@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <application
+        android:label="ACK"
+        android:theme="@android:style/Theme.DeviceDefault">
+
+        <!-- 1. Main Watch Face / App -->
+        <activity
+            android:name="com.example.besu.wear.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- NEURAL INPUT: Deep Links (e.g. besu://cryo?min=60) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="besu" />
+            </intent-filter>
+        </activity>
+
+        <!-- 3. Background Listener (Sync & Triggers) -->
+        <service
+            android:name=".WearConfigListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <!-- Ensure these match the paths used in WatchSync.kt on the phone -->
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/deck_update" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/context_update" />
+                <!-- Keep existing ones -->
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/besu/config_push" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".BackgroundSensorService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"> <!-- Or generic if allowed -->
+        </service>
+
+    </application>
+
+</manifest>

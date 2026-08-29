@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rendertheme xmlns="http://mapsforge.org/renderTheme"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://mapsforge.org/renderTheme https://raw.githubusercontent.com/mapsforge/mapsforge/master/resources/renderTheme.xsd"
+    version="1"
+    map-background="#050505">
+
+    <!-- 1. PARKS & AREAS -->
+    <rule e="way" k="leisure" v="park|garden|pitch|playground">
+        <area fill="#002B0B" stroke="#002B0B" stroke-width="0.5" />
+    </rule>
+    <rule e="way" k="landuse" v="forest|grass|meadow|orchard">
+        <area fill="#002B0B" stroke="#002B0B" stroke-width="0.5" />
+    </rule>
+    <rule e="way" k="landuse" v="residential|commercial|industrial|retail">
+        <area fill="#001A06" stroke="#001A06" stroke-width="0.5" />
+    </rule>
+    <rule e="way" k="amenity" v="parking|hospital|school|university">
+        <area fill="#001A06" stroke="#001A06" stroke-width="0.5" />
+    </rule>
+
+    <!-- 2. WATER -->
+    <rule e="way" k="natural" v="water|bay|coastline|beach">
+        <area fill="#001F22" stroke="#001F22" stroke-width="0.5" />
+    </rule>
+    <rule e="way" k="waterway" v="river|canal|stream|ditch">
+        <line stroke="#001F22" stroke-width="1.5" stroke-linecap="round" />
+    </rule>
+
+    <!-- 3. BUILDINGS -->
+    <rule e="way" k="building" v="*">
+        <area fill="#FF0055" stroke="#CC0044" stroke-width="0.5" />
+    </rule>
+    <rule e="way" k="aeroway" v="terminal|runway|taxiway|apron">
+        <area fill="#00F3FF" stroke="#00F3FF" stroke-width="0.5" />
+        <line stroke="#00F3FF" stroke-width="2.5" />
+    </rule>
+
+    <!-- 4. ROADS -->
+    <rule e="way" k="highway" v="motorway|motorway_link|trunk|trunk_link">
+        <line stroke="#00F3FF" stroke-width="2.5" stroke-linecap="round" />
+    </rule>
+    <rule e="way" k="highway" v="primary|primary_link|secondary|secondary_link">
+        <line stroke="#00F3FF" stroke-width="1.5" />
+    </rule>
+    <rule e="way" k="highway" v="tertiary|tertiary_link|unclassified|residential|living_street">
+        <line stroke="#00F3FF" stroke-width="0.8" />
+    </rule>
+    <rule e="way" k="highway" v="service|pedestrian|path|footway|cycleway|steps|track">
+        <line stroke="#0099AA" stroke-width="0.5" stroke-dasharray="3,3" />
+    </rule>
+
+</rendertheme>

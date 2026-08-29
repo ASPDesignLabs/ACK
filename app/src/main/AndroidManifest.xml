@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- PERMISSIONS -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    
+    <!-- CHANGED: Switched from SPECIAL_USE to MEDIA_PLAYBACK for TTS reliability -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    
+    <!-- NEW: Required for the "Nuclear Option" to keep the app alive in pocket -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Required for boundary detection while phone is locked -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <!-- DB Meter Permission Access -->
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="ACK"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.NoActionBar">
+    <!-- WIDGET PROVIDER -->
+    <receiver
+        android:name=".ProfileWidget"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            <action android:name="ACTION_SET_PROFILE" />
+        </intent-filter>
+        <meta-data
+            android:name="android.appwidget.provider"
+            android:resource="@xml/profile_widget_info" />
+    </receiver>
+
+
+        <!-- GEO-PROTOCOL RECEIVER -->
+        <receiver
+            android:name=".GeoBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.besu.GEO_ENGAGE" />
+                <action android:name="com.example.besu.GEO_ABORT" />
+                <action android:name="com.example.besu.SOVEREIGN_EVENT" />
+            </intent-filter>
+        </receiver>
+
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="ACK // TERMINAL"
+            android:theme="@android:style/Theme.Material.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- ADDED: The missing ghost activity from our diagnostic -->
+        <activity 
+            android:name=".SensorDebugActivity"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+
+        <activity
+            android:name=".FieldManualActivity"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+
+        <!-- ADD THIS: The Custom Scanner -->
+        <activity
+            android:name=".MosaicScannerActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+
+        <!-- CHANGED: Service is now explicitly handling Audio/Media -->
+        <service
+            android:name=".OutputService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback">
+        </service>
+
+        <service
+            android:name=".VisualPromptService"
+            android:exported="false" />
+
+        <service
+            android:name=".WearListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/gesture" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/sys" />
+            </intent-filter>
+        </service>
+
+        <!-- NOTE: Accelerometer detection is tricky on Play Store. 
+             If they reject 'specialUse' for this, you might need to drop this feature 
+             or argue it is a vital accessibility input method. -->
+        <service
+            android:name=".AccelerometerTapService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="gesture_detection" />
+        </service>
+
+    </application>
+
+</manifest>

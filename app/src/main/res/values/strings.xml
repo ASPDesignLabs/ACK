@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">BESU</string>
+    <string name="accessibility_service_description">Emotional AAC allows you to display emotions on your screen using the accessibility button. Tap the button to select an emotion.</string>
+</resources>

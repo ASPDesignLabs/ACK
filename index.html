@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Wideband Mosaic Protocol</title>
+    <style>
+      body {
+        margin: 0;
+        background-color: #000;
+        overflow: hidden; /* No scrollbars, we use every pixel */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+        font-family: monospace;
+      }
+
+      #data-viewport {
+        position: relative;
+        width: 95vw;
+        height: 90vh;
+        border: 2px solid #333;
+        box-shadow: 0 0 50px rgba(0, 255, 255, 0.1);
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+      }
+
+      /* Decorative markers to help Computer Vision find corners */
+      .fiducial {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        background: transparent;
+        border: 5px solid #ff00ff; /* Magenta for tracking */
+        z-index: 10;
+      }
+      .tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+      .tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+      .bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+      .br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+      .status-line {
+        position: absolute;
+        bottom: -25px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        color: #0ff;
+        font-size: 14px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="data-viewport">
+      <!-- Computer Vision Anchors -->
+      <div class="fiducial tl"></div>
+      <div class="fiducial tr"></div>
+      <div class="fiducial bl"></div>
+      <div class="fiducial br"></div>
+
+      <canvas id="mosaic"></canvas>
+      <div class="status-line">Wideband Link :: 10KB Static Buffer :: Ready</div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById('mosaic');
+      const ctx = canvas.getContext('2d');
+
+      // 16-Color High Contrast Palette
+      // We map 4 bits (0-15) to these specific hex codes.
+      const PALETTE = [
+        '#000000', '#222222', '#555555', '#777777', // Greys (Low bits)
+        '#00ff00', '#007700', // Greens
+        '#00ffff', '#007777', // Cyans
+        '#0000ff', '#000077', // Blues
+        '#ff00ff', '#770077', // Magentas
+        '#ff0000', '#770000', // Reds
+        '#ffff00', '#ffffff'  // Yellow / White
+      ];
+
+      function renderDataWall() {
+        // Set canvas resolution to match display size for maximum fidelity
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        const W = canvas.width;
+        const H = canvas.height;
+
+        // CALCULATE DENSITY
+        // To fit 10KB (20,000 hex chars), we need a grid.
+        // Let's aim for a grid that fits comfortably.
+        const COLS = 180; 
+        const ROWS = 120; // Total capacity: 21,600 nibbles (10.8KB)
+        
+        const CELL_W = W / COLS;
+        const CELL_H = H / ROWS;
+
+        // 1. Draw The Data Texture
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            
+            // MOCK DATA GENERATION
+            // In your real tool: val = dataBuffer[index]
+            const val = Math.floor(Math.random() * 16);
+            
+            ctx.fillStyle = PALETTE[val];
+            
+            // Draw logic:
+            // We leave a tiny gap (0.5px) to create a "grid" look
+            // but effectively we are painting a solid wall.
+            // Using fillRect with floating points is fine in Canvas.
+            ctx.fillRect(x * CELL_W, y * CELL_H, CELL_W + 0.5, CELL_H + 0.5);
+          }
+        }
+
+        // 2. The "Calibration Belt" (CRITICAL)
+        // Since we are using colors, we need to know what "Red" looks like
+        // in the user's specific lighting conditions.
+        // We draw a horizontal bar across the middle containing the sorted palette.
+        
+        const beltHeight = CELL_H * 4;
+        const beltY = (H / 2) - (beltHeight / 2);
+        
+        // Draw black backing for the belt
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, beltY - 5, W, beltHeight + 10);
+
+        // Draw the color reference spectrum
+        const swatchWidth = W / 16;
+        for (let i = 0; i < 16; i++) {
+            ctx.fillStyle = PALETTE[i];
+            ctx.fillRect(i * swatchWidth, beltY, swatchWidth, beltHeight);
+            
+            // Add index markers for human debugging
+            if (i === 15) ctx.fillStyle = '#000'; // Black text on white
+            else ctx.fillStyle = '#fff';
+            
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(i.toString(16).toUpperCase(), (i * swatchWidth) + (swatchWidth/2), beltY + (beltHeight/2));
+        }
+        
+        // 3. Scanline Aesthetic Overlay
+        // Adds that "CRT" feel without ruining the data readability
+        ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+        for (let i = 0; i < H; i += 2) {
+          ctx.fillRect(0, i, W, 1);
+        }
+      }
+
+      // Handle resize dynamically
+      window.addEventListener('resize', renderDataWall);
+      renderDataWall();
+
+    </script>
+  </body>
+</html>

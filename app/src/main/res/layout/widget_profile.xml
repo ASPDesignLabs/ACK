@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#050505"
+    android:padding="4dp">
+
+    <!-- HEADER -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="PROTOCOL SELECT"
+        android:textColor="#00FF41"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:letterSpacing="0.1"
+        android:layout_marginBottom="2dp"/>
+
+    <!-- ROW 1: WORK / STRESS -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/btn_work"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:text="WORK" android:textSize="9sp" android:layout_margin="1dp"/>
+        <Button
+            android:id="@+id/btn_stress"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:text="STRESS" android:textSize="9sp" android:layout_margin="1dp"/>
+    </LinearLayout>
+
+    <!-- ROW 2: SOCIAL / BUILDER -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/btn_social"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:text="SOCIAL" android:textSize="9sp" android:layout_margin="1dp"/>
+        <Button
+            android:id="@+id/btn_builder"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:text="BUILD" android:textSize="9sp" android:layout_margin="1dp"/>
+    </LinearLayout>
+
+    <!-- ROW 3: DEFAULT -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/btn_default"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:text="DEFAULT" android:textSize="9sp" android:layout_margin="1dp"/>
+    </LinearLayout>
+
+</LinearLayout>
