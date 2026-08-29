@@ -2,7 +2,7 @@
 
 
 
-#### Compose statements, build out context-based replies, utilize variables to speed up construction of statements. Use tap based controls to start playback or use the companion Wear OS app to unlock gesture based initiation.
+##### Compose statements, build out context-based replies, utilize variables to speed up construction of statements. Use tap based controls to start playback or use the companion Wear OS app to unlock gesture based initiation.
 
 
 Created primarily to assist myself with *situational mutism* concerns. This covers the many moments throughout my day where communicating with others via non-verbal means is significantly easier. This tool is a fair bit more advanced than what you'd normally call AAC. The depth of statement construction, the ability to bridge statements, establish replies around specific contexts. You should not assume this is meant for someone with heavily limited communication and cognitive ability.
