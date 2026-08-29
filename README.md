@@ -30,11 +30,9 @@
 
 
 
-This is a very heavy work in progress experience, even as I daily drive it while tinkering. Expect bugs.
+I am not a speech language pathologist, mental health or behavioral specialist, or an individual who has any formal schooling around the use and development of these tools. This is something I find useful that I threw together over the last year or so. It is distinctively different from other options I've attempted to use in the past. This is also a very heavy work in progress experience, even as I daily drive it while tinkering. Expect bugs.
 
 
 
 If you want to build this you'll need Android Studio and a custom map splice for your local region that works with Mapsforge. Drop it into app/assets.
-
-
 
