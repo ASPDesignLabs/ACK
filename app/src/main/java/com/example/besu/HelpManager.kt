@@ -1,5 +1,6 @@
 package com.example.besu
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -41,6 +42,9 @@ class HelpManager(
     }
 
     fun onEvent(event: HelpEvent) {
+        // TODO(smoke test): remove this Log.d once watch gesture telemetry is confirmed landing.
+        Log.d("ACK_HELP_EVENT", "onEvent: $event (active module=${activeModule?.id})")
+
         val step = currentStep ?: return
 
         if (matches(step.action, event)) {
