@@ -208,6 +208,9 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
     var showTrainingGround by remember {
         mutableStateOf(false)
     }
+    var showPoseSelector by remember {
+        mutableStateOf(false)
+    }
     var isLiveLinkActive by remember { mutableStateOf(false) }
     var watchStateLabel by remember { mutableStateOf("OFFLINE") }
     var watchPoseLabel by remember { mutableStateOf("---") }
@@ -396,6 +399,16 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
             else -> "OFF"
         }
         WatchSync.sendTrainingMode(context, mode)
+    }
+
+    // The watch never fires on its own timer while paced -- it waits for this
+    // exact signal, sent the instant the coach panel reaches the FIRE step, so
+    // it can never advance before the learner has actually been shown that step.
+    LaunchedEffect(helpManager.activeModule?.id, helpManager.currentStepIndex) {
+        val isPacedModule = helpManager.activeModule?.id in FieldOpsHelp.pacedModuleIds
+        if (isPacedModule && helpManager.currentStep?.action == HelpAction.WatchEvent("FIRE")) {
+            WatchSync.sendTrainingFireReady(context)
+        }
     }
 
     fun activateDeck(id: String, colorIdx: Int) {
@@ -1215,7 +1228,13 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
 
                     if (showHelpMenu) {
                         HelpMenuDialog(
-                            modules = HelpRegistry.modules,
+                            // The three individual pose walkthroughs stay registered
+                            // with HelpManager (HelpRegistry.modules) for lookup by id,
+                            // but aren't listed directly -- poseTrainingEntryModule is
+                            // the single visible entry point into them.
+                            modules = HelpRegistry.modules.filterNot {
+                                it.id in FieldOpsHelp.pacedModuleIds
+                            },
                             context = HelpContext(
                                 viewMode = viewMode,
                                 deckId = currentDeckId,
@@ -1230,13 +1249,36 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                             },
                             onLaunch = { module ->
                                 showHelpMenu = false
-                                if (module.id == FieldOpsHelp.trainingGroundModule.id) {
-                                    helpManager.abort()
-                                    showTrainingGround = true
-                                } else {
-                                    showTrainingGround = false
-                                    helpManager.start(module.id)
+                                when (module.id) {
+                                    FieldOpsHelp.trainingGroundModule.id -> {
+                                        helpManager.abort()
+                                        showPoseSelector = false
+                                        showTrainingGround = true
+                                    }
+                                    FieldOpsHelp.poseTrainingEntryModule.id -> {
+                                        showTrainingGround = false
+                                        showPoseSelector = true
+                                    }
+                                    else -> {
+                                        showTrainingGround = false
+                                        showPoseSelector = false
+                                        helpManager.start(module.id)
+                                    }
                                 }
+                            }
+                        )
+                    }
+
+                    if (showPoseSelector) {
+                        PoseSelectorDialog(
+                            options = FieldOpsHelp.poseOptions,
+                            primaryColor = primaryColor,
+                            onSelect = { moduleId ->
+                                showPoseSelector = false
+                                helpManager.start(moduleId)
+                            },
+                            onDismiss = {
+                                showPoseSelector = false
                             }
                         )
                     }

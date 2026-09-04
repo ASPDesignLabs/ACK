@@ -79,6 +79,19 @@ class WearConfigListenerService : WearableListenerService() {
                 }
             }
 
+            // 3b. TRAINING FIRE READY (Phone's coach panel reached its FIRE step)
+            "/sys/training_fire_ready" -> {
+                val serviceIntent = Intent(this, BackgroundSensorService::class.java).apply {
+                    action = PoseActions.ACTION_TRAINING_FIRE_READY
+                }
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+            }
+
             // 4. NEW: TARGET LIST SYNC (Full list of slot names)
             // Payload: "0:SARAH|1:BOSS|2:TEAM"
             "/sys/target_list" -> {

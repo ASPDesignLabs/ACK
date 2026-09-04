@@ -81,13 +81,21 @@ object WatchSync {
     // --- GESTURE TRAINING MODE ---
     // mode is one of "OFF" / "PACED" / "LIVE":
     //   OFF   - normal live behavior.
-    //   PACED - guided pose walkthroughs. Suppresses real output and suspends the
-    //           watch's auto-timeouts so a learner has time to read each step.
+    //   PACED - guided pose walkthroughs. Suppresses real output, suspends the
+    //           watch's auto-timeouts, and firing waits on sendTrainingFireReady
+    //           instead of a timer.
     //   LIVE  - Training Ground. Suppresses real output but leaves timing alone.
     fun sendTrainingMode(context: Context, mode: String) {
         val path = "/sys/training_mode"
         val data = mode.toByteArray(Charsets.UTF_8)
         sendMessage(context, path, data, "TRAINING MODE $mode")
+    }
+
+    // Tells the watch it's safe to complete the held pose -- sent the instant the
+    // coach panel actually reaches its FIRE step during PACED training, so the
+    // watch never fires before the learner has been shown that step.
+    fun sendTrainingFireReady(context: Context) {
+        sendMessage(context, "/sys/training_fire_ready", null)
     }
 
     // Helper to reduce boilerplate
