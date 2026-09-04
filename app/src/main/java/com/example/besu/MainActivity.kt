@@ -308,12 +308,11 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                 HelpEvent.WatchInput("MODIFIED")
                             )
                         }
-                    }
 
-                    "ACK_LOG" -> {
-                        val type = intent.getStringExtra("type")
-
-                        if (type == "HW/WATCH") {
+                        // COOLDOWN is entered the instant the watch fires a command,
+                        // whether or not the real /gesture/* output was suppressed for
+                        // training -- so this is the FIRE signal, not the echoed output.
+                        if (watchStateLabel == "COOLDOWN") {
                             helpManager.onEvent(
                                 HelpEvent.WatchInput("FIRE")
                             )
@@ -331,7 +330,6 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         }
         val filter = IntentFilter().apply {
             addAction("ACK_WATCH_STATUS")
-            addAction("ACK_LOG")
             addAction("ACK_DECK_CHANGE")
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -373,6 +371,11 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         }
 
         context.startService(intent)
+    }
+
+    LaunchedEffect(helpManager.activeModule?.id) {
+        val isGestureTraining = helpManager.activeModule?.id == FieldOpsHelp.module.id
+        WatchSync.sendTrainingMode(context, isGestureTraining)
     }
 
     fun activateDeck(id: String, colorIdx: Int) {

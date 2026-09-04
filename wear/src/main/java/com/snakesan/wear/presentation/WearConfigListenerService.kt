@@ -62,7 +62,24 @@ class WearConfigListenerService : WearableListenerService() {
                 broadcastToOverseer(deckName, contextName, colorInt)
             }
 
-            // 3. NEW: TARGET LIST SYNC (Full list of slot names)
+            // 3. TRAINING MODE (Phone toggles this while a gesture-training
+            // HelpModule is active). Payload: "1" or "0"
+            "/sys/training_mode" -> {
+                val enabled = String(messageEvent.data, Charsets.UTF_8) == "1"
+
+                val serviceIntent = Intent(this, BackgroundSensorService::class.java).apply {
+                    action = PoseActions.ACTION_SET_TRAINING_MODE
+                    putExtra(PoseActions.EXTRA_TRAINING_MODE, enabled)
+                }
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+            }
+
+            // 4. NEW: TARGET LIST SYNC (Full list of slot names)
             // Payload: "0:SARAH|1:BOSS|2:TEAM"
             "/sys/target_list" -> {
                 try {

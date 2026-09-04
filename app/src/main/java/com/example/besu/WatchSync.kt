@@ -78,6 +78,16 @@ object WatchSync {
         sendMessage(context, path, data, "PHYSICS SYNC")
     }
 
+    // --- GESTURE TRAINING MODE ---
+    // While enabled, the watch reports pose/fire telemetry but suppresses the
+    // real command output (voice, deck/target logic) that a live gesture would
+    // otherwise trigger.
+    fun sendTrainingMode(context: Context, enabled: Boolean) {
+        val path = "/sys/training_mode"
+        val data = (if (enabled) "1" else "0").toByteArray(Charsets.UTF_8)
+        sendMessage(context, path, data, "TRAINING MODE ${if (enabled) "ON" else "OFF"}")
+    }
+
     // Helper to reduce boilerplate
     private fun sendMessage(context: Context, path: String, data: ByteArray?, logMsg: String? = null) {
         Wearable.getNodeClient(context).connectedNodes.addOnSuccessListener { nodes ->
