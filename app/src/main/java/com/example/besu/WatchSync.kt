@@ -98,6 +98,15 @@ object WatchSync {
         sendMessage(context, "/sys/training_fire_ready", null)
     }
 
+    // Tells the watch to discard any pose/twist it may have picked up
+    // incidentally during the previous transition and start listening fresh for
+    // a deliberate one. target is "POSE" (coach panel reached the pose-entry
+    // step) or "MODIFIER" (reached the twist step).
+    fun sendTrainingResetListen(context: Context, target: String) {
+        val data = target.toByteArray(Charsets.UTF_8)
+        sendMessage(context, "/sys/training_reset_listen", data, "TRAINING RESET: $target")
+    }
+
     // Helper to reduce boilerplate
     private fun sendMessage(context: Context, path: String, data: ByteArray?, logMsg: String? = null) {
         Wearable.getNodeClient(context).connectedNodes.addOnSuccessListener { nodes ->

@@ -417,13 +417,23 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         WatchSync.sendTrainingMode(context, mode)
     }
 
-    // The watch never fires on its own timer while paced -- it waits for this
-    // exact signal, sent the instant the coach panel reaches the FIRE step, so
-    // it can never advance before the learner has actually been shown that step.
+    // Keeps the watch's paced state machine synced to the coach panel's actual
+    // position, since none of these steps advance on a timer:
+    // - FIRE: the watch never completes a held pose on its own; it waits for
+    //   this exact go-ahead, sent the instant the coach panel reaches that step.
+    // - POSE_ID/POSE_DEF/POSE_CON, MODIFIED: sent when the coach panel reaches
+    //   the pose-entry or modifier step, so a reading the watch picked up
+    //   incidentally during the previous transition (e.g. arm motion during the
+    //   wake gesture itself) can't silently consume that step before the
+    //   learner deliberately performs it.
     LaunchedEffect(helpManager.activeModule?.id, helpManager.currentStepIndex) {
         val isPacedModule = helpManager.activeModule?.id in FieldOpsHelp.pacedModuleIds
-        if (isPacedModule && helpManager.currentStep?.action == HelpAction.WatchEvent("FIRE")) {
-            WatchSync.sendTrainingFireReady(context)
+        if (!isPacedModule) return@LaunchedEffect
+
+        when ((helpManager.currentStep?.action as? HelpAction.WatchEvent)?.eventType) {
+            "FIRE" -> WatchSync.sendTrainingFireReady(context)
+            "POSE_ID", "POSE_DEF", "POSE_CON" -> WatchSync.sendTrainingResetListen(context, "POSE")
+            "MODIFIED" -> WatchSync.sendTrainingResetListen(context, "MODIFIER")
         }
     }
 

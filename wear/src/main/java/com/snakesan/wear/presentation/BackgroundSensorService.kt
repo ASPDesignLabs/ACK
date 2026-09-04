@@ -212,6 +212,35 @@ class BackgroundSensorService : Service(), SensorEventListener {
                     Log.d("ACK_BG", "Training fire-ready received (state=$currentState)")
                 }
             }
+            PoseActions.ACTION_TRAINING_RESET_LISTEN -> {
+                if (isPacedTraining()) {
+                    when (intent.getStringExtra(PoseActions.EXTRA_RESET_TARGET)) {
+                        // Sent when the coach panel reaches the pose-entry step.
+                        // Discards any pose lock the watch may have already picked up
+                        // incidentally (e.g. from arm motion during the wake gesture
+                        // itself) and re-arms cleanly so it's genuinely listening for
+                        // a fresh, deliberate pose from this point on.
+                        "POSE" -> {
+                            currentPose = Pose.NONE
+                            commandTwistCount = 0
+                            pacedFireReady = false
+                            transition(State.ARMED, System.currentTimeMillis())
+                            Log.d("ACK_BG", "Training: reset and listening for pose")
+                        }
+                        // Sent when the coach panel reaches the modifier/twist step.
+                        // Discards any twist count picked up incidentally while
+                        // locking the pose, without disturbing the pose lock itself.
+                        "MODIFIER" -> {
+                            if (currentState == State.POSE_LOCKED) {
+                                commandTwistCount = 0
+                                pacedFireReady = false
+                                broadcastStatus()
+                                Log.d("ACK_BG", "Training: reset and listening for modifier")
+                            }
+                        }
+                    }
+                }
+            }
         }
         return START_STICKY
     }
