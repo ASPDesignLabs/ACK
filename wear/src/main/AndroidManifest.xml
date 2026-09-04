@@ -42,6 +42,7 @@
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/context_update" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/training_mode" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/training_fire_ready" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/training_reset_listen" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/target_list" />
                 <!-- Keep existing ones -->
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/besu/config_push" />

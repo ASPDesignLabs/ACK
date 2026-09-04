@@ -39,14 +39,17 @@ object FieldOpsHelp {
             HelpStep(
                 id = "pose_lock",
                 title = "POSE: $poseLabel",
-                body = poseInstruction,
+                body = poseInstruction + "\n\nThe watch starts listening fresh the moment " +
+                    "this step appears. (Test build: it gives this about five seconds -- " +
+                    "the shipped app will use a shorter window.)",
                 action = HelpAction.WatchEvent(poseEventType)
             ),
             HelpStep(
                 id = "pose_locked",
                 title = "POSE LOCKED",
                 body = "$poseLabel pose detected.\n\nWhile holding the pose, perform ONE " +
-                    "TWIST to apply a modifier.",
+                    "TWIST to apply a modifier. The watch resets its modifier count fresh " +
+                    "as soon as this step appears.",
                 action = HelpAction.WatchEvent("MODIFIED")
             ),
             HelpStep(
