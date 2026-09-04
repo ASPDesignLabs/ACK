@@ -44,11 +44,26 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private var stateStartTime = 0L
     private var lastModifierTime = 0L
 
-    // TRAINING MODE (set by the phone while a gesture-training HelpModule is active)
-    // Suppresses real command output (voice, deck/target logic) while still driving
-    // the normal state machine and status telemetry, so gestures can be practiced
-    // without side effects.
-    private var trainingMode = false
+    // TRAINING MODE (set by the phone via /sys/training_mode)
+    // OFF   - normal live behavior.
+    // PACED - guided pose walkthroughs. Real output is suppressed AND the
+    //         ARMED/POSE_LOCKED auto-timeouts are suspended so a learner has time
+    //         to read/hear each step before the state machine moves on.
+    // LIVE  - Training Ground free practice. Real output is suppressed but timing
+    //         is untouched, so gestures behave exactly as they would live.
+    private enum class TrainingMode { OFF, PACED, LIVE }
+    private var trainingMode = TrainingMode.OFF
+
+    private fun isPacedTraining() = trainingMode == TrainingMode.PACED
+
+    // Normal live timings.
+    private val armedTimeoutMs = 6000L
+    private val poseLockedTimeoutMs = 6000L
+    private val normalFireDelayMs = 800L
+
+    // Paced training stretches the hold-to-fire window so there's time to react
+    // to the instruction before the pose auto-fires.
+    private val pacedFireDelayMs = 4000L
     
     // TARGET STATE
     private var activeTargetIndex = -1 // -1 = None/Cleared
@@ -178,7 +193,12 @@ class BackgroundSensorService : Service(), SensorEventListener {
             "ACTION_ENTER_CRYO" -> enterCryo()
             "ACTION_WAKE_CRYO" -> wakeFromCryo()
             PoseActions.ACTION_SET_TRAINING_MODE -> {
-                trainingMode = intent.getBooleanExtra(PoseActions.EXTRA_TRAINING_MODE, false)
+                val raw = intent.getStringExtra(PoseActions.EXTRA_TRAINING_MODE) ?: "OFF"
+                trainingMode = try {
+                    TrainingMode.valueOf(raw)
+                } catch (e: IllegalArgumentException) {
+                    TrainingMode.OFF
+                }
                 Log.d("ACK_BG", "Training mode set to $trainingMode")
                 broadcastStatus()
             }
@@ -385,18 +405,21 @@ class BackgroundSensorService : Service(), SensorEventListener {
             }
 
             State.ARMED -> {
-                if (time - stateStartTime > 6000L) {
+                // Paced training suspends this timeout entirely -- otherwise a
+                // learner mid-instruction gets silently bumped back to IDLE.
+                if (!isPacedTraining() && time - stateStartTime > armedTimeoutMs) {
                     transition(State.IDLE, time)
                 }
             }
 
             State.POSE_LOCKED -> {
-                if (time - stateStartTime > 6000L) {
+                if (!isPacedTraining() && time - stateStartTime > poseLockedTimeoutMs) {
                     transition(State.IDLE, time)
                     return
                 }
 
-                if (time - stateStartTime > 800L) {
+                val fireDelay = if (isPacedTraining()) pacedFireDelayMs else normalFireDelayMs
+                if (time - stateStartTime > fireDelay) {
                     fireCommand()
                 }
             }
@@ -573,10 +596,10 @@ class BackgroundSensorService : Service(), SensorEventListener {
             else -> "/gesture/generic"
         }
 
-        // During training, the pose/fire cycle is reported via status telemetry
-        // only (see broadcastStatus) -- no real command is sent, so nothing is
-        // spoken and no deck/target state changes.
-        if (!trainingMode) {
+        // In any training mode (paced or live), the pose/fire cycle is reported
+        // via status telemetry only (see broadcastStatus) -- no real command is
+        // sent, so nothing is spoken and no deck/target state changes.
+        if (trainingMode == TrainingMode.OFF) {
             sendToPhone(path)
         }
 

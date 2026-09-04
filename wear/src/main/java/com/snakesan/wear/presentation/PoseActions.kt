@@ -15,6 +15,8 @@ object PoseActions {
 
     const val EXTRA_DURATION_MS = "duration_ms"
 
+    // String extra, one of "OFF" / "PACED" / "LIVE" -- matches
+    // BackgroundSensorService.TrainingMode.
     const val EXTRA_TRAINING_MODE = "training_mode"
 
     const val DEFAULT_LISTENING_DURATION_MS = 60_000L

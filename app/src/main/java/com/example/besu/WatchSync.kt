@@ -79,13 +79,15 @@ object WatchSync {
     }
 
     // --- GESTURE TRAINING MODE ---
-    // While enabled, the watch reports pose/fire telemetry but suppresses the
-    // real command output (voice, deck/target logic) that a live gesture would
-    // otherwise trigger.
-    fun sendTrainingMode(context: Context, enabled: Boolean) {
+    // mode is one of "OFF" / "PACED" / "LIVE":
+    //   OFF   - normal live behavior.
+    //   PACED - guided pose walkthroughs. Suppresses real output and suspends the
+    //           watch's auto-timeouts so a learner has time to read each step.
+    //   LIVE  - Training Ground. Suppresses real output but leaves timing alone.
+    fun sendTrainingMode(context: Context, mode: String) {
         val path = "/sys/training_mode"
-        val data = (if (enabled) "1" else "0").toByteArray(Charsets.UTF_8)
-        sendMessage(context, path, data, "TRAINING MODE ${if (enabled) "ON" else "OFF"}")
+        val data = mode.toByteArray(Charsets.UTF_8)
+        sendMessage(context, path, data, "TRAINING MODE $mode")
     }
 
     // Helper to reduce boilerplate

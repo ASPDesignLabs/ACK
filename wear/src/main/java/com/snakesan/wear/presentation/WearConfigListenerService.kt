@@ -63,13 +63,13 @@ class WearConfigListenerService : WearableListenerService() {
             }
 
             // 3. TRAINING MODE (Phone toggles this while a gesture-training
-            // HelpModule is active). Payload: "1" or "0"
+            // HelpModule or Training Ground is active). Payload: "OFF" / "PACED" / "LIVE"
             "/sys/training_mode" -> {
-                val enabled = String(messageEvent.data, Charsets.UTF_8) == "1"
+                val mode = String(messageEvent.data, Charsets.UTF_8)
 
                 val serviceIntent = Intent(this, BackgroundSensorService::class.java).apply {
                     action = PoseActions.ACTION_SET_TRAINING_MODE
-                    putExtra(PoseActions.EXTRA_TRAINING_MODE, enabled)
+                    putExtra(PoseActions.EXTRA_TRAINING_MODE, mode)
                 }
 
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
