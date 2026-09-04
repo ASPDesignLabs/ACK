@@ -10,7 +10,12 @@ object PoseActions {
     const val ACTION_ENTER_CRYO =
         "com.example.besu.wear.ACTION_ENTER_CRYO"
 
+    const val ACTION_SET_TRAINING_MODE =
+        "com.example.besu.wear.ACTION_SET_TRAINING_MODE"
+
     const val EXTRA_DURATION_MS = "duration_ms"
+
+    const val EXTRA_TRAINING_MODE = "training_mode"
 
     const val DEFAULT_LISTENING_DURATION_MS = 60_000L
 }

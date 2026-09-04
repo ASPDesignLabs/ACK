@@ -43,6 +43,12 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private var commandTwistCount = 0
     private var stateStartTime = 0L
     private var lastModifierTime = 0L
+
+    // TRAINING MODE (set by the phone while a gesture-training HelpModule is active)
+    // Suppresses real command output (voice, deck/target logic) while still driving
+    // the normal state machine and status telemetry, so gestures can be practiced
+    // without side effects.
+    private var trainingMode = false
     
     // TARGET STATE
     private var activeTargetIndex = -1 // -1 = None/Cleared
@@ -171,6 +177,11 @@ class BackgroundSensorService : Service(), SensorEventListener {
             }
             "ACTION_ENTER_CRYO" -> enterCryo()
             "ACTION_WAKE_CRYO" -> wakeFromCryo()
+            PoseActions.ACTION_SET_TRAINING_MODE -> {
+                trainingMode = intent.getBooleanExtra(PoseActions.EXTRA_TRAINING_MODE, false)
+                Log.d("ACK_BG", "Training mode set to $trainingMode")
+                broadcastStatus()
+            }
         }
         return START_STICKY
     }
@@ -506,7 +517,6 @@ class BackgroundSensorService : Service(), SensorEventListener {
                     accelerometerRate = SensorManager.SENSOR_DELAY_UI,
                     gyroscopeRate = SensorManager.SENSOR_DELAY_UI,
                 )
-                sendHelpEvent("ARMED")
             }
 
             State.POSE_LOCKED -> {
@@ -534,7 +544,6 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private fun setPose(pose: Pose, time: Long) {
         currentPose = pose
         commandTwistCount = 0
-        sendHelpEvent("POSE:${poseHelpName(pose)}")
         feedback(50, TechSynth.Sfx.LOCK)
         transition(State.POSE_LOCKED, time)
     }
@@ -563,11 +572,14 @@ class BackgroundSensorService : Service(), SensorEventListener {
             Pose.HANDSHAKE -> when (commandTwistCount) { 0 -> "/gesture/nice"; 1 -> "/gesture/same"; 2 -> "/gesture/sorry_wait"; else -> "/gesture/meet_pleasure" }
             else -> "/gesture/generic"
         }
-        if (currentPose != Pose.NONE) {
-            val depthBucket = if (commandTwistCount <= 1) "SHALLOW" else "DEEP"
-            sendHelpEvent("FIRED:${poseHelpName(currentPose)}:$depthBucket")
+
+        // During training, the pose/fire cycle is reported via status telemetry
+        // only (see broadcastStatus) -- no real command is sent, so nothing is
+        // spoken and no deck/target state changes.
+        if (!trainingMode) {
+            sendToPhone(path)
         }
-        sendToPhone(path)
+
         feedback(150, TechSynth.Sfx.FIRE)
         transition(State.COOLDOWN, System.currentTimeMillis())
     }
@@ -575,24 +587,6 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private fun sendToPhone(path: String, payload: ByteArray? = null) {
         Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
             nodes.forEach { node -> Wearable.getMessageClient(this).sendMessage(node.id, path, payload) }
-        }
-    }
-
-    // --- HELP / TUTORIAL TELEMETRY ---
-    // Mirrors sendToPhone's gesture signal on a separate path so it never
-    // interferes with normal command resolution. Payload is a small ASCII
-    // event string the phone's Help system matches directly against
-    // HelpAction.WatchEvent(...) steps (see HelpEvent.WatchInput on the phone).
-    private fun sendHelpEvent(eventType: String) {
-        sendToPhone("/sys/help_event", eventType.toByteArray(Charsets.US_ASCII))
-    }
-
-    private fun poseHelpName(pose: Pose): String {
-        return when (pose) {
-            Pose.ARM_UP -> "IDENTITY"
-            Pose.STOP -> "DEFEND"
-            Pose.HANDSHAKE -> "CONNECT"
-            Pose.NONE -> "NONE"
         }
     }
 
@@ -615,8 +609,36 @@ class BackgroundSensorService : Service(), SensorEventListener {
         // NEW: Send Active Target to Overseer
         val targetLabel = if(activeTargetIndex == -1) "NONE" else TargetCache.getLabel(activeTargetIndex)
         intent.putExtra("active_target", targetLabel)
-        
+
         sendBroadcast(intent)
+
+        // Phone-facing status telemetry (drives the header readout and the
+        // ARMED/POSE_ID/MODIFIED/FIRE HelpEvents). Sent on every status change,
+        // training or not.
+        sendToPhone(
+            "/sys/status_update",
+            "${currentState.wireLabel()},${currentPose.wireLabel()},$commandTwistCount"
+                .toByteArray(Charsets.UTF_8)
+        )
+    }
+
+    // Maps internal enum names onto the short codes the phone app (WearListenerService/
+    // MainActivity) expects over /sys/status_update, decoupling the wire contract from
+    // these enums' own names.
+    private fun State.wireLabel(): String = when (this) {
+        State.IDLE -> "IDLE"
+        State.GATE_READY -> "GATE_READY"
+        State.ARMED -> "ARMED"
+        State.POSE_LOCKED -> "LOCKED"
+        State.COOLDOWN -> "COOLDOWN"
+        State.CRYO -> "CRYO"
+    }
+
+    private fun Pose.wireLabel(): String = when (this) {
+        Pose.NONE -> "---"
+        Pose.ARM_UP -> "ID"
+        Pose.STOP -> "DEF"
+        Pose.HANDSHAKE -> "CON"
     }
 
     private fun feedback(duration: Long, sfx: TechSynth.Sfx? = null) {
