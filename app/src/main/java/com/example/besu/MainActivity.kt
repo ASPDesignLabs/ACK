@@ -1541,14 +1541,7 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                         poseLabel = watchPoseLabel,
                         twistLevel = watchTwistLevel,
                         primaryColor = primaryColor,
-                        onClose = { showTrainingGround = false },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(
-                                start = 20.dp,
-                                end = 20.dp,
-                                bottom = 74.dp
-                            )
+                        onClose = { showTrainingGround = false }
                     )
                 }
             }
