@@ -326,6 +326,21 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                         currentDeckId = newId
                         primaryColor = NeonPalette.getColor(newColorIdx)
                     }
+
+                    "ACK_HELP_EVENT" -> {
+                        // Sent by BackgroundSensorService on the watch as it
+                        // arms, locks a pose, and fires (see sendHelpEvent()
+                        // there). Passed straight through: the watch already
+                        // sends the exact vocabulary HelpModule steps expect
+                        // ("ARMED", "POSE:IDENTITY"/"DEFEND"/"CONNECT",
+                        // "FIRED:<POSE>:SHALLOW"/"DEEP").
+                        val eventType = intent.getStringExtra("type")
+                        if (eventType != null) {
+                            helpManager.onEvent(
+                                HelpEvent.WatchInput(eventType)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -333,6 +348,7 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
             addAction("ACK_WATCH_STATUS")
             addAction("ACK_LOG")
             addAction("ACK_DECK_CHANGE")
+            addAction("ACK_HELP_EVENT")
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)

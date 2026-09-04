@@ -506,6 +506,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
                     accelerometerRate = SensorManager.SENSOR_DELAY_UI,
                     gyroscopeRate = SensorManager.SENSOR_DELAY_UI,
                 )
+                sendHelpEvent("ARMED")
             }
 
             State.POSE_LOCKED -> {
@@ -533,6 +534,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private fun setPose(pose: Pose, time: Long) {
         currentPose = pose
         commandTwistCount = 0
+        sendHelpEvent("POSE:${poseHelpName(pose)}")
         feedback(50, TechSynth.Sfx.LOCK)
         transition(State.POSE_LOCKED, time)
     }
@@ -561,6 +563,10 @@ class BackgroundSensorService : Service(), SensorEventListener {
             Pose.HANDSHAKE -> when (commandTwistCount) { 0 -> "/gesture/nice"; 1 -> "/gesture/same"; 2 -> "/gesture/sorry_wait"; else -> "/gesture/meet_pleasure" }
             else -> "/gesture/generic"
         }
+        if (currentPose != Pose.NONE) {
+            val depthBucket = if (commandTwistCount <= 1) "SHALLOW" else "DEEP"
+            sendHelpEvent("FIRED:${poseHelpName(currentPose)}:$depthBucket")
+        }
         sendToPhone(path)
         feedback(150, TechSynth.Sfx.FIRE)
         transition(State.COOLDOWN, System.currentTimeMillis())
@@ -569,6 +575,24 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private fun sendToPhone(path: String, payload: ByteArray? = null) {
         Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
             nodes.forEach { node -> Wearable.getMessageClient(this).sendMessage(node.id, path, payload) }
+        }
+    }
+
+    // --- HELP / TUTORIAL TELEMETRY ---
+    // Mirrors sendToPhone's gesture signal on a separate path so it never
+    // interferes with normal command resolution. Payload is a small ASCII
+    // event string the phone's Help system matches directly against
+    // HelpAction.WatchEvent(...) steps (see HelpEvent.WatchInput on the phone).
+    private fun sendHelpEvent(eventType: String) {
+        sendToPhone("/sys/help_event", eventType.toByteArray(Charsets.US_ASCII))
+    }
+
+    private fun poseHelpName(pose: Pose): String {
+        return when (pose) {
+            Pose.ARM_UP -> "IDENTITY"
+            Pose.STOP -> "DEFEND"
+            Pose.HANDSHAKE -> "CONNECT"
+            Pose.NONE -> "NONE"
         }
     }
 

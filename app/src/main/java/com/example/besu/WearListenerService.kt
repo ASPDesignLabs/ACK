@@ -41,7 +41,16 @@ class WearListenerService : WearableListenerService() {
             } catch (e: Exception) { }
         }
         
-        // 3. DECK CHANGE REQUEST
+        // 3. HELP / TUTORIAL EVENT (Gesture Calibration practice steps)
+        else if (path == "/sys/help_event") {
+            val eventType = String(messageEvent.data, Charsets.US_ASCII)
+            val intent = Intent("ACK_HELP_EVENT")
+            intent.setPackage(packageName)
+            intent.putExtra("type", eventType)
+            sendBroadcast(intent)
+        }
+
+        // 4. DECK CHANGE REQUEST
         else if (path == "/sys/req_deck_change") {
             val deckId = String(messageEvent.data, Charsets.UTF_8)
             broadcastLog("REMOTE DECK SWAP: $deckId", "SYS")
@@ -59,7 +68,7 @@ class WearListenerService : WearableListenerService() {
             sendBroadcast(uiIntent)
         }
 
-        // 4. NEW: TARGET SELECTION REQUEST
+        // 5. NEW: TARGET SELECTION REQUEST
         else if (path == "/sys/req_target") {
             try {
                 // Payload is index "0" to "7", or "-1" to clear
