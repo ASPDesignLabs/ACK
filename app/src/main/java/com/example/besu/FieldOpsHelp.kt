@@ -105,10 +105,42 @@ object FieldOpsHelp {
         )
     )
 
-    // Guided, paced walkthroughs. Distinct from trainingGroundModule, which runs
-    // live-paced instead -- see MainActivity's training-mode sync effect.
+    data class PoseOption(
+        val moduleId: String,
+        val label: String,
+        val hint: String
+    )
+
+    val poseOptions = listOf(
+        PoseOption(identityModule.id, "IDENTITY", "Arm raised straight up, like checking the time."),
+        PoseOption(defendModule.id, "DEFEND", "Arm out flat, palm down, like signaling stop."),
+        PoseOption(connectModule.id, "CONNECT", "Arm out to the side, like offering a handshake.")
+    )
+
+    // Also not a guided walkthrough by itself -- MainActivity intercepts this
+    // module's id before calling HelpManager.start() and opens PoseSelectorDialog
+    // instead. Picking an option there starts the matching real module below.
+    val poseTrainingEntryModule = HelpModule(
+        id = "field_ops_pose_training",
+        category = HelpCategory.FIELD_OPS,
+        title = "POSE TRAINING",
+        summary = "PICK A POSE, THEN WALK THROUGH ARM, LOCK, MODIFY, AND FIRE.",
+        steps = listOf(
+            HelpStep(
+                id = "select",
+                title = "POSE TRAINING",
+                body = "Choose a pose to train."
+            )
+        )
+    )
+
+    // Guided, paced walkthroughs, one per pose. Kept registered for HelpManager
+    // lookup but hidden from the menu list in favor of poseTrainingEntryModule --
+    // see MainActivity's filtered HelpMenuDialog modules list. Distinct from
+    // trainingGroundModule, which runs live-paced instead of paced -- see
+    // MainActivity's training-mode sync effect.
     val pacedModules = listOf(identityModule, defendModule, connectModule)
     val pacedModuleIds: Set<String> = pacedModules.map { it.id }.toSet()
 
-    val modules = pacedModules + trainingGroundModule
+    val modules = pacedModules + trainingGroundModule + poseTrainingEntryModule
 }

@@ -46,9 +46,10 @@ class BackgroundSensorService : Service(), SensorEventListener {
 
     // TRAINING MODE (set by the phone via /sys/training_mode)
     // OFF   - normal live behavior.
-    // PACED - guided pose walkthroughs. Real output is suppressed AND the
-    //         ARMED/POSE_LOCKED auto-timeouts are suspended so a learner has time
-    //         to read/hear each step before the state machine moves on.
+    // PACED - guided pose walkthroughs. Real output is suppressed, the
+    //         ARMED/POSE_LOCKED auto-timeouts are suspended, and firing waits on
+    //         an explicit go-ahead from the phone (see pacedFireReady) instead of
+    //         a timer -- the state machine only advances for a reason.
     // LIVE  - Training Ground free practice. Real output is suppressed but timing
     //         is untouched, so gestures behave exactly as they would live.
     private enum class TrainingMode { OFF, PACED, LIVE }
@@ -56,14 +57,16 @@ class BackgroundSensorService : Service(), SensorEventListener {
 
     private fun isPacedTraining() = trainingMode == TrainingMode.PACED
 
+    // Set by /sys/training_fire_ready, meaning the phone's coach panel has
+    // actually reached its FIRE step and it's safe to complete the hold. Cleared
+    // on every fresh pose lock (see setPose) and whenever training mode changes,
+    // so a stale go-ahead from a previous rep can never fire the next one.
+    private var pacedFireReady = false
+
     // Normal live timings.
     private val armedTimeoutMs = 6000L
     private val poseLockedTimeoutMs = 6000L
     private val normalFireDelayMs = 800L
-
-    // Paced training stretches the hold-to-fire window so there's time to react
-    // to the instruction before the pose auto-fires.
-    private val pacedFireDelayMs = 4000L
     
     // TARGET STATE
     private var activeTargetIndex = -1 // -1 = None/Cleared
@@ -199,8 +202,15 @@ class BackgroundSensorService : Service(), SensorEventListener {
                 } catch (e: IllegalArgumentException) {
                     TrainingMode.OFF
                 }
+                pacedFireReady = false
                 Log.d("ACK_BG", "Training mode set to $trainingMode")
                 broadcastStatus()
+            }
+            PoseActions.ACTION_TRAINING_FIRE_READY -> {
+                if (isPacedTraining()) {
+                    pacedFireReady = true
+                    Log.d("ACK_BG", "Training fire-ready received (state=$currentState)")
+                }
             }
         }
         return START_STICKY
@@ -418,8 +428,16 @@ class BackgroundSensorService : Service(), SensorEventListener {
                     return
                 }
 
-                val fireDelay = if (isPacedTraining()) pacedFireDelayMs else normalFireDelayMs
-                if (time - stateStartTime > fireDelay) {
+                if (isPacedTraining()) {
+                    // No timer here -- only fire once the phone has actually
+                    // confirmed it reached the FIRE step for this rep.
+                    if (pacedFireReady) {
+                        fireCommand()
+                    }
+                    return
+                }
+
+                if (time - stateStartTime > normalFireDelayMs) {
                     fireCommand()
                 }
             }
@@ -567,6 +585,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private fun setPose(pose: Pose, time: Long) {
         currentPose = pose
         commandTwistCount = 0
+        pacedFireReady = false
         feedback(50, TechSynth.Sfx.LOCK)
         transition(State.POSE_LOCKED, time)
     }
