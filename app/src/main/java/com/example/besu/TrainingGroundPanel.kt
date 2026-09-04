@@ -90,10 +90,21 @@ fun TrainingGroundPanel(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             TelemetryReadout(label = "STATE", value = stateLabel, primaryColor = primaryColor)
-            TelemetryReadout(label = "POSE", value = poseLabel, primaryColor = primaryColor)
+            TelemetryReadout(label = "POSE", value = fullPoseName(poseLabel), primaryColor = primaryColor)
             TelemetryReadout(label = "MOD", value = twistLevel.toString(), primaryColor = primaryColor)
         }
     }
+}
+
+// Training Ground has room to spell poses out in full, unlike the compact header
+// readout -- these are the same wire codes BackgroundSensorService.Pose.wireLabel()
+// sends (ID/DEF/CON/---), just expanded for display here.
+private fun fullPoseName(poseLabel: String): String = when (poseLabel) {
+    "ID" -> "IDENTITY"
+    "DEF" -> "DEFEND"
+    "CON" -> "CONNECT"
+    "---" -> "NONE"
+    else -> poseLabel
 }
 
 @Composable

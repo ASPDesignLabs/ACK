@@ -40,6 +40,7 @@
                 <!-- Ensure these match the paths used in WatchSync.kt on the phone -->
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/deck_update" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/context_update" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/training_mode" />
                 <!-- Keep existing ones -->
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/besu/config_push" />
             </intent-filter>
