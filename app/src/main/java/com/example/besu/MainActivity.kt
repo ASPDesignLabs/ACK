@@ -205,6 +205,9 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
     var showHelpMenu by remember {
         mutableStateOf(false)
     }
+    var showTrainingGround by remember {
+        mutableStateOf(false)
+    }
     var isLiveLinkActive by remember { mutableStateOf(false) }
     var watchStateLabel by remember { mutableStateOf("OFFLINE") }
     var watchPoseLabel by remember { mutableStateOf("---") }
@@ -303,6 +306,18 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                             )
                         }
 
+                        if (watchStateLabel == "LOCKED" && watchPoseLabel == "DEF") {
+                            helpManager.onEvent(
+                                HelpEvent.WatchInput("POSE_DEF")
+                            )
+                        }
+
+                        if (watchStateLabel == "LOCKED" && watchPoseLabel == "CON") {
+                            helpManager.onEvent(
+                                HelpEvent.WatchInput("POSE_CON")
+                            )
+                        }
+
                         if (watchStateLabel == "LOCKED" && watchTwistLevel > 0) {
                             helpManager.onEvent(
                                 HelpEvent.WatchInput("MODIFIED")
@@ -373,9 +388,14 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         context.startService(intent)
     }
 
-    LaunchedEffect(helpManager.activeModule?.id) {
-        val isGestureTraining = helpManager.activeModule?.id == FieldOpsHelp.module.id
-        WatchSync.sendTrainingMode(context, isGestureTraining)
+    LaunchedEffect(helpManager.activeModule?.id, showTrainingGround) {
+        val isPacedModule = helpManager.activeModule?.id in FieldOpsHelp.pacedModuleIds
+        val mode = when {
+            showTrainingGround -> "LIVE"
+            isPacedModule -> "PACED"
+            else -> "OFF"
+        }
+        WatchSync.sendTrainingMode(context, mode)
     }
 
     fun activateDeck(id: String, colorIdx: Int) {
@@ -1210,7 +1230,13 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                             },
                             onLaunch = { module ->
                                 showHelpMenu = false
-                                helpManager.start(module.id)
+                                if (module.id == FieldOpsHelp.trainingGroundModule.id) {
+                                    helpManager.abort()
+                                    showTrainingGround = true
+                                } else {
+                                    showTrainingGround = false
+                                    helpManager.start(module.id)
+                                }
                             }
                         )
                     }
@@ -1454,6 +1480,23 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                         manager = helpManager,
                         primaryColor = primaryColor,
                         modifier = coachModifier
+                    )
+                }
+
+                if (showTrainingGround) {
+                    TrainingGroundPanel(
+                        stateLabel = watchStateLabel,
+                        poseLabel = watchPoseLabel,
+                        twistLevel = watchTwistLevel,
+                        primaryColor = primaryColor,
+                        onClose = { showTrainingGround = false },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(
+                                start = 20.dp,
+                                end = 20.dp,
+                                bottom = 74.dp
+                            )
                     )
                 }
             }

@@ -2,18 +2,26 @@ package com.example.besu
 
 
 object FieldOpsHelp {
-    val module = HelpModule(
-        id = "field_ops_gesture_training",
+
+    private const val SYNC_INTRO = "Stand by for the physical command cycle: arm the " +
+        "system, lock a pose, apply a modifier, then fire. Make sure the watch app is " +
+        "open and its screen is active."
+
+    private fun poseCycleModule(
+        id: String,
+        poseLabel: String,
+        poseInstruction: String,
+        poseEventType: String
+    ): HelpModule = HelpModule(
+        id = id,
         category = HelpCategory.FIELD_OPS,
-        title = "GESTURE TRAINING",
-        summary = "ARM, LOCK A POSE, MODIFY, AND FIRE USING THE WATCH.",
+        title = "$poseLabel POSE",
+        summary = "ARM, LOCK $poseLabel, MODIFY, AND FIRE USING THE WATCH.",
         steps = listOf(
             HelpStep(
                 id = "intro",
                 title = "PHYSICAL SYNC",
-                body = "Gesture Training walks through a full physical command cycle: " +
-                    "arm the system, lock a pose, apply a modifier, then fire. Make sure " +
-                    "the watch app is open and its screen is active."
+                body = SYNC_INTRO
             ),
             HelpStep(
                 id = "wake_gesture",
@@ -29,16 +37,15 @@ object FieldOpsHelp {
                 body = "The system is now ARMED. It's scanning for a dominant pose."
             ),
             HelpStep(
-                id = "pose_identity",
-                title = "POSE: IDENTITY",
-                body = "Raise your arm straight up, like checking the time, and hold " +
-                    "steady to lock the IDENTITY pose.",
-                action = HelpAction.WatchEvent("POSE_ID")
+                id = "pose_lock",
+                title = "POSE: $poseLabel",
+                body = poseInstruction,
+                action = HelpAction.WatchEvent(poseEventType)
             ),
             HelpStep(
                 id = "pose_locked",
                 title = "POSE LOCKED",
-                body = "IDENTITY pose detected.\n\nWhile holding the pose, perform ONE " +
+                body = "$poseLabel pose detected.\n\nWhile holding the pose, perform ONE " +
                     "TWIST to apply a modifier.",
                 action = HelpAction.WatchEvent("MODIFIED")
             ),
@@ -56,4 +63,52 @@ object FieldOpsHelp {
             )
         )
     )
+
+    // Original module id preserved for continuity (was the only gesture-training
+    // entry before per-pose subcategories existed).
+    val identityModule = poseCycleModule(
+        id = "field_ops_gesture_training",
+        poseLabel = "IDENTITY",
+        poseInstruction = "Raise your arm straight up, like checking the time, and hold steady.",
+        poseEventType = "POSE_ID"
+    )
+
+    val defendModule = poseCycleModule(
+        id = "field_ops_pose_defend",
+        poseLabel = "DEFEND",
+        poseInstruction = "Hold your arm out flat, palm down, like signaling stop.",
+        poseEventType = "POSE_DEF"
+    )
+
+    val connectModule = poseCycleModule(
+        id = "field_ops_pose_connect",
+        poseLabel = "CONNECT",
+        poseInstruction = "Hold your arm out to the side, like offering a handshake.",
+        poseEventType = "POSE_CON"
+    )
+
+    // Not a guided walkthrough -- MainActivity intercepts this module's id before
+    // calling HelpManager.start() and opens TrainingGroundPanel instead, a live
+    // telemetry readout with no steps to complete and no state-machine pacing.
+    val trainingGroundModule = HelpModule(
+        id = "field_ops_training_ground",
+        category = HelpCategory.FIELD_OPS,
+        title = "TRAINING GROUND",
+        summary = "FREE-FORM PRACTICE. LIVE TELEMETRY, NORMAL PACING, NO REAL OUTPUT.",
+        steps = listOf(
+            HelpStep(
+                id = "live",
+                title = "TRAINING GROUND",
+                body = "Live telemetry only. Gesture freely and watch the readout -- " +
+                    "no steps to complete, no commands fire."
+            )
+        )
+    )
+
+    // Guided, paced walkthroughs. Distinct from trainingGroundModule, which runs
+    // live-paced instead -- see MainActivity's training-mode sync effect.
+    val pacedModules = listOf(identityModule, defendModule, connectModule)
+    val pacedModuleIds: Set<String> = pacedModules.map { it.id }.toSet()
+
+    val modules = pacedModules + trainingGroundModule
 }
