@@ -350,12 +350,19 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                         currentDeckId = newId
                         primaryColor = NeonPalette.getColor(newColorIdx)
                     }
+
+                    "ACK_OVERLAY_CLEARED" -> {
+                        helpManager.onEvent(
+                            HelpEvent.OverlayWasCleared(AckTags.EMOJI_SLOT)
+                        )
+                    }
                 }
             }
         }
         val filter = IntentFilter().apply {
             addAction("ACK_WATCH_STATUS")
             addAction("ACK_DECK_CHANGE")
+            addAction("ACK_OVERLAY_CLEARED")
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -871,10 +878,17 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                         DeckMenuAction(
                                             text = "MANAGE",
                                             color = Color.White,
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .testTag(AckTags.DECK_MANAGE_BUTTON)
+                                                .helpTarget(AckTags.DECK_MANAGE_BUTTON, primaryColor)
                                         ) {
                                             isDeckManageMode = true
                                             managedDeckId = null
+
+                                            helpManager.onEvent(
+                                                HelpEvent.Interacted(AckTags.DECK_MANAGE_BUTTON)
+                                            )
                                         }
                                     }
                                 } else {

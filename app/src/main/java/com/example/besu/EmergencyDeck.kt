@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -90,6 +91,16 @@ fun EmergencyDeck(
 
     var showOverrides by remember {
         mutableStateOf(false)
+    }
+
+    val helpManager = LocalHelpManager.current
+
+    fun reportHelpInteraction(tag: String) {
+        helpManager?.onEvent(HelpEvent.Interacted(tag))
+    }
+
+    fun reportTextCommit(tag: String) {
+        helpManager?.onEvent(HelpEvent.TextCommitted(tag))
     }
 
     fun reloadConfig() {
@@ -184,6 +195,7 @@ fun EmergencyDeck(
                         },
                         onEdit = {
                             editingSlot = slot
+                            reportHelpInteraction(AckTags.EMERGENCY_SLOT)
                         }
                     )
                 }
@@ -197,9 +209,13 @@ fun EmergencyDeck(
         AckOutlineButton(
             text = "CONFIGURE OVERRIDES",
             primaryColor = primaryColor,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(AckTags.EMERGENCY_OVERRIDES)
+                .helpTarget(AckTags.EMERGENCY_OVERRIDES, primaryColor)
         ) {
             showOverrides = true
+            reportHelpInteraction(AckTags.EMERGENCY_OVERRIDES)
         }
     }
 
@@ -221,6 +237,7 @@ fun EmergencyDeck(
                 )
 
                 reloadConfig()
+                reportTextCommit(AckTags.EMERGENCY_SAVE)
                 editingSlot = null
             }
         )
@@ -287,6 +304,8 @@ private fun EmergencyPromptButton(
     Column(
         modifier = modifier
             .aspectRatio(1f)
+            .testTag(AckTags.EMERGENCY_SLOT)
+            .helpTarget(AckTags.EMERGENCY_SLOT, primaryColor)
             .border(
                 width = 1.dp,
                 color = if (isConfigured) primaryColor else Color.DarkGray,

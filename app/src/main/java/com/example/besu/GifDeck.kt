@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -83,6 +84,12 @@ fun GifDeck(
     }
 
     val coroutineScope = rememberCoroutineScope()
+
+    val helpManager = LocalHelpManager.current
+
+    fun reportHelpInteraction(tag: String) {
+        helpManager?.onEvent(HelpEvent.Interacted(tag))
+    }
 
     val categories = remember(deckId, refreshToken) {
         GifRepository.getCategories(context, deckId)
@@ -183,9 +190,13 @@ fun GifDeck(
 
             NeonOutlineAction(
                 text = "+ IMPORT",
-                color = primaryColor
+                color = primaryColor,
+                modifier = Modifier
+                    .testTag(AckTags.GIF_IMPORT)
+                    .helpTarget(AckTags.GIF_IMPORT, primaryColor)
             ) {
                 importLauncher.launch(arrayOf("image/gif"))
+                reportHelpInteraction(AckTags.GIF_IMPORT)
             }
         }
 
@@ -199,9 +210,13 @@ fun GifDeck(
                     append(if (showCategoryMenu) " ▲" else " ▼")
                 },
                 color = primaryColor,
-                enabled = categories.isNotEmpty()
+                enabled = categories.isNotEmpty(),
+                modifier = Modifier
+                    .testTag(AckTags.GIF_CATEGORY)
+                    .helpTarget(AckTags.GIF_CATEGORY, primaryColor)
             ) {
                 showCategoryMenu = !showCategoryMenu
+                reportHelpInteraction(AckTags.GIF_CATEGORY)
             }
 
             if (showCategoryMenu) {
@@ -310,7 +325,10 @@ fun GifDeck(
             } else {
                 Color.Gray
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(AckTags.GIF_LANDSCAPE_TOGGLE)
+                .helpTarget(AckTags.GIF_LANDSCAPE_TOGGLE, primaryColor)
         ) {
             forceLandscapeOverlay = !forceLandscapeOverlay
 
@@ -319,6 +337,8 @@ fun GifDeck(
                 deckId = deckId,
                 enabled = forceLandscapeOverlay
             )
+
+            reportHelpInteraction(AckTags.GIF_LANDSCAPE_TOGGLE)
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -581,9 +601,14 @@ private fun GifImportDialog(
             }
         },
         confirmButton = {
+            val helpManager = LocalHelpManager.current
+
             NeonOutlineAction(
                 text = "IMPORT",
-                color = primaryColor
+                color = primaryColor,
+                modifier = Modifier
+                    .testTag(AckTags.GIF_IMPORT_COMMIT)
+                    .helpTarget(AckTags.GIF_IMPORT_COMMIT, primaryColor)
             ) {
                 val category = GifRepository.createCategory(
                     context = context,
@@ -598,6 +623,9 @@ private fun GifImportDialog(
                     categoryId = category.id
                 ).onSuccess { entry ->
                     onImported(entry)
+                    helpManager?.onEvent(
+                        HelpEvent.FileCommitted(AckTags.GIF_IMPORT_COMMIT)
+                    )
                 }.onFailure { error ->
                     errorMessage = error.message ?: "GIF IMPORT FAILED"
                 }
