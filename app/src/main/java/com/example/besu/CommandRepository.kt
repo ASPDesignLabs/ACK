@@ -193,24 +193,36 @@ object CommandRepository {
         deckId: String,
         groupIndex: Int,
         label: String,
-        rootCategory: String
+        rootCategory: String,
+        boundPose: String
     ) {
         val current = getQuickActionsConfig(context, deckId)
 
-        val safeCategory = rootCategory.takeIf {
-            it in setOf("IDENTITY", "DEFEND", "CONNECT")
-        } ?: "IDENTITY"
+        val safeCategory = rootCategory.takeIf { it in POSE_CATEGORIES } ?: "IDENTITY"
+        val safePose = boundPose.takeIf { it in POSE_CATEGORIES } ?: "IDENTITY"
+
+        // Keep the three groups' poses a permutation: if another group already
+        // owns the pose being assigned here, hand it this group's old pose
+        // rather than leaving two groups pointing at the same gesture.
+        val targetGroup = current.groups.find { it.groupIndex == groupIndex }
+        val previousPose = targetGroup?.boundPose
+        val conflictingGroupIndex = current.groups.find {
+            it.groupIndex != groupIndex && it.boundPose == safePose
+        }?.groupIndex
 
         val updatedGroups = current.groups.map { group ->
-            if (group.groupIndex == groupIndex) {
-                group.copy(
+            when (group.groupIndex) {
+                groupIndex -> group.copy(
                     label = label.trim().ifBlank {
                         "GROUP ${groupIndex + 1}"
                     },
-                    rootCategory = safeCategory
+                    rootCategory = safeCategory,
+                    boundPose = safePose
                 )
-            } else {
-                group
+                conflictingGroupIndex -> group.copy(
+                    boundPose = previousPose ?: group.boundPose
+                )
+                else -> group
             }
         }
 
@@ -262,6 +274,8 @@ object CommandRepository {
 
             existingGroup.copy(
                 groupIndex = groupIndex,
+                boundPose = existingGroup.boundPose.takeIf { it in POSE_CATEGORIES }
+                    ?: defaultBoundPose(groupIndex),
                 slots = (0..3).map { slotIndex ->
                     val existingSlot = existingGroup.slots.find {
                         it.slotIndex == slotIndex
@@ -273,7 +287,22 @@ object CommandRepository {
             )
         }
 
-        return config.copy(groups = normalizedGroups)
+        // Guard against corrupt or hand-edited data leaving two groups bound to
+        // the same pose (or a gap) -- fall back to the canonical
+        // IDENTITY/DEFEND/CONNECT-by-index assignment if it's not a clean
+        // permutation across the three groups.
+        val posesAreUnique = normalizedGroups.map { it.boundPose }.toSet().size ==
+            POSE_CATEGORIES.size
+
+        val finalGroups = if (posesAreUnique) {
+            normalizedGroups
+        } else {
+            normalizedGroups.map { group ->
+                group.copy(boundPose = defaultBoundPose(group.groupIndex))
+            }
+        }
+
+        return config.copy(groups = finalGroups)
     }
 
     fun getEmergencyConfig(
@@ -1037,14 +1066,41 @@ object CommandRepository {
             .edit().putString(ACTIVE_CAT_KEY, category).apply()
     }
 
+    // Decodes a fired gesture path (e.g. "/gesture/ask_name") back to which
+    // pose and twist index produced it. BackgroundSensorService.fireCommand()
+    // sends one of exactly 12 fixed paths -- 3 poses x 4 twists -- regardless
+    // of which deck is active on the phone, and BASE_TEMPLATE already lists
+    // that same fixed mapping (category + the /0../3 suffix on path) for the
+    // default Matrix deck, so it doubles as the canonical decode table here
+    // rather than duplicating it.
+    private fun decodeGestureSignal(signalPath: String): Pair<String, Int>? {
+        val node = BASE_TEMPLATE.find { it.triggerPath == signalPath } ?: return null
+        val twistIndex = node.path.substringAfterLast("/").toIntOrNull() ?: return null
+        return node.category to twistIndex
+    }
+
     // --- SIGNAL RESOLUTION ---
     fun resolveSignalToPhrase(
         context: Context,
         signalPath: String
     ): String {
-        // Normal watch gesture paths are Matrix routines. A non-Matrix deck must
-        // never accidentally execute a phrase from the last Matrix deck/profile.
-        if (getDeckType(context) != DeckType.MATRIX) {
+        val deckType = getDeckType(context)
+
+        // A Quick Actions deck overrides normal Matrix routing entirely: each
+        // of its three groups is bound to one root pose, and the fired twist
+        // index selects the slot within that group.
+        if (deckType == DeckType.QUICK_ACTIONS) {
+            val (pose, twistIndex) = decodeGestureSignal(signalPath) ?: return ""
+            val deckId = getActiveDeckId(context)
+            val config = getQuickActionsConfig(context, deckId)
+            val group = config.groups.find { it.boundPose == pose } ?: return ""
+            return resolveQuickAction(context, deckId, group.groupIndex, twistIndex)
+        }
+
+        // Normal watch gesture paths are Matrix routines. Any other deck type
+        // must never accidentally execute a phrase from the last Matrix
+        // deck/profile.
+        if (deckType != DeckType.MATRIX) {
             return ""
         }
 

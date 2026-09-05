@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,16 @@ fun QuickActionsDeck(
 
     var editingGroup by remember {
         mutableStateOf<QuickActionGroup?>(null)
+    }
+
+    val helpManager = LocalHelpManager.current
+
+    fun reportHelpInteraction(tag: String) {
+        helpManager?.onEvent(HelpEvent.Interacted(tag))
+    }
+
+    fun reportTextCommit(tag: String) {
+        helpManager?.onEvent(HelpEvent.TextCommitted(tag))
     }
 
     val activeGroup = config.groups.find {
@@ -104,6 +115,8 @@ fun QuickActionsDeck(
                 Box(
                     modifier = Modifier
                         .weight(1f)
+                        .testTag(AckTags.QUICK_ACTION_GROUP)
+                        .helpTarget(AckTags.QUICK_ACTION_GROUP, primaryColor)
                         .border(
                             width = 1.dp,
                             color = if (isSelected) {
@@ -123,15 +136,25 @@ fun QuickActionsDeck(
                         )
                         .clickable {
                             selectedGroupIndex = group.groupIndex
+                            reportHelpInteraction(AckTags.QUICK_ACTION_GROUP)
                         }
                         .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "G${group.groupIndex + 1}",
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "G${group.groupIndex + 1}",
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = group.boundPose.take(3),
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
                 }
             }
         }
@@ -143,6 +166,7 @@ fun QuickActionsDeck(
             primaryColor = primaryColor,
             onEdit = {
                 editingGroup = activeGroup
+                reportHelpInteraction(AckTags.QUICK_ACTION_GROUP_EDIT)
             }
         )
 
@@ -172,6 +196,7 @@ fun QuickActionsDeck(
                 },
                 onEdit = {
                     editingSlot = slot
+                    reportHelpInteraction(AckTags.QUICK_ACTION_SLOT)
                 }
             )
 
@@ -202,6 +227,7 @@ fun QuickActionsDeck(
                     deckId = deckId
                 )
 
+                reportTextCommit(AckTags.QUICK_ACTION_SAVE)
                 editingSlot = null
             }
         )
@@ -214,13 +240,14 @@ fun QuickActionsDeck(
             onDismiss = {
                 editingGroup = null
             },
-            onSave = { label, rootCategory ->
+            onSave = { label, rootCategory, boundPose ->
                 CommandRepository.updateQuickActionGroup(
                     context = context,
                     deckId = deckId,
                     groupIndex = group.groupIndex,
                     label = label,
-                    rootCategory = rootCategory
+                    rootCategory = rootCategory,
+                    boundPose = boundPose
                 )
 
                 config = CommandRepository.getQuickActionsConfig(
@@ -265,7 +292,7 @@ private fun QuickActionsGroupHeader(
             )
 
             Text(
-                text = "ROOT: ${group.rootCategory}",
+                text = "POSE: ${group.boundPose}  //  ROOT: ${group.rootCategory}",
                 color = Color.Gray,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace
@@ -274,6 +301,9 @@ private fun QuickActionsGroupHeader(
 
         NeonButton(
             text = "EDIT",
+            modifier = Modifier
+                .testTag(AckTags.QUICK_ACTION_GROUP_EDIT)
+                .helpTarget(AckTags.QUICK_ACTION_GROUP_EDIT, primaryColor),
             mainColor = primaryColor
         ) {
             onEdit()
@@ -294,6 +324,8 @@ private fun QuickActionButton(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(AckTags.QUICK_ACTION_SLOT)
+            .helpTarget(AckTags.QUICK_ACTION_SLOT, primaryColor)
             .border(
                 width = 1.dp,
                 color = if (isConfigured) primaryColor else Color.DarkGray,
@@ -467,7 +499,8 @@ private fun QuickActionGroupEditorDialog(
     onDismiss: () -> Unit,
     onSave: (
         label: String,
-        rootCategory: String
+        rootCategory: String,
+        boundPose: String
     ) -> Unit
 ) {
     var label by remember(group.groupIndex) {
@@ -478,7 +511,9 @@ private fun QuickActionGroupEditorDialog(
         mutableStateOf(group.rootCategory)
     }
 
-    val categories = listOf("IDENTITY", "DEFEND", "CONNECT")
+    var boundPose by remember(group.groupIndex) {
+        mutableStateOf(group.boundPose)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -508,49 +543,56 @@ private fun QuickActionGroupEditorDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
+                    text = "WATCH POSE",
+                    color = primaryColor,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Text(
+                    text = "WHICH GESTURE ON THE WATCH FIRES THIS GROUP.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                CategoryButtonRow(
+                    selected = boundPose,
+                    primaryColor = primaryColor,
+                    onSelect = { boundPose = it }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
                     text = "ROOT OVERRIDE SOURCE",
                     color = primaryColor,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
                 )
 
+                Text(
+                    text = "WHICH A/B/C VARIABLE BANK FILLS THIS GROUP'S {{TAGS}}.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    categories.forEach { category ->
-                        Button(
-                            onClick = {
-                                rootCategory = category
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (rootCategory == category) {
-                                    primaryColor.copy(alpha = 0.22f)
-                                } else {
-                                    VoidBlack
-                                },
-                                contentColor = if (rootCategory == category) {
-                                    primaryColor
-                                } else {
-                                    Color.Gray
-                                }
-                            )
-                        ) {
-                            Text(
-                                text = category.take(3),
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 10.sp
-                            )
-                        }
-                    }
-                }
+                CategoryButtonRow(
+                    selected = rootCategory,
+                    primaryColor = primaryColor,
+                    onSelect = { rootCategory = it }
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(label, rootCategory)
+                    onSave(label, rootCategory, boundPose)
                 }
             ) {
                 Text("SAVE")
@@ -562,4 +604,39 @@ private fun QuickActionGroupEditorDialog(
             }
         }
     )
+}
+
+@Composable
+private fun CategoryButtonRow(
+    selected: String,
+    primaryColor: Color,
+    onSelect: (String) -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        POSE_CATEGORIES.forEach { category ->
+            Button(
+                onClick = { onSelect(category) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (selected == category) {
+                        primaryColor.copy(alpha = 0.22f)
+                    } else {
+                        VoidBlack
+                    },
+                    contentColor = if (selected == category) {
+                        primaryColor
+                    } else {
+                        Color.Gray
+                    }
+                )
+            ) {
+                Text(
+                    text = category.take(3),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 10.sp
+                )
+            }
+        }
+    }
 }
