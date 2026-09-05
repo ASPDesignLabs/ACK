@@ -57,7 +57,8 @@ object HelpRegistry {
             )
         ),
         GeoProtocolHelp.module,
-        LogsHelp.module
+        LogsHelp.module,
+        QuickActionsDeckHelp.module
     ) + MatrixDeckHelp.modules + PersonalizationHelp.module + SettingsManagementHelp.module +
         TargetComputerHelp.module + FieldOpsHelp.modules
 }

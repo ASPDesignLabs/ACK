@@ -20,14 +20,23 @@ data class QuickActionGroup(
     // It is deliberately explicit rather than inferred from the group number.
     val rootCategory: String = "IDENTITY",
 
-    // Future watch mapping:
-    // group 0 -> QUICK_ACTION_GROUP_1
-    // group 1 -> QUICK_ACTION_GROUP_2
-    // group 2 -> QUICK_ACTION_GROUP_3
+    // Which watch pose fires this group -- distinct from rootCategory above.
+    // CommandRepository.resolveSignalToPhrase() routes an incoming gesture to
+    // whichever group has boundPose == the pose that was just locked, and the
+    // fired twist index (0-3) selects the slot within it. Normalized to a
+    // permutation of IDENTITY/DEFEND/CONNECT across the deck's three groups --
+    // see normalizeQuickActionsConfig.
+    val boundPose: String = defaultBoundPose(groupIndex),
+
     val slots: List<QuickActionSlot> = List(4) { slotIndex ->
         QuickActionSlot(slotIndex = slotIndex)
     }
 )
+
+fun defaultBoundPose(groupIndex: Int): String =
+    POSE_CATEGORIES.getOrElse(groupIndex) { POSE_CATEGORIES[0] }
+
+val POSE_CATEGORIES = listOf("IDENTITY", "DEFEND", "CONNECT")
 
 @Serializable
 data class QuickActionsDeckConfig(

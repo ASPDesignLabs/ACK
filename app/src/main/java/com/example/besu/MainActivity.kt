@@ -211,6 +211,13 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
     var showPoseSelector by remember {
         mutableStateOf(false)
     }
+    // Set when a HelpModule needs a deck that doesn't exist yet (e.g. Quick
+    // Actions Deck's tutorial) -- showCreateDeckDialog opens with that deck
+    // type pre-selected, and once CreateDeckDialog's onCreate fires, this
+    // module starts automatically instead of leaving the user to find it again.
+    var pendingHelpModuleId by remember {
+        mutableStateOf<String?>(null)
+    }
     var isLiveLinkActive by remember { mutableStateOf(false) }
     var watchStateLabel by remember { mutableStateOf("OFFLINE") }
     var watchPoseLabel by remember { mutableStateOf("---") }
@@ -1269,6 +1276,25 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                         showTrainingGround = false
                                         showPoseSelector = true
                                     }
+                                    QuickActionsDeckHelp.module.id -> {
+                                        showTrainingGround = false
+                                        showPoseSelector = false
+
+                                        val existingDeck = decks.firstOrNull {
+                                            it.type == DeckType.QUICK_ACTIONS
+                                        }
+
+                                        if (existingDeck != null) {
+                                            activateDeck(
+                                                id = existingDeck.id,
+                                                colorIdx = existingDeck.colorIndex
+                                            )
+                                            helpManager.start(module.id)
+                                        } else {
+                                            pendingHelpModuleId = module.id
+                                            showCreateDeckDialog = true
+                                        }
+                                    }
                                     else -> {
                                         showTrainingGround = false
                                         showPoseSelector = false
@@ -1362,6 +1388,7 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                             primaryColor = primaryColor,
                             onDismiss = {
                                 showCreateDeckDialog = false
+                                pendingHelpModuleId = null
                             },
                             onCreate = { name, colorIndex, type ->
                                 val newDeck = CommandRepository.createDeck(
@@ -1383,6 +1410,19 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                 )
 
                                 WatchSync.sendDeckList(context)
+
+                                // Resume whichever tutorial was waiting on this
+                                // deck to exist -- but only if the user actually
+                                // created the type it needed; if they changed
+                                // the type in the dialog, respect that choice
+                                // and just drop the pending tutorial silently.
+                                val pendingId = pendingHelpModuleId
+                                if (pendingId == QuickActionsDeckHelp.module.id &&
+                                    type == DeckType.QUICK_ACTIONS
+                                ) {
+                                    helpManager.start(pendingId)
+                                }
+                                pendingHelpModuleId = null
 
                                 showCreateDeckDialog = false
                             }
