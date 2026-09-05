@@ -78,6 +78,35 @@ object WatchSync {
         sendMessage(context, path, data, "PHYSICS SYNC")
     }
 
+    // --- GESTURE TRAINING MODE ---
+    // mode is one of "OFF" / "PACED" / "LIVE":
+    //   OFF   - normal live behavior.
+    //   PACED - guided pose walkthroughs. Suppresses real output, suspends the
+    //           watch's auto-timeouts, and firing waits on sendTrainingFireReady
+    //           instead of a timer.
+    //   LIVE  - Training Ground. Suppresses real output but leaves timing alone.
+    fun sendTrainingMode(context: Context, mode: String) {
+        val path = "/sys/training_mode"
+        val data = mode.toByteArray(Charsets.UTF_8)
+        sendMessage(context, path, data, "TRAINING MODE $mode")
+    }
+
+    // Tells the watch it's safe to complete the held pose -- sent the instant the
+    // coach panel actually reaches its FIRE step during PACED training, so the
+    // watch never fires before the learner has been shown that step.
+    fun sendTrainingFireReady(context: Context) {
+        sendMessage(context, "/sys/training_fire_ready", null)
+    }
+
+    // Tells the watch to discard any pose/twist it may have picked up
+    // incidentally during the previous transition and start listening fresh for
+    // a deliberate one. target is "POSE" (coach panel reached the pose-entry
+    // step) or "MODIFIER" (reached the twist step).
+    fun sendTrainingResetListen(context: Context, target: String) {
+        val data = target.toByteArray(Charsets.UTF_8)
+        sendMessage(context, "/sys/training_reset_listen", data, "TRAINING RESET: $target")
+    }
+
     // Helper to reduce boilerplate
     private fun sendMessage(context: Context, path: String, data: ByteArray?, logMsg: String? = null) {
         Wearable.getNodeClient(context).connectedNodes.addOnSuccessListener { nodes ->

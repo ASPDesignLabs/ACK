@@ -521,6 +521,14 @@ class VisualPromptService : Service() {
                  * lifecycle.
                  */
             }
+
+            // Lets MainActivity's HelpManager advance any step waiting on an
+            // overlay actually clearing (e.g. EmojiDeckHelp's "clear" step).
+            // Not slot-specific -- any overlay clearing is a harmless no-op
+            // for a step that isn't currently expecting it.
+            sendBroadcast(
+                Intent("ACK_OVERLAY_CLEARED").setPackage(packageName)
+            )
         }
 
         overlayView = null

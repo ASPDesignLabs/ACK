@@ -62,7 +62,30 @@ class WearConfigListenerService : WearableListenerService() {
                 broadcastToOverseer(deckName, contextName, colorInt)
             }
 
-            // 3. NEW: TARGET LIST SYNC (Full list of slot names)
+            // 3. TRAINING MODE (Phone toggles this while a gesture-training
+            // HelpModule or Training Ground is active). Payload: "OFF" / "PACED" / "LIVE"
+            "/sys/training_mode" -> {
+                val mode = String(messageEvent.data, Charsets.UTF_8)
+                startSensorService(PoseActions.ACTION_SET_TRAINING_MODE) {
+                    putExtra(PoseActions.EXTRA_TRAINING_MODE, mode)
+                }
+            }
+
+            // 3b. TRAINING FIRE READY (Phone's coach panel reached its FIRE step)
+            "/sys/training_fire_ready" -> {
+                startSensorService(PoseActions.ACTION_TRAINING_FIRE_READY)
+            }
+
+            // 3c. TRAINING RESET LISTEN (Phone's coach panel reached a step needing
+            // a fresh gesture -- pose entry or the modifier twist). Payload: "POSE" / "MODIFIER"
+            "/sys/training_reset_listen" -> {
+                val target = String(messageEvent.data, Charsets.UTF_8)
+                startSensorService(PoseActions.ACTION_TRAINING_RESET_LISTEN) {
+                    putExtra(PoseActions.EXTRA_RESET_TARGET, target)
+                }
+            }
+
+            // 4. NEW: TARGET LIST SYNC (Full list of slot names)
             // Payload: "0:SARAH|1:BOSS|2:TEAM"
             "/sys/target_list" -> {
                 try {
@@ -88,6 +111,22 @@ class WearConfigListenerService : WearableListenerService() {
                     Log.e("ACK_WEAR", "Failed to sync target list", e)
                 }
             }
+        }
+    }
+
+    private fun startSensorService(
+        serviceAction: String,
+        extras: Intent.() -> Unit = {}
+    ) {
+        val serviceIntent = Intent(this, BackgroundSensorService::class.java).apply {
+            action = serviceAction
+            extras()
+        }
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
         }
     }
 

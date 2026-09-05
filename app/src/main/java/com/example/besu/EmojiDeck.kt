@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -123,6 +124,8 @@ fun EmojiDeck(
     var showDeckConfig by remember {
         mutableStateOf(false)
     }
+
+    val helpManager = LocalHelpManager.current
 
     fun reloadConfig() {
         config = CommandRepository.getEmojiDeckConfig(
@@ -234,6 +237,7 @@ fun EmojiDeck(
             },
             onEdit = { slot ->
                 editingSlot = slot
+                helpManager?.onEvent(HelpEvent.Interacted(AckTags.EMOJI_SLOT))
             }
         )
     }
@@ -457,6 +461,8 @@ private fun EmojiSlotButton(
     Box(
         modifier = modifier
             .aspectRatio(1f)
+            .testTag(AckTags.EMOJI_SLOT)
+            .helpTarget(AckTags.EMOJI_SLOT, primaryColor)
             .border(
                 width = borderWidth,
                 color = borderColor,
@@ -569,6 +575,12 @@ private fun EmojiSlotEditorDialog(
         mutableStateOf(false)
     }
 
+    val helpManager = LocalHelpManager.current
+
+    fun reportHelpInteraction(tag: String) {
+        helpManager?.onEvent(HelpEvent.Interacted(tag))
+    }
+
     AckDialogShell(
         title = "CONFIGURE EMOJI ${initialSlot.slotIndex + 1}",
         primaryColor = primaryColor,
@@ -592,9 +604,13 @@ private fun EmojiSlotEditorDialog(
                 "PICK FROM LIBRARY"
             },
             color = primaryColor,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(AckTags.EMOJI_LIBRARY)
+                .helpTarget(AckTags.EMOJI_LIBRARY, primaryColor)
         ) {
             pickerOpen = !pickerOpen
+            reportHelpInteraction(AckTags.EMOJI_LIBRARY)
         }
 
         if (pickerOpen) {
@@ -636,9 +652,13 @@ private fun EmojiSlotEditorDialog(
         AckToggleRow(
             label = "OPEN RELATED EMOJI PANEL",
             enabled = opensRelatedPanel,
-            primaryColor = primaryColor
+            primaryColor = primaryColor,
+            modifier = Modifier
+                .testTag(AckTags.EMOJI_RELATED_PANEL)
+                .helpTarget(AckTags.EMOJI_RELATED_PANEL, primaryColor)
         ) {
             opensRelatedPanel = !opensRelatedPanel
+            reportHelpInteraction(AckTags.EMOJI_RELATED_PANEL)
         }
 
         if (opensRelatedPanel) {
@@ -1371,12 +1391,13 @@ private fun AckToggleRow(
     label: String,
     enabled: Boolean,
     primaryColor: Color,
+    modifier: Modifier = Modifier,
     onToggle: () -> Unit
 ) {
     val color = if (enabled) primaryColor else Color.Gray
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .border(
                 width = 1.dp,

@@ -205,6 +205,19 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
     var showHelpMenu by remember {
         mutableStateOf(false)
     }
+    var showTrainingGround by remember {
+        mutableStateOf(false)
+    }
+    var showPoseSelector by remember {
+        mutableStateOf(false)
+    }
+    // Set when a HelpModule needs a deck that doesn't exist yet (e.g. Quick
+    // Actions Deck's tutorial) -- showCreateDeckDialog opens with that deck
+    // type pre-selected, and once CreateDeckDialog's onCreate fires, this
+    // module starts automatically instead of leaving the user to find it again.
+    var pendingHelpModuleId by remember {
+        mutableStateOf<String?>(null)
+    }
     var isLiveLinkActive by remember { mutableStateOf(false) }
     var watchStateLabel by remember { mutableStateOf("OFFLINE") }
     var watchPoseLabel by remember { mutableStateOf("---") }
@@ -303,17 +316,28 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                             )
                         }
 
+                        if (watchStateLabel == "LOCKED" && watchPoseLabel == "DEF") {
+                            helpManager.onEvent(
+                                HelpEvent.WatchInput("POSE_DEF")
+                            )
+                        }
+
+                        if (watchStateLabel == "LOCKED" && watchPoseLabel == "CON") {
+                            helpManager.onEvent(
+                                HelpEvent.WatchInput("POSE_CON")
+                            )
+                        }
+
                         if (watchStateLabel == "LOCKED" && watchTwistLevel > 0) {
                             helpManager.onEvent(
                                 HelpEvent.WatchInput("MODIFIED")
                             )
                         }
-                    }
 
-                    "ACK_LOG" -> {
-                        val type = intent.getStringExtra("type")
-
-                        if (type == "HW/WATCH") {
+                        // COOLDOWN is entered the instant the watch fires a command,
+                        // whether or not the real /gesture/* output was suppressed for
+                        // training -- so this is the FIRE signal, not the echoed output.
+                        if (watchStateLabel == "COOLDOWN") {
                             helpManager.onEvent(
                                 HelpEvent.WatchInput("FIRE")
                             )
@@ -326,13 +350,19 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                         currentDeckId = newId
                         primaryColor = NeonPalette.getColor(newColorIdx)
                     }
+
+                    "ACK_OVERLAY_CLEARED" -> {
+                        helpManager.onEvent(
+                            HelpEvent.OverlayWasCleared(AckTags.EMOJI_SLOT)
+                        )
+                    }
                 }
             }
         }
         val filter = IntentFilter().apply {
             addAction("ACK_WATCH_STATUS")
-            addAction("ACK_LOG")
             addAction("ACK_DECK_CHANGE")
+            addAction("ACK_OVERLAY_CLEARED")
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -373,6 +403,36 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         }
 
         context.startService(intent)
+    }
+
+    LaunchedEffect(helpManager.activeModule?.id, showTrainingGround) {
+        val isPacedModule = helpManager.activeModule?.id in FieldOpsHelp.pacedModuleIds
+        val mode = when {
+            showTrainingGround -> "LIVE"
+            isPacedModule -> "PACED"
+            else -> "OFF"
+        }
+        WatchSync.sendTrainingMode(context, mode)
+    }
+
+    // Keeps the watch's paced state machine synced to the coach panel's actual
+    // position, since none of these steps advance on a timer:
+    // - FIRE: the watch never completes a held pose on its own; it waits for
+    //   this exact go-ahead, sent the instant the coach panel reaches that step.
+    // - POSE_ID/POSE_DEF/POSE_CON, MODIFIED: sent when the coach panel reaches
+    //   the pose-entry or modifier step, so a reading the watch picked up
+    //   incidentally during the previous transition (e.g. arm motion during the
+    //   wake gesture itself) can't silently consume that step before the
+    //   learner deliberately performs it.
+    LaunchedEffect(helpManager.activeModule?.id, helpManager.currentStepIndex) {
+        val isPacedModule = helpManager.activeModule?.id in FieldOpsHelp.pacedModuleIds
+        if (!isPacedModule) return@LaunchedEffect
+
+        when ((helpManager.currentStep?.action as? HelpAction.WatchEvent)?.eventType) {
+            "FIRE" -> WatchSync.sendTrainingFireReady(context)
+            "POSE_ID", "POSE_DEF", "POSE_CON" -> WatchSync.sendTrainingResetListen(context, "POSE")
+            "MODIFIED" -> WatchSync.sendTrainingResetListen(context, "MODIFIER")
+        }
     }
 
     fun activateDeck(id: String, colorIdx: Int) {
@@ -818,10 +878,17 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                         DeckMenuAction(
                                             text = "MANAGE",
                                             color = Color.White,
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .testTag(AckTags.DECK_MANAGE_BUTTON)
+                                                .helpTarget(AckTags.DECK_MANAGE_BUTTON, primaryColor)
                                         ) {
                                             isDeckManageMode = true
                                             managedDeckId = null
+
+                                            helpManager.onEvent(
+                                                HelpEvent.Interacted(AckTags.DECK_MANAGE_BUTTON)
+                                            )
                                         }
                                     }
                                 } else {
@@ -1192,7 +1259,13 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
 
                     if (showHelpMenu) {
                         HelpMenuDialog(
-                            modules = HelpRegistry.modules,
+                            // The three individual pose walkthroughs stay registered
+                            // with HelpManager (HelpRegistry.modules) for lookup by id,
+                            // but aren't listed directly -- poseTrainingEntryModule is
+                            // the single visible entry point into them.
+                            modules = HelpRegistry.modules.filterNot {
+                                it.id in FieldOpsHelp.pacedModuleIds
+                            },
                             context = HelpContext(
                                 viewMode = viewMode,
                                 deckId = currentDeckId,
@@ -1207,7 +1280,55 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                             },
                             onLaunch = { module ->
                                 showHelpMenu = false
-                                helpManager.start(module.id)
+                                when (module.id) {
+                                    FieldOpsHelp.trainingGroundModule.id -> {
+                                        helpManager.abort()
+                                        showPoseSelector = false
+                                        showTrainingGround = true
+                                    }
+                                    FieldOpsHelp.poseTrainingEntryModule.id -> {
+                                        showTrainingGround = false
+                                        showPoseSelector = true
+                                    }
+                                    QuickActionsDeckHelp.module.id -> {
+                                        showTrainingGround = false
+                                        showPoseSelector = false
+
+                                        val existingDeck = decks.firstOrNull {
+                                            it.type == DeckType.QUICK_ACTIONS
+                                        }
+
+                                        if (existingDeck != null) {
+                                            activateDeck(
+                                                id = existingDeck.id,
+                                                colorIdx = existingDeck.colorIndex
+                                            )
+                                            helpManager.start(module.id)
+                                        } else {
+                                            pendingHelpModuleId = module.id
+                                            showCreateDeckDialog = true
+                                        }
+                                    }
+                                    else -> {
+                                        showTrainingGround = false
+                                        showPoseSelector = false
+                                        helpManager.start(module.id)
+                                    }
+                                }
+                            }
+                        )
+                    }
+
+                    if (showPoseSelector) {
+                        PoseSelectorDialog(
+                            options = FieldOpsHelp.poseOptions,
+                            primaryColor = primaryColor,
+                            onSelect = { moduleId ->
+                                showPoseSelector = false
+                                helpManager.start(moduleId)
+                            },
+                            onDismiss = {
+                                showPoseSelector = false
                             }
                         )
                     }
@@ -1281,6 +1402,7 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                             primaryColor = primaryColor,
                             onDismiss = {
                                 showCreateDeckDialog = false
+                                pendingHelpModuleId = null
                             },
                             onCreate = { name, colorIndex, type ->
                                 val newDeck = CommandRepository.createDeck(
@@ -1302,6 +1424,19 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                 )
 
                                 WatchSync.sendDeckList(context)
+
+                                // Resume whichever tutorial was waiting on this
+                                // deck to exist -- but only if the user actually
+                                // created the type it needed; if they changed
+                                // the type in the dialog, respect that choice
+                                // and just drop the pending tutorial silently.
+                                val pendingId = pendingHelpModuleId
+                                if (pendingId == QuickActionsDeckHelp.module.id &&
+                                    type == DeckType.QUICK_ACTIONS
+                                ) {
+                                    helpManager.start(pendingId)
+                                }
+                                pendingHelpModuleId = null
 
                                 showCreateDeckDialog = false
                             }
@@ -1451,6 +1586,16 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                         manager = helpManager,
                         primaryColor = primaryColor,
                         modifier = coachModifier
+                    )
+                }
+
+                if (showTrainingGround) {
+                    TrainingGroundPanel(
+                        stateLabel = watchStateLabel,
+                        poseLabel = watchPoseLabel,
+                        twistLevel = watchTwistLevel,
+                        primaryColor = primaryColor,
+                        onClose = { showTrainingGround = false }
                     )
                 }
             }

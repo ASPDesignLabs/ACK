@@ -37,6 +37,10 @@ enum class HelpCategory(
     CONTEXTUAL_SYSTEMS(
         title = "CONTEXTUAL SYSTEMS",
         subtitle = "TARGET COMPUTER, GEO-PROTOCOL, AND LOGS"
+    ),
+    FIELD_OPS(
+        title = "FIELD OPS // GESTURE TRAINING",
+        subtitle = "ARM, POSE, MODIFY, AND FIRE FROM THE WATCH"
     )
 }
 

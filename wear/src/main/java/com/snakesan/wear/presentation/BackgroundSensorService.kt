@@ -43,6 +43,30 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private var commandTwistCount = 0
     private var stateStartTime = 0L
     private var lastModifierTime = 0L
+
+    // TRAINING MODE (set by the phone via /sys/training_mode)
+    // OFF   - normal live behavior.
+    // PACED - guided pose walkthroughs. Real output is suppressed, the
+    //         ARMED/POSE_LOCKED auto-timeouts are suspended, and firing waits on
+    //         an explicit go-ahead from the phone (see pacedFireReady) instead of
+    //         a timer -- the state machine only advances for a reason.
+    // LIVE  - Training Ground free practice. Real output is suppressed but timing
+    //         is untouched, so gestures behave exactly as they would live.
+    private enum class TrainingMode { OFF, PACED, LIVE }
+    private var trainingMode = TrainingMode.OFF
+
+    private fun isPacedTraining() = trainingMode == TrainingMode.PACED
+
+    // Set by /sys/training_fire_ready, meaning the phone's coach panel has
+    // actually reached its FIRE step and it's safe to complete the hold. Cleared
+    // on every fresh pose lock (see setPose) and whenever training mode changes,
+    // so a stale go-ahead from a previous rep can never fire the next one.
+    private var pacedFireReady = false
+
+    // Normal live timings.
+    private val armedTimeoutMs = 6000L
+    private val poseLockedTimeoutMs = 6000L
+    private val normalFireDelayMs = 800L
     
     // TARGET STATE
     private var activeTargetIndex = -1 // -1 = None/Cleared
@@ -171,6 +195,52 @@ class BackgroundSensorService : Service(), SensorEventListener {
             }
             "ACTION_ENTER_CRYO" -> enterCryo()
             "ACTION_WAKE_CRYO" -> wakeFromCryo()
+            PoseActions.ACTION_SET_TRAINING_MODE -> {
+                val raw = intent.getStringExtra(PoseActions.EXTRA_TRAINING_MODE) ?: "OFF"
+                trainingMode = try {
+                    TrainingMode.valueOf(raw)
+                } catch (e: IllegalArgumentException) {
+                    TrainingMode.OFF
+                }
+                pacedFireReady = false
+                Log.d("ACK_BG", "Training mode set to $trainingMode")
+                broadcastStatus()
+            }
+            PoseActions.ACTION_TRAINING_FIRE_READY -> {
+                if (isPacedTraining()) {
+                    pacedFireReady = true
+                    Log.d("ACK_BG", "Training fire-ready received (state=$currentState)")
+                }
+            }
+            PoseActions.ACTION_TRAINING_RESET_LISTEN -> {
+                if (isPacedTraining()) {
+                    when (intent.getStringExtra(PoseActions.EXTRA_RESET_TARGET)) {
+                        // Sent when the coach panel reaches the pose-entry step.
+                        // Discards any pose lock the watch may have already picked up
+                        // incidentally (e.g. from arm motion during the wake gesture
+                        // itself) and re-arms cleanly so it's genuinely listening for
+                        // a fresh, deliberate pose from this point on.
+                        "POSE" -> {
+                            currentPose = Pose.NONE
+                            commandTwistCount = 0
+                            pacedFireReady = false
+                            transition(State.ARMED, System.currentTimeMillis())
+                            Log.d("ACK_BG", "Training: reset and listening for pose")
+                        }
+                        // Sent when the coach panel reaches the modifier/twist step.
+                        // Discards any twist count picked up incidentally while
+                        // locking the pose, without disturbing the pose lock itself.
+                        "MODIFIER" -> {
+                            if (currentState == State.POSE_LOCKED) {
+                                commandTwistCount = 0
+                                pacedFireReady = false
+                                broadcastStatus()
+                                Log.d("ACK_BG", "Training: reset and listening for modifier")
+                            }
+                        }
+                    }
+                }
+            }
         }
         return START_STICKY
     }
@@ -374,18 +444,29 @@ class BackgroundSensorService : Service(), SensorEventListener {
             }
 
             State.ARMED -> {
-                if (time - stateStartTime > 6000L) {
+                // Paced training suspends this timeout entirely -- otherwise a
+                // learner mid-instruction gets silently bumped back to IDLE.
+                if (!isPacedTraining() && time - stateStartTime > armedTimeoutMs) {
                     transition(State.IDLE, time)
                 }
             }
 
             State.POSE_LOCKED -> {
-                if (time - stateStartTime > 6000L) {
+                if (!isPacedTraining() && time - stateStartTime > poseLockedTimeoutMs) {
                     transition(State.IDLE, time)
                     return
                 }
 
-                if (time - stateStartTime > 800L) {
+                if (isPacedTraining()) {
+                    // No timer here -- only fire once the phone has actually
+                    // confirmed it reached the FIRE step for this rep.
+                    if (pacedFireReady) {
+                        fireCommand()
+                    }
+                    return
+                }
+
+                if (time - stateStartTime > normalFireDelayMs) {
                     fireCommand()
                 }
             }
@@ -533,6 +614,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private fun setPose(pose: Pose, time: Long) {
         currentPose = pose
         commandTwistCount = 0
+        pacedFireReady = false
         feedback(50, TechSynth.Sfx.LOCK)
         transition(State.POSE_LOCKED, time)
     }
@@ -561,7 +643,14 @@ class BackgroundSensorService : Service(), SensorEventListener {
             Pose.HANDSHAKE -> when (commandTwistCount) { 0 -> "/gesture/nice"; 1 -> "/gesture/same"; 2 -> "/gesture/sorry_wait"; else -> "/gesture/meet_pleasure" }
             else -> "/gesture/generic"
         }
-        sendToPhone(path)
+
+        // In any training mode (paced or live), the pose/fire cycle is reported
+        // via status telemetry only (see broadcastStatus) -- no real command is
+        // sent, so nothing is spoken and no deck/target state changes.
+        if (trainingMode == TrainingMode.OFF) {
+            sendToPhone(path)
+        }
+
         feedback(150, TechSynth.Sfx.FIRE)
         transition(State.COOLDOWN, System.currentTimeMillis())
     }
@@ -591,8 +680,36 @@ class BackgroundSensorService : Service(), SensorEventListener {
         // NEW: Send Active Target to Overseer
         val targetLabel = if(activeTargetIndex == -1) "NONE" else TargetCache.getLabel(activeTargetIndex)
         intent.putExtra("active_target", targetLabel)
-        
+
         sendBroadcast(intent)
+
+        // Phone-facing status telemetry (drives the header readout and the
+        // ARMED/POSE_ID/MODIFIED/FIRE HelpEvents). Sent on every status change,
+        // training or not.
+        sendToPhone(
+            "/sys/status_update",
+            "${currentState.wireLabel()},${currentPose.wireLabel()},$commandTwistCount"
+                .toByteArray(Charsets.UTF_8)
+        )
+    }
+
+    // Maps internal enum names onto the short codes the phone app (WearListenerService/
+    // MainActivity) expects over /sys/status_update, decoupling the wire contract from
+    // these enums' own names.
+    private fun State.wireLabel(): String = when (this) {
+        State.IDLE -> "IDLE"
+        State.GATE_READY -> "GATE_READY"
+        State.ARMED -> "ARMED"
+        State.POSE_LOCKED -> "LOCKED"
+        State.COOLDOWN -> "COOLDOWN"
+        State.CRYO -> "CRYO"
+    }
+
+    private fun Pose.wireLabel(): String = when (this) {
+        Pose.NONE -> "---"
+        Pose.ARM_UP -> "ID"
+        Pose.STOP -> "DEF"
+        Pose.HANDSHAKE -> "CON"
     }
 
     private fun feedback(duration: Long, sfx: TechSynth.Sfx? = null) {
