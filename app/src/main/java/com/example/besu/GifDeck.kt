@@ -565,7 +565,8 @@ private fun GifImportDialog(
                             fontFamily = FontFamily.Monospace
                         )
                     },
-                    singleLine = true
+                    singleLine = true,
+                    colors = NeonTextFieldColors(primaryColor)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -585,7 +586,8 @@ private fun GifImportDialog(
                             fontFamily = FontFamily.Monospace
                         )
                     },
-                    singleLine = true
+                    singleLine = true,
+                    colors = NeonTextFieldColors(primaryColor)
                 )
 
                 if (errorMessage.isNotBlank()) {

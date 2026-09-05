@@ -2149,7 +2149,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
                     )
                 },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = NeonTextFieldColors(primaryColor)
             )
 
             Spacer(modifier = Modifier.height(10.dp))

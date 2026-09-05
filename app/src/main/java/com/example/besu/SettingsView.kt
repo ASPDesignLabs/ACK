@@ -44,6 +44,9 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
     var motTwist by remember { mutableFloatStateOf(prefs.getFloat("MOT_TWIST", 7.0f)) }
     var motPose by remember { mutableFloatStateOf(prefs.getFloat("MOT_POSE", 6.0f)) }
     var headerShortcuts by remember { mutableStateOf(CommandRepository.getHeaderShortcuts(context)) }
+    var forceDeviceRotation by remember {
+        mutableStateOf(OverlayDisplayPrefs.isDeviceRotationEnabled(context))
+    }
 
 
 
@@ -148,6 +151,55 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
                 Slider(value = toneVolume, onValueChange = { toneVolume = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor, inactiveTrackColor = Color.DarkGray))
             }
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            item {
+                Text("VISUAL PROMPT DISPLAY", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    "Text/emoji/GIF prompts fill the screen and rotate their content in place so words display large without wrapping.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "FORCE DEVICE ROTATION",
+                            color = if (forceDeviceRotation) primaryColor else Color.White,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "OFF: rotate the prompt only. ON: rotate the whole screen (old behavior).",
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    NeonToggle(
+                        checked = forceDeviceRotation,
+                        onCheckedChange = { enabled ->
+                            forceDeviceRotation = enabled
+                            OverlayDisplayPrefs.setDeviceRotationEnabled(context, enabled)
+                        },
+                        activeColor = primaryColor
+                    )
+                }
+            }
+
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {

@@ -1,5 +1,7 @@
 package com.example.besu
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -13,11 +15,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.besu.ui.theme.Graphite
+import com.example.besu.ui.theme.VoidBlack
 
 // --- ATOMIC UI COMPONENTS ---
 
@@ -89,3 +94,57 @@ fun HeroButton(text: String, modifier: Modifier = Modifier, mainColor: Color, on
         Text(text.uppercase(), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 4.sp, fontSize = 12.sp)
     }
 }
+
+// Cut-corner cyberpunk stand-in for the stock Material pill-shaped Switch, so
+// on/off toggles match the rest of the NEON design language instead of
+// standing out as a default-themed control.
+@Composable
+fun NeonToggle(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    activeColor: Color = Color(0xFF00F3FF)
+) {
+    val haptic = LocalHapticFeedback.current
+    val thumbOffset by animateDpAsState(
+        targetValue = if (checked) 26.dp else 0.dp,
+        animationSpec = tween(150),
+        label = "toggleThumb"
+    )
+
+    Box(
+        modifier = modifier
+            .width(56.dp)
+            .height(28.dp)
+            .border(1.dp, if (checked) activeColor else Color.DarkGray, CutCornerShape(6.dp))
+            .background(if (checked) activeColor.copy(alpha = 0.12f) else Color.Transparent, CutCornerShape(6.dp))
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onCheckedChange(!checked)
+            }
+            .padding(3.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .offset(x = thumbOffset)
+                .size(20.dp)
+                .background(if (checked) activeColor else Color.Gray, CutCornerShape(3.dp))
+        )
+    }
+}
+
+// Shared focus/border/text colors for OutlinedTextField, matching the
+// VoidBlack-on-primaryColor look used across the Matrix editor and dialogs,
+// instead of the default Material3 purple text field theme.
+@Composable
+fun NeonTextFieldColors(primaryColor: Color) = TextFieldDefaults.colors(
+    focusedTextColor = primaryColor,
+    unfocusedTextColor = primaryColor,
+    focusedContainerColor = VoidBlack,
+    unfocusedContainerColor = VoidBlack,
+    focusedIndicatorColor = primaryColor,
+    unfocusedIndicatorColor = Color.DarkGray,
+    focusedLabelColor = primaryColor,
+    unfocusedLabelColor = Color.Gray,
+    cursorColor = primaryColor
+)
