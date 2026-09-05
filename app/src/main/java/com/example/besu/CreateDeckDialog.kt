@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +58,8 @@ fun CreateDeckDialog(
     var colorIndex by remember {
         mutableIntStateOf(0)
     }
+
+    val helpManager = LocalHelpManager.current
 
     val description = when (deckType) {
         DeckType.MATRIX -> {
@@ -245,7 +248,10 @@ fun CreateDeckDialog(
                 CreateDeckButton(
                     text = "CREATE",
                     color = primaryColor,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(AckTags.DECK_CREATE_COMMIT)
+                        .helpTarget(AckTags.DECK_CREATE_COMMIT, primaryColor)
                 ) {
                     onCreate(
                         deckName.trim().ifBlank {
@@ -259,6 +265,10 @@ fun CreateDeckDialog(
                         },
                         colorIndex,
                         deckType
+                    )
+
+                    helpManager?.onEvent(
+                        HelpEvent.TextCommitted(AckTags.DECK_CREATE_COMMIT)
                     )
                 }
             }
@@ -290,9 +300,12 @@ private fun DeckTypeOption(
 ) {
     val color = if (selected) primaryColor else Color.Gray
     val shape = CutCornerShape(5.dp)
+    val helpManager = LocalHelpManager.current
 
     Box(
         modifier = modifier
+            .testTag(AckTags.DECK_CREATE_TYPE)
+            .helpTarget(AckTags.DECK_CREATE_TYPE, primaryColor)
             .border(
                 width = 1.dp,
                 color = color,
@@ -306,7 +319,12 @@ private fun DeckTypeOption(
                 },
                 shape = shape
             )
-            .clickable(onClick = onClick)
+            .clickable {
+                onClick()
+                helpManager?.onEvent(
+                    HelpEvent.Interacted(AckTags.DECK_CREATE_TYPE)
+                )
+            }
             .padding(vertical = 12.dp, horizontal = 6.dp),
         contentAlignment = Alignment.Center
     ) {

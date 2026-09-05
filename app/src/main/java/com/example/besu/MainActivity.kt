@@ -351,19 +351,10 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                         primaryColor = NeonPalette.getColor(newColorIdx)
                     }
 
-                    "ACK_HELP_EVENT" -> {
-                        // Sent by BackgroundSensorService on the watch as it
-                        // arms, locks a pose, and fires (see sendHelpEvent()
-                        // there). Passed straight through: the watch already
-                        // sends the exact vocabulary HelpModule steps expect
-                        // ("ARMED", "POSE:IDENTITY"/"DEFEND"/"CONNECT",
-                        // "FIRED:<POSE>:SHALLOW"/"DEEP").
-                        val eventType = intent.getStringExtra("type")
-                        if (eventType != null) {
-                            helpManager.onEvent(
-                                HelpEvent.WatchInput(eventType)
-                            )
-                        }
+                    "ACK_OVERLAY_CLEARED" -> {
+                        helpManager.onEvent(
+                            HelpEvent.OverlayWasCleared(AckTags.EMOJI_SLOT)
+                        )
                     }
                 }
             }
@@ -371,7 +362,7 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         val filter = IntentFilter().apply {
             addAction("ACK_WATCH_STATUS")
             addAction("ACK_DECK_CHANGE")
-            addAction("ACK_HELP_EVENT")
+            addAction("ACK_OVERLAY_CLEARED")
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -887,10 +878,17 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                         DeckMenuAction(
                                             text = "MANAGE",
                                             color = Color.White,
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .testTag(AckTags.DECK_MANAGE_BUTTON)
+                                                .helpTarget(AckTags.DECK_MANAGE_BUTTON, primaryColor)
                                         ) {
                                             isDeckManageMode = true
                                             managedDeckId = null
+
+                                            helpManager.onEvent(
+                                                HelpEvent.Interacted(AckTags.DECK_MANAGE_BUTTON)
+                                            )
                                         }
                                     }
                                 } else {
