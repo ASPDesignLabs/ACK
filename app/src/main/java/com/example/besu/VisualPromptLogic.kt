@@ -64,6 +64,36 @@ object VisualPresetRepository {
     }
 }
 
+// --- OVERLAY DISPLAY MODE (PROTOCOL TOGGLE) ---
+
+/*
+ * Wide visual prompts (text/emoji/GIF) used to force the whole device into
+ * landscape via WindowManager.LayoutParams.screenOrientation. That triggers a
+ * real configuration change, and MainActivity -- which doesn't declare
+ * android:configChanges for orientation -- gets destroyed and recreated, so
+ * whatever tab the user was on is lost and they land back on TERMINAL (logs)
+ * once the prompt clears. The default behavior now rotates only the prompt's
+ * content in place (VisualPromptService.showOverlay) so the device orientation
+ * never changes. This flag lets a user opt back into the old device-rotation
+ * behavior from PROTOCOL if they prefer it.
+ */
+object OverlayDisplayPrefs {
+    private const val PREFS_NAME = "ack_visual_presets"
+    private const val KEY_FORCE_DEVICE_ROTATION = "force_device_rotation"
+
+    fun isDeviceRotationEnabled(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_FORCE_DEVICE_ROTATION, false)
+    }
+
+    fun setDeviceRotationEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_FORCE_DEVICE_ROTATION, enabled)
+            .apply()
+    }
+}
+
 // --- LOGIC ENGINE ---
 
 object VisualLogicEngine {

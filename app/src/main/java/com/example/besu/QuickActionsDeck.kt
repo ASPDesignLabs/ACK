@@ -422,7 +422,8 @@ private fun QuickActionEditorDialog(
                     label = {
                         Text("BUTTON LABEL")
                     },
-                    singleLine = true
+                    singleLine = true,
+                    colors = NeonTextFieldColors(primaryColor)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -436,6 +437,7 @@ private fun QuickActionEditorDialog(
                     label = {
                         Text("PHRASE TEMPLATE")
                     },
+                    colors = NeonTextFieldColors(primaryColor),
                     minLines = 3
                 )
 
@@ -465,29 +467,32 @@ private fun QuickActionEditorDialog(
                                     tag?.let { "VAR:$it" } ?: "VAR ${index + 1}"
                                 )
                             },
-                            singleLine = true
+                            singleLine = true,
+                            colors = NeonTextFieldColors(primaryColor)
                         )
                     }
                 }
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    onSave(
-                        label,
-                        template,
-                        localValues
-                    )
-                }
+            NeonButton(
+                text = "SAVE",
+                mainColor = primaryColor
             ) {
-                Text("SAVE")
+                onSave(
+                    label,
+                    template,
+                    localValues
+                )
             }
         },
         dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("CANCEL")
-            }
+            NeonButton(
+                text = "CANCEL",
+                isActive = false,
+                mainColor = primaryColor,
+                onClick = onDismiss
+            )
         }
     )
 }
@@ -537,7 +542,8 @@ private fun QuickActionGroupEditorDialog(
                     label = {
                         Text("GROUP LABEL")
                     },
-                    singleLine = true
+                    singleLine = true,
+                    colors = NeonTextFieldColors(primaryColor)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -590,18 +596,20 @@ private fun QuickActionGroupEditorDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    onSave(label, rootCategory, boundPose)
-                }
+            NeonButton(
+                text = "SAVE",
+                mainColor = primaryColor
             ) {
-                Text("SAVE")
+                onSave(label, rootCategory, boundPose)
             }
         },
         dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("CANCEL")
-            }
+            NeonButton(
+                text = "CANCEL",
+                isActive = false,
+                mainColor = primaryColor,
+                onClick = onDismiss
+            )
         }
     )
 }

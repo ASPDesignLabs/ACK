@@ -425,6 +425,22 @@ class VisualPromptService : Service() {
     ) {
         clearOverlay(stopService = false)
 
+        /*
+         * landscapeLayout wants maximum width for large, unwrapped text. That
+         * used to be done by forcing the whole device into landscape (below),
+         * which destroys/recreates MainActivity and drops the user back on the
+         * TERMINAL tab once the prompt clears. Instead, by default, rotate just
+         * the content 90 degrees in place: it's sized as if it were landscape
+         * (width = screen height, height = screen width) and then spun to fill
+         * the actual (unrotated) screen bounds exactly, so device orientation
+         * never changes. PROTOCOL has a toggle back to the old forced-rotation
+         * behavior for anyone who prefers it.
+         */
+        val forceDeviceRotation = landscapeLayout &&
+                OverlayDisplayPrefs.isDeviceRotationEnabled(this)
+
+        val rotateContentInPlace = landscapeLayout && !forceDeviceRotation
+
         val root = FrameLayout(this).apply {
             /*
              * Opaque on purpose: no underlying app/UI should remain visible at the
@@ -432,14 +448,33 @@ class VisualPromptService : Service() {
              */
             setBackgroundColor(Color.BLACK)
 
-            addView(
-                content,
+            if (rotateContentInPlace) {
+                // The rotated child is wider than this parent (its unrotated
+                // width is the screen's height), so it must not be clipped to
+                // the parent's own bounds before the rotation transform lands
+                // it back inside the screen.
+                setClipChildren(false)
+            }
+
+            val contentParams = if (rotateContentInPlace) {
+                val screenBounds = windowManager.currentWindowMetrics.bounds
+
+                content.rotation = CONTENT_FILL_ROTATION_DEGREES
+
+                FrameLayout.LayoutParams(
+                    screenBounds.height(),
+                    screenBounds.width(),
+                    Gravity.CENTER
+                )
+            } else {
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.WRAP_CONTENT,
                     Gravity.CENTER
                 )
-            )
+            }
+
+            addView(content, contentParams)
         }
 
         if (requireHoldToClear) {
@@ -473,7 +508,7 @@ class VisualPromptService : Service() {
             x = 0
             y = 0
 
-            if (landscapeLayout) {
+            if (forceDeviceRotation) {
                 screenOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             }
 
@@ -586,6 +621,10 @@ class VisualPromptService : Service() {
         private const val EMOJI_LABEL_TEXT_SIZE_SP = 28f
         private const val GIF_TITLE_TEXT_SIZE_SP = 22f
         private const val HOLD_HINT_TEXT_SIZE_SP = 11f
+
+        // Rotates the in-place "fill the screen" content to read left-to-right,
+        // matching the direction SCREEN_ORIENTATION_LANDSCAPE used to produce.
+        private const val CONTENT_FILL_ROTATION_DEGREES = -90f
     }
 }
 

@@ -18,8 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -150,7 +148,7 @@ fun TrainingGroundPanel(
                             letterSpacing = 0.8.sp
                         )
 
-                        Switch(
+                        NeonToggle(
                             checked = gameModeEnabled,
                             onCheckedChange = { enabled ->
                                 if (!enabled) {
@@ -159,10 +157,7 @@ fun TrainingGroundPanel(
                                 }
                                 gameModeEnabled = enabled
                             },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = primaryColor,
-                                checkedTrackColor = primaryColor.copy(alpha = 0.4f)
-                            )
+                            activeColor = primaryColor
                         )
                     }
 
