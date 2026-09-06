@@ -187,50 +187,54 @@ private fun DeckConfigScreen(
     var selectedProfile by remember { mutableStateOf(game.profile) }
     var selectedDifficulty by remember { mutableStateOf(game.difficulty) }
     var selectedDuration by remember { mutableIntStateOf(game.durationSeconds) }
+    var isDeckExpanded by remember { mutableStateOf(false) }
+    var isProfileExpanded by remember { mutableStateOf(false) }
     var isDurationExpanded by remember { mutableStateOf(false) }
 
     Column {
-        Text(
-            text = "DECK",
-            color = Color.Gray,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp
+        ExpandableHeaderRow(
+            label = "DECK: ${selectedDeck.name}",
+            isExpanded = isDeckExpanded,
+            primaryColor = primaryColor,
+            onToggle = { isDeckExpanded = !isDeckExpanded }
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        if (isDeckExpanded) {
+            Spacer(modifier = Modifier.height(4.dp))
 
-        eligibleDecks.forEach { deckMeta ->
-            PickRow(
-                label = "${deckMeta.name} // ${deckMeta.type.name.replace('_', ' ')}",
-                isSelected = deckMeta.id == selectedDeck.id,
-                primaryColor = primaryColor,
-                onClick = { selectedDeck = deckMeta }
-            )
-            Spacer(modifier = Modifier.height(6.dp))
+            eligibleDecks.forEach { deckMeta ->
+                PickRow(
+                    label = "${deckMeta.name} // ${deckMeta.type.name.replace('_', ' ')}",
+                    isSelected = deckMeta.id == selectedDeck.id,
+                    primaryColor = primaryColor,
+                    onClick = { selectedDeck = deckMeta }
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+            }
         }
 
         if (selectedDeck.type == DeckType.MATRIX) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "PROFILE",
-                color = Color.Gray,
-                fontSize = 9.sp,
-                fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+            ExpandableHeaderRow(
+                label = "PROFILE: $selectedProfile",
+                isExpanded = isProfileExpanded,
+                primaryColor = primaryColor,
+                onToggle = { isProfileExpanded = !isProfileExpanded }
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            if (isProfileExpanded) {
+                Spacer(modifier = Modifier.height(4.dp))
 
-            CommandRepository.PROFILES.forEach { prof ->
-                PickRow(
-                    label = prof,
-                    isSelected = prof == selectedProfile,
-                    primaryColor = primaryColor,
-                    onClick = { selectedProfile = prof }
-                )
-                Spacer(modifier = Modifier.height(6.dp))
+                CommandRepository.PROFILES.forEach { prof ->
+                    PickRow(
+                        label = prof,
+                        isSelected = prof == selectedProfile,
+                        primaryColor = primaryColor,
+                        onClick = { selectedProfile = prof }
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
             }
         }
 
@@ -500,6 +504,42 @@ private fun DeckResultsScreen(
 
             DeckHistoryList(results = game.history.take(5), primaryColor = primaryColor)
         }
+    }
+}
+
+// Same collapsed-summary/[EXPAND]/[COLLAPSE] shape as the duration control
+// below it -- used for DECK and PROFILE so picking either doesn't force a
+// full list onto the screen every time the config screen is open.
+@Composable
+private fun ExpandableHeaderRow(
+    label: String,
+    isExpanded: Boolean,
+    primaryColor: Color,
+    onToggle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            color = primaryColor,
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.8.sp
+        )
+
+        Text(
+            text = if (isExpanded) "[COLLAPSE]" else "[EXPAND]",
+            color = Color.Gray,
+            fontSize = 9.sp,
+            fontFamily = FontFamily.Monospace
+        )
     }
 }
 

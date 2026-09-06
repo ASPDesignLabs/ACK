@@ -167,7 +167,15 @@ class DeckTrainerController(private val context: Context) {
 
     private fun rollTarget() {
         val (code, label) = TRAINABLE_POSES.random()
-        val twist = (0..3).random()
+
+        // EASY/HARD don't require the mod to match (see onFireDetected), so
+        // any twist under the right pose scores a hit -- but the screen still
+        // shows one specific statement. Pinning that to twist 0 keeps it a
+        // real, verifiable phrase: mod 0 is always a valid way to produce it,
+        // rather than a random twist whose phrase might differ from whatever
+        // twist the user actually fires.
+        val twist = if (difficulty.usesMod) (0..3).random() else 0
+
         target = DeckTrainerTarget(
             poseCode = code,
             poseLabel = label,
