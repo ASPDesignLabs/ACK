@@ -108,6 +108,27 @@ object FieldOpsHelp {
         )
     )
 
+    // Not a guided walkthrough -- MainActivity intercepts this module's id
+    // before calling HelpManager.start() and opens DeckTrainerPanel instead:
+    // a scored drill like Training Ground, but the prompt it shows is a real
+    // statement resolved from the deck (and Matrix profile) the user picks,
+    // rather than a bare pose/mod label.
+    val deckTrainerModule = HelpModule(
+        id = "field_ops_deck_trainer",
+        category = HelpCategory.FIELD_OPS,
+        title = "DECK TRAINER",
+        summary = "SCORED PRACTICE AGAINST YOUR OWN MATRIX OR QUICK ACTIONS DECK.",
+        steps = listOf(
+            HelpStep(
+                id = "live",
+                title = "DECK TRAINER",
+                body = "Pick a deck (and, for Matrix, a profile) to train against. " +
+                    "Each round shows the real statement that pose/modifier combo " +
+                    "resolves to in your own configuration -- root variables included."
+            )
+        )
+    )
+
     data class PoseOption(
         val moduleId: String,
         val label: String,
@@ -145,5 +166,5 @@ object FieldOpsHelp {
     val pacedModules = listOf(identityModule, defendModule, connectModule)
     val pacedModuleIds: Set<String> = pacedModules.map { it.id }.toSet()
 
-    val modules = pacedModules + trainingGroundModule + poseTrainingEntryModule
+    val modules = pacedModules + trainingGroundModule + deckTrainerModule + poseTrainingEntryModule
 }
