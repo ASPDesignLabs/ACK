@@ -391,18 +391,22 @@ private fun DeckPlayingScreen(
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // EUROPEAN_EXTREME is the final reinforcement step: recall the
+            // gesture from the phrase alone, with no pose/mod hint at all.
+            if (game.difficulty != GameDifficulty.EUROPEAN_EXTREME) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            val gestureText = game.target.poseLabel +
-                if (game.difficulty.usesMod) " + MOD ${game.target.twist}" else ""
-            Text(
-                text = gestureText,
-                color = primaryColor.copy(alpha = 0.7f),
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.6.sp
-            )
+                val gestureText = game.target.poseLabel +
+                    if (game.difficulty.usesMod) " + MOD ${game.target.twist}" else ""
+                Text(
+                    text = gestureText,
+                    color = primaryColor.copy(alpha = 0.7f),
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.6.sp
+                )
+            }
 
             if (!game.difficulty.usesMod) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -676,7 +680,8 @@ private fun describeDeckDifficulty(difficulty: GameDifficulty): String = when (d
     GameDifficulty.EASY -> "ANY MODIFIER UNDER THE RIGHT POSE COUNTS. NO PENALTY FOR A MISS."
     GameDifficulty.NORMAL -> "MUST MATCH THE EXACT STATEMENT SHOWN. NO PENALTY FOR A MISS."
     GameDifficulty.HARD -> "ANY MODIFIER UNDER THE RIGHT POSE COUNTS. -${difficulty.penaltyPoints} FOR A MISS."
-    GameDifficulty.EUROPEAN_EXTREME -> "MUST MATCH THE EXACT STATEMENT SHOWN. -${difficulty.penaltyPoints} FOR A MISS."
+    GameDifficulty.EUROPEAN_EXTREME -> "PHRASE ONLY -- NO POSE/MOD HINT SHOWN. " +
+        "-${difficulty.penaltyPoints} FOR A MISS."
 }
 
 private fun formatClock(totalSeconds: Int): String {
