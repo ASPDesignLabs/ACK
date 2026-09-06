@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -107,11 +106,11 @@ fun NeonToggle(
     activeColor: Color = Color(0xFF00F3FF)
 ) {
     val haptic = LocalHapticFeedback.current
-    val thumbOffset by animateDpAsState(
+    val thumbOffset = animateDpAsState(
         targetValue = if (checked) 26.dp else 0.dp,
         animationSpec = tween(150),
         label = "toggleThumb"
-    )
+    ).value
 
     Box(
         modifier = modifier
