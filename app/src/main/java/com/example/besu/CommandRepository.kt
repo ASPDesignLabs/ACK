@@ -1146,18 +1146,21 @@ object CommandRepository {
         return "$deckPrefix$profilePrefix$path"
     }
 
-    fun getPhrase(context: Context, storagePath: String): String {
+    fun getPhrase(
+        context: Context,
+        storagePath: String,
+        deckId: String = getActiveDeckId(context),
+        profile: String = getActiveProfile(context)
+    ): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val activeDeckId = getActiveDeckId(context)
-        val activeProfile = getActiveProfile(context)
 
         // 1. Deck + profile-specific value.
         //
         // Use contains() rather than isNullOrEmpty(): an intentionally blank
         // saved prompt is still a valid prompt and must override the default.
         val specificKey = generateStorageKey(
-            activeDeckId,
-            activeProfile,
+            deckId,
+            profile,
             storagePath
         )
 
@@ -1165,10 +1168,10 @@ object CommandRepository {
             return prefs.getString(specificKey, "").orEmpty()
         }
 
-        // 2. Default profile fallback for the active deck.
-        if (activeProfile != "DEFAULT") {
+        // 2. Default profile fallback for the deck.
+        if (profile != "DEFAULT") {
             val defaultProfileKey = generateStorageKey(
-                activeDeckId,
+                deckId,
                 "DEFAULT",
                 storagePath
             )
@@ -1212,9 +1215,14 @@ object CommandRepository {
             }
 
     // --- VARIABLES ---
-    fun getVariableValues(context: Context, storagePath: String): List<String> {
+    fun getVariableValues(
+        context: Context,
+        storagePath: String,
+        deckId: String = getActiveDeckId(context),
+        profile: String = getActiveProfile(context)
+    ): List<String> {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val key = generateStorageKey(getActiveDeckId(context), getActiveProfile(context), storagePath) + "_vars"
+        val key = generateStorageKey(deckId, profile, storagePath) + "_vars"
         val raw = prefs.getString(key, "[]") ?: "[]"
         return try { Json.decodeFromString(raw) } catch(e: Exception) { emptyList() }
     }
@@ -1294,12 +1302,14 @@ object CommandRepository {
 
     fun getResolvedPhrase(
         context: Context,
-        storagePath: String
+        storagePath: String,
+        deckId: String = getActiveDeckId(context),
+        profile: String = getActiveProfile(context)
     ): String {
         refreshCache(context)
 
-        val template = getPhrase(context, storagePath)
-        val localValues = getVariableValues(context, storagePath)
+        val template = getPhrase(context, storagePath, deckId, profile)
+        val localValues = getVariableValues(context, storagePath, deckId, profile)
 
         val category = cachedNodes
             .find { node ->

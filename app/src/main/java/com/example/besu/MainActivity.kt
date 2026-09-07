@@ -208,6 +208,9 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
     var showTrainingGround by remember {
         mutableStateOf(false)
     }
+    var showDeckTrainer by remember {
+        mutableStateOf(false)
+    }
     var showPoseSelector by remember {
         mutableStateOf(false)
     }
@@ -405,10 +408,10 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         context.startService(intent)
     }
 
-    LaunchedEffect(helpManager.activeModule?.id, showTrainingGround) {
+    LaunchedEffect(helpManager.activeModule?.id, showTrainingGround, showDeckTrainer) {
         val isPacedModule = helpManager.activeModule?.id in FieldOpsHelp.pacedModuleIds
         val mode = when {
-            showTrainingGround -> "LIVE"
+            showTrainingGround || showDeckTrainer -> "LIVE"
             isPacedModule -> "PACED"
             else -> "OFF"
         }
@@ -1284,14 +1287,23 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                     FieldOpsHelp.trainingGroundModule.id -> {
                                         helpManager.abort()
                                         showPoseSelector = false
+                                        showDeckTrainer = false
                                         showTrainingGround = true
+                                    }
+                                    FieldOpsHelp.deckTrainerModule.id -> {
+                                        helpManager.abort()
+                                        showPoseSelector = false
+                                        showTrainingGround = false
+                                        showDeckTrainer = true
                                     }
                                     FieldOpsHelp.poseTrainingEntryModule.id -> {
                                         showTrainingGround = false
+                                        showDeckTrainer = false
                                         showPoseSelector = true
                                     }
                                     QuickActionsDeckHelp.module.id -> {
                                         showTrainingGround = false
+                                        showDeckTrainer = false
                                         showPoseSelector = false
 
                                         val existingDeck = decks.firstOrNull {
@@ -1311,6 +1323,7 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                     }
                                     else -> {
                                         showTrainingGround = false
+                                        showDeckTrainer = false
                                         showPoseSelector = false
                                         helpManager.start(module.id)
                                     }
@@ -1596,6 +1609,17 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                         twistLevel = watchTwistLevel,
                         primaryColor = primaryColor,
                         onClose = { showTrainingGround = false }
+                    )
+                }
+
+                if (showDeckTrainer) {
+                    DeckTrainerPanel(
+                        stateLabel = watchStateLabel,
+                        poseLabel = watchPoseLabel,
+                        twistLevel = watchTwistLevel,
+                        decks = decks,
+                        primaryColor = primaryColor,
+                        onClose = { showDeckTrainer = false }
                     )
                 }
             }
