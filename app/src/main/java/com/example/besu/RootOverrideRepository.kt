@@ -23,6 +23,7 @@ data class RootOverrideConfig(
 object RootOverrideRepository {
     private const val PREFS_NAME = "ack_matrix_config"
     private const val KEY_PREFIX = "root_override_"
+    private const val KEY_COLLAPSED = "root_override_section_collapsed"
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -62,5 +63,21 @@ object RootOverrideRepository {
         tag: String
     ): RootOverrideValue {
         return getConfig(context, category).slots[tag] ?: RootOverrideValue()
+    }
+
+    /*
+     * Whether the SHARED ROOT VARIABLES section is collapsed. This is a
+     * single app-wide preference (not per-category) so the user sets it
+     * once and every ROOT block honors it consistently. Defaults to
+     * expanded -- collapsed must never be the out-of-the-box state.
+     */
+    fun isSectionCollapsed(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_COLLAPSED, false)
+    }
+
+    fun setSectionCollapsed(context: Context, collapsed: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_COLLAPSED, collapsed).apply()
     }
 }

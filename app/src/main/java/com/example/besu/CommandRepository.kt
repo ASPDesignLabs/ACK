@@ -50,6 +50,16 @@ data class MatrixNode(
     val category: String
 )
 
+// A user-created "additional context" layer. It reuses one of the three
+// immutable poses' physical gesture triggers (basePose) under a custom name,
+// so the wearer's existing IDENTITY/DEFEND/CONNECT poses can carry a second
+// (or third, etc.) set of phrases when this layer is focused.
+@Serializable
+data class CustomContextEntry(
+    val name: String,
+    val basePose: String = "IDENTITY"
+)
+
 object CommandRepository {
     private const val PREFS_NAME = "ack_matrix_config"
     
@@ -71,6 +81,8 @@ object CommandRepository {
 
     private const val EMERGENCY_PREFIX = "emergency_"
     private const val EMERGENCY_SUFFIX = "_config"
+
+    private const val ROOT_OVERRIDE_PREFIX = "root_override_"
 
     // Standard Profiles
     val PROFILES = listOf("DEFAULT", "WORK", "HIGH_STRESS", "SOCIAL", "BUILDER")
@@ -785,16 +797,6 @@ object CommandRepository {
         colorIndex: Int,
         type: DeckType
     ): DeckMeta {
-        /*
-         * DEFAULT is the permanent Matrix deck. New Matrix decks are no longer
-         * supported, even if an old UI route accidentally attempts creation.
-         *
-         * Existing legacy Matrix decks remain readable and deletable.
-         */
-        require(type != DeckType.MATRIX) {
-            "New MATRIX decks are not supported. Use the DEFAULT Matrix deck."
-        }
-
         val prefs = context.getSharedPreferences(
             PREFS_NAME,
             Context.MODE_PRIVATE
@@ -808,7 +810,7 @@ object CommandRepository {
             .take(40)
             .ifBlank {
                 when (type) {
-                    DeckType.MATRIX -> "DEFAULT"
+                    DeckType.MATRIX -> "MATRIX"
                     DeckType.QUICK_ACTIONS -> "QUICK ACTIONS"
                     DeckType.EMERGENCY -> "EMERGENCY"
                     DeckType.EMOJI -> "EMOJI"
@@ -1356,29 +1358,257 @@ object CommandRepository {
         prefs.edit().putString("header_shortcuts", Json.encodeToString(shortcuts)).apply()
     }
 
-    // --- CACHE & HELPERS ---
-    fun createCustomCategory(context: Context, catName: String) {
+    // --- CUSTOM CONTEXT LAYERS (MANAGE CONTEXT) ---
+
+    // The default "twist" labels/phrases every custom context layer starts
+    // with, independent of which pose's gestures it is assigned to. This
+    // matches the placeholder text custom categories have always shipped
+    // with, so migrated (legacy IDENTITY-only) entries render identically.
+    private val CUSTOM_SLOT_DEFAULTS = listOf(
+        "Twist 0 (Mapped)" to "Yes.",
+        "Twist 1 (Mapped)" to "No.",
+        "Twist 2 (Mapped)" to "Maybe.",
+        "Twist 3 (Mapped)" to "Explain."
+    )
+
+    private val CUSTOM_CONTEXT_NAME_PATTERN = Regex("^[A-Z0-9 _-]{1,24}$")
+
+    fun getCustomContextEntries(context: Context): List<CustomContextEntry> {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val existingSet = prefs.getStringSet(CUSTOM_CATS_KEY, mutableSetOf()) ?: mutableSetOf()
-        
-        if (!existingSet.contains(catName)) {
-            existingSet.add(catName)
-            prefs.edit().putStringSet(CUSTOM_CATS_KEY, existingSet).apply()
-            refreshCache(context)
+
+        val raw = try {
+            prefs.getString(CUSTOM_CATS_KEY, null)
+        } catch (_: ClassCastException) {
+            // A restored backup (or pre-migration install) may still hold the
+            // legacy Set<String> under this key.
+            null
         }
+
+        if (raw != null) {
+            return try {
+                Json.decodeFromString<List<CustomContextEntry>>(raw)
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+
+        // Legacy format: an unordered Set<String>, every entry implicitly
+        // bound to IDENTITY's gesture set -- the only mapping that used to
+        // exist. Migrate it once to the ordered list format so it gains a
+        // stable order and can be reassigned/renamed going forward.
+        val legacySet = prefs.getStringSet(CUSTOM_CATS_KEY, null) ?: return emptyList()
+
+        val migrated = legacySet.sorted().map { name ->
+            CustomContextEntry(name = name, basePose = "IDENTITY")
+        }
+
+        persistCustomContextEntries(context, migrated)
+        return migrated
+    }
+
+    private fun persistCustomContextEntries(
+        context: Context,
+        entries: List<CustomContextEntry>
+    ) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(CUSTOM_CATS_KEY, Json.encodeToString(entries)).apply()
+    }
+
+    /**
+     * Adds a new custom context layer. Fails (returns false) on a blank,
+     * malformed, reserved (IDENTITY/DEFEND/CONNECT), or already-used name.
+     */
+    fun addCustomContextEntry(
+        context: Context,
+        name: String,
+        basePose: String
+    ): Boolean {
+        val cleanName = name.trim().uppercase()
+        val safePose = basePose.takeIf { it in POSE_CATEGORIES } ?: "IDENTITY"
+
+        if (!CUSTOM_CONTEXT_NAME_PATTERN.matches(cleanName) || cleanName in POSE_CATEGORIES) {
+            return false
+        }
+
+        val current = getCustomContextEntries(context)
+
+        if (current.any { it.name == cleanName }) {
+            return false
+        }
+
+        persistCustomContextEntries(
+            context,
+            current + CustomContextEntry(name = cleanName, basePose = safePose)
+        )
+
+        refreshCache(context)
+        return true
+    }
+
+    /**
+     * Renames an existing custom context layer, carrying every saved
+     * phrase, variable, visual override, root override, and the active
+     * focus pointer (if it pointed at this layer) over to the new name.
+     */
+    fun renameCustomContextEntry(
+        context: Context,
+        oldName: String,
+        newName: String
+    ): Boolean {
+        val cleanName = newName.trim().uppercase()
+
+        if (cleanName == oldName) {
+            return true
+        }
+
+        if (!CUSTOM_CONTEXT_NAME_PATTERN.matches(cleanName) || cleanName in POSE_CATEGORIES) {
+            return false
+        }
+
+        val current = getCustomContextEntries(context)
+
+        if (current.none { it.name == oldName } || current.any { it.name == cleanName }) {
+            return false
+        }
+
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        val oldFragment = "/custom/$oldName/"
+        val newFragment = "/custom/$cleanName/"
+
+        prefs.all.forEach { (key, value) ->
+            if (key.contains(oldFragment)) {
+                val migratedKey = key.replace(oldFragment, newFragment)
+
+                editor.remove(key)
+
+                when (value) {
+                    is String -> editor.putString(migratedKey, value)
+                    is Boolean -> editor.putBoolean(migratedKey, value)
+                    is Int -> editor.putInt(migratedKey, value)
+                    is Float -> editor.putFloat(migratedKey, value)
+                    is Long -> editor.putLong(migratedKey, value)
+                }
+            }
+        }
+
+        prefs.getString("$ROOT_OVERRIDE_PREFIX$oldName", null)?.let { value ->
+            editor.remove("$ROOT_OVERRIDE_PREFIX$oldName")
+            editor.putString("$ROOT_OVERRIDE_PREFIX$cleanName", value)
+        }
+
+        if (getActiveCategoryFocus(context) == oldName) {
+            editor.putString(ACTIVE_CAT_KEY, cleanName)
+        }
+
+        editor.apply()
+
+        persistCustomContextEntries(
+            context,
+            current.map { entry ->
+                if (entry.name == oldName) entry.copy(name = cleanName) else entry
+            }
+        )
+
+        refreshCache(context)
+        return true
+    }
+
+    /** Changes which base pose's gestures activate this layer when focused. */
+    fun reassignCustomContextPose(
+        context: Context,
+        name: String,
+        basePose: String
+    ): Boolean {
+        val safePose = basePose.takeIf { it in POSE_CATEGORIES } ?: return false
+        val current = getCustomContextEntries(context)
+
+        if (current.none { it.name == name }) {
+            return false
+        }
+
+        persistCustomContextEntries(
+            context,
+            current.map { entry ->
+                if (entry.name == name) entry.copy(basePose = safePose) else entry
+            }
+        )
+
+        refreshCache(context)
+        return true
+    }
+
+    /**
+     * Permanently removes a custom context layer along with every phrase,
+     * variable, visual override, and root override it owns, across every
+     * deck and profile. Callers are expected to confirm with the user first.
+     */
+    fun removeCustomContextEntry(context: Context, name: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val current = getCustomContextEntries(context)
+        val editor = prefs.edit()
+        val fragment = "/custom/$name/"
+
+        prefs.all.keys.forEach { key ->
+            if (key.contains(fragment)) {
+                editor.remove(key)
+            }
+        }
+
+        editor.remove("$ROOT_OVERRIDE_PREFIX$name")
+
+        if (getActiveCategoryFocus(context) == name) {
+            editor.putString(ACTIVE_CAT_KEY, "IDENTITY")
+        }
+
+        editor.apply()
+
+        persistCustomContextEntries(
+            context,
+            current.filterNot { it.name == name }
+        )
+
+        refreshCache(context)
+    }
+
+    /** Moves a custom context layer up (-1) or down (+1) in display order. */
+    fun moveCustomContextEntry(context: Context, name: String, offset: Int) {
+        val current = getCustomContextEntries(context).toMutableList()
+        val index = current.indexOfFirst { it.name == name }
+        val targetIndex = index + offset
+
+        if (index == -1 || targetIndex !in current.indices) {
+            return
+        }
+
+        val entry = current.removeAt(index)
+        current.add(targetIndex, entry)
+
+        persistCustomContextEntries(context, current)
+        refreshCache(context)
     }
 
     private fun refreshCache(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val customCats = prefs.getStringSet(CUSTOM_CATS_KEY, emptySet()) ?: emptySet()
-        
         cachedNodes = BASE_TEMPLATE.toMutableList()
-        
-        customCats.forEach { cat ->
-            cachedNodes.add(MatrixNode("/custom/$cat/1", "/gesture/thumbsup", "Twist 0 (Mapped)", "Yes.", cat))
-            cachedNodes.add(MatrixNode("/custom/$cat/2", "/gesture/wave", "Twist 1 (Mapped)", "No.", cat))
-            cachedNodes.add(MatrixNode("/custom/$cat/3", "/gesture/ask_name", "Twist 2 (Mapped)", "Maybe.", cat))
-            cachedNodes.add(MatrixNode("/custom/$cat/4", "/gesture/name", "Twist 3 (Mapped)", "Explain.", cat))
+
+        getCustomContextEntries(context).forEach { entry ->
+            val poseTriggers = BASE_TEMPLATE.filter { it.category == entry.basePose }
+
+            poseTriggers.forEachIndexed { index, baseNode ->
+                val (label, defaultPhrase) = CUSTOM_SLOT_DEFAULTS.getOrElse(index) {
+                    "Twist $index (Mapped)" to ""
+                }
+
+                cachedNodes.add(
+                    MatrixNode(
+                        path = "/custom/${entry.name}/${index + 1}",
+                        triggerPath = baseNode.triggerPath,
+                        label = label,
+                        defaultPhrase = defaultPhrase,
+                        category = entry.name
+                    )
+                )
+            }
         }
     }
 

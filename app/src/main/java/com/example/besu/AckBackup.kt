@@ -16,6 +16,11 @@ data class AckBackup(
     // Explicit root A/B/C override storage, keyed by category.
     val rootOverrides: Map<String, RootOverrideConfig> = emptyMap(),
 
+    // Custom context layers (MANAGE CONTEXT), including each one's assigned
+    // base pose and display order. Empty on backups made before this field
+    // existed -- restore falls back to deriving names from matrixData keys.
+    val customContextEntries: List<CustomContextEntry> = emptyList(),
+
     // Restores the user's current operating context after import.
     val activeDeckId: String = "DEFAULT",
     val activeDeckColorIndex: Int = 0,

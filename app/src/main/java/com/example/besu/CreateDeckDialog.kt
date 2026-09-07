@@ -63,7 +63,7 @@ fun CreateDeckDialog(
 
     val description = when (deckType) {
         DeckType.MATRIX -> {
-            "The permanent system Matrix deck."
+            "A full 3-pose Matrix with its own phrases, context layers, and profiles."
         }
 
         DeckType.QUICK_ACTIONS -> {
@@ -131,6 +131,19 @@ fun CreateDeckDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     DeckTypeOption(
+                        text = "MATRIX",
+                        selected = deckType == DeckType.MATRIX,
+                        primaryColor = primaryColor,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        deckType = DeckType.MATRIX
+
+                        if (deckName.isDefaultDeckName()) {
+                            deckName = "MATRIX"
+                        }
+                    }
+
+                    DeckTypeOption(
                         text = "QUICK ACTIONS",
                         selected = deckType == DeckType.QUICK_ACTIONS,
                         primaryColor = primaryColor,
@@ -142,7 +155,12 @@ fun CreateDeckDialog(
                             deckName = "QUICK ACTIONS"
                         }
                     }
+                }
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     DeckTypeOption(
                         text = "EMERGENCY",
                         selected = deckType == DeckType.EMERGENCY,
@@ -155,12 +173,7 @@ fun CreateDeckDialog(
                             deckName = "EMERGENCY"
                         }
                     }
-                }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
                     DeckTypeOption(
                         text = "EMOJI",
                         selected = deckType == DeckType.EMOJI,
@@ -173,7 +186,12 @@ fun CreateDeckDialog(
                             deckName = "EMOJI"
                         }
                     }
+                }
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     DeckTypeOption(
                         text = "GIF",
                         selected = deckType == DeckType.GIF,
@@ -186,6 +204,8 @@ fun CreateDeckDialog(
                             deckName = "GIF"
                         }
                     }
+
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
 
@@ -256,7 +276,7 @@ fun CreateDeckDialog(
                     onCreate(
                         deckName.trim().ifBlank {
                             when (deckType) {
-                                DeckType.MATRIX -> "DEFAULT"
+                                DeckType.MATRIX -> "MATRIX"
                                 DeckType.QUICK_ACTIONS -> "QUICK ACTIONS"
                                 DeckType.EMERGENCY -> "EMERGENCY"
                                 DeckType.EMOJI -> "EMOJI"
