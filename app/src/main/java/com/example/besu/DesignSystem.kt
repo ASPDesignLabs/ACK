@@ -2,7 +2,10 @@ package com.example.besu
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -34,6 +37,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -352,11 +356,11 @@ fun RecentHistoryItem(phrase: String, onClick: () -> Unit) {
 @Composable
 fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boolean) -> Unit) {
     val primaryColor = NeonPalette.getColor(CommandRepository.getActiveColorIndex(context))
-    
-    var refreshKey by remember { mutableIntStateOf(0) } 
+
+    var refreshKey by remember { mutableIntStateOf(0) }
     var matrixData by remember(deckName, refreshKey) { mutableStateOf(CommandRepository.getMatrix(context)) }
     var showDialog by remember { mutableStateOf(false) }
-    var showNewCatDialog by remember { mutableStateOf(false) }
+    var showManageContextDialog by remember { mutableStateOf(false) }
     var selectedNode by remember { mutableStateOf<Triple<MatrixNode, String, String>?>(null) }
     var variableEditRequest by remember {
         mutableStateOf<VariableEditRequest?>(null)
@@ -368,12 +372,22 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
     Column {
         LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
-            item { 
+            item {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("SEQUENCE :: $deckName", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
-                    Text("+ ADD CONTEXT", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { showNewCatDialog = true })
+                    Text(
+                        "[MANAGE CONTEXT]",
+                        color = primaryColor,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .testTag(AckTags.MATRIX_CONTEXT_ADD)
+                            .helpTarget(AckTags.MATRIX_CONTEXT_ADD, primaryColor)
+                            .clickable { showManageContextDialog = true }
+                    )
                 }
-                Spacer(modifier = Modifier.height(12.dp)) 
+                Spacer(modifier = Modifier.height(12.dp))
             }
             grouped.forEach { (category, nodes) ->
                 item {
@@ -998,20 +1012,667 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         )
     }
 
-    if (showNewCatDialog) {
-        var newCatName by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showNewCatDialog = false }, containerColor = Graphite,
-            title = { Text("NEW CONTEXT LAYER", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace) },
-            text = { Column {
-                Text("Map standard poses to new context:", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(value = newCatName, onValueChange = { newCatName = it.uppercase() }, placeholder = { Text("CATEGORY NAME") }, colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor))
-            }},
-            confirmButton = { NeonButton("CREATE", mainColor = primaryColor) { if (newCatName.isNotEmpty()) { CommandRepository.createCustomCategory(context, newCatName); refreshKey++; showNewCatDialog = false }}},
-            dismissButton = { NeonButton("CANCEL", isActive = false, mainColor = primaryColor) { showNewCatDialog = false } }
+    if (showManageContextDialog) {
+        ManageContextDialog(
+            context = context,
+            primaryColor = primaryColor,
+            onDismiss = { showManageContextDialog = false },
+            onChanged = { refreshKey++ }
         )
     }
+}
+
+// --- MANAGE CONTEXT ---
+//
+// IDENTITY, DEFEND, and CONNECT are the three immutable poses -- they can
+// never be renamed, reassigned, reordered, or removed here. Everything below
+// them is a custom context layer the wearer added: additional expression
+// riding on top of one of those same three physical gestures.
+@Composable
+fun ManageContextDialog(
+    context: Context,
+    primaryColor: Color,
+    onDismiss: () -> Unit,
+    onChanged: () -> Unit
+) {
+    var refreshKey by remember { mutableIntStateOf(0) }
+    var entries by remember(refreshKey) {
+        mutableStateOf(CommandRepository.getCustomContextEntries(context))
+    }
+
+    var showAddDialog by remember { mutableStateOf(false) }
+    var renamingEntry by remember { mutableStateOf<CustomContextEntry?>(null) }
+    var reassigningEntry by remember { mutableStateOf<CustomContextEntry?>(null) }
+    var deletingEntry by remember { mutableStateOf<CustomContextEntry?>(null) }
+
+    fun refresh() {
+        refreshKey++
+        onChanged()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Graphite,
+        modifier = Modifier.border(
+            width = 1.dp,
+            color = primaryColor,
+            shape = CutCornerShape(8.dp)
+        ),
+        title = {
+            Text(
+                text = "MANAGE CONTEXT",
+                color = primaryColor,
+                fontSize = 14.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "The three base poses are permanent. Custom " +
+                            "context layers ride on top of one pose's " +
+                            "gestures and can be reordered, reassigned, " +
+                            "renamed, or removed.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(POSE_CATEGORIES) { pose ->
+                        ImmutablePoseRow(pose = pose, primaryColor = primaryColor)
+                    }
+
+                    items(entries, key = { it.name }) { entry ->
+                        val index = entries.indexOf(entry)
+
+                        CustomContextRow(
+                            entry = entry,
+                            primaryColor = primaryColor,
+                            canMoveUp = index > 0,
+                            canMoveDown = index < entries.lastIndex,
+                            onMoveUp = {
+                                CommandRepository.moveCustomContextEntry(
+                                    context, entry.name, -1
+                                )
+                                refresh()
+                            },
+                            onMoveDown = {
+                                CommandRepository.moveCustomContextEntry(
+                                    context, entry.name, 1
+                                )
+                                refresh()
+                            },
+                            onRename = { renamingEntry = entry },
+                            onReassign = { reassigningEntry = entry },
+                            onDelete = { deletingEntry = entry }
+                        )
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, primaryColor, CutCornerShape(6.dp))
+                                .background(
+                                    primaryColor.copy(alpha = 0.10f),
+                                    CutCornerShape(6.dp)
+                                )
+                                .clickable { showAddDialog = true }
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "+ ADD CONTEXT",
+                                color = primaryColor,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            NeonButton(text = "DONE", mainColor = primaryColor) {
+                onDismiss()
+            }
+        }
+    )
+
+    if (showAddDialog) {
+        AddContextDialog(
+            primaryColor = primaryColor,
+            existingNames = entries.map { it.name },
+            onDismiss = { showAddDialog = false },
+            onCreate = { name, basePose ->
+                if (CommandRepository.addCustomContextEntry(context, name, basePose)) {
+                    refresh()
+                    showAddDialog = false
+                }
+            }
+        )
+    }
+
+    val renaming = renamingEntry
+
+    if (renaming != null) {
+        RenameContextDialog(
+            entry = renaming,
+            primaryColor = primaryColor,
+            existingNames = entries.map { it.name },
+            onDismiss = { renamingEntry = null },
+            onConfirm = { newName ->
+                if (
+                    CommandRepository.renameCustomContextEntry(
+                        context, renaming.name, newName
+                    )
+                ) {
+                    refresh()
+                    renamingEntry = null
+                }
+            }
+        )
+    }
+
+    val reassigning = reassigningEntry
+
+    if (reassigning != null) {
+        ReassignPoseDialog(
+            entry = reassigning,
+            primaryColor = primaryColor,
+            onDismiss = { reassigningEntry = null },
+            onConfirm = { newPose ->
+                CommandRepository.reassignCustomContextPose(
+                    context, reassigning.name, newPose
+                )
+                refresh()
+                reassigningEntry = null
+            }
+        )
+    }
+
+    val deleting = deletingEntry
+
+    if (deleting != null) {
+        AlertDialog(
+            onDismissRequest = { deletingEntry = null },
+            containerColor = Graphite,
+            title = {
+                Text(
+                    text = "CONFIRM DELETE",
+                    color = RadicalRed,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Permanently remove context layer " +
+                            "\"${deleting.name}\"? Every phrase, variable, " +
+                            "and shared override saved under it will be " +
+                            "deleted across every deck and profile. This " +
+                            "cannot be undone -- consider exporting a " +
+                            "backup first.",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+            },
+            confirmButton = {
+                NeonButton(text = "DELETE PERMANENTLY", mainColor = RadicalRed) {
+                    CommandRepository.removeCustomContextEntry(context, deleting.name)
+                    refresh()
+                    deletingEntry = null
+                }
+            },
+            dismissButton = {
+                NeonButton(text = "CANCEL", isActive = false, mainColor = primaryColor) {
+                    deletingEntry = null
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ImmutablePoseRow(pose: String, primaryColor: Color) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Color.DarkGray, CutCornerShape(6.dp))
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "ROOT :: $pose",
+            color = primaryColor,
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold
+        )
+
+        Text(
+            text = "[IMMUTABLE]",
+            color = Color.Gray,
+            fontSize = 9.sp,
+            fontFamily = FontFamily.Monospace
+        )
+    }
+}
+
+@Composable
+private fun CustomContextRow(
+    entry: CustomContextEntry,
+    primaryColor: Color,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onRename: () -> Unit,
+    onReassign: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, primaryColor.copy(alpha = 0.5f), CutCornerShape(6.dp))
+            .background(primaryColor.copy(alpha = 0.05f), CutCornerShape(6.dp))
+            .padding(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.name,
+                    color = primaryColor,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "BASED ON: ${entry.basePose}",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                ContextRowIconButton(
+                    text = "▲",
+                    enabled = canMoveUp,
+                    primaryColor = primaryColor,
+                    onClick = onMoveUp
+                )
+
+                ContextRowIconButton(
+                    text = "▼",
+                    enabled = canMoveDown,
+                    primaryColor = primaryColor,
+                    onClick = onMoveDown
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            ContextRowActionButton(
+                text = "REASSIGN",
+                primaryColor = primaryColor,
+                modifier = Modifier.weight(1f),
+                onClick = onReassign
+            )
+
+            ContextRowActionButton(
+                text = "RENAME",
+                primaryColor = primaryColor,
+                modifier = Modifier.weight(1f),
+                onClick = onRename
+            )
+
+            ContextRowActionButton(
+                text = "DELETE",
+                primaryColor = RadicalRed,
+                modifier = Modifier.weight(1f),
+                onClick = onDelete
+            )
+        }
+    }
+}
+
+@Composable
+private fun ContextRowIconButton(
+    text: String,
+    enabled: Boolean,
+    primaryColor: Color,
+    onClick: () -> Unit
+) {
+    val color = if (enabled) primaryColor else Color.DarkGray
+
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .border(1.dp, color, CutCornerShape(4.dp))
+            .then(
+                if (enabled) Modifier.clickable { onClick() } else Modifier
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = text, color = color, fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun ContextRowActionButton(
+    text: String,
+    primaryColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .border(1.dp, primaryColor, CutCornerShape(4.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = primaryColor,
+            fontSize = 9.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun PosePicker(
+    selected: String,
+    primaryColor: Color,
+    onSelect: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        POSE_CATEGORIES.forEach { pose ->
+            val isSelected = pose == selected
+            val color = if (isSelected) primaryColor else Color.Gray
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .border(
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color = color,
+                        shape = CutCornerShape(4.dp)
+                    )
+                    .background(
+                        if (isSelected) primaryColor.copy(alpha = 0.14f) else Color.Transparent,
+                        CutCornerShape(4.dp)
+                    )
+                    .clickable { onSelect(pose) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = pose,
+                    color = color,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddContextDialog(
+    primaryColor: Color,
+    existingNames: List<String>,
+    onDismiss: () -> Unit,
+    onCreate: (name: String, basePose: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var basePose by remember { mutableStateOf(POSE_CATEGORIES[0]) }
+
+    val cleanName = name.trim().uppercase()
+    val isValid = cleanName.isNotEmpty() &&
+            cleanName !in POSE_CATEGORIES &&
+            cleanName !in existingNames
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Graphite,
+        title = {
+            Text(
+                text = "ADD CONTEXT",
+                color = primaryColor,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "CONTEXT NAME",
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.uppercase().take(24) },
+                    placeholder = { Text("E.G. SCHOOL, WORK, PLAY") },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = primaryColor,
+                        unfocusedTextColor = primaryColor,
+                        focusedContainerColor = VoidBlack,
+                        unfocusedContainerColor = VoidBlack,
+                        focusedIndicatorColor = primaryColor
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "ASSIGN TO POSE",
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "The physical gesture that activates this " +
+                            "layer's phrases when it is focused.",
+                    color = Color.DarkGray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                PosePicker(
+                    selected = basePose,
+                    primaryColor = primaryColor,
+                    onSelect = { basePose = it }
+                )
+            }
+        },
+        confirmButton = {
+            NeonButton(
+                text = "CREATE",
+                isActive = isValid,
+                mainColor = primaryColor
+            ) {
+                if (isValid) {
+                    onCreate(cleanName, basePose)
+                }
+            }
+        },
+        dismissButton = {
+            NeonButton(text = "CANCEL", isActive = false, mainColor = primaryColor) {
+                onDismiss()
+            }
+        }
+    )
+}
+
+@Composable
+private fun RenameContextDialog(
+    entry: CustomContextEntry,
+    primaryColor: Color,
+    existingNames: List<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var name by remember(entry.name) { mutableStateOf(entry.name) }
+
+    val cleanName = name.trim().uppercase()
+    val isValid = cleanName.isNotEmpty() &&
+            (cleanName == entry.name ||
+                    (cleanName !in POSE_CATEGORIES && cleanName !in existingNames))
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Graphite,
+        title = {
+            Text(
+                text = "RENAME CONTEXT",
+                color = primaryColor,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Every saved phrase, variable, and override " +
+                            "moves with the new name.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.uppercase().take(24) },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = primaryColor,
+                        unfocusedTextColor = primaryColor,
+                        focusedContainerColor = VoidBlack,
+                        unfocusedContainerColor = VoidBlack,
+                        focusedIndicatorColor = primaryColor
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            NeonButton(
+                text = "CONFIRM RENAME",
+                isActive = isValid,
+                mainColor = primaryColor
+            ) {
+                if (isValid) {
+                    onConfirm(cleanName)
+                }
+            }
+        },
+        dismissButton = {
+            NeonButton(text = "CANCEL", isActive = false, mainColor = primaryColor) {
+                onDismiss()
+            }
+        }
+    )
+}
+
+@Composable
+private fun ReassignPoseDialog(
+    entry: CustomContextEntry,
+    primaryColor: Color,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var basePose by remember(entry.name) { mutableStateOf(entry.basePose) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Graphite,
+        title = {
+            Text(
+                text = "REASSIGN POSE // ${entry.name}",
+                color = primaryColor,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Choose which pose's physical gesture activates " +
+                            "this context layer when it is focused.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                PosePicker(
+                    selected = basePose,
+                    primaryColor = primaryColor,
+                    onSelect = { basePose = it }
+                )
+            }
+        },
+        confirmButton = {
+            NeonButton(text = "CONFIRM", mainColor = primaryColor) {
+                onConfirm(basePose)
+            }
+        },
+        dismissButton = {
+            NeonButton(text = "CANCEL", isActive = false, mainColor = primaryColor) {
+                onDismiss()
+            }
+        }
+    )
 }
 
 @Composable
@@ -1221,6 +1882,12 @@ fun RootOverrideStrip(
         )
     }
 
+    // Stored per category/pose, so toggling this block never affects any
+    // other pose's or custom layer's own collapsed/expanded state.
+    var collapsed by remember(category) {
+        mutableStateOf(RootOverrideRepository.isSectionCollapsed(context, category))
+    }
+
     var editingTag by remember { mutableStateOf<String?>(null) }
 
     fun updateSlot(
@@ -1244,6 +1911,11 @@ fun RootOverrideStrip(
         onChanged()
     }
 
+    fun toggleCollapsed() {
+        collapsed = !collapsed
+        RootOverrideRepository.setSectionCollapsed(context, category, collapsed)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1258,162 +1930,246 @@ fun RootOverrideStrip(
             )
             .padding(10.dp)
     ) {
-        Text(
-            text = "SHARED ROOT VARIABLES",
-            color = primaryColor,
-            fontSize = 10.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { toggleCollapsed() },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "SHARED ROOT VARIABLES",
+                color = primaryColor,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            )
 
-        Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = if (collapsed) "[EXPAND ▼]" else "[COLLAPSE ▲]",
+                color = primaryColor,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
-        Text(
-            text = "Enabled tags replace matching {VAR:A}, {VAR:B}, or {VAR:C}.",
-            color = Color.Gray,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace
-        )
+        AnimatedVisibility(
+            visible = collapsed,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(8.dp))
 
-        Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("A", "B", "C").forEach { tag ->
+                        val slot = config.slots[tag] ?: RootOverrideValue()
 
-        listOf("A", "B", "C").forEach { tag ->
-            val slot = config.slots[tag] ?: RootOverrideValue()
-            val valueText = slot.value.ifBlank { "NO SHARED VALUE SET" }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (slot.enabled) {
+                                        primaryColor
+                                    } else {
+                                        Color.Gray
+                                    },
+                                    shape = CutCornerShape(4.dp)
+                                )
+                                .background(
+                                    color = if (slot.enabled) {
+                                        primaryColor.copy(alpha = 0.18f)
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                    shape = CutCornerShape(4.dp)
+                                )
+                                .clickable {
+                                    updateSlot(tag) { current ->
+                                        current.copy(enabled = !current.enabled)
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "$tag: ${if (slot.enabled) "ON" else "OFF"}",
+                                color = if (slot.enabled) {
+                                    primaryColor
+                                } else {
+                                    Color.Gray
+                                },
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp)
-                    .border(
-                        width = 1.dp,
-                        color = if (slot.enabled) {
-                            primaryColor
-                        } else {
-                            Color.DarkGray
-                        },
-                        shape = CutCornerShape(6.dp)
-                    )
-                    .background(
-                        color = if (slot.enabled) {
-                            primaryColor.copy(alpha = 0.10f)
-                        } else {
-                            Color.Transparent
-                        },
-                        shape = CutCornerShape(6.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+        AnimatedVisibility(
+            visible = !collapsed,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column {
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Enabled tags replace matching {VAR:A}, {VAR:B}, or {VAR:C}.",
+                color = Color.Gray,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            listOf("A", "B", "C").forEach { tag ->
+                val slot = config.slots[tag] ?: RootOverrideValue()
+                val valueText = slot.value.ifBlank { "NO SHARED VALUE SET" }
+
+                Row(
                     modifier = Modifier
-                        .size(width = 52.dp, height = 44.dp)
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
                         .border(
                             width = 1.dp,
                             color = if (slot.enabled) {
                                 primaryColor
                             } else {
-                                Color.Gray
+                                Color.DarkGray
                             },
-                            shape = CutCornerShape(4.dp)
+                            shape = CutCornerShape(6.dp)
                         )
                         .background(
                             color = if (slot.enabled) {
-                                primaryColor.copy(alpha = 0.18f)
+                                primaryColor.copy(alpha = 0.10f)
                             } else {
                                 Color.Transparent
                             },
-                            shape = CutCornerShape(4.dp)
+                            shape = CutCornerShape(6.dp)
                         )
-                        .clickable {
-                            updateSlot(tag) { current ->
-                                current.copy(enabled = !current.enabled)
-                            }
-                        },
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = tag,
-                            color = if (slot.enabled) {
-                                primaryColor
-                            } else {
-                                Color.Gray
+                    Box(
+                        modifier = Modifier
+                            .size(width = 52.dp, height = 44.dp)
+                            .border(
+                                width = 1.dp,
+                                color = if (slot.enabled) {
+                                    primaryColor
+                                } else {
+                                    Color.Gray
+                                },
+                                shape = CutCornerShape(4.dp)
+                            )
+                            .background(
+                                color = if (slot.enabled) {
+                                    primaryColor.copy(alpha = 0.18f)
+                                } else {
+                                    Color.Transparent
+                                },
+                                shape = CutCornerShape(4.dp)
+                            )
+                            .clickable {
+                                updateSlot(tag) { current ->
+                                    current.copy(enabled = !current.enabled)
+                                }
                             },
-                            fontSize = 14.sp,
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = tag,
+                                color = if (slot.enabled) {
+                                    primaryColor
+                                } else {
+                                    Color.Gray
+                                },
+                                fontSize = 14.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = if (slot.enabled) "ON" else "OFF",
+                                color = if (slot.enabled) {
+                                    primaryColor
+                                } else {
+                                    Color.Gray
+                                },
+                                fontSize = 8.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "ROOT $tag",
+                            color = if (slot.enabled) primaryColor else Color.Gray,
+                            fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
                         )
 
+                        Spacer(modifier = Modifier.height(3.dp))
+
                         Text(
-                            text = if (slot.enabled) "ON" else "OFF",
-                            color = if (slot.enabled) {
-                                primaryColor
+                            text = valueText,
+                            color = if (slot.value.isBlank()) {
+                                Color.DarkGray
                             } else {
-                                Color.Gray
+                                Color.White
                             },
-                            fontSize = 8.sp,
-                            fontFamily = FontFamily.Monospace
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 1
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(width = 64.dp, height = 44.dp)
+                            .border(
+                                width = 1.dp,
+                                color = primaryColor.copy(alpha = 0.75f),
+                                shape = CutCornerShape(4.dp)
+                            )
+                            .clickable {
+                                editingTag = tag
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "EDIT",
+                            color = primaryColor,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
-
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "ROOT $tag",
-                        color = if (slot.enabled) primaryColor else Color.Gray,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(3.dp))
-
-                    Text(
-                        text = valueText,
-                        color = if (slot.value.isBlank()) {
-                            Color.DarkGray
-                        } else {
-                            Color.White
-                        },
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        maxLines = 1
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(width = 64.dp, height = 44.dp)
-                        .border(
-                            width = 1.dp,
-                            color = primaryColor.copy(alpha = 0.75f),
-                            shape = CutCornerShape(4.dp)
-                        )
-                        .clickable {
-                            editingTag = tag
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "EDIT",
-                        color = primaryColor,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
+                if (tag != "C") {
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
-
-            if (tag != "C") {
-                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }

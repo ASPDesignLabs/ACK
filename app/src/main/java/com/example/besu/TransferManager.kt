@@ -162,22 +162,26 @@ object TransferManager {
             }
             .toMap()
 
-// 6. Gather current operating context.
+// 6. Gather custom context layers (name, assigned base pose, and order).
+        val customContextEntries = CommandRepository.getCustomContextEntries(context)
+
+// 7. Gather current operating context.
         val activeDeckId = CommandRepository.getActiveDeckId(context)
         val activeDeckColorIndex = CommandRepository.getActiveColorIndex(context)
         val activeProfile = CommandRepository.getActiveProfile(context)
         val activeCategoryFocus = CommandRepository.getActiveCategoryFocus(context)
 
-// 7. Gather header shortcuts.
+// 8. Gather header shortcuts.
         val headerShortcuts = CommandRepository.getHeaderShortcuts(context)
 
-// 8. Wrap and encode.
+// 9. Wrap and encode.
         val backup = AckBackup(
             dsp = dspConfig,
             matrixData = matrixMap,
             decks = decksList,
             quickPhrases = quickPhrases,
             rootOverrides = rootOverrides,
+            customContextEntries = customContextEntries,
             activeDeckId = activeDeckId,
             activeDeckColorIndex = activeDeckColorIndex,
             activeProfile = activeProfile,
@@ -258,7 +262,25 @@ object TransferManager {
             }
         }
 
-// 6. Validate header shortcuts.
+// 6. Validate custom context layers.
+        if (backup.customContextEntries.size > 20) return false
+
+        val contextNamePattern = Regex("^[A-Z0-9 _-]{1,24}$")
+
+        backup.customContextEntries.forEach { entry ->
+            if (!contextNamePattern.matches(entry.name)) return false
+            if (entry.name in POSE_CATEGORIES) return false
+            if (entry.basePose !in POSE_CATEGORIES) return false
+        }
+
+        if (
+            backup.customContextEntries.map { it.name }.distinct().size !=
+            backup.customContextEntries.size
+        ) {
+            return false
+        }
+
+// 7. Validate header shortcuts.
         if (backup.headerShortcuts.size > 3) return false
 
         backup.headerShortcuts.forEach { shortcut ->
@@ -368,27 +390,41 @@ object TransferManager {
             json.encodeToString(backup.quickPhrases)
         )
 
-        // Rebuild custom categories from the restored data only.
+        // Rebuild custom context layers from the restored data only.
         //
-        // Do this even when empty, so categories deleted before backup do not
+        // Do this even when empty, so layers deleted before backup do not
         // survive from a previous local configuration.
-        val customCategories = mutableSetOf<String>()
+        if (backup.customContextEntries.isNotEmpty()) {
+            // Modern backups carry the ordered layer list directly, assigned
+            // base pose included.
+            editor.putString(
+                KEY_CATS,
+                json.encodeToString(backup.customContextEntries)
+            )
+        } else {
+            // Backups made before MANAGE CONTEXT existed have no structured
+            // list -- fall back to deriving bare names from the sparse key
+            // dump. CommandRepository migrates this legacy Set<String> to
+            // the ordered format (IDENTITY-based, matching prior behavior)
+            // the next time it is read.
+            val customCategories = mutableSetOf<String>()
 
-        backup.matrixData.keys.forEach { key ->
-            if (key.contains("/custom/")) {
-                val parts = key.split("/")
-                val customIndex = parts.indexOf("custom")
+            backup.matrixData.keys.forEach { key ->
+                if (key.contains("/custom/")) {
+                    val parts = key.split("/")
+                    val customIndex = parts.indexOf("custom")
 
-                if (
-                    customIndex != -1 &&
-                    parts.size > customIndex + 1
-                ) {
-                    customCategories.add(parts[customIndex + 1])
+                    if (
+                        customIndex != -1 &&
+                        parts.size > customIndex + 1
+                    ) {
+                        customCategories.add(parts[customIndex + 1])
+                    }
                 }
             }
-        }
 
-        editor.putStringSet(KEY_CATS, customCategories)
+            editor.putStringSet(KEY_CATS, customCategories)
+        }
 
         editor.apply()
 
