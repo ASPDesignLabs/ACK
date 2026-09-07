@@ -23,7 +23,7 @@ data class RootOverrideConfig(
 object RootOverrideRepository {
     private const val PREFS_NAME = "ack_matrix_config"
     private const val KEY_PREFIX = "root_override_"
-    private const val KEY_COLLAPSED = "root_override_section_collapsed"
+    private const val KEY_COLLAPSED_PREFIX = "root_override_section_collapsed_"
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -66,18 +66,19 @@ object RootOverrideRepository {
     }
 
     /*
-     * Whether the SHARED ROOT VARIABLES section is collapsed. This is a
-     * single app-wide preference (not per-category) so the user sets it
-     * once and every ROOT block honors it consistently. Defaults to
-     * expanded -- collapsed must never be the out-of-the-box state.
+     * Whether the SHARED ROOT VARIABLES section is collapsed for a given
+     * pose/category. This is stored per-category so toggling IDENTITY's
+     * block never touches DEFEND's, CONNECT's, or any custom layer's.
+     * Defaults to expanded -- collapsed must never be the out-of-the-box
+     * state.
      */
-    fun isSectionCollapsed(context: Context): Boolean {
+    fun isSectionCollapsed(context: Context, category: String): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_COLLAPSED, false)
+        return prefs.getBoolean("$KEY_COLLAPSED_PREFIX$category", false)
     }
 
-    fun setSectionCollapsed(context: Context, collapsed: Boolean) {
+    fun setSectionCollapsed(context: Context, category: String, collapsed: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_COLLAPSED, collapsed).apply()
+        prefs.edit().putBoolean("$KEY_COLLAPSED_PREFIX$category", collapsed).apply()
     }
 }

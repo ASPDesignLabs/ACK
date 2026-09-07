@@ -2,7 +2,10 @@ package com.example.besu
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -363,17 +366,6 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         mutableStateOf<VariableEditRequest?>(null)
     }
 
-    // App-wide preference, lifted here so every ROOT block toggles in sync
-    // and the choice is remembered the next time the Matrix is opened.
-    var rootVarsCollapsed by remember {
-        mutableStateOf(RootOverrideRepository.isSectionCollapsed(context))
-    }
-
-    fun toggleRootVarsCollapsed() {
-        rootVarsCollapsed = !rootVarsCollapsed
-        RootOverrideRepository.setSectionCollapsed(context, rootVarsCollapsed)
-    }
-
     val grouped = matrixData.groupBy { it.first.category }
 
     LaunchedEffect(showDialog) { onDialogStateChange(showDialog) }
@@ -414,9 +406,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         },
                         onRootOverrideChanged = {
                             refreshKey++
-                        },
-                        rootVarsCollapsed = rootVarsCollapsed,
-                        onToggleRootVarsCollapsed = { toggleRootVarsCollapsed() }
+                        }
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -1693,9 +1683,7 @@ fun MatrixCategory(
     primaryColor: Color,
     onEdit: (Triple<MatrixNode, String, String>) -> Unit,
     onEditVariable: (VariableEditRequest) -> Unit,
-    onRootOverrideChanged: () -> Unit,
-    rootVarsCollapsed: Boolean,
-    onToggleRootVarsCollapsed: () -> Unit
+    onRootOverrideChanged: () -> Unit
 ) {
     val activeCat =
         remember(title) { mutableStateOf(CommandRepository.getActiveCategoryFocus(context)) }
@@ -1791,9 +1779,7 @@ fun MatrixCategory(
             category = title,
             context = context,
             primaryColor = primaryColor,
-            onChanged = onRootOverrideChanged,
-            collapsed = rootVarsCollapsed,
-            onToggleCollapsed = onToggleRootVarsCollapsed
+            onChanged = onRootOverrideChanged
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -1888,14 +1874,18 @@ fun RootOverrideStrip(
     category: String,
     context: Context,
     primaryColor: Color,
-    onChanged: () -> Unit,
-    collapsed: Boolean,
-    onToggleCollapsed: () -> Unit
+    onChanged: () -> Unit
 ) {
     var config by remember(category) {
         mutableStateOf(
             RootOverrideRepository.getConfig(context, category)
         )
+    }
+
+    // Stored per category/pose, so toggling this block never affects any
+    // other pose's or custom layer's own collapsed/expanded state.
+    var collapsed by remember(category) {
+        mutableStateOf(RootOverrideRepository.isSectionCollapsed(context, category))
     }
 
     var editingTag by remember { mutableStateOf<String?>(null) }
@@ -1921,6 +1911,11 @@ fun RootOverrideStrip(
         onChanged()
     }
 
+    fun toggleCollapsed() {
+        collapsed = !collapsed
+        RootOverrideRepository.setSectionCollapsed(context, category, collapsed)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1938,7 +1933,7 @@ fun RootOverrideStrip(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onToggleCollapsed() },
+                .clickable { toggleCollapsed() },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1960,20 +1955,114 @@ fun RootOverrideStrip(
             )
         }
 
-        if (collapsed) {
-            Spacer(modifier = Modifier.height(8.dp))
+        AnimatedVisibility(
+            visible = collapsed,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf("A", "B", "C").forEach { tag ->
-                    val slot = config.slots[tag] ?: RootOverrideValue()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("A", "B", "C").forEach { tag ->
+                        val slot = config.slots[tag] ?: RootOverrideValue()
 
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (slot.enabled) {
+                                        primaryColor
+                                    } else {
+                                        Color.Gray
+                                    },
+                                    shape = CutCornerShape(4.dp)
+                                )
+                                .background(
+                                    color = if (slot.enabled) {
+                                        primaryColor.copy(alpha = 0.18f)
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                    shape = CutCornerShape(4.dp)
+                                )
+                                .clickable {
+                                    updateSlot(tag) { current ->
+                                        current.copy(enabled = !current.enabled)
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "$tag: ${if (slot.enabled) "ON" else "OFF"}",
+                                color = if (slot.enabled) {
+                                    primaryColor
+                                } else {
+                                    Color.Gray
+                                },
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = !collapsed,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column {
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Enabled tags replace matching {VAR:A}, {VAR:B}, or {VAR:C}.",
+                color = Color.Gray,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            listOf("A", "B", "C").forEach { tag ->
+                val slot = config.slots[tag] ?: RootOverrideValue()
+                val valueText = slot.value.ifBlank { "NO SHARED VALUE SET" }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .border(
+                            width = 1.dp,
+                            color = if (slot.enabled) {
+                                primaryColor
+                            } else {
+                                Color.DarkGray
+                            },
+                            shape = CutCornerShape(6.dp)
+                        )
+                        .background(
+                            color = if (slot.enabled) {
+                                primaryColor.copy(alpha = 0.10f)
+                            } else {
+                                Color.Transparent
+                            },
+                            shape = CutCornerShape(6.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp)
+                            .size(width = 52.dp, height = 44.dp)
                             .border(
                                 width = 1.dp,
                                 color = if (slot.enabled) {
@@ -1998,171 +2087,89 @@ fun RootOverrideStrip(
                             },
                         contentAlignment = Alignment.Center
                     ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = tag,
+                                color = if (slot.enabled) {
+                                    primaryColor
+                                } else {
+                                    Color.Gray
+                                },
+                                fontSize = 14.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = if (slot.enabled) "ON" else "OFF",
+                                color = if (slot.enabled) {
+                                    primaryColor
+                                } else {
+                                    Color.Gray
+                                },
+                                fontSize = 8.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text(
-                            text = "$tag: ${if (slot.enabled) "ON" else "OFF"}",
-                            color = if (slot.enabled) {
-                                primaryColor
+                            text = "ROOT $tag",
+                            color = if (slot.enabled) primaryColor else Color.Gray,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(3.dp))
+
+                        Text(
+                            text = valueText,
+                            color = if (slot.value.isBlank()) {
+                                Color.DarkGray
                             } else {
-                                Color.Gray
+                                Color.White
                             },
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 1
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(width = 64.dp, height = 44.dp)
+                            .border(
+                                width = 1.dp,
+                                color = primaryColor.copy(alpha = 0.75f),
+                                shape = CutCornerShape(4.dp)
+                            )
+                            .clickable {
+                                editingTag = tag
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "EDIT",
+                            color = primaryColor,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
-            }
 
-            return@Column
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = "Enabled tags replace matching {VAR:A}, {VAR:B}, or {VAR:C}.",
-            color = Color.Gray,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        listOf("A", "B", "C").forEach { tag ->
-            val slot = config.slots[tag] ?: RootOverrideValue()
-            val valueText = slot.value.ifBlank { "NO SHARED VALUE SET" }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp)
-                    .border(
-                        width = 1.dp,
-                        color = if (slot.enabled) {
-                            primaryColor
-                        } else {
-                            Color.DarkGray
-                        },
-                        shape = CutCornerShape(6.dp)
-                    )
-                    .background(
-                        color = if (slot.enabled) {
-                            primaryColor.copy(alpha = 0.10f)
-                        } else {
-                            Color.Transparent
-                        },
-                        shape = CutCornerShape(6.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 52.dp, height = 44.dp)
-                        .border(
-                            width = 1.dp,
-                            color = if (slot.enabled) {
-                                primaryColor
-                            } else {
-                                Color.Gray
-                            },
-                            shape = CutCornerShape(4.dp)
-                        )
-                        .background(
-                            color = if (slot.enabled) {
-                                primaryColor.copy(alpha = 0.18f)
-                            } else {
-                                Color.Transparent
-                            },
-                            shape = CutCornerShape(4.dp)
-                        )
-                        .clickable {
-                            updateSlot(tag) { current ->
-                                current.copy(enabled = !current.enabled)
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = tag,
-                            color = if (slot.enabled) {
-                                primaryColor
-                            } else {
-                                Color.Gray
-                            },
-                            fontSize = 14.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = if (slot.enabled) "ON" else "OFF",
-                            color = if (slot.enabled) {
-                                primaryColor
-                            } else {
-                                Color.Gray
-                            },
-                            fontSize = 8.sp,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(10.dp))
-
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "ROOT $tag",
-                        color = if (slot.enabled) primaryColor else Color.Gray,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(3.dp))
-
-                    Text(
-                        text = valueText,
-                        color = if (slot.value.isBlank()) {
-                            Color.DarkGray
-                        } else {
-                            Color.White
-                        },
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        maxLines = 1
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(width = 64.dp, height = 44.dp)
-                        .border(
-                            width = 1.dp,
-                            color = primaryColor.copy(alpha = 0.75f),
-                            shape = CutCornerShape(4.dp)
-                        )
-                        .clickable {
-                            editingTag = tag
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "EDIT",
-                        color = primaryColor,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
+                if (tag != "C") {
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
-
-            if (tag != "C") {
-                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
