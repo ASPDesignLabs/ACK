@@ -14,12 +14,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CutCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,7 +34,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.besu.ui.theme.Graphite
 import com.example.besu.ui.theme.VoidBlack
 
 @Composable
@@ -400,19 +397,11 @@ private fun QuickActionEditorDialog(
         )
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Graphite,
-        title = {
-            Text(
-                text = "EDIT QUICK ACTION",
-                color = primaryColor,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
+    TightDialogSurface(
+        onDismiss = onDismiss,
+        primaryColor = primaryColor,
+        title = "EDIT QUICK ACTION"
+    ) {
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = label,
@@ -422,6 +411,7 @@ private fun QuickActionEditorDialog(
                     label = {
                         Text("BUTTON LABEL")
                     },
+                    shape = AckHelpShape,
                     singleLine = true,
                     colors = NeonTextFieldColors(primaryColor)
                 )
@@ -437,6 +427,7 @@ private fun QuickActionEditorDialog(
                     label = {
                         Text("PHRASE TEMPLATE")
                     },
+                    shape = AckHelpShape,
                     colors = NeonTextFieldColors(primaryColor),
                     minLines = 3
                 )
@@ -444,12 +435,7 @@ private fun QuickActionEditorDialog(
                 if (tags.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
-                        text = "LOCAL VARIABLES",
-                        color = primaryColor,
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
+                    TightSectionLabel("LOCAL VARIABLES", color = primaryColor)
 
                     tags.forEachIndexed { index, tag ->
                         Spacer(modifier = Modifier.height(8.dp))
@@ -467,34 +453,40 @@ private fun QuickActionEditorDialog(
                                     tag?.let { "VAR:$it" } ?: "VAR ${index + 1}"
                                 )
                             },
+                            shape = AckHelpShape,
                             singleLine = true,
                             colors = NeonTextFieldColors(primaryColor)
                         )
                     }
                 }
-            }
-        },
-        confirmButton = {
-            NeonButton(
-                text = "SAVE",
-                mainColor = primaryColor
-            ) {
-                onSave(
-                    label,
-                    template,
-                    localValues
-                )
-            }
-        },
-        dismissButton = {
-            NeonButton(
-                text = "CANCEL",
-                isActive = false,
-                mainColor = primaryColor,
-                onClick = onDismiss
-            )
-        }
-    )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
+                        text = "SAVE",
+                        modifier = Modifier.weight(1f),
+                        mainColor = primaryColor
+                    ) {
+                        onSave(
+                            label,
+                            template,
+                            localValues
+                        )
+                    }
+
+                    TightPanelButton(
+                        text = "CANCEL",
+                        modifier = Modifier.weight(1f),
+                        isActive = false,
+                        mainColor = primaryColor,
+                        onClick = onDismiss
+                    )
+                }
+    }
 }
 
 @Composable
@@ -520,19 +512,11 @@ private fun QuickActionGroupEditorDialog(
         mutableStateOf(group.boundPose)
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Graphite,
-        title = {
-            Text(
-                text = "EDIT GROUP",
-                color = primaryColor,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
+    TightDialogSurface(
+        onDismiss = onDismiss,
+        primaryColor = primaryColor,
+        title = "EDIT GROUP"
+    ) {
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = label,
@@ -542,18 +526,14 @@ private fun QuickActionGroupEditorDialog(
                     label = {
                         Text("GROUP LABEL")
                     },
+                    shape = AckHelpShape,
                     singleLine = true,
                     colors = NeonTextFieldColors(primaryColor)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "WATCH POSE",
-                    color = primaryColor,
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+                TightSectionLabel("WATCH POSE", color = primaryColor)
 
                 Text(
                     text = "WHICH GESTURE ON THE WATCH FIRES THIS GROUP.",
@@ -572,12 +552,7 @@ private fun QuickActionGroupEditorDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "ROOT OVERRIDE SOURCE",
-                    color = primaryColor,
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+                TightSectionLabel("ROOT OVERRIDE SOURCE", color = primaryColor)
 
                 Text(
                     text = "WHICH A/B/C VARIABLE BANK FILLS THIS GROUP'S {{TAGS}}.",
@@ -593,25 +568,30 @@ private fun QuickActionGroupEditorDialog(
                     primaryColor = primaryColor,
                     onSelect = { rootCategory = it }
                 )
-            }
-        },
-        confirmButton = {
-            NeonButton(
-                text = "SAVE",
-                mainColor = primaryColor
-            ) {
-                onSave(label, rootCategory, boundPose)
-            }
-        },
-        dismissButton = {
-            NeonButton(
-                text = "CANCEL",
-                isActive = false,
-                mainColor = primaryColor,
-                onClick = onDismiss
-            )
-        }
-    )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
+                        text = "SAVE",
+                        modifier = Modifier.weight(1f),
+                        mainColor = primaryColor
+                    ) {
+                        onSave(label, rootCategory, boundPose)
+                    }
+
+                    TightPanelButton(
+                        text = "CANCEL",
+                        modifier = Modifier.weight(1f),
+                        isActive = false,
+                        mainColor = primaryColor,
+                        onClick = onDismiss
+                    )
+                }
+    }
 }
 
 @Composable
@@ -624,24 +604,26 @@ private fun CategoryButtonRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         POSE_CATEGORIES.forEach { category ->
-            Button(
-                onClick = { onSelect(category) },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (selected == category) {
-                        primaryColor.copy(alpha = 0.22f)
-                    } else {
-                        VoidBlack
-                    },
-                    contentColor = if (selected == category) {
-                        primaryColor
-                    } else {
-                        Color.Gray
-                    }
-                )
+            val isSelected = selected == category
+            val color = if (isSelected) primaryColor else Color.Gray
+
+            Box(
+                modifier = Modifier
+                    .heightIn(min = 44.dp)
+                    .border(1.dp, color, AckHelpShape)
+                    .background(
+                        if (isSelected) primaryColor.copy(alpha = 0.22f) else VoidBlack,
+                        AckHelpShape
+                    )
+                    .clickable { onSelect(category) }
+                    .padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = category.take(3),
+                    color = color,
                     fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 10.sp
                 )
             }
