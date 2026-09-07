@@ -209,6 +209,7 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
             value = textInput,
             onValueChange = { textInput = it },
             modifier = Modifier.fillMaxWidth(),
+            shape = AckHelpShape,
             colors = TextFieldDefaults.colors(
                 focusedTextColor = primaryColor,
                 unfocusedTextColor = primaryColor,
@@ -261,17 +262,17 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
 
     if (showSaveDialog) {
         val existingTags = savedPhrases.map { it.tag }.distinct().sorted()
-        AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
-            containerColor = Graphite,
-            title = { Text("ENCODE TO BANK", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace) },
-            text = { Column {
-                Text("Assign a Tag:", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        TightDialogSurface(
+            onDismiss = { showSaveDialog = false },
+            primaryColor = primaryColor,
+            title = "ENCODE TO BANK"
+        ) {
+                TightSectionLabel("ASSIGN A TAG")
                 Spacer(modifier = Modifier.height(12.dp))
                 if (existingTags.isNotEmpty()) {
                     Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                         existingTags.forEach { tag ->
-                            Box(modifier = Modifier.padding(end = 8.dp).border(1.dp, if(newTagInput == tag) primaryColor else Color.Gray, CutCornerShape(4.dp)).clickable { newTagInput = tag }.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                            Box(modifier = Modifier.padding(end = 8.dp).heightIn(min = 44.dp).border(1.dp, if(newTagInput == tag) primaryColor else Color.Gray, AckHelpShape).clickable { newTagInput = tag }.padding(horizontal = 8.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
                                 Text(tag, color = if(newTagInput == tag) primaryColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                             }
                         }
@@ -279,21 +280,29 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
                     Spacer(modifier = Modifier.height(12.dp))
                 }
                 OutlinedTextField(
-                    value = newTagInput, onValueChange = { newTagInput = it.uppercase() }, 
-                    placeholder = { Text("NEW TAG") }, 
+                    value = newTagInput, onValueChange = { newTagInput = it.uppercase() },
+                    placeholder = { Text("NEW TAG") },
+                    shape = AckHelpShape,
                     colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor)
                 )
-            }},
-            confirmButton = { NeonButton("SAVE", mainColor = primaryColor) {
-                if (newTagInput.isNotEmpty()) {
-                    CommandRepository.saveQuickPhrase(context, textInput, newTagInput)
-                    refreshKey++
-                    showSaveDialog = false
-                    newTagInput = ""
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton("SAVE", modifier = Modifier.weight(1f), mainColor = primaryColor) {
+                        if (newTagInput.isNotEmpty()) {
+                            CommandRepository.saveQuickPhrase(context, textInput, newTagInput)
+                            refreshKey++
+                            showSaveDialog = false
+                            newTagInput = ""
+                        }
+                    }
+                    TightPanelButton("CANCEL", modifier = Modifier.weight(1f), isActive = false, mainColor = primaryColor) { showSaveDialog = false }
                 }
-            }},
-            dismissButton = { NeonButton("CANCEL", isActive = false, mainColor = primaryColor) { showSaveDialog = false } }
-        )
+        }
     }
 }
 
@@ -534,49 +543,17 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             }
         }
 
-        AlertDialog(
-            onDismissRequest = {
+        TightDialogSurface(
+            onDismiss = {
                 closeEditor()
             },
-            containerColor = Graphite,
-            modifier = Modifier
-                .tutorialTarget(AckTags.EDIT_NODE_DIALOG)
-                .border(
-                    width = 1.dp,
-                    color = primaryColor,
-                    shape = CutCornerShape(8.dp)
-                ),
-            title = {
+            primaryColor = primaryColor,
+            title = node.label,
+            subtitle = "LIVE-SAVE EDITOR",
+            surfaceModifier = Modifier.tutorialTarget(AckTags.EDIT_NODE_DIALOG)
+        ) {
                 Column {
-                    Text(
-                        text = node.label.uppercase(),
-                        color = primaryColor,
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(1.dp))
-
-                    Text(
-                        text = "LIVE-SAVE EDITOR",
-                        color = Color.Gray,
-                        fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace,
-                        letterSpacing = 1.sp
-                    )
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "MACRO TEMPLATE",
-                        color = Color.Gray,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
+                    TightSectionLabel("MACRO TEMPLATE")
 
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -594,6 +571,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                     macroFieldFocused = true
                                 }
                             },
+                        shape = AckHelpShape,
                         minLines = 3,
                         maxLines = 4,
                         placeholder = {
@@ -620,13 +598,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Text(
-                        text = "INSERT VARIABLE TOKEN",
-                        color = Color.Gray,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
+                    TightSectionLabel("INSERT VARIABLE TOKEN")
 
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -634,7 +606,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        NeonButton(
+                        TightPanelButton(
                             text = "+ VAR",
                             modifier = Modifier.weight(1f),
                             mainColor = primaryColor
@@ -642,7 +614,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             updateTemplate("$tempText {VAR}")
                         }
 
-                        NeonButton(
+                        TightPanelButton(
                             text = "+ A",
                             modifier = Modifier.weight(1f),
                             mainColor = primaryColor
@@ -650,7 +622,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             updateTemplate("$tempText {VAR:A}")
                         }
 
-                        NeonButton(
+                        TightPanelButton(
                             text = "+ B",
                             modifier = Modifier.weight(1f),
                             mainColor = primaryColor
@@ -658,7 +630,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             updateTemplate("$tempText {VAR:B}")
                         }
 
-                        NeonButton(
+                        TightPanelButton(
                             text = "+ C",
                             modifier = Modifier.weight(1f),
                             mainColor = primaryColor
@@ -710,6 +682,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .heightIn(min = 52.dp),
+                                shape = AckHelpShape,
                                 singleLine = true,
                                 label = {
                                     Text(
@@ -748,13 +721,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        text = "DESTRUCTIVE CONTROLS",
-                        color = RadicalRed,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
+                    TightSectionLabel("DESTRUCTIVE CONTROLS", color = RadicalRed)
 
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -762,7 +729,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        NeonButton(
+                        TightPanelButton(
                             text = "CLEAR VARS",
                             modifier = Modifier.weight(1f),
                             isActive = false,
@@ -771,7 +738,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             clearMode = "VARS"
                         }
 
-                        NeonButton(
+                        TightPanelButton(
                             text = "CLEAR PROMPT",
                             modifier = Modifier.weight(1f),
                             isActive = false,
@@ -783,7 +750,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    NeonButton(
+                    TightPanelButton(
                         text = "CLEAR ALL",
                         modifier = Modifier.fillMaxWidth(),
                         isActive = false,
@@ -792,32 +759,38 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         clearMode = "ALL"
                     }
                 }
-            },
-            confirmButton = {
-                NeonButton(
-                    text = "COMMIT",
-                    modifier = Modifier
-                        .testTag(AckTags.MATRIX_COMMIT_BUTTON)
-                        .helpTarget(AckTags.MATRIX_COMMIT_BUTTON, primaryColor),
-                    mainColor = primaryColor
-                ) {
-                    commitEditor()
 
-                    helpManager?.onEvent(
-                        HelpEvent.Interacted(AckTags.MATRIX_COMMIT_BUTTON)
-                    )
-                 }
-                },
-            dismissButton = {
-                NeonButton(
-                    text = "CLOSE",
-                    isActive = false,
-                    mainColor = primaryColor
-                     ) {
-                      closeEditor()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
+                        text = "COMMIT",
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(AckTags.MATRIX_COMMIT_BUTTON)
+                            .helpTarget(AckTags.MATRIX_COMMIT_BUTTON, primaryColor),
+                        mainColor = primaryColor
+                    ) {
+                        commitEditor()
+
+                        helpManager?.onEvent(
+                            HelpEvent.Interacted(AckTags.MATRIX_COMMIT_BUTTON)
+                        )
+                    }
+
+                    TightPanelButton(
+                        text = "CLOSE",
+                        modifier = Modifier.weight(1f),
+                        isActive = false,
+                        mainColor = primaryColor
+                    ) {
+                        closeEditor()
                     }
                 }
-        )
+        }
 
         val mode = clearMode
 
@@ -839,31 +812,30 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                 }
             }
 
-            AlertDialog(
-                onDismissRequest = {
+            TightDialogSurface(
+                onDismiss = {
                     clearMode = null
                 },
-                containerColor = Graphite,
-                title = {
-                    Text(
-                        text = "CONFIRM CLEAR",
-                        color = RadicalRed,
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                text = {
-                    Text(
-                        text = confirmationText,
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-                },
-                confirmButton = {
-                    NeonButton(
+                primaryColor = RadicalRed,
+                title = "CONFIRM CLEAR",
+                dismissLabel = "ABORT"
+            ) {
+                Text(
+                    text = confirmationText,
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
                         text = "CONFIRM",
+                        modifier = Modifier.weight(1f),
                         mainColor = RadicalRed
                     ) {
                         when (mode) {
@@ -904,17 +876,17 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         clearMode = null
                         refreshKey++
                     }
-                },
-                dismissButton = {
-                    NeonButton(
+
+                    TightPanelButton(
                         text = "CANCEL",
+                        modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
                     ) {
                         clearMode = null
                     }
                 }
-            )
+            }
         }
     }
 
@@ -924,26 +896,14 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             mutableStateOf(request.currentValue)
         }
 
-        AlertDialog(
-            onDismissRequest = { variableEditRequest = null },
-            containerColor = Graphite,
-            title = {
-                Text(
-                    text = "${request.nodeLabel.uppercase()} // VAR ${request.index + 1}",
-                    color = primaryColor,
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 1.sp
-                )
-            },
-            text = {
+        TightDialogSurface(
+            onDismiss = { variableEditRequest = null },
+            primaryColor = primaryColor,
+            title = "${request.nodeLabel} // VAR ${request.index + 1}",
+            dismissLabel = "ABORT"
+        ) {
                 Column {
-                    Text(
-                        text = "LIVE VARIABLE VALUE",
-                        color = Color.Gray,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
+                    TightSectionLabel("LIVE VARIABLE VALUE")
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -951,6 +911,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         value = value,
                         onValueChange = { value = it },
                         modifier = Modifier.fillMaxWidth(),
+                        shape = AckHelpShape,
                         singleLine = true,
                         placeholder = {
                             Text(
@@ -973,43 +934,49 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         )
                     )
                 }
-            },
-            confirmButton = {
-                NeonButton(
-                    text = "UPDATE",
-                    mainColor = primaryColor
-                ) {
-                    val existingValues = CommandRepository.getVariableValues(
-                        context,
-                        request.nodePath
-                    ).toMutableList()
 
-                    while (existingValues.size <= request.index) {
-                        existingValues.add("")
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
+                        text = "UPDATE",
+                        modifier = Modifier.weight(1f),
+                        mainColor = primaryColor
+                    ) {
+                        val existingValues = CommandRepository.getVariableValues(
+                            context,
+                            request.nodePath
+                        ).toMutableList()
+
+                        while (existingValues.size <= request.index) {
+                            existingValues.add("")
+                        }
+
+                        existingValues[request.index] = value
+
+                        CommandRepository.setVariableValues(
+                            context,
+                            request.nodePath,
+                            existingValues
+                        )
+
+                        refreshKey++
+                        variableEditRequest = null
                     }
 
-                    existingValues[request.index] = value
-
-                    CommandRepository.setVariableValues(
-                        context,
-                        request.nodePath,
-                        existingValues
-                    )
-
-                    refreshKey++
-                    variableEditRequest = null
+                    TightPanelButton(
+                        text = "ABORT",
+                        modifier = Modifier.weight(1f),
+                        isActive = false,
+                        mainColor = primaryColor
+                    ) {
+                        variableEditRequest = null
+                    }
                 }
-            },
-            dismissButton = {
-                NeonButton(
-                    text = "ABORT",
-                    isActive = false,
-                    mainColor = primaryColor
-                ) {
-                    variableEditRequest = null
-                }
-            }
-        )
+        }
     }
 
     if (showManageContextDialog) {
@@ -1050,26 +1017,12 @@ fun ManageContextDialog(
         onChanged()
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Graphite,
-        modifier = Modifier.border(
-            width = 1.dp,
-            color = primaryColor,
-            shape = CutCornerShape(8.dp)
-        ),
-        title = {
-            Text(
-                text = "MANAGE CONTEXT",
-                color = primaryColor,
-                fontSize = 14.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
-            )
-        },
-        text = {
-            Column {
+    TightDialogSurface(
+        onDismiss = onDismiss,
+        primaryColor = primaryColor,
+        title = "MANAGE CONTEXT",
+        dismissLabel = "DONE"
+    ) {
                 Text(
                     text = "The three base poses are permanent. Custom " +
                             "context layers ride on top of one pose's " +
@@ -1122,10 +1075,11 @@ fun ManageContextDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, primaryColor, CutCornerShape(6.dp))
+                                .heightIn(min = 44.dp)
+                                .border(1.dp, primaryColor, AckHelpShape)
                                 .background(
-                                    primaryColor.copy(alpha = 0.10f),
-                                    CutCornerShape(6.dp)
+                                    primaryColor.copy(alpha = 0.12f),
+                                    AckHelpShape
                                 )
                                 .clickable { showAddDialog = true }
                                 .padding(vertical = 12.dp),
@@ -1134,21 +1088,15 @@ fun ManageContextDialog(
                             Text(
                                 text = "+ ADD CONTEXT",
                                 color = primaryColor,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
                             )
                         }
                     }
                 }
-            }
-        },
-        confirmButton = {
-            NeonButton(text = "DONE", mainColor = primaryColor) {
-                onDismiss()
-            }
-        }
-    )
+    }
 
     if (showAddDialog) {
         AddContextDialog(
@@ -1205,44 +1153,47 @@ fun ManageContextDialog(
     val deleting = deletingEntry
 
     if (deleting != null) {
-        AlertDialog(
-            onDismissRequest = { deletingEntry = null },
-            containerColor = Graphite,
-            title = {
-                Text(
-                    text = "CONFIRM DELETE",
-                    color = RadicalRed,
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Text(
-                    text = "Permanently remove context layer " +
-                            "\"${deleting.name}\"? Every phrase, variable, " +
-                            "and shared override saved under it will be " +
-                            "deleted across every deck and profile. This " +
-                            "cannot be undone -- consider exporting a " +
-                            "backup first.",
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-            },
-            confirmButton = {
-                NeonButton(text = "DELETE PERMANENTLY", mainColor = RadicalRed) {
+        TightDialogSurface(
+            onDismiss = { deletingEntry = null },
+            primaryColor = RadicalRed,
+            title = "CONFIRM DELETE",
+            dismissLabel = "ABORT"
+        ) {
+            Text(
+                text = "Permanently remove context layer " +
+                        "\"${deleting.name}\"? Every phrase, variable, " +
+                        "and shared override saved under it will be " +
+                        "deleted across every deck and profile. This " +
+                        "cannot be undone -- consider exporting a " +
+                        "backup first.",
+                color = Color.White,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TightPanelButton(
+                    text = "DELETE PERMANENTLY",
+                    modifier = Modifier.fillMaxWidth(),
+                    mainColor = RadicalRed
+                ) {
                     CommandRepository.removeCustomContextEntry(context, deleting.name)
                     refresh()
                     deletingEntry = null
                 }
-            },
-            dismissButton = {
-                NeonButton(text = "CANCEL", isActive = false, mainColor = primaryColor) {
+
+                TightPanelButton(
+                    text = "CANCEL",
+                    modifier = Modifier.fillMaxWidth(),
+                    isActive = false,
+                    mainColor = primaryColor
+                ) {
                     deletingEntry = null
                 }
             }
-        )
+        }
     }
 }
 
@@ -1251,7 +1202,7 @@ private fun ImmutablePoseRow(pose: String, primaryColor: Color) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color.DarkGray, CutCornerShape(6.dp))
+            .border(1.dp, Color.DarkGray, AckHelpShape)
             .padding(horizontal = 10.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -1288,8 +1239,8 @@ private fun CustomContextRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, primaryColor.copy(alpha = 0.5f), CutCornerShape(6.dp))
-            .background(primaryColor.copy(alpha = 0.05f), CutCornerShape(6.dp))
+            .border(1.dp, primaryColor.copy(alpha = 0.5f), AckHelpShape)
+            .background(primaryColor.copy(alpha = 0.05f), AckHelpShape)
             .padding(10.dp)
     ) {
         Row(
@@ -1372,8 +1323,8 @@ private fun ContextRowIconButton(
 
     Box(
         modifier = Modifier
-            .size(32.dp)
-            .border(1.dp, color, CutCornerShape(4.dp))
+            .size(44.dp)
+            .border(1.dp, color, AckHelpShape)
             .then(
                 if (enabled) Modifier.clickable { onClick() } else Modifier
             ),
@@ -1392,7 +1343,8 @@ private fun ContextRowActionButton(
 ) {
     Box(
         modifier = modifier
-            .border(1.dp, primaryColor, CutCornerShape(4.dp))
+            .heightIn(min = 44.dp)
+            .border(1.dp, primaryColor, AckHelpShape)
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center
@@ -1425,14 +1377,15 @@ private fun PosePicker(
             Box(
                 modifier = Modifier
                     .weight(1f)
+                    .heightIn(min = 44.dp)
                     .border(
                         width = if (isSelected) 2.dp else 1.dp,
                         color = color,
-                        shape = CutCornerShape(4.dp)
+                        shape = AckHelpShape
                     )
                     .background(
                         if (isSelected) primaryColor.copy(alpha = 0.14f) else Color.Transparent,
-                        CutCornerShape(4.dp)
+                        AckHelpShape
                     )
                     .clickable { onSelect(pose) }
                     .padding(vertical = 10.dp),
@@ -1466,26 +1419,12 @@ private fun AddContextDialog(
             cleanName !in POSE_CATEGORIES &&
             cleanName !in existingNames
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Graphite,
-        title = {
-            Text(
-                text = "ADD CONTEXT",
-                color = primaryColor,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "CONTEXT NAME",
-                    color = Color.Gray,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+    TightDialogSurface(
+        onDismiss = onDismiss,
+        primaryColor = primaryColor,
+        title = "ADD CONTEXT"
+    ) {
+                TightSectionLabel("CONTEXT NAME")
 
                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -1493,6 +1432,7 @@ private fun AddContextDialog(
                     value = name,
                     onValueChange = { name = it.uppercase().take(24) },
                     placeholder = { Text("E.G. SCHOOL, WORK, PLAY") },
+                    shape = AckHelpShape,
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
                         focusedTextColor = primaryColor,
@@ -1505,12 +1445,7 @@ private fun AddContextDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "ASSIGN TO POSE",
-                    color = Color.Gray,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+                TightSectionLabel("ASSIGN TO POSE")
 
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -1529,25 +1464,34 @@ private fun AddContextDialog(
                     primaryColor = primaryColor,
                     onSelect = { basePose = it }
                 )
-            }
-        },
-        confirmButton = {
-            NeonButton(
-                text = "CREATE",
-                isActive = isValid,
-                mainColor = primaryColor
-            ) {
-                if (isValid) {
-                    onCreate(cleanName, basePose)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
+                        text = "CREATE",
+                        modifier = Modifier.weight(1f),
+                        isActive = isValid,
+                        mainColor = primaryColor
+                    ) {
+                        if (isValid) {
+                            onCreate(cleanName, basePose)
+                        }
+                    }
+
+                    TightPanelButton(
+                        text = "CANCEL",
+                        modifier = Modifier.weight(1f),
+                        isActive = false,
+                        mainColor = primaryColor
+                    ) {
+                        onDismiss()
+                    }
                 }
-            }
-        },
-        dismissButton = {
-            NeonButton(text = "CANCEL", isActive = false, mainColor = primaryColor) {
-                onDismiss()
-            }
-        }
-    )
+    }
 }
 
 @Composable
@@ -1565,20 +1509,11 @@ private fun RenameContextDialog(
             (cleanName == entry.name ||
                     (cleanName !in POSE_CATEGORIES && cleanName !in existingNames))
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Graphite,
-        title = {
-            Text(
-                text = "RENAME CONTEXT",
-                color = primaryColor,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
+    TightDialogSurface(
+        onDismiss = onDismiss,
+        primaryColor = primaryColor,
+        title = "RENAME CONTEXT"
+    ) {
                 Text(
                     text = "Every saved phrase, variable, and override " +
                             "moves with the new name.",
@@ -1592,6 +1527,7 @@ private fun RenameContextDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it.uppercase().take(24) },
+                    shape = AckHelpShape,
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
                         focusedTextColor = primaryColor,
@@ -1601,25 +1537,34 @@ private fun RenameContextDialog(
                         focusedIndicatorColor = primaryColor
                     )
                 )
-            }
-        },
-        confirmButton = {
-            NeonButton(
-                text = "CONFIRM RENAME",
-                isActive = isValid,
-                mainColor = primaryColor
-            ) {
-                if (isValid) {
-                    onConfirm(cleanName)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
+                        text = "CONFIRM RENAME",
+                        modifier = Modifier.weight(1f),
+                        isActive = isValid,
+                        mainColor = primaryColor
+                    ) {
+                        if (isValid) {
+                            onConfirm(cleanName)
+                        }
+                    }
+
+                    TightPanelButton(
+                        text = "CANCEL",
+                        modifier = Modifier.weight(1f),
+                        isActive = false,
+                        mainColor = primaryColor
+                    ) {
+                        onDismiss()
+                    }
                 }
-            }
-        },
-        dismissButton = {
-            NeonButton(text = "CANCEL", isActive = false, mainColor = primaryColor) {
-                onDismiss()
-            }
-        }
-    )
+    }
 }
 
 @Composable
@@ -1631,20 +1576,11 @@ private fun ReassignPoseDialog(
 ) {
     var basePose by remember(entry.name) { mutableStateOf(entry.basePose) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Graphite,
-        title = {
-            Text(
-                text = "REASSIGN POSE // ${entry.name}",
-                color = primaryColor,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
+    TightDialogSurface(
+        onDismiss = onDismiss,
+        primaryColor = primaryColor,
+        title = "REASSIGN POSE // ${entry.name}"
+    ) {
                 Text(
                     text = "Choose which pose's physical gesture activates " +
                             "this context layer when it is focused.",
@@ -1660,19 +1596,31 @@ private fun ReassignPoseDialog(
                     primaryColor = primaryColor,
                     onSelect = { basePose = it }
                 )
-            }
-        },
-        confirmButton = {
-            NeonButton(text = "CONFIRM", mainColor = primaryColor) {
-                onConfirm(basePose)
-            }
-        },
-        dismissButton = {
-            NeonButton(text = "CANCEL", isActive = false, mainColor = primaryColor) {
-                onDismiss()
-            }
-        }
-    )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
+                        text = "CONFIRM",
+                        modifier = Modifier.weight(1f),
+                        mainColor = primaryColor
+                    ) {
+                        onConfirm(basePose)
+                    }
+
+                    TightPanelButton(
+                        text = "CANCEL",
+                        modifier = Modifier.weight(1f),
+                        isActive = false,
+                        mainColor = primaryColor
+                    ) {
+                        onDismiss()
+                    }
+                }
+    }
 }
 
 @Composable
@@ -2209,26 +2157,13 @@ fun RootOverrideValueDialog(
         mutableStateOf(initialValue)
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Graphite,
-        title = {
-            Text(
-                text = "ROOT $category // TAG $tag",
-                color = primaryColor,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "SHARED OVERRIDE VALUE",
-                    color = Color.Gray,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+    TightDialogSurface(
+        onDismiss = onDismiss,
+        primaryColor = primaryColor,
+        title = "ROOT $category // TAG $tag",
+        dismissLabel = "ABORT"
+    ) {
+                TightSectionLabel("SHARED OVERRIDE VALUE")
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -2236,6 +2171,7 @@ fun RootOverrideValueDialog(
                     value = value,
                     onValueChange = { value = it },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = AckHelpShape,
                     singleLine = true,
                     placeholder = {
                         Text(
@@ -2257,26 +2193,31 @@ fun RootOverrideValueDialog(
                         cursorColor = primaryColor
                     )
                 )
-            }
-        },
-        confirmButton = {
-            NeonButton(
-                text = "COMMIT",
-                mainColor = primaryColor
-            ) {
-                onSave(value)
-            }
-        },
-        dismissButton = {
-            NeonButton(
-                text = "ABORT",
-                isActive = false,
-                mainColor = primaryColor
-            ) {
-                onDismiss()
-            }
-        }
-    )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
+                        text = "COMMIT",
+                        modifier = Modifier.weight(1f),
+                        mainColor = primaryColor
+                    ) {
+                        onSave(value)
+                    }
+
+                    TightPanelButton(
+                        text = "ABORT",
+                        modifier = Modifier.weight(1f),
+                        isActive = false,
+                        mainColor = primaryColor
+                    ) {
+                        onDismiss()
+                    }
+                }
+    }
 }
 
 @Composable
