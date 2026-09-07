@@ -28,28 +28,41 @@ needs a real decision, it's called out explicitly rather than assumed.
 
 ---
 
-## 1. Decisions needed before build work starts
+## 1. Decisions — resolved
 
-1. **Pages hosting source.** Root of `main`, `/docs` folder, or a dedicated
-   `gh-pages` branch + Actions workflow? (Recommendation: root of `main` —
-   simplest, no build step, no extra branch to keep in sync.)
-2. **License.** No `LICENSE` file exists today. Add one before publishing a
-   public page (even "all rights reserved, source available for reference")?
-3. **Screenshots / media.** None exist in the repo — only the two Play Store
-   app icons (`app/src/main/ic_launcher-playstore.png`,
-   `wear/src/main/ic_launcher-playstore.png`). Real screenshots/recordings of
-   decks, the gesture cycle, and watch pairing need to come from your device.
-   Do we launch v1 with icon + text only and add real captures after, or hold
-   the page until captures exist?
-4. **Tone for the "sharper-edged" features.** Target Computer, Geo-Protocol,
-   Field Ops, root/variable overrides read very "command console" in-app
-   (by design). For a public page aimed partly at people evaluating ACK for
-   themselves, do we keep that voice as the brand, or soften the copy so it
-   doesn't read as more technical/intimidating than the feature actually is?
+1. **Pages hosting source: root of `main`.** Simplest — no build step, no
+   extra branch to keep in sync. `index.html` lands at the repo root.
+2. **License: GPLv3.** Added as `LICENSE` at the repo root, with a short
+   mention + link in `README.md`. Rationale (worked through with the repo
+   owner): ACK is a whole standalone app, not something meant to be split
+   into a reusable library for other (possibly closed) apps, and there's no
+   server/hosted component planned, so the AGPL network clause buys nothing.
+   That points at GPLv3's whole-program, strong copyleft over a file-level
+   option like MPL-2.0 or a network-copyleft option like AGPLv3. GPLv3
+   (not v2) was picked specifically because it's the version compatible with
+   the Apache-2.0 licensed AndroidX/Compose dependencies already in the
+   project, and it adds an explicit patent grant. The two map libraries
+   (`mapsforge`, `vtm`) are LGPLv3 with an explicit static-linking waiver, so
+   they impose no license constraint on ACK's own choice either way.
+   Follow-up (not part of this landing-page task, flagged for later): GPLv3
+   recommends a short header notice at the top of each source file — that's
+   a large, separate, whole-codebase edit and shouldn't be bundled into the
+   landing page work.
+3. **Screenshots / media: placeholders for v1.** No real screenshots or
+   recordings exist yet — only the two Play Store app icons
+   (`app/src/main/ic_launcher-playstore.png`,
+   `wear/src/main/ic_launcher-playstore.png`). The repo owner will capture
+   real device screenshots/recordings later; v1 of the page ships with
+   clearly-marked illustrative placeholders instead of blocking on that.
+4. **Tone: keep the command-console voice.** Target Computer, Geo-Protocol,
+   Field Ops, and the root/variable overrides keep their in-app voice
+   (ARM/LOCK/FIRE, TARGET SLOTS, etc.) on the public page too — it's ACK's
+   actual brand identity. Plain-language explanations sit alongside the
+   jargon so it doesn't read as more complex or intimidating than the
+   feature actually is.
 5. **Old `index.html`.** Confirmed: it's the parked visual/mosaic importer
-   prototype (paired with `MosaicScannerActivity.kt`). Plan is to move it to
-   `legacy/mosaic-importer/index.html` with a one-line note explaining what it
-   is — confirm that path works before I move it.
+   prototype (paired with `MosaicScannerActivity.kt`). Moving it to
+   `legacy/mosaic-importer/index.html` with a short note — see Phase 0.
 
 ---
 
@@ -201,9 +214,8 @@ Every section below maps to a verified, real feature. This list *is* the
 
 ---
 
-## Open questions (blocking Phase 0/1 start)
+## Status
 
-See section 1 above — hosting source, license, screenshot strategy, and
-tone for the advanced-sounding features are the four decisions worth
-settling before content gets written, since each one changes what gets
-built.
+All four blocking decisions in section 1 are resolved. Next up: Phase 0
+housekeeping (move the legacy `index.html`, confirm `.nojekyll` isn't
+needed) and Phase 1 content drafting.
