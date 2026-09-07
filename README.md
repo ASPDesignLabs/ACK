@@ -39,3 +39,9 @@ I am not a speech language pathologist, mental health or behavioral specialist, 
 
 If you want to build this you'll need Android Studio and a custom map splice for your local region that works with Mapsforge. Drop it into app/assets.
 
+
+
+##### License
+
+Licensed under the GNU General Public License v3.0 (GPLv3) — see [`LICENSE`](LICENSE). In short: you're free to use, study, modify, and share this, but anyone who distributes a modified version has to share their source under the same license too.
+
