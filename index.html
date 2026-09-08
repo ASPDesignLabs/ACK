@@ -179,6 +179,16 @@
     flex-wrap: wrap;
     margin: 1.25rem 0;
   }
+  .placeholder-shot.has-image {
+    padding: 0;
+    overflow: hidden;
+  }
+  .placeholder-shot.has-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
 
   .deck-entry {
     display: flex;
@@ -439,8 +449,8 @@ around specific contexts. You should not assume this is meant for someone with h
       </div>
     </div>
     <div class="shot-row" role="group" aria-label="Screenshots (placeholder)">
-      <figure class="placeholder-shot" aria-hidden="false">
-        <span>Screenshot coming soon:<br>full-screen prompt playback</span>
+      <figure class="placeholder-shot has-image">
+        <img src="assets/screenshots/fullscreen-playback.png" alt="ACK full-screen prompt playback in action">
       </figure>
       <figure class="placeholder-shot">
         <span>Screenshot coming soon:<br>watch gesture cycle (ARM/LOCK/FIRE)</span>
@@ -471,7 +481,7 @@ around specific contexts. You should not assume this is meant for someone with h
         poses can be added inside a MATRIX deck, allowing for hot-swapping
         of all replies under a pose with a single tap.</p>
       </div>
-      <button type="button" class="shot-thumb" data-shot-name="MATRIX Deck" data-shot-src="">
+      <button type="button" class="shot-thumb" data-shot-name="MATRIX Deck" data-shot-src="assets/screenshots/matrix-deck.png">
         <span class="shot-thumb-sr">View MATRIX Deck screenshot, full size</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
       </button>
@@ -485,7 +495,7 @@ around specific contexts. You should not assume this is meant for someone with h
         Used for greetings, closures, quick references. Edit all three poses
         then initiate playback using the watch or with a tap.</p>
       </div>
-      <button type="button" class="shot-thumb" data-shot-name="Quick Actions Deck" data-shot-src="">
+      <button type="button" class="shot-thumb" data-shot-name="Quick Actions Deck" data-shot-src="assets/screenshots/quick-actions-deck.png">
         <span class="shot-thumb-sr">View Quick Actions Deck screenshot, full size</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
       </button>
@@ -516,7 +526,7 @@ around specific contexts. You should not assume this is meant for someone with h
         by category, add text to the displayed prompt, make the emoji prompt
         more sticky.</p>
       </div>
-      <button type="button" class="shot-thumb" data-shot-name="Emoji Deck" data-shot-src="">
+      <button type="button" class="shot-thumb" data-shot-name="Emoji Deck" data-shot-src="assets/screenshots/emoji-deck.png">
         <span class="shot-thumb-sr">View Emoji Deck screenshot, full size</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
       </button>
@@ -531,7 +541,7 @@ around specific contexts. You should not assume this is meant for someone with h
         aspect ratio content. Add in text to your GIF prompt to reduce load on
         the recipient.</p>
       </div>
-      <button type="button" class="shot-thumb" data-shot-name="GIF Deck" data-shot-src="">
+      <button type="button" class="shot-thumb" data-shot-name="GIF Deck" data-shot-src="assets/gifs/gif-deck.gif">
         <span class="shot-thumb-sr">View GIF Deck screenshot, full size</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
       </button>
@@ -545,7 +555,7 @@ around specific contexts. You should not assume this is meant for someone with h
         can also use this to issue an ephemeral reply, if the message isn't worth
         saving.</p>
       </div>
-      <button type="button" class="shot-thumb" data-shot-name="Manual Override" data-shot-src="">
+      <button type="button" class="shot-thumb" data-shot-name="Manual Override" data-shot-src="assets/screenshots/manual-override.png">
         <span class="shot-thumb-sr">View Manual Override screenshot, full size</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
       </button>
@@ -559,7 +569,7 @@ around specific contexts. You should not assume this is meant for someone with h
         Quick Actions deck. Add a quick name, place, identity, or callout with a
         quick tap before issuing a prompt to see it added to your statement.</p>
       </div>
-      <button type="button" class="shot-thumb" data-shot-name="Target Computer" data-shot-src="">
+      <button type="button" class="shot-thumb" data-shot-name="Target Computer" data-shot-src="assets/screenshots/target-computer.png">
         <span class="shot-thumb-sr">View Target Computer screenshot, full size</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
       </button>
