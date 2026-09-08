@@ -118,10 +118,17 @@ Every section below maps to a verified, real feature. This list *is* the
   variables.
 
 **E. Location awareness**
-- Geo-Protocol: location-based context/zone behavior. Stated plainly and
-  accurately: on-device only — the app requests no `INTERNET` permission
-  anywhere in the manifest, so this is verifiably local-first, not a cloud
-  feature.
+- Geo-Protocol: location-based context/zone behavior, geofenced zones with
+  configurable enter/exit logic per zone.
+- **Two engines, stated plainly:** `SOVEREIGN` runs fully on-device (the app
+  requests no `INTERNET` permission anywhere in the manifest); `OPTIMIZED`
+  uses Google Play Services for better accuracy/speed, which means location
+  data is shared with Google in that mode. Correction from an earlier draft
+  of this plan, which claimed Geo-Protocol was unconditionally on-device —
+  the no-`INTERNET`-permission check was accurate as far as it went, but
+  incomplete: Play Services can do its own networking from its own process
+  without the host app declaring `INTERNET` itself. The repo owner corrected
+  this directly in `index.html`; this section now matches that.
 
 **F. Training & confidence-building**
 - Training Ground — free-form gesture practice, live telemetry, no real
@@ -209,13 +216,47 @@ Every section below maps to a verified, real feature. This list *is* the
 
 ## 8. Phase 6 — Ship
 
-- Enable Pages in repo settings against the chosen source.
+- Enable Pages in repo settings against the chosen source. (No tool in this
+  session's toolset can flip that switch — it's a manual step in GitHub's
+  Settings → Pages UI, on `main` / root once content is merged.)
 - Verify the live URL renders correctly, hand back the link.
+
+## 9. Phase 3.5 — Per-deck screenshot lightbox
+
+Added after v1 shipped, at the repo owner's request, once real screenshots
+were expected to start landing:
+
+- Each deck entry in **C. Decks** gets a small square thumbnail to its
+  right, cropped to the exact center of the source 9:16 screenshot
+  (`background-position: center` + `cover` — no manual crop math needed).
+  Collapsed by default so it stays low-footprint until interacted with.
+- Click/tap opens a full-size preview in a native `<dialog>` (gives Esc-to-
+  close and modal focus handling for free, consistent with keyboard-first
+  accessibility), showing the image at its real 9:16 aspect ratio.
+- Inside the preview: pinch-to-zoom (touch), scroll-wheel zoom (desktop),
+  double-click/double-tap to toggle zoom, drag-to-pan once zoomed, and
+  explicit on-screen +/−/reset buttons — the buttons specifically so zooming
+  isn't gesture-only, which matters for a project built around accessibility
+  gaps.
+- Escape routes: Esc key (native to `<dialog>`), a close button, and a click
+  on the backdrop — zoom/pan state resets on close so the next screenshot
+  opens clean.
+- Placeholders remain fully supported: a deck with no real screenshot yet
+  shows the same "coming soon" pattern as before, both in the thumbnail and
+  the opened preview, with zoom controls simply inert. Adding a real image
+  later is a one-attribute change (`data-shot-src`) per deck, no markup
+  restructuring needed.
 
 ---
 
 ## Status
 
-All four blocking decisions in section 1 are resolved. Next up: Phase 0
-housekeeping (move the legacy `index.html`, confirm `.nojekyll` isn't
-needed) and Phase 1 content drafting.
+All four blocking decisions in section 1 are resolved. `index.html`, the
+`LICENSE`, and the legacy-importer move all shipped via PR #10 (merged), then
+the repo owner heavily revised the page copy directly on `main` afterward —
+that revision (not this plan's original draft copy) is the current source of
+truth for page content, including the SOVEREIGN/OPTIMIZED Geo-Protocol
+correction folded into section E above. The per-deck screenshot lightbox
+(section 9) is in progress. Still open: enabling Pages itself (manual step,
+see Phase 6), a screen-reader QA pass, and swapping in real device
+screenshots as they're captured.

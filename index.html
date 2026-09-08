@@ -180,15 +180,138 @@
     margin: 1.25rem 0;
   }
 
-  dl.feature-list dt {
+  .deck-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+  .deck-entry:first-child { margin-top: 0; }
+  .deck-text { flex: 1 1 auto; min-width: 0; }
+  .deck-text h3 {
     font-family: var(--font-mono);
     color: var(--cyan);
-    margin-top: 1.25rem;
+    font-size: 1rem;
+    margin: 0 0 0.35rem;
   }
-  dl.feature-list dt:first-child { margin-top: 0; }
-  dl.feature-list dd {
-    margin: 0.25rem 0 0;
-    color: var(--text-dim);
+  .deck-text p { margin: 0; color: var(--text-dim); }
+
+  /* Screenshot thumbnail: collapsed footprint until clicked. background-position:
+     center crops to the exact middle of the source 9:16 image with zero JS math. */
+  .shot-thumb {
+    flex: 0 0 auto;
+    width: 76px;
+    height: 76px;
+    padding: 0;
+    border: 1px solid var(--border);
+    background: repeating-linear-gradient(135deg, var(--graphite-2) 0 8px, var(--graphite) 8px 16px);
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .shot-thumb:hover, .shot-thumb:focus-visible {
+    border-color: var(--cyan-bright);
+  }
+  .shot-thumb svg { width: 20px; height: 20px; opacity: 0.6; }
+  .shot-thumb-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  /* Lightbox: native <dialog> gives Esc-to-close and modal focus handling for free */
+  dialog.shot-dialog {
+    position: fixed;
+    padding: 0;
+    border: 1px solid var(--border);
+    background: var(--void);
+    color: var(--text);
+    width: min(92vw, 420px);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  dialog.shot-dialog::backdrop { background: rgba(0,0,0,0.86); }
+  .shot-dialog-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 2;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--border);
+    background: var(--graphite);
+    color: var(--text);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .shot-dialog-close:hover, .shot-dialog-close:focus-visible { border-color: var(--cyan-bright); }
+  .shot-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    max-height: calc(90vh - 4.5rem);
+    overflow: hidden;
+    background: var(--graphite);
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: grab;
+  }
+  .shot-stage.dragging { cursor: grabbing; }
+  .shot-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform-origin: center center;
+    will-change: transform;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .shot-stage-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-faint);
+    background: repeating-linear-gradient(135deg, var(--graphite-2) 0 10px, var(--graphite) 10px 20px);
+  }
+  .shot-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.6rem;
+    border-top: 1px solid var(--border);
+  }
+  .shot-controls button {
+    font-family: var(--font-mono);
+    background: var(--graphite);
+    color: var(--text);
+    border: 1px solid var(--border);
+    width: 2.25rem;
+    height: 2.25rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .shot-controls button:hover, .shot-controls button:focus-visible { border-color: var(--cyan-bright); }
+  .shot-controls button:disabled { opacity: 0.4; cursor: default; }
+  .shot-hint {
+    margin: 0;
+    padding: 0 0.75rem 0.6rem;
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    text-align: center;
+  }
+  @media (max-width: 480px) {
+    .shot-thumb { width: 60px; height: 60px; }
   }
 
   details.module {
@@ -337,56 +460,110 @@ around specific contexts. You should not assume this is meant for someone with h
       activities, along with a few profiles for more detailed work related 
       tasks</p>
 
-    <dl class="feature-list">
-      <dt>MATRIX Deck</dt>
-      <dd>This is the core ACK deck and experience. Build around rapid
-      statement creation and recall. Tap to initiate playback, edit a 
-      prompt, use variables to speed up construction. Prompts can 
-      be bound to one of the three poses used by the Wear OS experience,
-      with up to four commands issuable per pose. Additional context 
-      poses can be added inside a MATRIX deck, allowing for hot-swapping 
-      of all replies under a pose with a single tap.</dd>
+    <div class="deck-entry">
+      <div class="deck-text">
+        <h3>MATRIX Deck</h3>
+        <p>This is the core ACK deck and experience. Build around rapid
+        statement creation and recall. Tap to initiate playback, edit a
+        prompt, use variables to speed up construction. Prompts can
+        be bound to one of the three poses used by the Wear OS experience,
+        with up to four commands issuable per pose. Additional context
+        poses can be added inside a MATRIX deck, allowing for hot-swapping
+        of all replies under a pose with a single tap.</p>
+      </div>
+      <button type="button" class="shot-thumb" data-shot-name="MATRIX Deck" data-shot-src="">
+        <span class="shot-thumb-sr">View MATRIX Deck screenshot, full size</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </button>
+    </div>
 
-      <dt>Quick Actions Deck</dt>
-      <dd>A more slimmed down experience that offers the user the ability
-      to bind up to four phrases to a pose under a single form of context.
-      Used for greetings, closures, quick references. Edit all three poses
-      then initiate playback using the watch or with a tap.</dd>
+    <div class="deck-entry">
+      <div class="deck-text">
+        <h3>Quick Actions Deck</h3>
+        <p>A more slimmed down experience that offers the user the ability
+        to bind up to four phrases to a pose under a single form of context.
+        Used for greetings, closures, quick references. Edit all three poses
+        then initiate playback using the watch or with a tap.</p>
+      </div>
+      <button type="button" class="shot-thumb" data-shot-name="Quick Actions Deck" data-shot-src="">
+        <span class="shot-thumb-sr">View Quick Actions Deck screenshot, full size</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </button>
+    </div>
 
-      <dt>Emergency Deck</dt>
-      <dd>Your high priority communications deck. If you need help, if you
-      have a response script for when things become extra difficult, if you
-      don't want your prompt to disapear due to a stray tap or clench, this 
-      is where you access these prompts. Prompts issued from here can include
-      a beaconing tone that plays before a prompt is issued, increasing 
-      the likelihood of reception by others.</dd>
+    <div class="deck-entry">
+      <div class="deck-text">
+        <h3>Emergency Deck</h3>
+        <p>Your high priority communications deck. If you need help, if you
+        have a response script for when things become extra difficult, if you
+        don't want your prompt to disapear due to a stray tap or clench, this
+        is where you access these prompts. Prompts issued from here can include
+        a beaconing tone that plays before a prompt is issued, increasing
+        the likelihood of reception by others.</p>
+      </div>
+      <button type="button" class="shot-thumb" data-shot-name="Emergency Deck" data-shot-src="">
+        <span class="shot-thumb-sr">View Emergency Deck screenshot, full size</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </button>
+    </div>
 
-      <dt>Emoji Deck</dt>
-      <dd>Emotional context can be difficult to deliver sometimes. This 
-      deck covers this a bit. Pick from a suite of emoji from the built-in
-      library or use any emoji you have access to on your device. Group them
-      by category, add text to the displayed prompt, make the emoji prompt 
-      more sticky.</dd>
+    <div class="deck-entry">
+      <div class="deck-text">
+        <h3>Emoji Deck</h3>
+        <p>Emotional context can be difficult to deliver sometimes. This
+        deck covers this a bit. Pick from a suite of emoji from the built-in
+        library or use any emoji you have access to on your device. Group them
+        by category, add text to the displayed prompt, make the emoji prompt
+        more sticky.</p>
+      </div>
+      <button type="button" class="shot-thumb" data-shot-name="Emoji Deck" data-shot-src="">
+        <span class="shot-thumb-sr">View Emoji Deck screenshot, full size</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </button>
+    </div>
 
-      <dt>GIF Deck</dt>
-      <dd>Memes. A powerful communication medium online, now ready to use 
-      in real space. Store and organize GIFs that you'd like to play at any
-      time here. Modifiers for GIF prompts enable better display of different
-      aspect ratio content. Add in text to your GIF prompt to reduce load on
-      the recipient.</dd>
+    <div class="deck-entry">
+      <div class="deck-text">
+        <h3>GIF Deck</h3>
+        <p>Memes. A powerful communication medium online, now ready to use
+        in real space. Store and organize GIFs that you'd like to play at any
+        time here. Modifiers for GIF prompts enable better display of different
+        aspect ratio content. Add in text to your GIF prompt to reduce load on
+        the recipient.</p>
+      </div>
+      <button type="button" class="shot-thumb" data-shot-name="GIF Deck" data-shot-src="">
+        <span class="shot-thumb-sr">View GIF Deck screenshot, full size</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </button>
+    </div>
 
-      <dt>Manual Override</dt>
-      <dd>A standard textbox input that can be used to store phrases and prompts
-      to a category of your choosing. These can be played with a quick tap. You 
-      can also use this to issue an ephemeral reply, if the message isn't worth
-      saving.</dd>
+    <div class="deck-entry">
+      <div class="deck-text">
+        <h3>Manual Override</h3>
+        <p>A standard textbox input that can be used to store phrases and prompts
+        to a category of your choosing. These can be played with a quick tap. You
+        can also use this to issue an ephemeral reply, if the message isn't worth
+        saving.</p>
+      </div>
+      <button type="button" class="shot-thumb" data-shot-name="Manual Override" data-shot-src="">
+        <span class="shot-thumb-sr">View Manual Override screenshot, full size</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </button>
+    </div>
 
-      <dt>Target Computer</dt>
-      <dd>Eight "targets" for any prompt you issue using ACK. These can be 
-      configured to prepend or append any simple prompt issued via a MATRIX or 
-      Quick Actions deck. Add a quick name, place, identity, or callout with a 
-      quick tap before issuing a prompt to see it added to your statement.</dd>
-    </dl>
+    <div class="deck-entry">
+      <div class="deck-text">
+        <h3>Target Computer</h3>
+        <p>Eight "targets" for any prompt you issue using ACK. These can be
+        configured to prepend or append any simple prompt issued via a MATRIX or
+        Quick Actions deck. Add a quick name, place, identity, or callout with a
+        quick tap before issuing a prompt to see it added to your statement.</p>
+      </div>
+      <button type="button" class="shot-thumb" data-shot-name="Target Computer" data-shot-src="">
+        <span class="shot-thumb-sr">View Target Computer screenshot, full size</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </button>
+    </div>
   </section>
 
   <!-- D. VOICE / TEMPLATE -->
@@ -545,6 +722,179 @@ around specific contexts. You should not assume this is meant for someone with h
     <a href="https://github.com/ASPDesignLabs/ACK">the repository</a>.
   </p>
 </footer>
+
+<dialog class="shot-dialog" id="shotDialog">
+  <button type="button" class="shot-dialog-close" data-shot-close aria-label="Close screenshot preview">&#10005;</button>
+  <div class="shot-stage" id="shotStage">
+    <div class="shot-stage-placeholder" id="shotPlaceholder" hidden><span id="shotPlaceholderText">Screenshot coming soon</span></div>
+    <img id="shotImage" class="shot-image" alt="" draggable="false" hidden>
+  </div>
+  <div class="shot-controls">
+    <button type="button" data-shot-zoom-out aria-label="Zoom out">&minus;</button>
+    <button type="button" data-shot-zoom-reset aria-label="Reset zoom">1:1</button>
+    <button type="button" data-shot-zoom-in aria-label="Zoom in">+</button>
+  </div>
+  <p class="shot-hint">Double-click, pinch, or scroll to zoom &middot; drag to pan while zoomed &middot; Esc to close</p>
+</dialog>
+
+<script>
+(function () {
+  "use strict";
+  var dialog = document.getElementById('shotDialog');
+  if (!dialog || typeof dialog.showModal !== 'function') return;
+
+  var stage = document.getElementById('shotStage');
+  var img = document.getElementById('shotImage');
+  var placeholder = document.getElementById('shotPlaceholder');
+  var placeholderText = document.getElementById('shotPlaceholderText');
+  var lastTrigger = null;
+
+  var MIN_SCALE = 1, MAX_SCALE = 4, STEP = 2.5;
+  var scale = 1, tx = 0, ty = 0;
+  var dragging = false, dragStartX = 0, dragStartY = 0, startTx = 0, startTy = 0;
+  var pointers = {};
+  var pinchStartDist = 0, pinchStartScale = 1;
+
+  function applyTransform() {
+    img.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+  }
+
+  function clampPan() {
+    var rect = stage.getBoundingClientRect();
+    var maxX = (rect.width * (scale - 1)) / 2 + rect.width * 0.15;
+    var maxY = (rect.height * (scale - 1)) / 2 + rect.height * 0.15;
+    tx = Math.max(-maxX, Math.min(maxX, tx));
+    ty = Math.max(-maxY, Math.min(maxY, ty));
+  }
+
+  function resetView() {
+    scale = 1; tx = 0; ty = 0;
+    applyTransform();
+    stage.classList.remove('dragging');
+  }
+
+  function setScale(next) {
+    if (img.hidden) return;
+    scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, next));
+    if (scale === MIN_SCALE) { tx = 0; ty = 0; }
+    clampPan();
+    applyTransform();
+  }
+
+  function openShot(btn) {
+    lastTrigger = btn;
+    var src = btn.getAttribute('data-shot-src') || '';
+    var name = btn.getAttribute('data-shot-name') || 'Screenshot';
+    dialog.setAttribute('aria-label', name + ' screenshot preview');
+    resetView();
+    if (src) {
+      img.src = src;
+      img.alt = name + ' screenshot';
+      img.hidden = false;
+      placeholder.hidden = true;
+    } else {
+      img.hidden = true;
+      placeholder.hidden = false;
+      placeholderText.textContent = name + ' screenshot coming soon';
+    }
+    dialog.showModal();
+  }
+
+  document.querySelectorAll('.shot-thumb').forEach(function (btn) {
+    var src = btn.getAttribute('data-shot-src');
+    if (src) {
+      // Center-cropped square preview: background-position:center does the
+      // crop-to-middle for free, no JS math needed.
+      btn.style.backgroundImage = 'url("' + src.replace(/"/g, '\\"') + '")';
+    }
+    btn.addEventListener('click', function () { openShot(btn); });
+  });
+
+  dialog.querySelectorAll('[data-shot-close]').forEach(function (el) {
+    el.addEventListener('click', function () { dialog.close(); });
+  });
+
+  // Clicking the backdrop lands a click on the dialog element itself (not a descendant)
+  dialog.addEventListener('click', function (e) {
+    if (e.target === dialog) dialog.close();
+  });
+
+  dialog.addEventListener('close', function () {
+    resetView();
+    if (lastTrigger) lastTrigger.focus();
+  });
+
+  document.querySelector('[data-shot-zoom-in]').addEventListener('click', function () { setScale(scale + STEP - 1.5); });
+  document.querySelector('[data-shot-zoom-out]').addEventListener('click', function () { setScale(scale - (STEP - 1.5)); });
+  document.querySelector('[data-shot-zoom-reset]').addEventListener('click', resetView);
+
+  dialog.addEventListener('dblclick', function () {
+    if (img.hidden) return;
+    setScale(scale > 1 ? 1 : STEP);
+  });
+
+  stage.addEventListener('wheel', function (e) {
+    if (img.hidden) return;
+    e.preventDefault();
+    setScale(scale + (e.deltaY > 0 ? -0.35 : 0.35));
+  }, { passive: false });
+
+  dialog.addEventListener('keydown', function (e) {
+    if (img.hidden || scale <= 1) return;
+    var step = 40;
+    if (e.key === 'ArrowLeft') { tx += step; clampPan(); applyTransform(); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { tx -= step; clampPan(); applyTransform(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { ty += step; clampPan(); applyTransform(); e.preventDefault(); }
+    else if (e.key === 'ArrowDown') { ty -= step; clampPan(); applyTransform(); e.preventDefault(); }
+  });
+
+  stage.addEventListener('pointerdown', function (e) {
+    if (img.hidden) return;
+    stage.setPointerCapture(e.pointerId);
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(pointers);
+    if (ids.length === 1) {
+      dragging = true;
+      dragStartX = e.clientX; dragStartY = e.clientY;
+      startTx = tx; startTy = ty;
+      stage.classList.add('dragging');
+    } else if (ids.length === 2) {
+      dragging = false;
+      var pts = ids.map(function (id) { return pointers[id]; });
+      pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      pinchStartScale = scale;
+    }
+  });
+
+  stage.addEventListener('pointermove', function (e) {
+    if (!(e.pointerId in pointers)) return;
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(pointers);
+    if (ids.length === 2 && pinchStartDist > 0) {
+      var pts = ids.map(function (id) { return pointers[id]; });
+      var dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      setScale(pinchStartScale * (dist / pinchStartDist));
+    } else if (dragging && scale > 1) {
+      tx = startTx + (e.clientX - dragStartX);
+      ty = startTy + (e.clientY - dragStartY);
+      clampPan();
+      applyTransform();
+    }
+  });
+
+  function endPointer(e) {
+    delete pointers[e.pointerId];
+    if (Object.keys(pointers).length < 2) pinchStartDist = 0;
+    if (Object.keys(pointers).length === 0) {
+      dragging = false;
+      stage.classList.remove('dragging');
+    }
+  }
+  stage.addEventListener('pointerup', endPointer);
+  stage.addEventListener('pointercancel', endPointer);
+  stage.addEventListener('pointerleave', function (e) { if (dragging) endPointer(e); });
+})();
+</script>
 
 </body>
 </html>
