@@ -257,52 +257,56 @@
 
   <!-- A. ORIENTATION -->
   <section class="hero wrap">
-    <p class="eyebrow">Non-traditional AAC</p>
-    <h1>Communicate without needing to speak — or even touch your phone.</h1>
+    <p class="eyebrow">Augmented Communications Link - ACK</p>
+    <h1>A Modern Approach to AAC, with a twist.</h1>
     <p class="lede">
-      ACK is a heavily modified take on augmentative and alternative
-      communication (AAC), built around gesture recognition instead of the
-      grid-of-buttons approach most AAC tools default to. Compose statements,
-      build context-based replies, and fire them off with a tap — or with a
-      three-pose gesture from your wrist, hands-free, even with your phone
-      locked in your pocket.
+      Compose statements, build out context-based replies, utilize variables to speed up construction of statements. Use tap based controls to start playback or use the companion Wear OS app to unlock gesture based initiation.
+Created primarily to assist myself with situational mutism concerns. This covers the many moments throughout my day where communicating with
+ others via non-verbal means is significantly easier. This tool is a fair bit more 
+advanced than what you'd normally call AAC. The depth of statement construction, the ability to bridge statements, establish replies 
+around specific contexts. You should not assume this is meant for someone with heavily limited communication and cognitive ability.
     </p>
     <p class="disclaimer">
       Built by one person, primarily to work around <em>situational
       mutism</em> — the moments where speaking out loud is much harder than
-      it should be, even though nothing is wrong with the ability to
-      communicate. I am not a speech-language pathologist, a mental health
-      professional, or anyone with formal training in AAC design. This is a
-      tool I built for myself that I'm sharing because it might help someone
-      else too — not a clinical recommendation.
+      it should be. I am not a speech-language pathologist, a mental health
+      professional, or anyone with formal training in AAC design. Created 
+      entirely by myself to help address this gap. Do not use as a substitute
+      for appropriate care and support from a qualified professional.
     </p>
   </section>
 
   <section class="wrap">
     <div class="status-banner" role="note">
-      <strong>Heads up:</strong> this is a solo, daily-driven work in
-      progress. Expect bugs, expect things to move around between updates,
-      and expect the roadmap below to be honest about what's unfinished.
+      <strong>DUST WARNING</strong> This is a genuine dogfood-style experience.
+      As I build out features I trial them in a testing environnment then
+      integrate them into my daily life. I will limit this as much as I can with
+      anything on main. Some bugs might sneak their way through though, so do
+      make sure you are reviewing any changes as ACK is developed.
     </div>
   </section>
 
   <!-- B. HOW YOU COMMUNICATE -->
   <section id="how-it-works" class="wrap">
     <p class="eyebrow">How it works</p>
-    <h2>Three ways in, one output.</h2>
+    <h2>Multimodal Output</h2>
     <div class="grid">
       <div class="panel">
         <h3>Tap controls</h3>
-        <p>The baseline. Every deck and prompt works from direct touch input
-        on the phone — no watch, no gesture setup required to get started.</p>
+        <p>Like any AAC app or device there are easy to access tap shortcuts
+          that can be used to initiate playback. This interface is where you will
+          compose your replies and statements, use variable construction to make
+          rapid edits to more formal communication, and build response and reply profiles
+          around various forms of context.
+        </p>
       </div>
       <div class="panel">
         <h3>Gesture playback</h3>
-        <p>A companion Wear OS app reads a three-pose gesture system —
+        <p>The Wear OS companion handles gestures using a simple state machine —
         <span class="kbd">ARM</span> → <span class="kbd">LOCK POSE</span> →
         <span class="kbd">MODIFY</span> → <span class="kbd">FIRE</span> —
-        letting you trigger prompts entirely touch-free, even with the phone
-        locked and in a pocket.</p>
+        giving you the ability to trigger a configured prompt using your wrist. this
+      works with the phone locked and the screen off.</p>
       </div>
       <div class="panel">
         <h3>Full-screen output</h3>
@@ -324,87 +328,101 @@
   <!-- C. DECKS -->
   <section id="decks" class="wrap">
     <p class="eyebrow">Decks</p>
-    <h2>Everything is organized into decks.</h2>
-    <p>A <strong>deck</strong> groups one style of communicating — routine
-    replies, emergency overrides, emoji reactions, memes — and a
-    <strong>profile</strong> lets the same deck carry different content for
-    different people or situations without losing your layout. Switching
-    decks changes what you're saying; switching profiles changes who you're
-    saying it to.</p>
+    <h2>Organization with a focus on utility</h2>
+    <p>A <strong>deck</strong> offers one specific form or Organization
+      of communication profiles on screen at any time, to make working 
+      with the greater context system easier with continuous use. MATRIX 
+      decks support the use of <strong>profiles</strong> which gives 
+      decks additional flexibility. Configure a deck around work related 
+      activities, along with a few profiles for more detailed work related 
+      tasks</p>
 
     <dl class="feature-list">
-      <dt>Matrix Deck</dt>
-      <dd>The core deck type: a node-based grid of prompts driven by
-      root-level variables, with a live template editor so a single saved
-      phrase can adapt to context. Supports multiple decks at once, each
-      with its own set of profiles.</dd>
+      <dt>MaATRIX Deck</dt>
+      <dd>This is the core ACK deck and experience. Build around rapid
+      statement creation and recall. Tap to initiate playback, edit a 
+      prompt, use variables to speed up construction. Prompts can 
+      be bound to one of the three poses used by the Wear OS experience,
+      with up to four commands issuable per pose. Additional context 
+      poses can be added inside a MATRIX deck, allowing for hot-swapping 
+      of all replies under a pose with a single tap.</dd>
 
       <dt>Quick Actions Deck</dt>
-      <dd>Three pose groups, four fixed actions each — the fastest path from
-      gesture to output when you don't need to compose anything, just fire a
-      known phrase.</dd>
+      <dd>A more slimmed down experience that offers the user the ability
+      to bind up to four phrases to a pose under a single form of context.
+      Used for greetings, closures, quick references. Edit all three poses
+      then initiate playback using the watch or with a tap.</dd>
 
       <dt>Emergency Deck</dt>
-      <dd>High-priority prompts that override whatever else is currently
-      playing, with a fast clear so the display doesn't get stuck mid-message
-      during something urgent.</dd>
+      <dd>Your high priority communications deck. If you need help, if you
+      have a response script for when things become extra difficult, if you
+      don't want your prompt to disapear due to a stray tap or clench, this 
+      is where you access these prompts. Prompts issued from here can include
+      a beaconing tone that plays before a prompt is issued, increasing 
+      the likelihood of reception by others.</dd>
 
       <dt>Emoji Deck</dt>
-      <dd>Visual, emoji-first prompts for quick emotional context — configure
-      a tile, pull from a library, or pair it with related panels for a
-      fuller reaction.</dd>
+      <dd>Emotional context can be difficult to deliver sometimes. This 
+      deck covers this a bit. Pick from a suite of emoji from the built-in
+      library or use any emoji you have access to on your device. Group them
+      by category, add text to the displayed prompt, make the emoji prompt 
+      more sticky.</dd>
 
       <dt>GIF Deck</dt>
-      <dd>Local GIF import and playback, organized into categories, in a
-      landscape-friendly display — for anyone who genuinely communicates
-      through memes and wants to bring that outside a chat window.</dd>
+      <dd>Memes. A powerful communication medium online, now ready to use 
+      in real space. Store and organize GIFs that you'd like to play at any
+      time here. Modifiers for GIF prompts enable better display of different
+      aspect ratio content. Add in text to your GIF prompt to reduce load on
+      the recipient.</dd>
 
       <dt>Manual Override</dt>
-      <dd>Memory banks and saved phrases with direct keyboard text output —
-      the fallback for whenever gesture input isn't available or isn't
-      convenient in the moment.</dd>
+      <dd>A standard textbox input that can be used to store phrases and prompts
+      to a category of your choosing. These can be played with a quick tap. You 
+      can also use this to issue an ephemeral reply, if the message isn't worth
+      saving.</dd>
 
       <dt>Target Computer</dt>
-      <dd>Configurable target slots that prepend or append text and route a
-      finished message somewhere specific — think of it as addressed,
-      reusable message shells rather than typing the same lead-in every
-      time.</dd>
+      <dd>Eight "targets" for any prompt you issue using ACK. These can be 
+      configured to prepend or append any simple prompt issued via a MATRIX or 
+      Quick Actions deck. Add a quick name, place, identity, or callout with a 
+      quick tap before issuing a prompt to see it added to your statement.</dd>
     </dl>
   </section>
 
   <!-- D. VOICE / TEMPLATE -->
   <section id="voice" class="wrap">
-    <p class="eyebrow">Making it sound like you</p>
-    <h2>Composable statements, tuned to your voice.</h2>
-    <p>Statements aren't limited to fixed phrases. ACK's template engine
-    supports one-off statements, routine replies, and <strong>composable,
-    bridged statements</strong> — building a full reply out of smaller
-    context-based pieces instead of writing every combination out by
-    hand.</p>
+    <p class="eyebrow">Your voice at a tap or twist</p>
+    <h2>Composable statements, tuned to context that matters to you.</h2>
+    <p>ACK is build around rapid statement construction. Fire off a one-off 
+    reply, build a social deck around a specific outing, grant yourself some
+    peace of mind with access to emergency statements when verbalizing isn't 
+    possible.</p>
 
     <div class="panel">
       <h3>Audio Architect</h3>
-      <p>Mild-but-real adjustments to the built-in TTS voice: base voice
-      selection, pitch and speed, an optional robotic overlay or bitcrush
-      texture, and custom profile slots so more than one tuned voice can be
-      saved and switched between. Output routing and gain live here too.
-      None of it aims to be a perfect voice clone — just enough tone, speed,
-      and cadence control to make the default a little more "you."</p>
+      <p>Adjust audio playback with texture, adjust the speed, cadence, and 
+      tone to better fit a voice that you want to hear, rather than the usual
+      flat output and delivery. Pick from a variety of TTS voices installed 
+      on your device then modify the output.
+      </p>
     </div>
   </section>
 
   <!-- E. GEO -->
   <section id="geo" class="wrap">
     <p class="eyebrow">Location awareness</p>
-    <h2>Geo-Protocol: context that follows where you are.</h2>
-    <p>Geo-Protocol lets specific zones change what's available or how
-    decks behave when you enter or leave them — so the same gesture can mean
-    something slightly different at home versus somewhere unfamiliar.</p>
+    <h2>Geo-Protocol: Offline location-aware deck management</h2>
+    <p>Geo-Protocol handles automatic switching of decks and profiles based on user 
+    defined geofenced zones. Offline when using the SOVEREIGN engine, uses Google 
+    Play Services with the OPTIMIZED engine. Open the map to drop a pin, then configure 
+    the name, radius, and enter/exit logic. Enable automatic swapping to a specific deck 
+    when crossing into one of these zones, handle how exiting the zone is configured.
+    </p>
     <p class="disclaimer">
-      This runs entirely on-device. ACK's Android manifest requests no
-      <code>INTERNET</code> permission anywhere in the app — location data
-      isn't sent anywhere, because there's no network path for it to travel
-      on in the first place.
+      This runs entirely on-device when using the SOVEREIGN engine, which comes with a few 
+      tradeoffs in accuracy. If accuracy and speed are a concern users have the option 
+      to enable an online-assested mode via OPTIMIZED. Your location data will be shared 
+      with Google in order to handle positioning with greater accuracy.
     </p>
   </section>
 
