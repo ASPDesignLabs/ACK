@@ -211,6 +211,68 @@
     color: var(--cyan-bright);
   }
 
+  /* Downloads pill: same mechanics as the other nav pills, distinct
+     always-on accent border so it reads as the one action item, not
+     another page-section category. */
+  details.nav-pill.nav-pill-cta > summary {
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+  .nav-dropdown-release {
+    padding: 0.9rem 1rem;
+    min-width: 260px;
+    max-width: 320px;
+  }
+  .release-tag-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+  .release-badge {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--cyan);
+    padding: 0.15rem 0.4rem;
+  }
+  .release-date {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    margin: 0.2rem 0 0.75rem;
+  }
+  .release-asset {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+  .release-asset a { color: var(--text); text-decoration: none; }
+  .release-asset a:hover, .release-asset a:focus-visible { color: var(--cyan-bright); }
+  .release-asset .size { color: var(--text-faint); flex-shrink: 0; }
+  .release-note {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    margin: 0.6rem 0 0;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--border);
+  }
+  .release-all-link {
+    display: block;
+    margin-top: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+  .release-fallback { margin: 0; font-size: 0.85rem; color: var(--text-dim); }
+
   .hero {
     padding-top: 4rem;
     padding-bottom: 3rem;
@@ -397,6 +459,21 @@
   }
   @media (max-width: 480px) {
     .shot-thumb { width: 60px; height: 60px; }
+    /* A dropdown anchored to its trigger pill's edge can extend past the
+       viewport on narrow screens once pills wrap onto their own row --
+       pin to viewport-relative bounds instead of the pill's edge here.
+       position:fixed escapes the pill's own positioning context; nav.top's
+       backdrop-filter makes it (not the true viewport) the containing
+       block for that, but nav.top already spans full viewport width, so
+       left/right still resolve against the real screen edges. */
+    .nav-dropdown, .nav-dropdown-release {
+      position: fixed;
+      left: 1rem;
+      right: 1rem;
+      width: auto;
+      min-width: 0;
+      max-width: none;
+    }
   }
 
   details.module {
@@ -499,6 +576,15 @@
           <a href="#help">Help &amp; logs</a>
           <a href="#dev">Build it</a>
           <a href="#status">Status</a>
+        </div>
+      </details>
+      <details class="nav-pill nav-pill-cta">
+        <summary>Downloads <span class="car" aria-hidden="true">&#9662;</span></summary>
+        <div class="nav-dropdown nav-dropdown-release">
+          <div id="releaseInfo">
+            <p class="release-fallback">Latest beta builds are on
+            <a href="https://github.com/ASPDesignLabs/ACK/releases" target="_blank" rel="noopener noreferrer">GitHub Releases</a>.</p>
+          </div>
         </div>
       </details>
     </div>
@@ -1115,6 +1201,61 @@ around specific contexts. You should not assume this is meant for someone with h
       if (pill) pill.open = false;
     });
   });
+})();
+
+// ---- Latest release info: live-fetched so it never needs a manual edit
+// to stay current. The static link already in the markup is a fully
+// working fallback if this fetch is blocked, offline, or rate-limited --
+// on any failure this just leaves that fallback exactly as it is. ----
+(function () {
+  var info = document.getElementById('releaseInfo');
+  if (!info || typeof fetch !== 'function') return;
+
+  function formatSize(bytes) {
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+  function formatDate(iso) {
+    try {
+      return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch (e) { return iso; }
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  fetch('https://api.github.com/repos/ASPDesignLabs/ACK/releases?per_page=1')
+    .then(function (res) { if (!res.ok) throw new Error('bad status'); return res.json(); })
+    .then(function (releases) {
+      if (!releases || !releases.length) return;
+      var r = releases[0];
+      var isPre = r.prerelease || /\b(alpha|beta|rc|preview|dev)\b/i.test(r.tag_name + ' ' + (r.name || ''));
+      var badge = isPre ? '<span class="release-badge">Beta</span>' : '';
+
+      var assetsHtml = (r.assets || []).map(function (a) {
+        return '<div class="release-asset">' +
+          '<a href="' + a.browser_download_url + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(a.name) + '</a>' +
+          '<span class="size">' + formatSize(a.size) + '</span>' +
+          '</div>';
+      }).join('');
+
+      info.innerHTML =
+        '<p class="release-tag-row">' + escapeHtml(r.tag_name) + ' ' + badge + '</p>' +
+        '<p class="release-date">Published ' + formatDate(r.published_at) + '</p>' +
+        assetsHtml +
+        '<a class="release-all-link" href="https://github.com/ASPDesignLabs/ACK/releases" target="_blank" rel="noopener noreferrer">View all releases on GitHub &#8599;</a>';
+
+      // These links were inserted after the page-wide nav-dropdown click
+      // wiring ran, so they need their own close-the-pill handler.
+      info.querySelectorAll('a').forEach(function (a) {
+        a.addEventListener('click', function () {
+          var pill = a.closest('details.nav-pill');
+          if (pill) pill.open = false;
+        });
+      });
+    })
+    .catch(function () { /* leave the static fallback link as-is */ });
 })();
 </script>
 
