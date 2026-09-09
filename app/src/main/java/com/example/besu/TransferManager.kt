@@ -100,6 +100,21 @@ object TransferManager {
                 )
             }
 
+// 4b. Gather Emergency configuration for Emergency decks, plus the
+// user's own (non-deck-scoped) medical ID card.
+        val emergencyDecks = decksList
+            .filter { deck ->
+                deck.type == DeckType.EMERGENCY
+            }
+            .map { deck ->
+                CommandRepository.getEmergencyConfig(
+                    context = context,
+                    deckId = deck.id
+                )
+            }
+
+        val emergencyInfoCard = CommandRepository.getEmergencyInfoCard(context)
+
 // Create a lookup map of system defaults: path -> factory phrase.
         val systemDefaults = CommandRepository.BASE_TEMPLATE.associate {
             it.path to it.defaultPhrase
@@ -188,6 +203,8 @@ object TransferManager {
             activeCategoryFocus = activeCategoryFocus,
             headerShortcuts = headerShortcuts,
             quickActionsDecks = quickActionsDecks,
+            emergencyDecks = emergencyDecks,
+            emergencyInfoCard = emergencyInfoCard,
         )
 
         return json.encodeToString(backup)
@@ -287,6 +304,39 @@ object TransferManager {
             if (shortcut.label.length > 30) return false
             if (shortcut.phrase.length > MAX_PHRASE_LENGTH) return false
         }
+
+// 8. Validate emergency deck configs.
+        if (backup.emergencyDecks.size > 20) return false
+
+        backup.emergencyDecks.forEach { config ->
+            if (!SAFE_KEY_PATTERN.matches(config.deckId)) return false
+            if (config.slots.size > 20) return false
+
+            config.slots.forEach { slot ->
+                if (slot.label.length > 60) return false
+                if (slot.template.length > MAX_PHRASE_LENGTH) return false
+                if (slot.localValues.size > 20) return false
+                slot.localValues.forEach { if (it.length > MAX_PHRASE_LENGTH) return false }
+            }
+        }
+
+// 9. Validate the medical ID card.
+        val card = backup.emergencyInfoCard
+        if (card.fullName.length > 100) return false
+        if (card.dateOfBirth.length > 40) return false
+        if (card.bloodType.length > 20) return false
+        if (card.communicationNote.length > MAX_PHRASE_LENGTH) return false
+        if (card.conditions.length > MAX_PHRASE_LENGTH) return false
+        if (card.allergies.length > MAX_PHRASE_LENGTH) return false
+        if (card.medications.length > MAX_PHRASE_LENGTH) return false
+        if (card.notes.length > MAX_PHRASE_LENGTH) return false
+        if (card.contacts.size > 5) return false
+        card.contacts.forEach { contact ->
+            if (contact.name.length > 100) return false
+            if (contact.relationship.length > 60) return false
+            if (contact.phone.length > 40) return false
+        }
+
         return true
     }
 
@@ -427,6 +477,36 @@ object TransferManager {
         }
 
         editor.apply()
+
+        // 2b. Restore structured data that lives outside the sparse matrix
+        // dump above -- root overrides, per-deck configs, header shortcuts,
+        // the medical ID card, and the active-context selection. These are
+        // gathered on export (see generateBackupJson) but need their own
+        // restore calls since editor.clear() above only wiped the matrix
+        // preferences file; each of these has its own storage shape.
+        backup.rootOverrides.forEach { (category, config) ->
+            RootOverrideRepository.saveConfig(context, category, config)
+        }
+
+        backup.quickActionsDecks.forEach { config ->
+            CommandRepository.saveQuickActionsConfig(context, config)
+        }
+
+        backup.emergencyDecks.forEach { config ->
+            CommandRepository.saveEmergencyConfig(context, config)
+        }
+
+        CommandRepository.saveEmergencyInfoCard(context, backup.emergencyInfoCard)
+
+        CommandRepository.saveHeaderShortcuts(context, backup.headerShortcuts)
+
+        CommandRepository.activateDeck(
+            context = context,
+            deckId = backup.activeDeckId,
+            colorIndex = backup.activeDeckColorIndex
+        )
+        CommandRepository.setActiveProfile(context, backup.activeProfile)
+        CommandRepository.setActiveCategoryFocus(context, backup.activeCategoryFocus)
 
         // 3. Make the active audio stack reread restored DSP values immediately.
         context.startService(

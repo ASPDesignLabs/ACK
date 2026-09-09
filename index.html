@@ -813,9 +813,14 @@ around specific contexts. You should not assume this is meant for someone with h
       <h3>Build requirements</h3>
       <ul>
         <li>Android Studio</li>
-        <li>A custom Mapsforge-compatible map splice for your local region,
-        dropped into <code>app/src/main/assets</code></li>
       </ul>
+      <p>No region map ships with the app or the build — Geo-Protocol works
+      by coordinate with no map data at all. Import your own
+      Mapsforge-compatible <code>.map</code> file from inside the app
+      (Geo-Protocol → Map Data → Import Map File) any time after install,
+      no rebuild required. A personal build can still drop a splice into
+      <code>app/src/main/assets/tactical_grid.map</code> as a build-time
+      default if you'd rather bundle one.</p>
       <p>Full contribution workflow — branch naming, commit conventions, and
       the day-to-day git flow — is documented in
       <a href="https://github.com/ASPDesignLabs/ACK/blob/main/docs/GIT_WORKFLOW.md">docs/GIT_WORKFLOW.md</a>.</p>

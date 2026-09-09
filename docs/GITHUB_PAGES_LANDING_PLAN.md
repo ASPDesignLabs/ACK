@@ -152,8 +152,9 @@ Every section below maps to a verified, real feature. This list *is* the
 - Stack: Kotlin, Jetpack Compose, Wear OS, Mapsforge (offline vector maps —
   explains *why* offline maps: geo features keep working with zero network
   dependency).
-- Build instructions summary (Android Studio, Gradle, the custom Mapsforge
-  map splice into `app/assets`) linking out to a fuller doc.
+- Build instructions summary (Android Studio, Gradle; note that region map
+  data is imported at runtime from within the app, not bundled at build
+  time) linking out to a fuller doc.
 - Contributing / git workflow, linking `docs/GIT_WORKFLOW.md`.
 - Parked/experimental: the visual/mosaic importer, clearly labeled inactive.
 

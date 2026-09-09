@@ -1,9 +1,11 @@
 package com.example.besu
 
 import android.content.Context
+import android.net.Uri
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.File
 
 // 1. THE DATA MODEL
 @Serializable
@@ -82,5 +84,65 @@ object GeoRepository {
     fun setGeoEnabled(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS_SECURE_GEO, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_MASTER_TOGGLE, enabled).apply()
+    }
+
+    // 3. USER-SUPPLIED MAP DATA
+    //
+    // No region map ships inside the APK. Instead, a user can import their own
+    // Mapsforge-compatible .map file at runtime (see GEO_MAP_IMPORT in
+    // GeoProtocolView) and it's copied into app-private storage here. This
+    // keeps the release build small while still letting Tactical Grid render
+    // real basemap tiles for whoever supplies their own regional extract.
+    private const val MAP_DIR_NAME = "geo_maps"
+    private const val USER_MAP_FILE_NAME = "user_region.map"
+
+    private fun mapDir(context: Context): File {
+        return File(context.filesDir, MAP_DIR_NAME).apply { mkdirs() }
+    }
+
+    /** The imported map file, or null if the user hasn't supplied one. */
+    fun getUserMapFile(context: Context): File? {
+        val file = File(mapDir(context), USER_MAP_FILE_NAME)
+        return if (file.exists() && file.length() > 0) file else null
+    }
+
+    /**
+     * Streams [uri] into app-private storage as the active region map.
+     * Writes to a temp file first and only swaps it in on full success, so a
+     * failed/interrupted import can never corrupt or half-overwrite an
+     * existing map.
+     */
+    fun importUserMapFile(context: Context, uri: Uri): Result<File> {
+        return try {
+            val dir = mapDir(context)
+            val tempFile = File(dir, "$USER_MAP_FILE_NAME.tmp")
+            val destFile = File(dir, USER_MAP_FILE_NAME)
+
+            val input = context.contentResolver.openInputStream(uri)
+                ?: return Result.failure(Exception("Cannot open selected file"))
+
+            input.use { streamIn ->
+                tempFile.outputStream().use { streamOut ->
+                    streamIn.copyTo(streamOut)
+                }
+            }
+
+            if (tempFile.length() == 0L) {
+                tempFile.delete()
+                return Result.failure(Exception("Selected file is empty"))
+            }
+
+            destFile.delete()
+            tempFile.renameTo(destFile)
+
+            Result.success(destFile)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Removes the imported map, if any. Tactical Grid falls back to no basemap tiles. */
+    fun clearUserMapFile(context: Context) {
+        getUserMapFile(context)?.delete()
     }
 }

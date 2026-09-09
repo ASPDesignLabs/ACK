@@ -37,7 +37,7 @@ I am not a speech language pathologist, mental health or behavioral specialist, 
 
 
 
-If you want to build this you'll need Android Studio and a custom map splice for your local region that works with Mapsforge. Drop it into app/assets.
+If you want to build this you'll need Android Studio. No region map ships with the app or the build -- Geo-Protocol's Tactical Grid works by coordinate with no map at all, and you can import your own Mapsforge-compatible `.map` file from within the app (Geo-Protocol → Map Data → Import Map File) any time after install, without rebuilding. Anyone doing a personal build can still drop a splice into `app/src/main/assets/tactical_grid.map` as a build-time default if they'd rather bundle one.
 
 
 

@@ -13,6 +13,13 @@ data class AckBackup(
 
     val quickActionsDecks: List<QuickActionsDeckConfig> = emptyList(),
 
+    // Emergency deck prompts/overrides, one entry per EMERGENCY-type deck.
+    val emergencyDecks: List<EmergencyDeckConfig> = emptyList(),
+
+    // The user's own medical ID card -- not deck-scoped, so it's a single
+    // entry rather than a per-deck list like the ones above.
+    val emergencyInfoCard: EmergencyInfoCard = EmergencyInfoCard(),
+
     // Explicit root A/B/C override storage, keyed by category.
     val rootOverrides: Map<String, RootOverrideConfig> = emptyMap(),
 

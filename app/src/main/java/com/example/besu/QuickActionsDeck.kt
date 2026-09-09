@@ -468,7 +468,10 @@ private fun QuickActionEditorDialog(
                 ) {
                     TightPanelButton(
                         text = "SAVE",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(AckTags.QUICK_ACTION_SAVE)
+                            .helpTarget(AckTags.QUICK_ACTION_SAVE, primaryColor),
                         mainColor = primaryColor
                     ) {
                         onSave(

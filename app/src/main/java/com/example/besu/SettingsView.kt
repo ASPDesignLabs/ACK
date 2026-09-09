@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -139,11 +140,11 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
                 Text("WATCH AUDIO FEEDBACK", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ThemeOption(0, "SHARP", if(toneTheme == 0) 0 else -1, primaryColor) { toneTheme = 0; syncAll()
+                    ThemeOption(0, "SHARP", if(toneTheme == 0) 0 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 0; syncAll()
                         reportHelpInteraction(AckTags.SETTINGS_WATCH_AUDIO)}
-                    ThemeOption(1, "CLEAN", if(toneTheme == 1) 1 else -1, primaryColor) { toneTheme = 1; syncAll()
+                    ThemeOption(1, "CLEAN", if(toneTheme == 1) 1 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 1; syncAll()
                         reportHelpInteraction(AckTags.SETTINGS_WATCH_AUDIO)}
-                    ThemeOption(2, "SOFT", if(toneTheme == 2) 2 else -1, primaryColor) { toneTheme = 2; syncAll()
+                    ThemeOption(2, "SOFT", if(toneTheme == 2) 2 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 2; syncAll()
                         reportHelpInteraction(AckTags.SETTINGS_WATCH_AUDIO)}
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -394,7 +395,7 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
                 }
             }
         }
-        HeroButton("UPLOAD PROTOCOL", Modifier.fillMaxWidth().tutorialTarget(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
+        HeroButton("UPLOAD PROTOCOL", Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
     }
 
     if (showImportDialog && importedBackup != null) {

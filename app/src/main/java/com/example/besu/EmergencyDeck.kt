@@ -6,7 +6,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.content.MediaType.Companion.Text
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,11 +15,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
 import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.Composable
@@ -37,6 +39,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.serialization.Serializable
@@ -70,6 +73,37 @@ data class EmergencyDeckConfig(
     val tone: EmergencyTone = EmergencyTone.OFF
 )
 
+@Serializable
+data class EmergencyContact(
+    val name: String = "",
+    val relationship: String = "",
+    val phone: String = ""
+) {
+    val isBlank: Boolean
+        get() = name.isBlank() && relationship.isBlank() && phone.isBlank()
+}
+
+// A one-glance medical ID card for a bystander or first responder -- not
+// deck-specific, since it describes the person, not a communication style.
+@Serializable
+data class EmergencyInfoCard(
+    val fullName: String = "",
+    val dateOfBirth: String = "",
+    val bloodType: String = "",
+    val communicationNote: String = "I am non-verbal or unable to speak right now " +
+        "and communicate using this device.",
+    val conditions: String = "",
+    val allergies: String = "",
+    val medications: String = "",
+    val contacts: List<EmergencyContact> = listOf(EmergencyContact(), EmergencyContact()),
+    val notes: String = ""
+) {
+    val isBlank: Boolean
+        get() = fullName.isBlank() && dateOfBirth.isBlank() && bloodType.isBlank() &&
+            conditions.isBlank() && allergies.isBlank() && medications.isBlank() &&
+            notes.isBlank() && contacts.all { it.isBlank }
+}
+
 @Composable
 fun EmergencyDeck(
     context: Context,
@@ -91,6 +125,14 @@ fun EmergencyDeck(
 
     var showOverrides by remember {
         mutableStateOf(false)
+    }
+
+    var showInfoCard by remember {
+        mutableStateOf(false)
+    }
+
+    var infoCard by remember {
+        mutableStateOf(CommandRepository.getEmergencyInfoCard(context))
     }
 
     val helpManager = LocalHelpManager.current
@@ -217,6 +259,24 @@ fun EmergencyDeck(
             showOverrides = true
             reportHelpInteraction(AckTags.EMERGENCY_OVERRIDES)
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Below CONFIGURE OVERRIDES at double the vertical padding so it's an
+        // easy target to hit, and white instead of the deck's accent color so
+        // it reads as the "for someone else looking at this screen" action.
+        AckOutlineButton(
+            text = "EMERGENCY INFO",
+            primaryColor = Color.White,
+            verticalPadding = 24.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(AckTags.EMERGENCY_INFO)
+                .helpTarget(AckTags.EMERGENCY_INFO, Color.White)
+        ) {
+            showInfoCard = true
+            reportHelpInteraction(AckTags.EMERGENCY_INFO)
+        }
     }
 
     editingSlot?.let { slot ->
@@ -258,6 +318,20 @@ fun EmergencyDeck(
 
                 reloadConfig()
                 showOverrides = false
+            }
+        )
+    }
+
+    if (showInfoCard) {
+        EmergencyInfoDialog(
+            card = infoCard,
+            onDismiss = {
+                showInfoCard = false
+            },
+            onSave = { updatedCard ->
+                CommandRepository.saveEmergencyInfoCard(context, updatedCard)
+                infoCard = updatedCard
+                reportTextCommit(AckTags.EMERGENCY_INFO_SAVE)
             }
         )
     }
@@ -462,7 +536,10 @@ private fun EmergencySlotEditorDialog(
             AckOutlineButton(
                 text = "SAVE",
                 primaryColor = primaryColor,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(AckTags.EMERGENCY_SAVE)
+                    .helpTarget(AckTags.EMERGENCY_SAVE, primaryColor)
             ) {
                 onSave(
                     label,
@@ -613,6 +690,332 @@ private fun EmergencyOverridesDialog(
 }
 
 @Composable
+private fun EmergencyInfoDialog(
+    card: EmergencyInfoCard,
+    onDismiss: () -> Unit,
+    onSave: (EmergencyInfoCard) -> Unit
+) {
+    var isEditing by remember { mutableStateOf(false) }
+
+    AckDialogShell(
+        title = if (isEditing) "EDIT EMERGENCY INFO" else "EMERGENCY INFO",
+        primaryColor = Color.White,
+        onDismiss = onDismiss
+    ) {
+        if (isEditing) {
+            EmergencyInfoEditForm(
+                card = card,
+                onCancel = { isEditing = false },
+                onSave = { updated ->
+                    onSave(updated)
+                    isEditing = false
+                }
+            )
+        } else {
+            EmergencyInfoDisplay(card)
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                AckOutlineButton(
+                    text = "CLOSE",
+                    primaryColor = Color.Gray,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    onDismiss()
+                }
+
+                AckOutlineButton(
+                    text = "EDIT",
+                    primaryColor = Color.White,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    isEditing = true
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmergencyInfoField(label: String, value: String) {
+    if (value.isBlank()) return
+
+    Column(modifier = Modifier.padding(bottom = 14.dp)) {
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = 9.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        Text(
+            text = value,
+            color = Color.White,
+            fontSize = 15.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun EmergencyInfoDisplay(card: EmergencyInfoCard) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (card.isBlank) {
+            Text(
+                text = "NO INFO ON FILE YET. TAP EDIT TO FILL OUT YOUR CARD.",
+                color = Color.Gray,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+        }
+
+        EmergencyInfoField("NAME", card.fullName)
+        EmergencyInfoField("DATE OF BIRTH", card.dateOfBirth)
+        EmergencyInfoField("BLOOD TYPE", card.bloodType)
+        EmergencyInfoField("COMMUNICATION", card.communicationNote)
+        EmergencyInfoField("CONDITIONS", card.conditions)
+        EmergencyInfoField("ALLERGIES", card.allergies)
+        EmergencyInfoField("MEDICATIONS", card.medications)
+
+        card.contacts.forEachIndexed { index, contact ->
+            if (!contact.isBlank) {
+                EmergencyInfoField(
+                    label = if (index == 0) "PRIMARY CONTACT" else "EMERGENCY CONTACT",
+                    value = listOf(contact.name, contact.relationship, contact.phone)
+                        .filter { it.isNotBlank() }
+                        .joinToString("  //  ")
+                )
+            }
+        }
+
+        EmergencyInfoField("NOTES", card.notes)
+    }
+}
+
+@Composable
+private fun EmergencyInfoEditForm(
+    card: EmergencyInfoCard,
+    onCancel: () -> Unit,
+    onSave: (EmergencyInfoCard) -> Unit
+) {
+    var fullName by remember { mutableStateOf(card.fullName) }
+    var dateOfBirth by remember { mutableStateOf(card.dateOfBirth) }
+    var bloodType by remember { mutableStateOf(card.bloodType) }
+    var communicationNote by remember { mutableStateOf(card.communicationNote) }
+    var conditions by remember { mutableStateOf(card.conditions) }
+    var allergies by remember { mutableStateOf(card.allergies) }
+    var medications by remember { mutableStateOf(card.medications) }
+    var notes by remember { mutableStateOf(card.notes) }
+
+    val contact1 = card.contacts.getOrNull(0) ?: EmergencyContact()
+    val contact2 = card.contacts.getOrNull(1) ?: EmergencyContact()
+
+    var contact1Name by remember { mutableStateOf(contact1.name) }
+    var contact1Relationship by remember { mutableStateOf(contact1.relationship) }
+    var contact1Phone by remember { mutableStateOf(contact1.phone) }
+    var contact2Name by remember { mutableStateOf(contact2.name) }
+    var contact2Relationship by remember { mutableStateOf(contact2.relationship) }
+    var contact2Phone by remember { mutableStateOf(contact2.phone) }
+
+    Column {
+        AckTextField(label = "FULL NAME", value = fullName, primaryColor = Color.White) {
+            fullName = it
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AckTextField(label = "DATE OF BIRTH", value = dateOfBirth, primaryColor = Color.White) {
+            dateOfBirth = it
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AckTextField(label = "BLOOD TYPE", value = bloodType, primaryColor = Color.White) {
+            bloodType = it
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AckTextField(
+            label = "COMMUNICATION NOTE",
+            value = communicationNote,
+            primaryColor = Color.White,
+            singleLine = false
+        ) {
+            communicationNote = it
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AckTextField(
+            label = "MEDICAL CONDITIONS",
+            value = conditions,
+            primaryColor = Color.White,
+            singleLine = false
+        ) {
+            conditions = it
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AckTextField(
+            label = "ALLERGIES",
+            value = allergies,
+            primaryColor = Color.White,
+            singleLine = false
+        ) {
+            allergies = it
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AckTextField(
+            label = "MEDICATIONS",
+            value = medications,
+            primaryColor = Color.White,
+            singleLine = false
+        ) {
+            medications = it
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "PRIMARY CONTACT",
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AckTextField(label = "NAME", value = contact1Name, primaryColor = Color.White) {
+            contact1Name = it
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AckTextField(
+            label = "RELATIONSHIP",
+            value = contact1Relationship,
+            primaryColor = Color.White
+        ) {
+            contact1Relationship = it
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AckTextField(label = "PHONE", value = contact1Phone, primaryColor = Color.White) {
+            contact1Phone = it
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "SECONDARY CONTACT",
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AckTextField(label = "NAME", value = contact2Name, primaryColor = Color.White) {
+            contact2Name = it
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AckTextField(
+            label = "RELATIONSHIP",
+            value = contact2Relationship,
+            primaryColor = Color.White
+        ) {
+            contact2Relationship = it
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AckTextField(label = "PHONE", value = contact2Phone, primaryColor = Color.White) {
+            contact2Phone = it
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AckTextField(
+            label = "ADDITIONAL NOTES",
+            value = notes,
+            primaryColor = Color.White,
+            singleLine = false
+        ) {
+            notes = it
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            AckOutlineButton(
+                text = "CANCEL",
+                primaryColor = Color.Gray,
+                modifier = Modifier.weight(1f)
+            ) {
+                onCancel()
+            }
+
+            AckOutlineButton(
+                text = "SAVE",
+                primaryColor = Color.White,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(AckTags.EMERGENCY_INFO_SAVE)
+                    .helpTarget(AckTags.EMERGENCY_INFO_SAVE, Color.White)
+            ) {
+                onSave(
+                    EmergencyInfoCard(
+                        fullName = fullName.trim(),
+                        dateOfBirth = dateOfBirth.trim(),
+                        bloodType = bloodType.trim(),
+                        communicationNote = communicationNote.trim(),
+                        conditions = conditions.trim(),
+                        allergies = allergies.trim(),
+                        medications = medications.trim(),
+                        contacts = listOf(
+                            EmergencyContact(
+                                name = contact1Name.trim(),
+                                relationship = contact1Relationship.trim(),
+                                phone = contact1Phone.trim()
+                            ),
+                            EmergencyContact(
+                                name = contact2Name.trim(),
+                                relationship = contact2Relationship.trim(),
+                                phone = contact2Phone.trim()
+                            )
+                        ),
+                        notes = notes.trim()
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun AckDialogShell(
     title: String,
     primaryColor: Color,
@@ -623,6 +1026,7 @@ private fun AckDialogShell(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(max = 640.dp)
                 .background(
                     color = Color(0xFF17191D),
                     shape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
@@ -633,6 +1037,7 @@ private fun AckDialogShell(
                     shape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
                 )
                 .padding(18.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             Text(
                 text = title,
@@ -806,6 +1211,7 @@ private fun AckOutlineButton(
     text: String,
     primaryColor: Color,
     modifier: Modifier = Modifier,
+    verticalPadding: Dp = 12.dp,
     onClick: () -> Unit
 ) {
     Box(
@@ -826,7 +1232,7 @@ private fun AckOutlineButton(
                     }
                 )
             }
-            .padding(vertical = 12.dp, horizontal = 10.dp),
+            .padding(vertical = verticalPadding, horizontal = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
