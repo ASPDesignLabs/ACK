@@ -137,22 +137,79 @@
     backdrop-filter: blur(4px);
     border-bottom: 1px solid var(--border);
     z-index: 10;
-    overflow-x: auto;
   }
-  nav.top ul {
-    list-style: none;
+  .nav-inner {
     display: flex;
-    gap: 1.25rem;
-    margin: 0;
-    padding: 0.9rem 1.5rem;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding: 0.75rem 1.5rem;
     max-width: 920px;
     margin-inline: auto;
+  }
+  .nav-brand {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+  .nav-brand:hover, .nav-brand:focus-visible { color: var(--cyan-bright); }
+  .nav-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  details.nav-pill { position: relative; }
+  details.nav-pill > summary {
+    list-style: none;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: var(--graphite);
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+  details.nav-pill > summary::-webkit-details-marker { display: none; }
+  details.nav-pill > summary::marker { content: ""; }
+  details.nav-pill > summary .car { font-size: 0.65rem; opacity: 0.7; transition: transform 0.15s ease; }
+  details.nav-pill[open] > summary { color: var(--cyan-bright); border-color: var(--cyan-bright); }
+  details.nav-pill[open] > summary .car { transform: rotate(180deg); }
+  details.nav-pill > summary:hover, details.nav-pill > summary:focus-visible { color: var(--cyan-bright); }
+
+  .nav-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 220px;
+    background: var(--graphite);
+    border: 1px solid var(--cyan-bright);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    padding: 0.4rem 0;
+    z-index: 20;
+  }
+  .nav-dropdown a {
+    display: block;
+    padding: 0.55rem 1rem;
     font-family: var(--font-mono);
     font-size: 0.85rem;
+    color: var(--text-dim);
+    text-decoration: none;
     white-space: nowrap;
   }
-  nav.top a { color: var(--text-dim); }
-  nav.top a:hover, nav.top a:focus-visible { color: var(--cyan-bright); }
+  .nav-dropdown a:hover, .nav-dropdown a:focus-visible {
+    background: var(--graphite-2);
+    color: var(--cyan-bright);
+  }
 
   .hero {
     padding-top: 4rem;
@@ -384,24 +441,68 @@
     border-bottom: 1px solid var(--border);
   }
   table.compat th { color: var(--cyan); font-family: var(--font-mono); }
+
+  .accordion-toggle {
+    all: unset;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem;
+    width: 100%;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+  }
+  .accordion-toggle:hover { color: var(--cyan-bright); }
+  .accordion-toggle:focus-visible {
+    outline: 2px solid var(--cyan-bright);
+    outline-offset: 3px;
+  }
+  .accordion-toggle .chevron {
+    font-size: 0.7em;
+    color: var(--cyan);
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+  }
+  .accordion-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+  .accordion-panel { margin-top: 1.5rem; }
 </style>
+<noscript><style>.accordion-panel[hidden] { display: block !important; }</style></noscript>
 </head>
 <body>
 
 <a class="skip-link" href="#main">Skip to main content</a>
 
 <nav class="top" aria-label="Section navigation">
-  <ul>
-    <li><a href="#how-it-works">How it works</a></li>
-    <li><a href="#decks">Decks</a></li>
-    <li><a href="#voice">Voice</a></li>
-    <li><a href="#geo">Location</a></li>
-    <li><a href="#training">Training</a></li>
-    <li><a href="#watch">Wear OS</a></li>
-    <li><a href="#help">Help &amp; logs</a></li>
-    <li><a href="#dev">Build it</a></li>
-    <li><a href="#status">Status</a></li>
-  </ul>
+  <div class="nav-inner">
+    <a class="nav-brand" href="#main">ACK</a>
+    <div class="nav-groups">
+      <details class="nav-pill">
+        <summary>Product <span class="car" aria-hidden="true">&#9662;</span></summary>
+        <div class="nav-dropdown">
+          <a href="#how-it-works">How it works</a>
+          <a href="#decks">Decks</a>
+          <a href="#voice">Voice</a>
+          <a href="#geo">Location</a>
+        </div>
+      </details>
+      <details class="nav-pill">
+        <summary>Training &amp; Wear OS <span class="car" aria-hidden="true">&#9662;</span></summary>
+        <div class="nav-dropdown">
+          <a href="#training">Training</a>
+          <a href="#watch">Wear OS</a>
+        </div>
+      </details>
+      <details class="nav-pill">
+        <summary>Project <span class="car" aria-hidden="true">&#9662;</span></summary>
+        <div class="nav-dropdown">
+          <a href="#help">Help &amp; logs</a>
+          <a href="#dev">Build it</a>
+          <a href="#status">Status</a>
+        </div>
+      </details>
+    </div>
+  </div>
 </nav>
 
 <main id="main">
@@ -479,7 +580,8 @@ around specific contexts. You should not assume this is meant for someone with h
   <!-- C. DECKS -->
   <section id="decks" class="wrap">
     <p class="eyebrow">Decks</p>
-    <h2>Organization with a focus on utility</h2>
+    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="decks-panel">Organization with a focus on utility<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
+    <div id="decks-panel" class="accordion-panel" hidden>
     <p>A <strong>deck</strong> offers one specific form or Organization
       of communication profiles on screen at any time, to make working 
       with the greater context system easier with continuous use. MATRIX 
@@ -592,12 +694,14 @@ around specific contexts. You should not assume this is meant for someone with h
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
       </button>
     </div>
+    </div>
   </section>
 
   <!-- D. VOICE / TEMPLATE -->
   <section id="voice" class="wrap">
     <p class="eyebrow">Your voice at a tap or twist</p>
-    <h2>Composable statements, tuned to context that matters to you.</h2>
+    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="voice-panel">Composable statements, tuned to context that matters to you.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
+    <div id="voice-panel" class="accordion-panel" hidden>
     <p>ACK is build around rapid statement construction. Fire off a one-off 
     reply, build a social deck around a specific outing, grant yourself some
     peace of mind with access to emergency statements when verbalizing isn't 
@@ -611,12 +715,14 @@ around specific contexts. You should not assume this is meant for someone with h
       on your device then modify the output.
       </p>
     </div>
+    </div>
   </section>
 
   <!-- E. GEO -->
   <section id="geo" class="wrap">
     <p class="eyebrow">Location awareness</p>
-    <h2>Geo-Protocol: Offline location-aware deck management</h2>
+    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="geo-panel">Geo-Protocol: Offline location-aware deck management<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
+    <div id="geo-panel" class="accordion-panel" hidden>
     <p>Geo-Protocol handles automatic switching of decks and profiles based on user 
     defined geofenced zones. Offline when using the SOVEREIGN engine, uses Google 
     Play Services with the OPTIMIZED engine. Open the map to drop a pin, then configure 
@@ -629,12 +735,14 @@ around specific contexts. You should not assume this is meant for someone with h
       to enable an online-assested mode via OPTIMIZED. Your location data will be shared 
       with Google in order to handle positioning with greater accuracy.
     </p>
+    </div>
   </section>
 
   <!-- F. TRAINING -->
   <section id="training" class="wrap">
     <p class="eyebrow">Training &amp; confidence-building</p>
-    <h2>Practice the gestures before you need them.</h2>
+    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="training-panel">Practice the gestures before you need them.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
+    <div id="training-panel" class="accordion-panel" hidden>
     <div class="grid">
       <div class="panel">
         <h3>Training Ground</h3>
@@ -649,12 +757,14 @@ around specific contexts. You should not assume this is meant for someone with h
         generic demo.</p>
       </div>
     </div>
+    </div>
   </section>
 
   <!-- G. WEAR OS -->
   <section id="watch" class="wrap">
     <p class="eyebrow">The companion</p>
-    <h2>A Wear OS app that does the physical half.</h2>
+    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="watch-panel">A Wear OS app that does the physical half.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
+    <div id="watch-panel" class="accordion-panel" hidden>
     <p>The watch side is deliberately small: it's what senses the pose,
     watches for a wake gesture (by default, a triple wrist twist so
     commands can't fire by accident), and pushes that event to the phone.
@@ -666,12 +776,14 @@ around specific contexts. You should not assume this is meant for someone with h
         <span>Screenshot coming soon:<br>watch pairing / pose selector</span>
       </figure>
     </div>
+    </div>
   </section>
 
   <!-- H. HELP / TRANSPARENCY -->
   <section id="help" class="wrap">
     <p class="eyebrow">Help, onboarding &amp; transparency</p>
-    <h2>A tutorial system that only advances when you actually do the thing.</h2>
+    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="help-panel">A tutorial system that only advances when you actually do the thing.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
+    <div id="help-panel" class="accordion-panel" hidden>
     <p>ACK's in-app help isn't a slideshow. Each module only steps forward
     when a real event fires from the real UI — a specific tap, a committed
     text field, a cleared overlay, an actual watch gesture broadcast — so
@@ -684,12 +796,14 @@ around specific contexts. You should not assume this is meant for someone with h
       variables are yours — the Data Port exists so you can move them, keep
       copies, and never be locked into a single install.</p>
     </div>
+    </div>
   </section>
 
   <!-- I. DEVELOPERS -->
   <section id="dev" class="wrap">
     <p class="eyebrow">Under the hood</p>
-    <h2>For anyone who wants to build it themselves.</h2>
+    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="dev-panel">For anyone who wants to build it themselves.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
+    <div id="dev-panel" class="accordion-panel" hidden>
     <p>ACK is Kotlin + Jetpack Compose, split into a phone module and a
     Wear OS module. Maps are rendered fully offline with Mapsforge/vtm — no
     tile server, no network dependency, matching the rest of the app's
@@ -718,12 +832,14 @@ around specific contexts. You should not assume this is meant for someone with h
         <tr><td>ACK itself</td><td>GPLv3</td></tr>
       </tbody>
     </table>
+    </div>
   </section>
 
   <!-- J. STATUS -->
   <section id="status" class="wrap">
     <p class="eyebrow">Status &amp; disclaimers</p>
-    <h2>Where this actually stands.</h2>
+    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="status-panel">Where this actually stands.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
+    <div id="status-panel" class="accordion-panel" hidden>
     <p>This section gets updated by hand against
     <code>docs/HELP_TUTORIAL_GUIDE.md</code> — it's a snapshot, not a live
     feed, so treat it as "true as of the last update," not real-time.</p>
@@ -738,6 +854,7 @@ around specific contexts. You should not assume this is meant for someone with h
       Not a substitute for professional AAC evaluation or speech-language
       therapy. Built by one person as a personal tool, shared as-is.
     </p>
+    </div>
   </section>
 
 </main>
@@ -921,6 +1038,78 @@ around specific contexts. You should not assume this is meant for someone with h
   stage.addEventListener('pointerup', endPointer);
   stage.addEventListener('pointercancel', endPointer);
   stage.addEventListener('pointerleave', function (e) { if (dragging) endPointer(e); });
+})();
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- Section accordions ----
+  function setExpanded(btn, expanded) {
+    btn.setAttribute('aria-expanded', String(expanded));
+    var panel = document.getElementById(btn.getAttribute('aria-controls'));
+    if (panel) panel.hidden = !expanded;
+  }
+
+  document.querySelectorAll('.accordion-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      setExpanded(btn, btn.getAttribute('aria-expanded') !== 'true');
+    });
+  });
+
+  function expandSectionById(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var btn = el.querySelector('.accordion-toggle');
+    if (btn && btn.getAttribute('aria-expanded') !== 'true') setExpanded(btn, true);
+  }
+
+  // Direct link / bookmark / back-forward to a collapsed section should land already open.
+  // Collapsing the panel never moves the heading above it, so no manual scroll correction
+  // is needed here -- the browser's native anchor scroll already lands in the right place.
+  function expandFromHash() {
+    if (location.hash) expandSectionById(location.hash.slice(1));
+  }
+  expandFromHash();
+  window.addEventListener('hashchange', expandFromHash);
+
+  // ---- Grouped nav pills ----
+  var navPills = document.querySelectorAll('details.nav-pill');
+
+  navPills.forEach(function (d) {
+    d.addEventListener('toggle', function () {
+      if (d.open) navPills.forEach(function (other) { if (other !== d) other.open = false; });
+    });
+  });
+
+  document.addEventListener('click', function (e) {
+    navPills.forEach(function (d) {
+      if (d.open && !d.contains(e.target)) d.open = false;
+    });
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    navPills.forEach(function (d) {
+      if (d.open) {
+        d.open = false;
+        var s = d.querySelector('summary');
+        if (s) s.focus();
+      }
+    });
+  });
+
+  // Picking a link expands its target (if collapsed) and tidies the open pill away;
+  // the browser's own anchor navigation still does the actual scrolling.
+  document.querySelectorAll('.nav-dropdown a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      var id = (a.getAttribute('href') || '').replace(/^#/, '');
+      if (id) expandSectionById(id);
+      var pill = a.closest('details.nav-pill');
+      if (pill) pill.open = false;
+    });
+  });
 })();
 </script>
 
