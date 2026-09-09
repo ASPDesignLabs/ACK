@@ -45,3 +45,9 @@ If you want to build this you'll need Android Studio and a custom map splice for
 
 Licensed under the GNU General Public License v3.0 (GPLv3) — see [`LICENSE`](LICENSE). In short: you're free to use, study, modify, and share this, but anyone who distributes a modified version has to share their source under the same license too.
 
+
+
+##### This site's landing page
+
+[`index.html`](index.html) is this project's GitHub Pages landing page. [`STYLEGUIDE.md`](STYLEGUIDE.md) is the portable methodology extracted from it — meant to be handed to an agent building a similarly-structured (not identically-styled) page for a different project.
+
