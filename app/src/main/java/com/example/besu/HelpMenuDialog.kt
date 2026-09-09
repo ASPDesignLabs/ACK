@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
@@ -109,16 +109,14 @@ fun HelpMenuDialog(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth(),
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                            horizontal = 14.dp
-                        )
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items<HelpCategory>(
-                            items = HelpCategory.values().toList()
-                        ) { category: HelpCategory ->
+                        HelpCategory.values().forEach { category: HelpCategory ->
                             HelpCategoryChip(
                                 category = category,
                                 isSelected = category == selectedCategory,
