@@ -75,10 +75,6 @@
             android:name=".SensorDebugActivity"
             android:theme="@android:style/Theme.Material.NoActionBar" />
 
-        <activity
-            android:name=".FieldManualActivity"
-            android:theme="@android:style/Theme.Material.NoActionBar" />
-
         <!-- ADD THIS: The Custom Scanner -->
         <activity
             android:name=".MosaicScannerActivity"

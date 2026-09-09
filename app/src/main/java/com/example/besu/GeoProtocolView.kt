@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -135,6 +136,17 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
     val currentEngine = remember(refreshKey) { GeoRepository.getEngineMode(context) }
     val zones = remember(refreshKey) { GeoRepository.getZones(context) }
     val availableDecks = remember { CommandRepository.getDecks(context) }
+    val userMapFile = remember(refreshKey) { GeoRepository.getUserMapFile(context) }
+
+    var pendingMapImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var showMapRemoveConfirm by remember { mutableStateOf(false) }
+    var mapImportError by remember { mutableStateOf<String?>(null) }
+
+    val helpManager = LocalHelpManager.current
+
+    fun reportHelpInteraction(tag: String) {
+        helpManager?.onEvent(HelpEvent.Interacted(tag))
+    }
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
@@ -142,6 +154,15 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) refreshKey++
+    }
+
+    val mapImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            mapImportError = null
+            pendingMapImportUri = uri
+        }
     }
 
     DisposableEffect(isMapFullscreen, isTracking) {
@@ -190,12 +211,31 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
                     currentLng = if (crosshairLng == 0.0) -74.0060 else crosshairLng,
                     isTracking = isTracking,
                     zones = zones,
+                    userMapFile = userMapFile,
                     onMapPan = { lat, lng -> crosshairLat = lat; crosshairLng = lng; isTracking = false },
                     modifier = Modifier.fillMaxSize()
                 )
 
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("+", color = NeonPalette.SWATCHES[1], fontSize = 32.sp, fontFamily = FontFamily.Monospace)
+                }
+
+                if (userMapFile == null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 72.dp)
+                            .background(VoidBlack.copy(alpha = 0.85f), CutCornerShape(4.dp))
+                            .border(1.dp, Color.Gray, CutCornerShape(4.dp))
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            "NO MAP DATA IMPORTED -- COORDINATES ONLY",
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
                 }
 
                 Row(modifier = Modifier.fillMaxWidth().background(VoidBlack.copy(alpha = 0.85f)).windowInsetsPadding(WindowInsets.statusBars).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -255,6 +295,52 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
         Spacer(modifier = Modifier.height(24.dp))
 
+        Text("MAP DATA", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            if (userMapFile != null) {
+                "IMPORTED -- ${"%.1f".format(userMapFile.length() / 1_048_576f)} MB"
+            } else {
+                "NONE -- TACTICAL GRID RENDERS COORDINATES ONLY"
+            },
+            color = if (userMapFile != null) primaryColor else Color.Gray,
+            fontSize = 9.sp,
+            fontFamily = FontFamily.Monospace
+        )
+        if (mapImportError != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("IMPORT FAILED: $mapImportError", color = Color.Red, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NeonButton(
+                text = "IMPORT MAP FILE",
+                mainColor = primaryColor,
+                modifier = Modifier
+                    .testTag(AckTags.GEO_MAP_IMPORT)
+                    .helpTarget(AckTags.GEO_MAP_IMPORT, primaryColor)
+            ) {
+                reportHelpInteraction(AckTags.GEO_MAP_IMPORT)
+                mapImportLauncher.launch(arrayOf("*/*"))
+            }
+            if (userMapFile != null) {
+                NeonButton(text = "REMOVE", mainColor = Color.Red) {
+                    showMapRemoveConfirm = true
+                }
+            }
+        }
+        Text(
+            "A REGION MAP IS NOT REQUIRED -- ZONES STILL WORK BY COORDINATE. IMPORT A MAPSFORGE-COMPATIBLE .MAP FILE FOR VISUALS.",
+            color = Color.DarkGray,
+            fontSize = 8.sp,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text("SECURE NODES [${zones.size}]", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -269,12 +355,82 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        HeroButton("OPEN TACTICAL GRID", modifier = Modifier.fillMaxWidth().tutorialTarget("MARK_GEO_BTN",), mainColor = primaryColor) {
+        HeroButton("OPEN TACTICAL GRID", modifier = Modifier.fillMaxWidth(), mainColor = primaryColor) {
             openMapAtCurrentLocation()
         }
     }
 
     if (showPermissionModal) GeoPermissionModal(context, primaryColor, permissionLauncher, onDismiss = { showPermissionModal = false })
+
+    pendingMapImportUri?.let { uri ->
+        GeoMapActionConfirmDialog(
+            primaryColor = primaryColor,
+            title = if (userMapFile != null) "REPLACE MAP DATA?" else "IMPORT MAP DATA?",
+            body = if (userMapFile != null) {
+                "This replaces the currently imported map file. The old file cannot be recovered " +
+                    "unless you still have the original on your device to import again."
+            } else {
+                "This copies the selected file into ACK's private storage. It stays on this " +
+                    "device only and is never bundled into or read from any backup you export."
+            },
+            confirmLabel = "IMPORT",
+            onDismiss = { pendingMapImportUri = null },
+            onConfirm = {
+                val result = GeoRepository.importUserMapFile(context, uri)
+                pendingMapImportUri = null
+                if (result.isSuccess) {
+                    mapImportError = null
+                    refreshKey++
+                } else {
+                    mapImportError = result.exceptionOrNull()?.message ?: "Unknown error"
+                }
+            }
+        )
+    }
+
+    if (showMapRemoveConfirm) {
+        GeoMapActionConfirmDialog(
+            primaryColor = Color.Red,
+            title = "REMOVE MAP DATA?",
+            body = "Tactical Grid will fall back to coordinates only until a new map file is imported.",
+            confirmLabel = "REMOVE",
+            onDismiss = { showMapRemoveConfirm = false },
+            onConfirm = {
+                GeoRepository.clearUserMapFile(context)
+                showMapRemoveConfirm = false
+                refreshKey++
+            }
+        )
+    }
+}
+
+@Composable
+private fun GeoMapActionConfirmDialog(
+    primaryColor: Color,
+    title: String,
+    body: String,
+    confirmLabel: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF17191D), CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp))
+                .border(1.dp, primaryColor, CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp))
+                .padding(18.dp)
+        ) {
+            Text(title, color = primaryColor, fontSize = 15.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(body, color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+            Spacer(modifier = Modifier.height(18.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                NeonButton(text = "CANCEL", mainColor = Color.Gray, modifier = Modifier.weight(1f)) { onDismiss() }
+                NeonButton(text = confirmLabel, mainColor = primaryColor, modifier = Modifier.weight(1f)) { onConfirm() }
+            }
+        }
+    }
 }
 
 // --- 2D MAPSFORGE RENDERER WITH COMPOSE MODE-7 TILT ---
@@ -285,6 +441,7 @@ fun TacticalMapView(
     currentLng: Double,
     isTracking: Boolean,
     zones: List<GeoZone>,
+    userMapFile: File? = null,
     onMapPan: (Double, Double) -> Unit
 ) {
     val context = LocalContext.current
@@ -313,32 +470,49 @@ fun TacticalMapView(
             model.displayModel.setBackgroundColor(android.graphics.Color.parseColor("#050505"))
 
             try {
-                val mapFile = File(context.cacheDir, "tactical_grid.map")
-                if (!mapFile.exists()) {
-                    context.assets.open("tactical_grid.map").use { input -> FileOutputStream(mapFile).use { output -> input.copyTo(output) } }
+                // No region map ships inside the APK. Prefer a map the user
+                // imported at runtime (GeoRepository); fall back to an asset
+                // named tactical_grid.map for anyone doing a personal build
+                // with their own splice dropped into app/assets; otherwise
+                // render with no basemap tiles at all -- zones still work by
+                // coordinate, this view just won't draw a map underneath them.
+                val resolvedMapFile: File? = userMapFile ?: run {
+                    val cachedAssetMap = File(context.cacheDir, "tactical_grid.map")
+                    if (!cachedAssetMap.exists()) {
+                        try {
+                            context.assets.open("tactical_grid.map").use { input ->
+                                FileOutputStream(cachedAssetMap).use { output -> input.copyTo(output) }
+                            }
+                        } catch (e: java.io.FileNotFoundException) {
+                            // No bundled asset splice either -- that's fine.
+                        }
+                    }
+                    if (cachedAssetMap.exists()) cachedAssetMap else null
                 }
 
-                // Make sure your OLD 2D Mapsforge XML theme is restored to ack_theme.xml in assets
-                val themeFile = File(context.cacheDir, "ack_theme.xml")
-                context.assets.open("ack_theme.xml").use { input -> FileOutputStream(themeFile).use { output -> input.copyTo(output) } }
+                if (resolvedMapFile != null) {
+                    // Make sure your OLD 2D Mapsforge XML theme is restored to ack_theme.xml in assets
+                    val themeFile = File(context.cacheDir, "ack_theme.xml")
+                    context.assets.open("ack_theme.xml").use { input -> FileOutputStream(themeFile).use { output -> input.copyTo(output) } }
 
-                // Using 3.0 and 2.0 (Doubles) instead of 3f and 2f
-                val tileCache: TileCache = AndroidUtil.createTileCache(
-                    context,
-                    "mapcache",
-                    model.displayModel.tileSize,
-                    3f,
-                    2.0
-                )
-                val mapDataStore: MapDataStore = MapFile(mapFile)
-                val tileRendererLayer = TileRendererLayer(tileCache, mapDataStore, model.mapViewPosition, AndroidGraphicFactory.INSTANCE)
+                    // Using 3.0 and 2.0 (Doubles) instead of 3f and 2f
+                    val tileCache: TileCache = AndroidUtil.createTileCache(
+                        context,
+                        "mapcache",
+                        model.displayModel.tileSize,
+                        3f,
+                        2.0
+                    )
+                    val mapDataStore: MapDataStore = MapFile(resolvedMapFile)
+                    val tileRendererLayer = TileRendererLayer(tileCache, mapDataStore, model.mapViewPosition, AndroidGraphicFactory.INSTANCE)
 
-                try {
-                    tileRendererLayer.setXmlRenderTheme(org.mapsforge.map.rendertheme.ExternalRenderTheme(themeFile))
-                } catch (e: Exception) {
-                    tileRendererLayer.setXmlRenderTheme(InternalRenderTheme.OSMARENDER)
+                    try {
+                        tileRendererLayer.setXmlRenderTheme(org.mapsforge.map.rendertheme.ExternalRenderTheme(themeFile))
+                    } catch (e: Exception) {
+                        tileRendererLayer.setXmlRenderTheme(InternalRenderTheme.OSMARENDER)
+                    }
+                    layerManager.layers.add(tileRendererLayer)
                 }
-                layerManager.layers.add(tileRendererLayer)
             } catch (e: Exception) {}
 
             val paintFill = AndroidGraphicFactory.INSTANCE.createPaint().apply { setColor(android.graphics.Color.parseColor("#3300F3FF")); setStyle(Style.FILL) }

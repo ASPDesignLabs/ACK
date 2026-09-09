@@ -81,6 +81,7 @@ object CommandRepository {
 
     private const val EMERGENCY_PREFIX = "emergency_"
     private const val EMERGENCY_SUFFIX = "_config"
+    private const val EMERGENCY_INFO_CARD_KEY = "emergency_info_card"
 
     private const val ROOT_OVERRIDE_PREFIX = "root_override_"
 
@@ -354,6 +355,26 @@ object CommandRepository {
                 emergencyKey(config.deckId),
                 Json.encodeToString(normalizeEmergencyConfig(config))
             )
+            .apply()
+    }
+
+    // Not deck-scoped -- one card describes the person, regardless of
+    // which emergency deck's overrides/prompts they're using.
+    fun getEmergencyInfoCard(context: Context): EmergencyInfoCard {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val raw = prefs.getString(EMERGENCY_INFO_CARD_KEY, null) ?: return EmergencyInfoCard()
+
+        return try {
+            Json.decodeFromString<EmergencyInfoCard>(raw)
+        } catch (_: Exception) {
+            EmergencyInfoCard()
+        }
+    }
+
+    fun saveEmergencyInfoCard(context: Context, card: EmergencyInfoCard) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(EMERGENCY_INFO_CARD_KEY, Json.encodeToString(card))
             .apply()
     }
 

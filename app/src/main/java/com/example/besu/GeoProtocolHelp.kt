@@ -20,6 +20,15 @@ object GeoProtocolHelp {
                     "to your environment.",
                 action = HelpAction.Interact(AckTags.GEO_VIEW),
                 targetTag = AckTags.GEO_VIEW
+            ),
+            HelpStep(
+                id = "map_data",
+                title = "MAP DATA",
+                body = "No region map ships with the app. Zones still work by coordinate " +
+                    "with nothing imported, but you can import your own Mapsforge-compatible " +
+                    ".map file here any time to see real basemap tiles on the Tactical Grid.",
+                action = HelpAction.Interact(AckTags.GEO_MAP_IMPORT),
+                targetTag = AckTags.GEO_MAP_IMPORT
             )
         )
     )

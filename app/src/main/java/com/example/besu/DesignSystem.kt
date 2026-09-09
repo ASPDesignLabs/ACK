@@ -7,7 +7,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,25 +21,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import com.example.besu.ui.theme.Graphite
 import com.example.besu.ui.theme.NeonPalette
 import com.example.besu.ui.theme.VoidBlack
@@ -69,19 +58,6 @@ val FluxCyan = Color(0xFF00F3FF)
 val RadicalRed = Color(0xFFFF0055)
 val BioGreen = Color(0xFF00FF41)
 val DataOrange = Color(0xFFFF9900)
-
-// --- TRACKER SYSTEM ---
-class TargetTracker {
-    private val targets = mutableMapOf<String, Rect>()
-    fun update(tag: String, coords: LayoutCoordinates) {
-        if (coords.isAttached) targets[tag] = coords.boundsInRoot()
-    }
-    fun get(tag: String?): Rect? = targets[tag]
-}
-
-fun Modifier.tutorialTarget(tag: String): Modifier {
-    return this.testTag(tag)
-}
 
 // ==========================================
 //        ATOMIC COMPONENTS (BUTTONS)
@@ -550,7 +526,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             primaryColor = primaryColor,
             title = node.label,
             subtitle = "LIVE-SAVE EDITOR",
-            surfaceModifier = Modifier.tutorialTarget(AckTags.EDIT_NODE_DIALOG)
+            surfaceModifier = Modifier.testTag(AckTags.EDIT_NODE_DIALOG)
         ) {
                 Column {
                     TightSectionLabel("MACRO TEMPLATE")
@@ -1742,10 +1718,10 @@ fun MatrixCategory(
                 // <-- UPDATED LOOP TO DESTRUCTURE THE TRIPLE -->
                 nodes.forEach { (node, rawPhrase, resolvedPhrase) ->
                     val isTarget = node.category == "IDENTITY" && node.label.contains("Twist 0")
-                    val itemMod = if (isTarget) Modifier.tutorialTarget(
-                        AckTags.MATRIX_ROW_TARGET
-
-                    ) else Modifier
+                    val itemMod = if (isTarget) Modifier
+                        .testTag(AckTags.MATRIX_ROW_TARGET)
+                        .helpTarget(AckTags.MATRIX_ROW_TARGET, primaryColor)
+                    else Modifier
 
                     val variableCount = TemplateEngine.countVariables(rawPhrase)
                     val savedValues = CommandRepository.getVariableValues(context, node.path)
@@ -1759,6 +1735,10 @@ fun MatrixCategory(
                         phrase = resolvedPhrase,
                         variableValues = variableValues,
                         modifier = itemMod,
+                        playModifier = if (isTarget) Modifier
+                            .testTag(AckTags.MATRIX_PLAY_BUTTON)
+                            .helpTarget(AckTags.MATRIX_PLAY_BUTTON, primaryColor)
+                        else Modifier,
                         primaryColor = primaryColor,
                         onPlay = {
                             if (isTarget) {
@@ -2367,192 +2347,3 @@ fun BuilderGuideCard(category: String, primaryColor: Color) {
         Text(body, color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
     }
 }
-
-// --- OVERLAY ---
-
-@Composable
-fun TacticalOverlay(
-    tracker: TargetTracker,
-    state: TutorialState,
-    onNext: () -> Unit,
-    onAbort: () -> Unit
-) {
-    if (!state.isActive) return
-
-    val targetRect = tracker.get(state.targetTag)
-
-    val infiniteTransition = rememberInfiniteTransition(label = "overlay")
-
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alpha"
-    )
-
-    val overlayModifier = if (state.action == TutAction.READ) {
-        Modifier
-            .fillMaxSize()
-            .zIndex(999f)
-            .graphicsLayer {
-                compositingStrategy = CompositingStrategy.Offscreen
-            }
-            .clickable {
-                onNext()
-            }
-    } else {
-        Modifier
-            .fillMaxSize()
-            .zIndex(999f)
-            .graphicsLayer {
-                compositingStrategy = CompositingStrategy.Offscreen
-            }
-    }
-
-    Box(modifier = overlayModifier) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRect(
-                color = Color.Black.copy(alpha = 0.85f),
-                size = size
-            )
-
-            if (targetRect != null) {
-                drawRect(
-                    color = Color.Transparent,
-                    topLeft = Offset(
-                        x = targetRect.left,
-                        y = targetRect.top
-                    ),
-                    size = Size(
-                        width = targetRect.width,
-                        height = targetRect.height
-                    ),
-                    blendMode = BlendMode.Clear
-                )
-
-                drawRect(
-                    color = NeonPalette.DEFAULT_CYAN.copy(
-                        alpha = pulseAlpha
-                    ),
-                    topLeft = Offset(
-                        x = targetRect.left - 4.dp.toPx(),
-                        y = targetRect.top - 4.dp.toPx()
-                    ),
-                    size = Size(
-                        width = targetRect.width + 8.dp.toPx(),
-                        height = targetRect.height + 8.dp.toPx()
-                    ),
-                    style = Stroke(width = 2.dp.toPx())
-                )
-            }
-        }
-
-        val isTargetNearTop = (targetRect?.top ?: 0f) < 1000f
-
-        val messageAlignment = if (isTargetNearTop) {
-            Alignment.BottomCenter
-        } else {
-            Alignment.TopCenter
-        }
-
-        Box(
-            modifier = Modifier
-                .align(messageAlignment)
-                .padding(24.dp)
-                .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = NeonPalette.DEFAULT_CYAN,
-                    shape = CutCornerShape(12.dp)
-                )
-                .background(
-                    color = VoidBlack,
-                    shape = CutCornerShape(12.dp)
-                )
-                // Absorb touches on the message panel itself. In READ mode,
-                // a tap outside it advances the tutorial.
-                .clickable(
-                    enabled = true,
-                    onClick = {}
-                )
-                .padding(16.dp)
-        ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "TRAINING MODULE // STEP ${state.stepIndex + 1}",
-                        color = NeonPalette.SWATCHES[2],
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-
-                    Text(
-                        text = "[SKIP]",
-                        color = NeonPalette.SWATCHES[1],
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.clickable {
-                            onAbort()
-                        }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = state.title.uppercase(),
-                    color = NeonPalette.DEFAULT_CYAN,
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = state.body,
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-
-                when (state.action) {
-                    TutAction.READ -> {
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = "TAP SCREEN TO CONTINUE >>",
-                            color = Color.Gray,
-                            fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace,
-                            modifier = Modifier.align(Alignment.End)
-                        )
-                    }
-
-                    TutAction.WATCH_INPUT -> {
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = "WAITING FOR SENSOR INPUT...",
-                            color = NeonPalette.SWATCHES[3],
-                            fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.align(Alignment.End)
-                        )
-                    }
-
-                    else -> Unit
-                }
-            }
-        }
-    }
-}
-
-

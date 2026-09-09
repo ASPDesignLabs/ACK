@@ -35,6 +35,24 @@ object EmergencyDeckHelp {
                     "change clearing behavior, and add an alert tone.",
                 action = HelpAction.Interact(AckTags.EMERGENCY_OVERRIDES),
                 targetTag = AckTags.EMERGENCY_OVERRIDES
+            ),
+            HelpStep(
+                id = "info",
+                title = "EMERGENCY INFO",
+                body = "Below the overrides button, this opens a large, easy-to-read " +
+                    "medical ID card -- name, conditions, allergies, medications, and " +
+                    "emergency contacts -- for a bystander or first responder to read " +
+                    "if you can't speak.",
+                action = HelpAction.Interact(AckTags.EMERGENCY_INFO),
+                targetTag = AckTags.EMERGENCY_INFO
+            ),
+            HelpStep(
+                id = "info_save",
+                title = "FILL IT OUT",
+                body = "Tap EDIT to fill in your own info. It's saved once, not per " +
+                    "deck, so it's the same card no matter which deck you're in.",
+                action = HelpAction.CommitText(AckTags.EMERGENCY_INFO_SAVE),
+                targetTag = AckTags.EMERGENCY_INFO_SAVE
             )
         )
     )

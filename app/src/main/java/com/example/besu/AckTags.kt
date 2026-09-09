@@ -1,9 +1,6 @@
 package com.example.besu
 
 object AckTags {
-    // --- GLOBAL ---
-    const val HEADER_ROW = "ACK_HEADER"
-
     // MATRIX HELP GUIDE
 
 
@@ -21,28 +18,10 @@ object AckTags {
     // --- NAVIGATION ---
     const val MODE_TOGGLE_BTN = "MODE_TOGGLE_BTN"
 
-    const val MANUAL_BUTTON = "MANUAL_BTN"          // The "Train" button in header
-    const val MANUAL_MEMORY_BANKS = "MANUAL_MEMORY_BANKS"
-    const val MANUAL_TEXT_FIELD = "MANUAL_TEXT_FIELD"
-    const val MANUAL_SEND = "MANUAL_SEND"
-
-    const val PROFILE_MENU = "PROFILE_MENU"
-    const val MATRIX_PLAY_BTN = "MATRIX_PLAY_BTN"
-    
     // --- MATRIX VIEW ---
 
-
-    const val CONTEXT_ADD_BTN = "CONTEXT_ADD_BTN"
-    const val CONTEXT_ACTIVATE_BTN = "CONTEXT_ACTIVATE_BTN"
-
-
     const val MATRIX_VIEW = "MATRIX_VIEW"           // The main container box
-    
-    // --- MANUAL VIEW ---
-    const val INPUT_FIELD = "INPUT_FIELD"
-    const val ENCODE_BTN = "ENCODE_BTN"
-    const val ACCORDION_HEADER = "ACCORDION_HEADER"
-    
+
     // --- SETTINGS ---
     const val UPLOAD_BTN = "UPLOAD_BTN"
 
@@ -64,7 +43,6 @@ object AckTags {
 
 
 
-    const val AUDIO_ARCHITECT = "AUDIO_ARCHITECT"
     const val AUDIO_PROFILE_SELECT = "AUDIO_PROFILE_SELECT"
     const val AUDIO_SAVE = "AUDIO_SAVE"
 
@@ -79,19 +57,16 @@ object AckTags {
     const val EMERGENCY_SLOT = "EMERGENCY_SLOT"
     const val EMERGENCY_SAVE = "EMERGENCY_SAVE"
     const val EMERGENCY_OVERRIDES = "EMERGENCY_OVERRIDES"
-    const val EMERGENCY_OVERRIDE_SAVE = "EMERGENCY_OVERRIDE_SAVE"
+    const val EMERGENCY_INFO = "EMERGENCY_INFO"
+    const val EMERGENCY_INFO_SAVE = "EMERGENCY_INFO_SAVE"
 
     const val EMOJI_SLOT = "EMOJI_SLOT"
     const val EMOJI_LIBRARY = "EMOJI_LIBRARY"
-    const val EMOJI_SLOT_SAVE = "EMOJI_SLOT_SAVE"
     const val EMOJI_RELATED_PANEL = "EMOJI_RELATED_PANEL"
-    const val EMOJI_CONFIG = "EMOJI_CONFIG"
 
     const val GIF_IMPORT = "GIF_IMPORT"
     const val GIF_IMPORT_COMMIT = "GIF_IMPORT_COMMIT"
     const val GIF_CATEGORY = "GIF_CATEGORY"
-    const val GIF_NAVIGATION = "GIF_NAVIGATION"
-    const val GIF_DISPLAY = "GIF_DISPLAY"
     const val GIF_LANDSCAPE_TOGGLE = "GIF_LANDSCAPE_TOGGLE"
 
 
@@ -103,7 +78,6 @@ object AckTags {
     const val DECK_MANAGE_BUTTON = "DECK_MANAGE_BUTTON"
     const val DECK_CREATE_TYPE = "DECK_CREATE_TYPE"
     const val DECK_CREATE_COMMIT = "DECK_CREATE_COMMIT"
-    const val DECK_META_SAVE = "DECK_META_SAVE"
 
     const val PROFILE_SELECTOR = "PROFILE_SELECTOR"
 
@@ -112,8 +86,6 @@ object AckTags {
 
 
     const val EDIT_NODE_DIALOG = "EDIT_NODE_DIALOG"
-    const val MATRIX_PROMPT_SAVE = "MATRIX_PROMPT_SAVE"
-    const val ROOT_VARIABLES = "ROOT_VARIABLES"
     const val MATRIX_ROW_TARGET = "MATRIX_ROW_TARGET"
     const val MANUAL_INPUT_BTN = "MANUAL_INPUT_BTN"
 
@@ -126,6 +98,7 @@ object AckTags {
 
     const val TARGETS_VIEW = "TARGETS_VIEW"
     const val GEO_VIEW = "GEO_VIEW"
+    const val GEO_MAP_IMPORT = "GEO_MAP_IMPORT"
     const val TERMINAL_VIEW = "TERMINAL_VIEW"
 
     // NEW: HELP Module support
@@ -136,10 +109,8 @@ object AckTags {
     const val TARGET_SLOT = "TARGET_SLOT"
     const val TARGET_STRATEGY = "TARGET_STRATEGY"
     const val TARGET_SLOT_SAVE = "TARGET_SLOT_SAVE"
-    const val TARGET_ACTIVE_SELECTION = "TARGET_ACTIVE_SELECTION"
 
     // --- AUDIO ARCHITECT HELP TARGETS ---
-    const val AUDIO_GLOBAL_OUTPUT = "AUDIO_GLOBAL_OUTPUT"
     const val AUDIO_MASTER_GAIN = "AUDIO_MASTER_GAIN"
     const val AUDIO_OUTPUT_ROUTING = "AUDIO_OUTPUT_ROUTING"
 

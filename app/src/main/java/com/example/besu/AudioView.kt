@@ -174,7 +174,10 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                                 0,
                                 profile.label,
                                 if (userProfile == profile.id) 0 else -1,
-                                primaryColor
+                                primaryColor,
+                                modifier = Modifier
+                                    .testTag(AckTags.AUDIO_PROFILE_SELECT)
+                                    .helpTarget(AckTags.AUDIO_PROFILE_SELECT, primaryColor)
                             ) {
                                 userProfile = profile.id
                                 syncDsp()
