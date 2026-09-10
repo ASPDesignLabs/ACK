@@ -76,6 +76,17 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private var activeTwistThreshold = 7.0f
     private var activePoseThreshold = 6.0f
 
+    // --- POSE ENTRY DEBOUNCE ---
+    // A pose must clear activePoseThreshold on consecutive samples for at
+    // least poseConfirmMs before it locks. Without this, a single noisy
+    // accelerometer sample -- a tremor spike, an overshoot mid arm-raise --
+    // locks a pose exactly as readily as a deliberate hold, and once locked
+    // it WILL fire (see fireCommand/normalFireDelayMs) with no cancel path.
+    // Mirrors the hysteresis isGyroTwist already has for twist detection.
+    private var pendingPose = Pose.NONE
+    private var pendingPoseStartTime = 0L
+    private val poseConfirmMs = 150L
+
     // --- GYROSCOPE TWIST DETECTION ---
 
     // Keep this false for an accelerometer-only baseline.
@@ -529,6 +540,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
         time: Long,
     ) {
         if (currentState != State.ARMED) {
+            pendingPose = Pose.NONE
             return
         }
 
@@ -536,24 +548,38 @@ class BackgroundSensorService : Service(), SensorEventListener {
         val absY = abs(y)
         val absZ = abs(z)
 
-        when {
+        val detected = when {
             absX > activePoseThreshold &&
                     absX > absY &&
-                    absX > absZ -> {
-                setPose(Pose.ARM_UP, time)
-            }
+                    absX > absZ -> Pose.ARM_UP
 
             absZ > activePoseThreshold &&
                     absZ > absX &&
-                    absZ > absY -> {
-                setPose(Pose.STOP, time)
-            }
+                    absZ > absY -> Pose.STOP
 
             absY > activePoseThreshold &&
                     absY > absX &&
-                    absY > absZ -> {
-                setPose(Pose.HANDSHAKE, time)
-            }
+                    absY > absZ -> Pose.HANDSHAKE
+
+            else -> Pose.NONE
+        }
+
+        if (detected == Pose.NONE) {
+            pendingPose = Pose.NONE
+            return
+        }
+
+        if (detected != pendingPose) {
+            // Fresh candidate -- start timing its hold instead of locking
+            // on it immediately.
+            pendingPose = detected
+            pendingPoseStartTime = time
+            return
+        }
+
+        if (time - pendingPoseStartTime >= poseConfirmMs) {
+            setPose(detected, time)
+            pendingPose = Pose.NONE
         }
     }
 
