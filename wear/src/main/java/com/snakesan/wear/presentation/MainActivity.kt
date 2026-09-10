@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.wear.ambient.AmbientModeSupport
+import androidx.wear.compose.material.Text
 import com.example.besu.wear.theme.NeonPalette
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
