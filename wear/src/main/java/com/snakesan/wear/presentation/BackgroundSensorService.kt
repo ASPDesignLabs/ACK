@@ -77,6 +77,16 @@ class BackgroundSensorService : Service(), SensorEventListener {
     // instead. Phone-configurable via /sys/fire_grace_config, 250-1000ms.
     private var fireGraceMs = 500L
     private var firePendingWarned = false
+
+    // --- WAKE GESTURE TIMING ---
+    // The 3-twist wake gesture used to require each twist within a fixed
+    // 1200ms of the last, resetting the count to zero on any longer gap.
+    // That's a tight rhythm to hit deliberately when a hand isn't fully
+    // steady -- unlike pose entry, twist detection itself already has real
+    // hysteresis (see isGyroTwist), so widening this is pure patience, not
+    // a new noise-rejection risk. Phone-configurable via
+    // /sys/wake_window_config, 800-3000ms.
+    private var wakeTwistWindowMs = 1800L
     
     // TARGET STATE
     private var activeTargetIndex = -1 // -1 = None/Cleared
@@ -201,6 +211,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
         activeTwistThreshold = prefs.getFloat("cfg_twist", 7.0f)
         activePoseThreshold = prefs.getFloat("cfg_pose", 6.0f)
         fireGraceMs = prefs.getInt("cfg_fire_grace", 500).toLong()
+        wakeTwistWindowMs = prefs.getInt("cfg_wake_window", 1800).toLong()
 
         registerSensors(
             accelerometerRate = SensorManager.SENSOR_DELAY_UI,
@@ -215,6 +226,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
                  activeTwistThreshold = prefs.getFloat("cfg_twist", 7.0f)
                  activePoseThreshold = prefs.getFloat("cfg_pose", 6.0f)
                  fireGraceMs = prefs.getInt("cfg_fire_grace", 500).toLong()
+                 wakeTwistWindowMs = prefs.getInt("cfg_wake_window", 1800).toLong()
             }
             PoseActions.ACTION_CANCEL_POSE -> cancelPoseLock()
             "ACTION_ENTER_CRYO" -> enterCryo()
@@ -519,7 +531,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private fun handleTwist(time: Long) {
         when (currentState) {
             State.IDLE -> {
-                if (time - lastModifierTime > 1200L) {
+                if (time - lastModifierTime > wakeTwistWindowMs) {
                     twistCount = 0
                 }
 

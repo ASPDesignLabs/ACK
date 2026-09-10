@@ -60,6 +60,7 @@ data class DspConfig(
     val crownSens: Int = 2,
     val autoCryoMinutes: Int = 10,
     val fireGraceMs: Int = 500,
+    val wakeWindowMs: Int = 1800,
     val customVoices: List<VoiceProfile> = emptyList()
 )
 

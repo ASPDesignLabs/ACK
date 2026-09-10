@@ -49,6 +49,7 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
     var motTwist by remember { mutableFloatStateOf(prefs.getFloat("MOT_TWIST", 7.0f)) }
     var motPose by remember { mutableFloatStateOf(prefs.getFloat("MOT_POSE", 6.0f)) }
     var fireGraceMs by remember { mutableFloatStateOf(prefs.getInt("FIRE_GRACE_MS", 500).toFloat()) }
+    var wakeWindowMs by remember { mutableFloatStateOf(prefs.getInt("WAKE_WINDOW_MS", 1800).toFloat()) }
     var shakeThreshold by remember {
         mutableFloatStateOf(
             prefs.getFloat("SHAKE_THRESHOLD", AccelerometerTapService.DEFAULT_SHAKE_THRESHOLD)
@@ -71,13 +72,15 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
         prefs.edit().putInt("TONE_THEME", toneTheme).putFloat("TONE_VOLUME", toneVolume)
             .putInt("AUTO_CRYO", autoCryo.toInt()).putInt("CROWN_SENS", crownSens.toInt())
             .putFloat("MOT_TWIST", motTwist).putFloat("MOT_POSE", motPose)
-            .putInt("FIRE_GRACE_MS", fireGraceMs.toInt()).apply()
+            .putInt("FIRE_GRACE_MS", fireGraceMs.toInt())
+            .putInt("WAKE_WINDOW_MS", wakeWindowMs.toInt()).apply()
 
         WatchSync.sendAudioConfig(context, toneTheme, toneVolume)
         WatchSync.sendPowerConfig(context, autoCryo.toInt())
         WatchSync.sendCrownSensitivity(context, crownSens.toInt())
         WatchSync.sendMotionConfig(context, motTwist, motPose)
         WatchSync.sendFireGraceConfig(context, fireGraceMs.toInt())
+        WatchSync.sendWakeWindowConfig(context, wakeWindowMs.toInt())
     }
 
     fun updateShakeThreshold() {
@@ -294,6 +297,20 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
                 )
                 Slider(value = fireGraceMs, onValueChange = { fireGraceMs = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 250f..1000f, steps = 14, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
+                    modifier = Modifier.helpTarget(
+                        AckTags.SETTINGS_WATCH_CONFIG,
+                        primaryColor
+                    ))
+
+                Text("WAKE GESTURE WINDOW: ${wakeWindowMs.toInt()}ms", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(
+                    "How much time is allowed between each of the 3 wake twists. Higher gives more room if your hand isn't perfectly steady.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Slider(value = wakeWindowMs, onValueChange = { wakeWindowMs = it }, onValueChangeFinished = { syncAll()
+                    reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 800f..3000f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
                         AckTags.SETTINGS_WATCH_CONFIG,
                         primaryColor

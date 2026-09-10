@@ -68,6 +68,7 @@ object TransferManager {
             crownSens = dspPrefs.getInt("CROWN_SENS", 2),
             autoCryoMinutes = dspPrefs.getInt("AUTO_CRYO", 10),
             fireGraceMs = dspPrefs.getInt("FIRE_GRACE_MS", 500),
+            wakeWindowMs = dspPrefs.getInt("WAKE_WINDOW_MS", 1800),
             customVoices = customVoicesList
         )
 
@@ -398,6 +399,7 @@ object TransferManager {
             putInt("CROWN_SENS", backup.dsp.crownSens)
             putInt("AUTO_CRYO", backup.dsp.autoCryoMinutes)
             putInt("FIRE_GRACE_MS", backup.dsp.fireGraceMs)
+            putInt("WAKE_WINDOW_MS", backup.dsp.wakeWindowMs)
 
             putString(
                 "CUSTOM_VOICES",

@@ -669,6 +669,19 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                 } catch (e: Exception) {}
             }
 
+            "/sys/wake_window_config" -> {
+                try {
+                    val ms = String(e.data).toInt()
+                    prefs.edit().putInt("cfg_wake_window", ms).apply()
+
+                    val i = Intent(this, BackgroundSensorService::class.java)
+                    i.action = "UPDATE_CONFIG"
+                    startService(i)
+
+                    feedback(50, TechSynth.Sfx.TICK)
+                } catch (e: Exception) {}
+            }
+
             "/sys/motion_config" -> {
                 try {
                     val parts = String(e.data).split(",")
