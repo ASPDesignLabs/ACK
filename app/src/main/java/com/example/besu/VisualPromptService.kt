@@ -127,6 +127,10 @@ class VisualPromptService : Service() {
                     )
                 )
             }
+
+            ACTION_FORCE_CLEAR -> {
+                clearOverlay()
+            }
         }
 
         return START_NOT_STICKY
@@ -593,6 +597,12 @@ class VisualPromptService : Service() {
         const val ACTION_SHOW_PROMPT = "SHOW_PROMPT"
         const val ACTION_SHOW_EMOJI = "SHOW_EMOJI"
         const val ACTION_SHOW_GIF = "SHOW_GIF"
+
+        // Dismisses whatever is currently showing immediately, ignoring
+        // preventTimedClear/requireHoldToClear -- used by the phone-shake
+        // kill switch (AccelerometerTapService) to back out of a mistaken
+        // output right away rather than waiting on its normal clear rules.
+        const val ACTION_FORCE_CLEAR = "FORCE_CLEAR"
         const val EXTRA_ROOT_CATEGORY = "root_category"
         const val EXTRA_LOCAL_VALUES = "local_values"
 

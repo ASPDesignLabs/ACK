@@ -21,6 +21,10 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Required alongside the generic FOREGROUND_SERVICE permission for
+         AccelerometerTapService's foregroundServiceType="specialUse" below,
+         or startForeground() throws on API 34+. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <!-- DB Meter Permission Access -->
 

@@ -102,6 +102,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         checkBatteryOptimization()
         startOutputService()
+        startAccelerometerTapService()
 
         setContent {
             MainScreen(logs = logBuffer, context = this, systemVoices = availableSystemVoices)
@@ -139,6 +140,17 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     private fun startOutputService() {
         try {
             val intent = Intent(this, OutputService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        } catch (e: Exception) { }
+    }
+
+    private fun startAccelerometerTapService() {
+        try {
+            val intent = Intent(this, AccelerometerTapService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(intent)
             } else {

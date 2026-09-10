@@ -82,6 +82,13 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
 
     private val speechQueue = java.util.concurrent.ConcurrentLinkedQueue<QueuedSpeech>()
 
+    // The AudioTrack currently playing synthesized speech, if any -- set/
+    // cleared in playPcm(). Lets the phone-shake kill switch (see
+    // "KILL_OUTPUT" below) stop audio that's already partway through
+    // playing, not just speech still queued or being synthesized.
+    @Volatile
+    private var activeTrack: AudioTrack? = null
+
     /*
      * TTS only returns our utterance ID when synthesis completes. Keep the
      * per-request output behavior here so emergency flags cannot leak into later
@@ -171,6 +178,19 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 val newProfile = intent.getStringExtra("NEW_PROFILE") ?: "DEFAULT"
                 CommandRepository.setActiveProfile(this, newProfile)
                 processSpeech("Profile Engaged.", true, "SYS/CONFIG")
+            }
+            "KILL_OUTPUT" -> {
+                // Phone-shake kill switch: stop anything mid-synthesis,
+                // drop anything queued, and stop audio already playing.
+                tts?.stop()
+                speechQueue.clear()
+                renderRequests.clear()
+                try {
+                    activeTrack?.stop()
+                } catch (_: IllegalStateException) {
+                    // Already stopped/released by playPcm's own finally block.
+                }
+                broadcastLog("OUTPUT KILLED (SHAKE)", "SYS")
             }
             else -> {
                 val phrase = intent.getStringExtra("phrase")
@@ -519,6 +539,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             .setBufferSizeInBytes(audioData.size * 2)
             .build()
 
+        activeTrack = track
+
         try {
             /*
              * Preserve the existing normal-output behavior, but explicitly do
@@ -550,6 +572,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             }
 
             track.release()
+            activeTrack = null
         }
     }
 
