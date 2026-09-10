@@ -132,17 +132,48 @@ fun RowScope.ThemeOption(
 
 // --- TERMINAL VIEW ---
 @Composable
-fun TerminalView(logs: List<LogEntry>) {
+fun TerminalView(logs: List<LogEntry>, context: Context) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         items(logs) { log ->
-            val typeColor = when(log.type) { 
-                "ERR" -> RadicalRed 
-                "WARN" -> DataOrange 
-                "SYS" -> BioGreen 
-                "OUT" -> FluxCyan 
-                else -> Color.White 
+            val typeColor = when(log.type) {
+                "ERR" -> RadicalRed
+                "WARN" -> DataOrange
+                "EMERGENCY" -> RadicalRed
+                "SYS" -> BioGreen
+                "OUT" -> FluxCyan
+                else -> Color.White
             }
-            Row(modifier = Modifier.padding(vertical = 2.dp)) {
+            // Only an actual communicated phrase carries replayText (see
+            // OutputService.processSpeech) -- status/system log lines never
+            // do, so they render plain with no tap affordance.
+            val replayText = log.replayText
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp)
+                    .then(
+                        if (replayText != null) {
+                            Modifier
+                                .background(FluxCyan.copy(alpha = 0.08f))
+                                .clickable {
+                                    val intent = Intent(context, OutputService::class.java)
+                                    intent.putExtra("phrase", replayText)
+                                    intent.putExtra("robotic", false)
+                                    intent.putExtra("source", "LOG/REPLAY")
+                                    context.startService(intent)
+                                }
+                        } else {
+                            Modifier
+                        }
+                    )
+            ) {
+                Text(
+                    if (replayText != null) "▶" else " ",
+                    color = FluxCyan,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    modifier = Modifier.width(14.dp)
+                )
                 Text("[${log.time}]", color = Color.DarkGray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.width(70.dp))
                 Text(log.type, color = typeColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
                 Text(" :: ${log.msg}", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)

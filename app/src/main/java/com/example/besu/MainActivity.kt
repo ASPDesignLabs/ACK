@@ -73,7 +73,8 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             if(intent?.action == "ACK_LOG") {
                 val msg = intent.getStringExtra("msg") ?: "Unknown"
                 val type = intent.getStringExtra("type") ?: "INFO"
-                addLog(msg, type)
+                val replayText = intent.getStringExtra("replay_text")
+                addLog(msg, type, replayText)
             }
         }
     }
@@ -159,9 +160,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         } catch (e: Exception) { }
     }
 
-    private fun addLog(text: String, type: String) {
+    private fun addLog(text: String, type: String, replayText: String? = null) {
         val timestamp = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
-        logBuffer.add(0, LogEntry(timestamp, type, text))
+        logBuffer.add(0, LogEntry(timestamp, type, text, replayText))
         if (logBuffer.size > 100) logBuffer.removeLast()
     }
 
@@ -172,7 +173,17 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     }
 }
 
-data class LogEntry(val time: String, val type: String, val msg: String)
+data class LogEntry(
+    val time: String,
+    val type: String,
+    val msg: String,
+    // Set only for a real communicated phrase (OUT/EMERGENCY, never
+    // tutorial/system narration) -- the already-resolved text, not the
+    // template that produced it, so TerminalView can replay it directly
+    // through OutputService without depending on whatever deck is
+    // currently active.
+    val replayText: String? = null
+)
 
 @Composable
 fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>) {
@@ -1108,7 +1119,7 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                             )
                     ) {
                         when (viewMode) {
-                            "TERMINAL" -> TerminalView(logs)
+                            "TERMINAL" -> TerminalView(logs, context)
                             "MATRIX" -> {
                                 when (currentDeckType()) {
                                     DeckType.MATRIX -> {

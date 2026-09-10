@@ -344,7 +344,14 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             "OUT"
         }
 
-        broadcastLog("$source > \"$rawText\"", logType)
+        // Only a real communicated phrase is replayable from the log --
+        // never tutorial/system narration, which isn't something a user
+        // "said" and shouldn't be offered back as if it were.
+        broadcastLog(
+            "$source > \"$rawText\"",
+            logType,
+            replayText = if (isTutorialOverride) null else rawText
+        )
 
         if (!isTutorialOverride) {
             showVisualPrompt(
@@ -764,9 +771,11 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         return sb.toString()
     }
 
-    private fun broadcastLog(msg: String, type: String) {
+    private fun broadcastLog(msg: String, type: String, replayText: String? = null) {
         val intent = Intent("ACK_LOG"); intent.setPackage(packageName)
-        intent.putExtra("msg", msg); intent.putExtra("type", type); sendBroadcast(intent)
+        intent.putExtra("msg", msg); intent.putExtra("type", type)
+        if (replayText != null) intent.putExtra("replay_text", replayText)
+        sendBroadcast(intent)
     }
 
     private fun createNotification(): Notification {
