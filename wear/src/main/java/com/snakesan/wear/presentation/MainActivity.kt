@@ -19,12 +19,18 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.wear.ambient.AmbientModeSupport
 import com.example.besu.wear.theme.NeonPalette
@@ -80,10 +86,15 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
     
     // CRYO UI STATE
     private var currentStateName = "CRYO"
-    private var isCryoMenuVisible by mutableStateOf(false)
-    private var cryoDurationMinutes by mutableIntStateOf(5)
     private var cryoRemainingSeconds by mutableLongStateOf(0L)
     private var cryoTimer: CountDownTimer? = null
+
+    // SHAKY-HANDS MODE -- toggled by a long press (replaces the old CRYO
+    // setup menu there). Mirrors BackgroundSensorService's own persisted
+    // copy via the same AckPrefs key, so this local state and the actual
+    // timing behavior stay in sync across restarts without needing a live
+    // status round-trip just for the HUD indicator.
+    private var isShakyHandsMode by mutableStateOf(false)
     
     // AUTO-CRYO
     private val inactivityHandler = Handler(Looper.getMainLooper())
@@ -130,8 +141,8 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         updateScreenPower(true)
         
         prefs = getSharedPreferences("AckPrefs", Context.MODE_PRIVATE)
-        cryoDurationMinutes = prefs.getInt("last_cryo_duration", 5)
-        
+        isShakyHandsMode = prefs.getBoolean("shaky_hands_mode", false)
+
         // Init Defaults
         activePrimaryColor = NeonPalette.getColor(prefs.getInt("active_color_idx", 0))
         activeDeckLabel = prefs.getString("active_deck_name", "DEFAULT") ?: "DEFAULT"
@@ -263,9 +274,8 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                         }
                     },
                     onLongPress = {
-                        if (!isCryo() && !isCryoMenuVisible && !isTargetMenuVisible) {
-                            isCryoMenuVisible = true
-                            feedback(50, TechSynth.Sfx.TICK)
+                        if (!isCryo() && !isTargetMenuVisible) {
+                            toggleShakyHandsMode()
                         }
                     },
                     onTapTapHold = {
@@ -287,7 +297,20 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                         // Render State from Background Service
                         AckWatchHud(uiState, uiPose, uiTwist, activePrimaryColor, activeDeckLabel, activeProfileLabel)
                     }
-                    
+
+                    if (isShakyHandsMode) {
+                        Text(
+                            "🤚 SHAKY HANDS",
+                            color = CyberAmber,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 4.dp)
+                        )
+                    }
+
                     //if (currentStateName == "CRYO") {
                     //    val displayTime = if (cryoRemainingSeconds == -1L) null else cryoRemainingSeconds
                     //    CryoHud("CRYOSTASIS", "DOUBLE TAP TO WAKE", displayTime)
@@ -310,15 +333,6 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                                 sendTargetSelection(index, isSticky)
                             },
                             onDismiss = { isTargetMenuVisible = false }
-                        )
-                    }
-
-                    if (isCryoMenuVisible) {
-                        CryoMenuOverlay(
-                            minutes = cryoDurationMinutes,
-                            onIncrement = { cryoDurationMinutes = (cryoDurationMinutes + 5).coerceAtMost(60); feedback(20); resetInactivityTimer() },
-                            onDecrement = { cryoDurationMinutes = (cryoDurationMinutes - 5).coerceAtLeast(5); feedback(20); resetInactivityTimer() },
-                            onConfirm = { enterCryostasis(cryoDurationMinutes) }
                         )
                     }
                 }
@@ -522,7 +536,6 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         isSelectingDeck = false
         isSelectingContext = false
         isTargetMenuVisible = false
-        isCryoMenuVisible = false
 
         updateScreenPower(false)
     }
@@ -553,10 +566,6 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
 
     private fun handleTap() {
         when {
-            isCryoMenuVisible -> {
-                isCryoMenuVisible = false
-            }
-
             isTargetMenuVisible -> {
                 isTargetMenuVisible = false
             }
@@ -579,6 +588,17 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
     private fun cancelPoseLock() {
         val intent = Intent(this, BackgroundSensorService::class.java).apply {
             action = PoseActions.ACTION_CANCEL_POSE
+        }
+
+        startService(intent)
+    }
+
+    private fun toggleShakyHandsMode() {
+        isShakyHandsMode = !isShakyHandsMode
+        prefs.edit().putBoolean("shaky_hands_mode", isShakyHandsMode).apply()
+
+        val intent = Intent(this, BackgroundSensorService::class.java).apply {
+            action = PoseActions.ACTION_TOGGLE_SHAKY_HANDS
         }
 
         startService(intent)

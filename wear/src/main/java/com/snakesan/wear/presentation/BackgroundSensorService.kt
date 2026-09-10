@@ -105,7 +105,51 @@ class BackgroundSensorService : Service(), SensorEventListener {
     // Mirrors the hysteresis isGyroTwist already has for twist detection.
     private var pendingPose = Pose.NONE
     private var pendingPoseStartTime = 0L
-    private val poseConfirmMs = 150L
+    private val basePoseConfirmMs = 150L
+
+    // --- SHAKY-HANDS MODE ---
+    // A quick-switch profile for moments motor control is worse than usual
+    // (tremor, fatigue, an anxiety spike) -- widens pose-hold, wake-twist,
+    // and fire-grace timing without touching the raw twist/pose magnitude
+    // thresholds, whose right direction under shakiness is less obvious.
+    // Toggled by a long press on the watch face (see toggleShakyHandsMode);
+    // replaces the old long-press CRYO setup menu, which is why it's a
+    // direct toggle rather than another menu to navigate under stress.
+    // Persisted so it survives a service restart, but never touches the
+    // phone-synced "normal" values below -- it's a floor on top of them,
+    // via maxOf, so it never makes things less forgiving than whatever the
+    // wearer already configured.
+    private var isShakyHandsMode = false
+
+    private val SHAKY_POSE_CONFIRM_MS = 350L
+    private val SHAKY_WAKE_WINDOW_MS = 2800L
+    private val SHAKY_FIRE_GRACE_MS = 900L
+
+    private fun effectivePoseConfirmMs(): Long {
+        return if (isShakyHandsMode) SHAKY_POSE_CONFIRM_MS else basePoseConfirmMs
+    }
+
+    private fun effectiveWakeTwistWindowMs(): Long {
+        return if (isShakyHandsMode) maxOf(wakeTwistWindowMs, SHAKY_WAKE_WINDOW_MS) else wakeTwistWindowMs
+    }
+
+    private fun effectiveFireGraceMs(): Long {
+        return if (isShakyHandsMode) maxOf(fireGraceMs, SHAKY_FIRE_GRACE_MS) else fireGraceMs
+    }
+
+    private fun toggleShakyHandsMode() {
+        isShakyHandsMode = !isShakyHandsMode
+
+        getSharedPreferences("AckPrefs", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("shaky_hands_mode", isShakyHandsMode)
+            .apply()
+
+        feedback(
+            if (isShakyHandsMode) 200 else 60,
+            if (isShakyHandsMode) TechSynth.Sfx.LOCK else TechSynth.Sfx.UNLOCK
+        )
+    }
 
     // --- GYROSCOPE TWIST DETECTION ---
 
@@ -212,6 +256,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
         activePoseThreshold = prefs.getFloat("cfg_pose", 6.0f)
         fireGraceMs = prefs.getInt("cfg_fire_grace", 500).toLong()
         wakeTwistWindowMs = prefs.getInt("cfg_wake_window", 1800).toLong()
+        isShakyHandsMode = prefs.getBoolean("shaky_hands_mode", false)
 
         registerSensors(
             accelerometerRate = SensorManager.SENSOR_DELAY_UI,
@@ -229,6 +274,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
                  wakeTwistWindowMs = prefs.getInt("cfg_wake_window", 1800).toLong()
             }
             PoseActions.ACTION_CANCEL_POSE -> cancelPoseLock()
+            PoseActions.ACTION_TOGGLE_SHAKY_HANDS -> toggleShakyHandsMode()
             "ACTION_ENTER_CRYO" -> enterCryo()
             "ACTION_WAKE_CRYO" -> wakeFromCryo()
             PoseActions.ACTION_SET_TRAINING_MODE -> {
@@ -512,7 +558,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
                     feedbackWarning()
                 }
 
-                if (elapsedSinceLock >= normalFireDelayMs + fireGraceMs) {
+                if (elapsedSinceLock >= normalFireDelayMs + effectiveFireGraceMs()) {
                     fireCommand()
                 }
             }
@@ -531,7 +577,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private fun handleTwist(time: Long) {
         when (currentState) {
             State.IDLE -> {
-                if (time - lastModifierTime > wakeTwistWindowMs) {
+                if (time - lastModifierTime > effectiveWakeTwistWindowMs()) {
                     twistCount = 0
                 }
 
@@ -613,7 +659,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
             return
         }
 
-        if (time - pendingPoseStartTime >= poseConfirmMs) {
+        if (time - pendingPoseStartTime >= effectivePoseConfirmMs()) {
             setPose(detected, time)
             pendingPose = Pose.NONE
         }

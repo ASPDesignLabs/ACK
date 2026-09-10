@@ -16,6 +16,13 @@ object PoseActions {
     const val ACTION_CANCEL_POSE =
         "com.example.besu.wear.ACTION_CANCEL_POSE"
 
+    // Sent on a long press of the watch face -- flips shaky-hands mode,
+    // which widens pose-hold, wake-twist, and fire-grace timing for
+    // moments motor control is worse than usual. Replaces the old
+    // long-press CRYO setup menu.
+    const val ACTION_TOGGLE_SHAKY_HANDS =
+        "com.example.besu.wear.ACTION_TOGGLE_SHAKY_HANDS"
+
     const val ACTION_SET_TRAINING_MODE =
         "com.example.besu.wear.ACTION_SET_TRAINING_MODE"
 
