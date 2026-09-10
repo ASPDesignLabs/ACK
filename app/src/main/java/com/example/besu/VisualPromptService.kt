@@ -34,6 +34,16 @@ class VisualPromptService : Service() {
     private var overlayView: View? = null
     private var timeoutRunnable: Runnable? = null
 
+    // Missed-message repair: if a prompt clears (timeout, tap, or hold),
+    // this is left set so a small REPLAY chip can bring it right back --
+    // recovering used to mean unlocking the phone and finding the right
+    // row in Type view's history. Not offered when a new prompt simply
+    // replaces this one, or when the phone-shake kill switch force-clears
+    // (that content was a mistake, not something to offer back).
+    private var replayAction: (() -> Unit)? = null
+    private var replayChipView: View? = null
+    private var chipTimeoutRunnable: Runnable? = null
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -170,6 +180,16 @@ class VisualPromptService : Service() {
             return
         }
 
+        replayAction = {
+            showTextPrompt(
+                template = template,
+                rootCategory = rootCategory,
+                localValues = localValues,
+                preventTimedClear = preventTimedClear,
+                requireHoldToClear = requireHoldToClear
+            )
+        }
+
         val preset = VisualPresetRepository.getActivePreset(this)
 
         val content = createContentContainer()
@@ -246,6 +266,14 @@ class VisualPromptService : Service() {
         if (emoji.isBlank()) {
             clearOverlay()
             return
+        }
+
+        replayAction = {
+            showEmojiPrompt(
+                emoji = emoji,
+                displayText = displayText,
+                timeoutMs = timeoutMs
+            )
         }
 
         val content = createContentContainer()
@@ -332,6 +360,15 @@ class VisualPromptService : Service() {
         if (movie == null) {
             clearOverlay()
             return
+        }
+
+        replayAction = {
+            showGifPrompt(
+                filePath = filePath,
+                title = title,
+                forceLandscape = forceLandscape,
+                showText = showText
+            )
         }
 
         val content = createContentContainer()
@@ -483,14 +520,14 @@ class VisualPromptService : Service() {
 
         if (requireHoldToClear) {
             root.setOnLongClickListener {
-                clearOverlay()
+                clearOverlay(offerReplay = true)
                 true
             }
 
             root.isLongClickable = true
         } else {
             root.setOnClickListener {
-                clearOverlay()
+                clearOverlay(offerReplay = true)
             }
         }
 
@@ -537,15 +574,22 @@ class VisualPromptService : Service() {
         timeoutRunnable?.let(handler::removeCallbacks)
 
         timeoutRunnable = Runnable {
-            clearOverlay()
+            clearOverlay(offerReplay = true)
         }
 
         handler.postDelayed(timeoutRunnable!!, timeoutMs)
     }
 
-    private fun clearOverlay(stopService: Boolean = true) {
+    private fun clearOverlay(stopService: Boolean = true, offerReplay: Boolean = false) {
         timeoutRunnable?.let(handler::removeCallbacks)
         timeoutRunnable = null
+
+        // Any overlay lifecycle event tears down a stale chip first -- new
+        // content replacing it, a fresh dismiss, or a force-clear all mean
+        // whatever the chip would have replayed is no longer the point.
+        clearReplayChip()
+
+        val hadContent = overlayView != null
 
         overlayView?.let { view ->
             try {
@@ -572,9 +616,75 @@ class VisualPromptService : Service() {
 
         overlayView = null
 
+        if (offerReplay && hadContent && replayAction != null) {
+            showReplayChip()
+            return
+        }
+
         if (stopService) {
             stopSelf()
         }
+    }
+
+    private fun showReplayChip() {
+        clearReplayChip()
+
+        val chip = TextView(this).apply {
+            text = "↻ REPLAY"
+            setTextColor(Color.WHITE)
+            textSize = 12f
+            setBackgroundColor(Color.argb(230, 20, 20, 24))
+            setPadding(28, 20, 28, 20)
+            setOnClickListener {
+                val action = replayAction
+                clearReplayChip()
+                action?.invoke()
+            }
+        }
+
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            overlayWindowType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            android.graphics.PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.END
+            x = 24
+            y = 48
+        }
+
+        try {
+            windowManager.addView(chip, params)
+            replayChipView = chip
+        } catch (_: Exception) {
+            stopSelf()
+            return
+        }
+
+        chipTimeoutRunnable = Runnable {
+            clearReplayChip()
+            stopSelf()
+        }
+
+        handler.postDelayed(chipTimeoutRunnable!!, REPLAY_CHIP_TIMEOUT_MS)
+    }
+
+    private fun clearReplayChip() {
+        chipTimeoutRunnable?.let(handler::removeCallbacks)
+        chipTimeoutRunnable = null
+
+        replayChipView?.let { view ->
+            try {
+                windowManager.removeViewImmediate(view)
+            } catch (_: Exception) {
+                // Already detached -- nothing left to do.
+            }
+        }
+
+        replayChipView = null
     }
 
     private fun overlayWindowType(): Int {
@@ -622,6 +732,7 @@ class VisualPromptService : Service() {
 
         private const val DEFAULT_PROMPT_TIMEOUT_MS = 10_000L
         private const val DEFAULT_EMOJI_TIMEOUT_MS = 10_000L
+        private const val REPLAY_CHIP_TIMEOUT_MS = 20_000L
 
         private const val CONTENT_PADDING_PX = 30
         private const val CONTAINER_PADDING_PX = 12
