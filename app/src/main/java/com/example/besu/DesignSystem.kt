@@ -293,6 +293,7 @@ fun QuickAccessAccordion(
 ) {
     val grouped = remember(phrases) { phrases.groupBy { it.tag } }
     val expandedStates = remember { mutableStateMapOf<String, Boolean>().apply { if(grouped.isNotEmpty()) this[grouped.keys.first()] = true } }
+    var deletingPhrase by remember { mutableStateOf<QuickPhrase?>(null) }
 
     LazyColumn {
         grouped.forEach { (tag, items) ->
@@ -316,10 +317,57 @@ fun QuickAccessAccordion(
                     ) {
                         Text(text = phrase.text, color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.weight(1f))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("X", color = Color.Red, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onDelete(phrase) }.padding(4.dp))
+                        Box(
+                            modifier = Modifier.size(44.dp).clickable { deletingPhrase = phrase },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("X", color = Color.Red, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
                 item { Spacer(modifier = Modifier.height(8.dp)) }
+            }
+        }
+    }
+
+    val deleting = deletingPhrase
+
+    if (deleting != null) {
+        TightDialogSurface(
+            onDismiss = { deletingPhrase = null },
+            primaryColor = RadicalRed,
+            title = "CONFIRM DELETE",
+            dismissLabel = "ABORT"
+        ) {
+            Text(
+                text = "Permanently remove the saved phrase " +
+                        "\"${deleting.text}\"? This cannot be undone -- " +
+                        "consider exporting a backup first.",
+                color = Color.White,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TightPanelButton(
+                    text = "DELETE PERMANENTLY",
+                    modifier = Modifier.fillMaxWidth(),
+                    mainColor = RadicalRed
+                ) {
+                    onDelete(deleting)
+                    deletingPhrase = null
+                }
+
+                TightPanelButton(
+                    text = "CANCEL",
+                    modifier = Modifier.fillMaxWidth(),
+                    isActive = false,
+                    mainColor = primaryColor
+                ) {
+                    deletingPhrase = null
+                }
             }
         }
     }
