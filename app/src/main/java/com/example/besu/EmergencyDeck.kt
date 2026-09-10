@@ -66,7 +66,11 @@ data class EmergencyDeckConfig(
     val slots: List<EmergencyPromptSlot> = (0..3).map { index ->
         EmergencyPromptSlot(slotIndex = index)
     },
-    val preventTimedClear: Boolean = false,
+    // Defaults to persisting: an emergency message disappearing on its own
+    // before a bystander or responder finishes reading it is a worse
+    // failure than it staying up until someone dismisses it (a plain tap
+    // still clears it immediately -- see requireHoldToClear below).
+    val preventTimedClear: Boolean = true,
     val requireHoldToClear: Boolean = false,
     val forceSpeaker: Boolean = false,
     val boostVolume: Boolean = false,
