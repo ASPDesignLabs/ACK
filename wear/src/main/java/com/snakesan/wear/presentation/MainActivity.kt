@@ -580,6 +580,7 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
 
         val intent = Intent(this, BackgroundSensorService::class.java).apply {
             action = PoseActions.ACTION_TOGGLE_SHAKY_HANDS
+            putExtra(PoseActions.EXTRA_SHAKY_HANDS_ENABLED, isShakyHandsMode)
         }
 
         startService(intent)

@@ -16,12 +16,19 @@ object PoseActions {
     const val ACTION_CANCEL_POSE =
         "com.example.besu.wear.ACTION_CANCEL_POSE"
 
-    // Sent on a long press of the watch face -- flips shaky-hands mode,
-    // which widens pose-hold, wake-twist, and fire-grace timing for
-    // moments motor control is worse than usual. Replaces the old
-    // long-press CRYO setup menu.
+    // Sent on a long press of the watch face -- sets shaky-hands mode to
+    // an explicit state (EXTRA_SHAKY_HANDS_ENABLED), which widens
+    // pose-hold, wake-twist, and fire-grace timing for moments motor
+    // control is worse than usual. Replaces the old long-press CRYO setup
+    // menu. Carries the target state explicitly rather than asking the
+    // service to flip its own copy: if the service isn't already running,
+    // startService's onCreate() reads the just-written preference before
+    // onStartCommand runs, so a same-service flip would double-apply and
+    // silently revert.
     const val ACTION_TOGGLE_SHAKY_HANDS =
         "com.example.besu.wear.ACTION_TOGGLE_SHAKY_HANDS"
+
+    const val EXTRA_SHAKY_HANDS_ENABLED = "shaky_hands_enabled"
 
     const val ACTION_SET_TRAINING_MODE =
         "com.example.besu.wear.ACTION_SET_TRAINING_MODE"

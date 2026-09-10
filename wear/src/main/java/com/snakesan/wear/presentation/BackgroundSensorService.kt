@@ -137,8 +137,8 @@ class BackgroundSensorService : Service(), SensorEventListener {
         return if (isShakyHandsMode) maxOf(fireGraceMs, SHAKY_FIRE_GRACE_MS) else fireGraceMs
     }
 
-    private fun toggleShakyHandsMode() {
-        isShakyHandsMode = !isShakyHandsMode
+    private fun setShakyHandsMode(enabled: Boolean) {
+        isShakyHandsMode = enabled
 
         getSharedPreferences("AckPrefs", Context.MODE_PRIVATE)
             .edit()
@@ -274,7 +274,13 @@ class BackgroundSensorService : Service(), SensorEventListener {
                  wakeTwistWindowMs = prefs.getInt("cfg_wake_window", 1800).toLong()
             }
             PoseActions.ACTION_CANCEL_POSE -> cancelPoseLock()
-            PoseActions.ACTION_TOGGLE_SHAKY_HANDS -> toggleShakyHandsMode()
+            PoseActions.ACTION_TOGGLE_SHAKY_HANDS -> {
+                val enabled = intent.getBooleanExtra(
+                    PoseActions.EXTRA_SHAKY_HANDS_ENABLED,
+                    !isShakyHandsMode
+                )
+                setShakyHandsMode(enabled)
+            }
             "ACTION_ENTER_CRYO" -> enterCryo()
             "ACTION_WAKE_CRYO" -> wakeFromCryo()
             PoseActions.ACTION_SET_TRAINING_MODE -> {
