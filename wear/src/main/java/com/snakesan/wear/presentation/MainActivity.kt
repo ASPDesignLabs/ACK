@@ -19,21 +19,14 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.wear.ambient.AmbientModeSupport
-import androidx.wear.compose.material.Text
 import com.example.besu.wear.theme.NeonPalette
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
@@ -287,29 +280,16 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                     }
                 ) {
                     if (isSelectingContext) {
-                        AckWatchHud("PROFILE 0${contextIndex + 1}", "ROTARY INPUT", 0, activePrimaryColor, activeDeckLabel, PROFILES[contextIndex])
-                    } 
+                        AckWatchHud("PROFILE 0${contextIndex + 1}", "ROTARY INPUT", 0, activePrimaryColor, activeDeckLabel, PROFILES[contextIndex], isShakyHandsMode)
+                    }
                     else if (isSelectingDeck) {
                         val deck = availableDecks.getOrNull(selectorIndex)
                         if (deck != null) {
-                            AckWatchHud("DECK 0${selectorIndex + 1}", "TAP FOR CTX >", 0, NeonPalette.getColor(deck.colorIdx), deck.name, activeProfileLabel)
+                            AckWatchHud("DECK 0${selectorIndex + 1}", "TAP FOR CTX >", 0, NeonPalette.getColor(deck.colorIdx), deck.name, activeProfileLabel, isShakyHandsMode)
                         }
                     } else {
                         // Render State from Background Service
-                        AckWatchHud(uiState, uiPose, uiTwist, activePrimaryColor, activeDeckLabel, activeProfileLabel)
-                    }
-
-                    if (isShakyHandsMode) {
-                        Text(
-                            "🤚 SHAKY HANDS",
-                            color = CyberAmber,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = 4.dp)
-                        )
+                        AckWatchHud(uiState, uiPose, uiTwist, activePrimaryColor, activeDeckLabel, activeProfileLabel, isShakyHandsMode)
                     }
 
                     //if (currentStateName == "CRYO") {

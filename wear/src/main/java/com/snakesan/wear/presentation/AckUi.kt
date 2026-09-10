@@ -94,12 +94,13 @@ fun CryoHud(label: String, subLabel: String, remainingSeconds: Long?) {
 
 @Composable
 fun AckWatchHud(
-    status: String, 
-    pose: String, 
+    status: String,
+    pose: String,
     twist: Int,
     primaryColor: Color = CyberCyan,
     deckName: String = "",
-    profileName: String = "DEFAULT" // <--- NEW PARAMETER
+    profileName: String = "DEFAULT", // <--- NEW PARAMETER
+    isShakyHandsMode: Boolean = false
 ) {
     // Dynamic Status Color: Uses Deck Color for neutral states
     val statusColor = when (status) {
@@ -132,6 +133,21 @@ fun AckWatchHud(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
+
+            // 0. SHAKY-HANDS INDICATOR -- sits directly above the deck line
+            // so it's read as "this deck, in this mode" rather than a
+            // generic screen-wide banner.
+            if (isShakyHandsMode) {
+                Text(
+                    text = "🤚 SHAKY HANDS",
+                    color = CyberAmber,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+            }
 
             // 1. DECK INDICATOR
             val deckIndicator = if (
