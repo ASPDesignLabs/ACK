@@ -44,6 +44,7 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
     var crownSens by remember { mutableFloatStateOf(prefs.getInt("CROWN_SENS", 2).toFloat()) }
     var motTwist by remember { mutableFloatStateOf(prefs.getFloat("MOT_TWIST", 7.0f)) }
     var motPose by remember { mutableFloatStateOf(prefs.getFloat("MOT_POSE", 6.0f)) }
+    var fireGraceMs by remember { mutableFloatStateOf(prefs.getInt("FIRE_GRACE_MS", 500).toFloat()) }
     var headerShortcuts by remember { mutableStateOf(CommandRepository.getHeaderShortcuts(context)) }
     var forceDeviceRotation by remember {
         mutableStateOf(OverlayDisplayPrefs.isDeviceRotationEnabled(context))
@@ -57,12 +58,14 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
     fun syncAll() {
         prefs.edit().putInt("TONE_THEME", toneTheme).putFloat("TONE_VOLUME", toneVolume)
             .putInt("AUTO_CRYO", autoCryo.toInt()).putInt("CROWN_SENS", crownSens.toInt())
-            .putFloat("MOT_TWIST", motTwist).putFloat("MOT_POSE", motPose).apply()
+            .putFloat("MOT_TWIST", motTwist).putFloat("MOT_POSE", motPose)
+            .putInt("FIRE_GRACE_MS", fireGraceMs.toInt()).apply()
 
         WatchSync.sendAudioConfig(context, toneTheme, toneVolume)
         WatchSync.sendPowerConfig(context, autoCryo.toInt())
         WatchSync.sendCrownSensitivity(context, crownSens.toInt())
         WatchSync.sendMotionConfig(context, motTwist, motPose)
+        WatchSync.sendFireGraceConfig(context, fireGraceMs.toInt())
     }
 
     fun reportHelpInteraction(tag: String) {
@@ -226,6 +229,20 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
                 Text("GRAVITY LOCK: ${String.format("%.1f", motPose)}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = motPose, onValueChange = { motPose = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 2.0f..9.0f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
+                    modifier = Modifier.helpTarget(
+                        AckTags.SETTINGS_WATCH_CONFIG,
+                        primaryColor
+                    ))
+
+                Text("FIRE GRACE WINDOW: ${fireGraceMs.toInt()}ms", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(
+                    "Extra time after a pose locks and goes quiet before it fires. Tap the watch face anytime before then to cancel instead.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Slider(value = fireGraceMs, onValueChange = { fireGraceMs = it }, onValueChangeFinished = { syncAll()
+                    reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 250f..1000f, steps = 14, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
                         AckTags.SETTINGS_WATCH_CONFIG,
                         primaryColor

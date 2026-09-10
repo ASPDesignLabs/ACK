@@ -78,6 +78,15 @@ object WatchSync {
         sendMessage(context, path, data, "PHYSICS SYNC")
     }
 
+    // How long, after a pose locks and goes quiet, the watch waits past its
+    // warning buzz before actually firing -- a tap on the watch face any
+    // time before then cancels instead. 250-1000ms.
+    fun sendFireGraceConfig(context: Context, graceMs: Int) {
+        val path = "/sys/fire_grace_config"
+        val data = "$graceMs".toByteArray(Charsets.UTF_8)
+        sendMessage(context, path, data, "FIRE GRACE SYNC")
+    }
+
     // --- GESTURE TRAINING MODE ---
     // mode is one of "OFF" / "PACED" / "LIVE":
     //   OFF   - normal live behavior.

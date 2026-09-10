@@ -67,6 +67,7 @@ object TransferManager {
             motionPose = dspPrefs.getFloat("MOT_POSE", 6.0f),
             crownSens = dspPrefs.getInt("CROWN_SENS", 2),
             autoCryoMinutes = dspPrefs.getInt("AUTO_CRYO", 10),
+            fireGraceMs = dspPrefs.getInt("FIRE_GRACE_MS", 500),
             customVoices = customVoicesList
         )
 
@@ -396,6 +397,7 @@ object TransferManager {
             putFloat("MOT_POSE", backup.dsp.motionPose)
             putInt("CROWN_SENS", backup.dsp.crownSens)
             putInt("AUTO_CRYO", backup.dsp.autoCryoMinutes)
+            putInt("FIRE_GRACE_MS", backup.dsp.fireGraceMs)
 
             putString(
                 "CUSTOM_VOICES",

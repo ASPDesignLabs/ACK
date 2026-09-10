@@ -59,6 +59,7 @@ data class DspConfig(
     val motionPose: Float = 6.0f,
     val crownSens: Int = 2,
     val autoCryoMinutes: Int = 10,
+    val fireGraceMs: Int = 500,
     val customVoices: List<VoiceProfile> = emptyList()
 )
 

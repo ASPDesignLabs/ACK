@@ -292,11 +292,13 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         val crownSens = prefs.getInt("CROWN_SENS", 2)
         val twist = prefs.getFloat("MOT_TWIST", 7.0f)
         val pose = prefs.getFloat("MOT_POSE", 6.0f)
+        val fireGrace = prefs.getInt("FIRE_GRACE_MS", 500)
         val toneTheme = prefs.getInt("TONE_THEME", 1)
         val toneVol = prefs.getFloat("TONE_VOLUME", 0.8f)
 
         WatchSync.sendCrownSensitivity(context, crownSens)
         WatchSync.sendMotionConfig(context, twist, pose)
+        WatchSync.sendFireGraceConfig(context, fireGrace)
         WatchSync.sendAudioConfig(context, toneTheme, toneVol)
     }
 
