@@ -160,6 +160,16 @@ fun TerminalView(logs: List<LogEntry>, context: Context) {
                                     intent.putExtra("phrase", replayText)
                                     intent.putExtra("robotic", false)
                                     intent.putExtra("source", "LOG/REPLAY")
+                                    // An emergency message's own boost/tone
+                                    // settings aren't in the log, but its
+                                    // core safety properties -- audible and
+                                    // not auto-clearing -- shouldn't be lost
+                                    // just because it's being replayed.
+                                    if (log.type == "EMERGENCY") {
+                                        intent.putExtra("emergency_mode", true)
+                                        intent.putExtra("emergency_force_speaker", true)
+                                        intent.putExtra("emergency_prevent_timed_clear", true)
+                                    }
                                     context.startService(intent)
                                 }
                         } else {
