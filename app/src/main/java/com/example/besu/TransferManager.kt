@@ -58,6 +58,7 @@ object TransferManager {
             crush = dspPrefs.getFloat("VOX_CRUSH", 0f),
             cadence = dspPrefs.getFloat("VOX_CADENCE", 0f),
             forceSpeaker = dspPrefs.getBoolean("FORCE_SPEAKER", false),
+            silentOutput = dspPrefs.getBoolean("SILENT_OUTPUT", false),
             toneTheme = dspPrefs.getInt("TONE_THEME", 1),
             toneVolume = dspPrefs.getFloat("TONE_VOLUME", 0.8f),
             isVoxEnabled = dspPrefs.getBoolean("TUTORIAL_VOX", true),
@@ -389,6 +390,7 @@ object TransferManager {
             putFloat("VOX_CRUSH", backup.dsp.crush)
             putFloat("VOX_CADENCE", backup.dsp.cadence)
             putBoolean("FORCE_SPEAKER", backup.dsp.forceSpeaker)
+            putBoolean("SILENT_OUTPUT", backup.dsp.silentOutput)
             putInt("TONE_THEME", backup.dsp.toneTheme)
             putFloat("TONE_VOLUME", backup.dsp.toneVolume)
             putBoolean("TUTORIAL_VOX", backup.dsp.isVoxEnabled)

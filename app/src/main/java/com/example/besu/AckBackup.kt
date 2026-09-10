@@ -49,6 +49,7 @@ data class DspConfig(
     val crush: Float,
     val cadence: Float,
     val forceSpeaker: Boolean,
+    val silentOutput: Boolean = false,
     val toneTheme: Int,
     val toneVolume: Float,
     val isVoxEnabled: Boolean,

@@ -43,8 +43,13 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     private var activeProfileId = "CYBER"
     private var tutorialProfileId = "MECH"
     private var cadenceFactor = 0f
-    private var forceSpeaker = false 
-    
+    private var forceSpeaker = false
+    // When on, regular output still shows its visual prompt as normal but
+    // never synthesizes or plays audio -- for contexts where sound itself
+    // is the barrier, not just being heard. Tutorial/guide narration has
+    // its own separate toggle (isVoxEnabled on the phone) and is untouched.
+    private var silentOutput = false
+
     // Gain State
     private var masterGain = 1.0f
 
@@ -140,6 +145,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         tutorialProfileId = prefs.getString("TUT_VOX_PROFILE", "MECH") ?: "MECH"
         cadenceFactor = prefs.getFloat("VOX_CADENCE", 0.0f)
         forceSpeaker = prefs.getBoolean("FORCE_SPEAKER", false)
+        silentOutput = prefs.getBoolean("SILENT_OUTPUT", false)
         masterGain = prefs.getFloat("MASTER_GAIN", 1.0f)
         
         val customJson = prefs.getString("CUSTOM_VOICES", "[]") ?: "[]"
@@ -160,6 +166,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 ?: tutorialProfileId
                 cadenceFactor = intent.getFloatExtra("cadence", cadenceFactor)
                 forceSpeaker = intent.getBooleanExtra("speaker", forceSpeaker)
+                silentOutput = intent.getBooleanExtra("silent_output", silentOutput)
                 masterGain = intent.getFloatExtra("master_gain", masterGain)
                 
                 val rawCustoms = intent.getStringExtra("custom_voices_json")
@@ -345,6 +352,14 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 emergency = emergency
                         )
             }
+
+        // Silent mode skips synthesis/playback for regular output only --
+        // never for an emergency message, which relies on being audible to
+        // get a bystander's attention, and never for tutorial narration,
+        // which has its own separate toggle.
+        if (!isTutorialOverride && silentOutput && !emergency.enabled) {
+            return
+        }
 
         val effectiveCadence = if (isTutorialOverride) {
             0.0f

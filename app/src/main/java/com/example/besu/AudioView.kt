@@ -48,6 +48,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     var userProfile by remember { mutableStateOf(prefs.getString("USER_VOX_PROFILE", "CYBER") ?: "CYBER") }
     var cadenceAmount by remember { mutableFloatStateOf(prefs.getFloat("VOX_CADENCE", 0.0f)) }
     var forceSpeaker by remember { mutableStateOf(prefs.getBoolean("FORCE_SPEAKER", false)) }
+    var silentOutput by remember { mutableStateOf(prefs.getBoolean("SILENT_OUTPUT", false)) }
     var isVoxEnabled by remember { mutableStateOf(prefs.getBoolean("TUTORIAL_VOX", true)) }
     var masterGain by remember { mutableFloatStateOf(prefs.getFloat("MASTER_GAIN", 1.0f)) }
 
@@ -72,6 +73,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             .putString("USER_VOX_PROFILE", userProfile)
             .putFloat("VOX_CADENCE", cadenceAmount)
             .putBoolean("FORCE_SPEAKER", forceSpeaker)
+            .putBoolean("SILENT_OUTPUT", silentOutput)
             .putBoolean("TUTORIAL_VOX", isVoxEnabled)
             .putFloat("MASTER_GAIN", masterGain)
             .putString("CUSTOM_VOICES", Json.encodeToString(customVoices))
@@ -82,6 +84,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             putExtra("user_profile", userProfile)
             putExtra("cadence", cadenceAmount)
             putExtra("speaker", forceSpeaker)
+            putExtra("silent_output", silentOutput)
             putExtra("master_gain", masterGain)
             putExtra("custom_voices_json", Json.encodeToString(customVoices))
         }
@@ -159,6 +162,25 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                         reportHelpInteraction(AckTags.AUDIO_OUTPUT_ROUTING)
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                NeonButton(
+                    "SILENT MODE: ${if (silentOutput) "ON" else "OFF"}",
+                    Modifier
+                        .fillMaxWidth()
+                        .helpTarget(AckTags.AUDIO_OUTPUT_ROUTING, primaryColor),
+                    isActive = silentOutput,
+                    mainColor = primaryColor
+                ) {
+                    silentOutput = !silentOutput
+                    syncDsp()
+                    reportHelpInteraction(AckTags.AUDIO_OUTPUT_ROUTING)
+                }
+                Text(
+                    "Shows prompts as normal but never speaks them out loud -- for places where sound itself is the problem. Emergency messages and tutorial narration are never silenced.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("VOICE PROFILE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Spacer(modifier = Modifier.height(8.dp))
