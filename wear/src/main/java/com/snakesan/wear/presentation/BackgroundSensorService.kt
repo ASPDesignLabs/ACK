@@ -67,6 +67,26 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private val armedTimeoutMs = 6000L
     private val poseLockedTimeoutMs = 6000L
     private val normalFireDelayMs = 800L
+
+    // --- FIRE-WARNING GRACE PERIOD ---
+    // A locked pose used to fire the instant normalFireDelayMs of silence
+    // elapsed, with no warning and no way to stop it. Now, at that same
+    // 800ms mark we give a distinct haptic warning and wait an additional
+    // fireGraceMs before actually firing -- tapping the watch face any time
+    // before then (see ACTION_CANCEL_POSE / cancelPoseLock) aborts it
+    // instead. Phone-configurable via /sys/fire_grace_config, 250-1000ms.
+    private var fireGraceMs = 500L
+    private var firePendingWarned = false
+
+    // --- WAKE GESTURE TIMING ---
+    // The 3-twist wake gesture used to require each twist within a fixed
+    // 1200ms of the last, resetting the count to zero on any longer gap.
+    // That's a tight rhythm to hit deliberately when a hand isn't fully
+    // steady -- unlike pose entry, twist detection itself already has real
+    // hysteresis (see isGyroTwist), so widening this is pure patience, not
+    // a new noise-rejection risk. Phone-configurable via
+    // /sys/wake_window_config, 800-3000ms.
+    private var wakeTwistWindowMs = 1800L
     
     // TARGET STATE
     private var activeTargetIndex = -1 // -1 = None/Cleared
@@ -75,6 +95,61 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private var lastX = 0f; private var lastY = 0f; private var lastZ = 0f
     private var activeTwistThreshold = 7.0f
     private var activePoseThreshold = 6.0f
+
+    // --- POSE ENTRY DEBOUNCE ---
+    // A pose must clear activePoseThreshold on consecutive samples for at
+    // least poseConfirmMs before it locks. Without this, a single noisy
+    // accelerometer sample -- a tremor spike, an overshoot mid arm-raise --
+    // locks a pose exactly as readily as a deliberate hold, and once locked
+    // it WILL fire (see fireCommand/normalFireDelayMs) with no cancel path.
+    // Mirrors the hysteresis isGyroTwist already has for twist detection.
+    private var pendingPose = Pose.NONE
+    private var pendingPoseStartTime = 0L
+    private val basePoseConfirmMs = 150L
+
+    // --- SHAKY-HANDS MODE ---
+    // A quick-switch profile for moments motor control is worse than usual
+    // (tremor, fatigue, an anxiety spike) -- widens pose-hold, wake-twist,
+    // and fire-grace timing without touching the raw twist/pose magnitude
+    // thresholds, whose right direction under shakiness is less obvious.
+    // Toggled by a long press on the watch face (see toggleShakyHandsMode);
+    // replaces the old long-press CRYO setup menu, which is why it's a
+    // direct toggle rather than another menu to navigate under stress.
+    // Persisted so it survives a service restart, but never touches the
+    // phone-synced "normal" values below -- it's a floor on top of them,
+    // via maxOf, so it never makes things less forgiving than whatever the
+    // wearer already configured.
+    private var isShakyHandsMode = false
+
+    private val SHAKY_POSE_CONFIRM_MS = 350L
+    private val SHAKY_WAKE_WINDOW_MS = 2800L
+    private val SHAKY_FIRE_GRACE_MS = 900L
+
+    private fun effectivePoseConfirmMs(): Long {
+        return if (isShakyHandsMode) SHAKY_POSE_CONFIRM_MS else basePoseConfirmMs
+    }
+
+    private fun effectiveWakeTwistWindowMs(): Long {
+        return if (isShakyHandsMode) maxOf(wakeTwistWindowMs, SHAKY_WAKE_WINDOW_MS) else wakeTwistWindowMs
+    }
+
+    private fun effectiveFireGraceMs(): Long {
+        return if (isShakyHandsMode) maxOf(fireGraceMs, SHAKY_FIRE_GRACE_MS) else fireGraceMs
+    }
+
+    private fun setShakyHandsMode(enabled: Boolean) {
+        isShakyHandsMode = enabled
+
+        getSharedPreferences("AckPrefs", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("shaky_hands_mode", isShakyHandsMode)
+            .apply()
+
+        feedback(
+            if (isShakyHandsMode) 200 else 60,
+            if (isShakyHandsMode) TechSynth.Sfx.LOCK else TechSynth.Sfx.UNLOCK
+        )
+    }
 
     // --- GYROSCOPE TWIST DETECTION ---
 
@@ -179,6 +254,9 @@ class BackgroundSensorService : Service(), SensorEventListener {
         val prefs = getSharedPreferences("AckPrefs", Context.MODE_PRIVATE)
         activeTwistThreshold = prefs.getFloat("cfg_twist", 7.0f)
         activePoseThreshold = prefs.getFloat("cfg_pose", 6.0f)
+        fireGraceMs = prefs.getInt("cfg_fire_grace", 500).toLong()
+        wakeTwistWindowMs = prefs.getInt("cfg_wake_window", 1800).toLong()
+        isShakyHandsMode = prefs.getBoolean("shaky_hands_mode", false)
 
         registerSensors(
             accelerometerRate = SensorManager.SENSOR_DELAY_UI,
@@ -192,6 +270,16 @@ class BackgroundSensorService : Service(), SensorEventListener {
                  val prefs = getSharedPreferences("AckPrefs", Context.MODE_PRIVATE)
                  activeTwistThreshold = prefs.getFloat("cfg_twist", 7.0f)
                  activePoseThreshold = prefs.getFloat("cfg_pose", 6.0f)
+                 fireGraceMs = prefs.getInt("cfg_fire_grace", 500).toLong()
+                 wakeTwistWindowMs = prefs.getInt("cfg_wake_window", 1800).toLong()
+            }
+            PoseActions.ACTION_CANCEL_POSE -> cancelPoseLock()
+            PoseActions.ACTION_TOGGLE_SHAKY_HANDS -> {
+                val enabled = intent.getBooleanExtra(
+                    PoseActions.EXTRA_SHAKY_HANDS_ENABLED,
+                    !isShakyHandsMode
+                )
+                setShakyHandsMode(enabled)
             }
             "ACTION_ENTER_CRYO" -> enterCryo()
             "ACTION_WAKE_CRYO" -> wakeFromCryo()
@@ -466,7 +554,17 @@ class BackgroundSensorService : Service(), SensorEventListener {
                     return
                 }
 
-                if (time - stateStartTime > normalFireDelayMs) {
+                val elapsedSinceLock = time - stateStartTime
+
+                if (!firePendingWarned && elapsedSinceLock >= normalFireDelayMs) {
+                    // First warning for this lock -- give the wearer a
+                    // haptic-only heads-up and the fireGraceMs window to tap
+                    // the watch face and cancel before it actually fires.
+                    firePendingWarned = true
+                    feedbackWarning()
+                }
+
+                if (elapsedSinceLock >= normalFireDelayMs + effectiveFireGraceMs()) {
                     fireCommand()
                 }
             }
@@ -485,7 +583,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private fun handleTwist(time: Long) {
         when (currentState) {
             State.IDLE -> {
-                if (time - lastModifierTime > 1200L) {
+                if (time - lastModifierTime > effectiveWakeTwistWindowMs()) {
                     twistCount = 0
                 }
 
@@ -510,6 +608,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
                 commandTwistCount++
                 lastModifierTime = time
                 stateStartTime = time
+                firePendingWarned = false
 
                 feedback(20, TechSynth.Sfx.MODIFIER)
                 broadcastStatus()
@@ -529,6 +628,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
         time: Long,
     ) {
         if (currentState != State.ARMED) {
+            pendingPose = Pose.NONE
             return
         }
 
@@ -536,24 +636,38 @@ class BackgroundSensorService : Service(), SensorEventListener {
         val absY = abs(y)
         val absZ = abs(z)
 
-        when {
+        val detected = when {
             absX > activePoseThreshold &&
                     absX > absY &&
-                    absX > absZ -> {
-                setPose(Pose.ARM_UP, time)
-            }
+                    absX > absZ -> Pose.ARM_UP
 
             absZ > activePoseThreshold &&
                     absZ > absX &&
-                    absZ > absY -> {
-                setPose(Pose.STOP, time)
-            }
+                    absZ > absY -> Pose.STOP
 
             absY > activePoseThreshold &&
                     absY > absX &&
-                    absY > absZ -> {
-                setPose(Pose.HANDSHAKE, time)
-            }
+                    absY > absZ -> Pose.HANDSHAKE
+
+            else -> Pose.NONE
+        }
+
+        if (detected == Pose.NONE) {
+            pendingPose = Pose.NONE
+            return
+        }
+
+        if (detected != pendingPose) {
+            // Fresh candidate -- start timing its hold instead of locking
+            // on it immediately.
+            pendingPose = detected
+            pendingPoseStartTime = time
+            return
+        }
+
+        if (time - pendingPoseStartTime >= effectivePoseConfirmMs()) {
+            setPose(detected, time)
+            pendingPose = Pose.NONE
         }
     }
 
@@ -615,8 +729,42 @@ class BackgroundSensorService : Service(), SensorEventListener {
         currentPose = pose
         commandTwistCount = 0
         pacedFireReady = false
+        firePendingWarned = false
         feedback(50, TechSynth.Sfx.LOCK)
         transition(State.POSE_LOCKED, time)
+    }
+
+    // Tap-to-cancel: aborts a locked pose before it fires and returns to
+    // ARMED so the wearer can just try the pose again, without needing the
+    // 3-twist wake gesture over again. No-op outside POSE_LOCKED so a stray
+    // tap can't do anything (e.g. re-arm from IDLE).
+    private fun cancelPoseLock() {
+        if (currentState != State.POSE_LOCKED) {
+            return
+        }
+
+        currentPose = Pose.NONE
+        commandTwistCount = 0
+        firePendingWarned = false
+        feedback(80, TechSynth.Sfx.TICK)
+        transition(State.ARMED, System.currentTimeMillis())
+    }
+
+    // Deliberately haptic-only (no TechSynth tone) -- this is a discretion
+    // tool, and a pre-fire warning is exactly the moment an audible cue is
+    // least welcome. Waveform pattern makes it distinguishable from every
+    // other single-pulse feedback() call in this class.
+    private fun feedbackWarning() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val timings = longArrayOf(0, 60, 80, 60)
+            val amplitudes = intArrayOf(
+                0,
+                VibrationEffect.DEFAULT_AMPLITUDE,
+                0,
+                VibrationEffect.DEFAULT_AMPLITUDE,
+            )
+            vibrator?.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+        }
     }
     // Shifting of Sensor Polling
 

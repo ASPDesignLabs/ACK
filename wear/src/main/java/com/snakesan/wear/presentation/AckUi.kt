@@ -53,50 +53,6 @@ val CyberIce = Color(0xFFAADDFF)
 
 
 @Composable
-fun CryoMenuOverlay(minutes: Int, onIncrement: () -> Unit, onDecrement: () -> Unit, onConfirm: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.95f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("CRYO SETUP", color = CyberIce, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                UiButton("-") { onDecrement() }
-                Spacer(modifier = Modifier.width(16.dp))
-                Text("${minutes}m", color = CyberIce, fontFamily = FontFamily.Monospace, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.width(16.dp))
-                UiButton("+") { onIncrement() }
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-            Box(
-                modifier = Modifier
-                    .clip(CutCornerShape(12.dp))
-                    .background(CyberIce.copy(alpha=0.2f))
-                    .border(1.dp, CyberIce, CutCornerShape(12.dp))
-                    .pointerInput(Unit) { detectTapGestures(onTap = { onConfirm() }) }
-                    .padding(horizontal = 32.dp, vertical = 10.dp)
-            ) {
-                Text("INITIATE", color = CyberIce, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-            }
-        }
-    }
-}
-
-@Composable
-fun UiButton(text: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(CyberDark)
-            .border(1.dp, CyberIce.copy(alpha=0.5f), CircleShape)
-            .pointerInput(Unit) { detectTapGestures(onTap = { onClick() }) },
-        contentAlignment = Alignment.Center
-    ) { Text(text, color = CyberIce, fontSize = 24.sp) }
-}
-
-@Composable
 fun CryoHud(label: String, subLabel: String, remainingSeconds: Long?) {
     val isInfinite = remainingSeconds == null
     val timeString = if (!isInfinite)
@@ -138,12 +94,13 @@ fun CryoHud(label: String, subLabel: String, remainingSeconds: Long?) {
 
 @Composable
 fun AckWatchHud(
-    status: String, 
-    pose: String, 
+    status: String,
+    pose: String,
     twist: Int,
     primaryColor: Color = CyberCyan,
     deckName: String = "",
-    profileName: String = "DEFAULT" // <--- NEW PARAMETER
+    profileName: String = "DEFAULT", // <--- NEW PARAMETER
+    isShakyHandsMode: Boolean = false
 ) {
     // Dynamic Status Color: Uses Deck Color for neutral states
     val statusColor = when (status) {
@@ -176,6 +133,21 @@ fun AckWatchHud(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
+
+            // 0. SHAKY-HANDS INDICATOR -- sits directly above the deck line
+            // so it's read as "this deck, in this mode" rather than a
+            // generic screen-wide banner.
+            if (isShakyHandsMode) {
+                Text(
+                    text = "🤚 SHAKY HANDS",
+                    color = CyberAmber,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+            }
 
             // 1. DECK INDICATOR
             val deckIndicator = if (

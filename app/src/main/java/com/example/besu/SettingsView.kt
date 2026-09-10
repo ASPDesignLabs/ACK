@@ -1,9 +1,12 @@
 package com.example.besu
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -28,6 +31,7 @@ import androidx.core.content.ContextCompat
 import com.example.besu.ui.theme.Graphite
 import com.example.besu.ui.theme.NeonPalette
 import com.example.besu.ui.theme.VoidBlack
+import kotlinx.coroutines.delay
 
 
 
@@ -44,6 +48,16 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
     var crownSens by remember { mutableFloatStateOf(prefs.getInt("CROWN_SENS", 2).toFloat()) }
     var motTwist by remember { mutableFloatStateOf(prefs.getFloat("MOT_TWIST", 7.0f)) }
     var motPose by remember { mutableFloatStateOf(prefs.getFloat("MOT_POSE", 6.0f)) }
+    var fireGraceMs by remember { mutableFloatStateOf(prefs.getInt("FIRE_GRACE_MS", 500).toFloat()) }
+    var wakeWindowMs by remember { mutableFloatStateOf(prefs.getInt("WAKE_WINDOW_MS", 1800).toFloat()) }
+    var shakeThreshold by remember {
+        mutableFloatStateOf(
+            prefs.getFloat("SHAKE_THRESHOLD", AccelerometerTapService.DEFAULT_SHAKE_THRESHOLD)
+        )
+    }
+    var isShakeTestActive by remember { mutableStateOf(false) }
+    var shakeDetectedCount by remember { mutableIntStateOf(0) }
+    var isShakeDetectedFlash by remember { mutableStateOf(false) }
     var headerShortcuts by remember { mutableStateOf(CommandRepository.getHeaderShortcuts(context)) }
     var forceDeviceRotation by remember {
         mutableStateOf(OverlayDisplayPrefs.isDeviceRotationEnabled(context))
@@ -57,12 +71,55 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
     fun syncAll() {
         prefs.edit().putInt("TONE_THEME", toneTheme).putFloat("TONE_VOLUME", toneVolume)
             .putInt("AUTO_CRYO", autoCryo.toInt()).putInt("CROWN_SENS", crownSens.toInt())
-            .putFloat("MOT_TWIST", motTwist).putFloat("MOT_POSE", motPose).apply()
+            .putFloat("MOT_TWIST", motTwist).putFloat("MOT_POSE", motPose)
+            .putInt("FIRE_GRACE_MS", fireGraceMs.toInt())
+            .putInt("WAKE_WINDOW_MS", wakeWindowMs.toInt()).apply()
 
         WatchSync.sendAudioConfig(context, toneTheme, toneVolume)
         WatchSync.sendPowerConfig(context, autoCryo.toInt())
         WatchSync.sendCrownSensitivity(context, crownSens.toInt())
         WatchSync.sendMotionConfig(context, motTwist, motPose)
+        WatchSync.sendFireGraceConfig(context, fireGraceMs.toInt())
+        WatchSync.sendWakeWindowConfig(context, wakeWindowMs.toInt())
+    }
+
+    fun updateShakeThreshold() {
+        prefs.edit().putFloat("SHAKE_THRESHOLD", shakeThreshold).apply()
+        context.startService(
+            Intent(context, AccelerometerTapService::class.java).setAction("UPDATE_CONFIG")
+        )
+    }
+
+    // Listens for the real shake detector's broadcast while the test panel
+    // is open, so calibrating the slider reflects the actual detector
+    // rather than a separate simulated one.
+    DisposableEffect(isShakeTestActive) {
+        if (!isShakeTestActive) {
+            return@DisposableEffect onDispose {}
+        }
+
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                shakeDetectedCount++
+            }
+        }
+        val filter = IntentFilter(AccelerometerTapService.ACTION_SHAKE_DETECTED)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+
+    LaunchedEffect(shakeDetectedCount) {
+        if (shakeDetectedCount > 0) {
+            isShakeDetectedFlash = true
+            delay(1500)
+            isShakeDetectedFlash = false
+        }
     }
 
     fun reportHelpInteraction(tag: String) {
@@ -231,6 +288,34 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
                         primaryColor
                     ))
 
+                Text("FIRE GRACE WINDOW: ${fireGraceMs.toInt()}ms", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(
+                    "Extra time after a pose locks and goes quiet before it fires. Tap the watch face anytime before then to cancel instead.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Slider(value = fireGraceMs, onValueChange = { fireGraceMs = it }, onValueChangeFinished = { syncAll()
+                    reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 250f..1000f, steps = 14, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
+                    modifier = Modifier.helpTarget(
+                        AckTags.SETTINGS_WATCH_CONFIG,
+                        primaryColor
+                    ))
+
+                Text("WAKE GESTURE WINDOW: ${wakeWindowMs.toInt()}ms", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(
+                    "How much time is allowed between each of the 3 wake twists. Higher gives more room if your hand isn't perfectly steady.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Slider(value = wakeWindowMs, onValueChange = { wakeWindowMs = it }, onValueChangeFinished = { syncAll()
+                    reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 800f..3000f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
+                    modifier = Modifier.helpTarget(
+                        AckTags.SETTINGS_WATCH_CONFIG,
+                        primaryColor
+                    ))
+
                 Text("AUTO-CRYO: ${autoCryo.toInt()} MIN", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = autoCryo, onValueChange = { autoCryo = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 1f..10f, steps = 8, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[3], activeTrackColor = NeonPalette.SWATCHES[3], inactiveTrackColor = Color.DarkGray),
@@ -238,6 +323,69 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
                         AckTags.SETTINGS_WATCH_CONFIG,
                         primaryColor
                     ))
+            }
+
+            // --- PHONE SHAKE KILL SWITCH ---
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            item {
+                Text("SHAKE KILL SWITCH", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "Shake the phone to immediately stop whatever it's currently saying or showing -- a backstop for a mistaken watch fire or a wrong tap.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text("SENSITIVITY: ${String.format("%.1f", shakeThreshold)} (lower = easier to trigger)", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Slider(value = shakeThreshold, onValueChange = { shakeThreshold = it }, onValueChangeFinished = { updateShakeThreshold() },
+                    valueRange = 8f..25f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[3], activeTrackColor = NeonPalette.SWATCHES[3], inactiveTrackColor = Color.DarkGray))
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("TRAIN / TEST", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+                    Text(
+                        text = if (isShakeTestActive) "[STOP]" else "[TEST]",
+                        color = if (isShakeTestActive) Color.Red else primaryColor,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { isShakeTestActive = !isShakeTestActive }
+                    )
+                }
+
+                if (isShakeTestActive) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .border(1.dp, if (isShakeDetectedFlash) BioGreen else Color.DarkGray, CutCornerShape(4.dp))
+                            .background(if (isShakeDetectedFlash) BioGreen.copy(alpha = 0.15f) else Graphite),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (isShakeDetectedFlash) "DETECTED ✓  ($shakeDetectedCount)" else "ARMED -- SHAKE THE PHONE",
+                            color = if (isShakeDetectedFlash) BioGreen else Color.Gray,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        "This uses the real detector at the sensitivity above -- shake exactly as hard as you would to actually cut off output, and adjust the slider until that feels right.",
+                        color = Color.Gray,
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
             }
 
             // --- NEW ENVIRONMENTAL SENSOR SECTION ---

@@ -73,7 +73,8 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             if(intent?.action == "ACK_LOG") {
                 val msg = intent.getStringExtra("msg") ?: "Unknown"
                 val type = intent.getStringExtra("type") ?: "INFO"
-                addLog(msg, type)
+                val replayText = intent.getStringExtra("replay_text")
+                addLog(msg, type, replayText)
             }
         }
     }
@@ -102,6 +103,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         checkBatteryOptimization()
         startOutputService()
+        startAccelerometerTapService()
 
         setContent {
             MainScreen(logs = logBuffer, context = this, systemVoices = availableSystemVoices)
@@ -147,9 +149,20 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         } catch (e: Exception) { }
     }
 
-    private fun addLog(text: String, type: String) {
+    private fun startAccelerometerTapService() {
+        try {
+            val intent = Intent(this, AccelerometerTapService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        } catch (e: Exception) { }
+    }
+
+    private fun addLog(text: String, type: String, replayText: String? = null) {
         val timestamp = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
-        logBuffer.add(0, LogEntry(timestamp, type, text))
+        logBuffer.add(0, LogEntry(timestamp, type, text, replayText))
         if (logBuffer.size > 100) logBuffer.removeLast()
     }
 
@@ -160,7 +173,17 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     }
 }
 
-data class LogEntry(val time: String, val type: String, val msg: String)
+data class LogEntry(
+    val time: String,
+    val type: String,
+    val msg: String,
+    // Set only for a real communicated phrase (OUT/EMERGENCY, never
+    // tutorial/system narration) -- the already-resolved text, not the
+    // template that produced it, so TerminalView can replay it directly
+    // through OutputService without depending on whatever deck is
+    // currently active.
+    val replayText: String? = null
+)
 
 @Composable
 fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>) {
@@ -292,11 +315,15 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         val crownSens = prefs.getInt("CROWN_SENS", 2)
         val twist = prefs.getFloat("MOT_TWIST", 7.0f)
         val pose = prefs.getFloat("MOT_POSE", 6.0f)
+        val fireGrace = prefs.getInt("FIRE_GRACE_MS", 500)
+        val wakeWindow = prefs.getInt("WAKE_WINDOW_MS", 1800)
         val toneTheme = prefs.getInt("TONE_THEME", 1)
         val toneVol = prefs.getFloat("TONE_VOLUME", 0.8f)
 
         WatchSync.sendCrownSensitivity(context, crownSens)
         WatchSync.sendMotionConfig(context, twist, pose)
+        WatchSync.sendFireGraceConfig(context, fireGrace)
+        WatchSync.sendWakeWindowConfig(context, wakeWindow)
         WatchSync.sendAudioConfig(context, toneTheme, toneVol)
     }
 
@@ -1092,7 +1119,7 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                             )
                     ) {
                         when (viewMode) {
-                            "TERMINAL" -> TerminalView(logs)
+                            "TERMINAL" -> TerminalView(logs, context)
                             "MATRIX" -> {
                                 when (currentDeckType()) {
                                     DeckType.MATRIX -> {

@@ -49,6 +49,7 @@ data class DspConfig(
     val crush: Float,
     val cadence: Float,
     val forceSpeaker: Boolean,
+    val silentOutput: Boolean = false,
     val toneTheme: Int,
     val toneVolume: Float,
     val isVoxEnabled: Boolean,
@@ -59,6 +60,8 @@ data class DspConfig(
     val motionPose: Float = 6.0f,
     val crownSens: Int = 2,
     val autoCryoMinutes: Int = 10,
+    val fireGraceMs: Int = 500,
+    val wakeWindowMs: Int = 1800,
     val customVoices: List<VoiceProfile> = emptyList()
 )
 

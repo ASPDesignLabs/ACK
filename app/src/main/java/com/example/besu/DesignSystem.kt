@@ -132,17 +132,58 @@ fun RowScope.ThemeOption(
 
 // --- TERMINAL VIEW ---
 @Composable
-fun TerminalView(logs: List<LogEntry>) {
+fun TerminalView(logs: List<LogEntry>, context: Context) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         items(logs) { log ->
-            val typeColor = when(log.type) { 
-                "ERR" -> RadicalRed 
-                "WARN" -> DataOrange 
-                "SYS" -> BioGreen 
-                "OUT" -> FluxCyan 
-                else -> Color.White 
+            val typeColor = when(log.type) {
+                "ERR" -> RadicalRed
+                "WARN" -> DataOrange
+                "EMERGENCY" -> RadicalRed
+                "SYS" -> BioGreen
+                "OUT" -> FluxCyan
+                else -> Color.White
             }
-            Row(modifier = Modifier.padding(vertical = 2.dp)) {
+            // Only an actual communicated phrase carries replayText (see
+            // OutputService.processSpeech) -- status/system log lines never
+            // do, so they render plain with no tap affordance.
+            val replayText = log.replayText
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp)
+                    .then(
+                        if (replayText != null) {
+                            Modifier
+                                .background(FluxCyan.copy(alpha = 0.08f))
+                                .clickable {
+                                    val intent = Intent(context, OutputService::class.java)
+                                    intent.putExtra("phrase", replayText)
+                                    intent.putExtra("robotic", false)
+                                    intent.putExtra("source", "LOG/REPLAY")
+                                    // An emergency message's own boost/tone
+                                    // settings aren't in the log, but its
+                                    // core safety properties -- audible and
+                                    // not auto-clearing -- shouldn't be lost
+                                    // just because it's being replayed.
+                                    if (log.type == "EMERGENCY") {
+                                        intent.putExtra("emergency_mode", true)
+                                        intent.putExtra("emergency_force_speaker", true)
+                                        intent.putExtra("emergency_prevent_timed_clear", true)
+                                    }
+                                    context.startService(intent)
+                                }
+                        } else {
+                            Modifier
+                        }
+                    )
+            ) {
+                Text(
+                    if (replayText != null) "▶" else " ",
+                    color = FluxCyan,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    modifier = Modifier.width(14.dp)
+                )
                 Text("[${log.time}]", color = Color.DarkGray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.width(70.dp))
                 Text(log.type, color = typeColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
                 Text(" :: ${log.msg}", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
@@ -293,6 +334,7 @@ fun QuickAccessAccordion(
 ) {
     val grouped = remember(phrases) { phrases.groupBy { it.tag } }
     val expandedStates = remember { mutableStateMapOf<String, Boolean>().apply { if(grouped.isNotEmpty()) this[grouped.keys.first()] = true } }
+    var deletingPhrase by remember { mutableStateOf<QuickPhrase?>(null) }
 
     LazyColumn {
         grouped.forEach { (tag, items) ->
@@ -316,10 +358,57 @@ fun QuickAccessAccordion(
                     ) {
                         Text(text = phrase.text, color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.weight(1f))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("X", color = Color.Red, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onDelete(phrase) }.padding(4.dp))
+                        Box(
+                            modifier = Modifier.size(44.dp).clickable { deletingPhrase = phrase },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("X", color = Color.Red, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
                 item { Spacer(modifier = Modifier.height(8.dp)) }
+            }
+        }
+    }
+
+    val deleting = deletingPhrase
+
+    if (deleting != null) {
+        TightDialogSurface(
+            onDismiss = { deletingPhrase = null },
+            primaryColor = RadicalRed,
+            title = "CONFIRM DELETE",
+            dismissLabel = "ABORT"
+        ) {
+            Text(
+                text = "Permanently remove the saved phrase " +
+                        "\"${deleting.text}\"? This cannot be undone -- " +
+                        "consider exporting a backup first.",
+                color = Color.White,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TightPanelButton(
+                    text = "DELETE PERMANENTLY",
+                    modifier = Modifier.fillMaxWidth(),
+                    mainColor = RadicalRed
+                ) {
+                    onDelete(deleting)
+                    deletingPhrase = null
+                }
+
+                TightPanelButton(
+                    text = "CANCEL",
+                    modifier = Modifier.fillMaxWidth(),
+                    isActive = false,
+                    mainColor = primaryColor
+                ) {
+                    deletingPhrase = null
+                }
             }
         }
     }

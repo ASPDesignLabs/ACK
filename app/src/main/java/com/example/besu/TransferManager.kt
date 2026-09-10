@@ -58,6 +58,7 @@ object TransferManager {
             crush = dspPrefs.getFloat("VOX_CRUSH", 0f),
             cadence = dspPrefs.getFloat("VOX_CADENCE", 0f),
             forceSpeaker = dspPrefs.getBoolean("FORCE_SPEAKER", false),
+            silentOutput = dspPrefs.getBoolean("SILENT_OUTPUT", false),
             toneTheme = dspPrefs.getInt("TONE_THEME", 1),
             toneVolume = dspPrefs.getFloat("TONE_VOLUME", 0.8f),
             isVoxEnabled = dspPrefs.getBoolean("TUTORIAL_VOX", true),
@@ -67,6 +68,8 @@ object TransferManager {
             motionPose = dspPrefs.getFloat("MOT_POSE", 6.0f),
             crownSens = dspPrefs.getInt("CROWN_SENS", 2),
             autoCryoMinutes = dspPrefs.getInt("AUTO_CRYO", 10),
+            fireGraceMs = dspPrefs.getInt("FIRE_GRACE_MS", 500),
+            wakeWindowMs = dspPrefs.getInt("WAKE_WINDOW_MS", 1800),
             customVoices = customVoicesList
         )
 
@@ -387,6 +390,7 @@ object TransferManager {
             putFloat("VOX_CRUSH", backup.dsp.crush)
             putFloat("VOX_CADENCE", backup.dsp.cadence)
             putBoolean("FORCE_SPEAKER", backup.dsp.forceSpeaker)
+            putBoolean("SILENT_OUTPUT", backup.dsp.silentOutput)
             putInt("TONE_THEME", backup.dsp.toneTheme)
             putFloat("TONE_VOLUME", backup.dsp.toneVolume)
             putBoolean("TUTORIAL_VOX", backup.dsp.isVoxEnabled)
@@ -396,6 +400,8 @@ object TransferManager {
             putFloat("MOT_POSE", backup.dsp.motionPose)
             putInt("CROWN_SENS", backup.dsp.crownSens)
             putInt("AUTO_CRYO", backup.dsp.autoCryoMinutes)
+            putInt("FIRE_GRACE_MS", backup.dsp.fireGraceMs)
+            putInt("WAKE_WINDOW_MS", backup.dsp.wakeWindowMs)
 
             putString(
                 "CUSTOM_VOICES",

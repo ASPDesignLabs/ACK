@@ -43,8 +43,13 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     private var activeProfileId = "CYBER"
     private var tutorialProfileId = "MECH"
     private var cadenceFactor = 0f
-    private var forceSpeaker = false 
-    
+    private var forceSpeaker = false
+    // When on, regular output still shows its visual prompt as normal but
+    // never synthesizes or plays audio -- for contexts where sound itself
+    // is the barrier, not just being heard. Tutorial/guide narration has
+    // its own separate toggle (isVoxEnabled on the phone) and is untouched.
+    private var silentOutput = false
+
     // Gain State
     private var masterGain = 1.0f
 
@@ -81,6 +86,21 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
 
 
     private val speechQueue = java.util.concurrent.ConcurrentLinkedQueue<QueuedSpeech>()
+
+    // The AudioTrack currently playing synthesized speech, if any -- set/
+    // cleared in playPcm(). Lets the phone-shake kill switch (see
+    // "KILL_OUTPUT" below) stop audio that's already partway through
+    // playing, not just speech still queued or being synthesized.
+    // playPcm's own stop/release runs on the TTS callback thread while
+    // KILL_OUTPUT runs on the main thread -- @Volatile alone only makes
+    // the reference visible across threads, it doesn't stop both from
+    // calling AudioTrack methods on the same instance at once, which
+    // AudioTrack itself doesn't document as safe. activeTrackLock keeps
+    // "read activeTrack, call a method on it" atomic between the two.
+    private val activeTrackLock = Any()
+
+    @Volatile
+    private var activeTrack: AudioTrack? = null
 
     /*
      * TTS only returns our utterance ID when synthesis completes. Keep the
@@ -133,6 +153,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         tutorialProfileId = prefs.getString("TUT_VOX_PROFILE", "MECH") ?: "MECH"
         cadenceFactor = prefs.getFloat("VOX_CADENCE", 0.0f)
         forceSpeaker = prefs.getBoolean("FORCE_SPEAKER", false)
+        silentOutput = prefs.getBoolean("SILENT_OUTPUT", false)
         masterGain = prefs.getFloat("MASTER_GAIN", 1.0f)
         
         val customJson = prefs.getString("CUSTOM_VOICES", "[]") ?: "[]"
@@ -153,6 +174,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 ?: tutorialProfileId
                 cadenceFactor = intent.getFloatExtra("cadence", cadenceFactor)
                 forceSpeaker = intent.getBooleanExtra("speaker", forceSpeaker)
+                silentOutput = intent.getBooleanExtra("silent_output", silentOutput)
                 masterGain = intent.getFloatExtra("master_gain", masterGain)
                 
                 val rawCustoms = intent.getStringExtra("custom_voices_json")
@@ -171,6 +193,21 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 val newProfile = intent.getStringExtra("NEW_PROFILE") ?: "DEFAULT"
                 CommandRepository.setActiveProfile(this, newProfile)
                 processSpeech("Profile Engaged.", true, "SYS/CONFIG")
+            }
+            "KILL_OUTPUT" -> {
+                // Phone-shake kill switch: stop anything mid-synthesis,
+                // drop anything queued, and stop audio already playing.
+                tts?.stop()
+                speechQueue.clear()
+                renderRequests.clear()
+                synchronized(activeTrackLock) {
+                    try {
+                        activeTrack?.stop()
+                    } catch (_: IllegalStateException) {
+                        // Already stopped/released by playPcm's own finally block.
+                    }
+                }
+                broadcastLog("OUTPUT KILLED (SHAKE)", "SYS")
             }
             else -> {
                 val phrase = intent.getStringExtra("phrase")
@@ -317,7 +354,14 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             "OUT"
         }
 
-        broadcastLog("$source > \"$rawText\"", logType)
+        // Only a real communicated phrase is replayable from the log --
+        // never tutorial/system narration, which isn't something a user
+        // "said" and shouldn't be offered back as if it were.
+        broadcastLog(
+            "$source > \"$rawText\"",
+            logType,
+            replayText = if (isTutorialOverride) null else rawText
+        )
 
         if (!isTutorialOverride) {
             showVisualPrompt(
@@ -325,6 +369,14 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 emergency = emergency
                         )
             }
+
+        // Silent mode skips synthesis/playback for regular output only --
+        // never for an emergency message, which relies on being audible to
+        // get a bystander's attention, and never for tutorial narration,
+        // which has its own separate toggle.
+        if (!isTutorialOverride && silentOutput && !emergency.enabled) {
+            return
+        }
 
         val effectiveCadence = if (isTutorialOverride) {
             0.0f
@@ -519,6 +571,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             .setBufferSizeInBytes(audioData.size * 2)
             .build()
 
+        synchronized(activeTrackLock) { activeTrack = track }
+
         try {
             /*
              * Preserve the existing normal-output behavior, but explicitly do
@@ -543,13 +597,17 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 Thread.sleep(10)
             }
         } finally {
-            try {
-                track.stop()
-            } catch (_: IllegalStateException) {
-                // Track may already be stopped by the platform.
-            }
+            synchronized(activeTrackLock) {
+                try {
+                    track.stop()
+                } catch (_: IllegalStateException) {
+                    // Track may already be stopped by the platform, or by
+                    // the kill switch's own synchronized stop() above.
+                }
 
-            track.release()
+                track.release()
+                activeTrack = null
+            }
         }
     }
 
@@ -726,9 +784,11 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         return sb.toString()
     }
 
-    private fun broadcastLog(msg: String, type: String) {
+    private fun broadcastLog(msg: String, type: String, replayText: String? = null) {
         val intent = Intent("ACK_LOG"); intent.setPackage(packageName)
-        intent.putExtra("msg", msg); intent.putExtra("type", type); sendBroadcast(intent)
+        intent.putExtra("msg", msg); intent.putExtra("type", type)
+        if (replayText != null) intent.putExtra("replay_text", replayText)
+        sendBroadcast(intent)
     }
 
     private fun createNotification(): Notification {
