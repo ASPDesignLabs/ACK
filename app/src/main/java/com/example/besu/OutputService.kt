@@ -91,6 +91,14 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     // cleared in playPcm(). Lets the phone-shake kill switch (see
     // "KILL_OUTPUT" below) stop audio that's already partway through
     // playing, not just speech still queued or being synthesized.
+    // playPcm's own stop/release runs on the TTS callback thread while
+    // KILL_OUTPUT runs on the main thread -- @Volatile alone only makes
+    // the reference visible across threads, it doesn't stop both from
+    // calling AudioTrack methods on the same instance at once, which
+    // AudioTrack itself doesn't document as safe. activeTrackLock keeps
+    // "read activeTrack, call a method on it" atomic between the two.
+    private val activeTrackLock = Any()
+
     @Volatile
     private var activeTrack: AudioTrack? = null
 
@@ -192,10 +200,12 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 tts?.stop()
                 speechQueue.clear()
                 renderRequests.clear()
-                try {
-                    activeTrack?.stop()
-                } catch (_: IllegalStateException) {
-                    // Already stopped/released by playPcm's own finally block.
+                synchronized(activeTrackLock) {
+                    try {
+                        activeTrack?.stop()
+                    } catch (_: IllegalStateException) {
+                        // Already stopped/released by playPcm's own finally block.
+                    }
                 }
                 broadcastLog("OUTPUT KILLED (SHAKE)", "SYS")
             }
@@ -561,7 +571,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             .setBufferSizeInBytes(audioData.size * 2)
             .build()
 
-        activeTrack = track
+        synchronized(activeTrackLock) { activeTrack = track }
 
         try {
             /*
@@ -587,14 +597,17 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 Thread.sleep(10)
             }
         } finally {
-            try {
-                track.stop()
-            } catch (_: IllegalStateException) {
-                // Track may already be stopped by the platform.
-            }
+            synchronized(activeTrackLock) {
+                try {
+                    track.stop()
+                } catch (_: IllegalStateException) {
+                    // Track may already be stopped by the platform, or by
+                    // the kill switch's own synchronized stop() above.
+                }
 
-            track.release()
-            activeTrack = null
+                track.release()
+                activeTrack = null
+            }
         }
     }
 
