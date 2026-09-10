@@ -67,6 +67,16 @@ class BackgroundSensorService : Service(), SensorEventListener {
     private val armedTimeoutMs = 6000L
     private val poseLockedTimeoutMs = 6000L
     private val normalFireDelayMs = 800L
+
+    // --- FIRE-WARNING GRACE PERIOD ---
+    // A locked pose used to fire the instant normalFireDelayMs of silence
+    // elapsed, with no warning and no way to stop it. Now, at that same
+    // 800ms mark we give a distinct haptic warning and wait an additional
+    // fireGraceMs before actually firing -- tapping the watch face any time
+    // before then (see ACTION_CANCEL_POSE / cancelPoseLock) aborts it
+    // instead. Phone-configurable via /sys/fire_grace_config, 250-1000ms.
+    private var fireGraceMs = 500L
+    private var firePendingWarned = false
     
     // TARGET STATE
     private var activeTargetIndex = -1 // -1 = None/Cleared
@@ -190,6 +200,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
         val prefs = getSharedPreferences("AckPrefs", Context.MODE_PRIVATE)
         activeTwistThreshold = prefs.getFloat("cfg_twist", 7.0f)
         activePoseThreshold = prefs.getFloat("cfg_pose", 6.0f)
+        fireGraceMs = prefs.getInt("cfg_fire_grace", 500).toLong()
 
         registerSensors(
             accelerometerRate = SensorManager.SENSOR_DELAY_UI,
@@ -203,7 +214,9 @@ class BackgroundSensorService : Service(), SensorEventListener {
                  val prefs = getSharedPreferences("AckPrefs", Context.MODE_PRIVATE)
                  activeTwistThreshold = prefs.getFloat("cfg_twist", 7.0f)
                  activePoseThreshold = prefs.getFloat("cfg_pose", 6.0f)
+                 fireGraceMs = prefs.getInt("cfg_fire_grace", 500).toLong()
             }
+            PoseActions.ACTION_CANCEL_POSE -> cancelPoseLock()
             "ACTION_ENTER_CRYO" -> enterCryo()
             "ACTION_WAKE_CRYO" -> wakeFromCryo()
             PoseActions.ACTION_SET_TRAINING_MODE -> {
@@ -477,7 +490,17 @@ class BackgroundSensorService : Service(), SensorEventListener {
                     return
                 }
 
-                if (time - stateStartTime > normalFireDelayMs) {
+                val elapsedSinceLock = time - stateStartTime
+
+                if (!firePendingWarned && elapsedSinceLock >= normalFireDelayMs) {
+                    // First warning for this lock -- give the wearer a
+                    // haptic-only heads-up and the fireGraceMs window to tap
+                    // the watch face and cancel before it actually fires.
+                    firePendingWarned = true
+                    feedbackWarning()
+                }
+
+                if (elapsedSinceLock >= normalFireDelayMs + fireGraceMs) {
                     fireCommand()
                 }
             }
@@ -521,6 +544,7 @@ class BackgroundSensorService : Service(), SensorEventListener {
                 commandTwistCount++
                 lastModifierTime = time
                 stateStartTime = time
+                firePendingWarned = false
 
                 feedback(20, TechSynth.Sfx.MODIFIER)
                 broadcastStatus()
@@ -641,8 +665,42 @@ class BackgroundSensorService : Service(), SensorEventListener {
         currentPose = pose
         commandTwistCount = 0
         pacedFireReady = false
+        firePendingWarned = false
         feedback(50, TechSynth.Sfx.LOCK)
         transition(State.POSE_LOCKED, time)
+    }
+
+    // Tap-to-cancel: aborts a locked pose before it fires and returns to
+    // ARMED so the wearer can just try the pose again, without needing the
+    // 3-twist wake gesture over again. No-op outside POSE_LOCKED so a stray
+    // tap can't do anything (e.g. re-arm from IDLE).
+    private fun cancelPoseLock() {
+        if (currentState != State.POSE_LOCKED) {
+            return
+        }
+
+        currentPose = Pose.NONE
+        commandTwistCount = 0
+        firePendingWarned = false
+        feedback(80, TechSynth.Sfx.TICK)
+        transition(State.ARMED, System.currentTimeMillis())
+    }
+
+    // Deliberately haptic-only (no TechSynth tone) -- this is a discretion
+    // tool, and a pre-fire warning is exactly the moment an audible cue is
+    // least welcome. Waveform pattern makes it distinguishable from every
+    // other single-pulse feedback() call in this class.
+    private fun feedbackWarning() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val timings = longArrayOf(0, 60, 80, 60)
+            val amplitudes = intArrayOf(
+                0,
+                VibrationEffect.DEFAULT_AMPLITUDE,
+                0,
+                VibrationEffect.DEFAULT_AMPLITUDE,
+            )
+            vibrator?.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+        }
     }
     // Shifting of Sensor Polling
 

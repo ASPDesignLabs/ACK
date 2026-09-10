@@ -10,6 +10,12 @@ object PoseActions {
     const val ACTION_ENTER_CRYO =
         "com.example.besu.wear.ACTION_ENTER_CRYO"
 
+    // Sent when the wearer taps the watch face while a pose is locked --
+    // aborts the pending fire and returns to ARMED instead of speaking
+    // whatever got locked in.
+    const val ACTION_CANCEL_POSE =
+        "com.example.besu.wear.ACTION_CANCEL_POSE"
+
     const val ACTION_SET_TRAINING_MODE =
         "com.example.besu.wear.ACTION_SET_TRAINING_MODE"
 

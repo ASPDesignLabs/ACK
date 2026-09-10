@@ -237,8 +237,14 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
             ) {
                 AckRootContainer(
                     onDoubleTap = { exitPauseOrCryo() },
-                    onTap = { 
-                        if (isSelectingDeck) {
+                    onTap = {
+                        if (currentStateName == "LOCKED") {
+                            // A locked pose is about to fire -- a plain tap
+                            // cancels it instead of falling through to
+                            // handleTap()'s default (which would put the
+                            // watch to sleep).
+                            cancelPoseLock()
+                        } else if (isSelectingDeck) {
                             feedback(50, TechSynth.Sfx.TICK)
                             commitDeckSelection(silent = true) 
                             isSelectingDeck = false; isSelectingContext = true
@@ -570,6 +576,14 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         requestPoseListening()
     }
 
+    private fun cancelPoseLock() {
+        val intent = Intent(this, BackgroundSensorService::class.java).apply {
+            action = PoseActions.ACTION_CANCEL_POSE
+        }
+
+        startService(intent)
+    }
+
     private fun enterCryostasis(minutes: Int = -1) {
         presentCryoUi()
 
@@ -642,6 +656,19 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                 } catch(e: Exception) {}
             }
 
+            "/sys/fire_grace_config" -> {
+                try {
+                    val ms = String(e.data).toInt()
+                    prefs.edit().putInt("cfg_fire_grace", ms).apply()
+
+                    val i = Intent(this, BackgroundSensorService::class.java)
+                    i.action = "UPDATE_CONFIG"
+                    startService(i)
+
+                    feedback(50, TechSynth.Sfx.TICK)
+                } catch (e: Exception) {}
+            }
+
             "/sys/motion_config" -> {
                 try {
                     val parts = String(e.data).split(",")
@@ -650,11 +677,11 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                             .putFloat("cfg_twist", parts[0].toFloat())
                             .putFloat("cfg_pose", parts[1].toFloat())
                             .apply()
-                        
+
                         val i = Intent(this, BackgroundSensorService::class.java)
                         i.action = "UPDATE_CONFIG"
                         startService(i)
-                        
+
                         feedback(50, TechSynth.Sfx.MODIFIER)
                     }
                 } catch(e: Exception) {}
