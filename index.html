@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ACK — Gesture-Driven AAC</title>
-<meta name="description" content="ACK is a non-traditional AAC communication tool built around gesture recognition, tap controls, and a Wear OS companion — for touch-free, situational, and composable communication." />
+<meta name="description" content="ACK is a non-traditional AAC tool built around gesture recognition, tap controls, along with rapid statement creation and recall." />
 <meta name="color-scheme" content="dark" />
 
 <!-- Open Graph (Facebook, and the general-purpose fallback most platforms read) -->
@@ -12,7 +12,7 @@
 <meta property="og:site_name" content="ACK" />
 <meta property="og:url" content="https://aspdesignlabs.github.io/ACK/" />
 <meta property="og:title" content="ACK — Gesture-Driven AAC" />
-<meta property="og:description" content="ACK is a non-traditional AAC communication tool built around gesture recognition, tap controls, and a Wear OS companion — for touch-free, situational, and composable communication." />
+<meta property="og:description" content="ACK is a non-traditional AAC tool built around gesture recognition, tap controls, along with rapid statement creation and recall." />
 <meta property="og:image" content="https://aspdesignlabs.github.io/ACK/assets/social/og-card.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
@@ -21,7 +21,7 @@
 <!-- X / Twitter card -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="ACK — Gesture-Driven AAC" />
-<meta name="twitter:description" content="ACK is a non-traditional AAC communication tool built around gesture recognition, tap controls, and a Wear OS companion — for touch-free, situational, and composable communication." />
+<meta name="twitter:description" content="ACK is a non-traditional AAC tool built around gesture recognition, tap controls, along with rapid statement creation and recall." />
 <meta name="twitter:image" content="https://aspdesignlabs.github.io/ACK/assets/social/og-card.png" />
 <meta name="twitter:image:alt" content="ACK — a modern approach to AAC, gesture-driven and tap-first. Screenshot of the MATRIX Deck." />
 <style>
@@ -555,12 +555,11 @@
     <a class="nav-brand" href="#main">ACK</a>
     <div class="nav-groups">
       <details class="nav-pill">
-        <summary>Product <span class="car" aria-hidden="true">&#9662;</span></summary>
+        <summary>What It Does <span class="car" aria-hidden="true">&#9662;</span></summary>
         <div class="nav-dropdown">
           <a href="#how-it-works">How it works</a>
           <a href="#decks">Decks</a>
           <a href="#voice">Voice</a>
-          <a href="#geo">Location</a>
         </div>
       </details>
       <details class="nav-pill">
@@ -572,7 +571,7 @@
         </div>
       </details>
       <details class="nav-pill">
-        <summary>Project <span class="car" aria-hidden="true">&#9662;</span></summary>
+        <summary>Track The Development <span class="car" aria-hidden="true">&#9662;</span></summary>
         <div class="nav-dropdown">
           <a href="#help">Help &amp; logs</a>
           <a href="#dev">Build it</a>
@@ -580,7 +579,7 @@
         </div>
       </details>
       <details class="nav-pill nav-pill-cta">
-        <summary>Downloads <span class="car" aria-hidden="true">&#9662;</span></summary>
+        <summary>Download ACK <span class="car" aria-hidden="true">&#9662;</span></summary>
         <div class="nav-dropdown nav-dropdown-release">
           <div id="releaseInfo">
             <p class="release-fallback">Latest beta builds are on
@@ -597,13 +596,13 @@
   <!-- A. ORIENTATION -->
   <section class="hero wrap">
     <p class="eyebrow">Augmented Communications Link - ACK</p>
-    <h1>A Modern Approach to AAC, with a twist.</h1>
+    <h1>A Modern Approach to AAC, with a twist</h1>
     <p class="lede">
       Compose statements, build out context-based replies, utilize variables to speed up construction of statements. Use tap based controls to start playback or use the companion Wear OS app to unlock gesture based initiation.
-Created primarily to assist myself with situational mutism concerns. This covers the many moments throughout my day where communicating with
- others via non-verbal means is significantly easier. This tool is a fair bit more 
-advanced than what you'd normally call AAC. The depth of statement construction, the ability to bridge statements, establish replies 
-around specific contexts. You should not assume this is meant for someone with heavily limited communication and cognitive ability.
+      Created primarily to assist myself with situational mutism concerns. This covers the many moments throughout my day where communicating with
+      others via non-verbal means is significantly easier. This tool is a fair bit more
+      advanced than what you'd normally call AAC. The depth of statement construction, the ability to bridge statements, establish replies
+      around specific contexts. You should not assume this is meant for someone with heavily limited communication and cognitive ability.
     </p>
     <p class="disclaimer">
       Built by one person, primarily to work around <em>situational
@@ -679,9 +678,13 @@ around specific contexts. You should not assume this is meant for someone with h
       of communication profiles on screen at any time, to make working 
       with the greater context system easier with continuous use. MATRIX 
       decks support the use of <strong>profiles</strong> which gives 
-      decks additional flexibility. Configure a deck around work related 
-      activities, along with a few profiles for more detailed work related 
+      decks additional flexibility. Configure a deck around work related
+      activities, along with a few profiles for more detailed work related
       tasks</p>
+
+    <p>Decks aren't fixed. Tap the DECK label to create a new Quick Actions, Emergency,
+      Emoji, or GIF deck — pick a type, name it, choose a color, done. MANAGE handles
+      renaming, recoloring, or removing anything you've created.</p>
 
     <div class="deck-entry">
       <div class="deck-text">
@@ -797,39 +800,39 @@ around specific contexts. You should not assume this is meant for someone with h
     <p class="eyebrow">Your voice at a tap or twist</p>
     <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="voice-panel">Composable statements, tuned to context that matters to you.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
     <div id="voice-panel" class="accordion-panel" hidden>
-    <p>ACK is build around rapid statement construction. Fire off a one-off 
+    <p>ACK is built around rapid statement construction. Fire off a one-off
     reply, build a social deck around a specific outing, grant yourself some
-    peace of mind with access to emergency statements when verbalizing isn't 
+    peace of mind with access to emergency statements when verbalizing isn't
     possible.</p>
 
     <div class="panel">
       <h3>Audio Architect</h3>
-      <p>Adjust audio playback with texture, adjust the speed, cadence, and 
-      tone to better fit a voice that you want to hear, rather than the usual
-      flat output and delivery. Pick from a variety of TTS voices installed 
-      on your device then modify the output.
-      </p>
+      <p>Audio Architect splits into two layers. Global Output settings shape ACK's
+      speech no matter which voice is active — Master Gain for volume, Global Cadence
+      for dynamic pacing (letting output speed up and slow down through a phrase
+      rather than reading at one flat rate), Force Speaker for routing, and Guide Vox
+      to toggle spoken tutorial guidance on or off.</p>
+      <p>Voice itself comes from either a locked factory preset for a ready-to-use,
+      consistent sound, or one of three fully editable custom slots. Each custom slot
+      has its own DSP chain: pick a base voice from any TTS engine installed on your
+      device, then shape it with pitch, a constant per-voice speed, an optional
+      robotic overlay, and a bitcrush texture — save it, and it becomes a reusable
+      voice of your own.</p>
     </div>
-    </div>
-  </section>
 
-  <!-- E. GEO -->
-  <section id="geo" class="wrap">
-    <p class="eyebrow">Location awareness</p>
-    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="geo-panel">Geo-Protocol: Offline location-aware deck management<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
-    <div id="geo-panel" class="accordion-panel" hidden>
-    <p>Geo-Protocol handles automatic switching of decks and profiles based on user 
-    defined geofenced zones. Offline when using the SOVEREIGN engine, uses Google 
-    Play Services with the OPTIMIZED engine. Open the map to drop a pin, then configure 
-    the name, radius, and enter/exit logic. Enable automatic swapping to a specific deck 
-    when crossing into one of these zones, handle how exiting the zone is configured.
-    </p>
-    <p class="disclaimer">
-      This runs entirely on-device when using the SOVEREIGN engine, which comes with a few 
-      tradeoffs in accuracy. If accuracy and speed are a concern users have the option 
-      to enable an online-assested mode via OPTIMIZED. Your location data will be shared 
-      with Google in order to handle positioning with greater accuracy.
-    </p>
+    <div class="panel">
+      <h3>Variables &amp; Root Overrides</h3>
+      <p>Any phrase can hold a variable — write <span class="kbd">{VAR}</span> in the
+      Live Save Editor and ACK prompts for that value, or tag it
+      <span class="kbd">{VAR:A}</span>, <span class="kbd">{VAR:B}</span>, or
+      <span class="kbd">{VAR:C}</span> to make it targeted instead of just local. A
+      targeted variable can be bridged: turn on that tag's Root Override for a
+      category, set one value, and it replaces that variable across every phrase in
+      the category — no editing each one by hand. Think of a routine work task: tag
+      the parts that actually change, like a name or a location, and one Root
+      Override update carries across the whole deck. Root Override is entirely
+      opt-in — every phrase already works on its own local value without it.</p>
+    </div>
     </div>
   </section>
 
@@ -866,6 +869,10 @@ around specific contexts. You should not assume this is meant for someone with h
     The phone stays in charge of decks, profiles, and playback. A background
     sensor service on the watch keeps this working without needing the
     watch screen to stay open the entire time you're wearing it.</p>
+    <p>There's no separate pairing step — install ACK on your watch and phone, and as
+    long as the two are already paired through Wear OS, commands start firing the
+    moment the watch app is running. Under the hood it rides Google's Wearable Data
+    Layer for that phone ↔ watch link.</p>
     <div class="shot-row" role="group" aria-label="Screenshots (placeholder)">
       <figure class="placeholder-shot">
         <span>Screenshot coming soon:<br>watch pairing / pose selector</span>
@@ -963,10 +970,19 @@ around specific contexts. You should not assume this is meant for someone with h
     read about it.</p>
 
     <div class="panel" style="margin-top: 1.5rem;">
-      <h3>Data Port</h3>
-      <p>Backup and restore live under Settings. Your decks, profiles, and
-      variables are yours — the Data Port exists so you can move them, keep
-      copies, and never be locked into a single install.</p>
+      <h3>Your Data, Your Rules</h3>
+      <p>Backup and restore live under Settings. Your decks, profiles, configurations,
+      personification, and variables are yours — the Data Port exists so you can move
+      them, keep copies, and never be locked into a single install.</p>
+    </div>
+
+    <div class="panel" style="margin-top: 1.5rem;">
+      <h3>Terminal</h3>
+      <p>Every system, output, and watch event gets a timestamped, color-coded line
+      in the Terminal — what ACK received, resolved, and sent. Any line that's an
+      actual spoken phrase gets a replay control, and replaying an Emergency message
+      keeps its safety behavior intact: forced speaker output, no auto-clear. The log
+      lives in memory only — closing and reopening ACK clears it.</p>
     </div>
     </div>
   </section>
@@ -1023,8 +1039,7 @@ around specific contexts. You should not assume this is meant for someone with h
     <div class="panel">
       <h3>Known gaps</h3>
       <ul>
-        <li>Several help/tutorial modules are written but not yet wired to
-        live UI tags (Deck Management, and Manual Override rewrites).</li>
+        <li>No known issues at this time.</li>
       </ul>
     </div>
     <p class="disclaimer">
