@@ -564,10 +564,11 @@
         </div>
       </details>
       <details class="nav-pill">
-        <summary>Training &amp; Wear OS <span class="car" aria-hidden="true">&#9662;</span></summary>
+        <summary>Training, Wear OS &amp; Safety <span class="car" aria-hidden="true">&#9662;</span></summary>
         <div class="nav-dropdown">
           <a href="#training">Training</a>
           <a href="#watch">Wear OS</a>
+          <a href="#safety">Safety &amp; Recovery</a>
         </div>
       </details>
       <details class="nav-pill">
@@ -651,11 +652,17 @@ around specific contexts. You should not assume this is meant for someone with h
         <p>Prompts play back full-screen with visual and audible output
         together, with audio routing to either the phone speaker or a
         connected Bluetooth speaker.</p>
+        <p>Relying on being heard isn't always possible, or even permissible. Sometimes you want communications
+        to be silent while offering a visual prompt for communication. If you want to prevent all voice output
+        toggle 'Silent Mode' under PROTOCOL from any deck.</p>
       </div>
     </div>
     <div class="shot-row" role="group" aria-label="Screenshots (placeholder)">
       <figure class="placeholder-shot has-image">
         <img src="assets/screenshots/fullscreen-playback.png" alt="ACK full-screen prompt playback in action">
+      </figure>
+      <figure class="placeholder-shot has-image">
+        <img src="assets/screenshots/audio-silent-mode-toggle.png" alt="ACK's SILENT MODE toggle for visual-only output">
       </figure>
       <figure class="placeholder-shot">
         <span>Screenshot coming soon:<br>watch gesture cycle (ARM/LOCK/FIRE)</span>
@@ -716,6 +723,8 @@ around specific contexts. You should not assume this is meant for someone with h
         is where you access these prompts. Prompts issued from here can include
         a beaconing tone that plays before a prompt is issued, increasing
         the likelihood of reception by others.</p>
+        <p>Never worry about an Emergency deck response leaving your screen without your intention. All Emergency
+        deck prompts now remain on the screen until explicitly cleared with a long tap-and-hold interaction.</p>
       </div>
       <button type="button" class="shot-thumb" data-shot-name="Emergency Deck" data-shot-src="">
         <span class="shot-thumb-sr">View Emergency Deck screenshot, full size</span>
@@ -861,6 +870,83 @@ around specific contexts. You should not assume this is meant for someone with h
       <figure class="placeholder-shot">
         <span>Screenshot coming soon:<br>watch pairing / pose selector</span>
       </figure>
+    </div>
+    </div>
+  </section>
+
+  <!-- G2. SAFETY & RECOVERY -->
+  <section id="safety" class="wrap">
+    <p class="eyebrow">Safety &amp; Recovery</p>
+    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="safety-panel">Fail-safes for stray taps, shaky hands, and messages that clear too soon.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
+    <div id="safety-panel" class="accordion-panel" hidden>
+    <p>Having the ability to recover from a misfire or accidental tap, interruptions, and moments where accuracy
+    takes a hit are what make an assistive tool truly useful. A graceful method to play back a previously issued
+    statement, a phone gesture to cancel playback of any prompt, and an additional way to cancel a prompt before
+    it even leaves your watch.</p>
+    <p>These features help build confidence knowing there are ways to stop a statement you didn't want to say
+    from being received, allowing playback from historical statements, and the ability to replay any visual
+    prompt indefinitely.</p>
+
+    <div class="deck-entry">
+      <div class="deck-text">
+        <h3>Shake Kill Switch</h3>
+        <p>You need multiple ways to stop a bad tap, gesture recognition, or statement from leaving your device
+        or completing. One of these methods is a 'Shake to cancel' service that cancels any queued prompt or
+        state traversal on the watch by shaking the phone. Configure sensitivity and test the configuration
+        under PROTOCOL from any deck.</p>
+      </div>
+      <button type="button" class="shot-thumb" data-shot-name="Shake Kill Switch" data-shot-src="assets/screenshots/settings-shake-kill-switch.gif">
+        <span class="shot-thumb-sr">View Shake Kill Switch screenshot, full size</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </button>
+    </div>
+
+    <div class="deck-entry">
+      <div class="deck-text">
+        <h3>Shaky-Hands Mode</h3>
+        <p>There are moments throughout a day that accuracy might take a hit. You might struggle to continuously
+        trigger the poses you've practiced, you shouldn't be denied access to your tool when this happens. A new
+        'Shaky hands' mode increases the time needed to navigate through the ACK Wear state machine, with
+        enhancements to addressing a set of noisy sensors due to a glitch in coordination. These options can be
+        configured from any deck under PROTOCOL.</p>
+        <p>Enable 'Shaky Hands' mode anywhere in ACK Wear with a tap-and-hold interaction. This does increase the
+        amount of time needed to confirm a pose command, you can always test this method out in the Training
+        Grounds.</p>
+      </div>
+      <button type="button" class="shot-thumb" data-shot-name="Shaky-Hands Mode" data-shot-src="assets/screenshots/watch-shaky-hands-indicator.jpg">
+        <span class="shot-thumb-sr">View Shaky-Hands Mode screenshot, full size</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </button>
+    </div>
+
+    <div class="panel" style="margin-top: 1.5rem;">
+      <h3>A way out before it fires</h3>
+      <p>Misfires happen. Sometimes a pose isn't recognized properly for a host of reasons. You can always halt
+      playback of these erroneous replies by tapping anywhere within ACK Wear to clear the current progression
+      through the state machine, preventing the error from leaking through.</p>
+    </div>
+
+    <div class="deck-entry" style="margin-top: 1.5rem;">
+      <div class="deck-text">
+        <h3>REPLAY: bring back what you missed</h3>
+        <p>Issuing a prompt doesn't always land on first play. Things can prevent others from reading or hearing
+        them, distractions happen, the situation at work can evolve at a rapid pace. You should have a little
+        security here when it comes to managing this type of interaction. For a prompt that you just issued a
+        'replay' button will remain on your screen for twenty seconds after a visual prompt is cleared. Any
+        prompt issued using 'replay' is sticky, they retain their presence on your screen until you tap to clear
+        them.</p>
+        <p>The Terminal (logs) screen can be used to reissue any previously played prompt from any deck as well.</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:0.5rem; flex:0 0 auto;">
+        <button type="button" class="shot-thumb" data-shot-name="REPLAY chip" data-shot-src="assets/screenshots/replay-chip.png">
+          <span class="shot-thumb-sr">View REPLAY chip screenshot, full size</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        </button>
+        <button type="button" class="shot-thumb" data-shot-name="Terminal log replay" data-shot-src="assets/screenshots/terminal-log-replay.png">
+          <span class="shot-thumb-sr">View Terminal log replay screenshot, full size</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        </button>
+      </div>
     </div>
     </div>
   </section>
