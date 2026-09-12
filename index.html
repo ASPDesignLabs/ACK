@@ -33,1341 +33,1138 @@
 <meta name="twitter:description" content="ACK is a non-traditional AAC tool built around gesture recognition, tap controls, along with rapid statement creation and recall." />
 <meta name="twitter:image" content="https://aspdesignlabs.github.io/ACK/assets/social/og-card.png" />
 <meta name="twitter:image:alt" content="ACK — a modern approach to AAC, gesture-driven and tap-first. Screenshot of the MATRIX Deck." />
+
+<noscript><style>
+  .tabpanel[hidden], .ctx-pane[hidden], .profile-pane[hidden] { display:block !important; }
+</style></noscript>
+
 <style>
-  /* ---------- Tokens ---------- */
-  :root {
-    --void: #050505;
-    --graphite: #121212;
-    --graphite-2: #1a1a1a;
-    --border: #2a2a2a;
-    --text: #e8e8e8;
-    --text-dim: #a8a8a8;
-    --text-faint: #808080;
-    --cyan: #00c3cc;      /* text-safe, darker than the pure neon swatch */
-    --cyan-bright: #00f3ff; /* decorative-only: borders, glow, icons */
-    --error: #ff5470;      /* text-safe red, darker than RadicalRed */
-    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Consolas, monospace;
-    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --radius-cut: 14px;
+  :root{
+    color-scheme: dark;
+    --void:#050505;
+    --graphite:#121212;
+    --graphite-2:#1a1a1a;
+    --border:#2a2a2a;
+    --text:#e8e8e8;
+    --text-dim:#a8a8a8;
+    --text-faint:#808080;
+    --cyan:#00c3cc;
+    --cyan-bright:#00f3ff;
+    --error:#ff5470;
+    --accent:#00f3ff;
+    --font-mono: ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Consolas,monospace;
+    --font-body: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --nav-h: 4.5rem;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+  html.force-reduced-motion, html.force-reduced-motion *{
+    animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;
+  }
+  html, body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--void);
+    color:var(--text);
+    font-family:var(--font-body);
+    line-height:1.55;
+    overflow:hidden;
+  }
+  .app-frame{
+    height:100vh; height:100dvh;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  .bar-inner{ max-width:1240px; margin:0 auto; width:100%; }
+  html.high-contrast{
+    --text:#ffffff; --text-dim:#f2f2f2; --text-faint:#dcdcdc;
+    --border:#8a8a8a; --graphite:#000000; --graphite-2:#0a0a0a;
+    --cyan:#7cf2f8;
+  }
+  html.high-contrast .panel, html.high-contrast .window, html.high-contrast .hud,
+  html.high-contrast dialog, html.high-contrast .tabbar, html.high-contrast .shot-thumb,
+  html.high-contrast table.compat th, html.high-contrast table.compat td{ border-width:3px; }
+  img{max-width:100%; display:block;}
+  a{color:var(--cyan);}
+  a:hover{color:var(--cyan-bright);}
+  a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--cyan-bright); outline-offset:3px;
+  }
+  .skip-link{ position:absolute; left:-999px; top:auto; background:var(--graphite); color:var(--text);
+    padding:0.75em 1.25em; border:2px solid var(--cyan-bright); z-index:200; font-family:var(--font-mono); }
+  .skip-link:focus{ left:1em; top:1em; }
+
+  /* .shell is the flex conduit between header and nav; .window (inside it) is the
+     one element that actually scrolls, so its border/clip-path frame stays put
+     while content moves underneath it -- matching the app's own bordered panel. */
+  .shell{
+    flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+    max-width:1240px; margin:0 auto; width:100%; padding:0.9rem;
   }
 
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-    * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  /* ---------- HUD header: full-width bar, pinned by the flex layout (never scrolls) ---------- */
+  .hud{
+    flex:none;
+    border-top:2px solid var(--accent);
+    border-bottom:2px solid var(--accent);
+    clip-path: polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);
+    background:var(--graphite);
+  }
+  .hud-inner{ padding:1rem 1.2rem; }
+  .hud-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
+  .brand-row{ display:flex; align-items:baseline; gap:0.6rem; flex-wrap:wrap; }
+  .brand{
+    font-family:var(--font-mono); font-weight:800; font-size:1.9rem; letter-spacing:0.12em;
+    color:var(--accent); margin:0;
+  }
+  .tagline{ font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.14em; color:var(--text-dim);
+    text-transform:uppercase; margin:0.15rem 0 0; }
+  .hud-actions{ display:flex; gap:0.5rem; flex-wrap:wrap; }
+  .hud-btn{
+    font-family:var(--font-mono); font-size:0.68rem; font-weight:700; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--accent); background:transparent; border:2px solid var(--accent);
+    padding:0.5rem 0.8rem; cursor:pointer; clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  }
+  .hud-btn:hover{ color:var(--cyan-bright); border-color:var(--cyan-bright); }
+
+  .ctx-row{ margin-top:0.9rem; display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; }
+  .ctx-row[hidden]{ display:none; }
+  .ctx-label{ font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; }
+  .ctx-select{
+    font-family:var(--font-mono); font-size:0.78rem; font-weight:700; letter-spacing:0.03em;
+    color:var(--accent); background:var(--void); border:2px solid var(--accent);
+    padding:0.4rem 1.9rem 0.4rem 0.7rem; appearance:none; -webkit-appearance:none; cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><polygon points='0,0 10,0 5,6' fill='%2300f3ff'/></svg>");
+    background-repeat:no-repeat; background-position:right 0.7rem center;
+    max-width: 100%;
   }
 
-  body {
-    margin: 0;
-    background: var(--void);
-    color: var(--text);
-    font-family: var(--font-body);
-    line-height: 1.6;
-    font-size: 16px;
+  /* ---------- content window: the one element that scrolls (see .shell note above) ---------- */
+  .window{
+    flex:1 1 auto; min-height:0; overflow-y:auto;
+    overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch;
+    border:2px solid var(--border);
+    background:var(--graphite);
+    clip-path: polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);
+    padding:1.4rem 1.3rem 1.8rem;
+  }
+  .tabpanel[hidden]{ display:none; }
+  .eyebrow{ font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.15em; font-size:0.78em; color:var(--cyan); margin:0 0 0.4rem; }
+  h1{ font-family:var(--font-mono); font-size:clamp(1.5em,4vw,2.1em); line-height:1.25; color:#fff; margin:0 0 0.9rem; text-wrap:balance; }
+  h2{ font-family:var(--font-mono); font-size:1.15em; color:#fff; letter-spacing:0.02em; margin:0 0 0.6rem; }
+  h3{ font-family:var(--font-mono); font-size:0.95em; color:#fff; letter-spacing:0.02em; margin:0 0 0.4rem; }
+  p{ margin:0 0 0.9rem; max-width:64ch; color:var(--text); }
+  .lede{ color:var(--text-dim); max-width:68ch; }
+  .disclaimer{ font-size:0.85em; color:var(--text-faint); border-left:2px solid var(--border); padding-left:0.9rem; max-width:66ch; }
+  .kbd{ font-family:var(--font-mono); background:var(--void); border:2px solid var(--border); padding:0.05em 0.4em; font-size:0.85em; color:var(--cyan-bright); }
+
+  .status-banner{
+    border:2px solid var(--error); background:rgba(255,84,112,0.08); color:var(--text);
+    padding:0.9rem 1rem; font-size:0.88em; margin-top:1rem; max-width:70ch;
+  }
+  .status-banner strong{ color:var(--error); font-family:var(--font-mono); letter-spacing:0.05em; }
+
+  .grid{ display:grid; grid-template-columns:1fr; gap:1rem; margin-top:1rem; }
+  .panel{
+    background:var(--graphite-2); border:2px solid var(--border); padding:1rem;
+    clip-path: polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  }
+  .panel p:last-child{ margin-bottom:0; }
+
+  .profile-pane[hidden]{ display:none; }
+
+  .deck-entry{ display:flex; gap:1rem; align-items:flex-start; margin-top:1rem; flex-wrap:wrap; }
+  .deck-entry .deck-text{ flex:1 1 320px; min-width:0; }
+  .shot-thumb{
+    flex:0 0 92px; width:92px; height:92px; border:2px solid var(--accent); background:var(--void);
+    background-size:cover; background-position:center; cursor:pointer; padding:0; position:relative;
+    clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  }
+  .shot-thumb svg{ position:absolute; right:4px; bottom:4px; width:16px; height:16px; stroke:var(--accent); }
+  .shot-thumb-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+  .shot-thumb.placeholder{ display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.55em; color:var(--text-faint); text-align:center; padding:0.3rem; }
+
+  table.compat{ border-collapse:collapse; width:100%; font-size:0.85em; margin-top:0.6rem; }
+  table.compat th, table.compat td{ border:2px solid var(--border); padding:0.5rem 0.7rem; text-align:left; }
+  table.compat th{ color:var(--text-dim); font-family:var(--font-mono); font-weight:600; }
+  .table-wrap{ overflow-x:auto; }
+
+  .reserved-note{ border:2px dashed var(--border); padding:1.2rem; color:var(--text-faint); font-family:var(--font-mono); font-size:0.85em; max-width:60ch; }
+
+  /* ---------- bottom nav: always a horizontal bar anchored to the bottom, never a side rail ---------- */
+  .tabbar{ flex:none; background:var(--void); border-top:2px solid var(--border); }
+  .tabbar-inner{ display:flex; gap:0.5rem; max-width:1240px; margin:0 auto; width:100%; padding:0.55rem 0.7rem; }
+  .tab-btn{
+    flex:1 1 0; height:44px; border:2px solid var(--accent); background:transparent; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; padding:0;
+    clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  }
+  .tab-btn svg{ width:22px; height:22px; stroke:var(--accent); fill:none; stroke-width:1.6; }
+  .tab-btn[aria-selected="true"]{ background:color-mix(in srgb, var(--accent) 18%, transparent); }
+  .tab-btn[aria-selected="true"] svg{ stroke:#fff; }
+  .tab-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+  .tab-label{ display:none; }
+
+  /* ---------- design notes / a11y dialogs ---------- */
+  dialog{
+    background:var(--graphite); color:var(--text); border:2px solid var(--accent);
+    padding:0; max-width:560px; width:min(560px,92vw); max-height:85vh;
+  }
+  dialog::backdrop{ background:rgba(0,0,0,0.7); }
+  .dialog-inner{ padding:1.3rem; overflow-y:auto; max-height:85vh; }
+  .dialog-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; gap:1rem; }
+  .dialog-head h2{ margin:0; }
+  .dialog-close{ background:transparent; border:2px solid var(--border); color:var(--text-dim); width:34px; height:34px; cursor:pointer; font-family:var(--font-mono); flex:0 0 auto; }
+  .dialog-close:hover{ color:#fff; border-color:var(--accent); }
+  .a11y-row{ display:flex; flex-direction:column; align-items:flex-start; gap:0.6rem; padding:0.9rem 0; border-top:2px solid var(--border); }
+  .a11y-row:first-of-type{ border-top:none; }
+  .a11y-row label, .a11y-row > span:first-child{ font-size:0.85rem; color:var(--text-dim); }
+  .opt-group{ display:flex; gap:0.4rem; flex-wrap:wrap; }
+  .opt-btn{
+    font-family:var(--font-mono); font-size:0.8rem; font-weight:700; color:var(--text-dim);
+    background:var(--void); border:2px solid var(--border); min-width:42px; height:38px; cursor:pointer;
+    padding:0 0.6rem;
+  }
+  .opt-btn[aria-pressed="true"]{ color:#fff; border-color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }
+  .opt-btn:hover{ border-color:var(--accent); }
+
+  .accent-picker{ display:flex; gap:0.4rem; flex-wrap:wrap; }
+  .swatch{
+    width:26px; height:26px; border:2px solid transparent; cursor:pointer; padding:0;
+    clip-path: polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
+  }
+  .swatch[aria-pressed="true"]{ border-color:#fff; }
+
+  #shotDialog{ padding:0.8rem; }
+  #shotDialog img{ max-height:70vh; margin:0 auto; }
+  .shot-caption{ font-family:var(--font-mono); font-size:0.75rem; color:var(--text-dim); text-align:center; margin-top:0.6rem; }
+
+  footer.credit{ margin-top:1.6rem; font-size:0.8em; color:var(--text-faint); }
+
+  /* ---------- tablet ---------- */
+  @media (min-width:700px){
+    .shell{ padding:1.3rem; }
+    .grid{ grid-template-columns:1fr 1fr; }
+    .tab-label{ display:block; font-family:var(--font-mono); font-size:0.55rem; text-transform:uppercase; margin-top:0.15rem; }
+    .tab-btn{ flex-direction:column; gap:0.15rem; height:56px; }
+    .tab-btn[aria-selected="true"] .tab-label{ color:#fff; }
+    .tab-btn:not([aria-selected="true"]) .tab-label{ color:var(--accent); }
   }
 
-  img, svg { max-width: 100%; }
-
-  a { color: var(--cyan); text-decoration-thickness: 1px; }
-  a:hover { color: var(--cyan-bright); }
-  a:focus-visible, button:focus-visible, summary:focus-visible {
-    outline: 2px solid var(--cyan-bright);
-    outline-offset: 3px;
+  /* ---------- desktop: wider content grid; nav stays a bottom bar ---------- */
+  @media (min-width:1080px){
+    .grid{ grid-template-columns:1fr 1fr 1fr; }
+    .deck-entry{ flex-wrap:nowrap; }
+    .tab-btn{ height:60px; }
   }
-
-  .skip-link {
-    position: absolute;
-    left: -999px;
-    top: auto;
-    background: var(--graphite);
-    color: var(--text);
-    padding: 0.75em 1.25em;
-    border: 1px solid var(--cyan-bright);
-    z-index: 100;
-  }
-  .skip-link:focus {
-    left: 1em;
-    top: 1em;
-  }
-
-  h1, h2, h3, h4 {
-    font-family: var(--font-mono);
-    letter-spacing: 0.02em;
-    font-weight: 600;
-    color: #fff;
-  }
-
-  .eyebrow {
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    font-size: 0.8rem;
-    color: var(--cyan);
-  }
-
-  .wrap {
-    max-width: 920px;
-    margin: 0 auto;
-    padding: 0 1.5rem;
-  }
-
-  section { padding: 4rem 0; border-top: 1px solid var(--border); }
-  section:first-of-type { border-top: none; }
-
-  /* cut-corner panel motif, echoing the app's own CutCornerShape */
-  .panel {
-    background: var(--graphite);
-    border: 1px solid var(--border);
-    padding: 1.5rem;
-    clip-path: polygon(0 0, calc(100% - var(--radius-cut)) 0, 100% var(--radius-cut), 100% 100%, var(--radius-cut) 100%, 0 calc(100% - var(--radius-cut)));
-  }
-  .panel + .panel { margin-top: 1rem; }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 1rem;
-  }
-
-  .status-banner {
-    background: var(--graphite-2);
-    border: 1px solid var(--error);
-    color: var(--text);
-    padding: 1rem 1.25rem;
-    font-size: 0.95rem;
-  }
-  .status-banner strong { color: var(--error); }
-
-  nav.top {
-    position: sticky;
-    top: 0;
-    background: rgba(5,5,5,0.92);
-    backdrop-filter: blur(4px);
-    border-bottom: 1px solid var(--border);
-    z-index: 10;
-  }
-  .nav-inner {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    padding: 0.75rem 1.5rem;
-    max-width: 920px;
-    margin-inline: auto;
-  }
-  .nav-brand {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: #fff;
-    text-decoration: none;
-    font-size: 0.95rem;
-    flex-shrink: 0;
-  }
-  .nav-brand:hover, .nav-brand:focus-visible { color: var(--cyan-bright); }
-  .nav-groups {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-  }
-  details.nav-pill { position: relative; }
-  details.nav-pill > summary {
-    list-style: none;
-    cursor: pointer;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    background: var(--graphite);
-    border: 1px solid var(--border);
-    padding: 0.5rem 0.9rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-  }
-  details.nav-pill > summary::-webkit-details-marker { display: none; }
-  details.nav-pill > summary::marker { content: ""; }
-  details.nav-pill > summary .car { font-size: 0.65rem; opacity: 0.7; transition: transform 0.15s ease; }
-  details.nav-pill[open] > summary { color: var(--cyan-bright); border-color: var(--cyan-bright); }
-  details.nav-pill[open] > summary .car { transform: rotate(180deg); }
-  details.nav-pill > summary:hover, details.nav-pill > summary:focus-visible { color: var(--cyan-bright); }
-
-  .nav-dropdown {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    min-width: 220px;
-    background: var(--graphite);
-    border: 1px solid var(--cyan-bright);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-    padding: 0.4rem 0;
-    z-index: 20;
-  }
-  .nav-dropdown a {
-    display: block;
-    padding: 0.55rem 1rem;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: var(--text-dim);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-  .nav-dropdown a:hover, .nav-dropdown a:focus-visible {
-    background: var(--graphite-2);
-    color: var(--cyan-bright);
-  }
-
-  /* Downloads pill: same mechanics as the other nav pills, distinct
-     always-on accent border so it reads as the one action item, not
-     another page-section category. */
-  details.nav-pill.nav-pill-cta > summary {
-    border-color: var(--cyan);
-    color: var(--cyan);
-  }
-  .nav-dropdown-release {
-    padding: 0.9rem 1rem;
-    min-width: 260px;
-    max-width: 320px;
-  }
-  .release-tag-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: var(--text);
-  }
-  .release-badge {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--void);
-    background: var(--cyan);
-    padding: 0.15rem 0.4rem;
-  }
-  .release-date {
-    font-size: 0.75rem;
-    color: var(--text-faint);
-    margin: 0.2rem 0 0.75rem;
-  }
-  .release-asset {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.5rem 0;
-    border-top: 1px solid var(--border);
-    font-size: 0.8rem;
-  }
-  .release-asset a { color: var(--text); text-decoration: none; }
-  .release-asset a:hover, .release-asset a:focus-visible { color: var(--cyan-bright); }
-  .release-asset .size { color: var(--text-faint); flex-shrink: 0; }
-  .release-note {
-    font-size: 0.75rem;
-    color: var(--text-faint);
-    margin: 0.6rem 0 0;
-    padding-top: 0.6rem;
-    border-top: 1px solid var(--border);
-  }
-  .release-all-link {
-    display: block;
-    margin-top: 0.6rem;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-  }
-  .release-fallback { margin: 0; font-size: 0.85rem; color: var(--text-dim); }
-
-  .hero {
-    padding-top: 4rem;
-    padding-bottom: 3rem;
-  }
-  .hero h1 {
-    font-size: clamp(2.2rem, 6vw, 3.5rem);
-    margin: 0.5rem 0 1rem;
-    line-height: 1.1;
-  }
-  .hero p.lede {
-    font-size: 1.15rem;
-    color: var(--text-dim);
-    max-width: 640px;
-  }
-
-  .disclaimer {
-    font-size: 0.9rem;
-    color: var(--text-faint);
-    border-left: 2px solid var(--border);
-    padding-left: 1rem;
-  }
-
-  .placeholder-shot {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    aspect-ratio: 9 / 16;
-    max-width: 220px;
-    background:
-      repeating-linear-gradient(135deg, var(--graphite-2) 0 10px, var(--graphite) 10px 20px);
-    border: 1px dashed var(--border);
-    color: var(--text-faint);
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    padding: 1rem;
-  }
-  .shot-row {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    margin: 1.25rem 0;
-  }
-  .placeholder-shot.has-image {
-    padding: 0;
-    overflow: hidden;
-  }
-  .placeholder-shot.has-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-  }
-
-  .deck-entry {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-top: 1.5rem;
-  }
-  .deck-entry:first-child { margin-top: 0; }
-  .deck-text { flex: 1 1 auto; min-width: 0; }
-  .deck-text h3 {
-    font-family: var(--font-mono);
-    color: var(--cyan);
-    font-size: 1rem;
-    margin: 0 0 0.35rem;
-  }
-  .deck-text p { margin: 0; color: var(--text-dim); }
-
-  /* Screenshot thumbnail: collapsed footprint until clicked. background-position:
-     center crops to the exact middle of the source 9:16 image with zero JS math. */
-  .shot-thumb {
-    flex: 0 0 auto;
-    width: 76px;
-    height: 76px;
-    padding: 0;
-    border: 1px solid var(--border);
-    background: repeating-linear-gradient(135deg, var(--graphite-2) 0 8px, var(--graphite) 8px 16px);
-    background-size: cover;
-    background-position: center;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
-  .shot-thumb:hover, .shot-thumb:focus-visible {
-    border-color: var(--cyan-bright);
-  }
-  .shot-thumb svg { width: 20px; height: 20px; opacity: 0.6; }
-  .shot-thumb-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-
-  /* Lightbox: native <dialog> gives Esc-to-close and modal focus handling for free */
-  dialog.shot-dialog {
-    position: fixed;
-    padding: 0;
-    border: 1px solid var(--border);
-    background: var(--void);
-    color: var(--text);
-    width: min(92vw, 420px);
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-  dialog.shot-dialog::backdrop { background: rgba(0,0,0,0.86); }
-  .shot-dialog-close {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    z-index: 2;
-    width: 2.25rem;
-    height: 2.25rem;
-    border: 1px solid var(--border);
-    background: var(--graphite);
-    color: var(--text);
-    font-size: 1.1rem;
-    line-height: 1;
-    cursor: pointer;
-  }
-  .shot-dialog-close:hover, .shot-dialog-close:focus-visible { border-color: var(--cyan-bright); }
-  .shot-stage {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 9 / 16;
-    max-height: calc(90vh - 4.5rem);
-    overflow: hidden;
-    background: var(--graphite);
-    touch-action: none;
-    -webkit-user-select: none;
-    user-select: none;
-    cursor: grab;
-  }
-  .shot-stage.dragging { cursor: grabbing; }
-  .shot-image {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    transform-origin: center center;
-    will-change: transform;
-    user-select: none;
-    -webkit-user-drag: none;
-  }
-  .shot-stage-placeholder {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 1rem;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: var(--text-faint);
-    background: repeating-linear-gradient(135deg, var(--graphite-2) 0 10px, var(--graphite) 10px 20px);
-  }
-  .shot-controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.6rem;
-    border-top: 1px solid var(--border);
-  }
-  .shot-controls button {
-    font-family: var(--font-mono);
-    background: var(--graphite);
-    color: var(--text);
-    border: 1px solid var(--border);
-    width: 2.25rem;
-    height: 2.25rem;
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-  .shot-controls button:hover, .shot-controls button:focus-visible { border-color: var(--cyan-bright); }
-  .shot-controls button:disabled { opacity: 0.4; cursor: default; }
-  .shot-hint {
-    margin: 0;
-    padding: 0 0.75rem 0.6rem;
-    font-size: 0.7rem;
-    color: var(--text-faint);
-    text-align: center;
-  }
-  @media (max-width: 480px) {
-    .shot-thumb { width: 60px; height: 60px; }
-    /* A dropdown anchored to its trigger pill's edge can extend past the
-       viewport on narrow screens once pills wrap onto their own row --
-       pin to viewport-relative bounds instead of the pill's edge here.
-       position:fixed escapes the pill's own positioning context; nav.top's
-       backdrop-filter makes it (not the true viewport) the containing
-       block for that, but nav.top already spans full viewport width, so
-       left/right still resolve against the real screen edges. */
-    .nav-dropdown, .nav-dropdown-release {
-      position: fixed;
-      left: 1rem;
-      right: 1rem;
-      width: auto;
-      min-width: 0;
-      max-width: none;
-    }
-  }
-
-  details.module {
-    border: 1px solid var(--border);
-    background: var(--graphite);
-    padding: 0.75rem 1rem;
-    margin-bottom: 0.6rem;
-  }
-  details.module summary {
-    cursor: pointer;
-    font-family: var(--font-mono);
-    color: var(--text);
-  }
-  details.module p {
-    color: var(--text-dim);
-    margin: 0.75rem 0 0.25rem;
-  }
-
-  code, .kbd {
-    font-family: var(--font-mono);
-    background: var(--graphite-2);
-    padding: 0.1em 0.4em;
-    border-radius: 3px;
-    font-size: 0.9em;
-  }
-
-  footer {
-    padding: 3rem 0 5rem;
-    color: var(--text-faint);
-    font-size: 0.9rem;
-  }
-  footer a { color: var(--text-dim); }
-
-  table.compat {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-  table.compat th, table.compat td {
-    text-align: left;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--border);
-  }
-  table.compat th { color: var(--cyan); font-family: var(--font-mono); }
-
-  .accordion-toggle {
-    all: unset;
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.6rem;
-    width: 100%;
-    cursor: pointer;
-    font: inherit;
-    color: inherit;
-  }
-  .accordion-toggle:hover { color: var(--cyan-bright); }
-  .accordion-toggle:focus-visible {
-    outline: 2px solid var(--cyan-bright);
-    outline-offset: 3px;
-  }
-  .accordion-toggle .chevron {
-    font-size: 0.7em;
-    color: var(--cyan);
-    transition: transform 0.15s ease;
-    flex-shrink: 0;
-  }
-  .accordion-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
-  .accordion-panel { margin-top: 1.5rem; }
 </style>
-<noscript><style>.accordion-panel[hidden] { display: block !important; }</style></noscript>
 </head>
 <body>
 
 <a class="skip-link" href="#main">Skip to main content</a>
 
-<nav class="top" aria-label="Section navigation">
-  <div class="nav-inner">
-    <a class="nav-brand" href="#main">ACK</a>
-    <div class="nav-groups">
-      <details class="nav-pill">
-        <summary>What It Does <span class="car" aria-hidden="true">&#9662;</span></summary>
-        <div class="nav-dropdown">
-          <a href="#how-it-works">How it works</a>
-          <a href="#decks">Decks</a>
-          <a href="#voice">Voice</a>
+<div class="app-frame">
+  <header class="hud" id="hud">
+   <div class="hud-inner bar-inner">
+    <div class="hud-top">
+      <div>
+        <div class="brand-row">
+          <p class="brand">ACK</p>
         </div>
-      </details>
-      <details class="nav-pill">
-        <summary>Training, Wear OS &amp; Safety <span class="car" aria-hidden="true">&#9662;</span></summary>
-        <div class="nav-dropdown">
-          <a href="#training">Training</a>
-          <a href="#watch">Wear OS</a>
-          <a href="#safety">Safety &amp; Recovery</a>
+        <p class="tagline">Augmented Comm Link</p>
+      </div>
+      <div class="hud-actions">
+        <button type="button" class="hud-btn" id="settingsOpen">SETTINGS</button>
+        <a class="hud-btn" style="text-decoration:none; display:inline-block;" href="https://github.com/ASPDesignLabs/ACK" target="_blank" rel="noopener noreferrer">SOURCE</a>
+      </div>
+    </div>
+
+    <div class="ctx-row" id="ctxRow" hidden>
+      <span class="ctx-label" id="ctxLabel">DECK:</span>
+      <select class="ctx-select" id="ctxSelect" aria-labelledby="ctxLabel"></select>
+    </div>
+    <div class="ctx-row" id="profileRow" hidden>
+      <span class="ctx-label" id="profileLabel">PROFILE:</span>
+      <select class="ctx-select" id="profileSelect" aria-labelledby="profileLabel"></select>
+    </div>
+   </div>
+  </header>
+
+  <div class="shell">
+  <main id="main" class="window">
+
+    <!-- HOME -->
+    <section class="tabpanel" id="panel-home" role="tabpanel" aria-labelledby="tab-home">
+      <p class="eyebrow">Augmented Communications Link &mdash; ACK</p>
+      <h1>A Modern Approach to AAC, with a twist</h1>
+      <p class="lede">Compose statements, build out context-based replies, utilize variables to speed up
+        construction of statements. Use tap based controls to start playback or use the companion Wear OS
+        app to unlock gesture based initiation. Created primarily to assist myself with situational mutism
+        concerns. This covers the many moments throughout my day where communicating with others via
+        non-verbal means is significantly easier. This tool is a fair bit more advanced than what you'd
+        normally call AAC. The depth of statement construction, the ability to bridge statements, establish
+        replies around specific contexts. You should not assume this is meant for someone with heavily
+        limited communication and cognitive ability.</p>
+      <p class="disclaimer">Built by one person, primarily to work around <em>situational mutism</em> &mdash;
+        the moments where speaking out loud is much harder than it should be. I am not a speech-language
+        pathologist, a mental health professional, or anyone with formal training in AAC design. Created
+        entirely by myself to help address this gap. Do not use as a substitute for appropriate care and
+        support from a qualified professional.</p>
+      <div class="status-banner" role="note">
+        <strong>DUST WARNING</strong> This is a genuine dogfood-style experience. As I build out features I
+        trial them in a testing environnment then integrate them into my daily life. I will limit this as
+        much as I can with anything on main. Some bugs might sneak their way through though, so do make sure
+        you are reviewing any changes as ACK is developed.
+      </div>
+    </section>
+
+    <!-- COMMS -->
+    <section class="tabpanel" id="panel-comms" role="tabpanel" aria-labelledby="tab-comms" hidden>
+
+      <div class="ctx-pane" data-ctx="how" id="ctx-how">
+        <p class="eyebrow">How it works</p>
+        <h2>Multimodal Output</h2>
+
+        <div class="profile-pane" data-profile="tap" id="profile-tap">
+          <h3>Tap controls</h3>
+          <p>Like any AAC app or device there are easy to access tap shortcuts that can be used to
+            initiate playback. This interface is where you will compose your replies and statements,
+            use variable construction to make rapid edits to more formal communication, and build
+            response and reply profiles around various forms of context.</p>
         </div>
-      </details>
-      <details class="nav-pill">
-        <summary>Track The Development <span class="car" aria-hidden="true">&#9662;</span></summary>
-        <div class="nav-dropdown">
-          <a href="#help">Help &amp; logs</a>
-          <a href="#dev">Build it</a>
-          <a href="#status">Status</a>
-        </div>
-      </details>
-      <details class="nav-pill nav-pill-cta">
-        <summary>Download ACK <span class="car" aria-hidden="true">&#9662;</span></summary>
-        <div class="nav-dropdown nav-dropdown-release">
-          <div id="releaseInfo">
-            <p class="release-fallback">Latest beta builds are on
-            <a href="https://github.com/ASPDesignLabs/ACK/releases" target="_blank" rel="noopener noreferrer">GitHub Releases</a>.</p>
+
+        <div class="profile-pane" data-profile="gesture" id="profile-gesture" hidden>
+          <h3>Gesture playback</h3>
+          <p>The Wear OS companion handles gestures using a simple state machine &mdash;
+            <span class="kbd">ARM</span> &rarr; <span class="kbd">LOCK POSE</span> &rarr;
+            <span class="kbd">MODIFY</span> &rarr; <span class="kbd">FIRE</span> &mdash; giving you the
+            ability to trigger a configured prompt using your wrist. this works with the phone locked
+            and the screen off.</p>
+          <div class="shot-row" role="group" aria-label="Screenshots (placeholder)" style="display:flex; gap:0.8rem; margin-top:1rem;">
+            <button type="button" class="shot-thumb placeholder" data-shot-src="" data-shot-name="Gesture cycle (ARM/LOCK/FIRE)">
+              <span class="shot-thumb-sr">View gesture cycle screenshot, full size</span>
+              Preview<br>coming soon
+            </button>
           </div>
         </div>
-      </details>
-    </div>
+
+        <div class="profile-pane" data-profile="fullscreen" id="profile-fullscreen" hidden>
+          <h3>Full-screen output</h3>
+          <p>Prompts play back full-screen with visual and audible output together, with audio routing
+            to either the phone speaker or a connected Bluetooth speaker.</p>
+          <p>Relying on being heard isn't always possible, or even permissible. Sometimes you want
+            communications to be silent while offering a visual prompt for communication. If you want
+            to prevent all voice output toggle 'Silent Mode' under PROTOCOL from any deck.</p>
+          <div class="shot-row" role="group" aria-label="Screenshots" style="display:flex; gap:0.8rem; margin-top:1rem;">
+            <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/fullscreen-playback.png" data-shot-name="Full-screen prompt playback">
+              <span class="shot-thumb-sr">View full-screen prompt playback screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+            <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/audio-silent-mode-toggle.png" data-shot-name="Silent Mode toggle">
+              <span class="shot-thumb-sr">View Silent Mode toggle screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ctx-pane" data-ctx="decksoverview" id="ctx-decksoverview" hidden>
+        <p class="eyebrow">Decks</p>
+        <h2>Organization with a focus on utility</h2>
+        <p>A <strong>deck</strong> offers one specific form of organization of communication profiles on
+          screen at any time, to make working with the greater context system easier with continuous use.
+          MATRIX decks support the use of <strong>profiles</strong> which gives decks additional
+          flexibility. Configure a deck around work related activities, along with a few profiles for
+          more detailed work related tasks.</p>
+        <p>Decks aren't fixed. Tap the DECK label to create a new Quick Actions, Emergency, Emoji, or GIF
+          deck &mdash; pick a type, name it, choose a color, done. MANAGE handles renaming, recoloring, or
+          removing anything you've created.</p>
+
+        <div class="profile-pane" data-profile="matrix" id="profile-matrix">
+          <div class="deck-entry" style="margin-top:1.4rem;">
+            <div class="deck-text">
+              <h3>MATRIX Deck</h3>
+              <p>This is the core ACK deck and experience. Build around rapid statement creation and
+                recall. Tap to initiate playback, edit a prompt, use variables to speed up construction.
+                Prompts can be bound to one of the three poses used by the Wear OS experience, with up to
+                four commands issuable per pose. Additional context poses can be added inside a MATRIX
+                deck, allowing for hot-swapping of all replies under a pose with a single tap.</p>
+            </div>
+            <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/matrix-deck.png" data-shot-name="MATRIX Deck">
+              <span class="shot-thumb-sr">View MATRIX Deck screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-pane" data-profile="quickactions" id="profile-quickactions" hidden>
+          <div class="deck-entry" style="margin-top:1.4rem;">
+            <div class="deck-text">
+              <h3>Quick Actions Deck</h3>
+              <p>A more slimmed down experience that offers the user the ability to bind up to four phrases
+                to a pose under a single form of context. Used for greetings, closures, quick references.
+                Edit all three poses then initiate playback using the watch or with a tap.</p>
+            </div>
+            <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/quick-actions-deck.png" data-shot-name="Quick Actions Deck">
+              <span class="shot-thumb-sr">View Quick Actions Deck screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-pane" data-profile="emergency" id="profile-emergency" hidden>
+          <div class="deck-entry" style="margin-top:1.4rem;">
+            <div class="deck-text">
+              <h3>Emergency Deck</h3>
+              <p>Your high priority communications deck. If you need help, if you have a response script
+                for when things become extra difficult, if you don't want your prompt to disapear due to a
+                stray tap or clench, this is where you access these prompts. Prompts issued from here can
+                include a beaconing tone that plays before a prompt is issued, increasing the likelihood of
+                reception by others.</p>
+              <p>Never worry about an Emergency deck response leaving your screen without your intention.
+                All Emergency deck prompts now remain on the screen until explicitly cleared with a long
+                tap-and-hold interaction.</p>
+            </div>
+            <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/EmergencyDeck_preview.png" data-shot-name="Emergency Deck">
+              <span class="shot-thumb-sr">View Emergency Deck screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-pane" data-profile="emoji" id="profile-emoji" hidden>
+          <div class="deck-entry" style="margin-top:1.4rem;">
+            <div class="deck-text">
+              <h3>Emoji Deck</h3>
+              <p>Emotional context can be difficult to deliver sometimes. This deck covers this a bit. Pick
+                from a suite of emoji from the built-in library or use any emoji you have access to on your
+                device. Group them by category, add text to the displayed prompt, make the emoji prompt
+                more sticky.</p>
+            </div>
+            <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/emoji-deck.png" data-shot-name="Emoji Deck">
+              <span class="shot-thumb-sr">View Emoji Deck screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-pane" data-profile="gif" id="profile-gif" hidden>
+          <div class="deck-entry" style="margin-top:1.4rem;">
+            <div class="deck-text">
+              <h3>GIF Deck</h3>
+              <p>Memes. A powerful communication medium online, now ready to use in real space. Store and
+                organize GIFs that you'd like to play at any time here. Modifiers for GIF prompts enable
+                better display of different aspect ratio content. Add in text to your GIF prompt to reduce
+                load on the recipient.</p>
+            </div>
+            <button type="button" class="shot-thumb" data-shot-src="assets/gifs/gif-deck.gif" data-shot-name="GIF Deck">
+              <span class="shot-thumb-sr">View GIF Deck screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-pane" data-profile="manual" id="profile-manual" hidden>
+          <div class="deck-entry" style="margin-top:1.4rem;">
+            <div class="deck-text">
+              <h3>Manual Override</h3>
+              <p>A standard textbox input that can be used to store phrases and prompts to a category of
+                your choosing. These can be played with a quick tap. You can also use this to issue an
+                ephemeral reply, if the message isn't worth saving.</p>
+            </div>
+            <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/manual-override.png" data-shot-name="Manual Override">
+              <span class="shot-thumb-sr">View Manual Override screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-pane" data-profile="target" id="profile-target" hidden>
+          <div class="deck-entry" style="margin-top:1.4rem;">
+            <div class="deck-text">
+              <h3>Target Computer</h3>
+              <p>Eight "targets" for any prompt you issue using ACK. These can be configured to prepend or
+                append any simple prompt issued via a MATRIX or Quick Actions deck. Add a quick name,
+                place, identity, or callout with a quick tap before issuing a prompt to see it added to
+                your statement.</p>
+            </div>
+            <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/target-computer.png" data-shot-name="Target Computer">
+              <span class="shot-thumb-sr">View Target Computer screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-pane" data-profile="audio" id="profile-audio" hidden>
+          <h3 style="margin-top:1.4rem;">Audio Architect</h3>
+          <p>Audio Architect splits into two layers. Global Output settings shape ACK's speech no matter
+            which voice is active &mdash; Master Gain for volume, Global Cadence for dynamic pacing
+            (letting output speed up and slow down through a phrase rather than reading at one flat rate),
+            Force Speaker for routing, and Guide Vox to toggle spoken tutorial guidance on or off.</p>
+          <p>Voice itself comes from either a locked factory preset for a ready-to-use, consistent sound, or
+            one of three fully editable custom slots. Each custom slot has its own DSP chain: pick a base
+            voice from any TTS engine installed on your device, then shape it with pitch, a constant
+            per-voice speed, an optional robotic overlay, and a bitcrush texture &mdash; save it, and it
+            becomes a reusable voice of your own.</p>
+        </div>
+
+        <div class="profile-pane" data-profile="variables" id="profile-variables" hidden>
+          <h3 style="margin-top:1.4rem;">Variables &amp; Root Overrides</h3>
+          <p>Any phrase can hold a variable &mdash; write <span class="kbd">{VAR}</span> in the Live Save
+            Editor and ACK prompts for that value, or tag it <span class="kbd">{VAR:A}</span>,
+            <span class="kbd">{VAR:B}</span>, or <span class="kbd">{VAR:C}</span> to make it targeted
+            instead of just local. A targeted variable can be bridged: turn on that tag's Root Override for
+            a category, set one value, and it replaces that variable across every phrase in the category
+            &mdash; no editing each one by hand. Think of a routine work task: tag the parts that actually
+            change, like a name or a location, and one Root Override update carries across the whole deck.
+            Root Override is entirely opt-in &mdash; every phrase already works on its own local value
+            without it.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- FIELD OPS -->
+    <section class="tabpanel" id="panel-fieldops" role="tabpanel" aria-labelledby="tab-fieldops" hidden>
+
+      <div class="ctx-pane" data-ctx="training" id="ctx-training">
+        <p class="eyebrow">Training &amp; confidence-building</p>
+        <h2>Practice the gestures before you need them.</h2>
+
+        <div class="profile-pane" data-profile="ground" id="profile-ground">
+          <h3>Training Ground</h3>
+          <p>Free-form gesture practice with live telemetry and normal pacing &mdash; nothing you do
+            here actually plays back or sends output. A safe space to get the arm/lock/modify/fire
+            cycle into muscle memory.</p>
+        </div>
+
+        <div class="profile-pane" data-profile="trainer" id="profile-trainer" hidden>
+          <h3>Deck Trainer</h3>
+          <p>Scored practice against your own real Matrix or Quick Actions deck, so you're rehearsing
+            the actual layout you'll use &mdash; not a generic demo.</p>
+        </div>
+      </div>
+
+      <div class="ctx-pane" data-ctx="wearos" id="ctx-wearos" hidden>
+        <p class="eyebrow">The companion</p>
+        <h2>A Wear OS app that does the physical half.</h2>
+
+        <div class="profile-pane" data-profile="pairing" id="profile-pairing">
+          <h3>Pairing &amp; Sync</h3>
+          <p>The watch side is deliberately small: it's what senses the pose, watches for a wake gesture (by
+            default, a triple wrist twist so commands can't fire by accident), and pushes that event to the
+            phone. The phone stays in charge of decks, profiles, and playback. A background sensor service
+            on the watch keeps this working without needing the watch screen to stay open the entire time
+            you're wearing it.</p>
+          <p>There's no separate pairing step &mdash; install ACK on your watch and phone, and as long as
+            the two are already paired through Wear OS, commands start firing the moment the watch app is
+            running. Under the hood it rides Google's Wearable Data Layer for that phone &harr; watch link.</p>
+          <div class="shot-row" role="group" aria-label="Screenshots (placeholder)" style="display:flex; gap:0.8rem; margin-top:1rem;">
+            <button type="button" class="shot-thumb placeholder" data-shot-src="" data-shot-name="Watch pairing / pose selector">
+              <span class="shot-thumb-sr">View watch pairing screenshot, full size</span>
+              Preview<br>coming soon
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ctx-pane" data-ctx="safety" id="ctx-safety" hidden>
+        <p class="eyebrow">Safety &amp; Recovery</p>
+        <h2>Fail-safes for stray taps, shaky hands, and messages that clear too soon.</h2>
+        <p>Having the ability to recover from a misfire or accidental tap, interruptions, and moments
+          where accuracy takes a hit are what make an assistive tool truly useful. A graceful method to
+          play back a previously issued statement, a phone gesture to cancel playback of any prompt, and
+          an additional way to cancel a prompt before it even leaves your watch.</p>
+        <p>These features help build confidence knowing there are ways to stop a statement you didn't
+          want to say from being received, allowing playback from historical statements, and the ability
+          to replay any visual prompt indefinitely.</p>
+
+        <div class="profile-pane" data-profile="shake" id="profile-shake">
+          <div class="deck-entry" style="margin-top:1.4rem;">
+            <div class="deck-text">
+              <h3>Shake Kill Switch</h3>
+              <p>You need multiple ways to stop a bad tap, gesture recognition, or statement from leaving
+                your device or completing. One of these methods is a 'Shake to cancel' service that cancels
+                any queued prompt or state traversal on the watch by shaking the phone. Configure
+                sensitivity and test the configuration under PROTOCOL from any deck.</p>
+            </div>
+            <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/settings-shake-kill-switch.gif" data-shot-name="Shake Kill Switch">
+              <span class="shot-thumb-sr">View Shake Kill Switch screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-pane" data-profile="shaky" id="profile-shaky" hidden>
+          <div class="deck-entry" style="margin-top:1.4rem;">
+            <div class="deck-text">
+              <h3>Shaky-Hands Mode</h3>
+              <p>There are moments throughout a day that accuracy might take a hit. You might struggle to
+                continuously trigger the poses you've practiced, you shouldn't be denied access to your
+                tool when this happens. A new 'Shaky hands' mode increases the time needed to navigate
+                through the ACK Wear state machine, with enhancements to addressing a set of noisy sensors
+                due to a glitch in coordination. These options can be configured from any deck under
+                PROTOCOL.</p>
+              <p>Enable 'Shaky Hands' mode anywhere in ACK Wear with a tap-and-hold interaction. This does
+                increase the amount of time needed to confirm a pose command, you can always test this
+                method out in the Training Grounds.</p>
+            </div>
+            <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/watch-shaky-hands-indicator.jpg" data-shot-name="Shaky-Hands Mode">
+              <span class="shot-thumb-sr">View Shaky-Hands Mode screenshot, full size</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-pane" data-profile="wayout" id="profile-wayout" hidden>
+          <div class="panel" style="margin-top:1.4rem;">
+            <h3>A way out before it fires</h3>
+            <p>Misfires happen. Sometimes a pose isn't recognized properly for a host of reasons. You can
+              always halt playback of these erroneous replies by tapping anywhere within ACK Wear to clear
+              the current progression through the state machine, preventing the error from leaking
+              through.</p>
+          </div>
+        </div>
+
+        <div class="profile-pane" data-profile="replay" id="profile-replay" hidden>
+          <div class="deck-entry" style="margin-top:1.4rem;">
+            <div class="deck-text">
+              <h3>REPLAY: bring back what you missed</h3>
+              <p>Issuing a prompt doesn't always land on first play. Things can prevent others from reading
+                or hearing them, distractions happen, the situation at work can evolve at a rapid pace. You
+                should have a little security here when it comes to managing this type of interaction. For
+                a prompt that you just issued a 'replay' button will remain on your screen for twenty
+                seconds after a visual prompt is cleared. Any prompt issued using 'replay' is sticky, they
+                retain their presence on your screen until you tap to clear them.</p>
+              <p>The Terminal (logs) screen can be used to reissue any previously played prompt from any
+                deck as well.</p>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:0.5rem; flex:0 0 auto;">
+              <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/replay-chip.png" data-shot-name="REPLAY chip">
+                <span class="shot-thumb-sr">View REPLAY chip screenshot, full size</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+              </button>
+              <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/terminal-log-replay.png" data-shot-name="Terminal log replay">
+                <span class="shot-thumb-sr">View Terminal log replay screenshot, full size</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- LOGS -->
+    <section class="tabpanel" id="panel-logs" role="tabpanel" aria-labelledby="tab-logs" hidden>
+
+      <div class="ctx-pane" data-ctx="help" id="ctx-help">
+        <p class="eyebrow">Help, onboarding &amp; transparency</p>
+        <h2>A tutorial system that only advances when you actually do the thing.</h2>
+        <p>ACK's in-app help isn't a slideshow. Each module only steps forward when a real event fires
+          from the real UI &mdash; a specific tap, a committed text field, a cleared overlay, an actual
+          watch gesture broadcast &mdash; so finishing a walkthrough means you've genuinely done it once,
+          not just read about it.</p>
+        <div class="panel" style="margin-top:1.5rem;">
+          <h3>Your Data, Your Rules</h3>
+          <p>Backup and restore live under Settings. Your decks, profiles, configurations,
+            personification, and variables are yours &mdash; the Data Port exists so you can move them,
+            keep copies, and never be locked into a single install.</p>
+        </div>
+        <div class="panel" style="margin-top:1.5rem;">
+          <h3>Terminal</h3>
+          <p>Every system, output, and watch event gets a timestamped, color-coded line in the Terminal
+            &mdash; what ACK received, resolved, and sent. Any line that's an actual spoken phrase gets a
+            replay control, and replaying an Emergency message keeps its safety behavior intact: forced
+            speaker output, no auto-clear. The log lives in memory only &mdash; closing and reopening ACK
+            clears it.</p>
+        </div>
+      </div>
+
+      <div class="ctx-pane" data-ctx="dev" id="ctx-dev" hidden>
+        <p class="eyebrow">Under the hood</p>
+        <h2>For anyone who wants to build it themselves.</h2>
+        <p>ACK is Kotlin + Jetpack Compose, split into a phone module and a Wear OS module. Maps are
+          rendered fully offline with Mapsforge/vtm &mdash; no tile server, no network dependency,
+          matching the rest of the app's local-first design.</p>
+        <div class="panel">
+          <h3>Build requirements</h3>
+          <ul style="margin:0 0 0.9rem; padding-left:1.2rem; color:var(--text);"><li>Android Studio</li></ul>
+          <p>No region map ships with the app or the build &mdash; Geo-Protocol works by coordinate with
+            no map data at all. Import your own Mapsforge-compatible <code>.map</code> file from inside
+            the app (Geo-Protocol &rarr; Map Data &rarr; Import Map File) any time after install, no
+            rebuild required. A personal build can still drop a splice into
+            <code>app/src/main/assets/tactical_grid.map</code> as a build-time default if you'd rather
+            bundle one.</p>
+          <p style="margin-bottom:0;">Full contribution workflow &mdash; branch naming, commit
+            conventions, and the day-to-day git flow &mdash; is documented in
+            <a href="https://github.com/ASPDesignLabs/ACK/blob/main/docs/GIT_WORKFLOW.md">docs/GIT_WORKFLOW.md</a>.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="compat">
+            <caption style="text-align:left; color:var(--text-dim); margin-bottom:0.5rem;">Notable dependencies &amp; their licenses</caption>
+            <thead><tr><th>Component</th><th>License</th></tr></thead>
+            <tbody>
+              <tr><td>Mapsforge / vtm (offline maps)</td><td>LGPLv3, with a static-linking waiver</td></tr>
+              <tr><td>AndroidX / Jetpack Compose</td><td>Apache-2.0</td></tr>
+              <tr><td>ACK itself</td><td>GPLv3</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="ctx-pane" data-ctx="status" id="ctx-status" hidden>
+        <p class="eyebrow">Status &amp; disclaimers</p>
+        <h2>Where this actually stands.</h2>
+        <p>This section gets updated by hand against <code>docs/HELP_TUTORIAL_GUIDE.md</code> &mdash; it's
+          a snapshot, not a live feed, so treat it as "true as of the last update," not real-time.</p>
+        <div class="panel">
+          <h3>Known gaps</h3>
+          <ul style="margin:0; padding-left:1.2rem; color:var(--text);"><li>No known issues at this time.</li></ul>
+        </div>
+        <p class="disclaimer" style="margin-top:1rem;">Not a substitute for professional AAC evaluation or
+          speech-language therapy. Built by one person as a personal tool, shared as-is.</p>
+      </div>
+
+    </section>
+
+    <!-- GET ACK -->
+    <section class="tabpanel" id="panel-getack" role="tabpanel" aria-labelledby="tab-getack" hidden>
+      <p class="eyebrow">Source &amp; license</p>
+      <h2>Get ACK</h2>
+      <p>ACK is licensed under the
+        <a href="https://github.com/ASPDesignLabs/ACK/blob/main/LICENSE">GNU General Public License v3.0</a>.
+        Source, issues, and the full build plan for this page live in
+        <a href="https://github.com/ASPDesignLabs/ACK">the repository</a>.</p>
+      <div class="panel">
+        <h3>Releases</h3>
+        <p style="font-size:0.85em; color:var(--text-dim);">Most recent first, pulled from GitHub Releases.</p>
+        <ul style="list-style:none; margin:0.8rem 0 0; padding:0; display:flex; flex-direction:column; gap:0.7rem;">
+          <li style="border:2px solid var(--border); padding:0.8rem;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:0.5rem;">
+              <a href="https://github.com/ASPDesignLabs/ACK/releases/tag/v1.0-beta.2" style="font-family:var(--font-mono); font-weight:700;" target="_blank" rel="noopener noreferrer">v1.0-beta.2</a>
+              <span style="font-family:var(--font-mono); font-size:0.8em; color:var(--text-faint);">2026-09-10</span>
+            </div>
+            <p style="margin:0.4rem 0 0;">Recovery, motor accountability, stability update</p>
+          </li>
+          <li style="border:2px solid var(--border); padding:0.8rem;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:0.5rem;">
+              <a href="https://github.com/ASPDesignLabs/ACK/releases/tag/v1.0-beta.1" style="font-family:var(--font-mono); font-weight:700;" target="_blank" rel="noopener noreferrer">v1.0-beta.1</a>
+              <span style="font-family:var(--font-mono); font-size:0.8em; color:var(--text-faint);">2026-09-09</span>
+            </div>
+          </li>
+        </ul>
+        <p style="margin:0.8rem 0 0;">See every build, including older betas, on
+          <a href="https://github.com/ASPDesignLabs/ACK/releases" target="_blank" rel="noopener noreferrer">GitHub Releases</a>.</p>
+      </div>
+    </section>
+
+    <!-- SIMULATOR (reserved) -->
+    <section class="tabpanel" id="panel-sim" role="tabpanel" aria-labelledby="tab-sim" hidden>
+      <p class="eyebrow">Coming later</p>
+      <h2>Try ACK in the browser</h2>
+      <div class="reserved-note">RESERVED SLOT &mdash; not built in this pass. This is where an in-browser
+        simulation of composition, recall, and context organization would eventually live, so visitors can
+        try the non-watch features without installing the app. Flagged here so the nav structure already
+        has a home for it.</div>
+    </section>
+
+    <footer class="credit">
+      ACK is licensed under the
+      <a href="https://github.com/ASPDesignLabs/ACK/blob/main/LICENSE">GNU General Public License v3.0</a>.
+      Source, issues, and the full build plan for this page live in
+      <a href="https://github.com/ASPDesignLabs/ACK">the repository</a>.
+    </footer>
+
+  </main>
+  </div>
+
+  <nav class="tabbar" aria-label="ACK sections">
+  <div class="tabbar-inner" role="tablist" aria-label="ACK site sections" id="tablist">
+    <button type="button" class="tab-btn" id="tab-home" role="tab" data-panel="panel-home" aria-selected="true" aria-controls="panel-home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h13l3 3v11H4z"/><path d="M7 10h8M7 13h5"/></svg>
+      <span class="tab-label">Home</span>
+    </button>
+    <button type="button" class="tab-btn" id="tab-comms" role="tab" data-panel="panel-comms" aria-selected="false" aria-controls="panel-comms" tabindex="-1">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <span class="tab-label">Comms</span>
+    </button>
+    <button type="button" class="tab-btn" id="tab-fieldops" role="tab" data-panel="panel-fieldops" aria-selected="false" aria-controls="panel-fieldops" tabindex="-1">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>
+      <span class="tab-label">Field Ops</span>
+    </button>
+    <button type="button" class="tab-btn" id="tab-logs" role="tab" data-panel="panel-logs" aria-selected="false" aria-controls="panel-logs" tabindex="-1">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M8 10l2 2-2 2M12 14h4"/></svg>
+      <span class="tab-label">Logs</span>
+    </button>
+    <button type="button" class="tab-btn" id="tab-getack" role="tab" data-panel="panel-getack" aria-selected="false" aria-controls="panel-getack" tabindex="-1">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M8 11l4 4 4-4M5 19h14"/></svg>
+      <span class="tab-label">Get ACK</span>
+    </button>
+    <button type="button" class="tab-btn" id="tab-sim" role="tab" data-panel="panel-sim" aria-selected="false" aria-controls="panel-sim" tabindex="-1">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M10 9l5 3-5 3z"/></svg>
+      <span class="tab-label">Simulator</span>
+    </button>
   </div>
 </nav>
+</div>
 
-<main id="main">
-
-  <!-- A. ORIENTATION -->
-  <section class="hero wrap">
-    <p class="eyebrow">Augmented Communications Link - ACK</p>
-    <h1>A Modern Approach to AAC, with a twist</h1>
-    <p class="lede">
-      Compose statements, build out context-based replies, utilize variables to speed up construction of statements. Use tap based controls to start playback or use the companion Wear OS app to unlock gesture based initiation.
-      Created primarily to assist myself with situational mutism concerns. This covers the many moments throughout my day where communicating with
-      others via non-verbal means is significantly easier. This tool is a fair bit more
-      advanced than what you'd normally call AAC. The depth of statement construction, the ability to bridge statements, establish replies
-      around specific contexts. You should not assume this is meant for someone with heavily limited communication and cognitive ability.
-    </p>
-    <p class="disclaimer">
-      Built by one person, primarily to work around <em>situational
-      mutism</em> — the moments where speaking out loud is much harder than
-      it should be. I am not a speech-language pathologist, a mental health
-      professional, or anyone with formal training in AAC design. Created 
-      entirely by myself to help address this gap. Do not use as a substitute
-      for appropriate care and support from a qualified professional.
-    </p>
-  </section>
-
-  <section class="wrap">
-    <div class="status-banner" role="note">
-      <strong>DUST WARNING</strong> This is a genuine dogfood-style experience.
-      As I build out features I trial them in a testing environnment then
-      integrate them into my daily life. I will limit this as much as I can with
-      anything on main. Some bugs might sneak their way through though, so do
-      make sure you are reviewing any changes as ACK is developed.
+<dialog id="settingsDialog" aria-labelledby="settingsTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="settingsTitle">Settings</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close settings">&#10005;</button>
     </div>
-  </section>
+    <p style="color:var(--text-dim); font-size:0.85rem;">Positioned where <span class="kbd">PROTOCOL</span>
+      sits in the app header. Everything below acts on this page right now. The rest of the app's own
+      Settings screen &mdash; watch audio feedback, hardware/sensor configuration, shortcuts, and Data Port
+      backup &amp; restore &mdash; lives on-device, in the app itself.</p>
 
-  <!-- B. HOW YOU COMMUNICATE -->
-  <section id="how-it-works" class="wrap">
-    <p class="eyebrow">How it works</p>
-    <h2>Multimodal Output</h2>
-    <div class="grid">
-      <div class="panel">
-        <h3>Tap controls</h3>
-        <p>Like any AAC app or device there are easy to access tap shortcuts
-          that can be used to initiate playback. This interface is where you will
-          compose your replies and statements, use variable construction to make
-          rapid edits to more formal communication, and build response and reply profiles
-          around various forms of context.
-        </p>
-      </div>
-      <div class="panel">
-        <h3>Gesture playback</h3>
-        <p>The Wear OS companion handles gestures using a simple state machine —
-        <span class="kbd">ARM</span> → <span class="kbd">LOCK POSE</span> →
-        <span class="kbd">MODIFY</span> → <span class="kbd">FIRE</span> —
-        giving you the ability to trigger a configured prompt using your wrist. this
-      works with the phone locked and the screen off.</p>
-      </div>
-      <div class="panel">
-        <h3>Full-screen output</h3>
-        <p>Prompts play back full-screen with visual and audible output
-        together, with audio routing to either the phone speaker or a
-        connected Bluetooth speaker.</p>
-        <p>Relying on being heard isn't always possible, or even permissible. Sometimes you want communications
-        to be silent while offering a visual prompt for communication. If you want to prevent all voice output
-        toggle 'Silent Mode' under PROTOCOL from any deck.</p>
+    <div class="a11y-row">
+      <span id="accentLabel">Accent (decorative &mdash; borders, icons, active-tab fill; body text stays
+        on the fixed text-safe cyan regardless of pick)</span>
+      <div class="accent-picker" role="group" aria-labelledby="accentLabel">
+        <button type="button" class="swatch" style="background:#00F3FF" data-hex="#00F3FF" aria-label="Cyan (default)" aria-pressed="true"></button>
+        <button type="button" class="swatch" style="background:#FF0055" data-hex="#FF0055" aria-label="Radical Red" aria-pressed="false"></button>
+        <button type="button" class="swatch" style="background:#00FF41" data-hex="#00FF41" aria-label="Bio Green" aria-pressed="false"></button>
+        <button type="button" class="swatch" style="background:#FF9900" data-hex="#FF9900" aria-label="Data Orange" aria-pressed="false"></button>
+        <button type="button" class="swatch" style="background:#BD00FF" data-hex="#BD00FF" aria-label="Neon Purple" aria-pressed="false"></button>
+        <button type="button" class="swatch" style="background:#FFD500" data-hex="#FFD500" aria-label="High-Vis Yellow" aria-pressed="false"></button>
+        <button type="button" class="swatch" style="background:#0055FF" data-hex="#0055FF" aria-label="Deep Link Blue" aria-pressed="false"></button>
+        <button type="button" class="swatch" style="background:#FF00FF" data-hex="#FF00FF" aria-label="Hot Magenta" aria-pressed="false"></button>
+        <button type="button" class="swatch" style="background:#B7FF00" data-hex="#B7FF00" aria-label="Toxic Lime" aria-pressed="false"></button>
+        <button type="button" class="swatch" style="background:#FF0099" data-hex="#FF0099" aria-label="Laser Pink" aria-pressed="false"></button>
       </div>
     </div>
-    <div class="shot-row" role="group" aria-label="Screenshots (placeholder)">
-      <figure class="placeholder-shot has-image">
-        <img src="assets/screenshots/fullscreen-playback.png" alt="ACK full-screen prompt playback in action">
-      </figure>
-      <figure class="placeholder-shot has-image">
-        <img src="assets/screenshots/audio-silent-mode-toggle.png" alt="ACK's SILENT MODE toggle for visual-only output">
-      </figure>
-      <figure class="placeholder-shot">
-        <span>Screenshot coming soon:<br>watch gesture cycle (ARM/LOCK/FIRE)</span>
-      </figure>
-    </div>
-  </section>
 
-  <!-- C. DECKS -->
-  <section id="decks" class="wrap">
-    <p class="eyebrow">Decks</p>
-    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="decks-panel">Organization with a focus on utility<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
-    <div id="decks-panel" class="accordion-panel" hidden>
-    <p>A <strong>deck</strong> offers one specific form or Organization
-      of communication profiles on screen at any time, to make working 
-      with the greater context system easier with continuous use. MATRIX 
-      decks support the use of <strong>profiles</strong> which gives 
-      decks additional flexibility. Configure a deck around work related
-      activities, along with a few profiles for more detailed work related
-      tasks</p>
-
-    <p>Decks aren't fixed. Tap the DECK label to create a new Quick Actions, Emergency,
-      Emoji, or GIF deck — pick a type, name it, choose a color, done. MANAGE handles
-      renaming, recoloring, or removing anything you've created.</p>
-
-    <div class="deck-entry">
-      <div class="deck-text">
-        <h3>MATRIX Deck</h3>
-        <p>This is the core ACK deck and experience. Build around rapid
-        statement creation and recall. Tap to initiate playback, edit a
-        prompt, use variables to speed up construction. Prompts can
-        be bound to one of the three poses used by the Wear OS experience,
-        with up to four commands issuable per pose. Additional context
-        poses can be added inside a MATRIX deck, allowing for hot-swapping
-        of all replies under a pose with a single tap.</p>
-      </div>
-      <button type="button" class="shot-thumb" data-shot-name="MATRIX Deck" data-shot-src="assets/screenshots/matrix-deck.png">
-        <span class="shot-thumb-sr">View MATRIX Deck screenshot, full size</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-      </button>
-    </div>
-
-    <div class="deck-entry">
-      <div class="deck-text">
-        <h3>Quick Actions Deck</h3>
-        <p>A more slimmed down experience that offers the user the ability
-        to bind up to four phrases to a pose under a single form of context.
-        Used for greetings, closures, quick references. Edit all three poses
-        then initiate playback using the watch or with a tap.</p>
-      </div>
-      <button type="button" class="shot-thumb" data-shot-name="Quick Actions Deck" data-shot-src="assets/screenshots/quick-actions-deck.png">
-        <span class="shot-thumb-sr">View Quick Actions Deck screenshot, full size</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-      </button>
-    </div>
-
-    <div class="deck-entry">
-      <div class="deck-text">
-        <h3>Emergency Deck</h3>
-        <p>Your high priority communications deck. If you need help, if you
-        have a response script for when things become extra difficult, if you
-        don't want your prompt to disapear due to a stray tap or clench, this
-        is where you access these prompts. Prompts issued from here can include
-        a beaconing tone that plays before a prompt is issued, increasing
-        the likelihood of reception by others.</p>
-        <p>Never worry about an Emergency deck response leaving your screen without your intention. All Emergency
-        deck prompts now remain on the screen until explicitly cleared with a long tap-and-hold interaction.</p>
-      </div>
-      <button type="button" class="shot-thumb" data-shot-name="Emergency Deck" data-shot-src="assets/screenshots/EmergencyDeck_preview.png">
-        <span class="shot-thumb-sr">View Emergency Deck screenshot, full size</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-      </button>
-    </div>
-
-    <div class="deck-entry">
-      <div class="deck-text">
-        <h3>Emoji Deck</h3>
-        <p>Emotional context can be difficult to deliver sometimes. This
-        deck covers this a bit. Pick from a suite of emoji from the built-in
-        library or use any emoji you have access to on your device. Group them
-        by category, add text to the displayed prompt, make the emoji prompt
-        more sticky.</p>
-      </div>
-      <button type="button" class="shot-thumb" data-shot-name="Emoji Deck" data-shot-src="assets/screenshots/emoji-deck.png">
-        <span class="shot-thumb-sr">View Emoji Deck screenshot, full size</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-      </button>
-    </div>
-
-    <div class="deck-entry">
-      <div class="deck-text">
-        <h3>GIF Deck</h3>
-        <p>Memes. A powerful communication medium online, now ready to use
-        in real space. Store and organize GIFs that you'd like to play at any
-        time here. Modifiers for GIF prompts enable better display of different
-        aspect ratio content. Add in text to your GIF prompt to reduce load on
-        the recipient.</p>
-      </div>
-      <button type="button" class="shot-thumb" data-shot-name="GIF Deck" data-shot-src="assets/gifs/gif-deck.gif">
-        <span class="shot-thumb-sr">View GIF Deck screenshot, full size</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-      </button>
-    </div>
-
-    <div class="deck-entry">
-      <div class="deck-text">
-        <h3>Manual Override</h3>
-        <p>A standard textbox input that can be used to store phrases and prompts
-        to a category of your choosing. These can be played with a quick tap. You
-        can also use this to issue an ephemeral reply, if the message isn't worth
-        saving.</p>
-      </div>
-      <button type="button" class="shot-thumb" data-shot-name="Manual Override" data-shot-src="assets/screenshots/manual-override.png">
-        <span class="shot-thumb-sr">View Manual Override screenshot, full size</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-      </button>
-    </div>
-
-    <div class="deck-entry">
-      <div class="deck-text">
-        <h3>Target Computer</h3>
-        <p>Eight "targets" for any prompt you issue using ACK. These can be
-        configured to prepend or append any simple prompt issued via a MATRIX or
-        Quick Actions deck. Add a quick name, place, identity, or callout with a
-        quick tap before issuing a prompt to see it added to your statement.</p>
-      </div>
-      <button type="button" class="shot-thumb" data-shot-name="Target Computer" data-shot-src="assets/screenshots/target-computer.png">
-        <span class="shot-thumb-sr">View Target Computer screenshot, full size</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-      </button>
-    </div>
-    </div>
-  </section>
-
-  <!-- D. VOICE / TEMPLATE -->
-  <section id="voice" class="wrap">
-    <p class="eyebrow">Your voice at a tap or twist</p>
-    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="voice-panel">Composable statements, tuned to context that matters to you.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
-    <div id="voice-panel" class="accordion-panel" hidden>
-    <p>ACK is built around rapid statement construction. Fire off a one-off
-    reply, build a social deck around a specific outing, grant yourself some
-    peace of mind with access to emergency statements when verbalizing isn't
-    possible.</p>
-
-    <div class="panel">
-      <h3>Audio Architect</h3>
-      <p>Audio Architect splits into two layers. Global Output settings shape ACK's
-      speech no matter which voice is active — Master Gain for volume, Global Cadence
-      for dynamic pacing (letting output speed up and slow down through a phrase
-      rather than reading at one flat rate), Force Speaker for routing, and Guide Vox
-      to toggle spoken tutorial guidance on or off.</p>
-      <p>Voice itself comes from either a locked factory preset for a ready-to-use,
-      consistent sound, or one of three fully editable custom slots. Each custom slot
-      has its own DSP chain: pick a base voice from any TTS engine installed on your
-      device, then shape it with pitch, a constant per-voice speed, an optional
-      robotic overlay, and a bitcrush texture — save it, and it becomes a reusable
-      voice of your own.</p>
-    </div>
-
-    <div class="panel">
-      <h3>Variables &amp; Root Overrides</h3>
-      <p>Any phrase can hold a variable — write <span class="kbd">{VAR}</span> in the
-      Live Save Editor and ACK prompts for that value, or tag it
-      <span class="kbd">{VAR:A}</span>, <span class="kbd">{VAR:B}</span>, or
-      <span class="kbd">{VAR:C}</span> to make it targeted instead of just local. A
-      targeted variable can be bridged: turn on that tag's Root Override for a
-      category, set one value, and it replaces that variable across every phrase in
-      the category — no editing each one by hand. Think of a routine work task: tag
-      the parts that actually change, like a name or a location, and one Root
-      Override update carries across the whole deck. Root Override is entirely
-      opt-in — every phrase already works on its own local value without it.</p>
-    </div>
-    </div>
-  </section>
-
-  <!-- F. TRAINING -->
-  <section id="training" class="wrap">
-    <p class="eyebrow">Training &amp; confidence-building</p>
-    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="training-panel">Practice the gestures before you need them.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
-    <div id="training-panel" class="accordion-panel" hidden>
-    <div class="grid">
-      <div class="panel">
-        <h3>Training Ground</h3>
-        <p>Free-form gesture practice with live telemetry and normal pacing
-        — nothing you do here actually plays back or sends output. A safe
-        space to get the arm/lock/modify/fire cycle into muscle memory.</p>
-      </div>
-      <div class="panel">
-        <h3>Deck Trainer</h3>
-        <p>Scored practice against your own real Matrix or Quick Actions
-        deck, so you're rehearsing the actual layout you'll use — not a
-        generic demo.</p>
+    <div class="a11y-row">
+      <span id="textSizeLabel">Content text size &mdash; saved, applies everywhere in the window</span>
+      <div class="opt-group" role="group" aria-labelledby="textSizeLabel">
+        <button type="button" class="opt-btn" data-size="0.875" aria-pressed="false">S</button>
+        <button type="button" class="opt-btn" data-size="1" aria-pressed="true">M</button>
+        <button type="button" class="opt-btn" data-size="1.125" aria-pressed="false">L</button>
+        <button type="button" class="opt-btn" data-size="1.25" aria-pressed="false">XL</button>
+        <button type="button" class="opt-btn" data-size="1.5" aria-pressed="false">2XL</button>
+        <button type="button" class="opt-btn" data-size="1.75" aria-pressed="false">3XL</button>
       </div>
     </div>
-    </div>
-  </section>
 
-  <!-- G. WEAR OS -->
-  <section id="watch" class="wrap">
-    <p class="eyebrow">The companion</p>
-    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="watch-panel">A Wear OS app that does the physical half.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
-    <div id="watch-panel" class="accordion-panel" hidden>
-    <p>The watch side is deliberately small: it's what senses the pose,
-    watches for a wake gesture (by default, a triple wrist twist so
-    commands can't fire by accident), and pushes that event to the phone.
-    The phone stays in charge of decks, profiles, and playback. A background
-    sensor service on the watch keeps this working without needing the
-    watch screen to stay open the entire time you're wearing it.</p>
-    <p>There's no separate pairing step — install ACK on your watch and phone, and as
-    long as the two are already paired through Wear OS, commands start firing the
-    moment the watch app is running. Under the hood it rides Google's Wearable Data
-    Layer for that phone ↔ watch link.</p>
-    <div class="shot-row" role="group" aria-label="Screenshots (placeholder)">
-      <figure class="placeholder-shot">
-        <span>Screenshot coming soon:<br>watch pairing / pose selector</span>
-      </figure>
-    </div>
-    </div>
-  </section>
-
-  <!-- G2. SAFETY & RECOVERY -->
-  <section id="safety" class="wrap">
-    <p class="eyebrow">Safety &amp; Recovery</p>
-    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="safety-panel">Fail-safes for stray taps, shaky hands, and messages that clear too soon.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
-    <div id="safety-panel" class="accordion-panel" hidden>
-    <p>Having the ability to recover from a misfire or accidental tap, interruptions, and moments where accuracy
-    takes a hit are what make an assistive tool truly useful. A graceful method to play back a previously issued
-    statement, a phone gesture to cancel playback of any prompt, and an additional way to cancel a prompt before
-    it even leaves your watch.</p>
-    <p>These features help build confidence knowing there are ways to stop a statement you didn't want to say
-    from being received, allowing playback from historical statements, and the ability to replay any visual
-    prompt indefinitely.</p>
-
-    <div class="deck-entry">
-      <div class="deck-text">
-        <h3>Shake Kill Switch</h3>
-        <p>You need multiple ways to stop a bad tap, gesture recognition, or statement from leaving your device
-        or completing. One of these methods is a 'Shake to cancel' service that cancels any queued prompt or
-        state traversal on the watch by shaking the phone. Configure sensitivity and test the configuration
-        under PROTOCOL from any deck.</p>
-      </div>
-      <button type="button" class="shot-thumb" data-shot-name="Shake Kill Switch" data-shot-src="assets/screenshots/settings-shake-kill-switch.gif">
-        <span class="shot-thumb-sr">View Shake Kill Switch screenshot, full size</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-      </button>
-    </div>
-
-    <div class="deck-entry">
-      <div class="deck-text">
-        <h3>Shaky-Hands Mode</h3>
-        <p>There are moments throughout a day that accuracy might take a hit. You might struggle to continuously
-        trigger the poses you've practiced, you shouldn't be denied access to your tool when this happens. A new
-        'Shaky hands' mode increases the time needed to navigate through the ACK Wear state machine, with
-        enhancements to addressing a set of noisy sensors due to a glitch in coordination. These options can be
-        configured from any deck under PROTOCOL.</p>
-        <p>Enable 'Shaky Hands' mode anywhere in ACK Wear with a tap-and-hold interaction. This does increase the
-        amount of time needed to confirm a pose command, you can always test this method out in the Training
-        Grounds.</p>
-      </div>
-      <button type="button" class="shot-thumb" data-shot-name="Shaky-Hands Mode" data-shot-src="assets/screenshots/watch-shaky-hands-indicator.jpg">
-        <span class="shot-thumb-sr">View Shaky-Hands Mode screenshot, full size</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-      </button>
-    </div>
-
-    <div class="panel" style="margin-top: 1.5rem;">
-      <h3>A way out before it fires</h3>
-      <p>Misfires happen. Sometimes a pose isn't recognized properly for a host of reasons. You can always halt
-      playback of these erroneous replies by tapping anywhere within ACK Wear to clear the current progression
-      through the state machine, preventing the error from leaking through.</p>
-    </div>
-
-    <div class="deck-entry" style="margin-top: 1.5rem;">
-      <div class="deck-text">
-        <h3>REPLAY: bring back what you missed</h3>
-        <p>Issuing a prompt doesn't always land on first play. Things can prevent others from reading or hearing
-        them, distractions happen, the situation at work can evolve at a rapid pace. You should have a little
-        security here when it comes to managing this type of interaction. For a prompt that you just issued a
-        'replay' button will remain on your screen for twenty seconds after a visual prompt is cleared. Any
-        prompt issued using 'replay' is sticky, they retain their presence on your screen until you tap to clear
-        them.</p>
-        <p>The Terminal (logs) screen can be used to reissue any previously played prompt from any deck as well.</p>
-      </div>
-      <div style="display:flex; flex-direction:column; gap:0.5rem; flex:0 0 auto;">
-        <button type="button" class="shot-thumb" data-shot-name="REPLAY chip" data-shot-src="assets/screenshots/replay-chip.png">
-          <span class="shot-thumb-sr">View REPLAY chip screenshot, full size</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-        </button>
-        <button type="button" class="shot-thumb" data-shot-name="Terminal log replay" data-shot-src="assets/screenshots/terminal-log-replay.png">
-          <span class="shot-thumb-sr">View Terminal log replay screenshot, full size</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-        </button>
+    <div class="a11y-row">
+      <span id="motionLabel">Motion &mdash; saved</span>
+      <div class="opt-group" role="group" aria-labelledby="motionLabel">
+        <button type="button" class="opt-btn" data-motion="normal" aria-pressed="true">Normal</button>
+        <button type="button" class="opt-btn" data-motion="reduced" aria-pressed="false">Reduced</button>
       </div>
     </div>
+
+    <div class="a11y-row">
+      <span id="contrastLabel">Contrast &mdash; saved</span>
+      <div class="opt-group" role="group" aria-labelledby="contrastLabel">
+        <button type="button" class="opt-btn" data-contrast="standard" aria-pressed="true">Standard</button>
+        <button type="button" class="opt-btn" data-contrast="high" aria-pressed="false">High</button>
+      </div>
     </div>
-  </section>
-
-  <!-- H. HELP / TRANSPARENCY -->
-  <section id="help" class="wrap">
-    <p class="eyebrow">Help, onboarding &amp; transparency</p>
-    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="help-panel">A tutorial system that only advances when you actually do the thing.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
-    <div id="help-panel" class="accordion-panel" hidden>
-    <p>ACK's in-app help isn't a slideshow. Each module only steps forward
-    when a real event fires from the real UI — a specific tap, a committed
-    text field, a cleared overlay, an actual watch gesture broadcast — so
-    finishing a walkthrough means you've genuinely done it once, not just
-    read about it.</p>
-
-    <div class="panel" style="margin-top: 1.5rem;">
-      <h3>Your Data, Your Rules</h3>
-      <p>Backup and restore live under Settings. Your decks, profiles, configurations,
-      personification, and variables are yours — the Data Port exists so you can move
-      them, keep copies, and never be locked into a single install.</p>
-    </div>
-
-    <div class="panel" style="margin-top: 1.5rem;">
-      <h3>Terminal</h3>
-      <p>Every system, output, and watch event gets a timestamped, color-coded line
-      in the Terminal — what ACK received, resolved, and sent. Any line that's an
-      actual spoken phrase gets a replay control, and replaying an Emergency message
-      keeps its safety behavior intact: forced speaker output, no auto-clear. The log
-      lives in memory only — closing and reopening ACK clears it.</p>
-    </div>
-    </div>
-  </section>
-
-  <!-- I. DEVELOPERS -->
-  <section id="dev" class="wrap">
-    <p class="eyebrow">Under the hood</p>
-    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="dev-panel">For anyone who wants to build it themselves.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
-    <div id="dev-panel" class="accordion-panel" hidden>
-    <p>ACK is Kotlin + Jetpack Compose, split into a phone module and a
-    Wear OS module. Maps are rendered fully offline with Mapsforge/vtm — no
-    tile server, no network dependency, matching the rest of the app's
-    local-first design.</p>
-
-    <div class="panel">
-      <h3>Build requirements</h3>
-      <ul>
-        <li>Android Studio</li>
-      </ul>
-      <p>No region map ships with the app or the build — Geo-Protocol works
-      by coordinate with no map data at all. Import your own
-      Mapsforge-compatible <code>.map</code> file from inside the app
-      (Geo-Protocol → Map Data → Import Map File) any time after install,
-      no rebuild required. A personal build can still drop a splice into
-      <code>app/src/main/assets/tactical_grid.map</code> as a build-time
-      default if you'd rather bundle one.</p>
-      <p>Full contribution workflow — branch naming, commit conventions, and
-      the day-to-day git flow — is documented in
-      <a href="https://github.com/ASPDesignLabs/ACK/blob/main/docs/GIT_WORKFLOW.md">docs/GIT_WORKFLOW.md</a>.</p>
-    </div>
-
-    <table class="compat">
-      <caption style="text-align:left; color: var(--text-dim); margin-bottom: 0.5rem;">Notable dependencies &amp; their licenses</caption>
-      <thead>
-        <tr><th>Component</th><th>License</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Mapsforge / vtm (offline maps)</td><td>LGPLv3, with a static-linking waiver</td></tr>
-        <tr><td>AndroidX / Jetpack Compose</td><td>Apache-2.0</td></tr>
-        <tr><td>ACK itself</td><td>GPLv3</td></tr>
-      </tbody>
-    </table>
-    </div>
-  </section>
-
-  <!-- J. STATUS -->
-  <section id="status" class="wrap">
-    <p class="eyebrow">Status &amp; disclaimers</p>
-    <h2><button type="button" class="accordion-toggle" aria-expanded="false" aria-controls="status-panel">Where this actually stands.<span class="chevron" aria-hidden="true">&#9662;</span></button></h2>
-    <div id="status-panel" class="accordion-panel" hidden>
-    <p>This section gets updated by hand against
-    <code>docs/HELP_TUTORIAL_GUIDE.md</code> — it's a snapshot, not a live
-    feed, so treat it as "true as of the last update," not real-time.</p>
-    <div class="panel">
-      <h3>Known gaps</h3>
-      <ul>
-        <li>No known issues at this time.</li>
-      </ul>
-    </div>
-    <p class="disclaimer">
-      Not a substitute for professional AAC evaluation or speech-language
-      therapy. Built by one person as a personal tool, shared as-is.
-    </p>
-    </div>
-  </section>
-
-</main>
-
-<footer class="wrap">
-  <p>
-    ACK is licensed under the
-    <a href="https://github.com/ASPDesignLabs/ACK/blob/main/LICENSE">GNU General Public License v3.0</a>.
-    Source, issues, and the full build plan for this page live in
-    <a href="https://github.com/ASPDesignLabs/ACK">the repository</a>.
-  </p>
-</footer>
-
-<dialog class="shot-dialog" id="shotDialog">
-  <button type="button" class="shot-dialog-close" data-shot-close aria-label="Close screenshot preview">&#10005;</button>
-  <div class="shot-stage" id="shotStage">
-    <div class="shot-stage-placeholder" id="shotPlaceholder" hidden><span id="shotPlaceholderText">Screenshot coming soon</span></div>
-    <img id="shotImage" class="shot-image" alt="" draggable="false" hidden>
   </div>
-  <div class="shot-controls">
-    <button type="button" data-shot-zoom-out aria-label="Zoom out">&minus;</button>
-    <button type="button" data-shot-zoom-reset aria-label="Reset zoom">1:1</button>
-    <button type="button" data-shot-zoom-in aria-label="Zoom in">+</button>
-  </div>
-  <p class="shot-hint">Double-click, pinch, or scroll to zoom &middot; drag to pan while zoomed &middot; Esc to close</p>
+</dialog>
+<dialog id="shotDialog" aria-label="Screenshot preview">
+  <button type="button" class="dialog-close" data-close aria-label="Close screenshot preview" style="float:right;">&#10005;</button>
+  <img id="shotImage" src="" alt="">
+  <p class="shot-caption" id="shotCaption"></p>
 </dialog>
 
 <script>
-(function () {
-  "use strict";
-  var dialog = document.getElementById('shotDialog');
-  if (!dialog || typeof dialog.showModal !== 'function') return;
-
-  var stage = document.getElementById('shotStage');
-  var img = document.getElementById('shotImage');
-  var placeholder = document.getElementById('shotPlaceholder');
-  var placeholderText = document.getElementById('shotPlaceholderText');
-  var lastTrigger = null;
-
-  var MIN_SCALE = 1, MAX_SCALE = 4, STEP = 2.5;
-  var scale = 1, tx = 0, ty = 0;
-  var dragging = false, dragStartX = 0, dragStartY = 0, startTx = 0, startTy = 0;
-  var pointers = {};
-  var pinchStartDist = 0, pinchStartScale = 1;
-
-  function applyTransform() {
-    img.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
-  }
-
-  function clampPan() {
-    var rect = stage.getBoundingClientRect();
-    var maxX = (rect.width * (scale - 1)) / 2 + rect.width * 0.15;
-    var maxY = (rect.height * (scale - 1)) / 2 + rect.height * 0.15;
-    tx = Math.max(-maxX, Math.min(maxX, tx));
-    ty = Math.max(-maxY, Math.min(maxY, ty));
-  }
-
-  function resetView() {
-    scale = 1; tx = 0; ty = 0;
-    applyTransform();
-    stage.classList.remove('dragging');
-  }
-
-  function setScale(next) {
-    if (img.hidden) return;
-    scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, next));
-    if (scale === MIN_SCALE) { tx = 0; ty = 0; }
-    clampPan();
-    applyTransform();
-  }
-
-  function openShot(btn) {
-    lastTrigger = btn;
-    var src = btn.getAttribute('data-shot-src') || '';
-    var name = btn.getAttribute('data-shot-name') || 'Screenshot';
-    dialog.setAttribute('aria-label', name + ' screenshot preview');
-    resetView();
-    if (src) {
-      img.src = src;
-      img.alt = name + ' screenshot';
-      img.hidden = false;
-      placeholder.hidden = true;
-    } else {
-      img.hidden = true;
-      placeholder.hidden = false;
-      placeholderText.textContent = name + ' screenshot coming soon';
-    }
-    dialog.showModal();
-  }
-
-  document.querySelectorAll('.shot-thumb').forEach(function (btn) {
-    var src = btn.getAttribute('data-shot-src');
-    if (src) {
-      // Center-cropped square preview: background-position:center does the
-      // crop-to-middle for free, no JS math needed.
-      btn.style.backgroundImage = 'url("' + src.replace(/"/g, '\\"') + '")';
-    }
-    btn.addEventListener('click', function () { openShot(btn); });
-  });
-
-  dialog.querySelectorAll('[data-shot-close]').forEach(function (el) {
-    el.addEventListener('click', function () { dialog.close(); });
-  });
-
-  // Clicking the backdrop lands a click on the dialog element itself (not a descendant)
-  dialog.addEventListener('click', function (e) {
-    if (e.target === dialog) dialog.close();
-  });
-
-  dialog.addEventListener('close', function () {
-    resetView();
-    if (lastTrigger) lastTrigger.focus();
-  });
-
-  document.querySelector('[data-shot-zoom-in]').addEventListener('click', function () { setScale(scale + STEP - 1.5); });
-  document.querySelector('[data-shot-zoom-out]').addEventListener('click', function () { setScale(scale - (STEP - 1.5)); });
-  document.querySelector('[data-shot-zoom-reset]').addEventListener('click', resetView);
-
-  dialog.addEventListener('dblclick', function () {
-    if (img.hidden) return;
-    setScale(scale > 1 ? 1 : STEP);
-  });
-
-  stage.addEventListener('wheel', function (e) {
-    if (img.hidden) return;
-    e.preventDefault();
-    setScale(scale + (e.deltaY > 0 ? -0.35 : 0.35));
-  }, { passive: false });
-
-  dialog.addEventListener('keydown', function (e) {
-    if (img.hidden || scale <= 1) return;
-    var step = 40;
-    if (e.key === 'ArrowLeft') { tx += step; clampPan(); applyTransform(); e.preventDefault(); }
-    else if (e.key === 'ArrowRight') { tx -= step; clampPan(); applyTransform(); e.preventDefault(); }
-    else if (e.key === 'ArrowUp') { ty += step; clampPan(); applyTransform(); e.preventDefault(); }
-    else if (e.key === 'ArrowDown') { ty -= step; clampPan(); applyTransform(); e.preventDefault(); }
-  });
-
-  stage.addEventListener('pointerdown', function (e) {
-    if (img.hidden) return;
-    stage.setPointerCapture(e.pointerId);
-    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
-    var ids = Object.keys(pointers);
-    if (ids.length === 1) {
-      dragging = true;
-      dragStartX = e.clientX; dragStartY = e.clientY;
-      startTx = tx; startTy = ty;
-      stage.classList.add('dragging');
-    } else if (ids.length === 2) {
-      dragging = false;
-      var pts = ids.map(function (id) { return pointers[id]; });
-      pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      pinchStartScale = scale;
-    }
-  });
-
-  stage.addEventListener('pointermove', function (e) {
-    if (!(e.pointerId in pointers)) return;
-    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
-    var ids = Object.keys(pointers);
-    if (ids.length === 2 && pinchStartDist > 0) {
-      var pts = ids.map(function (id) { return pointers[id]; });
-      var dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      setScale(pinchStartScale * (dist / pinchStartDist));
-    } else if (dragging && scale > 1) {
-      tx = startTx + (e.clientX - dragStartX);
-      ty = startTy + (e.clientY - dragStartY);
-      clampPan();
-      applyTransform();
-    }
-  });
-
-  function endPointer(e) {
-    delete pointers[e.pointerId];
-    if (Object.keys(pointers).length < 2) pinchStartDist = 0;
-    if (Object.keys(pointers).length === 0) {
-      dragging = false;
-      stage.classList.remove('dragging');
-    }
-  }
-  stage.addEventListener('pointerup', endPointer);
-  stage.addEventListener('pointercancel', endPointer);
-  stage.addEventListener('pointerleave', function (e) { if (dragging) endPointer(e); });
-})();
-</script>
-
-<script>
-(function () {
+(function(){
   "use strict";
 
-  // ---- Section accordions ----
-  function setExpanded(btn, expanded) {
-    btn.setAttribute('aria-expanded', String(expanded));
-    var panel = document.getElementById(btn.getAttribute('aria-controls'));
-    if (panel) panel.hidden = !expanded;
-  }
-
-  document.querySelectorAll('.accordion-toggle').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      setExpanded(btn, btn.getAttribute('aria-expanded') !== 'true');
-    });
-  });
-
-  function expandSectionById(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    var btn = el.querySelector('.accordion-toggle');
-    if (btn && btn.getAttribute('aria-expanded') !== 'true') setExpanded(btn, true);
-  }
-
-  // Direct link / bookmark / back-forward to a collapsed section should land already open.
-  // Collapsing the panel never moves the heading above it, so no manual scroll correction
-  // is needed here -- the browser's native anchor scroll already lands in the right place.
-  function expandFromHash() {
-    if (location.hash) expandSectionById(location.hash.slice(1));
-  }
-  expandFromHash();
-  window.addEventListener('hashchange', expandFromHash);
-
-  // ---- Grouped nav pills ----
-  var navPills = document.querySelectorAll('details.nav-pill');
-
-  navPills.forEach(function (d) {
-    d.addEventListener('toggle', function () {
-      if (d.open) navPills.forEach(function (other) { if (other !== d) other.open = false; });
-    });
-  });
-
-  document.addEventListener('click', function (e) {
-    navPills.forEach(function (d) {
-      if (d.open && !d.contains(e.target)) d.open = false;
-    });
-  });
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key !== 'Escape') return;
-    navPills.forEach(function (d) {
-      if (d.open) {
-        d.open = false;
-        var s = d.querySelector('summary');
-        if (s) s.focus();
+  var CTX = {
+    comms: {
+      label: "DECK:",
+      options: [
+        ["how","How It Works"],
+        ["decksoverview","Decks Overview"]
+      ],
+      profiles: {
+        how: {
+          label: "PROFILE:",
+          options: [
+            ["tap","Tap Controls"],
+            ["gesture","Gesture Playback"],
+            ["fullscreen","Full-Screen Output"]
+          ]
+        },
+        decksoverview: {
+          label: "PROFILE:",
+          options: [
+            ["matrix","Matrix Deck"],
+            ["quickactions","Quick Actions Deck"],
+            ["emergency","Emergency Deck"],
+            ["emoji","Emoji Deck"],
+            ["gif","GIF Deck"],
+            ["manual","Manual Override"],
+            ["target","Target Computer"],
+            ["audio","Audio Architect"],
+            ["variables","Variables & Root Overrides"]
+          ]
+        }
       }
-    });
-  });
+    },
+    fieldops: {
+      label: "MODULE:",
+      options: [
+        ["training","Training"],
+        ["wearos","Wear OS"],
+        ["safety","Safety & Recovery"]
+      ],
+      profiles: {
+        training: {
+          label: "PROFILE:",
+          options: [
+            ["ground","Training Ground"],
+            ["trainer","Deck Trainer"]
+          ]
+        },
+        wearos: {
+          label: "PROFILE:",
+          options: [
+            ["pairing","Pairing & Sync"]
+          ]
+        },
+        safety: {
+          label: "PROFILE:",
+          options: [
+            ["shake","Shake Kill Switch"],
+            ["shaky","Shaky-Hands Mode"],
+            ["wayout","A Way Out Before It Fires"],
+            ["replay","REPLAY"]
+          ]
+        }
+      }
+    },
+    logs: {
+      label: "LOG:",
+      options: [
+        ["help","Help & Tutorials"],
+        ["dev","Under the Hood"],
+        ["status","Status"]
+      ]
+    }
+  };
 
-  // Picking a link expands its target (if collapsed) and tidies the open pill away;
-  // the browser's own anchor navigation still does the actual scrolling.
-  document.querySelectorAll('.nav-dropdown a').forEach(function (a) {
-    a.addEventListener('click', function () {
-      var id = (a.getAttribute('href') || '').replace(/^#/, '');
-      if (id) expandSectionById(id);
-      var pill = a.closest('details.nav-pill');
-      if (pill) pill.open = false;
-    });
-  });
-})();
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab-btn'));
+  var ctxRow = document.getElementById('ctxRow');
+  var ctxLabel = document.getElementById('ctxLabel');
+  var ctxSelect = document.getElementById('ctxSelect');
+  var profileRow = document.getElementById('profileRow');
+  var profileLabel = document.getElementById('profileLabel');
+  var profileSelect = document.getElementById('profileSelect');
 
-// ---- Latest release info: live-fetched so it never needs a manual edit
-// to stay current. The static link already in the markup is a fully
-// working fallback if this fetch is blocked, offline, or rate-limited --
-// on any failure this just leaves that fallback exactly as it is. ----
-(function () {
-  var info = document.getElementById('releaseInfo');
-  if (!info || typeof fetch !== 'function') return;
+  function tabKey(panelId){ return panelId.replace('panel-',''); }
 
-  function formatSize(bytes) {
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  function showCtxPane(panelId, ctxKey){
+    var panel = document.getElementById(panelId);
+    var panes = panel.querySelectorAll('.ctx-pane');
+    panes.forEach(function(p){ p.hidden = (p.getAttribute('data-ctx') !== ctxKey); });
   }
-  function formatDate(iso) {
-    try {
-      return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-    } catch (e) { return iso; }
-  }
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
+
+  function showProfilePane(panelId, ctxKey, profileKey){
+    var panel = document.getElementById(panelId);
+    var ctxPane = panel.querySelector('.ctx-pane[data-ctx="' + ctxKey + '"]');
+    if(!ctxPane) return;
+    var panes = ctxPane.querySelectorAll('.profile-pane');
+    panes.forEach(function(p){ p.hidden = (p.getAttribute('data-profile') !== profileKey); });
   }
 
-  fetch('https://api.github.com/repos/ASPDesignLabs/ACK/releases?per_page=1')
-    .then(function (res) { if (!res.ok) throw new Error('bad status'); return res.json(); })
-    .then(function (releases) {
-      if (!releases || !releases.length) return;
-      var r = releases[0];
-      var isPre = r.prerelease || /\b(alpha|beta|rc|preview|dev)\b/i.test(r.tag_name + ' ' + (r.name || ''));
-      var badge = isPre ? '<span class="release-badge">Beta</span>' : '';
-
-      var assetsHtml = (r.assets || []).map(function (a) {
-        return '<div class="release-asset">' +
-          '<a href="' + a.browser_download_url + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(a.name) + '</a>' +
-          '<span class="size">' + formatSize(a.size) + '</span>' +
-          '</div>';
-      }).join('');
-
-      info.innerHTML =
-        '<p class="release-tag-row">' + escapeHtml(r.tag_name) + ' ' + badge + '</p>' +
-        '<p class="release-date">Published ' + formatDate(r.published_at) + '</p>' +
-        assetsHtml +
-        '<a class="release-all-link" href="https://github.com/ASPDesignLabs/ACK/releases" target="_blank" rel="noopener noreferrer">View all releases on GitHub &#8599;</a>';
-
-      // These links were inserted after the page-wide nav-dropdown click
-      // wiring ran, so they need their own close-the-pill handler.
-      info.querySelectorAll('a').forEach(function (a) {
-        a.addEventListener('click', function () {
-          var pill = a.closest('details.nav-pill');
-          if (pill) pill.open = false;
-        });
+  function applyDeckSelection(panelId, conf, deckKey){
+    showCtxPane(panelId, deckKey);
+    var profileConf = conf.profiles && conf.profiles[deckKey];
+    if(profileConf){
+      profileRow.hidden = false;
+      profileLabel.textContent = profileConf.label;
+      profileSelect.innerHTML = '';
+      profileConf.options.forEach(function(opt){
+        var o = document.createElement('option');
+        o.value = opt[0]; o.textContent = opt[1];
+        profileSelect.appendChild(o);
       });
-    })
-    .catch(function () { /* leave the static fallback link as-is */ });
+      profileSelect.value = profileConf.options[0][0];
+      showProfilePane(panelId, deckKey, profileConf.options[0][0]);
+    } else {
+      profileRow.hidden = true;
+    }
+  }
+
+  function selectTab(id){
+    tabs.forEach(function(btn){
+      var selected = btn.id === id;
+      btn.setAttribute('aria-selected', String(selected));
+      btn.tabIndex = selected ? 0 : -1;
+      var panel = document.getElementById(btn.getAttribute('data-panel'));
+      if(panel) panel.hidden = !selected;
+    });
+
+    var activeBtn = document.getElementById(id);
+    var panelId = activeBtn.getAttribute('data-panel');
+    var key = tabKey(panelId);
+    var conf = CTX[key];
+
+    if(conf){
+      ctxRow.hidden = false;
+      ctxLabel.textContent = conf.label;
+      ctxSelect.innerHTML = '';
+      conf.options.forEach(function(opt){
+        var o = document.createElement('option');
+        o.value = opt[0]; o.textContent = opt[1];
+        ctxSelect.appendChild(o);
+      });
+      ctxSelect.value = conf.options[0][0];
+      applyDeckSelection(panelId, conf, conf.options[0][0]);
+    } else {
+      ctxRow.hidden = true;
+      profileRow.hidden = true;
+    }
+
+    if(history.replaceState) history.replaceState(null, '', '#' + key);
+  }
+
+  ctxSelect.addEventListener('change', function(){
+    var activeBtn = tabs.filter(function(b){ return b.getAttribute('aria-selected') === 'true'; })[0];
+    var panelId = activeBtn.getAttribute('data-panel');
+    var conf = CTX[tabKey(panelId)];
+    applyDeckSelection(panelId, conf, ctxSelect.value);
+  });
+
+  profileSelect.addEventListener('change', function(){
+    var activeBtn = tabs.filter(function(b){ return b.getAttribute('aria-selected') === 'true'; })[0];
+    var panelId = activeBtn.getAttribute('data-panel');
+    showProfilePane(panelId, ctxSelect.value, profileSelect.value);
+  });
+
+  tabs.forEach(function(btn, idx){
+    btn.addEventListener('click', function(){ selectTab(btn.id); });
+    btn.addEventListener('keydown', function(e){
+      var dir = 0;
+      if(e.key === 'ArrowRight' || e.key === 'ArrowDown') dir = 1;
+      else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp') dir = -1;
+      else if(e.key === 'Home'){ tabs[0].focus(); selectTab(tabs[0].id); e.preventDefault(); return; }
+      else if(e.key === 'End'){ tabs[tabs.length-1].focus(); selectTab(tabs[tabs.length-1].id); e.preventDefault(); return; }
+      else return;
+      e.preventDefault();
+      var next = (idx + dir + tabs.length) % tabs.length;
+      tabs[next].focus();
+      selectTab(tabs[next].id);
+    });
+  });
+
+  var initial = (location.hash || '').replace('#','');
+  var initialTab = tabs.filter(function(b){ return tabKey(b.getAttribute('data-panel')) === initial; })[0];
+  selectTab(initialTab ? initialTab.id : 'tab-home');
+
+  var swatches = Array.prototype.slice.call(document.querySelectorAll('.swatch'));
+  swatches.forEach(function(sw){
+    sw.addEventListener('click', function(){
+      document.documentElement.style.setProperty('--accent', sw.getAttribute('data-hex'));
+      swatches.forEach(function(o){ o.setAttribute('aria-pressed', String(o === sw)); });
+    });
+  });
+
+  function wireDialog(openBtnId, dialogId){
+    var openBtn = document.getElementById(openBtnId);
+    var dlg = document.getElementById(dialogId);
+    var opener = null;
+    openBtn.addEventListener('click', function(){
+      opener = openBtn;
+      dlg.showModal();
+    });
+    dlg.querySelectorAll('[data-close]').forEach(function(btn){
+      btn.addEventListener('click', function(){ dlg.close(); });
+    });
+    dlg.addEventListener('click', function(e){
+      var rect = dlg.getBoundingClientRect();
+      var inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+      if(!inside) dlg.close();
+    });
+    dlg.addEventListener('close', function(){ if(opener) opener.focus(); });
+  }
+  wireDialog('settingsOpen','settingsDialog');
+
+  var shotDialog = document.getElementById('shotDialog');
+  var shotImage = document.getElementById('shotImage');
+  var shotCaption = document.getElementById('shotCaption');
+  var shotOpener = null;
+  document.querySelectorAll('.shot-thumb').forEach(function(btn){
+    var src = btn.getAttribute('data-shot-src');
+    if(src){ btn.style.backgroundImage = "url('" + src + "')"; }
+    btn.addEventListener('click', function(){
+      var name = btn.getAttribute('data-shot-name') || 'Screenshot';
+      if(!src){
+        shotImage.hidden = true;
+        shotCaption.textContent = name + ' — screenshot coming soon.';
+      } else {
+        shotImage.hidden = false;
+        shotImage.src = src;
+        shotImage.alt = name + ' screenshot';
+        shotCaption.textContent = name;
+      }
+      shotOpener = btn;
+      shotDialog.showModal();
+    });
+  });
+  shotDialog.querySelectorAll('[data-close]').forEach(function(btn){
+    btn.addEventListener('click', function(){ shotDialog.close(); });
+  });
+  shotDialog.addEventListener('close', function(){ if(shotOpener) shotOpener.focus(); });
+
+  // All three controls below are plain buttons with aria-pressed --
+  // a real, unambiguous click target, unlike a custom toggle-switch where a
+  // decorative track/thumb layered on top of a hidden checkbox can silently
+  // eat the click before it ever reaches the input.
+  function readStored(key, fallback){
+    try{ var v = localStorage.getItem(key); return v === null ? fallback : v; }catch(e){ return fallback; }
+  }
+  function writeStored(key, value){
+    try{ localStorage.setItem(key, value); }catch(e){}
+  }
+
+  var contentEl = document.getElementById('main');
+  var sizeBtns = Array.prototype.slice.call(document.querySelectorAll('.opt-btn[data-size]'));
+  function applyTextScale(scale, persist){
+    contentEl.style.fontSize = scale + 'em';
+    sizeBtns.forEach(function(b){
+      b.setAttribute('aria-pressed', String(parseFloat(b.getAttribute('data-size')) === scale));
+    });
+    if(persist) writeStored('ackConsoleTextScale', String(scale));
+  }
+  sizeBtns.forEach(function(b){
+    b.addEventListener('click', function(){ applyTextScale(parseFloat(b.getAttribute('data-size')), true); });
+  });
+  applyTextScale(parseFloat(readStored('ackConsoleTextScale', '1')) || 1, false);
+
+  var motionBtns = Array.prototype.slice.call(document.querySelectorAll('.opt-btn[data-motion]'));
+  function applyMotion(mode, persist){
+    document.documentElement.classList.toggle('force-reduced-motion', mode === 'reduced');
+    motionBtns.forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-motion') === mode)); });
+    if(persist) writeStored('ackConsoleMotion', mode);
+  }
+  motionBtns.forEach(function(b){
+    b.addEventListener('click', function(){ applyMotion(b.getAttribute('data-motion'), true); });
+  });
+  applyMotion(readStored('ackConsoleMotion', 'normal'), false);
+
+  var contrastBtns = Array.prototype.slice.call(document.querySelectorAll('.opt-btn[data-contrast]'));
+  function applyContrast(mode, persist){
+    document.documentElement.classList.toggle('high-contrast', mode === 'high');
+    contrastBtns.forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-contrast') === mode)); });
+    if(persist) writeStored('ackConsoleContrast', mode);
+  }
+  contrastBtns.forEach(function(b){
+    b.addEventListener('click', function(){ applyContrast(b.getAttribute('data-contrast'), true); });
+  });
+  applyContrast(readStored('ackConsoleContrast', 'standard'), false);
 })();
 </script>
-
 </body>
 </html>
