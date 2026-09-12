@@ -52,9 +52,14 @@
     --cyan-bright:#00f3ff;
     --error:#ff5470;
     --accent:#00f3ff;
+    --cc-b: 2px; /* border width for cut-corner elements */
+    --cc-diag: calc(var(--cc-b) + 1px); /* diagonal connector is 1px thicker than the straight border -- a
+      rotated stroke anti-aliases softer than an axis-aligned one of the same nominal width, so it needs the
+      extra weight to read as an equally solid line */
     --font-mono: ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Consolas,monospace;
     --font-body: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --nav-h: 4.5rem;
+    --var-accent: #ff9900; /* Data Orange -- the app's own fixed color for variable-related UI, independent of the live accent pick */
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
@@ -85,8 +90,8 @@
     --border:#8a8a8a; --graphite:#000000; --graphite-2:#0a0a0a;
     --cyan:#7cf2f8;
   }
-  html.high-contrast .panel, html.high-contrast .window, html.high-contrast .hud,
-  html.high-contrast dialog, html.high-contrast .tabbar, html.high-contrast .shot-thumb,
+  html.high-contrast{ --cc-b: 3px; }
+  html.high-contrast .tabbar, html.high-contrast dialog,
   html.high-contrast table.compat th, html.high-contrast table.compat td{ border-width:3px; }
   img{max-width:100%; display:block;}
   a{color:var(--cyan);}
@@ -107,12 +112,19 @@
   }
 
   /* ---------- HUD header: full-width bar, pinned by the flex layout (never scrolls) ---------- */
+  /* Cut-corner elements throughout this file use a plain border + clip-path:
+     the border strokes every straight edge, but clip-path never draws a
+     stroke of its own along the diagonal it chamfers off, leaving each cut an
+     open notch. A short bar the same thickness/color as the border, rotated
+     onto that diagonal's exact centerline (see the shared ::before/::after
+     rule further down), closes just the notch -- nothing else about the
+     border changes. */
   .hud{
     flex:none;
-    border-top:2px solid var(--accent);
-    border-bottom:2px solid var(--accent);
-    clip-path: polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);
+    border-top:var(--cc-b) solid var(--accent);
+    border-bottom:var(--cc-b) solid var(--accent);
     background:var(--graphite);
+    clip-path: polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);
   }
   .hud-inner{ padding:1rem 1.2rem; }
   .hud-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
@@ -126,30 +138,77 @@
   .hud-actions{ display:flex; gap:0.5rem; flex-wrap:wrap; }
   .hud-btn{
     font-family:var(--font-mono); font-size:0.68rem; font-weight:700; letter-spacing:0.08em;
-    text-transform:uppercase; color:var(--accent); background:transparent; border:2px solid var(--accent);
-    padding:0.5rem 0.8rem; cursor:pointer; clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+    text-transform:uppercase; color:var(--accent); background:transparent;
+    border:var(--cc-b) solid var(--accent); position:relative;
+    display:inline-flex; align-items:center; gap:0.35rem;
+    padding:0.5rem 0.8rem; cursor:pointer;
+    clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+    --cut:6px; --cc-color:var(--accent);
   }
-  .hud-btn:hover{ color:var(--cyan-bright); border-color:var(--cyan-bright); }
+  .hud-btn svg{ width:14px; height:14px; flex:none; }
+  .hud-btn:hover{ color:var(--cyan-bright); border-color:var(--cyan-bright); --cc-color:var(--cyan-bright); }
 
   .ctx-row{ margin-top:0.9rem; display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; }
   .ctx-row[hidden]{ display:none; }
   .ctx-label{ font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; }
-  .ctx-select{
-    font-family:var(--font-mono); font-size:0.78rem; font-weight:700; letter-spacing:0.03em;
-    color:var(--accent); background:var(--void); border:2px solid var(--accent);
-    padding:0.4rem 1.9rem 0.4rem 0.7rem; appearance:none; -webkit-appearance:none; cursor:pointer;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><polygon points='0,0 10,0 5,6' fill='%2300f3ff'/></svg>");
-    background-repeat:no-repeat; background-position:right 0.7rem center;
-    max-width: 100%;
-  }
 
-  /* ---------- content window: the one element that scrolls (see .shell note above) ---------- */
+  /* Custom DECK:/PROFILE:/MODULE:/LOG: dropdown -- a <details>/<summary> disclosure
+     (native keyboard handling, no hand-rolled ARIA needed) styled and driven as a
+     proper picker, matching the app's own dropdown rather than an OS-native <select>. */
+  .ctx-dropdown{ position:relative; max-width:100%; }
+  .ctx-dropdown summary{
+    list-style:none; cursor:pointer; position:relative;
+    display:flex; align-items:center; gap:0.6rem;
+    background:var(--void); border:var(--cc-b) solid var(--accent);
+    padding:0.4rem 0.7rem;
+    font-family:var(--font-mono); font-size:0.78rem; font-weight:700; letter-spacing:0.03em; color:var(--accent);
+    clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+    --cut:6px; --cc-color:var(--accent);
+  }
+  .ctx-dropdown summary::-webkit-details-marker{ display:none; }
+  .ctx-dropdown summary::marker{ content:""; }
+  .ctx-dropdown[open] summary{ color:var(--cyan-bright); border-color:var(--cyan-bright); --cc-color:var(--cyan-bright); }
+  .ctx-current{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ctx-caret{ flex:none; transition:transform 0.15s ease; }
+  .ctx-dropdown[open] .ctx-caret{ transform:rotate(180deg); }
+  /* position:fixed (not absolute) deliberately: .hud carries a clip-path, and
+     clip-path clips an element's ENTIRE subtree to its shape -- same as
+     overflow:hidden would -- so an absolutely-positioned menu nested inside it
+     gets cut off the moment it extends past .hud's own box. Fixed positioning
+     escapes that (its containing block is the viewport, not .hud), so JS sets
+     left/top from the summary's own rect on open instead of relying on CSS. */
+  .ctx-dropdown-menu{
+    position:fixed; min-width:220px; max-width:min(90vw,420px);
+    z-index:30;
+    background:var(--graphite); border:var(--cc-b) solid var(--accent);
+    padding:0.35rem; max-height:60vh; overflow-y:auto;
+    clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    --cut:8px; --cc-color:var(--accent);
+  }
+  .ctx-option{
+    display:block; width:100%; text-align:left; background:transparent; border:none; cursor:pointer;
+    font-family:var(--font-mono); font-size:0.82rem; color:var(--text); padding:0.55rem 0.6rem;
+  }
+  .ctx-option:hover{ background:color-mix(in srgb, var(--accent) 16%, transparent); }
+  .ctx-option[aria-selected="true"]{ color:var(--accent); font-weight:700; }
+  .ctx-option:focus-visible{ outline:2px solid var(--cyan-bright); outline-offset:-2px; }
+
+  /* ---------- content window ---------- */
+  /* .window is the fixed frame (sized by flex, never itself scrolls) so its
+     border/cut-corners stay put on screen; .window-fill is absolutely inset
+     within it and is the actual scrolling element, carrying the real
+     padding. Border color follows the live accent, matching the app's own
+     accent-tinted panel. */
   .window{
-    flex:1 1 auto; min-height:0; overflow-y:auto;
-    overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch;
-    border:2px solid var(--border);
-    background:var(--graphite);
+    position:relative;
+    flex:1 1 auto; min-height:0;
+    background:var(--graphite); border:var(--cc-b) solid var(--accent);
     clip-path: polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);
+    --cut:20px; --cc-color:var(--accent);
+  }
+  .window-fill{
+    position:absolute; inset:var(--cc-b);
+    overflow-y:auto; overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch;
     padding:1.4rem 1.3rem 1.8rem;
   }
   .tabpanel[hidden]{ display:none; }
@@ -170,8 +229,11 @@
 
   .grid{ display:grid; grid-template-columns:1fr; gap:1rem; margin-top:1rem; }
   .panel{
-    background:var(--graphite-2); border:2px solid var(--border); padding:1rem;
+    position:relative;
+    background:var(--graphite-2); border:var(--cc-b) solid var(--border);
+    padding:1rem;
     clip-path: polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+    --cut:10px; --cc-color:var(--border);
   }
   .panel p:last-child{ margin-bottom:0; }
 
@@ -180,11 +242,14 @@
   .deck-entry{ display:flex; gap:1rem; align-items:flex-start; margin-top:1rem; flex-wrap:wrap; }
   .deck-entry .deck-text{ flex:1 1 320px; min-width:0; }
   .shot-thumb{
-    flex:0 0 92px; width:92px; height:92px; border:2px solid var(--accent); background:var(--void);
-    background-size:cover; background-position:center; cursor:pointer; padding:0; position:relative;
+    flex:0 0 92px; width:92px; height:92px;
+    background-color:var(--void); background-size:cover; background-position:center;
+    border:var(--cc-b) solid var(--accent);
+    cursor:pointer; padding:0; position:relative;
     clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    --cut:8px; --cc-color:var(--accent);
   }
-  .shot-thumb svg{ position:absolute; right:4px; bottom:4px; width:16px; height:16px; stroke:var(--accent); }
+  .shot-thumb svg{ position:absolute; right:4px; bottom:4px; width:16px; height:16px; stroke:var(--accent); z-index:1; }
   .shot-thumb-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
   .shot-thumb.placeholder{ display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.55em; color:var(--text-faint); text-align:center; padding:0.3rem; }
 
@@ -199,15 +264,22 @@
   .tabbar{ flex:none; background:var(--void); border-top:2px solid var(--border); }
   .tabbar-inner{ display:flex; gap:0.5rem; max-width:1240px; margin:0 auto; width:100%; padding:0.55rem 0.7rem; }
   .tab-btn{
-    flex:1 1 0; height:44px; border:2px solid var(--accent); background:transparent; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; padding:0;
+    flex:1 1 0; height:56px; min-width:0; background:var(--void); cursor:pointer;
+    border:var(--cc-b) solid var(--accent); position:relative;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.15rem; padding:0;
     clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+    --cut:6px; --cc-color:var(--accent);
   }
-  .tab-btn svg{ width:22px; height:22px; stroke:var(--accent); fill:none; stroke-width:1.6; }
-  .tab-btn[aria-selected="true"]{ background:color-mix(in srgb, var(--accent) 18%, transparent); }
+  .tab-btn svg{ width:20px; height:20px; stroke:var(--accent); fill:none; stroke-width:1.6; flex:none; }
+  .tab-btn[aria-selected="true"]{ background:color-mix(in srgb, var(--accent) 18%, var(--void)); }
   .tab-btn[aria-selected="true"] svg{ stroke:#fff; }
   .tab-btn:disabled{ opacity:0.4; cursor:not-allowed; }
-  .tab-label{ display:none; }
+  .tab-label{
+    display:block; font-family:var(--font-mono); font-size:0.52rem; letter-spacing:0.02em;
+    text-transform:uppercase; line-height:1; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    color:var(--accent);
+  }
+  .tab-btn[aria-selected="true"] .tab-label{ color:#fff; }
 
   /* ---------- design notes / a11y dialogs ---------- */
   dialog{
@@ -220,6 +292,10 @@
   .dialog-head h2{ margin:0; }
   .dialog-close{ background:transparent; border:2px solid var(--border); color:var(--text-dim); width:34px; height:34px; cursor:pointer; font-family:var(--font-mono); flex:0 0 auto; }
   .dialog-close:hover{ color:#fff; border-color:var(--accent); }
+  .note-item{ border-top:2px solid var(--border); padding:0.9rem 0; }
+  .note-item:first-of-type{ border-top:none; }
+  .note-item h3{ font-size:0.88rem; }
+  .note-rec{ font-size:0.8rem; color:var(--cyan); font-family:var(--font-mono); margin-top:0.4rem; }
   .a11y-row{ display:flex; flex-direction:column; align-items:flex-start; gap:0.6rem; padding:0.9rem 0; border-top:2px solid var(--border); }
   .a11y-row:first-of-type{ border-top:none; }
   .a11y-row label, .a11y-row > span:first-child{ font-size:0.85rem; color:var(--text-dim); }
@@ -234,10 +310,174 @@
 
   .accent-picker{ display:flex; gap:0.4rem; flex-wrap:wrap; }
   .swatch{
-    width:26px; height:26px; border:2px solid transparent; cursor:pointer; padding:0;
+    width:26px; height:26px; cursor:pointer; padding:0; position:relative;
+    border:var(--cc-b) solid transparent;
     clip-path: polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
+    --cut:4px; --cc-color:transparent;
   }
-  .swatch[aria-pressed="true"]{ border-color:#fff; }
+  .swatch[aria-pressed="true"]{ border-color:#fff; --cc-color:#fff; }
+
+  /* Diagonal connector for every cut-corner element above: a bar the same
+     thickness/color as that element's own border, rotated onto the exact
+     centerline of the 45° chamfer clip-path cuts but never strokes. Only
+     the two cut corners are touched -- every straight edge keeps its plain
+     border, untouched. */
+  .hud-btn::before, .hud-btn::after,
+  .ctx-dropdown summary::before, .ctx-dropdown summary::after,
+  .ctx-dropdown-menu::before, .ctx-dropdown-menu::after,
+  .window::before, .window::after,
+  .panel::before, .panel::after,
+  .shot-thumb::before, .shot-thumb::after,
+  .tab-btn::before, .tab-btn::after,
+  .swatch::before, .swatch::after{
+    content:""; position:absolute; height:var(--cc-diag);
+    width:calc(var(--cut) * 1.4142136);
+    background:var(--cc-color);
+    transform:rotate(-45deg); transform-origin:left center;
+    pointer-events:none;
+  }
+  /* The containing block for these absolutely-positioned pseudo-elements is
+     their parent's PADDING box, not its border box -- inset from the corner
+     coordinates above (which match the clip-path polygon, in border-box
+     terms) by exactly the border width on every side. Left uncorrected, the
+     connector lands a full border-width off from the actual cut, floating
+     free of the shape instead of closing it. */
+  .hud-btn::before, .ctx-dropdown summary::before, .ctx-dropdown-menu::before,
+  .window::before, .panel::before, .shot-thumb::before, .tab-btn::before, .swatch::before{
+    left:calc(-1 * var(--cc-b)); top:calc(var(--cut) - var(--cc-b) - (var(--cc-diag) / 2));
+  }
+  .hud-btn::after, .ctx-dropdown summary::after, .ctx-dropdown-menu::after,
+  .window::after, .panel::after, .shot-thumb::after, .tab-btn::after, .swatch::after{
+    left:calc(100% + var(--cc-b) - var(--cut)); top:calc(100% + var(--cc-b) - (var(--cc-diag) / 2));
+  }
+
+  /* ---------- Matrix Deck Simulator ---------- */
+  .ctx-option:disabled{ opacity:0.4; cursor:not-allowed; }
+  .ctx-option:disabled:hover{ background:transparent; }
+
+  .mtx-intro-note{
+    border:2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background:color-mix(in srgb, var(--accent) 6%, transparent);
+    padding:0.8rem 1rem; font-size:0.85em; color:var(--text-dim); max-width:70ch; margin-top:1rem;
+  }
+
+  .mtx-pose{ margin-top:1.8rem; }
+  .mtx-pose-head{ display:flex; align-items:center; gap:0.5rem; }
+  .mtx-pose-dot{ width:10px; height:10px; flex:none; background:var(--text-faint); }
+  .mtx-pose-dot.is-live{ background:var(--accent); }
+  .mtx-pose-name{ font-family:var(--font-mono); font-weight:700; letter-spacing:0.12em; font-size:0.85em; color:var(--text-faint); }
+  .mtx-pose-name.is-live{ color:var(--accent); }
+
+  .mtx-root{
+    margin-top:0.7rem;
+    border:2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background:color-mix(in srgb, var(--accent) 4%, transparent);
+    padding:0.7rem;
+  }
+  .mtx-root-head{
+    display:flex; align-items:center; justify-content:space-between; gap:0.6rem;
+    background:none; border:none; width:100%; text-align:left; cursor:pointer; padding:0; font:inherit;
+  }
+  .mtx-root-title{ font-family:var(--font-mono); font-size:0.72em; font-weight:700; letter-spacing:0.08em; color:var(--accent); }
+  .mtx-root-toggle{ font-family:var(--font-mono); font-size:0.68em; font-weight:700; color:var(--accent); }
+  .mtx-root-hint{ font-size:0.72em; color:var(--text-faint); font-family:var(--font-mono); margin:0.55rem 0 0; }
+  .mtx-root-body[hidden]{ display:none; }
+  .mtx-root-row{
+    display:flex; align-items:center; gap:0.6rem;
+    border:2px solid var(--border); padding:0.5rem 0.6rem; margin-top:0.6rem;
+  }
+  .mtx-root-row.is-on{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 10%, transparent); }
+  .mtx-root-toggle-box{
+    flex:none; width:52px; height:44px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:0.1rem; border:2px solid var(--border); background:none; cursor:pointer; font-family:var(--font-mono); color:var(--text-faint);
+  }
+  .mtx-root-toggle-box.is-on{ border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }
+  .mtx-root-toggle-box b{ font-size:0.85em; }
+  .mtx-root-toggle-box span{ font-size:0.55em; }
+  .mtx-root-info{ flex:1 1 auto; min-width:0; }
+  .mtx-root-info .mtx-tag{ font-size:0.68em; font-family:var(--font-mono); font-weight:700; color:var(--text-faint); display:block; }
+  .mtx-root-row.is-on .mtx-root-info .mtx-tag{ color:var(--accent); }
+  .mtx-root-info .mtx-val{ font-size:0.78em; font-family:var(--font-mono); color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+  .mtx-root-info .mtx-val.is-empty{ color:var(--text-faint); }
+  .mtx-root-edit{
+    flex:none; height:44px; padding:0 0.7rem; border:2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+    background:none; color:var(--accent); font-family:var(--font-mono); font-size:0.68em; font-weight:700; cursor:pointer;
+  }
+
+  .mtx-node-list{ border:2px solid var(--border); margin-top:0.7rem; padding:0.7rem 0.7rem 0.7rem 1rem; }
+  .mtx-node{ display:flex; align-items:flex-start; gap:0.5rem; padding:0.3rem 0; }
+  .mtx-node-tree{ color:var(--text-faint); font-family:var(--font-mono); flex:none; padding-top:0.65rem; }
+  .mtx-node-card{
+    flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:0.6rem;
+    border:2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    background:var(--graphite-2); padding:0.5rem;
+  }
+  .mtx-node-body{ flex:1 1 auto; min-width:0; display:block; text-align:left; background:none; border:none; color:inherit; cursor:pointer; padding:0; font:inherit; }
+  .mtx-node-label{ display:block; font-family:var(--font-mono); font-size:0.7em; font-weight:700; color:var(--accent); }
+  .mtx-node-phrase{ display:block; font-family:var(--font-mono); font-size:0.78em; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:0.2rem; }
+  .mtx-node-phrase.is-empty{ color:var(--text-faint); font-style:italic; }
+  .mtx-var-row{ display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem; }
+  .mtx-var-chip{
+    font-family:var(--font-mono); font-size:0.65em; font-weight:700; color:var(--var-accent);
+    border:2px solid var(--var-accent); background:color-mix(in srgb, var(--var-accent) 10%, transparent);
+    padding:0.25rem 0.5rem; cursor:pointer;
+  }
+  .mtx-play-btn{
+    flex:none; width:40px; height:40px; display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--accent); background:color-mix(in srgb, var(--text-faint) 15%, transparent);
+    color:var(--accent); font-size:0.9em; cursor:pointer;
+  }
+  .mtx-play-btn:hover{ background:color-mix(in srgb, var(--accent) 20%, transparent); }
+
+  /* Live-Save Editor dialog */
+  .mtx-editor-textarea{
+    width:100%; min-height:5.5em; background:var(--void); color:var(--accent);
+    border:2px solid var(--accent); font-family:var(--font-mono); font-size:0.85rem;
+    padding:0.6rem; resize:vertical;
+  }
+  .mtx-insert-row{ display:flex; gap:0.4rem; margin-top:0.5rem; flex-wrap:wrap; }
+  .mtx-insert-row .opt-btn{ flex:1 1 auto; }
+  .mtx-var-field{ margin-top:0.6rem; }
+  .mtx-var-field label{ font-family:var(--font-mono); font-size:0.65rem; color:var(--var-accent); font-weight:700; display:block; margin-bottom:0.3rem; }
+  .mtx-var-field input{
+    width:100%; background:var(--void); border:2px solid var(--border); color:#fff;
+    font-family:var(--font-mono); font-size:0.8rem; padding:0.5rem 0.6rem;
+  }
+  .mtx-var-field input:focus-visible{ border-color:var(--var-accent); outline:none; }
+  .mtx-danger-row{ display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap; }
+  .mtx-danger-row .opt-btn{ flex:1 1 auto; }
+  .mtx-editor-row{ display:flex; gap:0.5rem; margin-top:1rem; }
+  .mtx-editor-row .opt-btn{ flex:1 1 auto; }
+
+  .mtx-reset-btn{
+    font-family:var(--font-mono); font-size:0.72em; font-weight:700; color:var(--error);
+    background:none; border:2px solid var(--error); padding:0.6rem 0.9rem; cursor:pointer;
+  }
+  .mtx-reset-btn:hover{ background:rgba(255,84,112,0.12); }
+
+  /* Full-screen playback overlay -- a sibling of .hud/.window (portal'd, like
+     the ctx-dropdown menus) so it is never clipped by .window's clip-path. */
+  .mtx-overlay{
+    position:fixed; inset:0; z-index:1000;
+    background:#000; display:flex; align-items:center; justify-content:center; padding:2rem;
+    cursor:pointer;
+  }
+  .mtx-overlay[hidden]{ display:none; }
+  .mtx-overlay-card{
+    background:rgba(15,17,21,0.965); max-width:min(90vw,900px); max-height:85vh; overflow:auto;
+    padding:2.4rem 2rem; text-align:center;
+  }
+  .mtx-overlay-text{
+    font-family:var(--font-body); font-weight:800; font-size:clamp(1.6rem,6vw,3.4rem); line-height:1.25;
+    color:#fff; -webkit-text-stroke:3px var(--accent); white-space:pre-wrap; margin:0;
+  }
+  .mtx-overlay-hint{ margin-top:1.4rem; font-family:var(--font-mono); font-size:0.85rem; color:#6eebff; }
+  .mtx-replay-chip{
+    position:fixed; right:1.2rem; bottom:1.2rem; z-index:1001;
+    background:rgba(20,20,24,0.92); color:#fff; font-family:var(--font-mono); font-size:0.8rem;
+    padding:0.6rem 1rem; cursor:pointer; border:2px solid var(--accent);
+  }
+  .mtx-replay-chip[hidden]{ display:none; }
 
   #shotDialog{ padding:0.8rem; }
   #shotDialog img{ max-height:70vh; margin:0 auto; }
@@ -249,10 +489,7 @@
   @media (min-width:700px){
     .shell{ padding:1.3rem; }
     .grid{ grid-template-columns:1fr 1fr; }
-    .tab-label{ display:block; font-family:var(--font-mono); font-size:0.55rem; text-transform:uppercase; margin-top:0.15rem; }
-    .tab-btn{ flex-direction:column; gap:0.15rem; height:56px; }
-    .tab-btn[aria-selected="true"] .tab-label{ color:#fff; }
-    .tab-btn:not([aria-selected="true"]) .tab-label{ color:var(--accent); }
+    .tab-label{ font-size:0.6rem; }
   }
 
   /* ---------- desktop: wider content grid; nav stays a bottom bar ---------- */
@@ -278,24 +515,51 @@
         <p class="tagline">Augmented Comm Link</p>
       </div>
       <div class="hud-actions">
-        <button type="button" class="hud-btn" id="settingsOpen">SETTINGS</button>
-        <a class="hud-btn" style="text-decoration:none; display:inline-block;" href="https://github.com/ASPDesignLabs/ACK" target="_blank" rel="noopener noreferrer">SOURCE</a>
+        <button type="button" class="hud-btn" id="settingsOpen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="7.5" r="1.3" fill="currentColor" stroke="none"/><path d="M7 10.5h10M12 10.5v4.5M9 19l3-4 3 4"/></svg>
+          <span>SETTINGS</span>
+        </button>
+        <a class="hud-btn" style="text-decoration:none;" href="https://github.com/ASPDesignLabs/ACK" target="_blank" rel="noopener noreferrer">SOURCE</a>
       </div>
     </div>
 
     <div class="ctx-row" id="ctxRow" hidden>
       <span class="ctx-label" id="ctxLabel">DECK:</span>
-      <select class="ctx-select" id="ctxSelect" aria-labelledby="ctxLabel"></select>
+      <details class="ctx-dropdown" id="ctxDropdown">
+        <summary><span class="ctx-current" id="ctxCurrent">&mdash;</span><span class="ctx-caret" aria-hidden="true">&#9662;</span></summary>
+      </details>
     </div>
     <div class="ctx-row" id="profileRow" hidden>
       <span class="ctx-label" id="profileLabel">PROFILE:</span>
-      <select class="ctx-select" id="profileSelect" aria-labelledby="profileLabel"></select>
+      <details class="ctx-dropdown" id="profileDropdown">
+        <summary><span class="ctx-current" id="profileCurrent">&mdash;</span><span class="ctx-caret" aria-hidden="true">&#9662;</span></summary>
+      </details>
     </div>
    </div>
   </header>
 
+  <!-- Dropdown menus render here, as siblings of .hud rather than nested inside
+       it: .hud carries a clip-path, and clip-path clips its whole subtree's
+       rendering (fixed-position descendants included), so a menu nested inside
+       it would still get cut off the moment it extends past .hud's own box.
+       Living outside that subtree sidesteps the problem entirely. JS syncs each
+       one's [hidden] state and fixed position to its <details> open state. -->
+  <div class="ctx-dropdown-menu" id="ctxDropdownMenu" hidden><div id="ctxMenu" role="listbox" aria-labelledby="ctxLabel"></div></div>
+  <div class="ctx-dropdown-menu" id="profileDropdownMenu" hidden><div id="profileMenu" role="listbox" aria-labelledby="profileLabel"></div></div>
+
+  <!-- Matrix Simulator full-screen playback overlay -- also a sibling of
+       .hud/.window for the same clip-path reason as the dropdown menus above. -->
+  <div class="mtx-overlay" id="mtxOverlay" hidden role="dialog" aria-label="Prompt playback">
+    <div class="mtx-overlay-card">
+      <p class="mtx-overlay-text" id="mtxOverlayText"></p>
+      <p class="mtx-overlay-hint">TAP ANYWHERE TO CLEAR</p>
+    </div>
+  </div>
+  <button type="button" class="mtx-replay-chip" id="mtxReplayChip" hidden>&#8635; REPLAY</button>
+
   <div class="shell">
   <main id="main" class="window">
+  <div class="window-fill">
 
     <!-- HOME -->
     <section class="tabpanel" id="panel-home" role="tabpanel" aria-labelledby="tab-home">
@@ -763,14 +1027,27 @@
       </div>
     </section>
 
-    <!-- SIMULATOR (reserved) -->
+    <!-- SIMULATOR -->
     <section class="tabpanel" id="panel-sim" role="tabpanel" aria-labelledby="tab-sim" hidden>
-      <p class="eyebrow">Coming later</p>
-      <h2>Try ACK in the browser</h2>
-      <div class="reserved-note">RESERVED SLOT &mdash; not built in this pass. This is where an in-browser
-        simulation of composition, recall, and context organization would eventually live, so visitors can
-        try the non-watch features without installing the app. Flagged here so the nav structure already
-        has a home for it.</div>
+      <p class="eyebrow">Try it in the browser</p>
+      <h2>ACK Deck Simulator</h2>
+      <p class="lede">A faithful, local-only reproduction of the real app's deck logic &mdash; edit prompts,
+        use variables and shared root overrides, and play a prompt to a full-screen overlay. Nothing here
+        reaches your phone or a server; everything is saved only in this browser.</p>
+
+      <div class="ctx-pane" data-ctx="matrix" id="ctx-sim-matrix">
+        <div class="mtx-intro-note">Simulating the <strong>MATRIX</strong> deck: 3 fixed root poses (IDENTITY /
+          DEFEND / CONNECT) &times; 4 phrases each, across the app's 5 fixed profiles. Voice output isn't
+          simulated &mdash; PLAY shows the same full-screen visual prompt the app displays, without audio.</div>
+
+        <div id="matrixEditorRoot"></div>
+        <noscript><p class="disclaimer">This simulator needs JavaScript to run. Everything else on this
+          page works without it.</p></noscript>
+
+        <div style="margin-top:1.8rem;">
+          <button type="button" class="mtx-reset-btn" id="matrixResetBtn">RESET SIMULATOR DATA</button>
+        </div>
+      </div>
     </section>
 
     <footer class="credit">
@@ -780,6 +1057,7 @@
       <a href="https://github.com/ASPDesignLabs/ACK">the repository</a>.
     </footer>
 
+  </div>
   </main>
   </div>
 
@@ -870,10 +1148,111 @@
     </div>
   </div>
 </dialog>
+
 <dialog id="shotDialog" aria-label="Screenshot preview">
   <button type="button" class="dialog-close" data-close aria-label="Close screenshot preview" style="float:right;">&#10005;</button>
   <img id="shotImage" src="" alt="">
   <p class="shot-caption" id="shotCaption"></p>
+</dialog>
+
+<!-- MATRIX SIMULATOR DIALOGS -->
+
+<dialog id="mtxNodeDialog" aria-labelledby="mtxNodeTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <div>
+        <h2 id="mtxNodeTitle">Node</h2>
+        <p style="margin:0.2rem 0 0; color:var(--text-faint); font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em;">LIVE-SAVE EDITOR</p>
+      </div>
+      <button type="button" class="dialog-close" data-close aria-label="Close editor">&#10005;</button>
+    </div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.8rem;">MACRO TEMPLATE</p>
+    <textarea class="mtx-editor-textarea" id="mtxTemplateInput" placeholder="ENTER OUTPUT PHRASE..."></textarea>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">INSERT VARIABLE TOKEN</p>
+    <div class="mtx-insert-row">
+      <button type="button" class="opt-btn" data-insert-token="{VAR}">+ VAR</button>
+      <button type="button" class="opt-btn" data-insert-token="{VAR:A}">+ A</button>
+      <button type="button" class="opt-btn" data-insert-token="{VAR:B}">+ B</button>
+      <button type="button" class="opt-btn" data-insert-token="{VAR:C}">+ C</button>
+    </div>
+
+    <div id="mtxVarFields"></div>
+
+    <p style="color:var(--error); font-size:0.78rem; margin-top:1.1rem;">DESTRUCTIVE CONTROLS</p>
+    <div class="mtx-danger-row">
+      <button type="button" class="opt-btn" id="mtxClearVars" style="color:var(--error);border-color:var(--error);">CLEAR VARS</button>
+      <button type="button" class="opt-btn" id="mtxClearPrompt" style="color:var(--error);border-color:var(--error);">CLEAR PROMPT</button>
+    </div>
+    <div class="mtx-danger-row">
+      <button type="button" class="opt-btn" id="mtxClearAll" style="color:var(--error);border-color:var(--error); flex:1 1 100%;">CLEAR ALL</button>
+    </div>
+
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxCommit" style="color:var(--accent);border-color:var(--accent);" aria-pressed="true">COMMIT</button>
+      <button type="button" class="opt-btn" data-close>CLOSE</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxVarQuickDialog" aria-labelledby="mtxVarQuickTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxVarQuickTitle">Variable</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close variable editor">&#10005;</button>
+    </div>
+    <p style="color:var(--var-accent); font-size:0.78rem; margin-top:0.6rem;">LIVE VARIABLE VALUE</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxVarQuickInput" style="min-height:auto;" placeholder="ENTER VALUE">
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxVarQuickSave" style="color:var(--accent);border-color:var(--accent);">UPDATE</button>
+      <button type="button" class="opt-btn" data-close>ABORT</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxRootDialog" aria-labelledby="mtxRootTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxRootTitle">Root Override</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close root override editor">&#10005;</button>
+    </div>
+    <p style="color:var(--accent); font-size:0.78rem; margin-top:0.6rem;">SHARED OVERRIDE VALUE</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxRootInput" style="min-height:auto;" placeholder="ENTER VALUE">
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxRootSave" style="color:var(--accent);border-color:var(--accent);">COMMIT</button>
+      <button type="button" class="opt-btn" data-close>ABORT</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxClearDialog" aria-labelledby="mtxClearTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxClearTitle" style="color:var(--error);">Confirm Clear</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Abort">&#10005;</button>
+    </div>
+    <p id="mtxClearText" style="font-size:0.85rem;"></p>
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxClearConfirm" style="color:var(--error);border-color:var(--error);">CONFIRM</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxResetDialog" aria-labelledby="mtxResetTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxResetTitle" style="color:var(--error);">Reset Simulator Data</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Abort">&#10005;</button>
+    </div>
+    <p style="font-size:0.85rem;">Permanently erase every prompt, variable, and shared root override you've
+      set in the Matrix Deck Simulator on this browser? This cannot be undone.</p>
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxResetConfirm" style="color:var(--error);border-color:var(--error);">ERASE EVERYTHING</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
 </dialog>
 
 <script>
@@ -951,16 +1330,660 @@
         ["dev","Under the Hood"],
         ["status","Status"]
       ]
+    },
+    sim: {
+      label: "DECK:",
+      // A 3rd tuple element marks an option disabled -- these four are real
+      // DeckType values in the app, listed here to show the roadmap, but only
+      // MATRIX is actually wired up in the simulator so far.
+      options: [
+        ["matrix","Matrix Deck"],
+        ["quickactions","Quick Actions Deck (soon)", true],
+        ["emergency","Emergency Deck (soon)", true],
+        ["emoji","Emoji Deck (soon)", true],
+        ["gif","GIF Deck (soon)", true]
+      ],
+      profiles: {
+        matrix: {
+          label: "PROFILE:",
+          options: [
+            ["DEFAULT","Default"],
+            ["WORK","Work"],
+            ["HIGH_STRESS","High Stress"],
+            ["SOCIAL","Social"],
+            ["BUILDER","Builder"]
+          ]
+        }
+      }
     }
   };
+
+  // ================= MATRIX DECK SIMULATOR =================
+  // A local-only reproduction of the real app's CommandRepository +
+  // TemplateEngine + RootOverrideRepository + MatrixEditor + VisualPromptService
+  // pipeline: same 3 fixed poses x 4 nodes, same 5 fixed profiles, same
+  // {VAR}/{VAR:A-C} token engine and root-override precedence, same LIVE-SAVE
+  // editor and PLAY-to-full-screen-overlay behavior -- persisted to
+  // localStorage instead of Android SharedPreferences, since this page has no
+  // backend. Deliberately NOT included (see chat): custom pose layers beyond
+  // IDENTITY/DEFEND/CONNECT (so the ACTIVATE/focus toggle is omitted too --
+  // with no other layer to focus, it would always read ACTIVE with nothing to
+  // switch to), the visual-preset editor (font size/outline/bold/etc -- this
+  // hardcodes the app's own default preset), and TTS/audio.
+  window.MatrixSim = (function(){
+    "use strict";
+
+    var STORAGE_PREFIX = 'ackSimMtx_';
+
+    var POSES = ["IDENTITY", "DEFEND", "CONNECT"];
+
+    // Same 3 poses x 4 "twists" as the app's own BASE_TEMPLATE, including the
+    // exact default phrases.
+    var NODES = [
+      {path:"id0", label:"Twist 0 (Default)", category:"IDENTITY", def:"Acknowledged."},
+      {path:"id1", label:"Twist 1", category:"IDENTITY", def:"Systems Online."},
+      {path:"id2", label:"Twist 2", category:"IDENTITY", def:"Identify yourself."},
+      {path:"id3", label:"Twist 3", category:"IDENTITY", def:"Handle is Snakesan."},
+      {path:"def0", label:"Twist 0 (Default)", category:"DEFEND", def:"Stop."},
+      {path:"def1", label:"Twist 1", category:"DEFEND", def:"Please wait."},
+      {path:"def2", label:"Twist 2", category:"DEFEND", def:"I need a break."},
+      {path:"def3", label:"Twist 3", category:"DEFEND", def:"Leave me alone."},
+      {path:"con0", label:"Twist 0 (Default)", category:"CONNECT", def:"Greetings."},
+      {path:"con1", label:"Twist 1", category:"CONNECT", def:"Me too."},
+      {path:"con2", label:"Twist 2", category:"CONNECT", def:"Sorry."},
+      {path:"con3", label:"Twist 3", category:"CONNECT", def:"Pleasure meeting you."}
+    ];
+
+    function nodeByPath(path){
+      for(var i=0;i<NODES.length;i++){ if(NODES[i].path === path) return NODES[i]; }
+      return null;
+    }
+
+    // ---------- storage ----------
+    function readJSON(key, fallback){
+      try{
+        var raw = localStorage.getItem(key);
+        return raw === null ? fallback : JSON.parse(raw);
+      }catch(e){ return fallback; }
+    }
+    function writeJSON(key, value){
+      try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
+    }
+    function readStr(key, fallback){
+      try{
+        var raw = localStorage.getItem(key);
+        return raw === null ? fallback : raw;
+      }catch(e){ return fallback; }
+    }
+    function writeStr(key, value){
+      try{ localStorage.setItem(key, value); }catch(e){}
+    }
+
+    function phraseKey(profile, path){ return STORAGE_PREFIX + 'phrase_' + profile + '_' + path; }
+    function varsKey(profile, path){ return STORAGE_PREFIX + 'vars_' + profile + '_' + path; }
+    function rootKey(category){ return STORAGE_PREFIX + 'root_' + category; }
+    function collapsedKey(category){ return STORAGE_PREFIX + 'collapsed_' + category; }
+
+    function defaultRootConfig(){
+      return { A:{enabled:false,value:''}, B:{enabled:false,value:''}, C:{enabled:false,value:''} };
+    }
+
+    // Mirrors CommandRepository.getPhrase: node+profile value, else that
+    // node's DEFAULT-profile value, else the built-in default phrase.
+    function getPhrase(profile, path){
+      var node = nodeByPath(path);
+      var direct = readStr(phraseKey(profile, path), null);
+      if(direct !== null) return direct;
+      if(profile !== 'DEFAULT'){
+        var defaultProfileValue = readStr(phraseKey('DEFAULT', path), null);
+        if(defaultProfileValue !== null) return defaultProfileValue;
+      }
+      return node ? node.def : '';
+    }
+    function setPhrase(profile, path, phrase){
+      writeStr(phraseKey(profile, path), phrase);
+    }
+    function getVars(profile, path){
+      return readJSON(varsKey(profile, path), []);
+    }
+    function setVars(profile, path, values){
+      writeJSON(varsKey(profile, path), values);
+    }
+    function getRootConfig(category){
+      var stored = readJSON(rootKey(category), null);
+      return stored || defaultRootConfig();
+    }
+    function setRootConfig(category, config){
+      writeJSON(rootKey(category), config);
+    }
+    function isCollapsed(category){
+      // "Collapsed" mirrors the app's own naming: false (default) shows the
+      // full detail view; true shows the compact ON/OFF-only strip.
+      return readJSON(collapsedKey(category), false);
+    }
+    function setCollapsed(category, value){
+      writeJSON(collapsedKey(category), value);
+    }
+
+    // ---------- template engine (mirrors TemplateEngine.kt) ----------
+    var VAR_SOURCE = '\\{VAR(?::([A-C]))?\\}';
+
+    function countVariables(template){
+      var re = new RegExp(VAR_SOURCE, 'g');
+      return (template.match(re) || []).length;
+    }
+    function getVariableTags(template){
+      var tags = [];
+      var re = new RegExp(VAR_SOURCE, 'g');
+      var m;
+      while((m = re.exec(template)) !== null){ tags.push(m[1] || null); }
+      return tags;
+    }
+    function resolveTemplate(template, localValues, overrides){
+      var i = 0;
+      var re = new RegExp(VAR_SOURCE, 'g');
+      return template.replace(re, function(full, tag){
+        var localValue = localValues[i] || '';
+        i++;
+        var root = tag ? overrides[tag] : null;
+        if(root && root.enabled && root.value && root.value.trim() !== ''){
+          return root.value;
+        }
+        return localValue;
+      });
+    }
+
+    function getResolvedPhrase(profile, path){
+      var node = nodeByPath(path);
+      var template = getPhrase(profile, path);
+      var localValues = getVars(profile, path);
+      var rootConfig = getRootConfig(node.category);
+      return resolveTemplate(template, localValues, rootConfig);
+    }
+
+    // Mirrors VisualLogicEngine.resolveDisplayPrompt, hardcoded to the app's
+    // own default preset (no per-node visual override, target ping, or
+    // preset editor in this simulator -- see the note above).
+    function resolveDisplayPrompt(rawPhrase){
+      var words = rawPhrase.trim().split(/\s+/).filter(function(w){ return w.length > 0; });
+      if(words.length === 0) return '';
+      if(words.length <= 5) return rawPhrase.toUpperCase();
+      return "ALERT:\n" + words.slice(0,3).join(' ').toUpperCase() + "...";
+    }
+
+    // ---------- small DOM helper ----------
+    function el(tag, className, text){
+      var e = document.createElement(tag);
+      if(className) e.className = className;
+      if(text !== undefined) e.textContent = text;
+      return e;
+    }
+
+    // ---------- rendering ----------
+    var state = { profile: 'DEFAULT' };
+
+    function render(profile, focusKey){
+      state.profile = profile;
+      var root = document.getElementById('matrixEditorRoot');
+      if(!root) return;
+      root.innerHTML = '';
+
+      POSES.forEach(function(category){
+        root.appendChild(renderPose(category, profile));
+      });
+
+      if(focusKey){
+        var target = root.querySelector('[data-focus-key="' + focusKey + '"]');
+        if(target) target.focus();
+      }
+    }
+
+    function renderPose(category, profile){
+      var wrap = el('div', 'mtx-pose');
+
+      var head = el('div', 'mtx-pose-head');
+      head.appendChild(el('span', 'mtx-pose-dot is-live'));
+      head.appendChild(el('span', 'mtx-pose-name is-live', 'ROOT :: ' + category));
+      wrap.appendChild(head);
+
+      wrap.appendChild(renderRootStrip(category));
+
+      var list = el('div', 'mtx-node-list');
+      NODES.filter(function(n){ return n.category === category; }).forEach(function(node){
+        list.appendChild(renderNodeRow(node, profile));
+      });
+      wrap.appendChild(list);
+
+      return wrap;
+    }
+
+    function renderRootStrip(category){
+      var config = getRootConfig(category);
+      var collapsed = isCollapsed(category);
+
+      var box = el('div', 'mtx-root');
+
+      var head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'mtx-root-head';
+      head.setAttribute('data-focus-key', 'root-head-' + category);
+      head.appendChild(el('span', 'mtx-root-title', 'SHARED ROOT VARIABLES'));
+      head.appendChild(el('span', 'mtx-root-toggle', collapsed ? '[EXPAND ▼]' : '[COLLAPSE ▲]'));
+      head.addEventListener('click', function(){
+        setCollapsed(category, !isCollapsed(category));
+        render(state.profile, 'root-head-' + category);
+      });
+      box.appendChild(head);
+
+      box.appendChild(el('p', 'mtx-root-hint', 'Enabled tags replace matching {VAR:A}, {VAR:B}, or {VAR:C}.'));
+
+      function makeToggleBox(tag, slot, compact){
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'mtx-root-toggle-box' + (slot.enabled ? ' is-on' : '');
+        if(compact) b.style.cssText = 'flex:1 1 0; width:auto;';
+        b.setAttribute('data-focus-key', 'root-slot-' + category + '-' + tag);
+        b.setAttribute('aria-pressed', String(!!slot.enabled));
+        b.appendChild(el('b', null, tag));
+        b.appendChild(el('span', null, slot.enabled ? 'ON' : 'OFF'));
+        b.addEventListener('click', function(){
+          var cfg = getRootConfig(category);
+          cfg[tag].enabled = !cfg[tag].enabled;
+          setRootConfig(category, cfg);
+          render(state.profile, 'root-slot-' + category + '-' + tag);
+        });
+        return b;
+      }
+
+      if(collapsed){
+        var compactRow = document.createElement('div');
+        compactRow.style.cssText = 'display:flex; gap:0.5rem; margin-top:0.6rem;';
+        ['A','B','C'].forEach(function(tag){
+          compactRow.appendChild(makeToggleBox(tag, config[tag], true));
+        });
+        box.appendChild(compactRow);
+      } else {
+        ['A','B','C'].forEach(function(tag){
+          var slot = config[tag];
+          var row = el('div', 'mtx-root-row' + (slot.enabled ? ' is-on' : ''));
+          row.appendChild(makeToggleBox(tag, slot, false));
+
+          var info = el('div', 'mtx-root-info');
+          info.appendChild(el('span', 'mtx-tag', 'ROOT ' + tag));
+          info.appendChild(el('span', 'mtx-val' + (slot.value ? '' : ' is-empty'), slot.value || 'NO SHARED VALUE SET'));
+          row.appendChild(info);
+
+          var editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'mtx-root-edit';
+          editBtn.textContent = 'EDIT';
+          editBtn.addEventListener('click', function(){ openRootDialog(category, tag); });
+          row.appendChild(editBtn);
+
+          box.appendChild(row);
+        });
+      }
+
+      return box;
+    }
+
+    function renderNodeRow(node, profile){
+      var row = el('div', 'mtx-node');
+      row.appendChild(el('span', 'mtx-node-tree', '├─'));
+
+      var card = el('div', 'mtx-node-card');
+
+      var body = document.createElement('button');
+      body.type = 'button';
+      body.className = 'mtx-node-body';
+      body.setAttribute('data-focus-key', 'node-body-' + node.path);
+
+      var rawTemplate = getPhrase(profile, node.path);
+      var resolved = getResolvedPhrase(profile, node.path);
+      var localValues = getVars(profile, node.path);
+      var variableCount = countVariables(rawTemplate);
+
+      body.appendChild(el('span', 'mtx-node-label', node.label));
+      body.appendChild(el(
+        'span',
+        'mtx-node-phrase' + (resolved.trim() ? '' : ' is-empty'),
+        resolved.trim() ? resolved : '(blank — PLAY does nothing)'
+      ));
+
+      if(variableCount > 0){
+        var varRow = el('div', 'mtx-var-row');
+        for(var i=0;i<variableCount;i++){
+          (function(index){
+            var val = localValues[index] || '';
+            var chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'mtx-var-chip';
+            chip.textContent = 'V' + (index+1) + ': ' + (val || 'EMPTY');
+            chip.addEventListener('click', function(e){
+              e.stopPropagation();
+              openVarQuickDialog(node, profile, index);
+            });
+            varRow.appendChild(chip);
+          })(i);
+        }
+        body.appendChild(varRow);
+      }
+
+      body.addEventListener('click', function(){ openNodeDialog(node, profile); });
+      card.appendChild(body);
+
+      var playBtn = document.createElement('button');
+      playBtn.type = 'button';
+      playBtn.className = 'mtx-play-btn';
+      playBtn.setAttribute('aria-label', 'Play ' + node.label + ', ' + node.category);
+      playBtn.textContent = '▶';
+      playBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        playNode(node, profile);
+      });
+      card.appendChild(playBtn);
+
+      row.appendChild(card);
+      return row;
+    }
+
+    // ---------- playback overlay ----------
+    var overlayEl, overlayTextEl, replayChipEl;
+    var overlayTimeout = null;
+    var replayTimeout = null;
+    var replayAction = null;
+
+    function ensureOverlayRefs(){
+      if(overlayEl) return;
+      overlayEl = document.getElementById('mtxOverlay');
+      overlayTextEl = document.getElementById('mtxOverlayText');
+      replayChipEl = document.getElementById('mtxReplayChip');
+      overlayEl.addEventListener('click', function(){ clearOverlay(true); });
+      replayChipEl.addEventListener('click', function(){
+        clearReplayChip();
+        if(replayAction) replayAction();
+      });
+    }
+
+    function showOverlay(text, onReplay){
+      ensureOverlayRefs();
+      clearReplayChip();
+      if(overlayTimeout){ clearTimeout(overlayTimeout); overlayTimeout = null; }
+
+      replayAction = onReplay;
+      overlayTextEl.textContent = text;
+      overlayEl.hidden = false;
+
+      overlayTimeout = setTimeout(function(){ clearOverlay(true); }, 10000);
+    }
+
+    function clearOverlay(offerReplay){
+      ensureOverlayRefs();
+      if(overlayTimeout){ clearTimeout(overlayTimeout); overlayTimeout = null; }
+      var hadContent = !overlayEl.hidden;
+      overlayEl.hidden = true;
+
+      if(offerReplay && hadContent && replayAction){
+        showReplayChip();
+      }
+    }
+
+    function showReplayChip(){
+      ensureOverlayRefs();
+      clearReplayChip();
+      replayChipEl.hidden = false;
+      replayTimeout = setTimeout(function(){ clearReplayChip(); }, 20000);
+    }
+
+    function clearReplayChip(){
+      ensureOverlayRefs();
+      if(replayTimeout){ clearTimeout(replayTimeout); replayTimeout = null; }
+      replayChipEl.hidden = true;
+    }
+
+    function playNode(node, profile){
+      var resolved = getResolvedPhrase(profile, node.path);
+      // Mirrors the app: a blank resolved phrase clears/no-ops rather than
+      // showing an empty overlay.
+      if(!resolved.trim()) return;
+      var displayText = resolveDisplayPrompt(resolved);
+      showOverlay(displayText, function(){ playNode(node, profile); });
+    }
+
+    // ---------- LIVE-SAVE EDITOR dialog ----------
+    var nodeDialogState = null;
+
+    function refreshListInBackground(){ render(state.profile); }
+
+    function renderVarFields(node, profile, template){
+      var container = document.getElementById('mtxVarFields');
+      container.innerHTML = '';
+      var count = countVariables(template);
+      if(count === 0) return;
+
+      var tags = getVariableTags(template);
+      var values = getVars(profile, node.path);
+
+      var header = el('p', null, 'LOCAL VARIABLE DATA');
+      header.style.cssText = 'color:var(--var-accent); font-family:var(--font-mono); font-size:0.72rem; font-weight:700; margin:1rem 0 0.2rem;';
+      container.appendChild(header);
+
+      var hint = el('p', null, 'Saved immediately. Tagged A/B/C values can be replaced by an enabled root override.');
+      hint.style.cssText = 'color:var(--text-faint); font-family:var(--font-mono); font-size:0.65rem; margin:0 0 0.4rem;';
+      container.appendChild(hint);
+
+      for(var i=0;i<count;i++){
+        (function(index){
+          var tag = tags[index];
+          var field = el('div', 'mtx-var-field');
+          var label = document.createElement('label');
+          label.textContent = tag ? ('VARIABLE ' + (index+1) + ' // ROOT ' + tag) : ('VARIABLE ' + (index+1));
+          field.appendChild(label);
+
+          var inp = document.createElement('input');
+          inp.type = 'text';
+          inp.placeholder = 'ENTER LOCAL FALLBACK...';
+          inp.value = values[index] || '';
+          inp.addEventListener('input', function(){
+            var current = getVars(profile, node.path);
+            while(current.length <= index) current.push('');
+            current[index] = inp.value;
+            setVars(profile, node.path, current);
+            refreshListInBackground();
+          });
+          field.appendChild(inp);
+          container.appendChild(field);
+        })(i);
+      }
+    }
+
+    function updateTemplate(node, profile, newTemplate){
+      var newCount = countVariables(newTemplate);
+      var current = getVars(profile, node.path);
+      while(current.length > newCount) current.pop();
+      while(current.length < newCount) current.push('');
+      setVars(profile, node.path, current);
+      setPhrase(profile, node.path, newTemplate);
+      renderVarFields(node, profile, newTemplate);
+      refreshListInBackground();
+    }
+
+    function openNodeDialog(node, profile){
+      nodeDialogState = { node: node, profile: profile };
+      document.getElementById('mtxNodeTitle').textContent = node.label + ' — ' + node.category;
+
+      var template = getPhrase(profile, node.path);
+      var input = document.getElementById('mtxTemplateInput');
+      input.value = template;
+
+      renderVarFields(node, profile, template);
+
+      document.getElementById('mtxNodeDialog').showModal();
+      input.focus();
+    }
+
+    // ---------- variable quick-edit dialog ----------
+    var varQuickState = null;
+
+    function openVarQuickDialog(node, profile, index){
+      varQuickState = { node: node, profile: profile, index: index };
+      var values = getVars(profile, node.path);
+      document.getElementById('mtxVarQuickTitle').textContent = node.label + ' // VAR ' + (index+1);
+      var input = document.getElementById('mtxVarQuickInput');
+      input.value = values[index] || '';
+      document.getElementById('mtxVarQuickDialog').showModal();
+      input.focus();
+    }
+
+    // ---------- root override value dialog ----------
+    var rootDialogState = null;
+
+    function openRootDialog(category, tag){
+      rootDialogState = { category: category, tag: tag };
+      var config = getRootConfig(category);
+      document.getElementById('mtxRootTitle').textContent = 'ROOT ' + category + ' // TAG ' + tag;
+      var input = document.getElementById('mtxRootInput');
+      input.value = config[tag].value || '';
+      document.getElementById('mtxRootDialog').showModal();
+      input.focus();
+    }
+
+    // ---------- clear confirm dialog ----------
+    var clearMode = null;
+    var CLEAR_COPY = {
+      VARS: "Clear every local variable value for this phrase? The prompt will remain.",
+      PROMPT: "Clear this prompt only? Existing local variable values will be preserved.",
+      ALL: "Clear both the prompt and every local variable value? This cannot be undone from this dialog."
+    };
+
+    function openClearDialog(mode){
+      clearMode = mode;
+      document.getElementById('mtxClearText').textContent = CLEAR_COPY[mode];
+      document.getElementById('mtxClearDialog').showModal();
+    }
+
+    // ---------- wiring ----------
+    function wireSimpleDialog(dialogId){
+      var dlg = document.getElementById(dialogId);
+      var opener = null;
+      var nativeShowModal = dlg.showModal.bind(dlg);
+      dlg.showModal = function(){
+        opener = document.activeElement;
+        nativeShowModal();
+      };
+      dlg.querySelectorAll('[data-close]').forEach(function(btn){
+        btn.addEventListener('click', function(){ dlg.close(); });
+      });
+      dlg.addEventListener('click', function(e){
+        var rect = dlg.getBoundingClientRect();
+        var inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+        if(!inside) dlg.close();
+      });
+      dlg.addEventListener('close', function(){ if(opener && opener.focus) opener.focus(); });
+    }
+
+    function init(){
+      ['mtxNodeDialog','mtxVarQuickDialog','mtxRootDialog','mtxClearDialog','mtxResetDialog'].forEach(wireSimpleDialog);
+
+      document.getElementById('mtxTemplateInput').addEventListener('input', function(){
+        if(!nodeDialogState) return;
+        updateTemplate(nodeDialogState.node, nodeDialogState.profile, this.value);
+      });
+
+      document.querySelectorAll('#mtxNodeDialog [data-insert-token]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if(!nodeDialogState) return;
+          var input = document.getElementById('mtxTemplateInput');
+          var token = btn.getAttribute('data-insert-token');
+          input.value = (input.value ? input.value + ' ' : '') + token;
+          updateTemplate(nodeDialogState.node, nodeDialogState.profile, input.value);
+          input.focus();
+        });
+      });
+
+      document.getElementById('mtxCommit').addEventListener('click', function(){
+        if(!nodeDialogState) return;
+        updateTemplate(nodeDialogState.node, nodeDialogState.profile, document.getElementById('mtxTemplateInput').value);
+        document.getElementById('mtxNodeDialog').close();
+      });
+
+      document.getElementById('mtxClearVars').addEventListener('click', function(){ openClearDialog('VARS'); });
+      document.getElementById('mtxClearPrompt').addEventListener('click', function(){ openClearDialog('PROMPT'); });
+      document.getElementById('mtxClearAll').addEventListener('click', function(){ openClearDialog('ALL'); });
+
+      document.getElementById('mtxClearConfirm').addEventListener('click', function(){
+        if(!nodeDialogState || !clearMode) return;
+        var node = nodeDialogState.node, profile = nodeDialogState.profile;
+
+        if(clearMode === 'VARS'){
+          var vals = getVars(profile, node.path);
+          for(var i=0;i<vals.length;i++) vals[i] = '';
+          setVars(profile, node.path, vals);
+        } else if(clearMode === 'PROMPT'){
+          setPhrase(profile, node.path, '');
+        } else if(clearMode === 'ALL'){
+          setPhrase(profile, node.path, '');
+          setVars(profile, node.path, []);
+        }
+
+        document.getElementById('mtxClearDialog').close();
+        clearMode = null;
+
+        var template = getPhrase(profile, node.path);
+        document.getElementById('mtxTemplateInput').value = template;
+        renderVarFields(node, profile, template);
+        refreshListInBackground();
+      });
+
+      document.getElementById('mtxVarQuickSave').addEventListener('click', function(){
+        if(!varQuickState) return;
+        var node = varQuickState.node, profile = varQuickState.profile, index = varQuickState.index;
+        var values = getVars(profile, node.path);
+        while(values.length <= index) values.push('');
+        values[index] = document.getElementById('mtxVarQuickInput').value;
+        setVars(profile, node.path, values);
+        document.getElementById('mtxVarQuickDialog').close();
+        render(state.profile, 'node-body-' + node.path);
+      });
+
+      document.getElementById('mtxRootSave').addEventListener('click', function(){
+        if(!rootDialogState) return;
+        var category = rootDialogState.category, tag = rootDialogState.tag;
+        var config = getRootConfig(category);
+        config[tag].value = document.getElementById('mtxRootInput').value;
+        setRootConfig(category, config);
+        document.getElementById('mtxRootDialog').close();
+        render(state.profile, 'root-slot-' + category + '-' + tag);
+      });
+
+      document.getElementById('matrixResetBtn').addEventListener('click', function(){
+        document.getElementById('mtxResetDialog').showModal();
+      });
+
+      document.getElementById('mtxResetConfirm').addEventListener('click', function(){
+        try{
+          var toRemove = [];
+          for(var i=0;i<localStorage.length;i++){
+            var key = localStorage.key(i);
+            if(key && key.indexOf(STORAGE_PREFIX) === 0) toRemove.push(key);
+          }
+          toRemove.forEach(function(k){ localStorage.removeItem(k); });
+        }catch(e){}
+        document.getElementById('mtxResetDialog').close();
+        render(state.profile);
+      });
+    }
+
+    init();
+
+    return { render: render };
+  })();
 
   var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab-btn'));
   var ctxRow = document.getElementById('ctxRow');
   var ctxLabel = document.getElementById('ctxLabel');
-  var ctxSelect = document.getElementById('ctxSelect');
   var profileRow = document.getElementById('profileRow');
   var profileLabel = document.getElementById('profileLabel');
-  var profileSelect = document.getElementById('profileSelect');
 
   function tabKey(panelId){ return panelId.replace('panel-',''); }
 
@@ -971,6 +1994,15 @@
   }
 
   function showProfilePane(panelId, ctxKey, profileKey){
+    // The Matrix Simulator's "profiles" aren't static content panes like every
+    // other tab's -- one live editor re-renders itself against whichever
+    // profile's saved data is selected, so it hooks in here instead of the
+    // generic hide/show below.
+    if(panelId === 'panel-sim' && ctxKey === 'matrix'){
+      if(window.MatrixSim) window.MatrixSim.render(profileKey);
+      return;
+    }
+
     var panel = document.getElementById(panelId);
     var ctxPane = panel.querySelector('.ctx-pane[data-ctx="' + ctxKey + '"]');
     if(!ctxPane) return;
@@ -978,19 +2010,110 @@
     panes.forEach(function(p){ p.hidden = (p.getAttribute('data-profile') !== profileKey); });
   }
 
+  // Custom DECK:/PROFILE:/MODULE:/LOG: dropdown -- a <details>/<summary>
+  // disclosure listing real option buttons, driven like a listbox. This is
+  // deliberately NOT a native <select>: the app's own dropdown is a styled
+  // picker, and an OS-native control can't match that look or behavior.
+  function makeDropdown(detailsId, currentId, menuId){
+    var details = document.getElementById(detailsId);
+    var summary = details.querySelector('summary');
+    var current = document.getElementById(currentId);
+    var menu = document.getElementById(menuId);
+    var menuBox = menu.closest('.ctx-dropdown-menu');
+    var buttons = [];
+    var changeHandler = null;
+
+    function positionMenu(){
+      var rect = summary.getBoundingClientRect();
+      menuBox.style.left = rect.left + 'px';
+      menuBox.style.top = (rect.bottom + 6) + 'px';
+      // Clamp after layout so a dropdown near the right edge doesn't run off-screen.
+      var menuRect = menuBox.getBoundingClientRect();
+      var overflowX = menuRect.right - (window.innerWidth - 8);
+      if(overflowX > 0) menuBox.style.left = Math.max(8, rect.left - overflowX) + 'px';
+    }
+    function focusOption(idx){ if(buttons[idx]) buttons[idx].focus(); }
+    function selectedIndex(){
+      for(var i=0;i<buttons.length;i++){ if(buttons[i].getAttribute('aria-selected')==='true') return i; }
+      return 0;
+    }
+    function setValue(value, fire){
+      buttons.forEach(function(b){ b.setAttribute('aria-selected', String(b.getAttribute('data-value')===value)); });
+      var match = buttons.filter(function(b){ return b.getAttribute('data-value')===value; })[0];
+      current.textContent = match ? match.textContent : '';
+      details.setAttribute('data-value', value);
+      if(fire && changeHandler) changeHandler(value);
+    }
+    function close(focusSummary){
+      details.open = false;
+      if(focusSummary) summary.focus();
+    }
+    function setOptions(options, initialValue){
+      menu.innerHTML = '';
+      buttons = options.map(function(opt){
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ctx-option';
+        btn.setAttribute('role', 'option');
+        btn.setAttribute('data-value', opt[0]);
+        btn.setAttribute('aria-selected', 'false');
+        btn.textContent = opt[1];
+        // A 3rd tuple element marks a placeholder entry (e.g. a deck type
+        // that isn't wired up yet) -- inert and unselectable rather than a
+        // real, live-but-broken choice.
+        if(opt[2]){
+          btn.disabled = true;
+          btn.setAttribute('aria-disabled', 'true');
+        } else {
+          btn.addEventListener('click', function(){ setValue(opt[0], true); close(true); });
+        }
+        menu.appendChild(btn);
+        return btn;
+      });
+      setValue(initialValue, false);
+    }
+    details.addEventListener('toggle', function(){
+      menuBox.hidden = !details.open;
+      if(details.open){ positionMenu(); focusOption(selectedIndex()); }
+    });
+    details.addEventListener('keydown', function(e){
+      if(!details.open) return;
+      var focusedIdx = buttons.indexOf(document.activeElement);
+      var from = focusedIdx >= 0 ? focusedIdx : selectedIndex();
+      if(e.key === 'ArrowDown'){ e.preventDefault(); focusOption((from+1) % buttons.length); }
+      else if(e.key === 'ArrowUp'){ e.preventDefault(); focusOption((from-1+buttons.length) % buttons.length); }
+      else if(e.key === 'Home'){ e.preventDefault(); focusOption(0); }
+      else if(e.key === 'End'){ e.preventDefault(); focusOption(buttons.length-1); }
+      else if(e.key === 'Escape'){ e.preventDefault(); close(true); }
+    });
+    return {
+      setOptions: setOptions,
+      getValue: function(){ return details.getAttribute('data-value'); },
+      onChange: function(fn){ changeHandler = fn; }
+    };
+  }
+
+  var ctxDD = makeDropdown('ctxDropdown', 'ctxCurrent', 'ctxMenu');
+  var profileDD = makeDropdown('profileDropdown', 'profileCurrent', 'profileMenu');
+
+  // Opening one ctx-dropdown closes any other; a click outside any of them closes it too.
+  var allDropdowns = Array.prototype.slice.call(document.querySelectorAll('.ctx-dropdown'));
+  allDropdowns.forEach(function(d){
+    d.addEventListener('toggle', function(){
+      if(d.open) allDropdowns.forEach(function(o){ if(o!==d) o.open=false; });
+    });
+  });
+  document.addEventListener('click', function(e){
+    allDropdowns.forEach(function(d){ if(d.open && !d.contains(e.target)) d.open=false; });
+  });
+
   function applyDeckSelection(panelId, conf, deckKey){
     showCtxPane(panelId, deckKey);
     var profileConf = conf.profiles && conf.profiles[deckKey];
     if(profileConf){
       profileRow.hidden = false;
       profileLabel.textContent = profileConf.label;
-      profileSelect.innerHTML = '';
-      profileConf.options.forEach(function(opt){
-        var o = document.createElement('option');
-        o.value = opt[0]; o.textContent = opt[1];
-        profileSelect.appendChild(o);
-      });
-      profileSelect.value = profileConf.options[0][0];
+      profileDD.setOptions(profileConf.options, profileConf.options[0][0]);
       showProfilePane(panelId, deckKey, profileConf.options[0][0]);
     } else {
       profileRow.hidden = true;
@@ -1014,13 +2137,7 @@
     if(conf){
       ctxRow.hidden = false;
       ctxLabel.textContent = conf.label;
-      ctxSelect.innerHTML = '';
-      conf.options.forEach(function(opt){
-        var o = document.createElement('option');
-        o.value = opt[0]; o.textContent = opt[1];
-        ctxSelect.appendChild(o);
-      });
-      ctxSelect.value = conf.options[0][0];
+      ctxDD.setOptions(conf.options, conf.options[0][0]);
       applyDeckSelection(panelId, conf, conf.options[0][0]);
     } else {
       ctxRow.hidden = true;
@@ -1030,17 +2147,17 @@
     if(history.replaceState) history.replaceState(null, '', '#' + key);
   }
 
-  ctxSelect.addEventListener('change', function(){
+  ctxDD.onChange(function(value){
     var activeBtn = tabs.filter(function(b){ return b.getAttribute('aria-selected') === 'true'; })[0];
     var panelId = activeBtn.getAttribute('data-panel');
     var conf = CTX[tabKey(panelId)];
-    applyDeckSelection(panelId, conf, ctxSelect.value);
+    applyDeckSelection(panelId, conf, value);
   });
 
-  profileSelect.addEventListener('change', function(){
+  profileDD.onChange(function(value){
     var activeBtn = tabs.filter(function(b){ return b.getAttribute('aria-selected') === 'true'; })[0];
     var panelId = activeBtn.getAttribute('data-panel');
-    showProfilePane(panelId, ctxSelect.value, profileSelect.value);
+    showProfilePane(panelId, ctxDD.getValue(), value);
   });
 
   tabs.forEach(function(btn, idx){
