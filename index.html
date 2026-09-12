@@ -186,12 +186,28 @@
     --cut:8px; --cc-color:var(--accent);
   }
   .ctx-option{
-    display:block; width:100%; text-align:left; background:transparent; border:none; cursor:pointer;
+    display:flex; align-items:center; gap:0.55rem; width:100%; text-align:left; background:transparent; border:none; cursor:pointer;
     font-family:var(--font-mono); font-size:0.82rem; color:var(--text); padding:0.55rem 0.6rem;
   }
   .ctx-option:hover{ background:color-mix(in srgb, var(--accent) 16%, transparent); }
   .ctx-option[aria-selected="true"]{ color:var(--accent); font-weight:700; }
   .ctx-option:focus-visible{ outline:2px solid var(--cyan-bright); outline-offset:-2px; }
+  .ctx-option:disabled{ opacity:0.4; cursor:not-allowed; }
+  .ctx-option:disabled:hover{ background:transparent; }
+  /* Simulator-only decoration: a per-deck color swatch and an [ACTIVE] badge.
+     Comms/Field Ops never pass this metadata, so their options render exactly
+     as plain text, unaffected. */
+  .ctx-option-swatch{ width:11px; height:11px; flex:none; border:1px solid rgba(255,255,255,0.35); }
+  .ctx-option-label{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ctx-option-badge{ flex:none; font-size:0.7em; color:var(--accent); font-weight:700; }
+  /* A trailing side-by-side action row (e.g. "+ CREATE DECK" / "MANAGE"),
+     visually grouped apart from the option list above it. */
+  .ctx-option-actions{ display:flex; gap:0.4rem; border-top:2px solid var(--border); margin-top:0.4rem; padding-top:0.5rem; }
+  .ctx-option-action-btn{
+    flex:1 1 0; border:2px solid var(--accent); background:none; color:var(--accent);
+    font-family:var(--font-mono); font-size:0.72rem; font-weight:700; padding:0.55rem 0.4rem; cursor:pointer;
+  }
+  .ctx-option-action-btn:hover{ background:color-mix(in srgb, var(--accent) 16%, transparent); }
 
   /* ---------- content window ---------- */
   /* .window is the fixed frame (sized by flex, never itself scrolls) so its
@@ -352,9 +368,6 @@
   }
 
   /* ---------- Matrix Deck Simulator ---------- */
-  .ctx-option:disabled{ opacity:0.4; cursor:not-allowed; }
-  .ctx-option:disabled:hover{ background:transparent; }
-
   .mtx-intro-note{
     border:2px solid color-mix(in srgb, var(--accent) 45%, transparent);
     background:color-mix(in srgb, var(--accent) 6%, transparent);
@@ -455,20 +468,73 @@
   }
   .mtx-reset-btn:hover{ background:rgba(255,84,112,0.12); }
 
+  /* Profile-source tag on a node row: only shown when a non-DEFAULT profile
+     is active, so switching profiles visibly does something even before an
+     override has been made under it. */
+  .mtx-profile-tag{
+    display:inline-block; margin-left:0.5rem; font-family:var(--font-mono);
+    font-size:0.62em; font-weight:700; letter-spacing:0.03em; color:var(--text-faint); vertical-align:middle;
+  }
+  .mtx-profile-tag.is-own{ color:var(--accent); }
+
+  /* Deck type picker (Create Deck dialog) */
+  .mtx-decktype-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-top:0.5rem; }
+  .mtx-decktype-btn{
+    border:2px solid var(--border); background:none; color:var(--text-faint);
+    font-family:var(--font-mono); font-size:0.72rem; font-weight:700; letter-spacing:0.02em;
+    padding:0.7rem 0.4rem; cursor:pointer; text-align:center;
+  }
+  .mtx-decktype-btn.is-selected{ border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, transparent); }
+  .mtx-decktype-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+  .mtx-decktype-desc{ color:var(--text-faint); font-size:0.7rem; font-family:var(--font-mono); margin:0.5rem 0 0; }
+
+  /* Deck color picker -- the app's own 10 NEON FLUX swatches, each showing
+     its own index (or a filled dot when selected), matching CreateDeckDialog. */
+  .mtx-color-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:0.5rem; margin-top:0.5rem; }
+  .mtx-color-swatch{
+    height:40px; border:2px solid var(--border); background:none; cursor:pointer;
+    font-family:var(--font-mono); font-weight:700; font-size:0.9rem;
+  }
+  .mtx-color-swatch.is-selected{ border-color:#fff; }
+
+  /* Manage Decks list rows */
+  .mtx-deck-row{
+    border:2px solid var(--border); padding:0.7rem 0.8rem; margin-top:0.6rem;
+    display:flex; align-items:center; justify-content:space-between; gap:0.7rem;
+  }
+  .mtx-deck-row .mtx-deck-name{ font-family:var(--font-mono); font-weight:700; font-size:0.85em; }
+  .mtx-deck-row .mtx-deck-lock{ font-family:var(--font-mono); font-size:0.68em; color:var(--text-faint); flex:none; }
+  .mtx-deck-row .mtx-deck-edit{
+    flex:none; height:38px; padding:0 0.7rem; border:2px solid var(--border);
+    background:none; color:var(--text); font-family:var(--font-mono); font-size:0.68rem; font-weight:700; cursor:pointer;
+  }
+
   /* Full-screen playback overlay -- a sibling of .hud/.window (portal'd, like
-     the ctx-dropdown menus) so it is never clipped by .window's clip-path. */
+     the ctx-dropdown menus) so it is never clipped by .window's clip-path.
+     .mtx-overlay-rotor's own size/rotation is set inline by JS: on a
+     portrait-shaped viewport it's sized with width/height swapped and
+     rotated -90deg in place to fill the screen edge-to-edge, matching the
+     app's own landscape-in-place behavior; on an already-landscape-shaped
+     viewport (most desktop windows) it renders unrotated, since there's
+     nothing to simulate. container-type lets the card's text size respond
+     to the rotor's own (pre-rotation) width, so it reads at the right scale
+     in both orientations. */
   .mtx-overlay{
     position:fixed; inset:0; z-index:1000;
-    background:#000; display:flex; align-items:center; justify-content:center; padding:2rem;
-    cursor:pointer;
+    background:#000; cursor:pointer; overflow:hidden;
   }
   .mtx-overlay[hidden]{ display:none; }
+  .mtx-overlay-rotor{
+    position:absolute; top:50%; left:50%;
+    display:flex; align-items:center; justify-content:center;
+    container-type:inline-size;
+  }
   .mtx-overlay-card{
-    background:rgba(15,17,21,0.965); max-width:min(90vw,900px); max-height:85vh; overflow:auto;
+    background:rgba(15,17,21,0.965); max-width:92%; max-height:92%; overflow:auto;
     padding:2.4rem 2rem; text-align:center;
   }
   .mtx-overlay-text{
-    font-family:var(--font-body); font-weight:800; font-size:clamp(1.6rem,6vw,3.4rem); line-height:1.25;
+    font-family:var(--font-body); font-weight:800; font-size:clamp(1.6rem,6cqw,3.4rem); line-height:1.25;
     color:#fff; -webkit-text-stroke:3px var(--accent); white-space:pre-wrap; margin:0;
   }
   .mtx-overlay-hint{ margin-top:1.4rem; font-family:var(--font-mono); font-size:0.85rem; color:#6eebff; }
@@ -550,9 +616,11 @@
   <!-- Matrix Simulator full-screen playback overlay -- also a sibling of
        .hud/.window for the same clip-path reason as the dropdown menus above. -->
   <div class="mtx-overlay" id="mtxOverlay" hidden role="dialog" aria-label="Prompt playback">
-    <div class="mtx-overlay-card">
-      <p class="mtx-overlay-text" id="mtxOverlayText"></p>
-      <p class="mtx-overlay-hint">TAP ANYWHERE TO CLEAR</p>
+    <div class="mtx-overlay-rotor" id="mtxOverlayRotor">
+      <div class="mtx-overlay-card">
+        <p class="mtx-overlay-text" id="mtxOverlayText"></p>
+        <p class="mtx-overlay-hint">TAP ANYWHERE TO CLEAR</p>
+      </div>
     </div>
   </div>
   <button type="button" class="mtx-replay-chip" id="mtxReplayChip" hidden>&#8635; REPLAY</button>
@@ -1255,6 +1323,63 @@
   </div>
 </dialog>
 
+<dialog id="mtxDeckFormDialog" aria-labelledby="mtxDeckFormTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxDeckFormTitle">Create Deck</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close">&#10005;</button>
+    </div>
+
+    <div id="mtxDeckTypeSection">
+      <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.8rem;">DECK TYPE</p>
+      <div class="mtx-decktype-grid" id="mtxDeckTypeGrid"></div>
+      <p class="mtx-decktype-desc" id="mtxDeckTypeDesc"></p>
+    </div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:1.1rem;">DECK NAME</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxDeckNameInput" style="min-height:auto;" placeholder="DECK NAME" maxlength="40">
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:1.1rem;">DECK COLOR</p>
+    <div class="mtx-color-grid" id="mtxDeckColorGrid"></div>
+
+    <div id="mtxDeckDeleteSection" hidden style="margin-top:1.1rem;">
+      <p style="color:var(--error); font-size:0.78rem;">DESTRUCTIVE CONTROLS</p>
+      <button type="button" class="opt-btn" id="mtxDeckDelete" style="color:var(--error);border-color:var(--error); width:100%; margin-top:0.5rem;">DELETE DECK</button>
+    </div>
+
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxDeckFormSave" style="color:var(--accent);border-color:var(--accent);">CREATE</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxManageDecksDialog" aria-labelledby="mtxManageDecksTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxManageDecksTitle">Manage Decks</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close">&#10005;</button>
+    </div>
+    <p style="color:var(--text-dim); font-size:0.85rem;">Select a deck to rename or recolor. SYSTEM DEFAULT
+      can't be edited or removed.</p>
+    <div id="mtxManageDecksList"></div>
+  </div>
+</dialog>
+
+<dialog id="mtxDeckDeleteDialog" aria-labelledby="mtxDeckDeleteTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxDeckDeleteTitle" style="color:var(--error);">Delete Deck</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Abort">&#10005;</button>
+    </div>
+    <p id="mtxDeckDeleteText" style="font-size:0.85rem;"></p>
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxDeckDeleteConfirm" style="color:var(--error);border-color:var(--error);">DELETE PERMANENTLY</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
+</dialog>
+
 <script>
 (function(){
   "use strict";
@@ -1331,653 +1456,1021 @@
         ["status","Status"]
       ]
     },
+    // sim's DECK:/PROFILE: dropdowns are populated dynamically by the Matrix
+    // Simulator code below (real, user-creatable deck instances rather than
+    // a fixed option list) -- see the "sim" special-cases in selectTab,
+    // applyDeckSelection, and showProfilePane.
     sim: {
-      label: "DECK:",
-      // A 3rd tuple element marks an option disabled -- these four are real
-      // DeckType values in the app, listed here to show the roadmap, but only
-      // MATRIX is actually wired up in the simulator so far.
-      options: [
-        ["matrix","Matrix Deck"],
-        ["quickactions","Quick Actions Deck (soon)", true],
-        ["emergency","Emergency Deck (soon)", true],
-        ["emoji","Emoji Deck (soon)", true],
-        ["gif","GIF Deck (soon)", true]
-      ],
-      profiles: {
-        matrix: {
-          label: "PROFILE:",
-          options: [
-            ["DEFAULT","Default"],
-            ["WORK","Work"],
-            ["HIGH_STRESS","High Stress"],
-            ["SOCIAL","Social"],
-            ["BUILDER","Builder"]
-          ]
-        }
-      }
+      label: "DECK:"
     }
   };
 
   // ================= MATRIX DECK SIMULATOR =================
   // A local-only reproduction of the real app's CommandRepository +
-  // TemplateEngine + RootOverrideRepository + MatrixEditor + VisualPromptService
-  // pipeline: same 3 fixed poses x 4 nodes, same 5 fixed profiles, same
-  // {VAR}/{VAR:A-C} token engine and root-override precedence, same LIVE-SAVE
-  // editor and PLAY-to-full-screen-overlay behavior -- persisted to
-  // localStorage instead of Android SharedPreferences, since this page has no
-  // backend. Deliberately NOT included (see chat): custom pose layers beyond
-  // IDENTITY/DEFEND/CONNECT (so the ACTIVATE/focus toggle is omitted too --
-  // with no other layer to focus, it would always read ACTIVE with nothing to
-  // switch to), the visual-preset editor (font size/outline/bold/etc -- this
-  // hardcodes the app's own default preset), and TTS/audio.
-  window.MatrixSim = (function(){
-    "use strict";
+  // TemplateEngine + RootOverrideRepository + MatrixEditor + CreateDeckDialog +
+  // VisualPromptService pipeline: multiple deck instances (starting with one
+  // permanent SYSTEM DEFAULT deck), 5 fixed profiles, {VAR}/{VAR:A-C} tokens,
+  // and PLAY-to-full-screen-overlay -- persisted to localStorage instead of
+  // Android SharedPreferences. Deliberately NOT included (see chat): custom
+  // pose layers beyond IDENTITY/DEFEND/CONNECT, the visual-preset editor
+  // (font size/outline/etc -- hardcodes the app's own default preset), and
+  // TTS/audio. Root overrides are per-deck isolated here (a deliberate
+  // deviation from the app, where they're global by category name) -- your
+  // call, made explicitly in chat.
+  //
+  // This code intentionally lives in the SAME scope as the rest of this
+  // script (not its own IIFE): deck create/edit/delete need to refresh the
+  // shared DECK: dropdown (ctxDD, defined further down), and keeping
+  // everything in one scope avoids threading that access through awkwardly.
 
-    var STORAGE_PREFIX = 'ackSimMtx_';
+  var STORAGE_PREFIX = 'ackSimMtx_';
 
-    var POSES = ["IDENTITY", "DEFEND", "CONNECT"];
+  var POSES = ["IDENTITY", "DEFEND", "CONNECT"];
 
-    // Same 3 poses x 4 "twists" as the app's own BASE_TEMPLATE, including the
-    // exact default phrases.
-    var NODES = [
-      {path:"id0", label:"Twist 0 (Default)", category:"IDENTITY", def:"Acknowledged."},
-      {path:"id1", label:"Twist 1", category:"IDENTITY", def:"Systems Online."},
-      {path:"id2", label:"Twist 2", category:"IDENTITY", def:"Identify yourself."},
-      {path:"id3", label:"Twist 3", category:"IDENTITY", def:"Handle is Snakesan."},
-      {path:"def0", label:"Twist 0 (Default)", category:"DEFEND", def:"Stop."},
-      {path:"def1", label:"Twist 1", category:"DEFEND", def:"Please wait."},
-      {path:"def2", label:"Twist 2", category:"DEFEND", def:"I need a break."},
-      {path:"def3", label:"Twist 3", category:"DEFEND", def:"Leave me alone."},
-      {path:"con0", label:"Twist 0 (Default)", category:"CONNECT", def:"Greetings."},
-      {path:"con1", label:"Twist 1", category:"CONNECT", def:"Me too."},
-      {path:"con2", label:"Twist 2", category:"CONNECT", def:"Sorry."},
-      {path:"con3", label:"Twist 3", category:"CONNECT", def:"Pleasure meeting you."}
-    ];
+  // Same 3 poses x 4 "twists" as the app's own BASE_TEMPLATE, including the
+  // exact default phrases.
+  var NODES = [
+    {path:"id0", label:"Twist 0 (Default)", category:"IDENTITY", def:"Acknowledged."},
+    {path:"id1", label:"Twist 1", category:"IDENTITY", def:"Systems Online."},
+    {path:"id2", label:"Twist 2", category:"IDENTITY", def:"Identify yourself."},
+    {path:"id3", label:"Twist 3", category:"IDENTITY", def:"Handle is Snakesan."},
+    {path:"def0", label:"Twist 0 (Default)", category:"DEFEND", def:"Stop."},
+    {path:"def1", label:"Twist 1", category:"DEFEND", def:"Please wait."},
+    {path:"def2", label:"Twist 2", category:"DEFEND", def:"I need a break."},
+    {path:"def3", label:"Twist 3", category:"DEFEND", def:"Leave me alone."},
+    {path:"con0", label:"Twist 0 (Default)", category:"CONNECT", def:"Greetings."},
+    {path:"con1", label:"Twist 1", category:"CONNECT", def:"Me too."},
+    {path:"con2", label:"Twist 2", category:"CONNECT", def:"Sorry."},
+    {path:"con3", label:"Twist 3", category:"CONNECT", def:"Pleasure meeting you."}
+  ];
 
-    function nodeByPath(path){
-      for(var i=0;i<NODES.length;i++){ if(NODES[i].path === path) return NODES[i]; }
-      return null;
-    }
+  function nodeByPath(path){
+    for(var i=0;i<NODES.length;i++){ if(NODES[i].path === path) return NODES[i]; }
+    return null;
+  }
 
-    // ---------- storage ----------
-    function readJSON(key, fallback){
-      try{
-        var raw = localStorage.getItem(key);
-        return raw === null ? fallback : JSON.parse(raw);
-      }catch(e){ return fallback; }
-    }
-    function writeJSON(key, value){
-      try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
-    }
-    function readStr(key, fallback){
-      try{
-        var raw = localStorage.getItem(key);
-        return raw === null ? fallback : raw;
-      }catch(e){ return fallback; }
-    }
-    function writeStr(key, value){
-      try{ localStorage.setItem(key, value); }catch(e){}
-    }
+  // The app's own 10 NEON FLUX swatches, same order as the accent picker.
+  var DECK_COLORS = ["#00F3FF","#FF0055","#00FF41","#FF9900","#BD00FF","#FFD500","#0055FF","#FF00FF","#B7FF00","#FF0099"];
 
-    function phraseKey(profile, path){ return STORAGE_PREFIX + 'phrase_' + profile + '_' + path; }
-    function varsKey(profile, path){ return STORAGE_PREFIX + 'vars_' + profile + '_' + path; }
-    function rootKey(category){ return STORAGE_PREFIX + 'root_' + category; }
-    function collapsedKey(category){ return STORAGE_PREFIX + 'collapsed_' + category; }
+  var PROFILE_OPTIONS = [
+    ["DEFAULT","Default"],
+    ["WORK","Work"],
+    ["HIGH_STRESS","High Stress"],
+    ["SOCIAL","Social"],
+    ["BUILDER","Builder"]
+  ];
 
-    function defaultRootConfig(){
-      return { A:{enabled:false,value:''}, B:{enabled:false,value:''}, C:{enabled:false,value:''} };
-    }
+  // Matches CreateDeckDialog.kt's own type grid and descriptions. Only MATRIX
+  // is actually creatable right now; the rest are shown (not hidden) so the
+  // roadmap is visible, same spirit as the rest of this page's placeholders.
+  var DECK_TYPES = [
+    {type:"MATRIX", label:"MATRIX", desc:"A full 3-pose Matrix with its own phrases, context layers, and profiles.", enabled:true},
+    {type:"QUICK_ACTIONS", label:"QUICK ACTIONS", desc:"Three action groups with four configurable slots per group.", enabled:false},
+    {type:"EMERGENCY", label:"EMERGENCY", desc:"Four immediate prompt slots with optional emergency overrides.", enabled:false},
+    {type:"EMOJI", label:"EMOJI", desc:"Visual-only emoji pages with configurable grids and optional text.", enabled:false},
+    {type:"GIF", label:"GIF", desc:"Local GIF library with categories, previews, and fullscreen playback.", enabled:false}
+  ];
 
-    // Mirrors CommandRepository.getPhrase: node+profile value, else that
-    // node's DEFAULT-profile value, else the built-in default phrase.
-    function getPhrase(profile, path){
-      var node = nodeByPath(path);
-      var direct = readStr(phraseKey(profile, path), null);
-      if(direct !== null) return direct;
-      if(profile !== 'DEFAULT'){
-        var defaultProfileValue = readStr(phraseKey('DEFAULT', path), null);
-        if(defaultProfileValue !== null) return defaultProfileValue;
-      }
-      return node ? node.def : '';
-    }
-    function setPhrase(profile, path, phrase){
-      writeStr(phraseKey(profile, path), phrase);
-    }
-    function getVars(profile, path){
-      return readJSON(varsKey(profile, path), []);
-    }
-    function setVars(profile, path, values){
-      writeJSON(varsKey(profile, path), values);
-    }
-    function getRootConfig(category){
-      var stored = readJSON(rootKey(category), null);
-      return stored || defaultRootConfig();
-    }
-    function setRootConfig(category, config){
-      writeJSON(rootKey(category), config);
-    }
-    function isCollapsed(category){
-      // "Collapsed" mirrors the app's own naming: false (default) shows the
-      // full detail view; true shows the compact ON/OFF-only strip.
-      return readJSON(collapsedKey(category), false);
-    }
-    function setCollapsed(category, value){
-      writeJSON(collapsedKey(category), value);
-    }
+  var DEFAULT_DECK_ID = 'SYSTEM_DEFAULT';
+  var DECKS_KEY = STORAGE_PREFIX + 'decks';
+  var ACTIVE_DECK_KEY = STORAGE_PREFIX + 'active_deck';
+  var ACTIVE_PROFILE_KEY = STORAGE_PREFIX + 'active_profile';
 
-    // ---------- template engine (mirrors TemplateEngine.kt) ----------
-    var VAR_SOURCE = '\\{VAR(?::([A-C]))?\\}';
+  // ---------- storage ----------
+  function readJSON(key, fallback){
+    try{
+      var raw = localStorage.getItem(key);
+      return raw === null ? fallback : JSON.parse(raw);
+    }catch(e){ return fallback; }
+  }
+  function writeJSON(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
+  }
+  function readStr(key, fallback){
+    try{
+      var raw = localStorage.getItem(key);
+      return raw === null ? fallback : raw;
+    }catch(e){ return fallback; }
+  }
+  function writeStr(key, value){
+    try{ localStorage.setItem(key, value); }catch(e){}
+  }
 
-    function countVariables(template){
-      var re = new RegExp(VAR_SOURCE, 'g');
-      return (template.match(re) || []).length;
+  // Storage keys gain a deck dimension. SYSTEM DEFAULT gets no prefix
+  // segment at all (deckKeyPart returns ''), so every key already saved by
+  // this simulator before decks existed keeps working unchanged.
+  function deckKeyPart(deckId){ return deckId === DEFAULT_DECK_ID ? '' : deckId + '_'; }
+  function phraseKey(deckId, profile, path){ return STORAGE_PREFIX + 'phrase_' + deckKeyPart(deckId) + profile + '_' + path; }
+  function varsKey(deckId, profile, path){ return STORAGE_PREFIX + 'vars_' + deckKeyPart(deckId) + profile + '_' + path; }
+  function rootKey(deckId, category){ return STORAGE_PREFIX + 'root_' + deckKeyPart(deckId) + category; }
+  function collapsedKey(deckId, category){ return STORAGE_PREFIX + 'collapsed_' + deckKeyPart(deckId) + category; }
+
+  function defaultRootConfig(){
+    return { A:{enabled:false,value:''}, B:{enabled:false,value:''}, C:{enabled:false,value:''} };
+  }
+
+  // Mirrors CommandRepository.getPhrase: node+profile value, else that
+  // node's DEFAULT-profile value, else the built-in default phrase.
+  function getPhrase(deckId, profile, path){
+    var node = nodeByPath(path);
+    var direct = readStr(phraseKey(deckId, profile, path), null);
+    if(direct !== null) return direct;
+    if(profile !== 'DEFAULT'){
+      var defaultProfileValue = readStr(phraseKey(deckId, 'DEFAULT', path), null);
+      if(defaultProfileValue !== null) return defaultProfileValue;
     }
-    function getVariableTags(template){
-      var tags = [];
-      var re = new RegExp(VAR_SOURCE, 'g');
-      var m;
-      while((m = re.exec(template)) !== null){ tags.push(m[1] || null); }
-      return tags;
+    return node ? node.def : '';
+  }
+  function setPhrase(deckId, profile, path, phrase){
+    writeStr(phraseKey(deckId, profile, path), phrase);
+  }
+  function getVars(deckId, profile, path){
+    return readJSON(varsKey(deckId, profile, path), []);
+  }
+  function setVars(deckId, profile, path, values){
+    writeJSON(varsKey(deckId, profile, path), values);
+  }
+  function getRootConfig(deckId, category){
+    var stored = readJSON(rootKey(deckId, category), null);
+    return stored || defaultRootConfig();
+  }
+  function setRootConfig(deckId, category, config){
+    writeJSON(rootKey(deckId, category), config);
+  }
+  function isCollapsed(deckId, category){
+    // "Collapsed" mirrors the app's own naming: false (default) shows the
+    // full detail view; true shows the compact ON/OFF-only strip.
+    return readJSON(collapsedKey(deckId, category), false);
+  }
+  function setCollapsed(deckId, category, value){
+    writeJSON(collapsedKey(deckId, category), value);
+  }
+
+  // Whether a node's template under this profile is its own saved override,
+  // or just inheriting DEFAULT's -- drives the small tag on each row so
+  // switching profiles visibly does something even before you've edited
+  // anything under the new one.
+  function getPhraseSource(deckId, profile, path){
+    if(profile === 'DEFAULT') return 'base';
+    return readStr(phraseKey(deckId, profile, path), null) !== null ? 'own' : 'inherited';
+  }
+
+  // ---------- deck CRUD (mirrors CommandRepository's deck management) ----------
+  function getCustomDecks(){ return readJSON(DECKS_KEY, []); }
+  function saveCustomDecks(list){ writeJSON(DECKS_KEY, list); }
+
+  function getDeckMeta(deckId){
+    if(deckId === DEFAULT_DECK_ID){
+      return { id: DEFAULT_DECK_ID, name: 'SYSTEM DEFAULT', colorIndex: 0, type: 'MATRIX' };
     }
-    function resolveTemplate(template, localValues, overrides){
-      var i = 0;
-      var re = new RegExp(VAR_SOURCE, 'g');
-      return template.replace(re, function(full, tag){
-        var localValue = localValues[i] || '';
-        i++;
-        var root = tag ? overrides[tag] : null;
-        if(root && root.enabled && root.value && root.value.trim() !== ''){
-          return root.value;
+    var list = getCustomDecks();
+    for(var i=0;i<list.length;i++){ if(list[i].id === deckId) return list[i]; }
+    return null;
+  }
+  function getAllDecks(){ return [getDeckMeta(DEFAULT_DECK_ID)].concat(getCustomDecks()); }
+
+  function getActiveDeckId(){
+    var id = readStr(ACTIVE_DECK_KEY, DEFAULT_DECK_ID);
+    return getDeckMeta(id) ? id : DEFAULT_DECK_ID;
+  }
+  function setActiveDeckIdStorage(id){ writeStr(ACTIVE_DECK_KEY, id); }
+
+  // Matches the app: which profile is active is a single global setting,
+  // not scoped to any one deck.
+  function getActiveProfile(){ return readStr(ACTIVE_PROFILE_KEY, 'DEFAULT'); }
+  function setActiveProfileStorage(p){ writeStr(ACTIVE_PROFILE_KEY, p); }
+
+  function createDeckRecord(name, colorIndex, type){
+    var id = 'DECK_' + Date.now();
+    var cleanName = (name || '').trim().toUpperCase().slice(0,40) || type;
+    var deck = { id: id, name: cleanName, colorIndex: colorIndex, type: type };
+    var list = getCustomDecks();
+    list.push(deck);
+    saveCustomDecks(list);
+    return deck;
+  }
+  function updateDeckRecord(deckId, name, colorIndex){
+    if(deckId === DEFAULT_DECK_ID) return null;
+    var list = getCustomDecks();
+    var idx = -1;
+    for(var i=0;i<list.length;i++){ if(list[i].id === deckId){ idx = i; break; } }
+    if(idx === -1) return null;
+    var cleanName = (name || '').trim().toUpperCase().slice(0,40) || 'UNTITLED DECK';
+    list[idx] = { id: list[idx].id, name: cleanName, colorIndex: colorIndex, type: list[idx].type };
+    saveCustomDecks(list);
+    return list[idx];
+  }
+  function deleteDeckRecord(deckId){
+    if(deckId === DEFAULT_DECK_ID) return false;
+    saveCustomDecks(getCustomDecks().filter(function(d){ return d.id !== deckId; }));
+
+    // Remove every phrase/vars/root/collapsed key this deck owns.
+    try{
+      var types = ['phrase_', 'vars_', 'root_', 'collapsed_'];
+      var toRemove = [];
+      for(var i=0;i<localStorage.length;i++){
+        var key = localStorage.key(i);
+        if(!key || key.indexOf(STORAGE_PREFIX) !== 0) continue;
+        var rest = key.slice(STORAGE_PREFIX.length);
+        for(var t=0;t<types.length;t++){
+          if(rest.indexOf(types[t]) === 0 && rest.slice(types[t].length).indexOf(deckId + '_') === 0){
+            toRemove.push(key);
+            break;
+          }
         }
-        return localValue;
-      });
-    }
-
-    function getResolvedPhrase(profile, path){
-      var node = nodeByPath(path);
-      var template = getPhrase(profile, path);
-      var localValues = getVars(profile, path);
-      var rootConfig = getRootConfig(node.category);
-      return resolveTemplate(template, localValues, rootConfig);
-    }
-
-    // Mirrors VisualLogicEngine.resolveDisplayPrompt, hardcoded to the app's
-    // own default preset (no per-node visual override, target ping, or
-    // preset editor in this simulator -- see the note above).
-    function resolveDisplayPrompt(rawPhrase){
-      var words = rawPhrase.trim().split(/\s+/).filter(function(w){ return w.length > 0; });
-      if(words.length === 0) return '';
-      if(words.length <= 5) return rawPhrase.toUpperCase();
-      return "ALERT:\n" + words.slice(0,3).join(' ').toUpperCase() + "...";
-    }
-
-    // ---------- small DOM helper ----------
-    function el(tag, className, text){
-      var e = document.createElement(tag);
-      if(className) e.className = className;
-      if(text !== undefined) e.textContent = text;
-      return e;
-    }
-
-    // ---------- rendering ----------
-    var state = { profile: 'DEFAULT' };
-
-    function render(profile, focusKey){
-      state.profile = profile;
-      var root = document.getElementById('matrixEditorRoot');
-      if(!root) return;
-      root.innerHTML = '';
-
-      POSES.forEach(function(category){
-        root.appendChild(renderPose(category, profile));
-      });
-
-      if(focusKey){
-        var target = root.querySelector('[data-focus-key="' + focusKey + '"]');
-        if(target) target.focus();
       }
-    }
+      toRemove.forEach(function(k){ localStorage.removeItem(k); });
+    }catch(e){}
 
-    function renderPose(category, profile){
-      var wrap = el('div', 'mtx-pose');
+    if(getActiveDeckId() === deckId) setActiveDeckIdStorage(DEFAULT_DECK_ID);
+    return true;
+  }
 
-      var head = el('div', 'mtx-pose-head');
-      head.appendChild(el('span', 'mtx-pose-dot is-live'));
-      head.appendChild(el('span', 'mtx-pose-name is-live', 'ROOT :: ' + category));
-      wrap.appendChild(head);
+  // ---------- template engine (mirrors TemplateEngine.kt) ----------
+  var VAR_SOURCE = '\\{VAR(?::([A-C]))?\\}';
 
-      wrap.appendChild(renderRootStrip(category));
-
-      var list = el('div', 'mtx-node-list');
-      NODES.filter(function(n){ return n.category === category; }).forEach(function(node){
-        list.appendChild(renderNodeRow(node, profile));
-      });
-      wrap.appendChild(list);
-
-      return wrap;
-    }
-
-    function renderRootStrip(category){
-      var config = getRootConfig(category);
-      var collapsed = isCollapsed(category);
-
-      var box = el('div', 'mtx-root');
-
-      var head = document.createElement('button');
-      head.type = 'button';
-      head.className = 'mtx-root-head';
-      head.setAttribute('data-focus-key', 'root-head-' + category);
-      head.appendChild(el('span', 'mtx-root-title', 'SHARED ROOT VARIABLES'));
-      head.appendChild(el('span', 'mtx-root-toggle', collapsed ? '[EXPAND ▼]' : '[COLLAPSE ▲]'));
-      head.addEventListener('click', function(){
-        setCollapsed(category, !isCollapsed(category));
-        render(state.profile, 'root-head-' + category);
-      });
-      box.appendChild(head);
-
-      box.appendChild(el('p', 'mtx-root-hint', 'Enabled tags replace matching {VAR:A}, {VAR:B}, or {VAR:C}.'));
-
-      function makeToggleBox(tag, slot, compact){
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'mtx-root-toggle-box' + (slot.enabled ? ' is-on' : '');
-        if(compact) b.style.cssText = 'flex:1 1 0; width:auto;';
-        b.setAttribute('data-focus-key', 'root-slot-' + category + '-' + tag);
-        b.setAttribute('aria-pressed', String(!!slot.enabled));
-        b.appendChild(el('b', null, tag));
-        b.appendChild(el('span', null, slot.enabled ? 'ON' : 'OFF'));
-        b.addEventListener('click', function(){
-          var cfg = getRootConfig(category);
-          cfg[tag].enabled = !cfg[tag].enabled;
-          setRootConfig(category, cfg);
-          render(state.profile, 'root-slot-' + category + '-' + tag);
-        });
-        return b;
+  function countVariables(template){
+    var re = new RegExp(VAR_SOURCE, 'g');
+    return (template.match(re) || []).length;
+  }
+  function getVariableTags(template){
+    var tags = [];
+    var re = new RegExp(VAR_SOURCE, 'g');
+    var m;
+    while((m = re.exec(template)) !== null){ tags.push(m[1] || null); }
+    return tags;
+  }
+  function resolveTemplate(template, localValues, overrides){
+    var i = 0;
+    var re = new RegExp(VAR_SOURCE, 'g');
+    return template.replace(re, function(full, tag){
+      var localValue = localValues[i] || '';
+      i++;
+      var root = tag ? overrides[tag] : null;
+      if(root && root.enabled && root.value && root.value.trim() !== ''){
+        return root.value;
       }
+      return localValue;
+    });
+  }
 
-      if(collapsed){
-        var compactRow = document.createElement('div');
-        compactRow.style.cssText = 'display:flex; gap:0.5rem; margin-top:0.6rem;';
-        ['A','B','C'].forEach(function(tag){
-          compactRow.appendChild(makeToggleBox(tag, config[tag], true));
-        });
-        box.appendChild(compactRow);
-      } else {
-        ['A','B','C'].forEach(function(tag){
-          var slot = config[tag];
-          var row = el('div', 'mtx-root-row' + (slot.enabled ? ' is-on' : ''));
-          row.appendChild(makeToggleBox(tag, slot, false));
+  function getResolvedPhrase(deckId, profile, path){
+    var node = nodeByPath(path);
+    var template = getPhrase(deckId, profile, path);
+    var localValues = getVars(deckId, profile, path);
+    var rootConfig = getRootConfig(deckId, node.category);
+    return resolveTemplate(template, localValues, rootConfig);
+  }
 
-          var info = el('div', 'mtx-root-info');
-          info.appendChild(el('span', 'mtx-tag', 'ROOT ' + tag));
-          info.appendChild(el('span', 'mtx-val' + (slot.value ? '' : ' is-empty'), slot.value || 'NO SHARED VALUE SET'));
-          row.appendChild(info);
+  // Mirrors VisualLogicEngine.resolveDisplayPrompt, hardcoded to the app's
+  // own default preset (no per-node visual override, target ping, or
+  // preset editor in this simulator -- see the note above).
+  function resolveDisplayPrompt(rawPhrase){
+    var words = rawPhrase.trim().split(/\s+/).filter(function(w){ return w.length > 0; });
+    if(words.length === 0) return '';
+    if(words.length <= 5) return rawPhrase.toUpperCase();
+    return "ALERT:\n" + words.slice(0,3).join(' ').toUpperCase() + "...";
+  }
 
-          var editBtn = document.createElement('button');
-          editBtn.type = 'button';
-          editBtn.className = 'mtx-root-edit';
-          editBtn.textContent = 'EDIT';
-          editBtn.addEventListener('click', function(){ openRootDialog(category, tag); });
-          row.appendChild(editBtn);
+  // ---------- small DOM helper ----------
+  function el(tag, className, text){
+    var e = document.createElement(tag);
+    if(className) e.className = className;
+    if(text !== undefined) e.textContent = text;
+    return e;
+  }
 
-          box.appendChild(row);
-        });
-      }
+  // ---------- rendering ----------
+  var mtxState = { deckId: DEFAULT_DECK_ID, profile: 'DEFAULT' };
 
-      return box;
+  function mtxRenderEditor(focusKey){
+    var root = document.getElementById('matrixEditorRoot');
+    if(!root) return;
+    root.innerHTML = '';
+
+    POSES.forEach(function(category){
+      root.appendChild(renderPose(category, mtxState.deckId, mtxState.profile));
+    });
+
+    if(focusKey){
+      var target = root.querySelector('[data-focus-key="' + focusKey + '"]');
+      if(target) target.focus();
     }
+  }
 
-    function renderNodeRow(node, profile){
-      var row = el('div', 'mtx-node');
-      row.appendChild(el('span', 'mtx-node-tree', '├─'));
+  function renderPose(category, deckId, profile){
+    var wrap = el('div', 'mtx-pose');
 
-      var card = el('div', 'mtx-node-card');
+    var head = el('div', 'mtx-pose-head');
+    head.appendChild(el('span', 'mtx-pose-dot is-live'));
+    head.appendChild(el('span', 'mtx-pose-name is-live', 'ROOT :: ' + category));
+    wrap.appendChild(head);
 
-      var body = document.createElement('button');
-      body.type = 'button';
-      body.className = 'mtx-node-body';
-      body.setAttribute('data-focus-key', 'node-body-' + node.path);
+    wrap.appendChild(renderRootStrip(category, deckId));
 
-      var rawTemplate = getPhrase(profile, node.path);
-      var resolved = getResolvedPhrase(profile, node.path);
-      var localValues = getVars(profile, node.path);
-      var variableCount = countVariables(rawTemplate);
+    var list = el('div', 'mtx-node-list');
+    NODES.filter(function(n){ return n.category === category; }).forEach(function(node){
+      list.appendChild(renderNodeRow(node, deckId, profile));
+    });
+    wrap.appendChild(list);
 
-      body.appendChild(el('span', 'mtx-node-label', node.label));
-      body.appendChild(el(
-        'span',
-        'mtx-node-phrase' + (resolved.trim() ? '' : ' is-empty'),
-        resolved.trim() ? resolved : '(blank — PLAY does nothing)'
-      ));
+    return wrap;
+  }
 
-      if(variableCount > 0){
-        var varRow = el('div', 'mtx-var-row');
-        for(var i=0;i<variableCount;i++){
-          (function(index){
-            var val = localValues[index] || '';
-            var chip = document.createElement('button');
-            chip.type = 'button';
-            chip.className = 'mtx-var-chip';
-            chip.textContent = 'V' + (index+1) + ': ' + (val || 'EMPTY');
-            chip.addEventListener('click', function(e){
-              e.stopPropagation();
-              openVarQuickDialog(node, profile, index);
-            });
-            varRow.appendChild(chip);
-          })(i);
-        }
-        body.appendChild(varRow);
-      }
+  function renderRootStrip(category, deckId){
+    var config = getRootConfig(deckId, category);
+    var collapsed = isCollapsed(deckId, category);
 
-      body.addEventListener('click', function(){ openNodeDialog(node, profile); });
-      card.appendChild(body);
+    var box = el('div', 'mtx-root');
 
-      var playBtn = document.createElement('button');
-      playBtn.type = 'button';
-      playBtn.className = 'mtx-play-btn';
-      playBtn.setAttribute('aria-label', 'Play ' + node.label + ', ' + node.category);
-      playBtn.textContent = '▶';
-      playBtn.addEventListener('click', function(e){
-        e.stopPropagation();
-        playNode(node, profile);
+    var head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'mtx-root-head';
+    head.setAttribute('data-focus-key', 'root-head-' + category);
+    head.appendChild(el('span', 'mtx-root-title', 'SHARED ROOT VARIABLES'));
+    head.appendChild(el('span', 'mtx-root-toggle', collapsed ? '[EXPAND ▼]' : '[COLLAPSE ▲]'));
+    head.addEventListener('click', function(){
+      setCollapsed(deckId, category, !isCollapsed(deckId, category));
+      mtxRenderEditor('root-head-' + category);
+    });
+    box.appendChild(head);
+
+    box.appendChild(el('p', 'mtx-root-hint', 'Enabled tags replace matching {VAR:A}, {VAR:B}, or {VAR:C} within this deck.'));
+
+    function makeToggleBox(tag, slot, compact){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mtx-root-toggle-box' + (slot.enabled ? ' is-on' : '');
+      if(compact) b.style.cssText = 'flex:1 1 0; width:auto;';
+      b.setAttribute('data-focus-key', 'root-slot-' + category + '-' + tag);
+      b.setAttribute('aria-pressed', String(!!slot.enabled));
+      b.appendChild(el('b', null, tag));
+      b.appendChild(el('span', null, slot.enabled ? 'ON' : 'OFF'));
+      b.addEventListener('click', function(){
+        var cfg = getRootConfig(deckId, category);
+        cfg[tag].enabled = !cfg[tag].enabled;
+        setRootConfig(deckId, category, cfg);
+        mtxRenderEditor('root-slot-' + category + '-' + tag);
       });
-      card.appendChild(playBtn);
-
-      row.appendChild(card);
-      return row;
+      return b;
     }
 
-    // ---------- playback overlay ----------
-    var overlayEl, overlayTextEl, replayChipEl;
-    var overlayTimeout = null;
-    var replayTimeout = null;
-    var replayAction = null;
+    if(collapsed){
+      var compactRow = document.createElement('div');
+      compactRow.style.cssText = 'display:flex; gap:0.5rem; margin-top:0.6rem;';
+      ['A','B','C'].forEach(function(tag){
+        compactRow.appendChild(makeToggleBox(tag, config[tag], true));
+      });
+      box.appendChild(compactRow);
+    } else {
+      ['A','B','C'].forEach(function(tag){
+        var slot = config[tag];
+        var row = el('div', 'mtx-root-row' + (slot.enabled ? ' is-on' : ''));
+        row.appendChild(makeToggleBox(tag, slot, false));
 
-    function ensureOverlayRefs(){
-      if(overlayEl) return;
-      overlayEl = document.getElementById('mtxOverlay');
-      overlayTextEl = document.getElementById('mtxOverlayText');
-      replayChipEl = document.getElementById('mtxReplayChip');
-      overlayEl.addEventListener('click', function(){ clearOverlay(true); });
-      replayChipEl.addEventListener('click', function(){
-        clearReplayChip();
-        if(replayAction) replayAction();
+        var info = el('div', 'mtx-root-info');
+        info.appendChild(el('span', 'mtx-tag', 'ROOT ' + tag));
+        info.appendChild(el('span', 'mtx-val' + (slot.value ? '' : ' is-empty'), slot.value || 'NO SHARED VALUE SET'));
+        row.appendChild(info);
+
+        var editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'mtx-root-edit';
+        editBtn.textContent = 'EDIT';
+        editBtn.addEventListener('click', function(){ openRootDialog(category, deckId, tag); });
+        row.appendChild(editBtn);
+
+        box.appendChild(row);
       });
     }
 
-    function showOverlay(text, onReplay){
-      ensureOverlayRefs();
-      clearReplayChip();
-      if(overlayTimeout){ clearTimeout(overlayTimeout); overlayTimeout = null; }
+    return box;
+  }
 
-      replayAction = onReplay;
-      overlayTextEl.textContent = text;
-      overlayEl.hidden = false;
+  function renderNodeRow(node, deckId, profile){
+    var row = el('div', 'mtx-node');
+    row.appendChild(el('span', 'mtx-node-tree', '├─'));
 
-      overlayTimeout = setTimeout(function(){ clearOverlay(true); }, 10000);
+    var card = el('div', 'mtx-node-card');
+
+    var body = document.createElement('button');
+    body.type = 'button';
+    body.className = 'mtx-node-body';
+    body.setAttribute('data-focus-key', 'node-body-' + node.path);
+
+    var rawTemplate = getPhrase(deckId, profile, node.path);
+    var resolved = getResolvedPhrase(deckId, profile, node.path);
+    var localValues = getVars(deckId, profile, node.path);
+    var variableCount = countVariables(rawTemplate);
+
+    var labelEl = el('span', 'mtx-node-label');
+    labelEl.textContent = node.label;
+    if(profile !== 'DEFAULT'){
+      var source = getPhraseSource(deckId, profile, node.path);
+      var tagEl = document.createElement('span');
+      tagEl.className = 'mtx-profile-tag' + (source === 'own' ? ' is-own' : '');
+      tagEl.textContent = source === 'own' ? '• ' + profile + ' OVERRIDE' : '• FROM DEFAULT';
+      labelEl.appendChild(tagEl);
     }
+    body.appendChild(labelEl);
 
-    function clearOverlay(offerReplay){
-      ensureOverlayRefs();
-      if(overlayTimeout){ clearTimeout(overlayTimeout); overlayTimeout = null; }
-      var hadContent = !overlayEl.hidden;
-      overlayEl.hidden = true;
+    body.appendChild(el(
+      'span',
+      'mtx-node-phrase' + (resolved.trim() ? '' : ' is-empty'),
+      resolved.trim() ? resolved : '(blank — PLAY does nothing)'
+    ));
 
-      if(offerReplay && hadContent && replayAction){
-        showReplayChip();
-      }
-    }
-
-    function showReplayChip(){
-      ensureOverlayRefs();
-      clearReplayChip();
-      replayChipEl.hidden = false;
-      replayTimeout = setTimeout(function(){ clearReplayChip(); }, 20000);
-    }
-
-    function clearReplayChip(){
-      ensureOverlayRefs();
-      if(replayTimeout){ clearTimeout(replayTimeout); replayTimeout = null; }
-      replayChipEl.hidden = true;
-    }
-
-    function playNode(node, profile){
-      var resolved = getResolvedPhrase(profile, node.path);
-      // Mirrors the app: a blank resolved phrase clears/no-ops rather than
-      // showing an empty overlay.
-      if(!resolved.trim()) return;
-      var displayText = resolveDisplayPrompt(resolved);
-      showOverlay(displayText, function(){ playNode(node, profile); });
-    }
-
-    // ---------- LIVE-SAVE EDITOR dialog ----------
-    var nodeDialogState = null;
-
-    function refreshListInBackground(){ render(state.profile); }
-
-    function renderVarFields(node, profile, template){
-      var container = document.getElementById('mtxVarFields');
-      container.innerHTML = '';
-      var count = countVariables(template);
-      if(count === 0) return;
-
-      var tags = getVariableTags(template);
-      var values = getVars(profile, node.path);
-
-      var header = el('p', null, 'LOCAL VARIABLE DATA');
-      header.style.cssText = 'color:var(--var-accent); font-family:var(--font-mono); font-size:0.72rem; font-weight:700; margin:1rem 0 0.2rem;';
-      container.appendChild(header);
-
-      var hint = el('p', null, 'Saved immediately. Tagged A/B/C values can be replaced by an enabled root override.');
-      hint.style.cssText = 'color:var(--text-faint); font-family:var(--font-mono); font-size:0.65rem; margin:0 0 0.4rem;';
-      container.appendChild(hint);
-
-      for(var i=0;i<count;i++){
+    if(variableCount > 0){
+      var varRow = el('div', 'mtx-var-row');
+      for(var i=0;i<variableCount;i++){
         (function(index){
-          var tag = tags[index];
-          var field = el('div', 'mtx-var-field');
-          var label = document.createElement('label');
-          label.textContent = tag ? ('VARIABLE ' + (index+1) + ' // ROOT ' + tag) : ('VARIABLE ' + (index+1));
-          field.appendChild(label);
-
-          var inp = document.createElement('input');
-          inp.type = 'text';
-          inp.placeholder = 'ENTER LOCAL FALLBACK...';
-          inp.value = values[index] || '';
-          inp.addEventListener('input', function(){
-            var current = getVars(profile, node.path);
-            while(current.length <= index) current.push('');
-            current[index] = inp.value;
-            setVars(profile, node.path, current);
-            refreshListInBackground();
+          var val = localValues[index] || '';
+          var chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'mtx-var-chip';
+          chip.textContent = 'V' + (index+1) + ': ' + (val || 'EMPTY');
+          chip.addEventListener('click', function(e){
+            e.stopPropagation();
+            openVarQuickDialog(node, deckId, profile, index);
           });
-          field.appendChild(inp);
-          container.appendChild(field);
+          varRow.appendChild(chip);
         })(i);
       }
+      body.appendChild(varRow);
     }
 
-    function updateTemplate(node, profile, newTemplate){
-      var newCount = countVariables(newTemplate);
-      var current = getVars(profile, node.path);
-      while(current.length > newCount) current.pop();
-      while(current.length < newCount) current.push('');
-      setVars(profile, node.path, current);
-      setPhrase(profile, node.path, newTemplate);
-      renderVarFields(node, profile, newTemplate);
-      refreshListInBackground();
+    body.addEventListener('click', function(){ openNodeDialog(node, deckId, profile); });
+    card.appendChild(body);
+
+    var playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'mtx-play-btn';
+    playBtn.setAttribute('aria-label', 'Play ' + node.label + ', ' + node.category);
+    playBtn.textContent = '▶';
+    playBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      playNode(node, deckId, profile);
+    });
+    card.appendChild(playBtn);
+
+    row.appendChild(card);
+    return row;
+  }
+
+  // ---------- playback overlay ----------
+  var overlayEl, overlayRotorEl, overlayTextEl, replayChipEl;
+  var overlayTimeout = null;
+  var replayTimeout = null;
+  var replayAction = null;
+  var overlayResizeHandler = null;
+
+  function ensureOverlayRefs(){
+    if(overlayEl) return;
+    overlayEl = document.getElementById('mtxOverlay');
+    overlayRotorEl = document.getElementById('mtxOverlayRotor');
+    overlayTextEl = document.getElementById('mtxOverlayText');
+    replayChipEl = document.getElementById('mtxReplayChip');
+    overlayEl.addEventListener('click', function(){ clearOverlay(true); });
+    replayChipEl.addEventListener('click', function(){
+      clearReplayChip();
+      if(replayAction) replayAction();
+    });
+  }
+
+  // Mirrors VisualPromptService.showOverlay's landscape-in-place behavior:
+  // on a portrait-shaped viewport (phone-like), the content is sized with
+  // width/height swapped and rotated -90deg to fill the screen edge-to-edge.
+  // On an already-landscape-shaped viewport (most desktop windows), there's
+  // nothing to simulate, so it renders unrotated, per your call in chat.
+  function applyOverlayOrientation(){
+    var portrait = window.innerHeight > window.innerWidth;
+    if(portrait){
+      overlayRotorEl.style.width = '100vh';
+      overlayRotorEl.style.height = '100vw';
+      overlayRotorEl.style.transform = 'translate(-50%,-50%) rotate(-90deg)';
+    } else {
+      overlayRotorEl.style.width = '100vw';
+      overlayRotorEl.style.height = '100vh';
+      overlayRotorEl.style.transform = 'translate(-50%,-50%)';
+    }
+  }
+
+  function showOverlay(text, onReplay){
+    ensureOverlayRefs();
+    clearReplayChip();
+    if(overlayTimeout){ clearTimeout(overlayTimeout); overlayTimeout = null; }
+
+    replayAction = onReplay;
+    overlayTextEl.textContent = text;
+    overlayEl.hidden = false;
+    applyOverlayOrientation();
+
+    if(!overlayResizeHandler){
+      overlayResizeHandler = function(){ applyOverlayOrientation(); };
+      window.addEventListener('resize', overlayResizeHandler);
     }
 
-    function openNodeDialog(node, profile){
-      nodeDialogState = { node: node, profile: profile };
-      document.getElementById('mtxNodeTitle').textContent = node.label + ' — ' + node.category;
+    overlayTimeout = setTimeout(function(){ clearOverlay(true); }, 10000);
+  }
 
-      var template = getPhrase(profile, node.path);
-      var input = document.getElementById('mtxTemplateInput');
-      input.value = template;
+  function clearOverlay(offerReplay){
+    ensureOverlayRefs();
+    if(overlayTimeout){ clearTimeout(overlayTimeout); overlayTimeout = null; }
+    var hadContent = !overlayEl.hidden;
+    overlayEl.hidden = true;
 
-      renderVarFields(node, profile, template);
-
-      document.getElementById('mtxNodeDialog').showModal();
-      input.focus();
+    if(overlayResizeHandler){
+      window.removeEventListener('resize', overlayResizeHandler);
+      overlayResizeHandler = null;
     }
 
-    // ---------- variable quick-edit dialog ----------
-    var varQuickState = null;
-
-    function openVarQuickDialog(node, profile, index){
-      varQuickState = { node: node, profile: profile, index: index };
-      var values = getVars(profile, node.path);
-      document.getElementById('mtxVarQuickTitle').textContent = node.label + ' // VAR ' + (index+1);
-      var input = document.getElementById('mtxVarQuickInput');
-      input.value = values[index] || '';
-      document.getElementById('mtxVarQuickDialog').showModal();
-      input.focus();
+    if(offerReplay && hadContent && replayAction){
+      showReplayChip();
     }
+  }
 
-    // ---------- root override value dialog ----------
-    var rootDialogState = null;
+  function showReplayChip(){
+    ensureOverlayRefs();
+    clearReplayChip();
+    replayChipEl.hidden = false;
+    replayTimeout = setTimeout(function(){ clearReplayChip(); }, 20000);
+  }
 
-    function openRootDialog(category, tag){
-      rootDialogState = { category: category, tag: tag };
-      var config = getRootConfig(category);
-      document.getElementById('mtxRootTitle').textContent = 'ROOT ' + category + ' // TAG ' + tag;
-      var input = document.getElementById('mtxRootInput');
-      input.value = config[tag].value || '';
-      document.getElementById('mtxRootDialog').showModal();
-      input.focus();
-    }
+  function clearReplayChip(){
+    ensureOverlayRefs();
+    if(replayTimeout){ clearTimeout(replayTimeout); replayTimeout = null; }
+    replayChipEl.hidden = true;
+  }
 
-    // ---------- clear confirm dialog ----------
-    var clearMode = null;
-    var CLEAR_COPY = {
-      VARS: "Clear every local variable value for this phrase? The prompt will remain.",
-      PROMPT: "Clear this prompt only? Existing local variable values will be preserved.",
-      ALL: "Clear both the prompt and every local variable value? This cannot be undone from this dialog."
-    };
+  function playNode(node, deckId, profile){
+    var resolved = getResolvedPhrase(deckId, profile, node.path);
+    // Mirrors the app: a blank resolved phrase clears/no-ops rather than
+    // showing an empty overlay.
+    if(!resolved.trim()) return;
+    var displayText = resolveDisplayPrompt(resolved);
+    showOverlay(displayText, function(){ playNode(node, deckId, profile); });
+  }
 
-    function openClearDialog(mode){
-      clearMode = mode;
-      document.getElementById('mtxClearText').textContent = CLEAR_COPY[mode];
-      document.getElementById('mtxClearDialog').showModal();
-    }
+  // ---------- LIVE-SAVE EDITOR dialog ----------
+  var nodeDialogState = null;
 
-    // ---------- wiring ----------
-    function wireSimpleDialog(dialogId){
-      var dlg = document.getElementById(dialogId);
-      var opener = null;
-      var nativeShowModal = dlg.showModal.bind(dlg);
-      dlg.showModal = function(){
-        opener = document.activeElement;
-        nativeShowModal();
-      };
-      dlg.querySelectorAll('[data-close]').forEach(function(btn){
-        btn.addEventListener('click', function(){ dlg.close(); });
-      });
-      dlg.addEventListener('click', function(e){
-        var rect = dlg.getBoundingClientRect();
-        var inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-        if(!inside) dlg.close();
-      });
-      dlg.addEventListener('close', function(){ if(opener && opener.focus) opener.focus(); });
-    }
+  function refreshListInBackground(){ mtxRenderEditor(); }
 
-    function init(){
-      ['mtxNodeDialog','mtxVarQuickDialog','mtxRootDialog','mtxClearDialog','mtxResetDialog'].forEach(wireSimpleDialog);
+  function renderVarFields(node, deckId, profile, template){
+    var container = document.getElementById('mtxVarFields');
+    container.innerHTML = '';
+    var count = countVariables(template);
+    if(count === 0) return;
 
-      document.getElementById('mtxTemplateInput').addEventListener('input', function(){
-        if(!nodeDialogState) return;
-        updateTemplate(nodeDialogState.node, nodeDialogState.profile, this.value);
-      });
+    var tags = getVariableTags(template);
+    var values = getVars(deckId, profile, node.path);
 
-      document.querySelectorAll('#mtxNodeDialog [data-insert-token]').forEach(function(btn){
-        btn.addEventListener('click', function(){
-          if(!nodeDialogState) return;
-          var input = document.getElementById('mtxTemplateInput');
-          var token = btn.getAttribute('data-insert-token');
-          input.value = (input.value ? input.value + ' ' : '') + token;
-          updateTemplate(nodeDialogState.node, nodeDialogState.profile, input.value);
-          input.focus();
+    var header = el('p', null, 'LOCAL VARIABLE DATA');
+    header.style.cssText = 'color:var(--var-accent); font-family:var(--font-mono); font-size:0.72rem; font-weight:700; margin:1rem 0 0.2rem;';
+    container.appendChild(header);
+
+    var hint = el('p', null, 'Saved immediately. Tagged A/B/C values can be replaced by an enabled root override.');
+    hint.style.cssText = 'color:var(--text-faint); font-family:var(--font-mono); font-size:0.65rem; margin:0 0 0.4rem;';
+    container.appendChild(hint);
+
+    for(var i=0;i<count;i++){
+      (function(index){
+        var tag = tags[index];
+        var field = el('div', 'mtx-var-field');
+        var label = document.createElement('label');
+        label.textContent = tag ? ('VARIABLE ' + (index+1) + ' // ROOT ' + tag) : ('VARIABLE ' + (index+1));
+        field.appendChild(label);
+
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.placeholder = 'ENTER LOCAL FALLBACK...';
+        inp.value = values[index] || '';
+        inp.addEventListener('input', function(){
+          var current = getVars(deckId, profile, node.path);
+          while(current.length <= index) current.push('');
+          current[index] = inp.value;
+          setVars(deckId, profile, node.path, current);
+          refreshListInBackground();
         });
+        field.appendChild(inp);
+        container.appendChild(field);
+      })(i);
+    }
+  }
+
+  function updateTemplate(node, deckId, profile, newTemplate){
+    var newCount = countVariables(newTemplate);
+    var current = getVars(deckId, profile, node.path);
+    while(current.length > newCount) current.pop();
+    while(current.length < newCount) current.push('');
+    setVars(deckId, profile, node.path, current);
+    setPhrase(deckId, profile, node.path, newTemplate);
+    renderVarFields(node, deckId, profile, newTemplate);
+    refreshListInBackground();
+  }
+
+  function openNodeDialog(node, deckId, profile){
+    nodeDialogState = { node: node, deckId: deckId, profile: profile };
+    document.getElementById('mtxNodeTitle').textContent = node.label + ' — ' + node.category;
+
+    var template = getPhrase(deckId, profile, node.path);
+    var input = document.getElementById('mtxTemplateInput');
+    input.value = template;
+
+    renderVarFields(node, deckId, profile, template);
+
+    document.getElementById('mtxNodeDialog').showModal();
+    input.focus();
+  }
+
+  // ---------- variable quick-edit dialog ----------
+  var varQuickState = null;
+
+  function openVarQuickDialog(node, deckId, profile, index){
+    varQuickState = { node: node, deckId: deckId, profile: profile, index: index };
+    var values = getVars(deckId, profile, node.path);
+    document.getElementById('mtxVarQuickTitle').textContent = node.label + ' // VAR ' + (index+1);
+    var input = document.getElementById('mtxVarQuickInput');
+    input.value = values[index] || '';
+    document.getElementById('mtxVarQuickDialog').showModal();
+    input.focus();
+  }
+
+  // ---------- root override value dialog ----------
+  var rootDialogState = null;
+
+  function openRootDialog(category, deckId, tag){
+    rootDialogState = { category: category, deckId: deckId, tag: tag };
+    var config = getRootConfig(deckId, category);
+    document.getElementById('mtxRootTitle').textContent = 'ROOT ' + category + ' // TAG ' + tag;
+    var input = document.getElementById('mtxRootInput');
+    input.value = config[tag].value || '';
+    document.getElementById('mtxRootDialog').showModal();
+    input.focus();
+  }
+
+  // ---------- clear confirm dialog ----------
+  var clearMode = null;
+  var CLEAR_COPY = {
+    VARS: "Clear every local variable value for this phrase? The prompt will remain.",
+    PROMPT: "Clear this prompt only? Existing local variable values will be preserved.",
+    ALL: "Clear both the prompt and every local variable value? This cannot be undone from this dialog."
+  };
+
+  function openClearDialog(mode){
+    clearMode = mode;
+    document.getElementById('mtxClearText').textContent = CLEAR_COPY[mode];
+    document.getElementById('mtxClearDialog').showModal();
+  }
+
+  // ---------- DECK:/PROFILE: dropdown data (consumed by selectTab/applyDeckSelection) ----------
+  function mtxGetDeckDropdownData(){
+    var decks = getAllDecks();
+    var activeId = getActiveDeckId();
+    var options = decks.map(function(d){
+      return [
+        d.id,
+        d.name + ' // ' + d.type,
+        { colorHex: DECK_COLORS[d.colorIndex] || DECK_COLORS[0], active: d.id === activeId }
+      ];
+    });
+    return {
+      options: options,
+      activeId: activeId,
+      actions: [
+        { label: '+ CREATE DECK', onClick: function(){ openDeckFormDialog('create'); } },
+        { label: 'MANAGE', onClick: function(){ openManageDecksDialog(); } }
+      ]
+    };
+  }
+
+  function mtxGetProfileDropdownData(){
+    return { options: PROFILE_OPTIONS, activeId: getActiveProfile() };
+  }
+
+  function mtxRefreshDeckDropdown(){
+    var deckData = mtxGetDeckDropdownData();
+    ctxDD.setOptions(deckData.options, deckData.activeId, deckData.actions);
+  }
+
+  function mtxSetDeck(deckId){
+    if(!getDeckMeta(deckId)) deckId = DEFAULT_DECK_ID;
+    mtxState.deckId = deckId;
+    setActiveDeckIdStorage(deckId);
+    mtxRenderEditor();
+  }
+
+  function mtxSetProfile(profile){
+    mtxState.profile = profile;
+    setActiveProfileStorage(profile);
+    mtxRenderEditor();
+  }
+
+  // Called once when the Simulator tab becomes active (fresh load or a tab
+  // click) to populate both dropdowns from real deck/profile state.
+  function mtxActivateSimTab(){
+    var deckData = mtxGetDeckDropdownData();
+    ctxDD.setOptions(deckData.options, deckData.activeId, deckData.actions);
+    mtxSetDeck(deckData.activeId);
+
+    var profileData = mtxGetProfileDropdownData();
+    profileRow.hidden = false;
+    profileLabel.textContent = 'PROFILE:';
+    profileDD.setOptions(profileData.options, profileData.activeId);
+  }
+
+  // ---------- Create/Edit Deck dialog ----------
+  var deckFormState = null; // { mode:'create'|'edit', deckId }
+  var selectedDeckType = 'MATRIX';
+  var selectedDeckColorIndex = 0;
+
+  function renderDeckTypeGrid(){
+    var gridEl = document.getElementById('mtxDeckTypeGrid');
+    gridEl.innerHTML = '';
+    DECK_TYPES.forEach(function(dt){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mtx-decktype-btn' + (selectedDeckType === dt.type ? ' is-selected' : '');
+      btn.textContent = dt.label;
+      if(!dt.enabled){
+        btn.disabled = true;
+      } else {
+        btn.addEventListener('click', function(){
+          var nameInput = document.getElementById('mtxDeckNameInput');
+          var wasDefaultName = DECK_TYPES.some(function(t){ return t.label === nameInput.value.trim().toUpperCase(); });
+          selectedDeckType = dt.type;
+          if(wasDefaultName) nameInput.value = dt.label;
+          renderDeckTypeGrid();
+        });
+      }
+      gridEl.appendChild(btn);
+    });
+    var current = DECK_TYPES.filter(function(dt){ return dt.type === selectedDeckType; })[0];
+    document.getElementById('mtxDeckTypeDesc').textContent = current ? current.desc : '';
+  }
+
+  function renderDeckColorGrid(){
+    var gridEl = document.getElementById('mtxDeckColorGrid');
+    gridEl.innerHTML = '';
+    DECK_COLORS.forEach(function(hex, index){
+      var isSelected = selectedDeckColorIndex === index;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mtx-color-swatch' + (isSelected ? ' is-selected' : '');
+      btn.style.background = 'color-mix(in srgb, ' + hex + ' ' + (isSelected ? '50%' : '15%') + ', transparent)';
+      btn.style.color = hex;
+      btn.textContent = isSelected ? '●' : String(index);
+      btn.setAttribute('aria-label', 'Color ' + index);
+      btn.setAttribute('aria-pressed', String(isSelected));
+      btn.addEventListener('click', function(){
+        selectedDeckColorIndex = index;
+        renderDeckColorGrid();
       });
+      gridEl.appendChild(btn);
+    });
+  }
 
-      document.getElementById('mtxCommit').addEventListener('click', function(){
-        if(!nodeDialogState) return;
-        updateTemplate(nodeDialogState.node, nodeDialogState.profile, document.getElementById('mtxTemplateInput').value);
-        document.getElementById('mtxNodeDialog').close();
-      });
+  function openDeckFormDialog(mode, deckId){
+    deckFormState = { mode: mode, deckId: deckId || null };
+    var typeSection = document.getElementById('mtxDeckTypeSection');
+    var deleteSection = document.getElementById('mtxDeckDeleteSection');
+    var nameInput = document.getElementById('mtxDeckNameInput');
+    var saveBtn = document.getElementById('mtxDeckFormSave');
 
-      document.getElementById('mtxClearVars').addEventListener('click', function(){ openClearDialog('VARS'); });
-      document.getElementById('mtxClearPrompt').addEventListener('click', function(){ openClearDialog('PROMPT'); });
-      document.getElementById('mtxClearAll').addEventListener('click', function(){ openClearDialog('ALL'); });
-
-      document.getElementById('mtxClearConfirm').addEventListener('click', function(){
-        if(!nodeDialogState || !clearMode) return;
-        var node = nodeDialogState.node, profile = nodeDialogState.profile;
-
-        if(clearMode === 'VARS'){
-          var vals = getVars(profile, node.path);
-          for(var i=0;i<vals.length;i++) vals[i] = '';
-          setVars(profile, node.path, vals);
-        } else if(clearMode === 'PROMPT'){
-          setPhrase(profile, node.path, '');
-        } else if(clearMode === 'ALL'){
-          setPhrase(profile, node.path, '');
-          setVars(profile, node.path, []);
-        }
-
-        document.getElementById('mtxClearDialog').close();
-        clearMode = null;
-
-        var template = getPhrase(profile, node.path);
-        document.getElementById('mtxTemplateInput').value = template;
-        renderVarFields(node, profile, template);
-        refreshListInBackground();
-      });
-
-      document.getElementById('mtxVarQuickSave').addEventListener('click', function(){
-        if(!varQuickState) return;
-        var node = varQuickState.node, profile = varQuickState.profile, index = varQuickState.index;
-        var values = getVars(profile, node.path);
-        while(values.length <= index) values.push('');
-        values[index] = document.getElementById('mtxVarQuickInput').value;
-        setVars(profile, node.path, values);
-        document.getElementById('mtxVarQuickDialog').close();
-        render(state.profile, 'node-body-' + node.path);
-      });
-
-      document.getElementById('mtxRootSave').addEventListener('click', function(){
-        if(!rootDialogState) return;
-        var category = rootDialogState.category, tag = rootDialogState.tag;
-        var config = getRootConfig(category);
-        config[tag].value = document.getElementById('mtxRootInput').value;
-        setRootConfig(category, config);
-        document.getElementById('mtxRootDialog').close();
-        render(state.profile, 'root-slot-' + category + '-' + tag);
-      });
-
-      document.getElementById('matrixResetBtn').addEventListener('click', function(){
-        document.getElementById('mtxResetDialog').showModal();
-      });
-
-      document.getElementById('mtxResetConfirm').addEventListener('click', function(){
-        try{
-          var toRemove = [];
-          for(var i=0;i<localStorage.length;i++){
-            var key = localStorage.key(i);
-            if(key && key.indexOf(STORAGE_PREFIX) === 0) toRemove.push(key);
-          }
-          toRemove.forEach(function(k){ localStorage.removeItem(k); });
-        }catch(e){}
-        document.getElementById('mtxResetDialog').close();
-        render(state.profile);
-      });
+    if(mode === 'create'){
+      document.getElementById('mtxDeckFormTitle').textContent = 'Create Deck';
+      typeSection.hidden = false;
+      deleteSection.hidden = true;
+      selectedDeckType = 'MATRIX';
+      selectedDeckColorIndex = 0;
+      nameInput.value = 'MATRIX';
+      saveBtn.textContent = 'CREATE';
+    } else {
+      var deck = getDeckMeta(deckId);
+      if(!deck) return;
+      document.getElementById('mtxDeckFormTitle').textContent = 'Edit Deck';
+      typeSection.hidden = true;
+      deleteSection.hidden = false;
+      selectedDeckType = deck.type;
+      selectedDeckColorIndex = deck.colorIndex;
+      nameInput.value = deck.name;
+      saveBtn.textContent = 'SAVE';
     }
 
-    init();
+    renderDeckTypeGrid();
+    renderDeckColorGrid();
+    document.getElementById('mtxDeckFormDialog').showModal();
+    nameInput.focus();
+  }
 
-    return { render: render };
-  })();
+  // ---------- Manage Decks dialog ----------
+  function renderManageDecksList(){
+    var listEl = document.getElementById('mtxManageDecksList');
+    listEl.innerHTML = '';
+    getAllDecks().forEach(function(deck){
+      var hex = DECK_COLORS[deck.colorIndex] || DECK_COLORS[0];
+      var row = el('div', 'mtx-deck-row');
+      row.style.borderColor = 'color-mix(in srgb, ' + hex + ' 55%, var(--border))';
+
+      var nameEl = el('span', 'mtx-deck-name', deck.name + ' // ' + deck.type);
+      nameEl.style.color = hex;
+      row.appendChild(nameEl);
+
+      if(deck.id === DEFAULT_DECK_ID){
+        row.appendChild(el('span', 'mtx-deck-lock', '[LOCKED]'));
+      } else {
+        var editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'mtx-deck-edit';
+        editBtn.textContent = 'EDIT';
+        editBtn.addEventListener('click', function(e){
+          // Without this, the click keeps bubbling after openDeckFormDialog
+          // opens the nested dialog, reaching Manage Decks' own "click
+          // outside closes" listener and incorrectly closing it too.
+          e.stopPropagation();
+          openDeckFormDialog('edit', deck.id);
+        });
+        row.appendChild(editBtn);
+      }
+
+      listEl.appendChild(row);
+    });
+  }
+
+  function openManageDecksDialog(){
+    renderManageDecksList();
+    document.getElementById('mtxManageDecksDialog').showModal();
+  }
+
+  // ---------- delete-deck confirm ----------
+  var deckDeleteTargetId = null;
+
+  function openDeckDeleteDialog(deckId){
+    var deck = getDeckMeta(deckId);
+    if(!deck) return;
+    deckDeleteTargetId = deckId;
+    document.getElementById('mtxDeckDeleteText').textContent =
+      'Permanently remove "' + deck.name + ' // ' + deck.type + '"? Every prompt, variable, and root ' +
+      'override saved under it will be deleted. This cannot be undone.';
+    document.getElementById('mtxDeckDeleteDialog').showModal();
+  }
+
+  // ---------- wiring ----------
+  function wireSimpleDialog(dialogId){
+    var dlg = document.getElementById(dialogId);
+    var opener = null;
+    var nativeShowModal = dlg.showModal.bind(dlg);
+    dlg.showModal = function(){
+      opener = document.activeElement;
+      nativeShowModal();
+    };
+    dlg.querySelectorAll('[data-close]').forEach(function(btn){
+      btn.addEventListener('click', function(){ dlg.close(); });
+    });
+    dlg.addEventListener('click', function(e){
+      var rect = dlg.getBoundingClientRect();
+      var inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+      if(!inside) dlg.close();
+    });
+    dlg.addEventListener('close', function(){ if(opener && opener.focus) opener.focus(); });
+  }
+
+  function mtxInit(){
+    [
+      'mtxNodeDialog','mtxVarQuickDialog','mtxRootDialog','mtxClearDialog','mtxResetDialog',
+      'mtxDeckFormDialog','mtxManageDecksDialog','mtxDeckDeleteDialog'
+    ].forEach(wireSimpleDialog);
+
+    document.getElementById('mtxTemplateInput').addEventListener('input', function(){
+      if(!nodeDialogState) return;
+      updateTemplate(nodeDialogState.node, nodeDialogState.deckId, nodeDialogState.profile, this.value);
+    });
+
+    document.querySelectorAll('#mtxNodeDialog [data-insert-token]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(!nodeDialogState) return;
+        var input = document.getElementById('mtxTemplateInput');
+        var token = btn.getAttribute('data-insert-token');
+        input.value = (input.value ? input.value + ' ' : '') + token;
+        updateTemplate(nodeDialogState.node, nodeDialogState.deckId, nodeDialogState.profile, input.value);
+        input.focus();
+      });
+    });
+
+    document.getElementById('mtxCommit').addEventListener('click', function(){
+      if(!nodeDialogState) return;
+      updateTemplate(nodeDialogState.node, nodeDialogState.deckId, nodeDialogState.profile, document.getElementById('mtxTemplateInput').value);
+      document.getElementById('mtxNodeDialog').close();
+    });
+
+    document.getElementById('mtxClearVars').addEventListener('click', function(){ openClearDialog('VARS'); });
+    document.getElementById('mtxClearPrompt').addEventListener('click', function(){ openClearDialog('PROMPT'); });
+    document.getElementById('mtxClearAll').addEventListener('click', function(){ openClearDialog('ALL'); });
+
+    document.getElementById('mtxClearConfirm').addEventListener('click', function(){
+      if(!nodeDialogState || !clearMode) return;
+      var node = nodeDialogState.node, deckId = nodeDialogState.deckId, profile = nodeDialogState.profile;
+
+      if(clearMode === 'VARS'){
+        var vals = getVars(deckId, profile, node.path);
+        for(var i=0;i<vals.length;i++) vals[i] = '';
+        setVars(deckId, profile, node.path, vals);
+      } else if(clearMode === 'PROMPT'){
+        setPhrase(deckId, profile, node.path, '');
+      } else if(clearMode === 'ALL'){
+        setPhrase(deckId, profile, node.path, '');
+        setVars(deckId, profile, node.path, []);
+      }
+
+      document.getElementById('mtxClearDialog').close();
+      clearMode = null;
+
+      var template = getPhrase(deckId, profile, node.path);
+      document.getElementById('mtxTemplateInput').value = template;
+      renderVarFields(node, deckId, profile, template);
+      refreshListInBackground();
+    });
+
+    document.getElementById('mtxVarQuickSave').addEventListener('click', function(){
+      if(!varQuickState) return;
+      var node = varQuickState.node, deckId = varQuickState.deckId, profile = varQuickState.profile, index = varQuickState.index;
+      var values = getVars(deckId, profile, node.path);
+      while(values.length <= index) values.push('');
+      values[index] = document.getElementById('mtxVarQuickInput').value;
+      setVars(deckId, profile, node.path, values);
+      document.getElementById('mtxVarQuickDialog').close();
+      mtxRenderEditor('node-body-' + node.path);
+    });
+
+    document.getElementById('mtxRootSave').addEventListener('click', function(){
+      if(!rootDialogState) return;
+      var category = rootDialogState.category, deckId = rootDialogState.deckId, tag = rootDialogState.tag;
+      var config = getRootConfig(deckId, category);
+      config[tag].value = document.getElementById('mtxRootInput').value;
+      setRootConfig(deckId, category, config);
+      document.getElementById('mtxRootDialog').close();
+      mtxRenderEditor('root-slot-' + category + '-' + tag);
+    });
+
+    document.getElementById('matrixResetBtn').addEventListener('click', function(){
+      document.getElementById('mtxResetDialog').showModal();
+    });
+
+    document.getElementById('mtxResetConfirm').addEventListener('click', function(){
+      try{
+        var toRemove = [];
+        for(var i=0;i<localStorage.length;i++){
+          var key = localStorage.key(i);
+          if(key && key.indexOf(STORAGE_PREFIX) === 0) toRemove.push(key);
+        }
+        toRemove.forEach(function(k){ localStorage.removeItem(k); });
+      }catch(e){}
+      document.getElementById('mtxResetDialog').close();
+      mtxActivateSimTab();
+    });
+
+    document.getElementById('mtxDeckFormSave').addEventListener('click', function(){
+      if(!deckFormState) return;
+      var name = document.getElementById('mtxDeckNameInput').value;
+
+      if(deckFormState.mode === 'create'){
+        var deck = createDeckRecord(name, selectedDeckColorIndex, selectedDeckType);
+        mtxSetDeck(deck.id);
+      } else {
+        updateDeckRecord(deckFormState.deckId, name, selectedDeckColorIndex);
+      }
+
+      mtxRefreshDeckDropdown();
+      document.getElementById('mtxDeckFormDialog').close();
+      deckFormState = null;
+
+      if(document.getElementById('mtxManageDecksDialog').open){
+        renderManageDecksList();
+      }
+    });
+
+    document.getElementById('mtxDeckDelete').addEventListener('click', function(){
+      if(!deckFormState || deckFormState.mode !== 'edit') return;
+      var deckId = deckFormState.deckId;
+      document.getElementById('mtxDeckFormDialog').close();
+      openDeckDeleteDialog(deckId);
+    });
+
+    document.getElementById('mtxDeckDeleteConfirm').addEventListener('click', function(){
+      if(!deckDeleteTargetId) return;
+      deleteDeckRecord(deckDeleteTargetId);
+      deckDeleteTargetId = null;
+      mtxSetDeck(getActiveDeckId());
+      mtxRefreshDeckDropdown();
+      document.getElementById('mtxDeckDeleteDialog').close();
+
+      if(document.getElementById('mtxManageDecksDialog').open){
+        renderManageDecksList();
+      }
+    });
+  }
+
+  mtxInit();
 
   var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab-btn'));
   var ctxRow = document.getElementById('ctxRow');
@@ -1996,10 +2489,11 @@
   function showProfilePane(panelId, ctxKey, profileKey){
     // The Matrix Simulator's "profiles" aren't static content panes like every
     // other tab's -- one live editor re-renders itself against whichever
-    // profile's saved data is selected, so it hooks in here instead of the
-    // generic hide/show below.
-    if(panelId === 'panel-sim' && ctxKey === 'matrix'){
-      if(window.MatrixSim) window.MatrixSim.render(profileKey);
+    // deck+profile combination is selected, so it hooks in here instead of
+    // the generic hide/show below. ctxKey here is a deck id, not a fixed
+    // key, since every simulator deck is (for now) a Matrix deck.
+    if(panelId === 'panel-sim'){
+      mtxSetProfile(profileKey);
       return;
     }
 
@@ -2048,7 +2542,7 @@
       details.open = false;
       if(focusSummary) summary.focus();
     }
-    function setOptions(options, initialValue){
+    function setOptions(options, initialValue, actions){
       menu.innerHTML = '';
       buttons = options.map(function(opt){
         var btn = document.createElement('button');
@@ -2057,11 +2551,30 @@
         btn.setAttribute('role', 'option');
         btn.setAttribute('data-value', opt[0]);
         btn.setAttribute('aria-selected', 'false');
-        btn.textContent = opt[1];
-        // A 3rd tuple element marks a placeholder entry (e.g. a deck type
-        // that isn't wired up yet) -- inert and unselectable rather than a
-        // real, live-but-broken choice.
-        if(opt[2]){
+
+        // An optional 3rd tuple element carries Simulator-only decoration
+        // (a per-deck color swatch, an [ACTIVE] badge, or disabling a
+        // not-yet-wired-up choice) -- Comms/Field Ops never pass this, so
+        // their options render exactly as plain text, unaffected.
+        var meta = opt[2] || {};
+        if(meta.colorHex){
+          var swatch = document.createElement('span');
+          swatch.className = 'ctx-option-swatch';
+          swatch.style.background = meta.colorHex;
+          btn.appendChild(swatch);
+        }
+        var labelSpan = document.createElement('span');
+        labelSpan.className = 'ctx-option-label';
+        labelSpan.textContent = opt[1];
+        btn.appendChild(labelSpan);
+        if(meta.active){
+          var badge = document.createElement('span');
+          badge.className = 'ctx-option-badge';
+          badge.textContent = '[ACTIVE]';
+          btn.appendChild(badge);
+        }
+
+        if(meta.disabled){
           btn.disabled = true;
           btn.setAttribute('aria-disabled', 'true');
         } else {
@@ -2071,6 +2584,26 @@
         return btn;
       });
       setValue(initialValue, false);
+
+      // Optional trailing action row (e.g. "+ CREATE DECK" / "MANAGE"),
+      // visually grouped apart from the list and outside the value/selection
+      // system entirely.
+      if(actions && actions.length){
+        var actionRow = document.createElement('div');
+        actionRow.className = 'ctx-option-actions';
+        actions.forEach(function(action){
+          var abtn = document.createElement('button');
+          abtn.type = 'button';
+          abtn.className = 'ctx-option-action-btn';
+          abtn.textContent = action.label;
+          abtn.addEventListener('click', function(){
+            close(true);
+            action.onClick();
+          });
+          actionRow.appendChild(abtn);
+        });
+        menu.appendChild(actionRow);
+      }
     }
     details.addEventListener('toggle', function(){
       menuBox.hidden = !details.open;
@@ -2108,6 +2641,18 @@
   });
 
   function applyDeckSelection(panelId, conf, deckKey){
+    // The Simulator picks from real deck instances (dynamic, user-creatable)
+    // rather than a fixed option list, so it's handled entirely by the
+    // Matrix Simulator code instead of the generic pane logic below.
+    if(panelId === 'panel-sim'){
+      mtxSetDeck(deckKey);
+      var profileData = mtxGetProfileDropdownData();
+      profileRow.hidden = false;
+      profileLabel.textContent = 'PROFILE:';
+      profileDD.setOptions(profileData.options, profileData.activeId);
+      return;
+    }
+
     showCtxPane(panelId, deckKey);
     var profileConf = conf.profiles && conf.profiles[deckKey];
     if(profileConf){
@@ -2137,8 +2682,12 @@
     if(conf){
       ctxRow.hidden = false;
       ctxLabel.textContent = conf.label;
-      ctxDD.setOptions(conf.options, conf.options[0][0]);
-      applyDeckSelection(panelId, conf, conf.options[0][0]);
+      if(key === 'sim'){
+        mtxActivateSimTab();
+      } else {
+        ctxDD.setOptions(conf.options, conf.options[0][0]);
+        applyDeckSelection(panelId, conf, conf.options[0][0]);
+      }
     } else {
       ctxRow.hidden = true;
       profileRow.hidden = true;
