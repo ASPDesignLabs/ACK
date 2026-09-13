@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -253,7 +254,12 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
         keyboardController?.show()
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
         Text("MANUAL OVERRIDE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -318,7 +324,7 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
             )
 
             Text(
-                text = "[MEMORY BANKS]",
+                text = if (savedPhrases.isNotEmpty()) "[MEMORY BANKS (${savedPhrases.size})]" else "[MEMORY BANKS]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -350,12 +356,17 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
         if (recentPhrases.isNotEmpty()) {
             Text("CACHE [RECENT]", color = primaryColor.copy(alpha=0.7f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
             Spacer(modifier = Modifier.height(8.dp))
-            LazyColumn(modifier = Modifier.weight(1f)) {
+            // Bounded height, not weight(1f) -- the outer Column now scrolls
+            // (see below), and weight() only makes sense against a parent
+            // with a fixed height to distribute.
+            LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
                 items(recentPhrases) { phrase ->
                     RecentHistoryItem(phrase) { speak(phrase, "CACHE/REPLAY") }
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 
     if (showMemoryBanks) {
