@@ -423,7 +423,9 @@
   .panel::before, .panel::after,
   .shot-thumb::before, .shot-thumb::after,
   .tab-btn::before, .tab-btn::after,
-  .swatch::before, .swatch::after{
+  .swatch::before, .swatch::after,
+  .mtx-emoji-tile::before, .mtx-emoji-tile::after,
+  .mtx-emoji-lib-swatch::before, .mtx-emoji-lib-swatch::after{
     content:""; position:absolute; height:var(--cc-diag);
     width:calc(var(--cut) * 1.4142136);
     background:var(--cc-color);
@@ -437,11 +439,13 @@
      connector lands a full border-width off from the actual cut, floating
      free of the shape instead of closing it. */
   .hud::before, .hud-btn::before, .hud-icon-btn::before, .ctx-dropdown summary::before, .ctx-dropdown-menu::before,
-  .window::before, .panel::before, .shot-thumb::before, .tab-btn::before, .swatch::before{
+  .window::before, .panel::before, .shot-thumb::before, .tab-btn::before, .swatch::before,
+  .mtx-emoji-tile::before, .mtx-emoji-lib-swatch::before{
     left:calc(-1 * var(--cc-b)); top:calc(var(--cut) - var(--cc-b) - (var(--cc-diag) / 2));
   }
   .hud::after, .hud-btn::after, .hud-icon-btn::after, .ctx-dropdown summary::after, .ctx-dropdown-menu::after,
-  .window::after, .panel::after, .shot-thumb::after, .tab-btn::after, .swatch::after{
+  .window::after, .panel::after, .shot-thumb::after, .tab-btn::after, .swatch::after,
+  .mtx-emoji-tile::after, .mtx-emoji-lib-swatch::after{
     left:calc(100% + var(--cc-b) - var(--cut)); top:calc(100% + var(--cc-b) - (var(--cc-diag) / 2));
   }
 
@@ -680,6 +684,111 @@
     font-family:var(--font-mono); font-size:0.72rem; padding:0.5rem 0.4rem;
   }
 
+  /* APP GESTURE mode's hold-to-configure visual feedback (see
+     wireGestureCard): every tile type this simulator has -- Matrix node,
+     Quick Actions/Emergency action, and Emoji tile -- shares this one rule
+     set. A resting transparent outline transitions to the live accent over
+     the same ~550ms as the hold threshold (a felt "filling in" cue), then
+     flashes white the instant it fires and opens the editor. Reduced-motion
+     collapses the transition to instant, per this page's global rule. */
+  .mtx-node-body, .mtx-qa-action-body, .mtx-emg-action-body, .mtx-emoji-tile{
+    outline:2px solid transparent; outline-offset:-2px;
+    transition:outline-color 0.55s linear;
+  }
+  .mtx-node-body.gesture-hold-active, .mtx-qa-action-body.gesture-hold-active,
+  .mtx-emg-action-body.gesture-hold-active, .mtx-emoji-tile.gesture-hold-active{
+    outline-color:var(--accent);
+  }
+  .mtx-node-body.gesture-hold-fired, .mtx-qa-action-body.gesture-hold-fired,
+  .mtx-emg-action-body.gesture-hold-fired, .mtx-emoji-tile.gesture-hold-fired{
+    outline-color:#fff; transition-duration:0.001ms;
+  }
+
+  /* Emoji editor -- mirrors EmojiDeck.kt's own layout: a title + CONFIG
+     button sharing one row (not a bottom action button, unlike Quick
+     Actions/Emergency), a page navigator, then a cut-corner tile grid whose
+     column count follows the deck's own gridSize setting (set inline by
+     JS, since it's a runtime choice, not fixed like Quick Actions/
+     Emergency). */
+  .mtx-emoji-heading{ display:flex; align-items:flex-start; justify-content:space-between; gap:0.8rem; margin-top:0.4rem; flex-wrap:wrap; }
+  .mtx-emoji-heading-text h3{ font-family:var(--font-mono); font-size:1.1em; font-weight:800; letter-spacing:0.05em; color:#fff; margin:0; }
+  .mtx-emoji-config-btn{
+    flex:none; height:40px; padding:0 0.9rem; border:2px solid var(--accent); background:none; color:var(--accent);
+    font-family:var(--font-mono); font-size:0.72rem; font-weight:700; cursor:pointer;
+  }
+  .mtx-emoji-pagenav{ display:flex; align-items:center; gap:0.5rem; margin-top:0.9rem; }
+  .mtx-emoji-pagenav-btn{
+    flex:none; width:44px; height:40px; border:2px solid var(--accent); background:none; color:var(--accent);
+    font-family:var(--font-mono); font-weight:700; font-size:1rem; cursor:pointer;
+  }
+  .mtx-emoji-pagenav-label{
+    flex:1 1 auto; min-width:0; text-align:center; border:2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+    padding:0.55rem 0.6rem; font-family:var(--font-mono); font-size:0.78rem; font-weight:700; color:var(--accent);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .mtx-emoji-grid{ display:grid; gap:0.6rem; margin-top:1rem; }
+  .mtx-emoji-tile-wrap{ position:relative; aspect-ratio:1; }
+  .mtx-emoji-tile{
+    position:absolute; inset:0; width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    background:rgba(0,0,0,0.35); border:1px solid var(--border); color:inherit;
+    cursor:pointer; padding:0.3rem;
+    clip-path: polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+    --cut:10px; --cc-color:var(--border);
+  }
+  .mtx-emoji-tile.is-configured{
+    background:color-mix(in srgb, var(--accent) 10%, transparent);
+    border-color:var(--accent); --cc-color:var(--accent);
+  }
+  .mtx-emoji-tile.is-related{ border-width:2px; }
+  .mtx-emoji-tile.has-text{ border-color:#fff; border-width:2px; --cc-color:#fff; }
+  .mtx-emoji-glyph{ font-size:1.8rem; line-height:1; }
+  .mtx-emoji-empty-hint{ font-family:var(--font-mono); font-size:0.6rem; font-weight:700; color:var(--text-faint); white-space:pre-line; }
+  .mtx-emoji-badge-txt{
+    position:absolute; right:6px; bottom:5px; font-family:var(--font-mono); font-size:0.55rem; font-weight:800;
+    letter-spacing:0.05em; color:#fff;
+  }
+  .mtx-emoji-badge-related{
+    position:absolute; right:5px; top:2px; font-family:var(--font-mono); font-size:0.95rem; font-weight:800; color:var(--accent);
+  }
+  /* Only shown in ACCESSIBLE CLICK gesture mode (see wireGestureCard) --
+     pinned to the one tile corner TXT/+ never use, so it never collides
+     with either badge in any slot state. */
+  .mtx-emoji-play-btn{
+    position:absolute; left:3px; bottom:3px; z-index:2;
+    width:22px; height:22px; padding:0; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--accent); background:rgba(0,0,0,0.6); color:var(--accent); font-size:0.6rem; cursor:pointer;
+  }
+  /* Author display:flex above otherwise beats the UA [hidden] rule at equal
+     specificity -- same reason every other JS-toggled element in this file
+     (.mtx-overlay[hidden], .mtx-tone-indicator[hidden], etc.) carries its
+     own explicit override. */
+  .mtx-emoji-play-btn[hidden]{ display:none; }
+
+  /* Emoji library picker -- 6 fixed categories x 6 emoji each, byte-for-byte
+     the same as EmojiLibrary in EmojiDeck.kt. Reused as-is by both the main
+     slot editor and the related-panel slot editor. */
+  .mtx-emoji-lib-category{ font-family:var(--font-mono); font-size:0.72rem; font-weight:700; color:var(--accent); margin:0.9rem 0 0.4rem; }
+  .mtx-emoji-lib-row{ display:grid; grid-template-columns:repeat(6,1fr); gap:0.4rem; }
+  .mtx-emoji-lib-swatch{
+    aspect-ratio:1; border:1px solid color-mix(in srgb, var(--accent) 65%, transparent); background:none;
+    display:flex; align-items:center; justify-content:center; font-size:1.1rem; cursor:pointer; padding:0.15rem;
+    clip-path: polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
+    --cut:4px; --cc-color:color-mix(in srgb, var(--accent) 65%, transparent);
+  }
+
+  /* Related Emoji Panel dialogs reuse the same tile grid, sized down since
+     they sit inside a dialog rather than the full window. */
+  .mtx-emoji-related-grid{ display:grid; gap:0.5rem; margin-top:0.8rem; max-width:360px; }
+  .mtx-emoji-related-hint{ color:var(--text-faint); font-size:0.72rem; font-family:var(--font-mono); margin-top:0.6rem; }
+
+  /* Emoji Deck Config dialog -- grid size + overlay timeout pickers reuse
+     .opt-group/.opt-btn (same as Emergency's ALERT TONE picker); PAGES gets
+     its own count label + one add-only button, matching
+     EmojiDeckConfigDialog exactly (no rename/delete control -- the app has
+     none either). */
+  .mtx-emoji-pages-count{ font-family:var(--font-mono); font-size:0.78rem; font-weight:700; color:var(--accent); margin-top:1.1rem; }
+
   /* Full-screen playback overlay -- a sibling of .hud/.window (portal'd, like
      the ctx-dropdown menus) so it is never clipped by .window's clip-path.
      .mtx-overlay-rotor's own size/rotation is set inline by JS: on a
@@ -709,6 +818,17 @@
     color:#fff; -webkit-text-stroke:3px var(--accent); white-space:pre-wrap; margin:0;
   }
   .mtx-overlay-hint{ margin-top:1.4rem; font-family:var(--font-mono); font-size:0.85rem; color:#6eebff; }
+
+  /* Emoji overlay mode -- a giant glyph (proportioned off
+     EMOJI_TEXT_SIZE_SP=132f's own dominance of a phone screen) plus an
+     optional smaller label below, swapped in for .mtx-overlay-text/-hint
+     instead of the wrapped phrase paragraph. Shares the same rotor/card
+     chrome, replay chip, and tap-to-clear as every other deck. */
+  .mtx-overlay-emoji{ font-size:clamp(5rem,40cqw,14rem); line-height:1; margin:0; }
+  .mtx-overlay-emoji-text{
+    font-family:var(--font-body); font-weight:800; font-size:clamp(1rem,3.5cqw,1.8rem); line-height:1.3;
+    color:#fff; margin:1rem 0 0; white-space:pre-wrap;
+  }
 
   /* Emergency ALERT TONE pre-beat -- a brief visual stand-in for the real
      app's audible tone (which always plays before the prompt, synchronously)
@@ -813,6 +933,8 @@
           <p class="mtx-tone-label" id="mtxToneLabel"></p>
         </div>
         <p class="mtx-overlay-text" id="mtxOverlayText"></p>
+        <p class="mtx-overlay-emoji" id="mtxOverlayEmoji" hidden></p>
+        <p class="mtx-overlay-emoji-text" id="mtxOverlayEmojiText" hidden></p>
         <p class="mtx-overlay-hint" id="mtxOverlayHint">TAP ANYWHERE TO CLEAR</p>
       </div>
     </div>
@@ -1627,6 +1749,17 @@
         <button type="button" class="opt-btn" data-contrast="high" aria-pressed="false">High</button>
       </div>
     </div>
+
+    <div class="a11y-row">
+      <span id="gestureModeLabel">Deck Simulator tile gesture &mdash; saved. APP MATCH mirrors the real
+        app's own tap-to-fire / hold-to-configure gesture (pointer or a held Enter/Space on the
+        keyboard); ACCESSIBLE CLICK swaps every tile to a plain click-to-configure body plus a small,
+        always-visible action button instead, with no timed hold anywhere.</span>
+      <div class="opt-group" role="group" aria-labelledby="gestureModeLabel">
+        <button type="button" class="opt-btn" data-gesture="app" aria-pressed="true">App Match</button>
+        <button type="button" class="opt-btn" data-gesture="accessible" aria-pressed="false">Accessible Click</button>
+      </div>
+    </div>
   </div>
 </dialog>
 
@@ -2066,6 +2199,134 @@
   </div>
 </dialog>
 
+<!-- EMOJI DIALOGS -->
+
+<dialog id="mtxEmojiSlotDialog" aria-labelledby="mtxEmojiSlotTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <div>
+        <h2 id="mtxEmojiSlotTitle">Configure Emoji</h2>
+        <p style="margin:0.2rem 0 0; color:var(--text-faint); font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em;">EXPLICIT-SAVE EDITOR</p>
+      </div>
+      <button type="button" class="dialog-close" data-close aria-label="Close editor">&#10005;</button>
+    </div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.8rem;">CUSTOM EMOJI</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxEmojiEmojiInput" style="min-height:auto; font-size:1.3rem;" placeholder="PASTE OR TYPE AN EMOJI" maxlength="16">
+
+    <button type="button" class="opt-btn" id="mtxEmojiLibraryToggle" style="width:100%; margin-top:0.7rem;">PICK FROM LIBRARY</button>
+    <div id="mtxEmojiLibrary" hidden></div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">LABEL // OPTIONAL</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxEmojiLabelInput" style="min-height:auto;" placeholder="LABEL" maxlength="40">
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">OVERLAY TEXT // OPTIONAL</p>
+    <textarea class="mtx-editor-textarea" id="mtxEmojiDisplayTextInput" placeholder="TEXT SHOWN BELOW THE EMOJI"></textarea>
+
+    <button type="button" class="mtx-emg-toggle" id="mtxEmojiRelatedToggle" style="margin-top:0.9rem;" aria-pressed="false">
+      <span class="mtx-emg-toggle-box"></span> OPEN RELATED EMOJI PANEL
+    </button>
+    <p class="mtx-emoji-related-hint" id="mtxEmojiRelatedHint" hidden>THIS SLOT OPENS A SINGLE-PAGE EMOJI PANEL.</p>
+    <button type="button" class="opt-btn" id="mtxEmojiConfigureRelated" style="width:100%; margin-top:0.6rem;" hidden>CONFIGURE RELATED PANEL</button>
+
+    <p style="color:var(--error); font-size:0.78rem; margin-top:1.1rem;">DESTRUCTIVE CONTROLS</p>
+    <button type="button" class="opt-btn" id="mtxEmojiClear" style="color:var(--error);border-color:var(--error); width:100%;">CLEAR</button>
+
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxEmojiSave" style="color:var(--accent);border-color:var(--accent);">SAVE</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxEmojiRelatedViewerDialog" aria-labelledby="mtxEmojiRelatedViewerTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxEmojiRelatedViewerTitle">Related // Panel</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close">&#10005;</button>
+    </div>
+    <p style="color:var(--text-dim); font-size:0.78rem;">TAP AN EMOJI TO DISPLAY IT.</p>
+    <div class="mtx-emoji-related-grid" id="mtxEmojiRelatedViewerGrid"></div>
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" data-close>DONE</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxEmojiRelatedEditorDialog" aria-labelledby="mtxEmojiRelatedEditorTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxEmojiRelatedEditorTitle">Related // Panel</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close">&#10005;</button>
+    </div>
+    <p class="mtx-emoji-related-hint" id="mtxEmojiRelatedEditorHint">HOLD A TILE TO CONFIGURE IT.</p>
+    <div class="mtx-emoji-related-grid" id="mtxEmojiRelatedEditorGrid"></div>
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" data-close>DONE</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxEmojiRelatedSlotDialog" aria-labelledby="mtxEmojiRelatedSlotTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxEmojiRelatedSlotTitle">Related Emoji</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close editor">&#10005;</button>
+    </div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.8rem;">CUSTOM EMOJI</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxEmojiRelatedEmojiInput" style="min-height:auto; font-size:1.3rem;" placeholder="PASTE OR TYPE AN EMOJI" maxlength="16">
+
+    <button type="button" class="opt-btn" id="mtxEmojiRelatedLibraryToggle" style="width:100%; margin-top:0.7rem;">PICK FROM LIBRARY</button>
+    <div id="mtxEmojiRelatedLibrary" hidden></div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">LABEL // OPTIONAL</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxEmojiRelatedLabelInput" style="min-height:auto;" placeholder="LABEL" maxlength="40">
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">OVERLAY TEXT // OPTIONAL</p>
+    <textarea class="mtx-editor-textarea" id="mtxEmojiRelatedDisplayTextInput" placeholder="TEXT SHOWN BELOW THE EMOJI"></textarea>
+
+    <p style="color:var(--error); font-size:0.78rem; margin-top:1.1rem;">DESTRUCTIVE CONTROLS</p>
+    <button type="button" class="opt-btn" id="mtxEmojiRelatedClear" style="color:var(--error);border-color:var(--error); width:100%;">CLEAR</button>
+
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxEmojiRelatedSave" style="color:var(--accent);border-color:var(--accent);">SAVE</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxEmojiConfigDialog" aria-labelledby="mtxEmojiConfigTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxEmojiConfigTitle">Emoji Deck Config</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close">&#10005;</button>
+    </div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.8rem;">GRID SIZE</p>
+    <div class="opt-group" id="mtxEmojiGridSizeGroup" role="group" aria-label="Grid size">
+      <button type="button" class="opt-btn" data-gridsize="THREE_BY_THREE" aria-pressed="false">3 X 3</button>
+      <button type="button" class="opt-btn" data-gridsize="FOUR_BY_FOUR" aria-pressed="false">4 X 4</button>
+      <button type="button" class="opt-btn" data-gridsize="FIVE_BY_FIVE" aria-pressed="false">5 X 5</button>
+    </div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:1.1rem;">OVERLAY TIMEOUT</p>
+    <div class="opt-group" id="mtxEmojiTimeoutGroup" role="group" aria-label="Overlay timeout">
+      <button type="button" class="opt-btn" data-timeout="STANDARD" aria-pressed="false">STANDARD</button>
+      <button type="button" class="opt-btn" data-timeout="EXTENDED" aria-pressed="false">EXTENDED</button>
+      <button type="button" class="opt-btn" data-timeout="NO_AUTO_CLEAR" aria-pressed="false">NO AUTO CLEAR</button>
+    </div>
+
+    <p class="mtx-emoji-pages-count" id="mtxEmojiPagesCount">PAGES // 1</p>
+    <button type="button" class="opt-btn" id="mtxEmojiAddPage" style="width:100%; margin-top:0.5rem;">+ ADD PAGE</button>
+
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxEmojiConfigSave" style="color:var(--accent);border-color:var(--accent);">SAVE CONFIG</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
+</dialog>
+
 <script>
 (function(){
   "use strict";
@@ -2171,6 +2432,115 @@
 
   var STORAGE_PREFIX = 'ackSimMtx_';
 
+  // ---------- gesture mode (APP GESTURE vs ACCESSIBLE CLICK) ----------
+  // A single global, persisted preference (not per-deck) controlling how
+  // every tile across Matrix/Quick Actions/Emergency/Emoji responds to
+  // interaction -- set from the Settings dialog, same home as Motion/
+  // Contrast. APP GESTURE (default) mirrors the real app's own tap-to-fire /
+  // hold-to-configure gesture (combinedClickable(onClick, onLongClick) in
+  // EmojiDeck.kt, QuickActionsDeck.kt, etc.) as closely as a browser
+  // reasonably allows, including a keyboard held-Enter/Space equivalent so
+  // it's never mouse/touch-only. ACCESSIBLE CLICK is this simulator's own
+  // original convention (click body = configure, small dedicated button =
+  // execute) for anyone who'd rather not rely on a timed hold on any input
+  // device -- unchanged from how Quick Actions/Emergency already worked.
+  var GESTURE_MODE_KEY = 'ackConsoleGestureMode';
+  var GESTURE_HOLD_MS = 550;
+  var gestureMode = (function(){
+    try{
+      return localStorage.getItem(GESTURE_MODE_KEY) === 'accessible' ? 'accessible' : 'app';
+    }catch(e){ return 'app'; }
+  })();
+  function getGestureMode(){ return gestureMode; }
+  function setGestureMode(mode){
+    gestureMode = (mode === 'accessible') ? 'accessible' : 'app';
+    try{ localStorage.setItem(GESTURE_MODE_KEY, gestureMode); }catch(e){}
+  }
+  // primaryVerb is the deck's main action (PLAY / EXECUTE / DISPLAY);
+  // configureVerb defaults to EDIT (CONFIGURE for Emoji, matching its own
+  // in-app copy exactly: "TAP: DISPLAY // HOLD: CONFIGURE").
+  function gestureHintText(primaryVerb, configureVerb){
+    configureVerb = configureVerb || 'EDIT';
+    return gestureMode === 'accessible'
+      ? 'CLICK: ' + configureVerb + '  //  ▶: ' + primaryVerb
+      : 'TAP: ' + primaryVerb + '  //  HOLD: ' + configureVerb;
+  }
+
+  // Wires a card's body button (+ optional small action button) to the
+  // current gesture mode. onPrimary is the deck's main action; onConfigure
+  // opens that item's editor. ACCESSIBLE CLICK preserves the simulator's
+  // original click-body/press-button behavior exactly. APP GESTURE has the
+  // body alone handle both, tap vs a ~550ms hold -- pointer AND keyboard
+  // (held Enter/Space), so it's never mouse/touch-only -- and hides the
+  // small button, matching the app's own single-tile surface.
+  function wireGestureCard(body, playBtn, onPrimary, onConfigure){
+    if(gestureMode === 'accessible'){
+      if(playBtn) playBtn.hidden = false;
+      body.addEventListener('click', function(){ onConfigure(); });
+      if(playBtn){
+        playBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          onPrimary();
+        });
+      }
+      return;
+    }
+
+    if(playBtn) playBtn.hidden = true;
+
+    var holdTimer = null;
+    var longPressFired = false;
+    var suppressClick = false;
+
+    function startHold(){
+      longPressFired = false;
+      body.classList.add('gesture-hold-active');
+      holdTimer = setTimeout(function(){
+        longPressFired = true;
+        body.classList.remove('gesture-hold-active');
+        body.classList.add('gesture-hold-fired');
+        onConfigure();
+      }, GESTURE_HOLD_MS);
+    }
+    function endHold(){
+      if(holdTimer){ clearTimeout(holdTimer); holdTimer = null; }
+      body.classList.remove('gesture-hold-active', 'gesture-hold-fired');
+      var fired = longPressFired;
+      longPressFired = false;
+      return fired;
+    }
+
+    body.addEventListener('pointerdown', function(e){
+      if(e.button !== undefined && e.button !== 0) return;
+      startHold();
+    });
+    body.addEventListener('pointerup', function(){
+      if(endHold()) suppressClick = true;
+    });
+    body.addEventListener('pointercancel', endHold);
+    body.addEventListener('pointerleave', endHold);
+
+    body.addEventListener('click', function(){
+      if(suppressClick){ suppressClick = false; return; }
+      onPrimary();
+    });
+
+    body.addEventListener('keydown', function(e){
+      if(e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      e.preventDefault();
+      if(e.repeat) return;
+      startHold();
+    });
+    body.addEventListener('keyup', function(e){
+      if(e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      e.preventDefault();
+      var wasHold = endHold();
+      suppressClick = true;
+      if(!wasHold) onPrimary();
+      setTimeout(function(){ suppressClick = false; }, 0);
+    });
+  }
+
   var POSES = ["IDENTITY", "DEFEND", "CONNECT"];
 
   // Same 3 poses x 4 "twists" as the app's own BASE_TEMPLATE, including the
@@ -2207,14 +2577,14 @@
   ];
 
   // Matches CreateDeckDialog.kt's own type grid and descriptions. MATRIX,
-  // QUICK_ACTIONS, and EMERGENCY are all real, creatable decks here, same as
-  // in the app; EMOJI/GIF are shown (not hidden) so the roadmap is visible,
-  // same spirit as the rest of this page's placeholders.
+  // QUICK_ACTIONS, EMERGENCY, and EMOJI are all real, creatable decks here,
+  // same as in the app; GIF is shown (not hidden) so the roadmap is
+  // visible, same spirit as the rest of this page's placeholders.
   var DECK_TYPES = [
     {type:"MATRIX", label:"MATRIX", desc:"A full 3-pose Matrix with its own phrases, context layers, and profiles.", enabled:true},
     {type:"QUICK_ACTIONS", label:"QUICK ACTIONS", desc:"Three action groups with four configurable slots per group.", enabled:true},
     {type:"EMERGENCY", label:"EMERGENCY", desc:"Four immediate prompt slots with optional emergency overrides.", enabled:true},
-    {type:"EMOJI", label:"EMOJI", desc:"Visual-only emoji pages with configurable grids and optional text.", enabled:false},
+    {type:"EMOJI", label:"EMOJI", desc:"Visual-only emoji pages with configurable grids and optional text.", enabled:true},
     {type:"GIF", label:"GIF", desc:"Local GIF library with categories, previews, and fullscreen playback.", enabled:false}
   ];
 
@@ -2621,7 +2991,7 @@
     // it isn't deck-scoped, so deleting one deck (even the last Emergency
     // deck) must never erase it.
     try{
-      var types = ['phrase_', 'vars_', 'root_', 'collapsed_', 'qa_', 'emergency_'];
+      var types = ['phrase_', 'vars_', 'root_', 'collapsed_', 'qa_', 'emergency_', 'emoji_'];
       var toRemove = [];
       for(var i=0;i<localStorage.length;i++){
         var key = localStorage.key(i);
@@ -2640,6 +3010,174 @@
     if(getActiveDeckId() === deckId) setActiveDeckIdStorage(DEFAULT_DECK_ID);
     return true;
   }
+
+  // ---------- Emoji deck (mirrors EmojiDeck.kt + the relevant parts of
+  // CommandRepository.kt) ----------
+  // A single JSON blob per deck: {deckId, gridSize, pages:[{pageId, name,
+  // slots:[{slotIndex, emoji, label, displayText, opensRelatedPanel,
+  // relatedPanel:[...]}]}], overlayTimeout}. Unlike Quick Actions/Emergency
+  // (whose slot counts are fixed at compile time), gridSize is a user
+  // setting here, so -- exactly like EmojiGrid itself -- each page's slots
+  // list stays sparse (only entries someone has actually touched) and is
+  // filled out to the full grid with defaults at render/lookup time instead
+  // of being normalized to a fixed-length array in storage. A related panel
+  // is exactly one level deep, matching RelatedEmojiPanelEditorDialog: the
+  // isChild flag below forces a child slot's own opensRelatedPanel/
+  // relatedPanel to false/[] no matter what's in storage.
+  var EMOJI_GRID_SIZES = {
+    THREE_BY_THREE: { columns: 3, rows: 3 },
+    FOUR_BY_FOUR: { columns: 4, rows: 4 },
+    FIVE_BY_FIVE: { columns: 5, rows: 5 }
+  };
+  var EMOJI_GRID_SIZE_ORDER = ['THREE_BY_THREE', 'FOUR_BY_FOUR', 'FIVE_BY_FIVE'];
+  // STANDARD/EXTENDED/NO_AUTO_CLEAR durations mirror EmojiOverlayTimeout
+  // exactly (10s / 20s / never).
+  var EMOJI_TIMEOUTS = { STANDARD: 10000, EXTENDED: 20000, NO_AUTO_CLEAR: 0 };
+  var EMOJI_TIMEOUT_ORDER = ['STANDARD', 'EXTENDED', 'NO_AUTO_CLEAR'];
+
+  function emojiConfigKey(deckId){ return STORAGE_PREFIX + 'emoji_' + deckId + '_config'; }
+  function emojiGridSlotCount(gridSize){
+    var g = EMOJI_GRID_SIZES[gridSize] || EMOJI_GRID_SIZES.FOUR_BY_FOUR;
+    return g.columns * g.rows;
+  }
+
+  function normalizeEmojiSlot(raw, slotIndex, isChild){
+    var slot = { slotIndex: slotIndex, emoji: '', label: '', displayText: '', opensRelatedPanel: false, relatedPanel: [] };
+    if(raw && typeof raw === 'object'){
+      if(typeof raw.emoji === 'string') slot.emoji = raw.emoji;
+      if(typeof raw.label === 'string') slot.label = raw.label;
+      if(typeof raw.displayText === 'string') slot.displayText = raw.displayText;
+      if(!isChild){
+        slot.opensRelatedPanel = !!raw.opensRelatedPanel;
+        if(Array.isArray(raw.relatedPanel)){
+          slot.relatedPanel = raw.relatedPanel.map(function(child, i){
+            return normalizeEmojiSlot(child, (child && typeof child.slotIndex === 'number') ? child.slotIndex : i, true);
+          });
+        }
+      }
+    }
+    return slot;
+  }
+
+  function normalizeEmojiPage(raw, index){
+    var fallbackName = 'PAGE ' + (index + 1);
+    if(!raw || typeof raw !== 'object'){
+      return { pageId: 'page_' + (index + 1), name: fallbackName, slots: [] };
+    }
+    return {
+      pageId: (typeof raw.pageId === 'string' && raw.pageId) ? raw.pageId : ('page_' + (index + 1)),
+      name: (typeof raw.name === 'string' && raw.name) ? raw.name : fallbackName,
+      slots: Array.isArray(raw.slots) ? raw.slots.map(function(s, i){
+        return normalizeEmojiSlot(s, (s && typeof s.slotIndex === 'number') ? s.slotIndex : i, false);
+      }) : []
+    };
+  }
+
+  function defaultEmojiDeckConfig(deckId){
+    return {
+      deckId: deckId,
+      gridSize: 'FOUR_BY_FOUR',
+      pages: [{ pageId: 'page_1', name: 'PAGE 1', slots: [] }],
+      overlayTimeout: 'STANDARD'
+    };
+  }
+
+  function normalizeEmojiDeckConfig(raw, deckId){
+    var fallback = defaultEmojiDeckConfig(deckId);
+    if(!raw || typeof raw !== 'object') return fallback;
+    var pages = Array.isArray(raw.pages) ? raw.pages.map(normalizeEmojiPage) : [];
+    return {
+      deckId: deckId,
+      gridSize: EMOJI_GRID_SIZES.hasOwnProperty(raw.gridSize) ? raw.gridSize : fallback.gridSize,
+      pages: pages.length ? pages : fallback.pages,
+      overlayTimeout: EMOJI_TIMEOUTS.hasOwnProperty(raw.overlayTimeout) ? raw.overlayTimeout : fallback.overlayTimeout
+    };
+  }
+
+  function getEmojiDeckConfig(deckId){
+    return normalizeEmojiDeckConfig(readJSON(emojiConfigKey(deckId), null), deckId);
+  }
+  function setEmojiDeckConfig(deckId, config){
+    writeJSON(emojiConfigKey(deckId), config);
+  }
+
+  // Fills a page's (possibly sparse) slots out to the full current grid
+  // size, exactly mirroring EmojiGrid's own
+  // "(0 until gridSize.slotCount).map { find or default }".
+  function getEmojiPageSlots(page, gridSize){
+    var count = emojiGridSlotCount(gridSize);
+    var slots = [];
+    for(var i=0;i<count;i++){
+      var found = null;
+      for(var j=0;j<page.slots.length;j++){ if(page.slots[j].slotIndex === i){ found = page.slots[j]; break; } }
+      slots.push(found || normalizeEmojiSlot(null, i, false));
+    }
+    return slots;
+  }
+  function getEmojiRelatedSlots(parentSlot, gridSize){
+    var count = emojiGridSlotCount(gridSize);
+    var slots = [];
+    for(var i=0;i<count;i++){
+      var found = null;
+      for(var j=0;j<parentSlot.relatedPanel.length;j++){ if(parentSlot.relatedPanel[j].slotIndex === i){ found = parentSlot.relatedPanel[j]; break; } }
+      slots.push(found || normalizeEmojiSlot(null, i, true));
+    }
+    return slots;
+  }
+
+  function findEmojiPage(config, pageId){
+    for(var i=0;i<config.pages.length;i++){ if(config.pages[i].pageId === pageId) return config.pages[i]; }
+    return null;
+  }
+  function findEmojiSlotInPage(page, slotIndex){
+    for(var i=0;i<page.slots.length;i++){ if(page.slots[i].slotIndex === slotIndex) return page.slots[i]; }
+    return null;
+  }
+
+  function updateEmojiSlot(deckId, pageId, slotIndex, patch){
+    var config = getEmojiDeckConfig(deckId);
+    var page = findEmojiPage(config, pageId);
+    if(!page) return;
+    var slot = findEmojiSlotInPage(page, slotIndex);
+    if(!slot){
+      slot = normalizeEmojiSlot(null, slotIndex, false);
+      page.slots.push(slot);
+    }
+    if(patch.emoji !== undefined) slot.emoji = patch.emoji;
+    if(patch.label !== undefined) slot.label = patch.label;
+    if(patch.displayText !== undefined) slot.displayText = patch.displayText;
+    if(patch.opensRelatedPanel !== undefined) slot.opensRelatedPanel = patch.opensRelatedPanel;
+    setEmojiDeckConfig(deckId, config);
+  }
+
+  function updateRelatedEmojiSlot(deckId, pageId, parentSlotIndex, childSlotIndex, patch){
+    var config = getEmojiDeckConfig(deckId);
+    var page = findEmojiPage(config, pageId);
+    if(!page) return;
+    var parent = findEmojiSlotInPage(page, parentSlotIndex);
+    if(!parent) return;
+    var child = null;
+    for(var i=0;i<parent.relatedPanel.length;i++){ if(parent.relatedPanel[i].slotIndex === childSlotIndex){ child = parent.relatedPanel[i]; break; } }
+    if(!child){
+      child = normalizeEmojiSlot(null, childSlotIndex, true);
+      parent.relatedPanel.push(child);
+    }
+    if(patch.emoji !== undefined) child.emoji = patch.emoji;
+    if(patch.label !== undefined) child.label = patch.label;
+    if(patch.displayText !== undefined) child.displayText = patch.displayText;
+    setEmojiDeckConfig(deckId, config);
+  }
+
+  // The built-in library, byte-for-byte the same 6 categories x 6 emoji as
+  // EmojiLibrary in EmojiDeck.kt.
+  var EMOJI_LIBRARY = [
+    ['RESPONSES', ['✅', '❌', '👍', '👎', '❓', '💬']],
+    ['BOUNDARIES', ['🛑', '✋', '🚫', '🔇', '↔️', '🚪']],
+    ['NEEDS', ['⏳', '🥤', '🍽️', '🛏️', '🚻', '💊']],
+    ['FEELINGS', ['😀', '😐', '😖', '😢', '😡', '😵‍💫']],
+    ['REGULATION', ['🧠', '🎧', '🌧️', '🌿', '🫂', '🧊']],
+    ['PEOPLE / PLACES', ['👤', '👥', '🏠', '🚗', '🏥', '📱']]
+  ];
 
   // ---------- template engine (mirrors TemplateEngine.kt) ----------
   var VAR_SOURCE = '\\{VAR(?::([A-C]))?\\}';
@@ -2712,12 +3250,21 @@
     'have no visual effect here; an ALERT TONE plays as a brief visual pulse before the prompt appears. ' +
     'EMERGENCY INFO is one reference card shared by every Emergency deck &mdash; editing it never changes ' +
     'what a slot plays.';
+  var EMOJI_INTRO = 'Simulating an <strong>EMOJI</strong> deck: visual-only pages of emoji tiles, a ' +
+    'configurable grid (3&times;3 / 4&times;4 / 5&times;5), an optional overlay text label per tile, and an ' +
+    'optional one-level-deep related-emoji panel per tile. No profiles, no root overrides, no template ' +
+    'variables &mdash; every tile is just an emoji plus optional text. Voice output isn\'t simulated ' +
+    '&mdash; DISPLAY shows the same full-screen visual prompt the app displays, without audio, and clears ' +
+    'itself per this deck\'s own OVERLAY TIMEOUT setting.';
 
   function updateIntroNote(deck){
     var note = document.getElementById('mtxIntroNote');
     if(!note) return;
     var type = deck ? deck.type : 'MATRIX';
-    note.innerHTML = type === 'QUICK_ACTIONS' ? QA_INTRO : type === 'EMERGENCY' ? EMERGENCY_INTRO : MTX_INTRO;
+    note.innerHTML = type === 'QUICK_ACTIONS' ? QA_INTRO
+      : type === 'EMERGENCY' ? EMERGENCY_INTRO
+      : type === 'EMOJI' ? EMOJI_INTRO
+      : MTX_INTRO;
   }
 
   function mtxRenderEditor(focusKey){
@@ -2734,8 +3281,13 @@
       renderEmergencyEditor(root, mtxState.deckId, focusKey);
       return;
     }
+    if(deck && deck.type === 'EMOJI'){
+      renderEmojiEditor(root, mtxState.deckId, focusKey);
+      return;
+    }
 
     root.innerHTML = '';
+    root.appendChild(el('p', 'mtx-qa-hint', gestureHintText('PLAY')));
     POSES.forEach(function(category){
       root.appendChild(renderPose(category, mtxState.deckId, mtxState.profile));
     });
@@ -2887,7 +3439,6 @@
       body.appendChild(varRow);
     }
 
-    body.addEventListener('click', function(){ openNodeDialog(node, deckId, profile); });
     card.appendChild(body);
 
     var playBtn = document.createElement('button');
@@ -2895,11 +3446,12 @@
     playBtn.className = 'mtx-play-btn';
     playBtn.setAttribute('aria-label', 'Play ' + node.label + ', ' + node.category);
     playBtn.textContent = '▶';
-    playBtn.addEventListener('click', function(e){
-      e.stopPropagation();
-      playNode(node, deckId, profile);
-    });
     card.appendChild(playBtn);
+
+    wireGestureCard(body, playBtn,
+      function(){ playNode(node, deckId, profile); },
+      function(){ openNodeDialog(node, deckId, profile); }
+    );
 
     row.appendChild(card);
     return row;
@@ -2922,7 +3474,7 @@
 
     var heading = el('div', 'mtx-qa-heading');
     heading.appendChild(el('h3', null, 'QUICK ACTIONS'));
-    heading.appendChild(el('p', 'mtx-qa-hint', 'CLICK: EDIT  //  ▶: EXECUTE'));
+    heading.appendChild(el('p', 'mtx-qa-hint', gestureHintText('EXECUTE')));
     root.appendChild(heading);
 
     var tabRow = el('div', 'mtx-qa-group-tabs');
@@ -3013,7 +3565,6 @@
       body.appendChild(varRow);
     }
 
-    body.addEventListener('click', function(){ openQaSlotDialog(deckId, group.groupIndex, slot.slotIndex); });
     card.appendChild(body);
 
     var playBtn = document.createElement('button');
@@ -3021,11 +3572,12 @@
     playBtn.className = 'mtx-play-btn';
     playBtn.setAttribute('aria-label', 'Play ' + slot.label + ', ' + group.label);
     playBtn.textContent = '▶';
-    playBtn.addEventListener('click', function(e){
-      e.stopPropagation();
-      playQuickAction(deckId, group.groupIndex, slot.slotIndex);
-    });
     card.appendChild(playBtn);
+
+    wireGestureCard(body, playBtn,
+      function(){ playQuickAction(deckId, group.groupIndex, slot.slotIndex); },
+      function(){ openQaSlotDialog(deckId, group.groupIndex, slot.slotIndex); }
+    );
 
     return card;
   }
@@ -3049,7 +3601,7 @@
 
     var heading = el('div', 'mtx-qa-heading');
     heading.appendChild(el('h3', null, 'EMERGENCY'));
-    heading.appendChild(el('p', 'mtx-qa-hint', 'CLICK: EDIT  //  ▶: EXECUTE'));
+    heading.appendChild(el('p', 'mtx-qa-hint', gestureHintText('EXECUTE')));
     root.appendChild(heading);
 
     root.appendChild(el('p', 'mtx-emg-status', 'OVERRIDES: ' + emergencyOverridesSummary(config)));
@@ -3095,7 +3647,6 @@
       'mtx-emg-action-label' + (isConfigured ? '' : ' is-empty'),
       isConfigured ? slot.label : '[CLICK TO CONFIGURE]'
     ));
-    body.addEventListener('click', function(){ openEmgSlotDialog(deckId, slot.slotIndex); });
     card.appendChild(body);
 
     var footer = el('div', 'mtx-emg-action-footer');
@@ -3110,18 +3661,20 @@
     playBtn.className = 'mtx-play-btn';
     playBtn.setAttribute('aria-label', 'Play ' + slot.label);
     playBtn.textContent = '▶';
-    playBtn.addEventListener('click', function(e){
-      e.stopPropagation();
-      playEmergencySlot(deckId, slot.slotIndex);
-    });
     footer.appendChild(playBtn);
     card.appendChild(footer);
+
+    wireGestureCard(body, playBtn,
+      function(){ playEmergencySlot(deckId, slot.slotIndex); },
+      function(){ openEmgSlotDialog(deckId, slot.slotIndex); }
+    );
 
     return card;
   }
 
   // ---------- playback overlay ----------
   var overlayEl, overlayRotorEl, overlayTextEl, overlayHintEl, replayChipEl;
+  var overlayEmojiEl, overlayEmojiTextEl;
   var toneIndicatorEl, toneFlashEl, toneLabelEl;
   var overlayTimeout = null;
   var replayTimeout = null;
@@ -3140,6 +3693,8 @@
     overlayEl = document.getElementById('mtxOverlay');
     overlayRotorEl = document.getElementById('mtxOverlayRotor');
     overlayTextEl = document.getElementById('mtxOverlayText');
+    overlayEmojiEl = document.getElementById('mtxOverlayEmoji');
+    overlayEmojiTextEl = document.getElementById('mtxOverlayEmojiText');
     overlayHintEl = document.getElementById('mtxOverlayHint');
     replayChipEl = document.getElementById('mtxReplayChip');
     toneIndicatorEl = document.getElementById('mtxToneIndicator');
@@ -3207,6 +3762,8 @@
     overlayRequireHold = !!options.requireHoldToClear;
     overlayHintEl.textContent = overlayRequireHold ? 'HOLD ANYWHERE TO CLEAR' : 'TAP ANYWHERE TO CLEAR';
     overlayTextEl.hidden = false;
+    overlayEmojiEl.hidden = true;
+    overlayEmojiTextEl.hidden = true;
     overlayHintEl.hidden = false;
     toneIndicatorEl.hidden = true;
     overlayTextEl.textContent = text;
@@ -3223,6 +3780,40 @@
     // clears it themselves.
     if(!options.preventTimedClear){
       overlayTimeout = setTimeout(function(){ clearOverlay(true); }, 10000);
+    }
+  }
+
+  // Mirrors VisualPromptService.showEmojiPrompt: a giant glyph plus an
+  // optional smaller label, sharing the same rotor/card chrome, replay
+  // chip, and landscape-in-place rotation as showOverlay above. Emoji never
+  // uses hold-to-clear (that's Emergency-only) and its auto-clear timing
+  // comes from the deck's own overlayTimeout (0 = EmojiOverlayTimeout.
+  // NO_AUTO_CLEAR, i.e. never).
+  function showEmojiOverlay(emoji, displayText, timeoutMs, onReplay){
+    ensureOverlayRefs();
+    clearReplayChip();
+    if(overlayTimeout){ clearTimeout(overlayTimeout); overlayTimeout = null; }
+
+    replayAction = onReplay;
+    overlayRequireHold = false;
+    overlayHintEl.textContent = 'TAP ANYWHERE TO CLEAR';
+    overlayTextEl.hidden = true;
+    toneIndicatorEl.hidden = true;
+    overlayEmojiEl.hidden = false;
+    overlayEmojiEl.textContent = emoji;
+    overlayEmojiTextEl.hidden = !displayText;
+    overlayEmojiTextEl.textContent = displayText;
+    overlayHintEl.hidden = false;
+    overlayEl.hidden = false;
+    applyOverlayOrientation();
+
+    if(!overlayResizeHandler){
+      overlayResizeHandler = function(){ applyOverlayOrientation(); };
+      window.addEventListener('resize', overlayResizeHandler);
+    }
+
+    if(timeoutMs > 0){
+      overlayTimeout = setTimeout(function(){ clearOverlay(true); }, timeoutMs);
     }
   }
 
@@ -3270,6 +3861,8 @@
     toneInProgress = true;
     overlayEl.hidden = false;
     overlayTextEl.hidden = true;
+    overlayEmojiEl.hidden = true;
+    overlayEmojiTextEl.hidden = true;
     overlayHintEl.hidden = true;
     toneIndicatorEl.hidden = false;
     toneLabelEl.textContent = meta.label + ' TONE';
@@ -3326,6 +3919,138 @@
     } else {
       showOverlay(displayText, replay, overlayOptions);
     }
+  }
+
+  // Mirrors VisualPromptService.showEmojiPrompt: emoji/displayText/timeoutMs
+  // are captured by value in the replay closure (like the app's own
+  // replayAction), so a replay always redisplays exactly what was shown --
+  // even if the slot's own config changes in the meantime.
+  function playEmojiSlot(deckId, slot){
+    var emoji = slot.emoji.trim();
+    if(!emoji) return;
+    var config = getEmojiDeckConfig(deckId);
+    var timeoutMs = EMOJI_TIMEOUTS.hasOwnProperty(config.overlayTimeout) ? EMOJI_TIMEOUTS[config.overlayTimeout] : EMOJI_TIMEOUTS.STANDARD;
+    var displayText = slot.displayText.trim();
+    var replay = function(){ showEmojiOverlay(emoji, displayText, timeoutMs, replay); };
+    showEmojiOverlay(emoji, displayText, timeoutMs, replay);
+  }
+
+  // ---------- Emoji editor (mirrors EmojiDeck.kt's own layout: a title +
+  // CONFIG button sharing one row -- not a bottom action button, unlike
+  // Quick Actions/Emergency -- a page navigator, then a cut-corner tile
+  // grid whose column count follows the deck's own gridSize setting) ----------
+  var emojiSelectedPageIndex = {}; // deckId -> page index, in-memory only (resets to page 0 on reload)
+
+  function renderEmojiEditor(root, deckId, focusKey){
+    root.innerHTML = '';
+    var config = getEmojiDeckConfig(deckId);
+    var activeIndex = emojiSelectedPageIndex[deckId] || 0;
+    if(activeIndex >= config.pages.length) activeIndex = 0;
+    var activePage = config.pages[activeIndex];
+    var pageCount = config.pages.length;
+
+    var heading = el('div', 'mtx-emoji-heading');
+    var headingText = el('div', 'mtx-emoji-heading-text');
+    headingText.appendChild(el('h3', null, 'EMOJI // EXPRESS'));
+    headingText.appendChild(el('p', 'mtx-qa-hint', gestureHintText('DISPLAY', 'CONFIGURE')));
+    heading.appendChild(headingText);
+
+    var configBtn = document.createElement('button');
+    configBtn.type = 'button';
+    configBtn.className = 'mtx-emoji-config-btn';
+    configBtn.textContent = 'CONFIG';
+    configBtn.addEventListener('click', function(){ openEmojiConfigDialog(deckId); });
+    heading.appendChild(configBtn);
+    root.appendChild(heading);
+
+    var nav = el('div', 'mtx-emoji-pagenav');
+    var prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'mtx-emoji-pagenav-btn';
+    prevBtn.setAttribute('aria-label', 'Previous page');
+    prevBtn.textContent = '<';
+    prevBtn.addEventListener('click', function(){
+      emojiSelectedPageIndex[deckId] = (activeIndex - 1 + pageCount) % pageCount;
+      mtxRenderEditor();
+    });
+    nav.appendChild(prevBtn);
+
+    nav.appendChild(el('div', 'mtx-emoji-pagenav-label', activePage.name + ' // ' + (activeIndex + 1) + '/' + pageCount));
+
+    var nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'mtx-emoji-pagenav-btn';
+    nextBtn.setAttribute('aria-label', 'Next page');
+    nextBtn.textContent = '>';
+    nextBtn.addEventListener('click', function(){
+      emojiSelectedPageIndex[deckId] = (activeIndex + 1) % pageCount;
+      mtxRenderEditor();
+    });
+    nav.appendChild(nextBtn);
+    root.appendChild(nav);
+
+    var gridSizeMeta = EMOJI_GRID_SIZES[config.gridSize] || EMOJI_GRID_SIZES.FOUR_BY_FOUR;
+    var gridEl = el('div', 'mtx-emoji-grid');
+    gridEl.style.gridTemplateColumns = 'repeat(' + gridSizeMeta.columns + ', 1fr)';
+    getEmojiPageSlots(activePage, config.gridSize).forEach(function(slot){
+      gridEl.appendChild(renderEmojiTile(slot, deckId, activePage.pageId, config.gridSize));
+    });
+    root.appendChild(gridEl);
+
+    if(focusKey){
+      var target = root.querySelector('[data-focus-key="' + focusKey + '"]');
+      if(target) target.focus();
+    }
+  }
+
+  function renderEmojiTile(slot, deckId, pageId, gridSize){
+    var wrap = el('div', 'mtx-emoji-tile-wrap');
+    var configured = slot.emoji.trim() !== '';
+    var hasText = slot.displayText.trim() !== '';
+
+    var body = document.createElement('button');
+    body.type = 'button';
+    body.className = 'mtx-emoji-tile' +
+      (configured ? ' is-configured' : '') +
+      (slot.opensRelatedPanel ? ' is-related' : '') +
+      (hasText ? ' has-text' : '');
+    body.setAttribute('data-focus-key', 'emoji-slot-' + pageId + '-' + slot.slotIndex);
+
+    if(configured){
+      body.appendChild(el('span', 'mtx-emoji-glyph', slot.emoji));
+      if(hasText) body.appendChild(el('span', 'mtx-emoji-badge-txt', 'TXT'));
+      if(slot.opensRelatedPanel) body.appendChild(el('span', 'mtx-emoji-badge-related', '+'));
+    } else {
+      var hint = (getGestureMode() === 'accessible' ? 'CLICK' : 'HOLD') + '\nTO SET';
+      body.appendChild(el('span', 'mtx-emoji-empty-hint', hint));
+    }
+    wrap.appendChild(body);
+
+    var playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'mtx-emoji-play-btn';
+    playBtn.setAttribute('aria-label', slot.opensRelatedPanel ? 'Open related panel' : 'Display emoji');
+    playBtn.textContent = '▶';
+    wrap.appendChild(playBtn);
+
+    wireGestureCard(body, playBtn,
+      function(){ executeEmojiSlot(deckId, pageId, slot, gridSize); },
+      function(){ openEmojiSlotDialog(deckId, pageId, slot.slotIndex); }
+    );
+
+    return wrap;
+  }
+
+  // Mirrors EmojiDeck's onExecute: a blank slot no-ops, opensRelatedPanel
+  // opens the child panel instead of firing, otherwise it plays straight to
+  // the full-screen overlay.
+  function executeEmojiSlot(deckId, pageId, slot, gridSize){
+    if(slot.emoji.trim() === '') return;
+    if(slot.opensRelatedPanel){
+      openEmojiRelatedPanelViewer(deckId, pageId, slot.slotIndex, gridSize);
+      return;
+    }
+    playEmojiSlot(deckId, slot);
   }
 
   // ---------- LIVE-SAVE EDITOR dialog ----------
@@ -3740,6 +4465,226 @@
     document.getElementById('mtxEmgInfoDialog').showModal();
   }
 
+  // ---------- Emoji library picker (shared by the main slot editor and the
+  // related-slot editor) ----------
+  function renderEmojiLibraryInto(container, onSelect){
+    container.innerHTML = '';
+    EMOJI_LIBRARY.forEach(function(entry){
+      var title = entry[0], emojiList = entry[1];
+      container.appendChild(el('p', 'mtx-emoji-lib-category', title));
+      var row = el('div', 'mtx-emoji-lib-row');
+      emojiList.forEach(function(emoji){
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'mtx-emoji-lib-swatch';
+        btn.textContent = emoji;
+        btn.addEventListener('click', function(){ onSelect(emoji); });
+        row.appendChild(btn);
+      });
+      container.appendChild(row);
+    });
+  }
+
+  // ---------- Emoji slot editor (EXPLICIT-SAVE, mirrors
+  // EmojiSlotEditorDialog.kt exactly -- unlike Quick Actions/Emergency's
+  // live-save slot editors, nothing here persists until SAVE is pressed,
+  // and CLEAR only resets the draft fields, not storage) ----------
+  var emojiSlotDialogState = null; // { deckId, pageId, slotIndex }
+  var emojiSlotDraft = null; // { emoji, label, displayText, opensRelatedPanel }
+
+  function syncEmojiRelatedUI(){
+    var pressed = !!emojiSlotDraft.opensRelatedPanel;
+    document.getElementById('mtxEmojiRelatedToggle').setAttribute('aria-pressed', String(pressed));
+    document.getElementById('mtxEmojiRelatedHint').hidden = !pressed;
+    document.getElementById('mtxEmojiConfigureRelated').hidden = !pressed;
+  }
+
+  function openEmojiSlotDialog(deckId, pageId, slotIndex){
+    var config = getEmojiDeckConfig(deckId);
+    var page = findEmojiPage(config, pageId);
+    var slot = (page && findEmojiSlotInPage(page, slotIndex)) || normalizeEmojiSlot(null, slotIndex, false);
+
+    emojiSlotDialogState = { deckId: deckId, pageId: pageId, slotIndex: slotIndex };
+    emojiSlotDraft = { emoji: slot.emoji, label: slot.label, displayText: slot.displayText, opensRelatedPanel: slot.opensRelatedPanel };
+
+    document.getElementById('mtxEmojiSlotTitle').textContent = 'CONFIGURE EMOJI ' + (slotIndex + 1);
+    document.getElementById('mtxEmojiEmojiInput').value = emojiSlotDraft.emoji;
+    document.getElementById('mtxEmojiLabelInput').value = emojiSlotDraft.label;
+    document.getElementById('mtxEmojiDisplayTextInput').value = emojiSlotDraft.displayText;
+    document.getElementById('mtxEmojiLibrary').hidden = true;
+    document.getElementById('mtxEmojiLibraryToggle').textContent = 'PICK FROM LIBRARY';
+    syncEmojiRelatedUI();
+
+    document.getElementById('mtxEmojiSlotDialog').showModal();
+    document.getElementById('mtxEmojiEmojiInput').focus();
+  }
+
+  // Persists the current draft immediately (with opensRelatedPanel forced
+  // true) while keeping this editor open -- mirrors
+  // EmojiSlotEditorDialog.kt's onSaveParentForRelated: the child panel
+  // needs a saved parent slot to attach children to, and the parent editor
+  // stays open underneath it as a nested configuration screen.
+  function saveEmojiSlotDraftAsParent(){
+    if(!emojiSlotDialogState || !emojiSlotDraft) return;
+    updateEmojiSlot(emojiSlotDialogState.deckId, emojiSlotDialogState.pageId, emojiSlotDialogState.slotIndex, {
+      emoji: emojiSlotDraft.emoji.trim(),
+      label: emojiSlotDraft.label.trim(),
+      displayText: emojiSlotDraft.displayText.trim(),
+      opensRelatedPanel: true
+    });
+    mtxRenderEditor();
+  }
+
+  // ---------- Related Emoji Panel viewer (opened from the main grid when a
+  // configured opensRelatedPanel slot is executed -- tapping a configured
+  // child fires it; an unconfigured child does nothing, matching
+  // RelatedEmojiPanelViewerDialog exactly) ----------
+  function openEmojiRelatedPanelViewer(deckId, pageId, parentSlotIndex, gridSize){
+    var config = getEmojiDeckConfig(deckId);
+    var page = findEmojiPage(config, pageId);
+    var parent = page && findEmojiSlotInPage(page, parentSlotIndex);
+    if(!parent) return;
+
+    document.getElementById('mtxEmojiRelatedViewerTitle').textContent =
+      'RELATED // ' + (parent.label.trim() || parent.emoji.trim() || 'PANEL');
+
+    var gridMeta = EMOJI_GRID_SIZES[gridSize] || EMOJI_GRID_SIZES.FOUR_BY_FOUR;
+    var grid = document.getElementById('mtxEmojiRelatedViewerGrid');
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = 'repeat(' + gridMeta.columns + ', 1fr)';
+
+    getEmojiRelatedSlots(parent, gridSize).forEach(function(childSlot){
+      var configured = childSlot.emoji.trim() !== '';
+      var wrap = el('div', 'mtx-emoji-tile-wrap');
+      var body = document.createElement('button');
+      body.type = 'button';
+      body.className = 'mtx-emoji-tile' + (configured ? ' is-configured' : '') + (childSlot.displayText.trim() ? ' has-text' : '');
+      if(configured){
+        body.appendChild(el('span', 'mtx-emoji-glyph', childSlot.emoji));
+        if(childSlot.displayText.trim()) body.appendChild(el('span', 'mtx-emoji-badge-txt', 'TXT'));
+      } else {
+        body.appendChild(el('span', 'mtx-emoji-empty-hint', '—'));
+      }
+      wrap.appendChild(body);
+      if(configured){
+        body.addEventListener('click', function(){
+          document.getElementById('mtxEmojiRelatedViewerDialog').close();
+          playEmojiSlot(deckId, childSlot);
+        });
+      }
+      grid.appendChild(wrap);
+    });
+
+    document.getElementById('mtxEmojiRelatedViewerDialog').showModal();
+  }
+
+  // ---------- Related Emoji Panel editor (opened via CONFIGURE RELATED
+  // PANEL from the parent slot editor -- every child tile only ever
+  // configures, matching RelatedEmojiPanelEditorDialog's onExecute={};
+  // still routed through wireGestureCard with a no-op primary action so it
+  // still respects the same gesture-mode toggle as everything else) ----------
+  var emojiRelatedEditorState = null; // { deckId, pageId, parentSlotIndex, gridSize }
+
+  function renderEmojiRelatedEditorGrid(){
+    if(!emojiRelatedEditorState) return;
+    var state = emojiRelatedEditorState;
+    var config = getEmojiDeckConfig(state.deckId);
+    var page = findEmojiPage(config, state.pageId);
+    var parent = page && findEmojiSlotInPage(page, state.parentSlotIndex);
+    if(!parent) return;
+
+    document.getElementById('mtxEmojiRelatedEditorTitle').textContent =
+      'RELATED // ' + (parent.label.trim() || parent.emoji.trim() || 'PANEL');
+    document.getElementById('mtxEmojiRelatedEditorHint').textContent =
+      getGestureMode() === 'accessible' ? 'CLICK A TILE TO CONFIGURE IT.' : 'HOLD A TILE TO CONFIGURE IT.';
+
+    var gridMeta = EMOJI_GRID_SIZES[state.gridSize] || EMOJI_GRID_SIZES.FOUR_BY_FOUR;
+    var grid = document.getElementById('mtxEmojiRelatedEditorGrid');
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = 'repeat(' + gridMeta.columns + ', 1fr)';
+
+    getEmojiRelatedSlots(parent, state.gridSize).forEach(function(childSlot){
+      var configured = childSlot.emoji.trim() !== '';
+      var wrap = el('div', 'mtx-emoji-tile-wrap');
+      var body = document.createElement('button');
+      body.type = 'button';
+      body.className = 'mtx-emoji-tile' + (configured ? ' is-configured' : '') + (childSlot.displayText.trim() ? ' has-text' : '');
+      if(configured){
+        body.appendChild(el('span', 'mtx-emoji-glyph', childSlot.emoji));
+        if(childSlot.displayText.trim()) body.appendChild(el('span', 'mtx-emoji-badge-txt', 'TXT'));
+      } else {
+        var hint = (getGestureMode() === 'accessible' ? 'CLICK' : 'HOLD') + '\nTO SET';
+        body.appendChild(el('span', 'mtx-emoji-empty-hint', hint));
+      }
+      wrap.appendChild(body);
+      wireGestureCard(body, null, function(){}, function(){
+        openEmojiRelatedSlotEditor(state.deckId, state.pageId, state.parentSlotIndex, childSlot.slotIndex);
+      });
+      grid.appendChild(wrap);
+    });
+  }
+
+  function openEmojiRelatedPanelEditor(deckId, pageId, parentSlotIndex, gridSize){
+    emojiRelatedEditorState = { deckId: deckId, pageId: pageId, parentSlotIndex: parentSlotIndex, gridSize: gridSize };
+    renderEmojiRelatedEditorGrid();
+    document.getElementById('mtxEmojiRelatedEditorDialog').showModal();
+  }
+
+  // ---------- Related Emoji slot editor (EXPLICIT-SAVE, mirrors
+  // RelatedEmojiSlotEditorDialog.kt -- simpler than the parent editor:
+  // no "opens related panel" option, since a related panel is exactly one
+  // level deep) ----------
+  var emojiRelatedSlotDialogState = null; // { deckId, pageId, parentSlotIndex, childSlotIndex }
+  var emojiRelatedSlotDraft = null; // { emoji, label, displayText }
+
+  function openEmojiRelatedSlotEditor(deckId, pageId, parentSlotIndex, childSlotIndex){
+    var config = getEmojiDeckConfig(deckId);
+    var page = findEmojiPage(config, pageId);
+    var parent = page && findEmojiSlotInPage(page, parentSlotIndex);
+    var child = null;
+    if(parent){
+      for(var i=0;i<parent.relatedPanel.length;i++){
+        if(parent.relatedPanel[i].slotIndex === childSlotIndex){ child = parent.relatedPanel[i]; break; }
+      }
+    }
+    child = child || normalizeEmojiSlot(null, childSlotIndex, true);
+
+    emojiRelatedSlotDialogState = { deckId: deckId, pageId: pageId, parentSlotIndex: parentSlotIndex, childSlotIndex: childSlotIndex };
+    emojiRelatedSlotDraft = { emoji: child.emoji, label: child.label, displayText: child.displayText };
+
+    document.getElementById('mtxEmojiRelatedSlotTitle').textContent = 'RELATED EMOJI ' + (childSlotIndex + 1);
+    document.getElementById('mtxEmojiRelatedEmojiInput').value = emojiRelatedSlotDraft.emoji;
+    document.getElementById('mtxEmojiRelatedLabelInput').value = emojiRelatedSlotDraft.label;
+    document.getElementById('mtxEmojiRelatedDisplayTextInput').value = emojiRelatedSlotDraft.displayText;
+    document.getElementById('mtxEmojiRelatedLibrary').hidden = true;
+    document.getElementById('mtxEmojiRelatedLibraryToggle').textContent = 'PICK FROM LIBRARY';
+
+    document.getElementById('mtxEmojiRelatedSlotDialog').showModal();
+    document.getElementById('mtxEmojiRelatedEmojiInput').focus();
+  }
+
+  // ---------- Emoji Deck Config dialog (EXPLICIT-SAVE, mirrors
+  // EmojiDeckConfigDialog.kt exactly -- including ADD PAGE only mutating
+  // the local draft; nothing persists until SAVE CONFIG) ----------
+  var emojiConfigDialogState = null; // { deckId }
+  var emojiConfigDraft = null; // { pages }
+  var selectedEmojiGridSize = 'FOUR_BY_FOUR';
+  var selectedEmojiTimeout = 'STANDARD';
+
+  function openEmojiConfigDialog(deckId){
+    var config = getEmojiDeckConfig(deckId);
+    emojiConfigDialogState = { deckId: deckId };
+    emojiConfigDraft = { pages: config.pages.slice() };
+    selectedEmojiGridSize = config.gridSize;
+    selectedEmojiTimeout = config.overlayTimeout;
+
+    syncOptGroupButtons('mtxEmojiGridSizeGroup', selectedEmojiGridSize, 'data-gridsize');
+    syncOptGroupButtons('mtxEmojiTimeoutGroup', selectedEmojiTimeout, 'data-timeout');
+    document.getElementById('mtxEmojiPagesCount').textContent = 'PAGES // ' + emojiConfigDraft.pages.length;
+
+    document.getElementById('mtxEmojiConfigDialog').showModal();
+  }
+
   // ---------- DECK:/PROFILE: dropdown data (consumed by selectTab/applyDeckSelection) ----------
   function mtxGetDeckDropdownData(){
     var decks = getAllDecks();
@@ -3976,7 +4921,9 @@
       'mtxNodeDialog','mtxVarQuickDialog','mtxRootDialog','mtxClearDialog','mtxResetDialog',
       'mtxDeckFormDialog','mtxManageDecksDialog','mtxDeckDeleteDialog',
       'mtxQaSlotDialog','mtxQaVarQuickDialog','mtxQaClearDialog','mtxQaGroupDialog',
-      'mtxEmgSlotDialog','mtxEmgClearDialog','mtxEmgOverridesDialog','mtxEmgInfoDialog'
+      'mtxEmgSlotDialog','mtxEmgClearDialog','mtxEmgOverridesDialog','mtxEmgInfoDialog',
+      'mtxEmojiSlotDialog','mtxEmojiRelatedViewerDialog','mtxEmojiRelatedEditorDialog',
+      'mtxEmojiRelatedSlotDialog','mtxEmojiConfigDialog'
     ].forEach(wireSimpleDialog);
 
     document.getElementById('mtxTemplateInput').addEventListener('input', function(){
@@ -4325,6 +5272,138 @@
       if(document.getElementById('mtxManageDecksDialog').open){
         renderManageDecksList();
       }
+    });
+
+    // ---------- Emoji slot editor wiring ----------
+    document.getElementById('mtxEmojiEmojiInput').addEventListener('input', function(){
+      if(emojiSlotDraft) emojiSlotDraft.emoji = this.value;
+    });
+    document.getElementById('mtxEmojiLabelInput').addEventListener('input', function(){
+      if(emojiSlotDraft) emojiSlotDraft.label = this.value;
+    });
+    document.getElementById('mtxEmojiDisplayTextInput').addEventListener('input', function(){
+      if(emojiSlotDraft) emojiSlotDraft.displayText = this.value;
+    });
+    document.getElementById('mtxEmojiLibraryToggle').addEventListener('click', function(){
+      var lib = document.getElementById('mtxEmojiLibrary');
+      if(lib.hidden && !lib.childNodes.length){
+        renderEmojiLibraryInto(lib, function(emoji){
+          document.getElementById('mtxEmojiEmojiInput').value = emoji;
+          if(emojiSlotDraft) emojiSlotDraft.emoji = emoji;
+        });
+      }
+      lib.hidden = !lib.hidden;
+      this.textContent = lib.hidden ? 'PICK FROM LIBRARY' : 'HIDE EMOJI LIBRARY';
+    });
+    document.getElementById('mtxEmojiRelatedToggle').addEventListener('click', function(){
+      if(!emojiSlotDraft) return;
+      emojiSlotDraft.opensRelatedPanel = !emojiSlotDraft.opensRelatedPanel;
+      syncEmojiRelatedUI();
+    });
+    document.getElementById('mtxEmojiConfigureRelated').addEventListener('click', function(){
+      if(!emojiSlotDialogState) return;
+      saveEmojiSlotDraftAsParent();
+      var gridSize = getEmojiDeckConfig(emojiSlotDialogState.deckId).gridSize;
+      openEmojiRelatedPanelEditor(emojiSlotDialogState.deckId, emojiSlotDialogState.pageId, emojiSlotDialogState.slotIndex, gridSize);
+    });
+    document.getElementById('mtxEmojiClear').addEventListener('click', function(){
+      if(!emojiSlotDraft) return;
+      emojiSlotDraft.emoji = '';
+      emojiSlotDraft.label = '';
+      emojiSlotDraft.displayText = '';
+      emojiSlotDraft.opensRelatedPanel = false;
+      document.getElementById('mtxEmojiEmojiInput').value = '';
+      document.getElementById('mtxEmojiLabelInput').value = '';
+      document.getElementById('mtxEmojiDisplayTextInput').value = '';
+      syncEmojiRelatedUI();
+    });
+    document.getElementById('mtxEmojiSave').addEventListener('click', function(){
+      if(!emojiSlotDialogState || !emojiSlotDraft) return;
+      updateEmojiSlot(emojiSlotDialogState.deckId, emojiSlotDialogState.pageId, emojiSlotDialogState.slotIndex, {
+        emoji: emojiSlotDraft.emoji.trim(),
+        label: emojiSlotDraft.label.trim(),
+        displayText: emojiSlotDraft.displayText.trim(),
+        opensRelatedPanel: emojiSlotDraft.opensRelatedPanel
+      });
+      document.getElementById('mtxEmojiSlotDialog').close();
+      mtxRenderEditor();
+    });
+
+    // ---------- Related Emoji slot editor wiring ----------
+    document.getElementById('mtxEmojiRelatedEmojiInput').addEventListener('input', function(){
+      if(emojiRelatedSlotDraft) emojiRelatedSlotDraft.emoji = this.value;
+    });
+    document.getElementById('mtxEmojiRelatedLabelInput').addEventListener('input', function(){
+      if(emojiRelatedSlotDraft) emojiRelatedSlotDraft.label = this.value;
+    });
+    document.getElementById('mtxEmojiRelatedDisplayTextInput').addEventListener('input', function(){
+      if(emojiRelatedSlotDraft) emojiRelatedSlotDraft.displayText = this.value;
+    });
+    document.getElementById('mtxEmojiRelatedLibraryToggle').addEventListener('click', function(){
+      var lib = document.getElementById('mtxEmojiRelatedLibrary');
+      if(lib.hidden && !lib.childNodes.length){
+        renderEmojiLibraryInto(lib, function(emoji){
+          document.getElementById('mtxEmojiRelatedEmojiInput').value = emoji;
+          if(emojiRelatedSlotDraft) emojiRelatedSlotDraft.emoji = emoji;
+        });
+      }
+      lib.hidden = !lib.hidden;
+      this.textContent = lib.hidden ? 'PICK FROM LIBRARY' : 'HIDE EMOJI LIBRARY';
+    });
+    document.getElementById('mtxEmojiRelatedClear').addEventListener('click', function(){
+      if(!emojiRelatedSlotDraft) return;
+      emojiRelatedSlotDraft.emoji = '';
+      emojiRelatedSlotDraft.label = '';
+      emojiRelatedSlotDraft.displayText = '';
+      document.getElementById('mtxEmojiRelatedEmojiInput').value = '';
+      document.getElementById('mtxEmojiRelatedLabelInput').value = '';
+      document.getElementById('mtxEmojiRelatedDisplayTextInput').value = '';
+    });
+    document.getElementById('mtxEmojiRelatedSave').addEventListener('click', function(){
+      if(!emojiRelatedSlotDialogState || !emojiRelatedSlotDraft) return;
+      var relSt = emojiRelatedSlotDialogState;
+      updateRelatedEmojiSlot(relSt.deckId, relSt.pageId, relSt.parentSlotIndex, relSt.childSlotIndex, {
+        emoji: emojiRelatedSlotDraft.emoji.trim(),
+        label: emojiRelatedSlotDraft.label.trim(),
+        displayText: emojiRelatedSlotDraft.displayText.trim()
+      });
+      document.getElementById('mtxEmojiRelatedSlotDialog').close();
+      renderEmojiRelatedEditorGrid();
+      mtxRenderEditor();
+    });
+
+    // ---------- Emoji Deck Config dialog wiring ----------
+    document.querySelectorAll('#mtxEmojiGridSizeGroup .opt-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        selectedEmojiGridSize = btn.getAttribute('data-gridsize');
+        syncOptGroupButtons('mtxEmojiGridSizeGroup', selectedEmojiGridSize, 'data-gridsize');
+      });
+    });
+    document.querySelectorAll('#mtxEmojiTimeoutGroup .opt-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        selectedEmojiTimeout = btn.getAttribute('data-timeout');
+        syncOptGroupButtons('mtxEmojiTimeoutGroup', selectedEmojiTimeout, 'data-timeout');
+      });
+    });
+    document.getElementById('mtxEmojiAddPage').addEventListener('click', function(){
+      if(!emojiConfigDraft) return;
+      var nextNumber = emojiConfigDraft.pages.length + 1;
+      emojiConfigDraft.pages.push({ pageId: 'page_' + Date.now() + '_' + nextNumber, name: 'PAGE ' + nextNumber, slots: [] });
+      document.getElementById('mtxEmojiPagesCount').textContent = 'PAGES // ' + emojiConfigDraft.pages.length;
+    });
+    document.getElementById('mtxEmojiConfigSave').addEventListener('click', function(){
+      if(!emojiConfigDialogState || !emojiConfigDraft) return;
+      var emojiDeckId = emojiConfigDialogState.deckId;
+      setEmojiDeckConfig(emojiDeckId, {
+        deckId: emojiDeckId,
+        gridSize: selectedEmojiGridSize,
+        overlayTimeout: selectedEmojiTimeout,
+        pages: emojiConfigDraft.pages
+      });
+      document.getElementById('mtxEmojiConfigDialog').close();
+      emojiConfigDialogState = null;
+      emojiConfigDraft = null;
+      mtxRenderEditor();
     });
   }
 
@@ -4695,6 +5774,25 @@
     b.addEventListener('click', function(){ applyContrast(b.getAttribute('data-contrast'), true); });
   });
   applyContrast(readStored('ackConsoleContrast', 'standard'), false);
+
+  // gestureMode itself was already read from storage at the top of this
+  // script (before mtxActivateSimTab's first render), so this just syncs
+  // the Settings buttons to match on load and re-renders the active deck
+  // editor whenever it changes.
+  var gestureBtns = Array.prototype.slice.call(document.querySelectorAll('.opt-btn[data-gesture]'));
+  function syncGestureButtons(){
+    gestureBtns.forEach(function(b){
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-gesture') === getGestureMode()));
+    });
+  }
+  gestureBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      setGestureMode(b.getAttribute('data-gesture'));
+      syncGestureButtons();
+      mtxRenderEditor();
+    });
+  });
+  syncGestureButtons();
 })();
 </script>
 </body>
