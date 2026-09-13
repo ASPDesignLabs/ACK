@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,8 +36,11 @@ import com.example.besu.ui.theme.NeonPalette
 import com.example.besu.ui.theme.VoidBlack
 import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.input.TextFieldValue
 
 
 data class VariableEditRequest(
@@ -194,14 +198,27 @@ fun TerminalView(logs: List<LogEntry>, context: Context) {
 
 // --- TYPE VIEW ---
 @Composable
-fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots.SnapshotStateList<String>) {
+fun TypeView(
+    context: Context,
+    recentPhrases: androidx.compose.runtime.snapshots.SnapshotStateList<String>,
+    textFieldValue: TextFieldValue,
+    onTextFieldValueChange: (TextFieldValue) -> Unit,
+    textFieldFocusRequester: FocusRequester,
+    onInsertAtCursor: (String) -> Unit
+) {
     val primaryColor = NeonPalette.getColor(CommandRepository.getActiveColorIndex(context))
-    
-    var textInput by remember { mutableStateOf("") }
+
     var refreshKey by remember { mutableIntStateOf(0) }
     var savedPhrases by remember(refreshKey) { mutableStateOf(CommandRepository.getQuickPhrases(context)) }
     var showSaveDialog by remember { mutableStateOf(false) }
+    var showMemoryBanks by remember { mutableStateOf(false) }
+    var showBrowsePanel by remember { mutableStateOf(false) }
     var newTagInput by remember { mutableStateOf("") }
+
+    val helpManager = LocalHelpManager.current
+    fun reportHelpInteraction(tag: String) {
+        helpManager?.onEvent(HelpEvent.Interacted(tag))
+    }
 
     fun speak(text: String, sourceTag: String) {
         if (text.isNotBlank()) {
@@ -214,18 +231,29 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
             if (recentPhrases.contains(text)) recentPhrases.remove(text)
             recentPhrases.add(0, text)
             if (recentPhrases.size > 10) recentPhrases.removeLast()
-            textInput = ""
+            onTextFieldValueChange(TextFieldValue(""))
+            // TRANSMIT is a button tap like any other -- it can pull focus
+            // away from the field the same way a chip tap can. Reclaim it
+            // so the field is immediately ready for the next phrase.
+            textFieldFocusRequester.requestFocus()
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
         Text("MANUAL OVERRIDE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
-            value = textInput,
-            onValueChange = { textInput = it },
-            modifier = Modifier.fillMaxWidth(),
+            value = textFieldValue,
+            onValueChange = onTextFieldValueChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(textFieldFocusRequester),
             shape = AckHelpShape,
             colors = TextFieldDefaults.colors(
                 focusedTextColor = primaryColor,
@@ -245,34 +273,109 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             // Encode button relies on isActive for dimming, but logic check inside lambda protects it
-            NeonButton("ENCODE", Modifier.weight(0.4f), isActive = textInput.isNotBlank(), mainColor = primaryColor) {
-                if(textInput.isNotBlank()) showSaveDialog = true
+            NeonButton("ENCODE", Modifier.weight(0.4f), isActive = textFieldValue.text.isNotBlank(), mainColor = primaryColor) {
+                if (textFieldValue.text.isNotBlank()) showSaveDialog = true
             }
             HeroButton("TRANSMIT", Modifier.weight(0.6f), mainColor = primaryColor) {
-                speak(textInput, "TERM/INPUT")
+                speak(textFieldValue.text, "TERM/INPUT")
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        if (savedPhrases.isNotEmpty()) {
-            Text("MEMORY BANKS [SAVED]", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+        // --- TARGET COMPUTER: QUICK ACCESS + FULL BROWSER ---
+        TargetQuickAccessRow(
+            context = context,
+            primaryColor = primaryColor,
+            onInsert = onInsertAtCursor
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(
+                text = if (showBrowsePanel) "[HIDE TARGET BROWSER]" else "[BROWSE TARGETS]",
+                color = primaryColor,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .testTag(AckTags.MANUAL_TARGET_BROWSE_TOGGLE)
+                    .helpTarget(AckTags.MANUAL_TARGET_BROWSE_TOGGLE, primaryColor)
+                    .clickable {
+                        showBrowsePanel = !showBrowsePanel
+                        reportHelpInteraction(AckTags.MANUAL_TARGET_BROWSE_TOGGLE)
+                    }
+            )
+
+            Text(
+                text = if (savedPhrases.isNotEmpty()) "[MEMORY BANKS (${savedPhrases.size})]" else "[MEMORY BANKS]",
+                color = primaryColor,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .testTag(AckTags.MANUAL_MEMORY_BANKS_BTN)
+                    .helpTarget(AckTags.MANUAL_MEMORY_BANKS_BTN, primaryColor)
+                    .clickable {
+                        showMemoryBanks = true
+                        reportHelpInteraction(AckTags.MANUAL_MEMORY_BANKS_BTN)
+                    }
+            )
+        }
+
+        if (showBrowsePanel) {
             Spacer(modifier = Modifier.height(8.dp))
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                QuickAccessAccordion(
-                    phrases = savedPhrases,
-                    primaryColor = primaryColor,
-                    onPlay = { p -> speak(p.text, "BANK/${p.tag}") },
-                    onDelete = { p -> CommandRepository.deleteQuickPhrase(context, p); refreshKey++ }
-                )
-            }
-        } else if (recentPhrases.isNotEmpty()) {
+            TargetBrowsePanel(
+                context = context,
+                primaryColor = primaryColor,
+                onInsert = onInsertAtCursor
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Decoupled from Memory Banks' presence now that Memory Banks lives
+        // behind its own popup -- previously a single saved phrase would
+        // permanently hide recents from this screen.
+        if (recentPhrases.isNotEmpty()) {
             Text("CACHE [RECENT]", color = primaryColor.copy(alpha=0.7f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
             Spacer(modifier = Modifier.height(8.dp))
-            LazyColumn(modifier = Modifier.weight(1f)) {
+            // Bounded height, not weight(1f) -- the outer Column now scrolls
+            // (see below), and weight() only makes sense against a parent
+            // with a fixed height to distribute.
+            LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
                 items(recentPhrases) { phrase ->
                     RecentHistoryItem(phrase) { speak(phrase, "CACHE/REPLAY") }
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    if (showMemoryBanks) {
+        TightDialogSurface(
+            onDismiss = { showMemoryBanks = false },
+            primaryColor = primaryColor,
+            title = "MEMORY BANKS",
+            dismissLabel = "CLOSE"
+        ) {
+            if (savedPhrases.isEmpty()) {
+                Text(
+                    text = "NO SAVED PHRASES YET. ENCODE ONE FROM THE TEXT FIELD ABOVE.",
+                    color = Color.DarkGray,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+            } else {
+                QuickAccessAccordion(
+                    phrases = savedPhrases,
+                    primaryColor = primaryColor,
+                    modifier = Modifier.heightIn(max = 420.dp),
+                    onPlay = { p -> speak(p.text, "BANK/${p.tag}") },
+                    onDelete = { p -> CommandRepository.deleteQuickPhrase(context, p); refreshKey++ }
+                )
             }
         }
     }
@@ -311,7 +414,7 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
                 ) {
                     TightPanelButton("SAVE", modifier = Modifier.weight(1f), mainColor = primaryColor) {
                         if (newTagInput.isNotEmpty()) {
-                            CommandRepository.saveQuickPhrase(context, textInput, newTagInput)
+                            CommandRepository.saveQuickPhrase(context, textFieldValue.text, newTagInput)
                             refreshKey++
                             showSaveDialog = false
                             newTagInput = ""
@@ -329,6 +432,7 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
 fun QuickAccessAccordion(
     phrases: List<QuickPhrase>,
     primaryColor: Color,
+    modifier: Modifier = Modifier,
     onPlay: (QuickPhrase) -> Unit,
     onDelete: (QuickPhrase) -> Unit
 ) {
@@ -336,7 +440,7 @@ fun QuickAccessAccordion(
     val expandedStates = remember { mutableStateMapOf<String, Boolean>().apply { if(grouped.isNotEmpty()) this[grouped.keys.first()] = true } }
     var deletingPhrase by remember { mutableStateOf<QuickPhrase?>(null) }
 
-    LazyColumn {
+    LazyColumn(modifier = modifier) {
         grouped.forEach { (tag, items) ->
             item {
                 val isExpanded = expandedStates[tag] == true

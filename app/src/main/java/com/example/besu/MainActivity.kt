@@ -27,10 +27,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.besu.ui.theme.Graphite
@@ -185,6 +189,7 @@ data class LogEntry(
     val replayText: String? = null
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>) {
     var viewMode by remember { mutableStateOf("TERMINAL") }
@@ -224,6 +229,39 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         mutableStateOf(false)
     }
     val recentPhrases = remember { mutableStateListOf<String>() }
+
+    // Manual Override's text field is hoisted here (rather than owned inside
+    // TypeView) so the header takeover below can insert Target Computer
+    // picks into it directly -- both the header and TypeView's own
+    // below-field browse panel share this one source of truth.
+    var manualOverrideText by remember { mutableStateOf(TextFieldValue("")) }
+    val manualOverrideFocusRequester = remember { FocusRequester() }
+    val manualOverrideKeyboardController = LocalSoftwareKeyboardController.current
+
+    fun insertIntoManualOverride(insertText: String) {
+        val selection = manualOverrideText.selection
+        val newText = manualOverrideText.text.replaceRange(selection.start, selection.end, insertText)
+        val newCursor = selection.start + insertText.length
+        manualOverrideText = TextFieldValue(newText, TextRange(newCursor))
+        manualOverrideFocusRequester.requestFocus()
+        manualOverrideKeyboardController?.show()
+    }
+
+    // The header takes over to show Target Computer quick-insert only while
+    // the software keyboard is actually visible on the TYPE screen -- not on
+    // mere field focus. That way a hardware keyboard or switch-access user
+    // who focuses the field without ever raising a soft keyboard keeps full
+    // normal header access (DECK/PROFILE/HELP, etc. stay reachable).
+    val isKeyboardVisible = WindowInsets.isImeVisible
+    val showComputerHeaderTakeover = viewMode == "TYPE" && isKeyboardVisible
+
+    LaunchedEffect(showComputerHeaderTakeover) {
+        if (showComputerHeaderTakeover) {
+            isDeckMenuOpen = false
+            isProfileMenuOpen = false
+        }
+    }
+
     val helpManager = remember {
         HelpManager(HelpRegistry.modules)
     }
@@ -552,6 +590,13 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                             .padding(16.dp)
 
                     ) {
+                        if (showComputerHeaderTakeover) {
+                            ManualOverrideHeaderTakeover(
+                                context = context,
+                                primaryColor = primaryColor,
+                                onInsert = { insertIntoManualOverride(it) }
+                            )
+                        } else {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -867,6 +912,7 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                     )
                                 }
                             }
+                        }
                         }
 
                         AnimatedVisibility(
@@ -1218,7 +1264,14 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                 }
                             )
 
-                            "TYPE" -> TypeView(context, recentPhrases)
+                            "TYPE" -> TypeView(
+                                context = context,
+                                recentPhrases = recentPhrases,
+                                textFieldValue = manualOverrideText,
+                                onTextFieldValueChange = { manualOverrideText = it },
+                                textFieldFocusRequester = manualOverrideFocusRequester,
+                                onInsertAtCursor = { insertIntoManualOverride(it) }
+                            )
                             "AUDIO" -> AudioArchitectView(context, primaryColor, systemVoices)
                             "TARGETS" -> TargetView(context, primaryColor)
                             "GEO" -> GeoProtocolView(

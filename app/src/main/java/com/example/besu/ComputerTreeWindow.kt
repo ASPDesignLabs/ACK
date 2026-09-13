@@ -279,14 +279,17 @@ fun ComputerTreeWindow(
     }
 }
 
-private data class TreeVisualRow(
+// Visibility widened to internal (not private) so ManualOverrideTargetBrowser.kt
+// can reuse this exact tree/dropdown rendering for its own, non-modal,
+// insert-only browse panel. No behavior change to ComputerTreeWindow itself.
+internal data class TreeVisualRow(
     val node: ComputerNode,
     val depth: Int,
     val isLastChild: Boolean,
     val ancestorContinues: List<Boolean>
 )
 
-private fun flattenVisibleTree(
+internal fun flattenVisibleTree(
     children: List<ComputerNode>,
     depth: Int,
     ancestorContinues: List<Boolean>,
@@ -303,7 +306,7 @@ private fun flattenVisibleTree(
     }
 }
 
-private fun connectorPrefix(row: TreeVisualRow): String {
+internal fun connectorPrefix(row: TreeVisualRow): String {
     val sb = StringBuilder()
     for (i in 0 until row.depth) {
         sb.append(if (row.ancestorContinues.getOrElse(i) { false }) "│  " else "   ")
@@ -314,7 +317,7 @@ private fun connectorPrefix(row: TreeVisualRow): String {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ComputerTreeVisualRow(
+internal fun ComputerTreeVisualRow(
     row: TreeVisualRow,
     isActive: Boolean,
     isExpanded: Boolean,
@@ -377,7 +380,7 @@ private fun ComputerTreeVisualRow(
 // picking an entry commits it. Styled per the existing DropdownMenu
 // precedent in GeoProtocolView.kt (Graphite background, primaryColor text).
 @Composable
-private fun ComputerDropdownPath(
+internal fun ComputerDropdownPath(
     root: ComputerNode,
     pathNodes: List<ComputerNode>,
     primaryColor: Color,
@@ -413,7 +416,7 @@ private fun ComputerDropdownPath(
 }
 
 @Composable
-private fun ComputerDropdownLevel(
+internal fun ComputerDropdownLevel(
     label: String,
     options: List<ComputerNode>,
     selected: ComputerNode?,
