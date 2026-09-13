@@ -9,8 +9,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -73,7 +75,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
 
     var showVoicePicker by remember { mutableStateOf(false) }
     var showManageProfiles by remember { mutableStateOf(false) }
-    var showRoboticEditor by remember { mutableStateOf(false) }
+    var showDspChainEditor by remember { mutableStateOf(false) }
     var deleteTargetId by remember { mutableStateOf<String?>(null) }
 
     val activeIdx = customVoices.indexOfFirst { it.id == userProfile }
@@ -220,11 +222,15 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                 ) {
                     userProfile = profile.id
                     syncDsp()
+                    showDspChainEditor = true
                     reportHelpInteraction(AckTags.AUDIO_PROFILE_SELECT)
                 }
             }
             if (customVoices.size < MAX_CUSTOM_PROFILES) {
-                AudioProfileChip("+ NEW", false, primaryColor) { createProfile() }
+                AudioProfileChip("+ NEW", false, primaryColor) {
+                    createProfile()
+                    showDspChainEditor = true
+                }
             }
         }
         Spacer(modifier = Modifier.height(10.dp))
@@ -239,19 +245,61 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // --- DSP CHAIN (fills remaining space, no internal page scroll) ---
+        // --- DSP CHAIN (opens as its own popup -- see AudioDialogFrame below) ---
         if (editingProfile != null) {
             val p = editingProfile!!
-            val voiceName = if (p.systemVoiceName.isNotEmpty()) p.systemVoiceName.takeLast(15) else "DEFAULT"
-            val isRobotic = p.modDepth > 0.05f
+            val isUnsaved = customVoices.getOrNull(activeIdx) != p
 
-            Column(modifier = Modifier.weight(1f).fillMaxWidth().border(1.dp, primaryColor, CutCornerShape(12.dp)).background(VoidBlack).padding(12.dp)) {
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("DSP CHAIN // ${p.label}", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                    Text("UNSAVED*", color = if (customVoices[activeIdx] != p) NeonPalette.SWATCHES[3] else Color.Transparent, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+            NeonButton(
+                "EDIT DSP CHAIN // ${p.label}${if (isUnsaved) " *" else ""}",
+                Modifier.fillMaxWidth(),
+                mainColor = primaryColor
+            ) {
+                showDspChainEditor = true
+            }
+        } else {
+            Box(modifier = Modifier.fillMaxWidth().border(1.dp, Color.Gray, CutCornerShape(12.dp)).padding(24.dp), contentAlignment = Alignment.Center) {
+                Text("FACTORY PRESET LOCKED\nSELECT OR CREATE A CUSTOM SLOT TO EDIT", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, textAlign = TextAlign.Center)
+            }
+        }
+    }
+
+    if (showVoicePicker) {
+        AudioDialogFrame(onDismissRequest = { showVoicePicker = false }, primaryColor = primaryColor, title = "SELECT SYSTEM VOICE") {
+            LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                items(systemVoices) { voice ->
+                    val isSelected = editingProfile?.systemVoiceName == voice.name
+                    Row(modifier = Modifier.fillMaxWidth().background(if (isSelected) primaryColor.copy(alpha = 0.2f) else Color.Transparent).clickable {
+                        editingProfile = editingProfile?.copy(systemVoiceName = voice.name)
+                        showVoicePicker = false
+                        reportHelpInteraction(AckTags.AUDIO_VOICE_PICKER)
+                    }.padding(12.dp)) {
+                        Text(voice.name, color = if (isSelected) primaryColor else Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                    }
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+            }
+            Spacer(modifier = Modifier.height(14.dp))
+            Text("CANCEL", color = Color.Red, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showVoicePicker = false }.padding(8.dp))
+        }
+    }
 
+    if (showDspChainEditor && editingProfile != null) {
+        val p = editingProfile!!
+        val voiceName = if (p.systemVoiceName.isNotEmpty()) p.systemVoiceName.takeLast(15) else "DEFAULT"
+        val isRobotic = p.modDepth > 0.05f
+        val isUnsaved = customVoices.getOrNull(activeIdx) != p
+
+        AudioDialogFrame(onDismissRequest = { showDspChainEditor = false }, primaryColor = primaryColor, title = "DSP CHAIN // ${p.label}") {
+            Text(
+                if (isUnsaved) "UNSAVED CHANGES*" else "UP TO DATE",
+                color = if (isUnsaved) NeonPalette.SWATCHES[3] else Color.Gray,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 NeonButton(
                     "BASE VOICE: $voiceName",
                     Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_VOICE_PICKER, primaryColor),
@@ -260,7 +308,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     showVoicePicker = true
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Column(modifier = Modifier.helpTarget(AckTags.AUDIO_PITCH_SPEED, primaryColor)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -291,47 +339,35 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_ROBOTIC_OVERLAY, primaryColor)
                 ) {
-                    Column {
-                        Text("ROBOTIC OVERLAY", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-                        if (isRobotic) {
-                            Text(
-                                "${p.modFreq.toInt()}Hz / ${(p.modDepth * 100).toInt()}%",
-                                color = primaryColor,
-                                fontSize = 9.sp,
-                                fontFamily = FontFamily.Monospace
-                            )
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        NeonButton(if (isRobotic) "ON" else "OFF", Modifier.width(60.dp), isActive = isRobotic, mainColor = primaryColor) {
-                            editingProfile = if (isRobotic) {
-                                p.copy(modDepth = 0f)
-                            } else {
-                                p.copy(modDepth = 0.5f, modFreq = 50f)
-                            }
-                        }
-                        NeonButton(
-                            "EDIT",
-                            Modifier.width(70.dp).helpTarget(AckTags.AUDIO_ROBOTIC_OVERLAY, primaryColor),
-                            isActive = isRobotic,
-                            mainColor = primaryColor
-                        ) {
-                            if (isRobotic) {
-                                showRoboticEditor = true
-                                reportHelpInteraction(AckTags.AUDIO_ROBOTIC_OVERLAY)
-                            }
+                    Text("ROBOTIC OVERLAY", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                    NeonButton(if (isRobotic) "ON" else "OFF", Modifier.width(60.dp), isActive = isRobotic, mainColor = primaryColor) {
+                        editingProfile = if (isRobotic) {
+                            p.copy(modDepth = 0f)
+                        } else {
+                            p.copy(modDepth = 0.5f, modFreq = 50f)
                         }
                     }
                 }
+                if (isRobotic) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    DspSlider("ROBOTIC FREQ (HZ)", p.modFreq, 0f..100f, primaryColor) {
+                        editingProfile = p.copy(modFreq = it)
+                        reportHelpInteraction(AckTags.AUDIO_ROBOTIC_OVERLAY)
+                    }
+                    DspSlider("ROBOTIC DEPTH (%)", p.modDepth, 0f..1f, primaryColor) {
+                        editingProfile = p.copy(modDepth = it)
+                        reportHelpInteraction(AckTags.AUDIO_ROBOTIC_OVERLAY)
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Box(modifier = Modifier.helpTarget(AckTags.AUDIO_BITCRUSH, primaryColor)) {
                     DspSlider("BITCRUSH (%)", p.crush, 0f..1f, primaryColor) {
@@ -339,71 +375,31 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                         reportHelpInteraction(AckTags.AUDIO_BITCRUSH)
                     }
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    NeonButton("PREVIEW", Modifier.weight(1f), mainColor = primaryColor) {
-                        previewCurrentEdit()
-                    }
-                    NeonButton("DISCARD", Modifier.weight(1f), mainColor = Color.Gray) {
-                        discardEditingProfile()
-                    }
-                    HeroButton(
-                        "COMMIT",
-                        Modifier.weight(1f).testTag(AckTags.AUDIO_SAVE).helpTarget(AckTags.AUDIO_SAVE, primaryColor),
-                        mainColor = NeonPalette.SWATCHES[2]
-                    ) {
-                        saveEditingProfile()
-                        reportTextCommit(AckTags.AUDIO_SAVE)
-                    }
-                }
             }
-        } else {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth().border(1.dp, Color.Gray, CutCornerShape(12.dp)).padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("FACTORY PRESET LOCKED\nSELECT OR CREATE A CUSTOM SLOT TO EDIT", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, textAlign = TextAlign.Center)
-            }
-        }
-    }
 
-    if (showVoicePicker) {
-        AudioDialogFrame(onDismissRequest = { showVoicePicker = false }, primaryColor = primaryColor, title = "SELECT SYSTEM VOICE") {
-            LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                items(systemVoices) { voice ->
-                    val isSelected = editingProfile?.systemVoiceName == voice.name
-                    Row(modifier = Modifier.fillMaxWidth().background(if (isSelected) primaryColor.copy(alpha = 0.2f) else Color.Transparent).clickable {
-                        editingProfile = editingProfile?.copy(systemVoiceName = voice.name)
-                        showVoicePicker = false
-                        reportHelpInteraction(AckTags.AUDIO_VOICE_PICKER)
-                    }.padding(12.dp)) {
-                        Text(voice.name, color = if (isSelected) primaryColor else Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                    }
-                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
-                }
-            }
             Spacer(modifier = Modifier.height(14.dp))
-            Text("CANCEL", color = Color.Red, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showVoicePicker = false }.padding(8.dp))
-        }
-    }
 
-    if (showRoboticEditor && editingProfile != null) {
-        val p = editingProfile!!
-        AudioDialogFrame(onDismissRequest = { showRoboticEditor = false }, primaryColor = primaryColor, title = "ROBOTIC OVERLAY") {
-            Text(
-                "Ring-modulates the base voice for a mechanical character. Frequency sets the modulation rate, Depth blends between the clean and modulated signal.",
-                color = Color.Gray,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            DspSlider("FREQUENCY (HZ)", p.modFreq, 0f..100f, primaryColor) { editingProfile = p.copy(modFreq = it) }
-            DspSlider("DEPTH (%)", p.modDepth, 0f..1f, primaryColor) { editingProfile = p.copy(modDepth = it) }
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                NeonButton("TEST", Modifier.weight(1f), mainColor = primaryColor) { previewCurrentEdit() }
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text("DONE", color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showRoboticEditor = false }.padding(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NeonButton("PREVIEW", Modifier.weight(1f), mainColor = primaryColor) {
+                    previewCurrentEdit()
                 }
+                NeonButton("DISCARD", Modifier.weight(1f), mainColor = Color.Gray) {
+                    discardEditingProfile()
+                }
+                HeroButton(
+                    "COMMIT",
+                    Modifier.weight(1f).testTag(AckTags.AUDIO_SAVE).helpTarget(AckTags.AUDIO_SAVE, primaryColor),
+                    mainColor = NeonPalette.SWATCHES[2]
+                ) {
+                    saveEditingProfile()
+                    reportTextCommit(AckTags.AUDIO_SAVE)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text("CLOSE", color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showDspChainEditor = false }.padding(8.dp))
             }
         }
     }

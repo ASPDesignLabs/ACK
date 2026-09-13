@@ -47,7 +47,7 @@ object PersonalizationHelp {
                 title = "CUSTOM PROFILE SLOTS",
                 body = "Custom profile slots can store your own voice designs. " +
                     "Select one of the custom slots below to open " +
-                    "its editable DSP Chain configuration.",
+                    "its editable DSP Chain in a popup.",
                 action = HelpAction.Interact(AckTags.AUDIO_PROFILE_SELECT),
                 targetTag = AckTags.AUDIO_PROFILE_SELECT
             ),
@@ -63,9 +63,9 @@ object PersonalizationHelp {
             HelpStep(
                 id = "dsp_chain",
                 title = "DSP CHAIN",
-                body = "The DSP Chain is available when a custom profile is " +
-                    "selected. It controls the source voice and signal treatment " +
-                    "stored inside that custom slot."
+                body = "The DSP Chain opens as a popup when a custom profile is " +
+                    "selected or created. It controls the source voice and signal " +
+                    "treatment stored inside that custom slot."
             ),
             HelpStep(
                 id = "base_voice",
@@ -91,8 +91,8 @@ object PersonalizationHelp {
                 id = "robotic_overlay",
                 title = "ROBOTIC OVERLAY",
                 body = "The Robotic Overlay ring-modulates the selected voice. " +
-                    "Enable it and use EDIT to reveal frequency and depth " +
-                    "controls. Frequency changes the character of the effect, " +
+                    "Enable it to reveal frequency and depth controls directly " +
+                    "below. Frequency changes the character of the effect, " +
                     "while depth controls how strongly the processed signal " +
                     "replaces the base voice.",
                 action = HelpAction.Interact(AckTags.AUDIO_ROBOTIC_OVERLAY),
