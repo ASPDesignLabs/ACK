@@ -14,7 +14,9 @@ class WearListenerService : WearableListenerService() {
             broadcastLog("RX: $path", "DATA")
             
             // A. Resolve Base Phrase from Matrix (e.g. "Systems Online")
-            val basePhrase = CommandRepository.resolveSignalToPhrase(this, path)
+            // This is a genuine dispatch (about to become real spoken output),
+            // so single-use [COMPUTER:X] picks are allowed to clear here.
+            val basePhrase = CommandRepository.resolveSignalToPhrase(this, path, consumeSingleUse = true)
             
             if (basePhrase.isNotEmpty()) {
                 // B. INJECT TARGET NAME

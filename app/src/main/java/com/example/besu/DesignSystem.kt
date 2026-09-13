@@ -509,6 +509,22 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             }
         }
 
+        val tempComputerFallbacks = remember(node.path) {
+            mutableStateListOf<String>().apply {
+                val initialCount = TemplateEngine.countComputerTags(rawPhrase)
+                val savedValues = CommandRepository.getComputerFallbackValues(
+                    context,
+                    node.path
+                )
+
+                repeat(initialCount) { index ->
+                    add(savedValues.getOrElse(index) { "" })
+                }
+            }
+        }
+
+        val computerCategories = remember(refreshKey) { ComputerRepository.getCategories(context) }
+
         var clearMode by remember(node.path) {
             mutableStateOf<String?>(null)
         }
@@ -523,12 +539,21 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
 
         val variableCount = TemplateEngine.countVariables(tempText)
+        val computerTagCount = TemplateEngine.countComputerTags(tempText)
 
         fun saveVariables() {
             CommandRepository.setVariableValues(
                 context = context,
                 storagePath = node.path,
                 values = tempVars.toList()
+            )
+        }
+
+        fun saveComputerFallbacks() {
+            CommandRepository.setComputerFallbackValues(
+                context = context,
+                storagePath = node.path,
+                values = tempComputerFallbacks.toList()
             )
         }
 
@@ -542,14 +567,26 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             }
         }
 
+        fun normalizeComputerFallbackSlots(newCount: Int) {
+            while (tempComputerFallbacks.size > newCount) {
+                tempComputerFallbacks.removeAt(tempComputerFallbacks.lastIndex)
+            }
+
+            while (tempComputerFallbacks.size < newCount) {
+                tempComputerFallbacks.add("")
+            }
+        }
+
         fun updateTemplate(newTemplate: String) {
             tempText = newTemplate
 
             val newVariableCount = TemplateEngine.countVariables(newTemplate)
+            val newComputerTagCount = TemplateEngine.countComputerTags(newTemplate)
 
             // When a token is removed, its local value is removed too.
             // If a token is added later, it receives a fresh blank field.
             normalizeVariableSlots(newVariableCount)
+            normalizeComputerFallbackSlots(newComputerTagCount)
 
             CommandRepository.setPhrase(
                 context = context,
@@ -558,6 +595,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             )
 
             saveVariables()
+            saveComputerFallbacks()
         }
 
         fun commitEditor() {
@@ -704,6 +742,35 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         }
                     }
 
+                    if (computerCategories.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        TightSectionLabel("INSERT TARGET TAG")
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag(AckTags.MATRIX_INSERT_COMPUTER_TAG)
+                                .helpTarget(AckTags.MATRIX_INSERT_COMPUTER_TAG, primaryColor)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            computerCategories.forEach { computerCategory ->
+                                TightPanelButton(
+                                    text = "+ ${computerCategory.label}",
+                                    mainColor = primaryColor
+                                ) {
+                                    updateTemplate("$tempText [COMPUTER:${computerCategory.id}]")
+                                    helpManager?.onEvent(
+                                        HelpEvent.Interacted(AckTags.MATRIX_INSERT_COMPUTER_TAG)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     if (variableCount > 0) {
                         Spacer(modifier = Modifier.height(14.dp))
 
@@ -779,6 +846,87 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             )
 
                             if (index < variableCount - 1) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    }
+
+                    if (computerTagCount > 0) {
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Text(
+                            text = "TARGET TAG FALLBACKS",
+                            color = NeonPalette.SWATCHES[3],
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = "[COMPUTER:X] resolves to whichever entry is " +
+                                "currently active for that category in the Target " +
+                                "Computer. If nothing is active, the fallback below " +
+                                "is used instead.",
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        val computerTagsInOrder = TemplateEngine.getComputerTags(tempText)
+
+                        repeat(computerTagCount) { index ->
+                            val categoryId = computerTagsInOrder.getOrNull(index)
+                            val categoryLabel = computerCategories
+                                .find { it.id == categoryId }
+                                ?.label
+                                ?: categoryId
+                                ?: "?"
+
+                            OutlinedTextField(
+                                value = tempComputerFallbacks.getOrElse(index) { "" },
+                                onValueChange = { newValue ->
+                                    tempComputerFallbacks[index] = newValue
+                                    saveComputerFallbacks()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 52.dp),
+                                shape = AckHelpShape,
+                                singleLine = true,
+                                label = {
+                                    Text(
+                                        text = "TARGET TAG ${index + 1} // $categoryLabel",
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 10.sp
+                                    )
+                                },
+                                placeholder = {
+                                    Text(
+                                        text = "ENTER LOCAL FALLBACK...",
+                                        color = Color.DarkGray,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                },
+                                textStyle = androidx.compose.ui.text.TextStyle(
+                                    color = Color.White,
+                                    fontFamily = FontFamily.Monospace
+                                ),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = VoidBlack,
+                                    unfocusedContainerColor = VoidBlack,
+                                    focusedIndicatorColor = NeonPalette.SWATCHES[3],
+                                    unfocusedIndicatorColor = Color.DarkGray,
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    cursorColor = NeonPalette.SWATCHES[3]
+                                )
+                            )
+
+                            if (index < computerTagCount - 1) {
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
@@ -1797,6 +1945,8 @@ fun MatrixCategory(
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        val computerCategories = ComputerRepository.getCategories(context)
+
         Box(modifier = Modifier.padding(start = 3.dp)) {
             Column(
                 modifier = Modifier.border(
@@ -1819,10 +1969,24 @@ fun MatrixCategory(
                         savedValues.getOrElse(index) { "" }
                     }
 
+                    val computerTagsInOrder = TemplateEngine.getComputerTags(rawPhrase)
+                    val computerFallbacks = CommandRepository.getComputerFallbackValues(context, node.path)
+
+                    val computerTagChips = computerTagsInOrder.mapIndexed { index, categoryId ->
+                        val categoryLabel = computerCategories.find { it.id == categoryId }?.label ?: categoryId
+                        val activeValue = ComputerRepository.resolveTag(context, categoryId)
+                        val displayValue = activeValue
+                            .ifBlank { computerFallbacks.getOrNull(index).orEmpty() }
+                            .ifBlank { "EMPTY" }
+                        categoryLabel to displayValue
+                    }
+
                     MatrixNodeItem(
                         label = node.label,
                         phrase = resolvedPhrase,
                         variableValues = variableValues,
+                        computerTagChips = computerTagChips,
+                        onOpenComputerTag = { onEdit(Triple(node, rawPhrase, resolvedPhrase)) },
                         modifier = itemMod,
                         playModifier = if (isTarget) Modifier
                             .testTag(AckTags.MATRIX_PLAY_BUTTON)
@@ -1850,7 +2014,11 @@ fun MatrixCategory(
 
                             val finalPhrase = CommandRepository.getResolvedPhrase(
                                 context = context,
-                                storagePath = node.path
+                                storagePath = node.path,
+                                // Genuine dispatch (about to speak), not a
+                                // preview -- allowed to clear single-use
+                                // [COMPUTER:X] picks.
+                                consumeSingleUse = true
                             )
 
                             val intent = Intent(context, OutputService::class.java).apply {
@@ -2299,7 +2467,14 @@ fun MatrixNodeItem(
     primaryColor: Color,
     onPlay: () -> Unit,
     onClick: () -> Unit,
-    onEditVariable: (Int) -> Unit
+    onEditVariable: (Int) -> Unit,
+    // (category label, currently-resolved display value) per [COMPUTER:X]
+    // tag in this node's template. Unlike variableValues, a resolved
+    // computer tag disappears entirely into the (often-truncated) preview
+    // text below with nothing marking that it was ever there -- these
+    // chips are the only visible sign the tag exists at all.
+    computerTagChips: List<Pair<String, String>> = emptyList(),
+    onOpenComputerTag: () -> Unit = {}
 ) {
     Row(
         modifier = modifier
@@ -2389,6 +2564,45 @@ fun MatrixNodeItem(
                                 Text(
                                     text = "V${index + 1}: $displayValue",
                                     color = NeonPalette.SWATCHES[3],
+                                    fontSize = 9.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (computerTagChips.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.horizontalScroll(
+                            rememberScrollState()
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        computerTagChips.forEach { (categoryLabel, displayValue) ->
+                            Box(
+                                modifier = Modifier
+                                    .border(
+                                        1.dp,
+                                        color = primaryColor,
+                                        CutCornerShape(4.dp)
+                                    )
+                                    .background(
+                                        primaryColor.copy(alpha = 0.10f),
+                                        CutCornerShape(4.dp)
+                                    )
+                                    .clickable { onOpenComputerTag() }
+                                    .padding(
+                                        horizontal = 6.dp,
+                                        vertical = 4.dp
+                                    )
+                            ) {
+                                Text(
+                                    text = "$categoryLabel: $displayValue",
+                                    color = primaryColor,
                                     fontSize = 9.sp,
                                     fontFamily = FontFamily.Monospace,
                                     fontWeight = FontWeight.Bold

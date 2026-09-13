@@ -34,10 +34,17 @@ object TransferManager {
 
     // --- SECURITY CONSTANTS ---
     private const val MAX_DECOMPRESSED_SIZE = 1024 * 1024 // 1MB Limit
-    private const val MAX_PHRASE_LENGTH = 300 
-    private const val MAX_KEY_LENGTH = 150 
-    // Regex: Alphanumeric, underscores, hyphens, slashes, spaces. 
+    private const val MAX_PHRASE_LENGTH = 300
+    private const val MAX_KEY_LENGTH = 150
+    // Regex: Alphanumeric, underscores, hyphens, slashes, spaces.
     private val SAFE_KEY_PATTERN = Regex("^[a-zA-Z0-9_\\-/ ]+$")
+
+    // Targeting Computer category tree limits.
+    private const val MAX_LABEL_LENGTH = 60
+    private const val MAX_COMPUTER_CATEGORIES = 40
+    private const val MAX_NODES_PER_CATEGORY = 500
+    private const val MAX_TREE_DEPTH = 12
+    private val CATEGORY_ID_PATTERN = Regex("^[A-Z0-9_]{1,$MAX_KEY_LENGTH}$")
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; encodeDefaults = true }
 
@@ -192,7 +199,14 @@ object TransferManager {
 // 8. Gather header shortcuts.
         val headerShortcuts = CommandRepository.getHeaderShortcuts(context)
 
-// 9. Wrap and encode.
+// 9. Gather Target Computer data (legacy flat slots + the new category
+// tree). Both are exported unconditionally so restoring a backup never
+// leaves either shape behind.
+        val targets = TargetRepository.getTargets(context)
+        val syntaxRules = TargetRepository.getSyntaxRules(context)
+        val computerCategories = ComputerRepository.getCategories(context)
+
+// 10. Wrap and encode.
         val backup = AckBackup(
             dsp = dspConfig,
             matrixData = matrixMap,
@@ -208,9 +222,29 @@ object TransferManager {
             quickActionsDecks = quickActionsDecks,
             emergencyDecks = emergencyDecks,
             emergencyInfoCard = emergencyInfoCard,
+            targets = targets,
+            syntaxRules = syntaxRules,
+            computerCategories = computerCategories,
         )
 
         return json.encodeToString(backup)
+    }
+
+    // Writes a backup snapshot to app-internal storage (not a user-facing
+    // export) as a safety net before a one-time, non-reversible-feeling data
+    // transform such as the Target Computer's legacy-slot migration. Returns
+    // false if the snapshot couldn't be written, so the caller can decline
+    // to proceed rather than transform data with no rollback copy.
+    fun writeInternalSnapshot(context: Context, label: String): Boolean {
+        return try {
+            val dir = java.io.File(context.filesDir, "auto_backups").apply { mkdirs() }
+            val file = java.io.File(dir, "${label}_${System.currentTimeMillis()}.json")
+            file.writeText(generateBackupJson(context))
+            true
+        } catch (e: Exception) {
+            Log.e("ACK_BACKUP", "Automatic snapshot failed: $label", e)
+            false
+        }
     }
 
     // --- RESTORE (SECURE) ---
@@ -340,7 +374,62 @@ object TransferManager {
             if (contact.phone.length > 40) return false
         }
 
+// 10. Validate legacy target slots and their syntax rules.
+        if (backup.targets.size > 50) return false
+        backup.targets.forEach { slot ->
+            if (slot.label.length > MAX_LABEL_LENGTH) return false
+            if (slot.defaultStrategy !in setOf("PRE", "POST")) return false
+        }
+
+        if (backup.syntaxRules.size > 200) return false
+        backup.syntaxRules.forEach { (key, value) ->
+            if (key.length > MAX_KEY_LENGTH) return false
+            if (!SAFE_KEY_PATTERN.matches(key)) return false
+            if (value !in setOf("PRE", "POST")) return false
+        }
+
+// 11. Validate the Targeting Computer category tree.
+        if (backup.computerCategories.size > MAX_COMPUTER_CATEGORIES) return false
+
+        backup.computerCategories.forEach { category ->
+            if (!CATEGORY_ID_PATTERN.matches(category.id)) return false
+            if (category.label.length > MAX_LABEL_LENGTH) return false
+            if (!isComputerNodeValid(category.root)) return false
+
+            val (nodeCount, depth) = countComputerNodes(category.root)
+            if (nodeCount > MAX_NODES_PER_CATEGORY) return false
+            if (depth > MAX_TREE_DEPTH) return false
+        }
+
+        if (
+            backup.computerCategories.map { it.id }.distinct().size !=
+            backup.computerCategories.size
+        ) {
+            return false
+        }
+
         return true
+    }
+
+    private fun isComputerNodeValid(node: ComputerNode): Boolean {
+        if (node.id.length > MAX_KEY_LENGTH) return false
+        if (node.label.length > MAX_LABEL_LENGTH) return false
+        if (node.legacyStrategy != null && node.legacyStrategy !in setOf("PRE", "POST")) return false
+        return node.children.all { isComputerNodeValid(it) }
+    }
+
+    // Returns (total node count, max depth) for the subtree rooted at node.
+    private fun countComputerNodes(node: ComputerNode, depth: Int = 1): Pair<Int, Int> {
+        var count = 1
+        var maxDepth = depth
+
+        for (child in node.children) {
+            val (childCount, childDepth) = countComputerNodes(child, depth + 1)
+            count += childCount
+            maxDepth = maxOf(maxDepth, childDepth)
+        }
+
+        return count to maxDepth
     }
 
     // --- UTILITIES ---
@@ -505,6 +594,20 @@ object TransferManager {
         CommandRepository.saveEmergencyInfoCard(context, backup.emergencyInfoCard)
 
         CommandRepository.saveHeaderShortcuts(context, backup.headerShortcuts)
+
+        // Restore Target Computer data. Legacy slots first, since the
+        // category-tree fallback below migrates from whatever
+        // TargetRepository now holds when the backup predates the tree.
+        TargetRepository.restoreTargets(context, backup.targets, backup.syntaxRules)
+
+        if (backup.computerCategories.isNotEmpty()) {
+            ComputerRepository.replaceCategories(context, backup.computerCategories)
+        } else if (backup.targets.isNotEmpty()) {
+            ComputerRepository.replaceCategories(context, emptyList())
+            ComputerRepository.migrateLegacyTargetsIfNeeded(context)
+        } else {
+            ComputerRepository.replaceCategories(context, emptyList())
+        }
 
         CommandRepository.activateDeck(
             context = context,

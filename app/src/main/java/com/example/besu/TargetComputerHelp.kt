@@ -5,69 +5,91 @@ object TargetComputerHelp {
         id = "target_computer",
         category = HelpCategory.CONTEXTUAL_SYSTEMS,
         title = "TARGET COMPUTER",
-        summary = "TARGET SLOTS, PROMPT INSERTION, AND MESSAGE ROUTING.",
+        summary = "CATEGORY TREES, TARGET TAGS, AND GUIDED SETUP.",
         destination = HelpDestination.TARGETS,
         steps = listOf(
             HelpStep(
                 id = "intro",
                 title = "TARGET COMPUTER",
-                body = "The Target Computer stores names, labels, places, and " +
-                    "other reusable prompt context. A selected target can be " +
-                    "inserted into outgoing ACK phrases without rewriting the " +
-                    "same context every time."
+                body = "The Target Computer organizes reusable prompt " +
+                    "content -- names, places, food, actions, and anything " +
+                    "else you add -- into categories you define. Each " +
+                    "category holds one active pick at a time, which can " +
+                    "be dropped into outgoing phrases without retyping it."
             ),
             HelpStep(
-                id = "prompt_injection",
-                title = "TARGETS AND PROMPTS",
-                body = "When a target is active, ACK can inject its label into a " +
-                    "generated or manually issued prompt. For example, a target " +
-                    "placeholder such as [TARGET_NAME] can become part of a " +
-                    "message such as [TARGET_NAME], I NEED A MOMENT."
-            ),
-            HelpStep(
-                id = "open_slot",
-                title = "CONFIGURE A TARGET SLOT",
-                body = "Each slot stores one target entry. Select any slot to " +
-                    "open its configuration panel. Empty slots can be deployed " +
-                    "as new targets, while configured slots can be revised or " +
-                    "cleared.",
+                id = "open_category",
+                title = "OPEN A CATEGORY",
+                body = "Tap any category chip to view what's inside it. " +
+                    "Long-press a chip to rename it, change whether its " +
+                    "pick clears itself after use, or delete it.",
                 action = HelpAction.Interact(AckTags.TARGET_SLOT),
                 targetTag = AckTags.TARGET_SLOT
             ),
             HelpStep(
-                id = "placement_strategy",
-                title = "PREPEND OR APPEND",
-                body = "Choose where ACK inserts this target in a phrase. PREPEND " +
-                    "places the target before the message, such as [TARGET_NAME], " +
-                    "[MESSAGE]. APPEND places the target after the message, such " +
-                    "as [MESSAGE], [TARGET_NAME].",
-                action = HelpAction.Interact(AckTags.TARGET_STRATEGY),
-                targetTag = AckTags.TARGET_STRATEGY
+                id = "add_category",
+                title = "ADD A CATEGORY",
+                body = "Beyond the defaults, add as many categories as you " +
+                    "want. The four shipped categories can be renamed too " +
+                    "-- nothing about them is fixed.",
+                action = HelpAction.Interact(AckTags.COMPUTER_ADD_CATEGORY),
+                targetTag = AckTags.COMPUTER_ADD_CATEGORY
             ),
             HelpStep(
-                id = "save_slot",
-                title = "SAVE THE TARGET",
-                body = "Enter a descriptive placeholder or target label, then " +
-                    "save the slot. You can use any naming scheme that makes " +
-                    "sense to you, such as [PERSON], [PLACE], [TEAM], or " +
-                    "[CONTEXT_LABEL].",
-                action = HelpAction.CommitText(AckTags.TARGET_SLOT_SAVE),
-                targetTag = AckTags.TARGET_SLOT_SAVE
+                id = "tree_navigation",
+                title = "TAP TO SELECT, HOLD TO EDIT",
+                body = "Inside a category: tap a subcategory to open it, " +
+                    "tap an entry to make it that category's active pick " +
+                    "(tap it again to clear it). Long-press anything to " +
+                    "rename or delete it. \"+ CATEGORY\" and \"+ ENTRY\" " +
+                    "add new items under whatever you last tapped."
             ),
             HelpStep(
-                id = "using_target",
-                title = "USING A TARGET",
-                body = "Once selected through your chosen ACK target workflow, " +
-                    "the active target modifies compatible outgoing prompts. " +
-                    "Use this when you need to address a person, identify a " +
-                    "place, or add repeated context with less typing."
+                id = "display_modes",
+                title = "TREE OR DROPDOWN",
+                body = "Switch between a branching TREE view and a " +
+                    "cascading DROPDOWN view of the same category -- " +
+                    "whichever is faster for how deep you've organized it.",
+                action = HelpAction.Interact(AckTags.COMPUTER_TREE_WINDOW_MODE),
+                targetTag = AckTags.COMPUTER_TREE_WINDOW_MODE
+            ),
+            HelpStep(
+                id = "guide_me",
+                title = "GUIDED SETUP",
+                body = "Not sure where to start? GUIDE ME walks you " +
+                    "through adding categories and entries one step at a " +
+                    "time, staying wherever you're building instead of " +
+                    "sending you back to the start after every add.",
+                action = HelpAction.Interact(AckTags.COMPUTER_GUIDE_ME),
+                targetTag = AckTags.COMPUTER_GUIDE_ME
+            ),
+            HelpStep(
+                id = "computer_tag",
+                title = "USING A TARGET IN A PHRASE",
+                body = "In the Matrix phrase editor, INSERT TARGET TAG " +
+                    "adds a tag like [COMPUTER:PEOPLE] to your template. " +
+                    "It resolves to that category's current active pick " +
+                    "-- or to an authored fallback if nothing is active.",
+                action = HelpAction.Interact(AckTags.MATRIX_INSERT_COMPUTER_TAG),
+                targetTag = AckTags.MATRIX_INSERT_COMPUTER_TAG
+            ),
+            HelpStep(
+                id = "status_indicator",
+                title = "CHECK WHAT'S ACTIVE",
+                body = "The COMPUTER status in the header shows how many " +
+                    "categories currently have an active pick. Tap it to " +
+                    "see every category's pick at a glance and clear any " +
+                    "of them on the spot.",
+                action = HelpAction.Interact(AckTags.COMPUTER_STATUS_INDICATOR),
+                targetTag = AckTags.COMPUTER_STATUS_INDICATOR
             ),
             HelpStep(
                 id = "completion",
                 title = "TARGET COMPUTER TRAINING COMPLETE",
-                body = "Target Computer training complete. You can now create " +
-                    "target slots, choose message placement, save target labels, " +
-                    "and use active context with compatible prompts."
+                body = "Target Computer training complete. You can now " +
+                    "build categories, navigate and edit their trees, " +
+                    "insert target tags into phrases, and check what's " +
+                    "currently active."
             )
         )
     )
