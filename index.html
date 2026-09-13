@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ACK — Gesture-Driven AAC</title>
+<title>ACK — Gesture-Driven AAC for Situational Mutism</title>
+<link rel="canonical" href="https://aspdesignlabs.github.io/ACK/" />
 
 <!-- Favicon (from the phone app's own Play Store icon) -->
 <link rel="icon" href="assets/favicon/favicon.ico" sizes="32x32" />
@@ -13,15 +14,17 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon/favicon-192.png" />
 <link rel="icon" type="image/png" sizes="512x512" href="assets/favicon/favicon-512.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png" />
-<meta name="description" content="ACK is a non-traditional AAC tool built around gesture recognition, tap controls, along with rapid statement creation and recall." />
+<meta name="description" content="ACK is a non-traditional AAC tool for situational mutism, built around gesture recognition, tap controls, and rapid statement construction and recall." />
 <meta name="color-scheme" content="dark" />
+<meta name="google-site-verification" content="SZDLG1pzuuhxYA0NX76ImR6k4XOPnfdyDeele5mEXyQ" />
+<meta name="msvalidate.01" content="CDAAA6111F04493CBB381F0CB821E663" />
 
 <!-- Open Graph (Facebook, and the general-purpose fallback most platforms read) -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="ACK" />
 <meta property="og:url" content="https://aspdesignlabs.github.io/ACK/" />
-<meta property="og:title" content="ACK — Gesture-Driven AAC" />
-<meta property="og:description" content="ACK is a non-traditional AAC tool built around gesture recognition, tap controls, along with rapid statement creation and recall." />
+<meta property="og:title" content="ACK — Gesture-Driven AAC for Situational Mutism" />
+<meta property="og:description" content="ACK is a non-traditional AAC tool for situational mutism, built around gesture recognition, tap controls, and rapid statement construction and recall." />
 <meta property="og:image" content="https://aspdesignlabs.github.io/ACK/assets/social/og-card.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
@@ -29,8 +32,8 @@
 
 <!-- X / Twitter card -->
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="ACK — Gesture-Driven AAC" />
-<meta name="twitter:description" content="ACK is a non-traditional AAC tool built around gesture recognition, tap controls, along with rapid statement creation and recall." />
+<meta name="twitter:title" content="ACK — Gesture-Driven AAC for Situational Mutism" />
+<meta name="twitter:description" content="ACK is a non-traditional AAC tool for situational mutism, built around gesture recognition, tap controls, and rapid statement construction and recall." />
 <meta name="twitter:image" content="https://aspdesignlabs.github.io/ACK/assets/social/og-card.png" />
 <meta name="twitter:image:alt" content="ACK — a modern approach to AAC, gesture-driven and tap-first. Screenshot of the MATRIX Deck." />
 
@@ -284,13 +287,14 @@
   .deck-entry .deck-text{ flex:1 1 320px; min-width:0; }
   .shot-thumb{
     flex:0 0 92px; width:92px; height:92px;
-    background-color:var(--void); background-size:cover; background-position:center;
+    background-color:var(--void);
     border:var(--cc-b) solid var(--accent);
     cursor:pointer; padding:0; position:relative;
     clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
     --cut:8px; --cc-color:var(--accent);
   }
   .shot-thumb svg{ position:absolute; right:4px; bottom:4px; width:16px; height:16px; stroke:var(--accent); z-index:1; }
+  .shot-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
   .shot-thumb-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
   .shot-thumb.placeholder{ display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.55em; color:var(--text-faint); text-align:center; padding:0.3rem; }
 
@@ -839,10 +843,12 @@
             to prevent all voice output toggle 'Silent Mode' under PROTOCOL from any deck.</p>
           <div class="shot-row" role="group" aria-label="Screenshots" style="display:flex; gap:0.8rem; margin-top:1rem;">
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/fullscreen-playback.png" data-shot-name="Full-screen prompt playback">
+              <img src="assets/screenshots/fullscreen-playback.png" alt="Full-screen prompt playback screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View full-screen prompt playback screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/audio-silent-mode-toggle.png" data-shot-name="Silent Mode toggle">
+              <img src="assets/screenshots/audio-silent-mode-toggle.png" alt="Silent Mode toggle screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Silent Mode toggle screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -873,6 +879,7 @@
                 deck, allowing for hot-swapping of all replies under a pose with a single tap.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/matrix-deck.png" data-shot-name="MATRIX Deck">
+              <img src="assets/screenshots/matrix-deck.png" alt="MATRIX Deck screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View MATRIX Deck screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -888,6 +895,7 @@
                 Edit all three poses then initiate playback using the watch or with a tap.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/quick-actions-deck.png" data-shot-name="Quick Actions Deck">
+              <img src="assets/screenshots/quick-actions-deck.png" alt="Quick Actions Deck screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Quick Actions Deck screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -908,6 +916,7 @@
                 tap-and-hold interaction.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/EmergencyDeck_preview.png" data-shot-name="Emergency Deck">
+              <img src="assets/screenshots/EmergencyDeck_preview.png" alt="Emergency Deck screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Emergency Deck screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -924,6 +933,7 @@
                 more sticky.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/emoji-deck.png" data-shot-name="Emoji Deck">
+              <img src="assets/screenshots/emoji-deck.png" alt="Emoji Deck screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Emoji Deck screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -940,6 +950,7 @@
                 load on the recipient.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/gifs/gif-deck.gif" data-shot-name="GIF Deck">
+              <img src="assets/gifs/gif-deck.gif" alt="GIF Deck screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View GIF Deck screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -955,6 +966,7 @@
                 ephemeral reply, if the message isn't worth saving.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/manual-override.png" data-shot-name="Manual Override">
+              <img src="assets/screenshots/manual-override.png" alt="Manual Override screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Manual Override screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -971,6 +983,7 @@
                 your statement.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/target-computer.png" data-shot-name="Target Computer">
+              <img src="assets/screenshots/target-computer.png" alt="Target Computer screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Target Computer screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -1071,6 +1084,7 @@
                 sensitivity and test the configuration under PROTOCOL from any deck.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/settings-shake-kill-switch.gif" data-shot-name="Shake Kill Switch">
+              <img src="assets/screenshots/settings-shake-kill-switch.gif" alt="Shake Kill Switch screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Shake Kill Switch screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -1092,6 +1106,7 @@
                 method out in the Training Grounds.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/watch-shaky-hands-indicator.jpg" data-shot-name="Shaky-Hands Mode">
+              <img src="assets/screenshots/watch-shaky-hands-indicator.jpg" alt="Shaky-Hands Mode screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Shaky-Hands Mode screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -1123,10 +1138,12 @@
             </div>
             <div style="display:flex; flex-direction:column; gap:0.5rem; flex:0 0 auto;">
               <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/replay-chip.png" data-shot-name="REPLAY chip">
+                <img src="assets/screenshots/replay-chip.png" alt="REPLAY chip screenshot" loading="lazy" decoding="async">
                 <span class="shot-thumb-sr">View REPLAY chip screenshot, full size</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
               </button>
               <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/terminal-log-replay.png" data-shot-name="Terminal log replay">
+                <img src="assets/screenshots/terminal-log-replay.png" alt="Terminal log replay screenshot" loading="lazy" decoding="async">
                 <span class="shot-thumb-sr">View Terminal log replay screenshot, full size</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
               </button>
@@ -4362,7 +4379,6 @@
   var shotOpener = null;
   document.querySelectorAll('.shot-thumb').forEach(function(btn){
     var src = btn.getAttribute('data-shot-src');
-    if(src){ btn.style.backgroundImage = "url('" + src + "')"; }
     btn.addEventListener('click', function(){
       var name = btn.getAttribute('data-shot-name') || 'Screenshot';
       if(!src){
