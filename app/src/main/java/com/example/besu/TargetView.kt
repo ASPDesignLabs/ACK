@@ -200,10 +200,22 @@ fun TargetView(context: Context, primaryColor: Color) {
     }
 }
 
+private data class ClearedRecord(
+    val categoryId: String,
+    val categoryLabel: String,
+    val node: ComputerNode
+)
+
 // Opened by tapping the "COMPUTER:" status indicator in the app header.
 // Lists every category's current active pick (or lack of one), with an
 // inline CLEAR -- this dialog is about *current state*, not authoring, so
 // it swaps RootOverrideStrip's usual EDIT button for CLEAR instead.
+//
+// CLEAR is gated behind a tap-to-confirm step (mirroring the two-step
+// delete pattern used elsewhere in this file), and a confirmed clear leaves
+// a one-tap UNDO in place until something else is cleared or the dialog is
+// dismissed -- clearing a category's pick here is otherwise a single tap
+// with no other recovery path.
 @Composable
 fun ComputerSummaryDialog(
     context: Context,
@@ -212,6 +224,8 @@ fun ComputerSummaryDialog(
 ) {
     var refreshKey by remember { mutableIntStateOf(0) }
     val categories = remember(refreshKey) { ComputerRepository.getCategories(context) }
+    var confirmingClearId by remember { mutableStateOf<String?>(null) }
+    var lastCleared by remember { mutableStateOf<ClearedRecord?>(null) }
 
     TightDialogSurface(
         onDismiss = onDismiss,
@@ -219,6 +233,46 @@ fun ComputerSummaryDialog(
         title = "TARGET COMPUTER STATUS",
         dismissLabel = "CLOSE"
     ) {
+        val cleared = lastCleared
+
+        if (cleared != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, primaryColor, CutCornerShape(6.dp))
+                    .background(primaryColor.copy(alpha = 0.08f), CutCornerShape(6.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "CLEARED ${cleared.categoryLabel.uppercase()}: ${cleared.node.label}",
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Text(
+                    text = "UNDO",
+                    color = primaryColor,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .heightIn(min = 44.dp)
+                        .clickable {
+                            ComputerRepository.setActiveEntry(context, cleared.categoryId, cleared.node.id)
+                            lastCleared = null
+                            refreshKey++
+                        }
+                        .padding(horizontal = 10.dp, vertical = 12.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         if (categories.isEmpty()) {
             Text(
                 text = "NO CATEGORIES YET.",
@@ -231,6 +285,7 @@ fun ComputerSummaryDialog(
                 categories.forEach { category ->
                     val activeNode = category.activeNodeId?.let { ComputerRepository.findNode(category, it) }
                     val isActive = activeNode != null
+                    val isConfirming = confirmingClearId == category.id
 
                     Row(
                         modifier = Modifier
@@ -259,22 +314,63 @@ fun ComputerSummaryDialog(
                             )
 
                             Text(
-                                text = activeNode?.label ?: "NOTHING SELECTED",
-                                color = if (isActive) Color.White else Color.DarkGray,
+                                text = if (isConfirming) {
+                                    "CLEAR ${activeNode?.label}?"
+                                } else {
+                                    activeNode?.label ?: "NOTHING SELECTED"
+                                },
+                                color = if (isConfirming) DangerRed else if (isActive) Color.White else Color.DarkGray,
                                 fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = if (isConfirming) FontWeight.Bold else FontWeight.Normal
                             )
                         }
 
-                        if (isActive) {
+                        if (isConfirming) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = "CANCEL",
+                                    color = Color.Gray,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .heightIn(min = 44.dp)
+                                        .clickable { confirmingClearId = null }
+                                        .padding(horizontal = 8.dp, vertical = 12.dp)
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .heightIn(min = 44.dp)
+                                        .border(1.dp, DangerRed, CutCornerShape(4.dp))
+                                        .clickable {
+                                            val node = activeNode
+                                            if (node != null) {
+                                                ComputerRepository.clearActiveEntry(context, category.id)
+                                                lastCleared = ClearedRecord(category.id, category.label, node)
+                                            }
+                                            confirmingClearId = null
+                                            refreshKey++
+                                        }
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "CONFIRM",
+                                        color = DangerRed,
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        } else if (isActive) {
                             Box(
                                 modifier = Modifier
                                     .heightIn(min = 44.dp)
                                     .border(1.dp, DangerRed, CutCornerShape(4.dp))
-                                    .clickable {
-                                        ComputerRepository.clearActiveEntry(context, category.id)
-                                        refreshKey++
-                                    }
+                                    .clickable { confirmingClearId = category.id }
                                     .padding(horizontal = 10.dp, vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
