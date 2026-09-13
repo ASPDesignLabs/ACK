@@ -84,7 +84,6 @@
     display:flex; flex-direction:column;
     overflow:hidden;
   }
-  .bar-inner{ max-width:1240px; margin:0 auto; width:100%; }
   html.high-contrast{
     --text:#ffffff; --text-dim:#f2f2f2; --text-faint:#dcdcdc;
     --border:#8a8a8a; --graphite:#000000; --graphite-2:#0a0a0a;
@@ -105,10 +104,14 @@
 
   /* .shell is the flex conduit between header and nav; .window (inside it) is the
      one element that actually scrolls, so its border/clip-path frame stays put
-     while content moves underneath it -- matching the app's own bordered panel. */
+     while content moves underneath it -- matching the app's own bordered panel.
+     No max-width here: .window's own border is the visible frame, so it should
+     track the viewport edges the same way .hud's does, just inset by this
+     padding instead of sitting flush -- not stop short and leave a growing
+     void on wide screens. */
   .shell{
     flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
-    max-width:1240px; margin:0 auto; width:100%; padding:0.9rem;
+    width:100%; padding:0.9rem;
   }
 
   /* ---------- HUD header: full-width bar, pinned by the flex layout (never scrolls) ---------- */
@@ -121,10 +124,16 @@
      border changes. */
   .hud{
     flex:none;
-    border-top:var(--cc-b) solid var(--accent);
-    border-bottom:var(--cc-b) solid var(--accent);
+    position:relative;
+    /* Inset from the top and both sides by the same 0.7rem buffer
+       .tabbar-inner uses horizontally, instead of running the border into
+       the screen's physical edges. No bottom margin: .shell's own padding
+       already provides that gap on its way into .window. */
+    margin:0.7rem 0.7rem 0;
+    border:var(--cc-b) solid var(--accent);
     background:var(--graphite);
     clip-path: polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);
+    --cut:20px; --cc-color:var(--accent);
   }
   .hud-inner{ padding:1rem 1.2rem; }
   .hud-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
@@ -135,7 +144,10 @@
   }
   .tagline{ font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.14em; color:var(--text-dim);
     text-transform:uppercase; margin:0.15rem 0 0; }
-  .hud-actions{ display:flex; gap:0.5rem; flex-wrap:wrap; }
+  /* Two-row split so the accessibility icon button can sit directly below
+     SOURCE rather than just wherever flex-wrap happens to drop it. */
+  .hud-actions{ display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem; }
+  .hud-actions-row{ display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:flex-end; }
   .hud-btn{
     font-family:var(--font-mono); font-size:0.68rem; font-weight:700; letter-spacing:0.08em;
     text-transform:uppercase; color:var(--accent); background:transparent;
@@ -147,6 +159,19 @@
   }
   .hud-btn svg{ width:14px; height:14px; flex:none; }
   .hud-btn:hover{ color:var(--cyan-bright); border-color:var(--cyan-bright); --cc-color:var(--cyan-bright); }
+  /* Icon-only accessibility-settings button -- sized up from the shared
+     14px .hud-btn icon so it reads clearly as its own link, not a decoration
+     lost inside a text button. */
+  .hud-icon-btn{
+    color:var(--accent); background:transparent;
+    border:var(--cc-b) solid var(--accent); position:relative;
+    display:inline-flex; align-items:center; justify-content:center;
+    width:44px; height:44px; padding:0; cursor:pointer;
+    clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+    --cut:6px; --cc-color:var(--accent);
+  }
+  .hud-icon-btn svg{ width:22px; height:22px; flex:none; }
+  .hud-icon-btn:hover{ color:var(--cyan-bright); border-color:var(--cyan-bright); --cc-color:var(--cyan-bright); }
 
   .ctx-row{ margin-top:0.9rem; display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; }
   .ctx-row[hidden]{ display:none; }
@@ -278,7 +303,10 @@
 
   /* ---------- bottom nav: always a horizontal bar anchored to the bottom, never a side rail ---------- */
   .tabbar{ flex:none; background:var(--void); border-top:2px solid var(--border); }
-  .tabbar-inner{ display:flex; gap:0.5rem; max-width:1240px; margin:0 auto; width:100%; padding:0.55rem 0.7rem; }
+  /* No max-width, matching .shell/.window: each tab-btn carries its own
+     accent border, so capping this row would strand those borders in a
+     centered island instead of letting them track the bar's full width. */
+  .tabbar-inner{ display:flex; gap:0.5rem; width:100%; padding:0.55rem 0.7rem; }
   .tab-btn{
     flex:1 1 0; height:56px; min-width:0; background:var(--void); cursor:pointer;
     border:var(--cc-b) solid var(--accent); position:relative;
@@ -338,7 +366,9 @@
      centerline of the 45° chamfer clip-path cuts but never strokes. Only
      the two cut corners are touched -- every straight edge keeps its plain
      border, untouched. */
+  .hud::before, .hud::after,
   .hud-btn::before, .hud-btn::after,
+  .hud-icon-btn::before, .hud-icon-btn::after,
   .ctx-dropdown summary::before, .ctx-dropdown summary::after,
   .ctx-dropdown-menu::before, .ctx-dropdown-menu::after,
   .window::before, .window::after,
@@ -358,11 +388,11 @@
      terms) by exactly the border width on every side. Left uncorrected, the
      connector lands a full border-width off from the actual cut, floating
      free of the shape instead of closing it. */
-  .hud-btn::before, .ctx-dropdown summary::before, .ctx-dropdown-menu::before,
+  .hud::before, .hud-btn::before, .hud-icon-btn::before, .ctx-dropdown summary::before, .ctx-dropdown-menu::before,
   .window::before, .panel::before, .shot-thumb::before, .tab-btn::before, .swatch::before{
     left:calc(-1 * var(--cc-b)); top:calc(var(--cut) - var(--cc-b) - (var(--cc-diag) / 2));
   }
-  .hud-btn::after, .ctx-dropdown summary::after, .ctx-dropdown-menu::after,
+  .hud::after, .hud-btn::after, .hud-icon-btn::after, .ctx-dropdown summary::after, .ctx-dropdown-menu::after,
   .window::after, .panel::after, .shot-thumb::after, .tab-btn::after, .swatch::after{
     left:calc(100% + var(--cc-b) - var(--cut)); top:calc(100% + var(--cc-b) - (var(--cc-diag) / 2));
   }
@@ -509,6 +539,42 @@
     background:none; color:var(--text); font-family:var(--font-mono); font-size:0.68rem; font-weight:700; cursor:pointer;
   }
 
+  /* Quick Actions editor: styled after the app's own QuickActionsDeck.kt
+     screen (title + interaction hint, G1/G2/G3 group tabs, a group header,
+     then 4 standalone action cards) rather than reusing Matrix's dense
+     tree-branch node list -- the shared root-override strip and the play
+     button are kept regardless, since those are simulator-only affordances
+     the app doesn't need but this browser-only tool does. */
+  .mtx-qa-heading{ margin-top:0.4rem; }
+  .mtx-qa-heading h3{ font-family:var(--font-mono); font-size:1.1em; font-weight:800; letter-spacing:0.05em; color:#fff; margin:0; }
+  .mtx-qa-hint{ font-family:var(--font-mono); font-size:0.68em; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-faint); margin:0.35rem 0 0; }
+  .mtx-qa-group-tabs{ display:flex; gap:0.5rem; margin-top:0.9rem; }
+  .mtx-qa-group-tab{
+    flex:1 1 0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:0.1rem; height:52px; border:2px solid var(--border); background:none; cursor:pointer;
+    font-family:var(--font-mono); color:var(--text-faint);
+  }
+  .mtx-qa-group-tab b{ font-size:0.85em; }
+  .mtx-qa-group-tab span{ font-size:0.62em; letter-spacing:0.04em; }
+  .mtx-qa-group-tab.is-active{ border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }
+  .mtx-qa-group-head{
+    margin-top:0.7rem; display:flex; align-items:center; justify-content:space-between; gap:0.6rem;
+    border:2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background:color-mix(in srgb, var(--accent) 4%, transparent);
+    padding:0.7rem;
+  }
+  .mtx-qa-group-title{ font-family:var(--font-mono); font-size:0.85em; font-weight:700; color:#fff; display:block; }
+  .mtx-qa-group-meta{ font-family:var(--font-mono); font-size:0.68em; color:var(--text-faint); display:block; margin-top:0.2rem; }
+
+  /* Action cards -- each a standalone cut-corner .panel (not a bordered
+     list with tree connectors), matching the app's large tap-targets. */
+  .mtx-qa-action-list{ margin-top:0.9rem; display:flex; flex-direction:column; gap:0.7rem; }
+  .mtx-qa-action{ display:flex; align-items:center; gap:0.7rem; }
+  .mtx-qa-action-body{ flex:1 1 auto; min-width:0; display:block; text-align:left; background:none; border:none; color:inherit; cursor:pointer; padding:0; font:inherit; }
+  .mtx-qa-action-label{ display:block; font-family:var(--font-mono); font-size:1em; font-weight:800; letter-spacing:0.03em; color:#fff; }
+  .mtx-qa-action-phrase{ display:block; font-family:var(--font-mono); font-size:0.8em; color:var(--accent); margin-top:0.4rem; }
+  .mtx-qa-action-phrase.is-empty{ color:var(--text-faint); font-style:italic; }
+
   /* Full-screen playback overlay -- a sibling of .hud/.window (portal'd, like
      the ctx-dropdown menus) so it is never clipped by .window's clip-path.
      .mtx-overlay-rotor's own size/rotation is set inline by JS: on a
@@ -572,7 +638,7 @@
 
 <div class="app-frame">
   <header class="hud" id="hud">
-   <div class="hud-inner bar-inner">
+   <div class="hud-inner">
     <div class="hud-top">
       <div>
         <div class="brand-row">
@@ -581,11 +647,12 @@
         <p class="tagline">Augmented Comm Link</p>
       </div>
       <div class="hud-actions">
-        <button type="button" class="hud-btn" id="settingsOpen">
+        <div class="hud-actions-row">
+          <a class="hud-btn" style="text-decoration:none;" href="https://github.com/ASPDesignLabs/ACK" target="_blank" rel="noopener noreferrer">SOURCE</a>
+        </div>
+        <button type="button" class="hud-icon-btn" id="settingsOpen" aria-label="Accessibility settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="7.5" r="1.3" fill="currentColor" stroke="none"/><path d="M7 10.5h10M12 10.5v4.5M9 19l3-4 3 4"/></svg>
-          <span>SETTINGS</span>
         </button>
-        <a class="hud-btn" style="text-decoration:none;" href="https://github.com/ASPDesignLabs/ACK" target="_blank" rel="noopener noreferrer">SOURCE</a>
       </div>
     </div>
 
@@ -1104,7 +1171,7 @@
         reaches your phone or a server; everything is saved only in this browser.</p>
 
       <div class="ctx-pane" data-ctx="matrix" id="ctx-sim-matrix">
-        <div class="mtx-intro-note">Simulating the <strong>MATRIX</strong> deck: 3 fixed root poses (IDENTITY /
+        <div class="mtx-intro-note" id="mtxIntroNote">Simulating the <strong>MATRIX</strong> deck: 3 fixed root poses (IDENTITY /
           DEFEND / CONNECT) &times; 4 phrases each, across the app's 5 fixed profiles. Voice output isn't
           simulated &mdash; PLAY shows the same full-screen visual prompt the app displays, without audio.</div>
 
@@ -1314,8 +1381,8 @@
       <h2 id="mtxResetTitle" style="color:var(--error);">Reset Simulator Data</h2>
       <button type="button" class="dialog-close" data-close aria-label="Abort">&#10005;</button>
     </div>
-    <p style="font-size:0.85rem;">Permanently erase every prompt, variable, and shared root override you've
-      set in the Matrix Deck Simulator on this browser? This cannot be undone.</p>
+    <p style="font-size:0.85rem;">Permanently erase every prompt, variable, shared root override, and Quick
+      Actions configuration you've set in the Deck Simulator on this browser? This cannot be undone.</p>
     <div class="mtx-editor-row">
       <button type="button" class="opt-btn" id="mtxResetConfirm" style="color:var(--error);border-color:var(--error);">ERASE EVERYTHING</button>
       <button type="button" class="opt-btn" data-close>CANCEL</button>
@@ -1375,6 +1442,112 @@
     <p id="mtxDeckDeleteText" style="font-size:0.85rem;"></p>
     <div class="mtx-editor-row">
       <button type="button" class="opt-btn" id="mtxDeckDeleteConfirm" style="color:var(--error);border-color:var(--error);">DELETE PERMANENTLY</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- QUICK ACTIONS DIALOGS -->
+
+<dialog id="mtxQaSlotDialog" aria-labelledby="mtxQaSlotTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <div>
+        <h2 id="mtxQaSlotTitle">Action</h2>
+        <p style="margin:0.2rem 0 0; color:var(--text-faint); font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em;">LIVE-SAVE EDITOR</p>
+      </div>
+      <button type="button" class="dialog-close" data-close aria-label="Close editor">&#10005;</button>
+    </div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.8rem;">BUTTON LABEL</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxQaLabelInput" style="min-height:auto;" placeholder="ACTION LABEL" maxlength="40">
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">PHRASE TEMPLATE</p>
+    <textarea class="mtx-editor-textarea" id="mtxQaTemplateInput" placeholder="ENTER OUTPUT PHRASE..."></textarea>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">INSERT VARIABLE TOKEN</p>
+    <div class="mtx-insert-row">
+      <button type="button" class="opt-btn" data-insert-token="{VAR}">+ VAR</button>
+      <button type="button" class="opt-btn" data-insert-token="{VAR:A}">+ A</button>
+      <button type="button" class="opt-btn" data-insert-token="{VAR:B}">+ B</button>
+      <button type="button" class="opt-btn" data-insert-token="{VAR:C}">+ C</button>
+    </div>
+
+    <div id="mtxQaVarFields"></div>
+
+    <p style="color:var(--error); font-size:0.78rem; margin-top:1.1rem;">DESTRUCTIVE CONTROLS</p>
+    <div class="mtx-danger-row">
+      <button type="button" class="opt-btn" id="mtxQaClearVars" style="color:var(--error);border-color:var(--error);">CLEAR VARS</button>
+      <button type="button" class="opt-btn" id="mtxQaClearPrompt" style="color:var(--error);border-color:var(--error);">CLEAR PROMPT</button>
+    </div>
+    <div class="mtx-danger-row">
+      <button type="button" class="opt-btn" id="mtxQaClearAll" style="color:var(--error);border-color:var(--error); flex:1 1 100%;">CLEAR ALL</button>
+    </div>
+
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxQaCommit" style="color:var(--accent);border-color:var(--accent);" aria-pressed="true">COMMIT</button>
+      <button type="button" class="opt-btn" data-close>CLOSE</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxQaVarQuickDialog" aria-labelledby="mtxQaVarQuickTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxQaVarQuickTitle">Variable</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close variable editor">&#10005;</button>
+    </div>
+    <p style="color:var(--var-accent); font-size:0.78rem; margin-top:0.6rem;">LIVE VARIABLE VALUE</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxQaVarQuickInput" style="min-height:auto;" placeholder="ENTER VALUE">
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxQaVarQuickSave" style="color:var(--accent);border-color:var(--accent);">UPDATE</button>
+      <button type="button" class="opt-btn" data-close>ABORT</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxQaClearDialog" aria-labelledby="mtxQaClearTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxQaClearTitle" style="color:var(--error);">Confirm Clear</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Abort">&#10005;</button>
+    </div>
+    <p id="mtxQaClearText" style="font-size:0.85rem;"></p>
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxQaClearConfirm" style="color:var(--error);border-color:var(--error);">CONFIRM</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxQaGroupDialog" aria-labelledby="mtxQaGroupTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxQaGroupTitle">Edit Group</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close">&#10005;</button>
+    </div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.8rem;">GROUP LABEL</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxQaGroupLabelInput" style="min-height:auto;" placeholder="GROUP LABEL" maxlength="40">
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:1.1rem;">WATCH POSE</p>
+    <div class="opt-group" id="mtxQaGroupPoseGroup" role="group" aria-label="Watch pose">
+      <button type="button" class="opt-btn" data-pose="IDENTITY" aria-pressed="false">IDENTITY</button>
+      <button type="button" class="opt-btn" data-pose="DEFEND" aria-pressed="false">DEFEND</button>
+      <button type="button" class="opt-btn" data-pose="CONNECT" aria-pressed="false">CONNECT</button>
+    </div>
+    <p style="color:var(--text-faint); font-size:0.7rem; font-family:var(--font-mono); margin:0.4rem 0 0;">Which gesture on the watch fires this group. Picking a pose another group already uses swaps the two.</p>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:1.1rem;">ROOT OVERRIDE SOURCE</p>
+    <div class="opt-group" id="mtxQaGroupRootGroup" role="group" aria-label="Root override source">
+      <button type="button" class="opt-btn" data-root="IDENTITY" aria-pressed="false">IDENTITY</button>
+      <button type="button" class="opt-btn" data-root="DEFEND" aria-pressed="false">DEFEND</button>
+      <button type="button" class="opt-btn" data-root="CONNECT" aria-pressed="false">CONNECT</button>
+    </div>
+    <p style="color:var(--text-faint); font-size:0.7rem; font-family:var(--font-mono); margin:0.4rem 0 0;">Which A/B/C variable bank fills this group's {VAR:X} tags. Has no effect on which gesture triggers it.</p>
+
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxQaGroupSave" style="color:var(--accent);border-color:var(--accent);">SAVE</button>
       <button type="button" class="opt-btn" data-close>CANCEL</button>
     </div>
   </div>
@@ -1520,12 +1693,13 @@
     ["BUILDER","Builder"]
   ];
 
-  // Matches CreateDeckDialog.kt's own type grid and descriptions. Only MATRIX
-  // is actually creatable right now; the rest are shown (not hidden) so the
-  // roadmap is visible, same spirit as the rest of this page's placeholders.
+  // Matches CreateDeckDialog.kt's own type grid and descriptions. MATRIX and
+  // QUICK_ACTIONS are both real, creatable decks here, same as in the app;
+  // EMERGENCY/EMOJI/GIF are shown (not hidden) so the roadmap is visible,
+  // same spirit as the rest of this page's placeholders.
   var DECK_TYPES = [
     {type:"MATRIX", label:"MATRIX", desc:"A full 3-pose Matrix with its own phrases, context layers, and profiles.", enabled:true},
-    {type:"QUICK_ACTIONS", label:"QUICK ACTIONS", desc:"Three action groups with four configurable slots per group.", enabled:false},
+    {type:"QUICK_ACTIONS", label:"QUICK ACTIONS", desc:"Three action groups with four configurable slots per group.", enabled:true},
     {type:"EMERGENCY", label:"EMERGENCY", desc:"Four immediate prompt slots with optional emergency overrides.", enabled:false},
     {type:"EMOJI", label:"EMOJI", desc:"Visual-only emoji pages with configurable grids and optional text.", enabled:false},
     {type:"GIF", label:"GIF", desc:"Local GIF library with categories, previews, and fullscreen playback.", enabled:false}
@@ -1615,6 +1789,112 @@
     return readStr(phraseKey(deckId, profile, path), null) !== null ? 'own' : 'inherited';
   }
 
+  // ---------- Quick Actions deck (mirrors QuickActionsModels.kt + the
+  // relevant parts of CommandRepository.kt) ----------
+  // A Quick Actions deck is a genuinely different shape from Matrix, not a
+  // reskin: one JSON blob per deck (3 groups x 4 slots, no per-node keys,
+  // no profile axis -- a Quick Actions deck holds exactly one configuration).
+  // A group's rootCategory (which A/B/C bank feeds its {VAR:X} tags) and its
+  // boundPose (which watch gesture fires it) are independent fields; poses
+  // still form a strict permutation across the 3 groups, exactly like the
+  // app enforces.
+  function qaConfigKey(deckId){ return STORAGE_PREFIX + 'qa_' + deckId + '_config'; }
+
+  function defaultQuickActionsConfig(deckId){
+    return {
+      deckId: deckId,
+      groups: POSES.map(function(pose, i){
+        return {
+          groupIndex: i,
+          label: 'GROUP ' + (i + 1),
+          rootCategory: pose,
+          boundPose: pose,
+          slots: [0,1,2,3].map(function(s){
+            return { slotIndex: s, label: 'ACTION ' + (s + 1), template: '', localValues: [] };
+          })
+        };
+      })
+    };
+  }
+
+  // Self-healing, mirroring CommandRepository.normalizeQuickActionsConfig:
+  // always exactly 3 groups / 4 slots regardless of what's in storage, and
+  // boundPose must form a clean permutation of the 3 poses -- if corrupted,
+  // every group resets to its canonical index-based pose.
+  function normalizeQuickActionsConfig(raw, deckId){
+    var fallback = defaultQuickActionsConfig(deckId);
+    if(!raw || !Array.isArray(raw.groups)) return fallback;
+
+    var groups = POSES.map(function(pose, i){
+      var g = raw.groups[i] || {};
+      var rawSlots = Array.isArray(g.slots) ? g.slots : [];
+      var slots = [0,1,2,3].map(function(s){
+        var slot = rawSlots[s] || {};
+        return {
+          slotIndex: s,
+          label: typeof slot.label === 'string' && slot.label ? slot.label : ('ACTION ' + (s + 1)),
+          template: typeof slot.template === 'string' ? slot.template : '',
+          localValues: Array.isArray(slot.localValues) ? slot.localValues : []
+        };
+      });
+      return {
+        groupIndex: i,
+        label: typeof g.label === 'string' && g.label ? g.label : ('GROUP ' + (i + 1)),
+        rootCategory: POSES.indexOf(g.rootCategory) !== -1 ? g.rootCategory : pose,
+        boundPose: POSES.indexOf(g.boundPose) !== -1 ? g.boundPose : pose,
+        slots: slots
+      };
+    });
+
+    var posesUsed = groups.map(function(g){ return g.boundPose; });
+    var isPermutation = POSES.every(function(p){ return posesUsed.indexOf(p) !== -1; });
+    if(!isPermutation){
+      groups.forEach(function(g, i){ g.boundPose = POSES[i]; });
+    }
+
+    return { deckId: deckId, groups: groups };
+  }
+
+  function getQuickActionsConfig(deckId){
+    return normalizeQuickActionsConfig(readJSON(qaConfigKey(deckId), null), deckId);
+  }
+  function setQuickActionsConfig(deckId, config){
+    writeJSON(qaConfigKey(deckId), config);
+  }
+
+  function resolveQuickAction(deckId, groupIndex, slotIndex){
+    var group = getQuickActionsConfig(deckId).groups[groupIndex];
+    var slot = group.slots[slotIndex];
+    var rootConfig = getRootConfig(deckId, group.rootCategory);
+    return resolveTemplate(slot.template, slot.localValues, rootConfig);
+  }
+
+  function updateQuickActionSlot(deckId, groupIndex, slotIndex, patch){
+    var config = getQuickActionsConfig(deckId);
+    var slot = config.groups[groupIndex].slots[slotIndex];
+    if(patch.label !== undefined) slot.label = patch.label;
+    if(patch.template !== undefined) slot.template = patch.template;
+    if(patch.localValues !== undefined) slot.localValues = patch.localValues;
+    setQuickActionsConfig(deckId, config);
+  }
+
+  function updateQuickActionGroup(deckId, groupIndex, patch){
+    var config = getQuickActionsConfig(deckId);
+    var group = config.groups[groupIndex];
+    if(patch.label !== undefined) group.label = patch.label;
+    if(patch.rootCategory !== undefined) group.rootCategory = patch.rootCategory;
+    if(patch.boundPose !== undefined && patch.boundPose !== group.boundPose){
+      // Every pose always belongs to exactly one group -- picking a pose
+      // another group already owns swaps the two, mirroring
+      // CommandRepository.updateQuickActionGroup rather than leaving two
+      // groups pointing at the same pose.
+      var other = config.groups.filter(function(g){ return g.groupIndex !== groupIndex && g.boundPose === patch.boundPose; })[0];
+      if(other) other.boundPose = group.boundPose;
+      group.boundPose = patch.boundPose;
+    }
+    setQuickActionsConfig(deckId, config);
+  }
+
   // ---------- deck CRUD (mirrors CommandRepository's deck management) ----------
   function getCustomDecks(){ return readJSON(DECKS_KEY, []); }
   function saveCustomDecks(list){ writeJSON(DECKS_KEY, list); }
@@ -1628,6 +1908,17 @@
     return null;
   }
   function getAllDecks(){ return [getDeckMeta(DEFAULT_DECK_ID)].concat(getCustomDecks()); }
+  function getDeckColorHex(deckId){
+    var meta = getDeckMeta(deckId);
+    return DECK_COLORS[meta ? meta.colorIndex : 0] || DECK_COLORS[0];
+  }
+  // The stored type is the raw enum value (e.g. "QUICK_ACTIONS", matching
+  // CreateDeckDialog.kt); everywhere a deck's type is shown to the user it
+  // should read its DECK_TYPES label ("QUICK ACTIONS") instead.
+  function deckTypeLabel(type){
+    var dt = DECK_TYPES.filter(function(t){ return t.type === type; })[0];
+    return dt ? dt.label : type;
+  }
 
   function getActiveDeckId(){
     var id = readStr(ACTIVE_DECK_KEY, DEFAULT_DECK_ID);
@@ -1664,9 +1955,9 @@
     if(deckId === DEFAULT_DECK_ID) return false;
     saveCustomDecks(getCustomDecks().filter(function(d){ return d.id !== deckId; }));
 
-    // Remove every phrase/vars/root/collapsed key this deck owns.
+    // Remove every phrase/vars/root/collapsed/qa key this deck owns.
     try{
-      var types = ['phrase_', 'vars_', 'root_', 'collapsed_'];
+      var types = ['phrase_', 'vars_', 'root_', 'collapsed_', 'qa_'];
       var toRemove = [];
       for(var i=0;i<localStorage.length;i++){
         var key = localStorage.key(i);
@@ -1743,11 +2034,32 @@
   // ---------- rendering ----------
   var mtxState = { deckId: DEFAULT_DECK_ID, profile: 'DEFAULT' };
 
+  var MTX_INTRO = 'Simulating the <strong>MATRIX</strong> deck: 3 fixed root poses (IDENTITY / ' +
+    'DEFEND / CONNECT) &times; 4 phrases each, across the app\'s 5 fixed profiles. Voice output isn\'t ' +
+    'simulated &mdash; PLAY shows the same full-screen visual prompt the app displays, without audio.';
+  var QA_INTRO = 'Simulating a <strong>QUICK ACTIONS</strong> deck: 3 groups &times; 4 fixed slots each, ' +
+    'each group bound to one watch pose and one A/B/C root-override bank independently. No profiles here ' +
+    '&mdash; a Quick Actions deck holds exactly one configuration. Voice output isn\'t simulated &mdash; ' +
+    'PLAY shows the same full-screen visual prompt the app displays, without audio.';
+
+  function updateIntroNote(deck){
+    var note = document.getElementById('mtxIntroNote');
+    if(!note) return;
+    note.innerHTML = (deck && deck.type === 'QUICK_ACTIONS') ? QA_INTRO : MTX_INTRO;
+  }
+
   function mtxRenderEditor(focusKey){
     var root = document.getElementById('matrixEditorRoot');
     if(!root) return;
-    root.innerHTML = '';
+    var deck = getDeckMeta(mtxState.deckId);
+    updateIntroNote(deck);
 
+    if(deck && deck.type === 'QUICK_ACTIONS'){
+      renderQuickActionsEditor(root, mtxState.deckId, focusKey);
+      return;
+    }
+
+    root.innerHTML = '';
     POSES.forEach(function(category){
       root.appendChild(renderPose(category, mtxState.deckId, mtxState.profile));
     });
@@ -1917,6 +2229,131 @@
     return row;
   }
 
+  // ---------- Quick Actions editor (mirrors QuickActionsDeck.kt's layout:
+  // a title + interaction hint, a G1/G2/G3 group-tab row, the active
+  // group's pose/root-source header, then its 4 slots as standalone action
+  // cards -- the shared root-override strip and the play button are kept
+  // even though the app's own screen has neither, since they're this
+  // simulator's own affordances for a mouse/keyboard/tap audience) ----------
+  var qaSelectedGroupIndex = {}; // deckId -> tab index, in-memory only (resets to Group 1 on reload)
+
+  function renderQuickActionsEditor(root, deckId, focusKey){
+    root.innerHTML = '';
+    var config = getQuickActionsConfig(deckId);
+    var activeIndex = qaSelectedGroupIndex[deckId] || 0;
+    if(activeIndex >= config.groups.length) activeIndex = 0;
+    var activeGroup = config.groups[activeIndex];
+
+    var heading = el('div', 'mtx-qa-heading');
+    heading.appendChild(el('h3', null, 'QUICK ACTIONS'));
+    heading.appendChild(el('p', 'mtx-qa-hint', 'CLICK: EDIT  //  ▶: EXECUTE'));
+    root.appendChild(heading);
+
+    var tabRow = el('div', 'mtx-qa-group-tabs');
+    config.groups.forEach(function(group, idx){
+      var tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'mtx-qa-group-tab' + (idx === activeIndex ? ' is-active' : '');
+      tab.setAttribute('aria-pressed', String(idx === activeIndex));
+      tab.setAttribute('aria-label', 'Group ' + (idx + 1) + ', bound to ' + group.boundPose);
+      tab.setAttribute('data-focus-key', 'qa-tab-' + idx);
+      tab.appendChild(el('b', null, 'G' + (idx + 1)));
+      tab.appendChild(el('span', null, group.boundPose.slice(0, 3)));
+      tab.addEventListener('click', function(){
+        qaSelectedGroupIndex[deckId] = idx;
+        mtxRenderEditor('qa-tab-' + idx);
+      });
+      tabRow.appendChild(tab);
+    });
+    root.appendChild(tabRow);
+
+    root.appendChild(renderQaGroupHead(activeGroup, deckId));
+    root.appendChild(renderRootStrip(activeGroup.rootCategory, deckId));
+
+    var list = el('div', 'mtx-qa-action-list');
+    activeGroup.slots.forEach(function(slot){
+      list.appendChild(renderQaActionCard(slot, activeGroup, deckId));
+    });
+    root.appendChild(list);
+
+    if(focusKey){
+      var target = root.querySelector('[data-focus-key="' + focusKey + '"]');
+      if(target) target.focus();
+    }
+  }
+
+  function renderQaGroupHead(group, deckId){
+    var box = el('div', 'mtx-qa-group-head');
+
+    var info = el('div');
+    info.appendChild(el('span', 'mtx-qa-group-title', group.label));
+    info.appendChild(el('span', 'mtx-qa-group-meta', 'POSE: ' + group.boundPose + '  //  ROOT: ' + group.rootCategory));
+    box.appendChild(info);
+
+    var editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'mtx-root-edit';
+    editBtn.textContent = 'EDIT';
+    editBtn.addEventListener('click', function(){ openQaGroupDialog(deckId, group.groupIndex); });
+    box.appendChild(editBtn);
+
+    return box;
+  }
+
+  function renderQaActionCard(slot, group, deckId){
+    var card = el('div', 'mtx-qa-action panel');
+
+    var body = document.createElement('button');
+    body.type = 'button';
+    body.className = 'mtx-qa-action-body';
+    body.setAttribute('data-focus-key', 'qa-slot-body-' + group.groupIndex + '-' + slot.slotIndex);
+
+    var resolved = resolveQuickAction(deckId, group.groupIndex, slot.slotIndex);
+    var variableCount = countVariables(slot.template);
+
+    body.appendChild(el('span', 'mtx-qa-action-label', slot.label));
+    body.appendChild(el(
+      'span',
+      'mtx-qa-action-phrase' + (resolved.trim() ? '' : ' is-empty'),
+      resolved.trim() ? resolved : '[CLICK TO CONFIGURE]'
+    ));
+
+    if(variableCount > 0){
+      var varRow = el('div', 'mtx-var-row');
+      for(var i=0;i<variableCount;i++){
+        (function(index){
+          var val = slot.localValues[index] || '';
+          var chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'mtx-var-chip';
+          chip.textContent = 'V' + (index+1) + ': ' + (val || 'EMPTY');
+          chip.addEventListener('click', function(e){
+            e.stopPropagation();
+            openQaVarQuickDialog(deckId, group.groupIndex, slot.slotIndex, index);
+          });
+          varRow.appendChild(chip);
+        })(i);
+      }
+      body.appendChild(varRow);
+    }
+
+    body.addEventListener('click', function(){ openQaSlotDialog(deckId, group.groupIndex, slot.slotIndex); });
+    card.appendChild(body);
+
+    var playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'mtx-play-btn';
+    playBtn.setAttribute('aria-label', 'Play ' + slot.label + ', ' + group.label);
+    playBtn.textContent = '▶';
+    playBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      playQuickAction(deckId, group.groupIndex, slot.slotIndex);
+    });
+    card.appendChild(playBtn);
+
+    return card;
+  }
+
   // ---------- playback overlay ----------
   var overlayEl, overlayRotorEl, overlayTextEl, replayChipEl;
   var overlayTimeout = null;
@@ -2009,6 +2446,13 @@
     if(!resolved.trim()) return;
     var displayText = resolveDisplayPrompt(resolved);
     showOverlay(displayText, function(){ playNode(node, deckId, profile); });
+  }
+
+  function playQuickAction(deckId, groupIndex, slotIndex){
+    var resolved = resolveQuickAction(deckId, groupIndex, slotIndex);
+    if(!resolved.trim()) return;
+    var displayText = resolveDisplayPrompt(resolved);
+    showOverlay(displayText, function(){ playQuickAction(deckId, groupIndex, slotIndex); });
   }
 
   // ---------- LIVE-SAVE EDITOR dialog ----------
@@ -2123,6 +2567,133 @@
     document.getElementById('mtxClearDialog').showModal();
   }
 
+  // ---------- Quick Actions slot editor (LIVE-SAVE EDITOR, mirrors the
+  // Matrix node dialog above but addresses a group+slot pair in a single
+  // JSON blob instead of a discrete localStorage key per node) ----------
+  var qaSlotDialogState = null;
+
+  function renderQaVarFields(deckId, groupIndex, slotIndex, template){
+    var container = document.getElementById('mtxQaVarFields');
+    container.innerHTML = '';
+    var count = countVariables(template);
+    if(count === 0) return;
+
+    var tags = getVariableTags(template);
+    var values = getQuickActionsConfig(deckId).groups[groupIndex].slots[slotIndex].localValues;
+
+    var header = el('p', null, 'LOCAL VARIABLE DATA');
+    header.style.cssText = 'color:var(--var-accent); font-family:var(--font-mono); font-size:0.72rem; font-weight:700; margin:1rem 0 0.2rem;';
+    container.appendChild(header);
+
+    var hint = el('p', null, 'Saved immediately. Tagged A/B/C values can be replaced by an enabled root override.');
+    hint.style.cssText = 'color:var(--text-faint); font-family:var(--font-mono); font-size:0.65rem; margin:0 0 0.4rem;';
+    container.appendChild(hint);
+
+    for(var i=0;i<count;i++){
+      (function(index){
+        var tag = tags[index];
+        var field = el('div', 'mtx-var-field');
+        var label = document.createElement('label');
+        label.textContent = tag ? ('VARIABLE ' + (index+1) + ' // ROOT ' + tag) : ('VARIABLE ' + (index+1));
+        field.appendChild(label);
+
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.placeholder = 'ENTER LOCAL FALLBACK...';
+        inp.value = values[index] || '';
+        inp.addEventListener('input', function(){
+          var current = getQuickActionsConfig(deckId).groups[groupIndex].slots[slotIndex].localValues.slice();
+          while(current.length <= index) current.push('');
+          current[index] = inp.value;
+          updateQuickActionSlot(deckId, groupIndex, slotIndex, { localValues: current });
+          mtxRenderEditor();
+        });
+        field.appendChild(inp);
+        container.appendChild(field);
+      })(i);
+    }
+  }
+
+  function updateQaTemplate(deckId, groupIndex, slotIndex, newTemplate){
+    var slot = getQuickActionsConfig(deckId).groups[groupIndex].slots[slotIndex];
+    var newCount = countVariables(newTemplate);
+    var current = slot.localValues.slice();
+    while(current.length > newCount) current.pop();
+    while(current.length < newCount) current.push('');
+    updateQuickActionSlot(deckId, groupIndex, slotIndex, { template: newTemplate, localValues: current });
+    renderQaVarFields(deckId, groupIndex, slotIndex, newTemplate);
+    mtxRenderEditor();
+  }
+
+  function openQaSlotDialog(deckId, groupIndex, slotIndex){
+    qaSlotDialogState = { deckId: deckId, groupIndex: groupIndex, slotIndex: slotIndex };
+    var group = getQuickActionsConfig(deckId).groups[groupIndex];
+    var slot = group.slots[slotIndex];
+    document.getElementById('mtxQaSlotTitle').textContent = group.label + ' — ' + slot.label;
+
+    document.getElementById('mtxQaLabelInput').value = slot.label;
+
+    var input = document.getElementById('mtxQaTemplateInput');
+    input.value = slot.template;
+
+    renderQaVarFields(deckId, groupIndex, slotIndex, slot.template);
+
+    document.getElementById('mtxQaSlotDialog').showModal();
+    input.focus();
+  }
+
+  // ---------- Quick Actions variable quick-edit dialog ----------
+  var qaVarQuickState = null;
+
+  function openQaVarQuickDialog(deckId, groupIndex, slotIndex, index){
+    qaVarQuickState = { deckId: deckId, groupIndex: groupIndex, slotIndex: slotIndex, index: index };
+    var group = getQuickActionsConfig(deckId).groups[groupIndex];
+    var slot = group.slots[slotIndex];
+    document.getElementById('mtxQaVarQuickTitle').textContent = slot.label + ' // VAR ' + (index+1);
+    var input = document.getElementById('mtxQaVarQuickInput');
+    input.value = slot.localValues[index] || '';
+    document.getElementById('mtxQaVarQuickDialog').showModal();
+    input.focus();
+  }
+
+  // ---------- Quick Actions clear-confirm dialog ----------
+  var qaClearMode = null;
+
+  function openQaClearDialog(mode){
+    qaClearMode = mode;
+    document.getElementById('mtxQaClearText').textContent = CLEAR_COPY[mode];
+    document.getElementById('mtxQaClearDialog').showModal();
+  }
+
+  // ---------- Quick Actions group editor (label + WATCH POSE + ROOT
+  // OVERRIDE SOURCE) -- an explicit-save dialog like Create/Edit Deck,
+  // not a live-save one: nothing changes until SAVE is pressed. ----------
+  var qaGroupDialogState = null; // { deckId, groupIndex }
+  var selectedQaPose = 'IDENTITY';
+  var selectedQaRoot = 'IDENTITY';
+
+  function syncQaPickerButtons(containerId, selectedValue, attr){
+    document.querySelectorAll('#' + containerId + ' .opt-btn').forEach(function(btn){
+      btn.setAttribute('aria-pressed', String(btn.getAttribute(attr) === selectedValue));
+    });
+  }
+
+  function openQaGroupDialog(deckId, groupIndex){
+    qaGroupDialogState = { deckId: deckId, groupIndex: groupIndex };
+    var group = getQuickActionsConfig(deckId).groups[groupIndex];
+
+    document.getElementById('mtxQaGroupTitle').textContent = 'Edit ' + group.label;
+    document.getElementById('mtxQaGroupLabelInput').value = group.label;
+
+    selectedQaPose = group.boundPose;
+    selectedQaRoot = group.rootCategory;
+    syncQaPickerButtons('mtxQaGroupPoseGroup', selectedQaPose, 'data-pose');
+    syncQaPickerButtons('mtxQaGroupRootGroup', selectedQaRoot, 'data-root');
+
+    document.getElementById('mtxQaGroupDialog').showModal();
+    document.getElementById('mtxQaGroupLabelInput').focus();
+  }
+
   // ---------- DECK:/PROFILE: dropdown data (consumed by selectTab/applyDeckSelection) ----------
   function mtxGetDeckDropdownData(){
     var decks = getAllDecks();
@@ -2130,7 +2701,7 @@
     var options = decks.map(function(d){
       return [
         d.id,
-        d.name + ' // ' + d.type,
+        d.name + ' // ' + deckTypeLabel(d.type),
         { colorHex: DECK_COLORS[d.colorIndex] || DECK_COLORS[0], active: d.id === activeId }
       ];
     });
@@ -2158,6 +2729,29 @@
     mtxState.deckId = deckId;
     setActiveDeckIdStorage(deckId);
     mtxRenderEditor();
+    // The active deck's own color IS the interface accent while in the
+    // Simulator -- same quick-glance-context purpose it serves in the real
+    // app. applyAccent/userAccentHex are defined further down (shared with
+    // the Settings accent picker); selectTab restores userAccentHex on the
+    // way out of this tab.
+    applyAccent(getDeckColorHex(deckId));
+    mtxSyncProfileRow(deckId);
+  }
+
+  // Profiles are MATRIX-only, exactly like the app: it never even renders a
+  // profile picker while a Quick Actions deck is active. Centralized here so
+  // every mtxSetDeck call site (dropdown change, tab activation, deck
+  // create/delete) gets this for free instead of duplicating it.
+  function mtxSyncProfileRow(deckId){
+    var deck = getDeckMeta(deckId);
+    if(deck && deck.type === 'QUICK_ACTIONS'){
+      profileRow.hidden = true;
+      return;
+    }
+    var profileData = mtxGetProfileDropdownData();
+    profileRow.hidden = false;
+    profileLabel.textContent = 'PROFILE:';
+    profileDD.setOptions(profileData.options, profileData.activeId);
   }
 
   function mtxSetProfile(profile){
@@ -2172,11 +2766,6 @@
     var deckData = mtxGetDeckDropdownData();
     ctxDD.setOptions(deckData.options, deckData.activeId, deckData.actions);
     mtxSetDeck(deckData.activeId);
-
-    var profileData = mtxGetProfileDropdownData();
-    profileRow.hidden = false;
-    profileLabel.textContent = 'PROFILE:';
-    profileDD.setOptions(profileData.options, profileData.activeId);
   }
 
   // ---------- Create/Edit Deck dialog ----------
@@ -2272,7 +2861,7 @@
       var row = el('div', 'mtx-deck-row');
       row.style.borderColor = 'color-mix(in srgb, ' + hex + ' 55%, var(--border))';
 
-      var nameEl = el('span', 'mtx-deck-name', deck.name + ' // ' + deck.type);
+      var nameEl = el('span', 'mtx-deck-name', deck.name + ' // ' + deckTypeLabel(deck.type));
       nameEl.style.color = hex;
       row.appendChild(nameEl);
 
@@ -2310,8 +2899,8 @@
     if(!deck) return;
     deckDeleteTargetId = deckId;
     document.getElementById('mtxDeckDeleteText').textContent =
-      'Permanently remove "' + deck.name + ' // ' + deck.type + '"? Every prompt, variable, and root ' +
-      'override saved under it will be deleted. This cannot be undone.';
+      'Permanently remove "' + deck.name + ' // ' + deckTypeLabel(deck.type) + '"? Every prompt, variable, ' +
+      'and root override saved under it will be deleted. This cannot be undone.';
     document.getElementById('mtxDeckDeleteDialog').showModal();
   }
 
@@ -2338,7 +2927,8 @@
   function mtxInit(){
     [
       'mtxNodeDialog','mtxVarQuickDialog','mtxRootDialog','mtxClearDialog','mtxResetDialog',
-      'mtxDeckFormDialog','mtxManageDecksDialog','mtxDeckDeleteDialog'
+      'mtxDeckFormDialog','mtxManageDecksDialog','mtxDeckDeleteDialog',
+      'mtxQaSlotDialog','mtxQaVarQuickDialog','mtxQaClearDialog','mtxQaGroupDialog'
     ].forEach(wireSimpleDialog);
 
     document.getElementById('mtxTemplateInput').addEventListener('input', function(){
@@ -2361,6 +2951,99 @@
       if(!nodeDialogState) return;
       updateTemplate(nodeDialogState.node, nodeDialogState.deckId, nodeDialogState.profile, document.getElementById('mtxTemplateInput').value);
       document.getElementById('mtxNodeDialog').close();
+    });
+
+    document.getElementById('mtxQaLabelInput').addEventListener('input', function(){
+      if(!qaSlotDialogState) return;
+      updateQuickActionSlot(qaSlotDialogState.deckId, qaSlotDialogState.groupIndex, qaSlotDialogState.slotIndex, { label: this.value });
+      mtxRenderEditor();
+    });
+
+    document.getElementById('mtxQaTemplateInput').addEventListener('input', function(){
+      if(!qaSlotDialogState) return;
+      updateQaTemplate(qaSlotDialogState.deckId, qaSlotDialogState.groupIndex, qaSlotDialogState.slotIndex, this.value);
+    });
+
+    document.querySelectorAll('#mtxQaSlotDialog [data-insert-token]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(!qaSlotDialogState) return;
+        var input = document.getElementById('mtxQaTemplateInput');
+        var token = btn.getAttribute('data-insert-token');
+        input.value = (input.value ? input.value + ' ' : '') + token;
+        updateQaTemplate(qaSlotDialogState.deckId, qaSlotDialogState.groupIndex, qaSlotDialogState.slotIndex, input.value);
+        input.focus();
+      });
+    });
+
+    document.getElementById('mtxQaCommit').addEventListener('click', function(){
+      if(!qaSlotDialogState) return;
+      updateQaTemplate(qaSlotDialogState.deckId, qaSlotDialogState.groupIndex, qaSlotDialogState.slotIndex, document.getElementById('mtxQaTemplateInput').value);
+      document.getElementById('mtxQaSlotDialog').close();
+    });
+
+    document.getElementById('mtxQaClearVars').addEventListener('click', function(){ openQaClearDialog('VARS'); });
+    document.getElementById('mtxQaClearPrompt').addEventListener('click', function(){ openQaClearDialog('PROMPT'); });
+    document.getElementById('mtxQaClearAll').addEventListener('click', function(){ openQaClearDialog('ALL'); });
+
+    document.getElementById('mtxQaClearConfirm').addEventListener('click', function(){
+      if(!qaSlotDialogState || !qaClearMode) return;
+      var deckId = qaSlotDialogState.deckId, groupIndex = qaSlotDialogState.groupIndex, slotIndex = qaSlotDialogState.slotIndex;
+      var slot = getQuickActionsConfig(deckId).groups[groupIndex].slots[slotIndex];
+
+      if(qaClearMode === 'VARS'){
+        var vals = slot.localValues.slice();
+        for(var i=0;i<vals.length;i++) vals[i] = '';
+        updateQuickActionSlot(deckId, groupIndex, slotIndex, { localValues: vals });
+      } else if(qaClearMode === 'PROMPT'){
+        updateQuickActionSlot(deckId, groupIndex, slotIndex, { template: '' });
+      } else if(qaClearMode === 'ALL'){
+        updateQuickActionSlot(deckId, groupIndex, slotIndex, { template: '', localValues: [] });
+      }
+
+      document.getElementById('mtxQaClearDialog').close();
+      qaClearMode = null;
+
+      var template = getQuickActionsConfig(deckId).groups[groupIndex].slots[slotIndex].template;
+      document.getElementById('mtxQaTemplateInput').value = template;
+      renderQaVarFields(deckId, groupIndex, slotIndex, template);
+      mtxRenderEditor();
+    });
+
+    document.getElementById('mtxQaVarQuickSave').addEventListener('click', function(){
+      if(!qaVarQuickState) return;
+      var deckId = qaVarQuickState.deckId, groupIndex = qaVarQuickState.groupIndex, slotIndex = qaVarQuickState.slotIndex, index = qaVarQuickState.index;
+      var values = getQuickActionsConfig(deckId).groups[groupIndex].slots[slotIndex].localValues.slice();
+      while(values.length <= index) values.push('');
+      values[index] = document.getElementById('mtxQaVarQuickInput').value;
+      updateQuickActionSlot(deckId, groupIndex, slotIndex, { localValues: values });
+      document.getElementById('mtxQaVarQuickDialog').close();
+      mtxRenderEditor('qa-slot-body-' + groupIndex + '-' + slotIndex);
+    });
+
+    document.querySelectorAll('#mtxQaGroupPoseGroup .opt-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        selectedQaPose = btn.getAttribute('data-pose');
+        syncQaPickerButtons('mtxQaGroupPoseGroup', selectedQaPose, 'data-pose');
+      });
+    });
+    document.querySelectorAll('#mtxQaGroupRootGroup .opt-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        selectedQaRoot = btn.getAttribute('data-root');
+        syncQaPickerButtons('mtxQaGroupRootGroup', selectedQaRoot, 'data-root');
+      });
+    });
+
+    document.getElementById('mtxQaGroupSave').addEventListener('click', function(){
+      if(!qaGroupDialogState) return;
+      var name = document.getElementById('mtxQaGroupLabelInput').value;
+      updateQuickActionGroup(qaGroupDialogState.deckId, qaGroupDialogState.groupIndex, {
+        label: (name || '').trim().toUpperCase().slice(0, 40) || 'UNTITLED GROUP',
+        boundPose: selectedQaPose,
+        rootCategory: selectedQaRoot
+      });
+      document.getElementById('mtxQaGroupDialog').close();
+      qaGroupDialogState = null;
+      mtxRenderEditor();
     });
 
     document.getElementById('mtxClearVars').addEventListener('click', function(){ openClearDialog('VARS'); });
@@ -2438,6 +3121,11 @@
         mtxSetDeck(deck.id);
       } else {
         updateDeckRecord(deckFormState.deckId, name, selectedDeckColorIndex);
+        // Recoloring the deck you're currently looking at should be visible
+        // immediately, not just after reselecting it.
+        if(deckFormState.deckId === mtxState.deckId){
+          applyAccent(getDeckColorHex(deckFormState.deckId));
+        }
       }
 
       mtxRefreshDeckDropdown();
@@ -2477,6 +3165,13 @@
   var ctxLabel = document.getElementById('ctxLabel');
   var profileRow = document.getElementById('profileRow');
   var profileLabel = document.getElementById('profileLabel');
+
+  // The user's own Settings accent pick, tracked separately from whatever
+  // color is currently painted on screen -- the Simulator temporarily
+  // overrides the live --accent with the active deck's own color (see
+  // mtxSetDeck), and selectTab restores this the moment you leave that tab.
+  var userAccentHex = '#00F3FF';
+  function applyAccent(hex){ document.documentElement.style.setProperty('--accent', hex); }
 
   function tabKey(panelId){ return panelId.replace('panel-',''); }
 
@@ -2646,10 +3341,6 @@
     // Matrix Simulator code instead of the generic pane logic below.
     if(panelId === 'panel-sim'){
       mtxSetDeck(deckKey);
-      var profileData = mtxGetProfileDropdownData();
-      profileRow.hidden = false;
-      profileLabel.textContent = 'PROFILE:';
-      profileDD.setOptions(profileData.options, profileData.activeId);
       return;
     }
 
@@ -2693,6 +3384,10 @@
       profileRow.hidden = true;
     }
 
+    // Leaving the Simulator drops its deck-driven accent override; every
+    // other tab uses whatever the user picked (or the default) in Settings.
+    if(key !== 'sim') applyAccent(userAccentHex);
+
     if(history.replaceState) history.replaceState(null, '', '#' + key);
   }
 
@@ -2732,7 +3427,8 @@
   var swatches = Array.prototype.slice.call(document.querySelectorAll('.swatch'));
   swatches.forEach(function(sw){
     sw.addEventListener('click', function(){
-      document.documentElement.style.setProperty('--accent', sw.getAttribute('data-hex'));
+      userAccentHex = sw.getAttribute('data-hex');
+      applyAccent(userAccentHex);
       swatches.forEach(function(o){ o.setAttribute('aria-pressed', String(o === sw)); });
     });
   });
