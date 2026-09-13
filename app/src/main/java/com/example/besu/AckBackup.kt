@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class AckBackup(
-    val version: Int = 4,
+    val version: Int = 5,
     val timestamp: Long = System.currentTimeMillis(),
     val dsp: DspConfig,
     val matrixData: Map<String, String>,
@@ -37,6 +37,10 @@ data class AckBackup(
     // Existing optional systems.
     val targets: List<TargetSlot> = emptyList(),
     val syntaxRules: Map<String, String> = emptyMap(),
+
+    // Targeting Computer category tree. Self-contained (each tree nests
+    // inside its own category), unlike targets/syntaxRules above.
+    val computerCategories: List<ComputerCategory> = emptyList(),
 
     // Header macro buttons, if your current build uses them.
     val headerShortcuts: List<CommandRepository.HeaderShortcut> = emptyList()

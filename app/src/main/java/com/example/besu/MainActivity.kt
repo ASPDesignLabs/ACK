@@ -220,6 +220,9 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
     var showCreateDeckDialog by remember {
         mutableStateOf(false)
     }
+    var showComputerSummary by remember {
+        mutableStateOf(false)
+    }
     val recentPhrases = remember { mutableStateListOf<String>() }
     val helpManager = remember {
         HelpManager(HelpRegistry.modules)
@@ -721,6 +724,34 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                                             fontFamily = FontFamily.Monospace
                                         )
                                     }
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                val computerActiveCount = ComputerRepository.getCategories(context)
+                                    .count { it.activeNodeId != null }
+
+                                Row(
+                                    modifier = Modifier
+                                        .testTag(AckTags.COMPUTER_STATUS_INDICATOR)
+                                        .helpTarget(AckTags.COMPUTER_STATUS_INDICATOR, primaryColor)
+                                        .clickable { showComputerSummary = true },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "COMPUTER: ",
+                                        color = Color.Gray,
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+
+                                    Text(
+                                        text = if (computerActiveCount > 0) "$computerActiveCount ACTIVE" else "OFF",
+                                        color = if (computerActiveCount > 0) primaryColor else Color.Gray,
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
 
@@ -1435,6 +1466,14 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
                         } else {
                             showDeleteDeckConfirm = false
                         }
+                    }
+
+                    if (showComputerSummary) {
+                        ComputerSummaryDialog(
+                            context = context,
+                            primaryColor = primaryColor,
+                            onDismiss = { showComputerSummary = false }
+                        )
                     }
 
                     if (showCreateDeckDialog) {

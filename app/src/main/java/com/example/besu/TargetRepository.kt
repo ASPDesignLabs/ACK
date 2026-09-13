@@ -133,8 +133,20 @@ object TargetRepository {
         } else {
             map[path] = strategy
         }
-        
+
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_SYNTAX, json.encodeToString(map)).apply()
+    }
+
+    // Restore-only: replaces both the saved target slots and their syntax
+    // rules wholesale from a backup, mirroring how RootOverrideRepository
+    // and other repositories expose their own restore entry point rather
+    // than TransferManager reaching into this file's storage keys directly.
+    fun restoreTargets(context: Context, targets: List<TargetSlot>, syntaxRules: Map<String, String>) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_TARGETS, json.encodeToString(targets))
+            .putString(KEY_SYNTAX, json.encodeToString(syntaxRules))
+            .apply()
     }
 }

@@ -1105,7 +1105,8 @@ object CommandRepository {
     // --- SIGNAL RESOLUTION ---
     fun resolveSignalToPhrase(
         context: Context,
-        signalPath: String
+        signalPath: String,
+        consumeSingleUse: Boolean = false
     ): String {
         val deckType = getDeckType(context)
 
@@ -1138,7 +1139,7 @@ object CommandRepository {
         }
 
         if (focusedNode != null) {
-            return getResolvedPhrase(context, focusedNode.path)
+            return getResolvedPhrase(context, focusedNode.path, consumeSingleUse = consumeSingleUse)
         }
 
         // 2. DEFEND and CONNECT remain globally available.
@@ -1148,7 +1149,7 @@ object CommandRepository {
         }
 
         if (fixedNode != null) {
-            return getResolvedPhrase(context, fixedNode.path)
+            return getResolvedPhrase(context, fixedNode.path, consumeSingleUse = consumeSingleUse)
         }
 
         // 3. Last fallback is the default identity mapping.
@@ -1158,7 +1159,7 @@ object CommandRepository {
         }
 
         return identityNode?.let { node ->
-            getResolvedPhrase(context, node.path)
+            getResolvedPhrase(context, node.path, consumeSingleUse = consumeSingleUse)
         }.orEmpty()
     }
 
@@ -1256,6 +1257,40 @@ object CommandRepository {
         prefs.edit().putString(key, Json.encodeToString(values)).apply()
     }
 
+    // --- TARGET COMPUTER TAG FALLBACKS ---
+    // Per-occurrence local fallback text for [COMPUTER:X] tags, storage-shaped
+    // identically to _vars above. Rides into TransferManager's sparse backup
+    // dump automatically like _vars/_visual already do -- it's just another
+    // String-valued key in this same prefs file, not on TransferManager's
+    // exclusion list.
+    fun getComputerFallbackValues(
+        context: Context,
+        storagePath: String,
+        deckId: String = getActiveDeckId(context),
+        profile: String = getActiveProfile(context)
+    ): List<String> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val key = generateStorageKey(deckId, profile, storagePath) + "_computer_vars"
+        val raw = prefs.getString(key, "[]") ?: "[]"
+        return try { Json.decodeFromString(raw) } catch(e: Exception) { emptyList() }
+    }
+
+    fun setComputerFallbackValues(context: Context, storagePath: String, values: List<String>) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val key = generateStorageKey(getActiveDeckId(context), getActiveProfile(context), storagePath) + "_computer_vars"
+        prefs.edit().putString(key, Json.encodeToString(values)).apply()
+    }
+
+    // Read-only: resolves each distinct [COMPUTER:X] tag in a template to
+    // its category's current active label, keyed by category id. Never
+    // touches single-use state -- see getResolvedPhrase's consumeSingleUse
+    // param for why that's a separate, explicit step.
+    private fun computerActiveValuesFor(context: Context, template: String): Map<String, String> {
+        return TemplateEngine.getComputerTags(template).distinct().associateWith { categoryId ->
+            ComputerRepository.resolveTag(context, categoryId)
+        }
+    }
+
     fun debugResolvedPhrase(
         context: Context,
         storagePath: String
@@ -1264,6 +1299,7 @@ object CommandRepository {
 
         val template = getPhrase(context, storagePath)
         val localValues = getVariableValues(context, storagePath)
+        val computerFallbacks = getComputerFallbackValues(context, storagePath)
 
         val category = cachedNodes
             .find { node ->
@@ -1308,16 +1344,29 @@ object CommandRepository {
             "$token=$source[${resolvedValue.ifBlank { "EMPTY" }}]"
         }
 
+        val computerTagsInOrder = TemplateEngine.getComputerTags(template)
+        val computerActiveValues = computerActiveValuesFor(context, template)
+
+        val computerTrace = computerTagsInOrder.mapIndexed { index, categoryId ->
+            val activeValue = computerActiveValues[categoryId].orEmpty()
+            val usesActive = activeValue.isNotBlank()
+            val fallback = computerFallbacks.getOrNull(index).orEmpty()
+            val source = if (usesActive) "ACTIVE" else "FALLBACK"
+            val resolvedValue = if (usesActive) activeValue else fallback
+
+            "[COMPUTER:$categoryId]=$source[${resolvedValue.ifBlank { "EMPTY" }}]"
+        }
+
         val resolved = TemplateEngine.resolve(
             template = template,
             localValues = localValues,
-            overrides = rootConfig.slots
+            overrides = rootConfig.slots,
+            computerFallbacks = computerFallbacks,
+            computerActiveValues = computerActiveValues
         )
 
-        val trace = if (variableTrace.isEmpty()) {
-            "NO VARIABLES"
-        } else {
-            variableTrace.joinToString(separator = " | ")
+        val trace = (variableTrace + computerTrace).let { combined ->
+            if (combined.isEmpty()) "NO VARIABLES" else combined.joinToString(separator = " | ")
         }
 
         return "RESOLVE ${category}/${storagePath} :: $trace :: OUT=$resolved"
@@ -1327,12 +1376,20 @@ object CommandRepository {
         context: Context,
         storagePath: String,
         deckId: String = getActiveDeckId(context),
-        profile: String = getActiveProfile(context)
+        profile: String = getActiveProfile(context),
+        // Single-use [COMPUTER:X] categories only clear once a phrase is
+        // actually committed to output. getMatrix() below calls this for
+        // every row's preview text on every recompose, and the Deck Trainer
+        // game calls it to show what a phrase WOULD say -- neither is real
+        // output, so this defaults to false and only genuine dispatch paths
+        // (the Matrix "PLAY" button, the watch gesture trigger) pass true.
+        consumeSingleUse: Boolean = false
     ): String {
         refreshCache(context)
 
         val template = getPhrase(context, storagePath, deckId, profile)
         val localValues = getVariableValues(context, storagePath, deckId, profile)
+        val computerFallbacks = getComputerFallbackValues(context, storagePath, deckId, profile)
 
         val category = cachedNodes
             .find { node ->
@@ -1346,11 +1403,24 @@ object CommandRepository {
             category = category
         )
 
-        return TemplateEngine.resolve(
+        val computerTags = TemplateEngine.getComputerTags(template).distinct()
+        val computerActiveValues = computerActiveValuesFor(context, template)
+
+        val resolved = TemplateEngine.resolve(
             template = template,
             localValues = localValues,
-            overrides = rootConfig.slots
+            overrides = rootConfig.slots,
+            computerFallbacks = computerFallbacks,
+            computerActiveValues = computerActiveValues
         )
+
+        if (consumeSingleUse) {
+            computerTags.forEach { categoryId ->
+                ComputerRepository.consumeIfSingleUse(context, categoryId)
+            }
+        }
+
+        return resolved
     }
 
     // Header Shortcut Handlers

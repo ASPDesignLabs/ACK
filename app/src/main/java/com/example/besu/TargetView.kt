@@ -1,14 +1,15 @@
 package com.example.besu
 
 import android.content.Context
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,203 +19,292 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.besu.ui.theme.Graphite
-import com.example.besu.ui.theme.NeonPalette
 import com.example.besu.ui.theme.VoidBlack
 
+private val DangerRed = Color(0xFFFF0055)
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TargetView(context: Context, primaryColor: Color) {
-    var subMode by remember { mutableStateOf("SLOTS") } // SLOTS, TRAINING, VISUALS
+    var subMode by remember { mutableStateOf("CATEGORIES") } // CATEGORIES, VISUALS
 
     val helpManager = LocalHelpManager.current
 
     fun reportHelpInteraction(tag: String) {
-        helpManager?.onEvent(
-            HelpEvent.Interacted(tag)
-        )
+        helpManager?.onEvent(HelpEvent.Interacted(tag))
     }
 
-    fun reportTextCommit(tag: String) {
-        helpManager?.onEvent(
-            HelpEvent.TextCommitted(tag)
-        )
-    }
-
-    // Data States
     var refreshKey by remember { mutableIntStateOf(0) }
-    val targets = remember(refreshKey) { TargetRepository.getTargets(context) }
-    val rules = remember(refreshKey) { TargetRepository.getSyntaxRules(context) }
-    val matrix = remember { CommandRepository.getMatrix(context) }
+    val categories = remember(refreshKey) { ComputerRepository.getCategories(context) }
 
-    // Edit Dialog State
-    var editingSlotIndex by remember { mutableStateOf<Int?>(null) }
+    var showAddCategory by remember { mutableStateOf(false) }
+    var optionsCategory by remember { mutableStateOf<ComputerCategory?>(null) }
+    var openTreeCategoryId by remember { mutableStateOf<String?>(null) }
+    var showMigrationNotice by remember { mutableStateOf(false) }
+    var showWizard by remember { mutableStateOf(false) }
+    var wizardStartCategoryId by remember { mutableStateOf<String?>(null) }
+    var initialized by remember { mutableStateOf(false) }
+
+    fun refresh() {
+        refreshKey++
+    }
+
+    // Runs once per screen visit: seeds the four default categories on a
+    // fresh install, or folds any still-unmigrated legacy TargetSlot data
+    // into a PEOPLE category (auto-backed-up first -- see
+    // ComputerRepository.migrateLegacyTargetsIfNeeded). Either way this is
+    // a no-op once categories already exist.
+    LaunchedEffect(Unit) {
+        if (!initialized) {
+            initialized = true
+            val result = ComputerRepository.ensureInitialized(context)
+            if (result.didMigrate) {
+                showMigrationNotice = true
+            }
+            refresh()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        
+
         // --- HEADER ---
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text("TARGET COMPUTER", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("SLOTS", color = if(subMode=="SLOTS") primaryColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { subMode = "SLOTS" })
+                Text("CATEGORIES", color = if(subMode=="CATEGORIES") primaryColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { subMode = "CATEGORIES" })
                 Text("|", color = Color.DarkGray)
                 Text("VISUALS", color = if(subMode=="VISUALS") primaryColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { subMode = "VISUALS" })
             }
         }
+
+        if (subMode == "CATEGORIES") {
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "[GUIDE ME]",
+                color = primaryColor,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .testTag(AckTags.COMPUTER_GUIDE_ME)
+                    .helpTarget(AckTags.COMPUTER_GUIDE_ME, primaryColor)
+                    .clickable {
+                        wizardStartCategoryId = null
+                        showWizard = true
+                        reportHelpInteraction(AckTags.COMPUTER_GUIDE_ME)
+                    }
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- SUB-MODE: SLOTS ---
-        if (subMode == "SLOTS") {
+        // --- SUB-MODE: CATEGORIES ---
+        if (subMode == "CATEGORIES") {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                // Render 8 Slots (0 to 7)
-                items(8) { index ->
-                    val data = targets.find { it.index == index }
-                    TargetSlotCard(
-                        index = index,
-                        data = data,
+                items(categories, key = { it.id }) { category ->
+                    val activeLabel = category.activeNodeId?.let { ComputerRepository.findNode(category, it)?.label }
+
+                    TargetCategoryChip(
+                        category = category,
+                        activeLabel = activeLabel,
                         primaryColor = primaryColor,
                         modifier = Modifier
                             .testTag(AckTags.TARGET_SLOT)
-                            .helpTarget(AckTags.TARGET_SLOT, primaryColor)
-                    ) {
-                        editingSlotIndex = index
-                        reportHelpInteraction(AckTags.TARGET_SLOT)
-                    }
+                            .helpTarget(AckTags.TARGET_SLOT, primaryColor),
+                        onTap = {
+                            openTreeCategoryId = category.id
+                            reportHelpInteraction(AckTags.TARGET_SLOT)
+                        },
+                        onLongPress = { optionsCategory = category }
+                    )
                 }
-            }
-        }
 
-        // --- SUB-MODE: TRAINING ---
-        if (subMode == "TRAINING") {
-            Text("SYNTAX OVERRIDES", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(matrix) { (node, phrase) ->
-                    val currentRule = rules[node.path] ?: "AUTO"
-                    
-                    TrainingRow(node.label, phrase, currentRule, primaryColor) { nextRule ->
-                        TargetRepository.setSyntaxRule(context, node.path, nextRule)
-                        refreshKey++
+                item {
+                    AddCategoryTile(primaryColor = primaryColor) {
+                        showAddCategory = true
+                        reportHelpInteraction(AckTags.COMPUTER_ADD_CATEGORY)
                     }
                 }
             }
         }
 
         // --- SUB-MODE: VISUALS ---
-                if (subMode == "VISUALS") {
-                        VisualEditorView(context, primaryColor)
-                    }
+        if (subMode == "VISUALS") {
+            VisualEditorView(context, primaryColor)
+        }
     }
 
-    // --- DIALOG: EDIT SLOT ---
-    if (editingSlotIndex != null) {
-        val idx = editingSlotIndex!!
-        val existing = targets.find { it.index == idx }
-        var tempName by remember { mutableStateOf(existing?.label ?: "") }
-        var tempStrategy by remember { mutableStateOf(existing?.defaultStrategy ?: "POST") }
+    if (showAddCategory) {
+        AddCategoryDialog(
+            primaryColor = primaryColor,
+            onDismiss = { showAddCategory = false },
+            onCreate = { label ->
+                ComputerRepository.createCategory(context, label)
+                showAddCategory = false
+                refresh()
+            }
+        )
+    }
 
-        AlertDialog(
-            onDismissRequest = { editingSlotIndex = null },
-            containerColor = Graphite,
-            title = { Text("CONFIG SLOT $idx", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace) },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = tempName, 
-                        onValueChange = { tempName = it },
-                        placeholder = { Text("TARGET NAME (e.g. SARAH)") },
-                        colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("DEFAULT PLACEMENT:", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Strategy Toggles
-                        NeonButton(
-                            "PREPEND",
-                            Modifier
-                                .weight(1f)
-                                .helpTarget(AckTags.TARGET_STRATEGY, primaryColor),
-                            isActive = tempStrategy == "PRE",
-                            mainColor = primaryColor
-                        ) {
-                            tempStrategy = "PRE"
-                            reportHelpInteraction(AckTags.TARGET_STRATEGY)
-                        }
+    val editingOptions = optionsCategory
+    if (editingOptions != null) {
+        CategoryOptionsDialog(
+            context = context,
+            category = editingOptions,
+            primaryColor = primaryColor,
+            onDismiss = { optionsCategory = null },
+            onChanged = { refresh() }
+        )
+    }
 
-                        NeonButton(
-                            "APPEND",
-                            Modifier
-                                .weight(1f)
-                                .helpTarget(AckTags.TARGET_STRATEGY, primaryColor),
-                            isActive = tempStrategy == "POST",
-                            mainColor = primaryColor
-                        ) {
-                            tempStrategy = "POST"
-                            reportHelpInteraction(AckTags.TARGET_STRATEGY)
-                        }
-                    }
-                    if (tempStrategy == "PRE") Text("Ex: \"Sarah, Accepted.\"", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(top=4.dp))
-                    else Text("Ex: \"Accepted, Sarah.\"", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(top=4.dp))
-                }
-            },
-            confirmButton = {
-                Row {
-                   if (existing != null) {
-                       Text("[CLEAR]", color = Color.Red, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable {
-                           TargetRepository.clearTarget(context, idx)
-                           refreshKey++
-                           editingSlotIndex = null
-                           WatchSync.sendTargetList(context)
-                       }.padding(horizontal = 16.dp, vertical = 8.dp))
-                   }
-                    NeonButton(
-                        "SAVE",
-                        Modifier
-                            .testTag(AckTags.TARGET_SLOT_SAVE)
-                            .helpTarget(AckTags.TARGET_SLOT_SAVE, primaryColor),
-                        mainColor = primaryColor
-                    ) {
-                        if (tempName.isNotEmpty()) {
-                            TargetRepository.saveTarget(
-                                context,
-                                TargetSlot(
-                                    index = idx,
-                                    label = tempName,
-                                    defaultStrategy = tempStrategy
-                                )
-                            )
+    val treeCategoryId = openTreeCategoryId
+    if (treeCategoryId != null) {
+        ComputerTreeWindow(
+            context = context,
+            primaryColor = primaryColor,
+            categoryId = treeCategoryId,
+            onDismiss = { openTreeCategoryId = null },
+            onChanged = { refresh() }
+        )
+    }
 
-                            refreshKey++
-                            editingSlotIndex = null
-                            WatchSync.sendTargetList(context)
+    if (showWizard) {
+        ComputerWizard(
+            context = context,
+            primaryColor = primaryColor,
+            initialCategoryId = wizardStartCategoryId,
+            onDismiss = { showWizard = false },
+            onChanged = { refresh() }
+        )
+    }
 
-                            reportTextCommit(AckTags.TARGET_SLOT_SAVE)
-                        }
-                    }
-                }
+    if (showMigrationNotice) {
+        MigrationNoticeDialog(
+            primaryColor = primaryColor,
+            onDismiss = { showMigrationNotice = false },
+            onStartWizard = {
+                showMigrationNotice = false
+                wizardStartCategoryId = "PEOPLE"
+                showWizard = true
             }
         )
     }
 }
 
+// Opened by tapping the "COMPUTER:" status indicator in the app header.
+// Lists every category's current active pick (or lack of one), with an
+// inline CLEAR -- this dialog is about *current state*, not authoring, so
+// it swaps RootOverrideStrip's usual EDIT button for CLEAR instead.
 @Composable
-fun TargetSlotCard(
-    index: Int,
-    data: TargetSlot?,
+fun ComputerSummaryDialog(
+    context: Context,
+    primaryColor: Color,
+    onDismiss: () -> Unit
+) {
+    var refreshKey by remember { mutableIntStateOf(0) }
+    val categories = remember(refreshKey) { ComputerRepository.getCategories(context) }
+
+    TightDialogSurface(
+        onDismiss = onDismiss,
+        primaryColor = primaryColor,
+        title = "TARGET COMPUTER STATUS",
+        dismissLabel = "CLOSE"
+    ) {
+        if (categories.isEmpty()) {
+            Text(
+                text = "NO CATEGORIES YET.",
+                color = Color.DarkGray,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                categories.forEach { category ->
+                    val activeNode = category.activeNodeId?.let { ComputerRepository.findNode(category, it) }
+                    val isActive = activeNode != null
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp)
+                            .border(
+                                1.dp,
+                                if (isActive) primaryColor else Color.DarkGray,
+                                CutCornerShape(6.dp)
+                            )
+                            .background(
+                                if (isActive) primaryColor.copy(alpha = 0.08f) else Color.Transparent,
+                                CutCornerShape(6.dp)
+                            )
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = category.label.uppercase(),
+                                color = if (isActive) primaryColor else Color.Gray,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = activeNode?.label ?: "NOTHING SELECTED",
+                                color = if (isActive) Color.White else Color.DarkGray,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+
+                        if (isActive) {
+                            Box(
+                                modifier = Modifier
+                                    .heightIn(min = 44.dp)
+                                    .border(1.dp, DangerRed, CutCornerShape(4.dp))
+                                    .clickable {
+                                        ComputerRepository.clearActiveEntry(context, category.id)
+                                        refreshKey++
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "CLEAR",
+                                    color = DangerRed,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun TargetCategoryChip(
+    category: ComputerCategory,
+    activeLabel: String?,
     primaryColor: Color,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onTap: () -> Unit,
+    onLongPress: () -> Unit
 ) {
-    val isSet = data != null
+    val isSet = activeLabel != null
     val borderColor = if (isSet) primaryColor else Color.DarkGray
     val bg = if (isSet) primaryColor.copy(alpha = 0.1f) else Color.Transparent
 
@@ -223,11 +313,11 @@ fun TargetSlotCard(
             .height(80.dp)
             .background(bg, CutCornerShape(8.dp))
             .border(1.dp, borderColor, CutCornerShape(8.dp))
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onTap, onLongClick = onLongPress)
             .padding(12.dp)
     ) {
         Text(
-            text = "SLOT $index",
+            text = category.label.uppercase(),
             color = Color.Gray,
             fontSize = 8.sp,
             fontFamily = FontFamily.Monospace,
@@ -235,26 +325,14 @@ fun TargetSlotCard(
         )
 
         if (isSet) {
-            Column(modifier = Modifier.align(Alignment.Center)) {
-                Text(
-                    text = data!!.label.uppercase(),
-                    color = primaryColor,
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = if (data.defaultStrategy == "PRE") {
-                        "[PRE] < MSG"
-                    } else {
-                        "MSG > [APP]"
-                    },
-                    color = primaryColor.copy(alpha = 0.6f),
-                    fontSize = 8.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-            }
+            Text(
+                text = activeLabel!!.uppercase(),
+                color = primaryColor,
+                fontSize = 14.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Center)
+            )
         } else {
             Text(
                 text = "EMPTY",
@@ -268,41 +346,187 @@ fun TargetSlotCard(
 }
 
 @Composable
-fun TrainingRow(label: String, phrase: String, rule: String, primaryColor: Color, onToggle: (String) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).background(Graphite).padding(8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+private fun AddCategoryTile(primaryColor: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .height(80.dp)
+            .fillMaxWidth()
+            .testTag(AckTags.COMPUTER_ADD_CATEGORY)
+            .helpTarget(AckTags.COMPUTER_ADD_CATEGORY, primaryColor)
+            .border(1.dp, primaryColor.copy(alpha = 0.6f), CutCornerShape(8.dp))
+            .background(primaryColor.copy(alpha = 0.06f), CutCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-            Text(if(phrase.length>25) phrase.take(22)+"..." else phrase, color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Text(
+            text = "+ ADD\nCATEGORY",
+            color = primaryColor,
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun AddCategoryDialog(
+    primaryColor: Color,
+    onDismiss: () -> Unit,
+    onCreate: (String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    val isValid = name.trim().isNotEmpty()
+
+    TightDialogSurface(onDismiss = onDismiss, primaryColor = primaryColor, title = "ADD CATEGORY") {
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            placeholder = { Text("E.G. FEELINGS") },
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+                focusedTextColor = primaryColor,
+                unfocusedTextColor = primaryColor,
+                focusedContainerColor = VoidBlack,
+                unfocusedContainerColor = VoidBlack,
+                focusedIndicatorColor = primaryColor
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TightPanelButton("CREATE", Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
+                if (isValid) onCreate(name.trim())
+            }
+            TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor, onClick = onDismiss)
         }
-        
-        // Tri-State Toggle
-        val (txt, col) = when(rule) {
-            "PRE" -> "PRE" to NeonPalette.SWATCHES[3] // Orange
-            "POST" -> "APP" to NeonPalette.SWATCHES[2] // Green
-            else -> "AUTO" to Color.Gray
+    }
+}
+
+@Composable
+private fun CategoryOptionsDialog(
+    context: Context,
+    category: ComputerCategory,
+    primaryColor: Color,
+    onDismiss: () -> Unit,
+    onChanged: () -> Unit
+) {
+    var name by remember(category.id) { mutableStateOf(category.label) }
+    var persistUntilCleared by remember(category.id) { mutableStateOf(category.persistUntilCleared) }
+    var confirmingDelete by remember { mutableStateOf(false) }
+    val isValid = name.trim().isNotEmpty()
+
+    TightDialogSurface(onDismiss = onDismiss, primaryColor = primaryColor, title = "CATEGORY OPTIONS") {
+        TightSectionLabel("NAME")
+        Spacer(modifier = Modifier.height(6.dp))
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+                focusedTextColor = primaryColor,
+                unfocusedTextColor = primaryColor,
+                focusedContainerColor = VoidBlack,
+                unfocusedContainerColor = VoidBlack,
+                focusedIndicatorColor = primaryColor
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+        TightSectionLabel("WHEN A PICK IS MADE")
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TightPanelButton("KEEP IT", Modifier.weight(1f), isActive = persistUntilCleared, mainColor = primaryColor) {
+                persistUntilCleared = true
+            }
+            TightPanelButton("CLEAR AFTER USE", Modifier.weight(1f), isActive = !persistUntilCleared, mainColor = primaryColor) {
+                persistUntilCleared = false
+            }
         }
-        
-        Box(
-            modifier = Modifier
-                .width(50.dp)
-                .border(1.dp, col, CutCornerShape(4.dp))
-                .clickable {
-                    // Cycle: AUTO -> PRE -> POST -> AUTO
-                    val next = when(rule) {
-                        "AUTO" -> "PRE"
-                        "PRE" -> "POST"
-                        else -> "AUTO"
+        Text(
+            text = if (persistUntilCleared) "Stays active until you clear it." else "Automatically clears the next time it's used.",
+            color = Color.Gray,
+            fontSize = 9.sp,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (!confirmingDelete) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TightPanelButton("SAVE", Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
+                    if (isValid) {
+                        ComputerRepository.saveCategory(
+                            context,
+                            category.copy(label = name.trim(), persistUntilCleared = persistUntilCleared)
+                        )
+                        onChanged()
+                        onDismiss()
                     }
-                    onToggle(next)
                 }
-                .padding(vertical = 6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(txt, color = col, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                TightPanelButton("DELETE", Modifier.weight(1f), mainColor = DangerRed) {
+                    confirmingDelete = true
+                }
+            }
+        } else {
+            Text(
+                text = "This removes the whole category and everything in it. This cannot be undone.",
+                color = Color.Gray,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TightPanelButton("CONFIRM DELETE", Modifier.weight(1f), mainColor = DangerRed) {
+                    ComputerRepository.deleteCategory(context, category.id)
+                    onChanged()
+                    onDismiss()
+                }
+                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
+                    confirmingDelete = false
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MigrationNoticeDialog(
+    primaryColor: Color,
+    onDismiss: () -> Unit,
+    onStartWizard: () -> Unit
+) {
+    TightDialogSurface(
+        onDismiss = onDismiss,
+        primaryColor = primaryColor,
+        title = "TARGETS MOVED",
+        dismissLabel = "LOOKS GOOD"
+    ) {
+        Text(
+            text = "Your previously saved targets are now entries under PEOPLE. " +
+                "Nothing was deleted, and a backup was taken automatically before " +
+                "anything moved.",
+            color = Color.Gray,
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Want help organizing them into subcategories?",
+            color = Color.Gray,
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TightPanelButton("START WIZARD", Modifier.weight(1f), mainColor = primaryColor, onClick = onStartWizard)
+            TightPanelButton("I'LL DO IT MYSELF", Modifier.weight(1f), isActive = false, mainColor = primaryColor, onClick = onDismiss)
         }
     }
 }
