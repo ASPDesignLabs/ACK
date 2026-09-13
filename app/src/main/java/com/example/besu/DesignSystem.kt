@@ -40,8 +40,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 
 
@@ -200,12 +198,16 @@ fun TerminalView(logs: List<LogEntry>, context: Context) {
 
 // --- TYPE VIEW ---
 @Composable
-fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots.SnapshotStateList<String>) {
+fun TypeView(
+    context: Context,
+    recentPhrases: androidx.compose.runtime.snapshots.SnapshotStateList<String>,
+    textFieldValue: TextFieldValue,
+    onTextFieldValueChange: (TextFieldValue) -> Unit,
+    textFieldFocusRequester: FocusRequester,
+    onInsertAtCursor: (String) -> Unit
+) {
     val primaryColor = NeonPalette.getColor(CommandRepository.getActiveColorIndex(context))
 
-    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
-    val textFieldFocusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
     var refreshKey by remember { mutableIntStateOf(0) }
     var savedPhrases by remember(refreshKey) { mutableStateOf(CommandRepository.getQuickPhrases(context)) }
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -229,29 +231,12 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
             if (recentPhrases.contains(text)) recentPhrases.remove(text)
             recentPhrases.add(0, text)
             if (recentPhrases.size > 10) recentPhrases.removeLast()
-            textFieldValue = TextFieldValue("")
+            onTextFieldValueChange(TextFieldValue(""))
             // TRANSMIT is a button tap like any other -- it can pull focus
             // away from the field the same way a chip tap can. Reclaim it
             // so the field is immediately ready for the next phrase.
             textFieldFocusRequester.requestFocus()
         }
-    }
-
-    // Inserts at the cursor (or replaces an active selection) with no
-    // surrounding spacing added -- callers that want a separator type it
-    // themselves, same as if they'd typed the inserted text by hand.
-    // Modifier.clickable (every chip/row here) chains .focusable() under
-    // the hood, so tapping one *does* pull Compose focus off the field --
-    // requestFocus() alone reclaims it, but pairing it with an explicit
-    // keyboard show() call is the belt-and-suspenders way to guarantee the
-    // IME actually reappears rather than staying hidden.
-    fun insertAtCursor(insertText: String) {
-        val selection = textFieldValue.selection
-        val newText = textFieldValue.text.replaceRange(selection.start, selection.end, insertText)
-        val newCursor = selection.start + insertText.length
-        textFieldValue = TextFieldValue(newText, TextRange(newCursor))
-        textFieldFocusRequester.requestFocus()
-        keyboardController?.show()
     }
 
     Column(
@@ -265,7 +250,7 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
 
         OutlinedTextField(
             value = textFieldValue,
-            onValueChange = { textFieldValue = it },
+            onValueChange = onTextFieldValueChange,
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(textFieldFocusRequester),
@@ -302,7 +287,7 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
         TargetQuickAccessRow(
             context = context,
             primaryColor = primaryColor,
-            onInsert = { insertAtCursor(it) }
+            onInsert = onInsertAtCursor
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -344,7 +329,7 @@ fun TypeView(context: Context, recentPhrases: androidx.compose.runtime.snapshots
             TargetBrowsePanel(
                 context = context,
                 primaryColor = primaryColor,
-                onInsert = { insertAtCursor(it) }
+                onInsert = onInsertAtCursor
             )
         }
 

@@ -114,7 +114,12 @@ fun TargetQuickAccessRow(
 fun TargetBrowsePanel(
     context: Context,
     primaryColor: Color,
-    onInsert: (String) -> Unit
+    onInsert: (String) -> Unit,
+    // Threaded straight onto the TREE mode's own LazyColumn (not an outer
+    // wrapper) so the caller can tighten the bound -- e.g. the header
+    // takeover, which shares its vertical budget with the keyboard --
+    // without risking the unbounded-height crash an indirect wrapper can.
+    treeMaxHeight: androidx.compose.ui.unit.Dp = 260.dp
 ) {
     val categories = remember { ComputerRepository.getCategories(context) }
     var browseCategoryId by remember { mutableStateOf<String?>(null) }
@@ -226,7 +231,7 @@ fun TargetBrowsePanel(
                     }
                 }
 
-                LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
+                LazyColumn(modifier = Modifier.heightIn(max = treeMaxHeight)) {
                     items(visibleRows, key = { it.node.id }) { row ->
                         ComputerTreeVisualRow(
                             row = row,
@@ -264,6 +269,84 @@ fun TargetBrowsePanel(
                     }
                 )
             }
+        }
+    }
+}
+
+// Takes over the app's whole header container (MainActivity's bordered
+// ACK/DECK/PROFILE/COMPUTER box) while the software keyboard is visible on
+// the Manual Override screen -- the header sits above the keyboard, so it's
+// the one part of the screen guaranteed reachable without scrolling while
+// typing. MainActivity swaps this in for the normal header content based on
+// WindowInsets.isImeVisible && viewMode == "TYPE", and swaps back the
+// instant the keyboard closes -- nothing here decides that, it only renders
+// once asked to.
+@Composable
+fun ManualOverrideHeaderTakeover(
+    context: Context,
+    primaryColor: Color,
+    onInsert: (String) -> Unit
+) {
+    var browseExpanded by remember { mutableStateOf(false) }
+    val helpManager = LocalHelpManager.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(AckTags.MANUAL_HEADER_TAKEOVER)
+            .helpTarget(AckTags.MANUAL_HEADER_TAKEOVER, primaryColor)
+    ) {
+        Text(
+            text = "QUICK INSERT MODE",
+            color = primaryColor,
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
+        Text(
+            text = "CLOSE THE KEYBOARD TO RETURN TO THE HEADER.",
+            color = Color.Gray,
+            fontSize = 9.sp,
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        TargetQuickAccessRow(
+            context = context,
+            primaryColor = primaryColor,
+            onInsert = onInsert
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = if (browseExpanded) "[HIDE FULL BROWSER]" else "[BROWSE ALL ENTRIES]",
+            color = primaryColor,
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .testTag(AckTags.MANUAL_HEADER_BROWSE_TOGGLE)
+                .helpTarget(AckTags.MANUAL_HEADER_BROWSE_TOGGLE, primaryColor)
+                .clickable {
+                    browseExpanded = !browseExpanded
+                    helpManager?.onEvent(HelpEvent.Interacted(AckTags.MANUAL_HEADER_BROWSE_TOGGLE))
+                }
+        )
+
+        if (browseExpanded) {
+            Spacer(modifier = Modifier.height(8.dp))
+            // Tighter cap than the below-field panel's default 260dp -- the
+            // header shares its vertical budget with the keyboard and the
+            // text field itself, not a whole screen on its own.
+            TargetBrowsePanel(
+                context = context,
+                primaryColor = primaryColor,
+                onInsert = onInsert,
+                treeMaxHeight = 180.dp
+            )
         }
     }
 }
