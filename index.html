@@ -575,6 +575,63 @@
   .mtx-qa-action-phrase{ display:block; font-family:var(--font-mono); font-size:0.8em; color:var(--accent); margin-top:0.4rem; }
   .mtx-qa-action-phrase.is-empty{ color:var(--text-faint); font-style:italic; }
 
+  /* Emergency editor -- a 2x2 quad grid of large, low-clutter tiles rather
+     than a scrolling stack of wide cards. This is deliberate, matching the
+     real app: every slot fits on one screen with big targets and minimal
+     per-tile content, specifically so motor difficulties never require
+     scrolling or fiddling with the screen to reach an emergency response.
+     Each tile shows only its index, label, and READY/NOT SET status -- no
+     resolved-phrase preview, no variable chips (those live in the slot
+     editor dialog only), keeping every tile the same simple shape. */
+  .mtx-emg-status{ font-family:var(--font-mono); font-size:0.72em; font-weight:700; letter-spacing:0.03em; color:var(--accent); text-transform:uppercase; margin:0.6rem 0 0; }
+  .mtx-emg-action-grid{ margin-top:0.9rem; display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; }
+  .mtx-emg-action{ display:flex; flex-direction:column; min-height:150px; }
+  .mtx-emg-action-index{ display:block; font-family:var(--font-mono); font-size:0.72em; font-weight:700; letter-spacing:0.04em; color:var(--text-faint); }
+  .mtx-emg-action-body{
+    flex:1 1 auto; display:flex; align-items:center; justify-content:center; text-align:center;
+    background:none; border:none; color:inherit; cursor:pointer; padding:0.6rem 0; width:100%; font:inherit;
+  }
+  .mtx-emg-action-label{ font-family:var(--font-mono); font-size:1.05em; font-weight:800; line-height:1.3; color:#fff; }
+  .mtx-emg-action-label.is-empty{ color:var(--text-faint); font-style:italic; font-weight:700; font-size:0.78em; letter-spacing:0.03em; }
+  .mtx-emg-action-footer{ display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
+  .mtx-emg-ready-tag{ display:inline-block; font-family:var(--font-mono); font-size:0.62em; font-weight:700; letter-spacing:0.05em; color:var(--text-faint); }
+  .mtx-emg-ready-tag.is-ready{ color:var(--accent); }
+  .mtx-emg-wide-btn{
+    display:block; width:100%; margin-top:0.9rem; padding:0.9rem;
+    border:2px solid var(--accent); background:none; color:var(--accent);
+    font-family:var(--font-mono); font-weight:700; font-size:0.8rem; letter-spacing:0.04em;
+    cursor:pointer; text-align:center;
+  }
+  .mtx-emg-wide-btn:hover{ background:color-mix(in srgb, var(--accent) 14%, transparent); }
+  .mtx-emg-wide-btn.mtx-emg-info-btn{ border-color:var(--border); color:var(--text); }
+  .mtx-emg-wide-btn.mtx-emg-info-btn:hover{ background:color-mix(in srgb, var(--text-faint) 14%, transparent); }
+
+  /* Emergency Overrides dialog -- one full-width row per boolean override,
+     the row itself acting as the toggle (click flips it), matching the
+     app's own filled-square-plus-label rows rather than a paired ON/OFF
+     button group. */
+  .mtx-emg-toggle{
+    display:flex; align-items:center; gap:0.7rem; width:100%; margin-top:0.6rem;
+    padding:0.7rem 0.9rem; border:2px solid var(--border); background:none; cursor:pointer;
+    font-family:var(--font-mono); font-size:0.78rem; font-weight:700; color:var(--text-dim); text-align:left;
+  }
+  .mtx-emg-toggle-box{ flex:none; width:18px; height:18px; border:2px solid var(--border); }
+  .mtx-emg-toggle[aria-pressed="true"]{ border-color:var(--accent); color:#fff; background:color-mix(in srgb, var(--accent) 10%, transparent); }
+  .mtx-emg-toggle[aria-pressed="true"] .mtx-emg-toggle-box{ border-color:var(--accent); background:var(--accent); }
+
+  /* Emergency Info dialog -- a read-only display mode (label/value rows +
+     two contact summaries) and a full edit-form mode, toggled via [hidden]. */
+  .mtx-emg-info-row{ border-top:2px solid var(--border); padding:0.7rem 0; }
+  .mtx-emg-info-row:first-of-type{ border-top:none; margin-top:0.8rem; }
+  .mtx-emg-info-label{ display:block; font-family:var(--font-mono); font-size:0.68em; font-weight:700; letter-spacing:0.04em; color:var(--text-faint); }
+  .mtx-emg-info-value{ display:block; margin-top:0.3rem; font-size:0.92em; color:#fff; white-space:pre-wrap; }
+  .mtx-emg-info-value.is-empty{ color:var(--text-faint); font-style:italic; }
+  .mtx-emg-contact-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.5rem; margin-top:0.5rem; }
+  .mtx-emg-contact-grid input{
+    width:100%; background:var(--void); border:2px solid var(--border); color:#fff;
+    font-family:var(--font-mono); font-size:0.72rem; padding:0.5rem 0.4rem;
+  }
+
   /* Full-screen playback overlay -- a sibling of .hud/.window (portal'd, like
      the ctx-dropdown menus) so it is never clipped by .window's clip-path.
      .mtx-overlay-rotor's own size/rotation is set inline by JS: on a
@@ -604,6 +661,24 @@
     color:#fff; -webkit-text-stroke:3px var(--accent); white-space:pre-wrap; margin:0;
   }
   .mtx-overlay-hint{ margin-top:1.4rem; font-family:var(--font-mono); font-size:0.85rem; color:#6eebff; }
+
+  /* Emergency ALERT TONE pre-beat -- a brief visual stand-in for the real
+     app's audible tone (which always plays before the prompt, synchronously)
+     since this simulator has no audio anywhere. Shown in place of the
+     overlay text/hint for a few hundred ms, then swapped back. */
+  .mtx-tone-indicator[hidden]{ display:none; }
+  .mtx-tone-indicator{ display:flex; flex-direction:column; align-items:center; gap:1rem; }
+  .mtx-tone-flash{
+    width:64px; height:64px; border-radius:50%;
+    border:4px solid var(--error); background:color-mix(in srgb, var(--error) 25%, transparent);
+  }
+  .mtx-tone-flash.is-pulsing{ animation-name:mtx-tone-pulse; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+  @keyframes mtx-tone-pulse{
+    0%, 100% { transform:scale(0.8); opacity:0.45; }
+    50% { transform:scale(1.15); opacity:1; }
+  }
+  .mtx-tone-label{ margin:0; font-family:var(--font-mono); font-size:0.85rem; letter-spacing:0.12em; color:var(--error); text-transform:uppercase; }
+
   .mtx-replay-chip{
     position:fixed; right:1.2rem; bottom:1.2rem; z-index:1001;
     background:rgba(20,20,24,0.92); color:#fff; font-family:var(--font-mono); font-size:0.8rem;
@@ -685,8 +760,12 @@
   <div class="mtx-overlay" id="mtxOverlay" hidden role="dialog" aria-label="Prompt playback">
     <div class="mtx-overlay-rotor" id="mtxOverlayRotor">
       <div class="mtx-overlay-card">
+        <div class="mtx-tone-indicator" id="mtxToneIndicator" hidden>
+          <span class="mtx-tone-flash" id="mtxToneFlash"></span>
+          <p class="mtx-tone-label" id="mtxToneLabel"></p>
+        </div>
         <p class="mtx-overlay-text" id="mtxOverlayText"></p>
-        <p class="mtx-overlay-hint">TAP ANYWHERE TO CLEAR</p>
+        <p class="mtx-overlay-hint" id="mtxOverlayHint">TAP ANYWHERE TO CLEAR</p>
       </div>
     </div>
   </div>
@@ -1381,8 +1460,9 @@
       <h2 id="mtxResetTitle" style="color:var(--error);">Reset Simulator Data</h2>
       <button type="button" class="dialog-close" data-close aria-label="Abort">&#10005;</button>
     </div>
-    <p style="font-size:0.85rem;">Permanently erase every prompt, variable, shared root override, and Quick
-      Actions configuration you've set in the Deck Simulator on this browser? This cannot be undone.</p>
+    <p style="font-size:0.85rem;">Permanently erase every prompt, variable, shared root override, Quick
+      Actions and Emergency configuration, and the Emergency Info card you've set in the Deck Simulator on
+      this browser? This cannot be undone.</p>
     <div class="mtx-editor-row">
       <button type="button" class="opt-btn" id="mtxResetConfirm" style="color:var(--error);border-color:var(--error);">ERASE EVERYTHING</button>
       <button type="button" class="opt-btn" data-close>CANCEL</button>
@@ -1553,6 +1633,172 @@
   </div>
 </dialog>
 
+<!-- EMERGENCY DIALOGS -->
+
+<dialog id="mtxEmgSlotDialog" aria-labelledby="mtxEmgSlotTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <div>
+        <h2 id="mtxEmgSlotTitle">Emergency Slot</h2>
+        <p style="margin:0.2rem 0 0; color:var(--text-faint); font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em;">LIVE-SAVE EDITOR</p>
+      </div>
+      <button type="button" class="dialog-close" data-close aria-label="Close editor">&#10005;</button>
+    </div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.8rem;">BUTTON LABEL</p>
+    <input type="text" class="mtx-editor-textarea" id="mtxEmgLabelInput" style="min-height:auto;" placeholder="EMERGENCY LABEL" maxlength="40">
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">PHRASE TEMPLATE</p>
+    <textarea class="mtx-editor-textarea" id="mtxEmgTemplateInput" placeholder="ENTER OUTPUT PHRASE..."></textarea>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">INSERT VARIABLE TOKEN</p>
+    <div class="mtx-insert-row">
+      <button type="button" class="opt-btn" data-insert-token="{VAR}">+ VAR</button>
+      <button type="button" class="opt-btn" data-insert-token="{VAR:A}">+ A</button>
+      <button type="button" class="opt-btn" data-insert-token="{VAR:B}">+ B</button>
+      <button type="button" class="opt-btn" data-insert-token="{VAR:C}">+ C</button>
+    </div>
+
+    <div id="mtxEmgVarFields"></div>
+
+    <p style="color:var(--error); font-size:0.78rem; margin-top:1.1rem;">DESTRUCTIVE CONTROLS</p>
+    <div class="mtx-danger-row">
+      <button type="button" class="opt-btn" id="mtxEmgClearVars" style="color:var(--error);border-color:var(--error);">CLEAR VARS</button>
+      <button type="button" class="opt-btn" id="mtxEmgClearPrompt" style="color:var(--error);border-color:var(--error);">CLEAR PROMPT</button>
+    </div>
+    <div class="mtx-danger-row">
+      <button type="button" class="opt-btn" id="mtxEmgClearAll" style="color:var(--error);border-color:var(--error); flex:1 1 100%;">CLEAR ALL</button>
+    </div>
+
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxEmgCommit" style="color:var(--accent);border-color:var(--accent);" aria-pressed="true">COMMIT</button>
+      <button type="button" class="opt-btn" data-close>CLOSE</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxEmgClearDialog" aria-labelledby="mtxEmgClearTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxEmgClearTitle" style="color:var(--error);">Confirm Clear</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Abort">&#10005;</button>
+    </div>
+    <p id="mtxEmgClearText" style="font-size:0.85rem;"></p>
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxEmgClearConfirm" style="color:var(--error);border-color:var(--error);">CONFIRM</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxEmgOverridesDialog" aria-labelledby="mtxEmgOverridesTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxEmgOverridesTitle">Emergency Overrides</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close">&#10005;</button>
+    </div>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.8rem;">OVERLAY CLEARING</p>
+    <button type="button" class="mtx-emg-toggle" id="mtxEmgTogglePersist" aria-pressed="false">
+      <span class="mtx-emg-toggle-box"></span> PREVENT TIMED CLEAR
+    </button>
+    <button type="button" class="mtx-emg-toggle" id="mtxEmgToggleHold" aria-pressed="false">
+      <span class="mtx-emg-toggle-box"></span> REQUIRE HOLD TO CLEAR
+    </button>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:1.1rem;">OUTPUT ROUTING</p>
+    <button type="button" class="mtx-emg-toggle" id="mtxEmgToggleSpeaker" aria-pressed="false">
+      <span class="mtx-emg-toggle-box"></span> FORCE DEVICE SPEAKER
+    </button>
+    <button type="button" class="mtx-emg-toggle" id="mtxEmgToggleBoost" aria-pressed="false">
+      <span class="mtx-emg-toggle-box"></span> EMERGENCY VOLUME BOOST
+    </button>
+
+    <p style="color:var(--text-dim); font-size:0.78rem; margin-top:1.1rem;">ALERT TONE</p>
+    <div class="opt-group" id="mtxEmgToneGroup" role="group" aria-label="Alert tone">
+      <button type="button" class="opt-btn" data-tone="OFF" aria-pressed="false">OFF</button>
+      <button type="button" class="opt-btn" data-tone="TONE_1" aria-pressed="false">TONE 1</button>
+      <button type="button" class="opt-btn" data-tone="TONE_2" aria-pressed="false">TONE 2</button>
+      <button type="button" class="opt-btn" data-tone="TONE_3" aria-pressed="false">TONE 3</button>
+    </div>
+    <p style="color:var(--text-faint); font-size:0.7rem; font-family:var(--font-mono); margin:0.4rem 0 0;">Plays as a brief visual pulse before the prompt appears -- this simulator has no audio.</p>
+
+    <div class="mtx-editor-row">
+      <button type="button" class="opt-btn" id="mtxEmgOverridesSave" style="color:var(--accent);border-color:var(--accent);">SAVE OVERRIDES</button>
+      <button type="button" class="opt-btn" data-close>CANCEL</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="mtxEmgInfoDialog" aria-labelledby="mtxEmgInfoTitle">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="mtxEmgInfoTitle">Emergency Info</h2>
+      <button type="button" class="dialog-close" data-close aria-label="Close">&#10005;</button>
+    </div>
+    <p style="color:var(--text-faint); font-size:0.72rem; font-family:var(--font-mono); margin-top:0.4rem;">One card, shared by every Emergency deck. Never read or shown automatically -- open it yourself.</p>
+
+    <div id="mtxEmgInfoDisplay">
+      <div class="mtx-emg-info-row"><span class="mtx-emg-info-label">NAME</span><span class="mtx-emg-info-value" id="mtxEmgInfoName"></span></div>
+      <div class="mtx-emg-info-row"><span class="mtx-emg-info-label">DATE OF BIRTH</span><span class="mtx-emg-info-value" id="mtxEmgInfoDob"></span></div>
+      <div class="mtx-emg-info-row"><span class="mtx-emg-info-label">BLOOD TYPE</span><span class="mtx-emg-info-value" id="mtxEmgInfoBlood"></span></div>
+      <div class="mtx-emg-info-row"><span class="mtx-emg-info-label">COMMUNICATION</span><span class="mtx-emg-info-value" id="mtxEmgInfoComm"></span></div>
+      <div class="mtx-emg-info-row"><span class="mtx-emg-info-label">CONDITIONS</span><span class="mtx-emg-info-value" id="mtxEmgInfoConditions"></span></div>
+      <div class="mtx-emg-info-row"><span class="mtx-emg-info-label">ALLERGIES</span><span class="mtx-emg-info-value" id="mtxEmgInfoAllergies"></span></div>
+      <div class="mtx-emg-info-row"><span class="mtx-emg-info-label">MEDICATIONS</span><span class="mtx-emg-info-value" id="mtxEmgInfoMeds"></span></div>
+      <div class="mtx-emg-info-row"><span class="mtx-emg-info-label">PRIMARY CONTACT</span><span class="mtx-emg-info-value" id="mtxEmgInfoContact0"></span></div>
+      <div class="mtx-emg-info-row"><span class="mtx-emg-info-label">EMERGENCY CONTACT</span><span class="mtx-emg-info-value" id="mtxEmgInfoContact1"></span></div>
+
+      <div class="mtx-editor-row">
+        <button type="button" class="opt-btn" id="mtxEmgInfoEdit" style="color:var(--accent);border-color:var(--accent);">EDIT</button>
+        <button type="button" class="opt-btn" data-close>CLOSE</button>
+      </div>
+    </div>
+
+    <div id="mtxEmgInfoEditForm" hidden>
+      <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.8rem;">NAME</p>
+      <input type="text" class="mtx-editor-textarea" id="mtxEmgEditName" style="min-height:auto;">
+
+      <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">DATE OF BIRTH</p>
+      <input type="text" class="mtx-editor-textarea" id="mtxEmgEditDob" style="min-height:auto;" placeholder="MM/DD/YYYY">
+
+      <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">BLOOD TYPE</p>
+      <input type="text" class="mtx-editor-textarea" id="mtxEmgEditBlood" style="min-height:auto;">
+
+      <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">COMMUNICATION</p>
+      <textarea class="mtx-editor-textarea" id="mtxEmgEditComm"></textarea>
+
+      <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">CONDITIONS</p>
+      <textarea class="mtx-editor-textarea" id="mtxEmgEditConditions"></textarea>
+
+      <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">ALLERGIES</p>
+      <textarea class="mtx-editor-textarea" id="mtxEmgEditAllergies"></textarea>
+
+      <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.9rem;">MEDICATIONS</p>
+      <textarea class="mtx-editor-textarea" id="mtxEmgEditMeds"></textarea>
+
+      <p style="color:var(--text-dim); font-size:0.78rem; margin-top:1.1rem;">PRIMARY CONTACT</p>
+      <div class="mtx-emg-contact-grid">
+        <input type="text" id="mtxEmgEditC0Name" placeholder="NAME">
+        <input type="text" id="mtxEmgEditC0Rel" placeholder="RELATIONSHIP">
+        <input type="text" id="mtxEmgEditC0Phone" placeholder="PHONE">
+      </div>
+
+      <p style="color:var(--text-dim); font-size:0.78rem; margin-top:1.1rem;">EMERGENCY CONTACT</p>
+      <div class="mtx-emg-contact-grid">
+        <input type="text" id="mtxEmgEditC1Name" placeholder="NAME">
+        <input type="text" id="mtxEmgEditC1Rel" placeholder="RELATIONSHIP">
+        <input type="text" id="mtxEmgEditC1Phone" placeholder="PHONE">
+      </div>
+
+      <div class="mtx-editor-row">
+        <button type="button" class="opt-btn" id="mtxEmgInfoSave" style="color:var(--accent);border-color:var(--accent);">SAVE</button>
+        <button type="button" class="opt-btn" id="mtxEmgInfoCancel">CANCEL</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <script>
 (function(){
   "use strict";
@@ -1693,14 +1939,14 @@
     ["BUILDER","Builder"]
   ];
 
-  // Matches CreateDeckDialog.kt's own type grid and descriptions. MATRIX and
-  // QUICK_ACTIONS are both real, creatable decks here, same as in the app;
-  // EMERGENCY/EMOJI/GIF are shown (not hidden) so the roadmap is visible,
+  // Matches CreateDeckDialog.kt's own type grid and descriptions. MATRIX,
+  // QUICK_ACTIONS, and EMERGENCY are all real, creatable decks here, same as
+  // in the app; EMOJI/GIF are shown (not hidden) so the roadmap is visible,
   // same spirit as the rest of this page's placeholders.
   var DECK_TYPES = [
     {type:"MATRIX", label:"MATRIX", desc:"A full 3-pose Matrix with its own phrases, context layers, and profiles.", enabled:true},
     {type:"QUICK_ACTIONS", label:"QUICK ACTIONS", desc:"Three action groups with four configurable slots per group.", enabled:true},
-    {type:"EMERGENCY", label:"EMERGENCY", desc:"Four immediate prompt slots with optional emergency overrides.", enabled:false},
+    {type:"EMERGENCY", label:"EMERGENCY", desc:"Four immediate prompt slots with optional emergency overrides.", enabled:true},
     {type:"EMOJI", label:"EMOJI", desc:"Visual-only emoji pages with configurable grids and optional text.", enabled:false},
     {type:"GIF", label:"GIF", desc:"Local GIF library with categories, previews, and fullscreen playback.", enabled:false}
   ];
@@ -1895,6 +2141,154 @@
     setQuickActionsConfig(deckId, config);
   }
 
+  // ---------- Emergency deck (mirrors EmergencyDeck.kt + the relevant parts
+  // of CommandRepository.kt) ----------
+  // Another genuinely different shape: a flat 4-slot list (no groups/poses)
+  // plus 5 override fields living directly on the deck's own config blob.
+  // Slots support the same {VAR}/{VAR:A-C} tokens as Matrix/QuickActions,
+  // but root overrides never apply here -- resolveEmergencyPrompt always
+  // passes an empty overrides map, so a {VAR:A} tag behaves exactly like a
+  // bare {VAR}, matching CommandRepository.resolveEmergencyPrompt's own
+  // comment: "independent from Matrix profiles, root category focus, and
+  // root-override configuration."
+  var EMERGENCY_TONES = ['OFF', 'TONE_1', 'TONE_2', 'TONE_3'];
+
+  function emergencyConfigKey(deckId){ return STORAGE_PREFIX + 'emergency_' + deckId + '_config'; }
+
+  function defaultEmergencyConfig(deckId){
+    return {
+      deckId: deckId,
+      slots: [0,1,2,3].map(function(s){
+        return { slotIndex: s, label: 'EMERGENCY ' + (s + 1), template: '', localValues: [] };
+      }),
+      preventTimedClear: true,
+      requireHoldToClear: false,
+      forceSpeaker: false,
+      boostVolume: false,
+      tone: 'OFF'
+    };
+  }
+
+  // Self-healing, mirroring CommandRepository.normalizeEmergencyConfig:
+  // always exactly 4 slots, and any corrupted/unknown tone falls back to OFF.
+  function normalizeEmergencyConfig(raw, deckId){
+    var fallback = defaultEmergencyConfig(deckId);
+    if(!raw) return fallback;
+
+    var rawSlots = Array.isArray(raw.slots) ? raw.slots : [];
+    var slots = [0,1,2,3].map(function(s){
+      var slot = rawSlots[s] || {};
+      return {
+        slotIndex: s,
+        label: typeof slot.label === 'string' && slot.label ? slot.label : ('EMERGENCY ' + (s + 1)),
+        template: typeof slot.template === 'string' ? slot.template : '',
+        localValues: Array.isArray(slot.localValues) ? slot.localValues : []
+      };
+    });
+
+    return {
+      deckId: deckId,
+      slots: slots,
+      preventTimedClear: typeof raw.preventTimedClear === 'boolean' ? raw.preventTimedClear : true,
+      requireHoldToClear: typeof raw.requireHoldToClear === 'boolean' ? raw.requireHoldToClear : false,
+      forceSpeaker: typeof raw.forceSpeaker === 'boolean' ? raw.forceSpeaker : false,
+      boostVolume: typeof raw.boostVolume === 'boolean' ? raw.boostVolume : false,
+      tone: EMERGENCY_TONES.indexOf(raw.tone) !== -1 ? raw.tone : 'OFF'
+    };
+  }
+
+  function getEmergencyConfig(deckId){
+    return normalizeEmergencyConfig(readJSON(emergencyConfigKey(deckId), null), deckId);
+  }
+  function setEmergencyConfig(deckId, config){
+    writeJSON(emergencyConfigKey(deckId), config);
+  }
+
+  function resolveEmergencyPrompt(deckId, slotIndex){
+    var slot = getEmergencyConfig(deckId).slots[slotIndex];
+    return resolveTemplate(slot.template, slot.localValues, {});
+  }
+
+  function updateEmergencySlot(deckId, slotIndex, patch){
+    var config = getEmergencyConfig(deckId);
+    var slot = config.slots[slotIndex];
+    if(patch.label !== undefined) slot.label = patch.label;
+    if(patch.template !== undefined) slot.template = patch.template;
+    if(patch.localValues !== undefined) slot.localValues = patch.localValues;
+    setEmergencyConfig(deckId, config);
+  }
+
+  function updateEmergencyOverrides(deckId, patch){
+    var config = getEmergencyConfig(deckId);
+    if(patch.preventTimedClear !== undefined) config.preventTimedClear = patch.preventTimedClear;
+    if(patch.requireHoldToClear !== undefined) config.requireHoldToClear = patch.requireHoldToClear;
+    if(patch.forceSpeaker !== undefined) config.forceSpeaker = patch.forceSpeaker;
+    if(patch.boostVolume !== undefined) config.boostVolume = patch.boostVolume;
+    if(patch.tone !== undefined) config.tone = patch.tone;
+    setEmergencyConfig(deckId, config);
+  }
+
+  // Derived read-only summary shown above the slot list -- lists only the
+  // overrides currently in effect, joined by " // ", or "STANDARD" if none.
+  function emergencyOverridesSummary(config){
+    var parts = [];
+    if(config.preventTimedClear) parts.push('PERSIST');
+    if(config.requireHoldToClear) parts.push('HOLD CLEAR');
+    if(config.forceSpeaker) parts.push('SPEAKER');
+    if(config.boostVolume) parts.push('BOOST');
+    if(config.tone !== 'OFF') parts.push(config.tone);
+    return parts.length ? parts.join('  //  ') : 'STANDARD';
+  }
+
+  // ---------- Emergency Info card (mirrors EmergencyInfoCard) ----------
+  // Deliberately NOT deck-scoped -- one card describes the person, shared by
+  // every Emergency deck, and firing a slot never reads or displays it; it's
+  // a manually-opened reference screen only.
+  var EMERGENCY_INFO_KEY = STORAGE_PREFIX + 'emergency_info_card';
+
+  function defaultEmergencyInfoCard(){
+    return {
+      fullName: '', dateOfBirth: '', bloodType: '',
+      communicationNote: 'I am non-verbal or unable to speak right now and communicate using this device.',
+      conditions: '', allergies: '', medications: '',
+      contacts: [
+        { name: '', relationship: '', phone: '' },
+        { name: '', relationship: '', phone: '' }
+      ]
+    };
+  }
+
+  function normalizeEmergencyInfoCard(raw){
+    var fallback = defaultEmergencyInfoCard();
+    if(!raw) return fallback;
+    var rawContacts = Array.isArray(raw.contacts) ? raw.contacts : [];
+    var contacts = [0,1].map(function(i){
+      var c = rawContacts[i] || {};
+      return {
+        name: typeof c.name === 'string' ? c.name : '',
+        relationship: typeof c.relationship === 'string' ? c.relationship : '',
+        phone: typeof c.phone === 'string' ? c.phone : ''
+      };
+    });
+    return {
+      fullName: typeof raw.fullName === 'string' ? raw.fullName : '',
+      dateOfBirth: typeof raw.dateOfBirth === 'string' ? raw.dateOfBirth : '',
+      bloodType: typeof raw.bloodType === 'string' ? raw.bloodType : '',
+      communicationNote: typeof raw.communicationNote === 'string' ? raw.communicationNote : fallback.communicationNote,
+      conditions: typeof raw.conditions === 'string' ? raw.conditions : '',
+      allergies: typeof raw.allergies === 'string' ? raw.allergies : '',
+      medications: typeof raw.medications === 'string' ? raw.medications : '',
+      contacts: contacts
+    };
+  }
+
+  function getEmergencyInfoCard(){
+    return normalizeEmergencyInfoCard(readJSON(EMERGENCY_INFO_KEY, null));
+  }
+  function setEmergencyInfoCard(card){
+    writeJSON(EMERGENCY_INFO_KEY, card);
+  }
+
   // ---------- deck CRUD (mirrors CommandRepository's deck management) ----------
   function getCustomDecks(){ return readJSON(DECKS_KEY, []); }
   function saveCustomDecks(list){ writeJSON(DECKS_KEY, list); }
@@ -1955,9 +2349,12 @@
     if(deckId === DEFAULT_DECK_ID) return false;
     saveCustomDecks(getCustomDecks().filter(function(d){ return d.id !== deckId; }));
 
-    // Remove every phrase/vars/root/collapsed/qa key this deck owns.
+    // Remove every phrase/vars/root/collapsed/qa/emergency key this deck
+    // owns. The global Emergency Info card is deliberately untouched here --
+    // it isn't deck-scoped, so deleting one deck (even the last Emergency
+    // deck) must never erase it.
     try{
-      var types = ['phrase_', 'vars_', 'root_', 'collapsed_', 'qa_'];
+      var types = ['phrase_', 'vars_', 'root_', 'collapsed_', 'qa_', 'emergency_'];
       var toRemove = [];
       for(var i=0;i<localStorage.length;i++){
         var key = localStorage.key(i);
@@ -2041,11 +2438,19 @@
     'each group bound to one watch pose and one A/B/C root-override bank independently. No profiles here ' +
     '&mdash; a Quick Actions deck holds exactly one configuration. Voice output isn\'t simulated &mdash; ' +
     'PLAY shows the same full-screen visual prompt the app displays, without audio.';
+  var EMERGENCY_INTRO = 'Simulating an <strong>EMERGENCY</strong> deck: 4 fixed slots, no profiles, and no ' +
+    'shared root overrides &mdash; a {VAR:A}/{VAR:B}/{VAR:C} tag behaves exactly like a bare {VAR} here, since ' +
+    'Emergency slots only ever use their own local values. PLAY applies this deck\'s own overrides: PERSIST ' +
+    'and HOLD TO CLEAR change how the overlay behaves; FORCE SPEAKER and VOLUME BOOST are audio-only and ' +
+    'have no visual effect here; an ALERT TONE plays as a brief visual pulse before the prompt appears. ' +
+    'EMERGENCY INFO is one reference card shared by every Emergency deck &mdash; editing it never changes ' +
+    'what a slot plays.';
 
   function updateIntroNote(deck){
     var note = document.getElementById('mtxIntroNote');
     if(!note) return;
-    note.innerHTML = (deck && deck.type === 'QUICK_ACTIONS') ? QA_INTRO : MTX_INTRO;
+    var type = deck ? deck.type : 'MATRIX';
+    note.innerHTML = type === 'QUICK_ACTIONS' ? QA_INTRO : type === 'EMERGENCY' ? EMERGENCY_INTRO : MTX_INTRO;
   }
 
   function mtxRenderEditor(focusKey){
@@ -2056,6 +2461,10 @@
 
     if(deck && deck.type === 'QUICK_ACTIONS'){
       renderQuickActionsEditor(root, mtxState.deckId, focusKey);
+      return;
+    }
+    if(deck && deck.type === 'EMERGENCY'){
+      renderEmergencyEditor(root, mtxState.deckId, focusKey);
       return;
     }
 
@@ -2354,20 +2763,145 @@
     return card;
   }
 
+  // ---------- Emergency editor (mirrors EmergencyDeck.kt's layout: a title +
+  // interaction hint, a compact overrides-summary status line, a 2x2 quad
+  // grid of large tiles, then CONFIGURE OVERRIDES / EMERGENCY INFO buttons.
+  // The quad grid -- not a scrolling stack of wide cards -- is deliberate:
+  // the real app fits every slot on one screen with large, low-clutter
+  // targets specifically so motor difficulties never require fiddling with
+  // the screen to reach an emergency response. Each tile shows only its
+  // index, label, and READY/NOT SET status, matching the app; the resolved-
+  // phrase preview and per-variable quick-edit chips Quick Actions cards
+  // show are dropped here on purpose, both to match the app (which shows
+  // neither) and to keep every tile the same simple shape. There's no
+  // group-tab row or root-variables strip either, since Emergency has
+  // neither groups nor a root-override concept at all. ----------
+  function renderEmergencyEditor(root, deckId, focusKey){
+    root.innerHTML = '';
+    var config = getEmergencyConfig(deckId);
+
+    var heading = el('div', 'mtx-qa-heading');
+    heading.appendChild(el('h3', null, 'EMERGENCY'));
+    heading.appendChild(el('p', 'mtx-qa-hint', 'CLICK: EDIT  //  ▶: EXECUTE'));
+    root.appendChild(heading);
+
+    root.appendChild(el('p', 'mtx-emg-status', 'OVERRIDES: ' + emergencyOverridesSummary(config)));
+
+    var grid = el('div', 'mtx-emg-action-grid');
+    config.slots.forEach(function(slot){
+      grid.appendChild(renderEmergencyActionCard(slot, deckId));
+    });
+    root.appendChild(grid);
+
+    var overridesBtn = document.createElement('button');
+    overridesBtn.type = 'button';
+    overridesBtn.className = 'mtx-emg-wide-btn';
+    overridesBtn.textContent = 'CONFIGURE OVERRIDES';
+    overridesBtn.addEventListener('click', function(){ openEmgOverridesDialog(deckId); });
+    root.appendChild(overridesBtn);
+
+    var infoBtn = document.createElement('button');
+    infoBtn.type = 'button';
+    infoBtn.className = 'mtx-emg-wide-btn mtx-emg-info-btn';
+    infoBtn.textContent = 'EMERGENCY INFO';
+    infoBtn.addEventListener('click', function(){ openEmgInfoDialog(); });
+    root.appendChild(infoBtn);
+
+    if(focusKey){
+      var target = root.querySelector('[data-focus-key="' + focusKey + '"]');
+      if(target) target.focus();
+    }
+  }
+
+  function renderEmergencyActionCard(slot, deckId){
+    var card = el('div', 'mtx-emg-action panel');
+    var isConfigured = slot.template.trim() !== '';
+
+    card.appendChild(el('span', 'mtx-emg-action-index', 'E' + (slot.slotIndex + 1)));
+
+    var body = document.createElement('button');
+    body.type = 'button';
+    body.className = 'mtx-emg-action-body';
+    body.setAttribute('data-focus-key', 'emg-slot-body-' + slot.slotIndex);
+    body.appendChild(el(
+      'span',
+      'mtx-emg-action-label' + (isConfigured ? '' : ' is-empty'),
+      isConfigured ? slot.label : '[CLICK TO CONFIGURE]'
+    ));
+    body.addEventListener('click', function(){ openEmgSlotDialog(deckId, slot.slotIndex); });
+    card.appendChild(body);
+
+    var footer = el('div', 'mtx-emg-action-footer');
+    footer.appendChild(el(
+      'span',
+      'mtx-emg-ready-tag' + (isConfigured ? ' is-ready' : ''),
+      isConfigured ? 'READY' : 'NOT SET'
+    ));
+
+    var playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'mtx-play-btn';
+    playBtn.setAttribute('aria-label', 'Play ' + slot.label);
+    playBtn.textContent = '▶';
+    playBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      playEmergencySlot(deckId, slot.slotIndex);
+    });
+    footer.appendChild(playBtn);
+    card.appendChild(footer);
+
+    return card;
+  }
+
   // ---------- playback overlay ----------
-  var overlayEl, overlayRotorEl, overlayTextEl, replayChipEl;
+  var overlayEl, overlayRotorEl, overlayTextEl, overlayHintEl, replayChipEl;
+  var toneIndicatorEl, toneFlashEl, toneLabelEl;
   var overlayTimeout = null;
   var replayTimeout = null;
   var replayAction = null;
   var overlayResizeHandler = null;
+  // Only an Emergency deck's overrides ever set these -- Matrix/QuickActions
+  // playback always leaves them at their defaults (instant tap-to-clear,
+  // never in a tone pre-beat), matching the real app where these flags only
+  // ever come from an Emergency-mode request.
+  var overlayRequireHold = false;
+  var toneInProgress = false;
+  var overlayHoldTimer = null;
 
   function ensureOverlayRefs(){
     if(overlayEl) return;
     overlayEl = document.getElementById('mtxOverlay');
     overlayRotorEl = document.getElementById('mtxOverlayRotor');
     overlayTextEl = document.getElementById('mtxOverlayText');
+    overlayHintEl = document.getElementById('mtxOverlayHint');
     replayChipEl = document.getElementById('mtxReplayChip');
-    overlayEl.addEventListener('click', function(){ clearOverlay(true); });
+    toneIndicatorEl = document.getElementById('mtxToneIndicator');
+    toneFlashEl = document.getElementById('mtxToneFlash');
+    toneLabelEl = document.getElementById('mtxToneLabel');
+
+    // A plain click only clears when hold-to-clear isn't in effect (and
+    // never while the tone pre-beat is still running) -- mirrors
+    // VisualPromptService: "a plain tap still clears it immediately" unless
+    // requireHoldToClear is on, in which case a tap does nothing at all.
+    overlayEl.addEventListener('click', function(){
+      if(overlayRequireHold || toneInProgress) return;
+      clearOverlay(true);
+    });
+    function cancelHold(){
+      if(overlayHoldTimer){ clearTimeout(overlayHoldTimer); overlayHoldTimer = null; }
+    }
+    overlayEl.addEventListener('pointerdown', function(){
+      if(!overlayRequireHold || toneInProgress) return;
+      cancelHold();
+      overlayHoldTimer = setTimeout(function(){
+        overlayHoldTimer = null;
+        clearOverlay(true);
+      }, 550);
+    });
+    overlayEl.addEventListener('pointerup', cancelHold);
+    overlayEl.addEventListener('pointercancel', cancelHold);
+    overlayEl.addEventListener('pointerleave', cancelHold);
+
     replayChipEl.addEventListener('click', function(){
       clearReplayChip();
       if(replayAction) replayAction();
@@ -2392,12 +2926,22 @@
     }
   }
 
-  function showOverlay(text, onReplay){
+  // options is only ever populated by Emergency playback: { preventTimedClear,
+  // requireHoldToClear }. Matrix/QuickActions calls pass nothing, so both
+  // flags default falsy -- ordinary instant tap-to-clear, auto-clear after
+  // 10s, exactly as before this deck type existed.
+  function showOverlay(text, onReplay, options){
+    options = options || {};
     ensureOverlayRefs();
     clearReplayChip();
     if(overlayTimeout){ clearTimeout(overlayTimeout); overlayTimeout = null; }
 
     replayAction = onReplay;
+    overlayRequireHold = !!options.requireHoldToClear;
+    overlayHintEl.textContent = overlayRequireHold ? 'HOLD ANYWHERE TO CLEAR' : 'TAP ANYWHERE TO CLEAR';
+    overlayTextEl.hidden = false;
+    overlayHintEl.hidden = false;
+    toneIndicatorEl.hidden = true;
     overlayTextEl.textContent = text;
     overlayEl.hidden = false;
     applyOverlayOrientation();
@@ -2407,14 +2951,21 @@
       window.addEventListener('resize', overlayResizeHandler);
     }
 
-    overlayTimeout = setTimeout(function(){ clearOverlay(true); }, 10000);
+    // Mirrors EmergencyDeckConfig.preventTimedClear: when true, no auto-clear
+    // Runnable is ever scheduled -- the prompt stays up until the viewer
+    // clears it themselves.
+    if(!options.preventTimedClear){
+      overlayTimeout = setTimeout(function(){ clearOverlay(true); }, 10000);
+    }
   }
 
   function clearOverlay(offerReplay){
     ensureOverlayRefs();
     if(overlayTimeout){ clearTimeout(overlayTimeout); overlayTimeout = null; }
+    if(overlayHoldTimer){ clearTimeout(overlayHoldTimer); overlayHoldTimer = null; }
     var hadContent = !overlayEl.hidden;
     overlayEl.hidden = true;
+    overlayRequireHold = false;
 
     if(overlayResizeHandler){
       window.removeEventListener('resize', overlayResizeHandler);
@@ -2424,6 +2975,47 @@
     if(offerReplay && hadContent && replayAction){
       showReplayChip();
     }
+  }
+
+  // ---------- Emergency ALERT TONE pre-beat ----------
+  // Mirrors OutputService.playEmergencyTone's three fixed tones, reduced to
+  // a pulse count + per-pulse duration for a purely visual stand-in (real
+  // durations: TONE_1 two 90ms beeps, TONE_2 three 80/80/120ms beeps,
+  // TONE_3 three 110/110/150ms beeps -- close enough for a felt-timing
+  // simulation, not sample-accurate reproduction).
+  var EMERGENCY_TONE_META = {
+    TONE_1: { label: 'PULSE', pulses: 2, msPerPulse: 130 },
+    TONE_2: { label: 'SIGNAL', pulses: 3, msPerPulse: 120 },
+    TONE_3: { label: 'URGENT', pulses: 3, msPerPulse: 150 }
+  };
+
+  function prefersReducedMotion(){
+    return document.documentElement.classList.contains('force-reduced-motion') ||
+      (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function playTonePreBeat(tone, onDone){
+    var meta = EMERGENCY_TONE_META[tone];
+    if(!meta || prefersReducedMotion()){ onDone(); return; }
+
+    ensureOverlayRefs();
+    clearReplayChip();
+    toneInProgress = true;
+    overlayEl.hidden = false;
+    overlayTextEl.hidden = true;
+    overlayHintEl.hidden = true;
+    toneIndicatorEl.hidden = false;
+    toneLabelEl.textContent = meta.label + ' TONE';
+    toneFlashEl.style.animationDuration = meta.msPerPulse + 'ms';
+    toneFlashEl.style.animationIterationCount = String(meta.pulses);
+    toneFlashEl.classList.add('is-pulsing');
+    applyOverlayOrientation();
+
+    setTimeout(function(){
+      toneFlashEl.classList.remove('is-pulsing');
+      toneInProgress = false;
+      onDone();
+    }, meta.pulses * meta.msPerPulse);
   }
 
   function showReplayChip(){
@@ -2453,6 +3045,20 @@
     if(!resolved.trim()) return;
     var displayText = resolveDisplayPrompt(resolved);
     showOverlay(displayText, function(){ playQuickAction(deckId, groupIndex, slotIndex); });
+  }
+
+  function playEmergencySlot(deckId, slotIndex){
+    var resolved = resolveEmergencyPrompt(deckId, slotIndex);
+    if(!resolved.trim()) return;
+    var config = getEmergencyConfig(deckId);
+    var displayText = resolveDisplayPrompt(resolved);
+    var overlayOptions = { preventTimedClear: config.preventTimedClear, requireHoldToClear: config.requireHoldToClear };
+    var replay = function(){ playEmergencySlot(deckId, slotIndex); };
+    if(config.tone !== 'OFF'){
+      playTonePreBeat(config.tone, function(){ showOverlay(displayText, replay, overlayOptions); });
+    } else {
+      showOverlay(displayText, replay, overlayOptions);
+    }
   }
 
   // ---------- LIVE-SAVE EDITOR dialog ----------
@@ -2672,7 +3278,7 @@
   var selectedQaPose = 'IDENTITY';
   var selectedQaRoot = 'IDENTITY';
 
-  function syncQaPickerButtons(containerId, selectedValue, attr){
+  function syncOptGroupButtons(containerId, selectedValue, attr){
     document.querySelectorAll('#' + containerId + ' .opt-btn').forEach(function(btn){
       btn.setAttribute('aria-pressed', String(btn.getAttribute(attr) === selectedValue));
     });
@@ -2687,11 +3293,184 @@
 
     selectedQaPose = group.boundPose;
     selectedQaRoot = group.rootCategory;
-    syncQaPickerButtons('mtxQaGroupPoseGroup', selectedQaPose, 'data-pose');
-    syncQaPickerButtons('mtxQaGroupRootGroup', selectedQaRoot, 'data-root');
+    syncOptGroupButtons('mtxQaGroupPoseGroup', selectedQaPose, 'data-pose');
+    syncOptGroupButtons('mtxQaGroupRootGroup', selectedQaRoot, 'data-root');
 
     document.getElementById('mtxQaGroupDialog').showModal();
     document.getElementById('mtxQaGroupLabelInput').focus();
+  }
+
+  // ---------- Emergency slot editor (LIVE-SAVE EDITOR, mirrors the Quick
+  // Actions slot dialog above but addresses a flat slot index -- no group to
+  // thread through) ----------
+  var emgSlotDialogState = null;
+
+  function renderEmgVarFields(deckId, slotIndex, template){
+    var container = document.getElementById('mtxEmgVarFields');
+    container.innerHTML = '';
+    var count = countVariables(template);
+    if(count === 0) return;
+
+    var tags = getVariableTags(template);
+    var values = getEmergencyConfig(deckId).slots[slotIndex].localValues;
+
+    var header = el('p', null, 'LOCAL VARIABLE DATA');
+    header.style.cssText = 'color:var(--var-accent); font-family:var(--font-mono); font-size:0.72rem; font-weight:700; margin:1rem 0 0.2rem;';
+    container.appendChild(header);
+
+    var hint = el('p', null, 'Saved immediately. Emergency slots have no shared root override -- every A/B/C tag just uses this local value.');
+    hint.style.cssText = 'color:var(--text-faint); font-family:var(--font-mono); font-size:0.65rem; margin:0 0 0.4rem;';
+    container.appendChild(hint);
+
+    for(var i=0;i<count;i++){
+      (function(index){
+        var tag = tags[index];
+        var field = el('div', 'mtx-var-field');
+        var label = document.createElement('label');
+        label.textContent = tag ? ('VARIABLE ' + (index+1) + ' // TAG ' + tag) : ('VARIABLE ' + (index+1));
+        field.appendChild(label);
+
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.placeholder = 'ENTER LOCAL FALLBACK...';
+        inp.value = values[index] || '';
+        inp.addEventListener('input', function(){
+          var current = getEmergencyConfig(deckId).slots[slotIndex].localValues.slice();
+          while(current.length <= index) current.push('');
+          current[index] = inp.value;
+          updateEmergencySlot(deckId, slotIndex, { localValues: current });
+          mtxRenderEditor();
+        });
+        field.appendChild(inp);
+        container.appendChild(field);
+      })(i);
+    }
+  }
+
+  function updateEmgTemplate(deckId, slotIndex, newTemplate){
+    var slot = getEmergencyConfig(deckId).slots[slotIndex];
+    var newCount = countVariables(newTemplate);
+    var current = slot.localValues.slice();
+    while(current.length > newCount) current.pop();
+    while(current.length < newCount) current.push('');
+    updateEmergencySlot(deckId, slotIndex, { template: newTemplate, localValues: current });
+    renderEmgVarFields(deckId, slotIndex, newTemplate);
+    mtxRenderEditor();
+  }
+
+  function openEmgSlotDialog(deckId, slotIndex){
+    emgSlotDialogState = { deckId: deckId, slotIndex: slotIndex };
+    var slot = getEmergencyConfig(deckId).slots[slotIndex];
+    document.getElementById('mtxEmgSlotTitle').textContent = slot.label;
+
+    document.getElementById('mtxEmgLabelInput').value = slot.label;
+
+    var input = document.getElementById('mtxEmgTemplateInput');
+    input.value = slot.template;
+
+    renderEmgVarFields(deckId, slotIndex, slot.template);
+
+    document.getElementById('mtxEmgSlotDialog').showModal();
+    input.focus();
+  }
+
+  // ---------- Emergency clear-confirm dialog ----------
+  var emgClearMode = null;
+
+  function openEmgClearDialog(mode){
+    emgClearMode = mode;
+    document.getElementById('mtxEmgClearText').textContent = CLEAR_COPY[mode];
+    document.getElementById('mtxEmgClearDialog').showModal();
+  }
+
+  // ---------- Emergency overrides editor (PREVENT TIMED CLEAR / REQUIRE
+  // HOLD TO CLEAR / FORCE DEVICE SPEAKER / EMERGENCY VOLUME BOOST / ALERT
+  // TONE) -- an explicit-save dialog like Create/Edit Deck and the Quick
+  // Actions group editor: nothing changes until SAVE OVERRIDES is
+  // pressed. ----------
+  var emgOverridesDialogState = null; // { deckId }
+  var selectedEmgOverrides = null; // working copy of the 5 fields until SAVE
+  var EMG_TOGGLE_IDS = {
+    preventTimedClear: 'mtxEmgTogglePersist',
+    requireHoldToClear: 'mtxEmgToggleHold',
+    forceSpeaker: 'mtxEmgToggleSpeaker',
+    boostVolume: 'mtxEmgToggleBoost'
+  };
+
+  function syncEmgToggle(field){
+    var btn = document.getElementById(EMG_TOGGLE_IDS[field]);
+    btn.setAttribute('aria-pressed', String(!!selectedEmgOverrides[field]));
+  }
+
+  function openEmgOverridesDialog(deckId){
+    var config = getEmergencyConfig(deckId);
+    emgOverridesDialogState = { deckId: deckId };
+    selectedEmgOverrides = {
+      preventTimedClear: config.preventTimedClear,
+      requireHoldToClear: config.requireHoldToClear,
+      forceSpeaker: config.forceSpeaker,
+      boostVolume: config.boostVolume,
+      tone: config.tone
+    };
+    Object.keys(EMG_TOGGLE_IDS).forEach(syncEmgToggle);
+    syncOptGroupButtons('mtxEmgToneGroup', selectedEmgOverrides.tone, 'data-tone');
+    document.getElementById('mtxEmgOverridesDialog').showModal();
+  }
+
+  // ---------- Emergency Info card editor -- explicit display/edit-mode
+  // toggle (CLOSE/EDIT <-> CANCEL/SAVE), matching the real app: this is a
+  // reference card, not a live-save phrase editor, and it's shared by every
+  // Emergency deck rather than scoped to whichever one opened it. ----------
+  var EMG_INFO_FIELD_IDS = {
+    fullName: 'mtxEmgInfoName',
+    dateOfBirth: 'mtxEmgInfoDob',
+    bloodType: 'mtxEmgInfoBlood',
+    communicationNote: 'mtxEmgInfoComm',
+    conditions: 'mtxEmgInfoConditions',
+    allergies: 'mtxEmgInfoAllergies',
+    medications: 'mtxEmgInfoMeds'
+  };
+  var EMG_INFO_CONTACT_LABELS = ['PRIMARY CONTACT', 'EMERGENCY CONTACT'];
+
+  function renderEmgInfoDisplay(card){
+    Object.keys(EMG_INFO_FIELD_IDS).forEach(function(field){
+      var el = document.getElementById(EMG_INFO_FIELD_IDS[field]);
+      var value = card[field];
+      el.textContent = value.trim() ? value : 'NOT SET';
+      el.classList.toggle('is-empty', !value.trim());
+    });
+    card.contacts.forEach(function(contact, i){
+      var el = document.getElementById('mtxEmgInfoContact' + i);
+      var parts = [contact.name, contact.relationship, contact.phone].filter(function(p){ return p.trim(); });
+      el.textContent = parts.length ? parts.join('  //  ') : 'NOT SET';
+      el.classList.toggle('is-empty', parts.length === 0);
+    });
+  }
+
+  function fillEmgInfoEditForm(card){
+    document.getElementById('mtxEmgEditName').value = card.fullName;
+    document.getElementById('mtxEmgEditDob').value = card.dateOfBirth;
+    document.getElementById('mtxEmgEditBlood').value = card.bloodType;
+    document.getElementById('mtxEmgEditComm').value = card.communicationNote;
+    document.getElementById('mtxEmgEditConditions').value = card.conditions;
+    document.getElementById('mtxEmgEditAllergies').value = card.allergies;
+    document.getElementById('mtxEmgEditMeds').value = card.medications;
+    card.contacts.forEach(function(contact, i){
+      document.getElementById('mtxEmgEditC' + i + 'Name').value = contact.name;
+      document.getElementById('mtxEmgEditC' + i + 'Rel').value = contact.relationship;
+      document.getElementById('mtxEmgEditC' + i + 'Phone').value = contact.phone;
+    });
+  }
+
+  function showEmgInfoMode(editing){
+    document.getElementById('mtxEmgInfoDisplay').hidden = editing;
+    document.getElementById('mtxEmgInfoEditForm').hidden = !editing;
+  }
+
+  function openEmgInfoDialog(){
+    renderEmgInfoDisplay(getEmergencyInfoCard());
+    showEmgInfoMode(false);
+    document.getElementById('mtxEmgInfoDialog').showModal();
   }
 
   // ---------- DECK:/PROFILE: dropdown data (consumed by selectTab/applyDeckSelection) ----------
@@ -2739,12 +3518,13 @@
   }
 
   // Profiles are MATRIX-only, exactly like the app: it never even renders a
-  // profile picker while a Quick Actions deck is active. Centralized here so
-  // every mtxSetDeck call site (dropdown change, tab activation, deck
-  // create/delete) gets this for free instead of duplicating it.
+  // profile picker while a Quick Actions or Emergency deck is active.
+  // Centralized here so every mtxSetDeck call site (dropdown change, tab
+  // activation, deck create/delete) gets this for free instead of
+  // duplicating it per deck type.
   function mtxSyncProfileRow(deckId){
     var deck = getDeckMeta(deckId);
-    if(deck && deck.type === 'QUICK_ACTIONS'){
+    if(deck && deck.type !== 'MATRIX'){
       profileRow.hidden = true;
       return;
     }
@@ -2928,7 +3708,8 @@
     [
       'mtxNodeDialog','mtxVarQuickDialog','mtxRootDialog','mtxClearDialog','mtxResetDialog',
       'mtxDeckFormDialog','mtxManageDecksDialog','mtxDeckDeleteDialog',
-      'mtxQaSlotDialog','mtxQaVarQuickDialog','mtxQaClearDialog','mtxQaGroupDialog'
+      'mtxQaSlotDialog','mtxQaVarQuickDialog','mtxQaClearDialog','mtxQaGroupDialog',
+      'mtxEmgSlotDialog','mtxEmgClearDialog','mtxEmgOverridesDialog','mtxEmgInfoDialog'
     ].forEach(wireSimpleDialog);
 
     document.getElementById('mtxTemplateInput').addEventListener('input', function(){
@@ -3023,13 +3804,13 @@
     document.querySelectorAll('#mtxQaGroupPoseGroup .opt-btn').forEach(function(btn){
       btn.addEventListener('click', function(){
         selectedQaPose = btn.getAttribute('data-pose');
-        syncQaPickerButtons('mtxQaGroupPoseGroup', selectedQaPose, 'data-pose');
+        syncOptGroupButtons('mtxQaGroupPoseGroup', selectedQaPose, 'data-pose');
       });
     });
     document.querySelectorAll('#mtxQaGroupRootGroup .opt-btn').forEach(function(btn){
       btn.addEventListener('click', function(){
         selectedQaRoot = btn.getAttribute('data-root');
-        syncQaPickerButtons('mtxQaGroupRootGroup', selectedQaRoot, 'data-root');
+        syncOptGroupButtons('mtxQaGroupRootGroup', selectedQaRoot, 'data-root');
       });
     });
 
@@ -3044,6 +3825,128 @@
       document.getElementById('mtxQaGroupDialog').close();
       qaGroupDialogState = null;
       mtxRenderEditor();
+    });
+
+    document.getElementById('mtxEmgLabelInput').addEventListener('input', function(){
+      if(!emgSlotDialogState) return;
+      updateEmergencySlot(emgSlotDialogState.deckId, emgSlotDialogState.slotIndex, { label: this.value });
+      mtxRenderEditor();
+    });
+
+    document.getElementById('mtxEmgTemplateInput').addEventListener('input', function(){
+      if(!emgSlotDialogState) return;
+      updateEmgTemplate(emgSlotDialogState.deckId, emgSlotDialogState.slotIndex, this.value);
+    });
+
+    document.querySelectorAll('#mtxEmgSlotDialog [data-insert-token]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(!emgSlotDialogState) return;
+        var input = document.getElementById('mtxEmgTemplateInput');
+        var token = btn.getAttribute('data-insert-token');
+        input.value = (input.value ? input.value + ' ' : '') + token;
+        updateEmgTemplate(emgSlotDialogState.deckId, emgSlotDialogState.slotIndex, input.value);
+        input.focus();
+      });
+    });
+
+    document.getElementById('mtxEmgCommit').addEventListener('click', function(){
+      if(!emgSlotDialogState) return;
+      updateEmgTemplate(emgSlotDialogState.deckId, emgSlotDialogState.slotIndex, document.getElementById('mtxEmgTemplateInput').value);
+      document.getElementById('mtxEmgSlotDialog').close();
+    });
+
+    document.getElementById('mtxEmgClearVars').addEventListener('click', function(){ openEmgClearDialog('VARS'); });
+    document.getElementById('mtxEmgClearPrompt').addEventListener('click', function(){ openEmgClearDialog('PROMPT'); });
+    document.getElementById('mtxEmgClearAll').addEventListener('click', function(){ openEmgClearDialog('ALL'); });
+
+    document.getElementById('mtxEmgClearConfirm').addEventListener('click', function(){
+      if(!emgSlotDialogState || !emgClearMode) return;
+      var emgDeckId = emgSlotDialogState.deckId, emgSlotIndex = emgSlotDialogState.slotIndex;
+      var emgSlot = getEmergencyConfig(emgDeckId).slots[emgSlotIndex];
+
+      if(emgClearMode === 'VARS'){
+        var emgVals = emgSlot.localValues.slice();
+        for(var vi=0;vi<emgVals.length;vi++) emgVals[vi] = '';
+        updateEmergencySlot(emgDeckId, emgSlotIndex, { localValues: emgVals });
+      } else if(emgClearMode === 'PROMPT'){
+        updateEmergencySlot(emgDeckId, emgSlotIndex, { template: '' });
+      } else if(emgClearMode === 'ALL'){
+        updateEmergencySlot(emgDeckId, emgSlotIndex, { template: '', localValues: [] });
+      }
+
+      document.getElementById('mtxEmgClearDialog').close();
+      emgClearMode = null;
+
+      var emgTemplate = getEmergencyConfig(emgDeckId).slots[emgSlotIndex].template;
+      document.getElementById('mtxEmgTemplateInput').value = emgTemplate;
+      renderEmgVarFields(emgDeckId, emgSlotIndex, emgTemplate);
+      mtxRenderEditor();
+    });
+
+    Object.keys(EMG_TOGGLE_IDS).forEach(function(field){
+      document.getElementById(EMG_TOGGLE_IDS[field]).addEventListener('click', function(){
+        if(!selectedEmgOverrides) return;
+        selectedEmgOverrides[field] = !selectedEmgOverrides[field];
+        syncEmgToggle(field);
+      });
+    });
+    document.querySelectorAll('#mtxEmgToneGroup .opt-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(!selectedEmgOverrides) return;
+        selectedEmgOverrides.tone = btn.getAttribute('data-tone');
+        syncOptGroupButtons('mtxEmgToneGroup', selectedEmgOverrides.tone, 'data-tone');
+      });
+    });
+
+    document.getElementById('mtxEmgOverridesSave').addEventListener('click', function(){
+      if(!emgOverridesDialogState || !selectedEmgOverrides) return;
+      updateEmergencyOverrides(emgOverridesDialogState.deckId, selectedEmgOverrides);
+      document.getElementById('mtxEmgOverridesDialog').close();
+      emgOverridesDialogState = null;
+      selectedEmgOverrides = null;
+      mtxRenderEditor();
+    });
+
+    // Each handler below stops the click from bubbling to the dialog's own
+    // outside-click-closes listener: toggling display/edit mode changes the
+    // dialog's own content height synchronously (a 13-field form collapsing
+    // to a short display list, or back), which can shift the dialog's
+    // re-centered bounding box to no longer contain this same click's
+    // coordinates by the time that bubbled listener runs -- misreading an
+    // interior click as "outside" and closing the dialog out from under
+    // whichever mode button was just pressed.
+    document.getElementById('mtxEmgInfoEdit').addEventListener('click', function(e){
+      e.stopPropagation();
+      fillEmgInfoEditForm(getEmergencyInfoCard());
+      showEmgInfoMode(true);
+    });
+
+    document.getElementById('mtxEmgInfoCancel').addEventListener('click', function(e){
+      e.stopPropagation();
+      showEmgInfoMode(false);
+    });
+
+    document.getElementById('mtxEmgInfoSave').addEventListener('click', function(e){
+      e.stopPropagation();
+      var card = {
+        fullName: document.getElementById('mtxEmgEditName').value.trim(),
+        dateOfBirth: document.getElementById('mtxEmgEditDob').value.trim(),
+        bloodType: document.getElementById('mtxEmgEditBlood').value.trim(),
+        communicationNote: document.getElementById('mtxEmgEditComm').value.trim(),
+        conditions: document.getElementById('mtxEmgEditConditions').value.trim(),
+        allergies: document.getElementById('mtxEmgEditAllergies').value.trim(),
+        medications: document.getElementById('mtxEmgEditMeds').value.trim(),
+        contacts: [0,1].map(function(i){
+          return {
+            name: document.getElementById('mtxEmgEditC' + i + 'Name').value.trim(),
+            relationship: document.getElementById('mtxEmgEditC' + i + 'Rel').value.trim(),
+            phone: document.getElementById('mtxEmgEditC' + i + 'Phone').value.trim()
+          };
+        })
+      };
+      setEmergencyInfoCard(card);
+      renderEmgInfoDisplay(card);
+      showEmgInfoMode(false);
     });
 
     document.getElementById('mtxClearVars').addEventListener('click', function(){ openClearDialog('VARS'); });
