@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ACK — Gesture-Driven AAC</title>
+<title>ACK — Gesture-Driven AAC for Situational Mutism</title>
+<link rel="canonical" href="https://aspdesignlabs.github.io/ACK/" />
 
 <!-- Favicon (from the phone app's own Play Store icon) -->
 <link rel="icon" href="assets/favicon/favicon.ico" sizes="32x32" />
@@ -13,15 +14,17 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon/favicon-192.png" />
 <link rel="icon" type="image/png" sizes="512x512" href="assets/favicon/favicon-512.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png" />
-<meta name="description" content="ACK is a non-traditional AAC tool built around gesture recognition, tap controls, along with rapid statement creation and recall." />
+<meta name="description" content="ACK is a non-traditional AAC tool for situational mutism, built around gesture recognition, tap controls, and rapid statement construction and recall." />
 <meta name="color-scheme" content="dark" />
+<meta name="google-site-verification" content="SZDLG1pzuuhxYA0NX76ImR6k4XOPnfdyDeele5mEXyQ" />
+<meta name="msvalidate.01" content="CDAAA6111F04493CBB381F0CB821E663" />
 
 <!-- Open Graph (Facebook, and the general-purpose fallback most platforms read) -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="ACK" />
 <meta property="og:url" content="https://aspdesignlabs.github.io/ACK/" />
-<meta property="og:title" content="ACK — Gesture-Driven AAC" />
-<meta property="og:description" content="ACK is a non-traditional AAC tool built around gesture recognition, tap controls, along with rapid statement creation and recall." />
+<meta property="og:title" content="ACK — Gesture-Driven AAC for Situational Mutism" />
+<meta property="og:description" content="ACK is a non-traditional AAC tool for situational mutism, built around gesture recognition, tap controls, and rapid statement construction and recall." />
 <meta property="og:image" content="https://aspdesignlabs.github.io/ACK/assets/social/og-card.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
@@ -29,10 +32,32 @@
 
 <!-- X / Twitter card -->
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="ACK — Gesture-Driven AAC" />
-<meta name="twitter:description" content="ACK is a non-traditional AAC tool built around gesture recognition, tap controls, along with rapid statement creation and recall." />
+<meta name="twitter:title" content="ACK — Gesture-Driven AAC for Situational Mutism" />
+<meta name="twitter:description" content="ACK is a non-traditional AAC tool for situational mutism, built around gesture recognition, tap controls, and rapid statement construction and recall." />
 <meta name="twitter:image" content="https://aspdesignlabs.github.io/ACK/assets/social/og-card.png" />
 <meta name="twitter:image:alt" content="ACK — a modern approach to AAC, gesture-driven and tap-first. Screenshot of the MATRIX Deck." />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ACK",
+  "alternateName": "Augmented Communications Link",
+  "description": "ACK is a non-traditional AAC tool for situational mutism, built around gesture recognition, tap controls, and rapid statement construction and recall.",
+  "url": "https://aspdesignlabs.github.io/ACK/",
+  "applicationCategory": "AccessibilityApplication",
+  "operatingSystem": "Android, Wear OS",
+  "license": "https://github.com/ASPDesignLabs/ACK/blob/main/LICENSE",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "image": "https://aspdesignlabs.github.io/ACK/assets/social/og-card.png",
+  "author": {
+    "@type": "Person",
+    "name": "Christopher Frank",
+    "alternateName": "Snakesan",
+    "sameAs": ["https://x.com/Snakesan"]
+  }
+}
+</script>
 
 <noscript><style>
   .tabpanel[hidden], .ctx-pane[hidden], .profile-pane[hidden] { display:block !important; }
@@ -262,6 +287,24 @@
   .disclaimer{ font-size:0.85em; color:var(--text-faint); border-left:2px solid var(--border); padding-left:0.9rem; max-width:66ch; }
   .kbd{ font-family:var(--font-mono); background:var(--void); border:2px solid var(--border); padding:0.05em 0.4em; font-size:0.85em; color:var(--cyan-bright); }
 
+  /* Newcomer-facing plain-language intro, one per section/sub-panel. Bright
+     cyan border marks it as the primary/first-read path -- same accent
+     .eyebrow labels already use, so it reads as "part of this design," not
+     a bolted-on box. */
+  .plain-terms{ border-left:2px solid var(--cyan); padding-left:0.9rem; margin:0 0 1.1rem; max-width:66ch; }
+  .plain-terms-label{ display:block; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.15em;
+    font-size:0.72em; color:var(--cyan); margin:0 0 0.35rem; }
+  .plain-terms p{ margin:0; color:var(--text); }
+
+  /* Optional AAC/clinical aside for readers who want the deeper framing.
+     Deliberately quieter than .plain-terms -- same dim/border treatment
+     .disclaimer already uses for secondary reading, so it never competes
+     with the plain-language paragraph above it. */
+  .deeper-cut{ border-left:2px solid var(--border); padding-left:0.9rem; margin:0.9rem 0 0; max-width:66ch; }
+  .deeper-cut-label{ display:block; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.15em;
+    font-size:0.72em; color:var(--text-dim); margin:0 0 0.35rem; }
+  .deeper-cut p{ margin:0; color:var(--text-dim); font-size:0.92em; }
+
   .status-banner{
     border:2px solid var(--error); background:rgba(255,84,112,0.08); color:var(--text);
     padding:0.9rem 1rem; font-size:0.88em; margin-top:1rem; max-width:70ch;
@@ -284,13 +327,14 @@
   .deck-entry .deck-text{ flex:1 1 320px; min-width:0; }
   .shot-thumb{
     flex:0 0 92px; width:92px; height:92px;
-    background-color:var(--void); background-size:cover; background-position:center;
+    background-color:var(--void);
     border:var(--cc-b) solid var(--accent);
     cursor:pointer; padding:0; position:relative;
     clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
     --cut:8px; --cc-color:var(--accent);
   }
   .shot-thumb svg{ position:absolute; right:4px; bottom:4px; width:16px; height:16px; stroke:var(--accent); z-index:1; }
+  .shot-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
   .shot-thumb-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
   .shot-thumb.placeholder{ display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.55em; color:var(--text-faint); text-align:center; padding:0.3rem; }
 
@@ -779,6 +823,23 @@
     <section class="tabpanel" id="panel-home" role="tabpanel" aria-labelledby="tab-home">
       <p class="eyebrow">Augmented Communications Link &mdash; ACK</p>
       <h1>A Modern Approach to AAC, with a twist</h1>
+
+      <div class="plain-terms">
+        <span class="plain-terms-label">In Plain Terms</span>
+        <p>Situational mutism isn't about not knowing what to say. It's the gap between knowing exactly what
+          you mean and being able to get it out loud, on command, right when someone's waiting on a reply.
+          It shows up in ordinary moments &mdash; starting a conversation about something you'd already
+          planned to bring up, replying when a direct answer is expected <em>right now</em>, or wanting to
+          say something warmer than a nod when someone's done something kind. It can also show up as needing
+          a beat to figure out what to do next when a place gets overwhelming &mdash; a grocery store, a
+          string of errands &mdash; where having a few ready, grouped replies makes that next step easier
+          instead of harder. And sometimes it's smaller and more urgent than any of that: needing to ask a
+          quick, time-sensitive question and not being able to afford a freeze. None of this is about
+          vocabulary, intelligence, or not caring about the conversation &mdash; it's a bottleneck between
+          the sentence forming and the sentence leaving your mouth. ACK exists to give that sentence another
+          way out.</p>
+      </div>
+
       <p class="lede">Compose statements, build out context-based replies, utilize variables to speed up
         construction of statements. Use tap based controls to start playback or use the companion Wear OS
         app to unlock gesture based initiation. Created primarily to assist myself with situational mutism
@@ -809,6 +870,13 @@
 
         <div class="profile-pane" data-profile="tap" id="profile-tap">
           <h3>Tap controls</h3>
+          <div class="plain-terms">
+            <span class="plain-terms-label">In Plain Terms</span>
+            <p>This is the path that never fails: press a button, the phrase plays. Everything else on
+              this page &mdash; gestures, variables, the different deck types &mdash; is a faster or more
+              flexible way to reach this same moment, not a replacement for it. If you only ever use tap
+              controls, ACK still works exactly as intended.</p>
+          </div>
           <p>Like any AAC app or device there are easy to access tap shortcuts that can be used to
             initiate playback. This interface is where you will compose your replies and statements,
             use variable construction to make rapid edits to more formal communication, and build
@@ -817,6 +885,16 @@
 
         <div class="profile-pane" data-profile="gesture" id="profile-gesture" hidden>
           <h3>Gesture playback</h3>
+          <div class="plain-terms">
+            <span class="plain-terms-label">In Plain Terms</span>
+            <p>You never have to use the watch &mdash; tapping through the app on your phone always works,
+              and for a lot of moments that's exactly right. But sometimes reaching for your phone,
+              unlocking it, and finding the right screen costs more than you have to spend right then
+              &mdash; mid-task, hands busy, or just not wanting to break what you're doing to dig a phone
+              out. The watch lets you fire a prepared phrase, out loud, with your phone still locked in your
+              pocket &mdash; just your arm. It's a focused feature, not the whole app: one more way in, not
+              a replacement for tapping.</p>
+          </div>
           <p>The Wear OS companion handles gestures using a simple state machine &mdash;
             <span class="kbd">ARM</span> &rarr; <span class="kbd">LOCK POSE</span> &rarr;
             <span class="kbd">MODIFY</span> &rarr; <span class="kbd">FIRE</span> &mdash; giving you the
@@ -832,6 +910,15 @@
 
         <div class="profile-pane" data-profile="fullscreen" id="profile-fullscreen" hidden>
           <h3>Full-screen output</h3>
+          <div class="plain-terms">
+            <span class="plain-terms-label">In Plain Terms</span>
+            <p>Holding up a silent screen can land as a demand, and it leaves the other person guessing
+              &mdash; is that the whole message? How are they supposed to respond? Playing the phrase out
+              loud alongside the visual gives them the same context a spoken sentence would, so they can
+              react naturally instead of interpreting a picture. Audio isn't always appropriate, though
+              &mdash; a quiet office, a library, a moment you'd rather keep private &mdash; so Silent Mode
+              exists for exactly those times, without losing the visual half.</p>
+          </div>
           <p>Prompts play back full-screen with visual and audible output together, with audio routing
             to either the phone speaker or a connected Bluetooth speaker.</p>
           <p>Relying on being heard isn't always possible, or even permissible. Sometimes you want
@@ -839,10 +926,12 @@
             to prevent all voice output toggle 'Silent Mode' under PROTOCOL from any deck.</p>
           <div class="shot-row" role="group" aria-label="Screenshots" style="display:flex; gap:0.8rem; margin-top:1rem;">
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/fullscreen-playback.png" data-shot-name="Full-screen prompt playback">
+              <img src="assets/screenshots/fullscreen-playback.png" alt="Full-screen prompt playback screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View full-screen prompt playback screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/audio-silent-mode-toggle.png" data-shot-name="Silent Mode toggle">
+              <img src="assets/screenshots/audio-silent-mode-toggle.png" alt="Silent Mode toggle screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Silent Mode toggle screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -853,6 +942,13 @@
       <div class="ctx-pane" data-ctx="decksoverview" id="ctx-decksoverview" hidden>
         <p class="eyebrow">Decks</p>
         <h2>Organization with a focus on utility</h2>
+        <div class="plain-terms">
+          <span class="plain-terms-label">In Plain Terms</span>
+          <p>Think of a deck as a tab full of your most-used phrases for one part of your life or one kind
+            of moment &mdash; work, errands, emergencies, feelings. Instead of scrolling through everything
+            you might ever want to say, you switch to the deck built for where you are and what's likely
+            coming up next, so the right phrase is one or two taps away instead of buried in a long list.</p>
+        </div>
         <p>A <strong>deck</strong> offers one specific form of organization of communication profiles on
           screen at any time, to make working with the greater context system easier with continuous use.
           MATRIX decks support the use of <strong>profiles</strong> which gives decks additional
@@ -866,13 +962,31 @@
           <div class="deck-entry" style="margin-top:1.4rem;">
             <div class="deck-text">
               <h3>MATRIX Deck</h3>
+              <div class="plain-terms">
+                <span class="plain-terms-label">In Plain Terms</span>
+                <p>This is the main, do-everything deck. Three broad categories cover most day-to-day
+                  replies, with four ready phrases in each &mdash; enough breadth that you're rarely stuck,
+                  but small enough to actually remember where things live. Profiles let those same three
+                  categories hold different phrasing for different parts of your life (work vs. home, say)
+                  without rebuilding the whole layout each time.</p>
+              </div>
               <p>This is the core ACK deck and experience. Build around rapid statement creation and
                 recall. Tap to initiate playback, edit a prompt, use variables to speed up construction.
                 Prompts can be bound to one of the three poses used by the Wear OS experience, with up to
                 four commands issuable per pose. Additional context poses can be added inside a MATRIX
                 deck, allowing for hot-swapping of all replies under a pose with a single tap.</p>
+              <div class="deeper-cut">
+                <span class="deeper-cut-label">The Deeper Cut</span>
+                <p>Switching profiles remaps what the same gesture produces &mdash; useful for reach, but it
+                  trades away the "one motor plan, one meaning, always" consistency that core-vocabulary AAC
+                  systems (PODD, LAMP Words for Life) deliberately protect, on the theory that automaticity
+                  needs a fixed mapping to build on. The on-screen and on-watch profile indicator exists to
+                  offset that ambiguity. If a specific gesture needs to mean the exact same thing no matter
+                  what, a Quick Actions deck keeps that guarantee instead of a MATRIX deck's profiles.</p>
+              </div>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/matrix-deck.png" data-shot-name="MATRIX Deck">
+              <img src="assets/screenshots/matrix-deck.png" alt="MATRIX Deck screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View MATRIX Deck screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -883,11 +997,19 @@
           <div class="deck-entry" style="margin-top:1.4rem;">
             <div class="deck-text">
               <h3>Quick Actions Deck</h3>
+              <div class="plain-terms">
+                <span class="plain-terms-label">In Plain Terms</span>
+                <p>A stripped-down deck for the phrases you want to be unmistakable no matter what &mdash;
+                  greetings, sign-offs, a fixed set of references. Twelve total slots, no profile-switching,
+                  so a given gesture always means the same thing here &mdash; the guaranteed-consistency
+                  option next to MATRIX's more flexible one.</p>
+              </div>
               <p>A more slimmed down experience that offers the user the ability to bind up to four phrases
                 to a pose under a single form of context. Used for greetings, closures, quick references.
                 Edit all three poses then initiate playback using the watch or with a tap.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/quick-actions-deck.png" data-shot-name="Quick Actions Deck">
+              <img src="assets/screenshots/quick-actions-deck.png" alt="Quick Actions Deck screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Quick Actions Deck screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -898,6 +1020,16 @@
           <div class="deck-entry" style="margin-top:1.4rem;">
             <div class="deck-text">
               <h3>Emergency Deck</h3>
+              <div class="plain-terms">
+                <span class="plain-terms-label">In Plain Terms</span>
+                <p>Stress can make your body do things you didn't choose &mdash; for me, that's clenching. A
+                  clenched hand brushing the screen used to be enough to accidentally clear a message before
+                  anyone had even read it. The Emergency deck is built so that can't happen: once a message
+                  from here is on screen, it stays until you deliberately clear it &mdash; a stray touch, a
+                  tremor, hands that aren't quite in your control can't make it disappear early. I haven't
+                  had to lean on this deck for a genuine emergency yet &mdash; but I built it to the standard
+                  I'd want if I ever do.</p>
+              </div>
               <p>Your high priority communications deck. If you need help, if you have a response script
                 for when things become extra difficult, if you don't want your prompt to disapear due to a
                 stray tap or clench, this is where you access these prompts. Prompts issued from here can
@@ -906,8 +1038,20 @@
               <p>Never worry about an Emergency deck response leaving your screen without your intention.
                 All Emergency deck prompts now remain on the screen until explicitly cleared with a long
                 tap-and-hold interaction.</p>
+              <div class="deeper-cut">
+                <span class="deeper-cut-label">The Deeper Cut</span>
+                <p>This follows a principle common in AAC design for high-priority messaging: an urgent
+                  message's <em>visibility</em> needs to be as reliable as the trigger that produced it.
+                  Motor noise &mdash; tremor, involuntary movement, incidental contact &mdash; is exactly the
+                  kind of interference an emergency channel has to be immune to, because it's most likely to
+                  occur under the same stress that made the message necessary in the first place. Forcing
+                  speaker output and playing a beaconing tone ahead of the phrase further reduces reliance on
+                  a first attempt being received &mdash; lowering the cost of a communication breakdown at
+                  the moment repair is hardest.</p>
+              </div>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/EmergencyDeck_preview.png" data-shot-name="Emergency Deck">
+              <img src="assets/screenshots/EmergencyDeck_preview.png" alt="Emergency Deck screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Emergency Deck screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -918,12 +1062,20 @@
           <div class="deck-entry" style="margin-top:1.4rem;">
             <div class="deck-text">
               <h3>Emoji Deck</h3>
+              <div class="plain-terms">
+                <span class="plain-terms-label">In Plain Terms</span>
+                <p>Not every reply needs to be a full sentence. Sometimes an emoji says exactly the right
+                  amount &mdash; enough to show you're following along or reacting, without needing (or
+                  wanting) to build a whole statement for it. The built-in library is grouped into things
+                  like feelings, needs, and boundaries, not just a generic emoji keyboard.</p>
+              </div>
               <p>Emotional context can be difficult to deliver sometimes. This deck covers this a bit. Pick
                 from a suite of emoji from the built-in library or use any emoji you have access to on your
                 device. Group them by category, add text to the displayed prompt, make the emoji prompt
                 more sticky.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/emoji-deck.png" data-shot-name="Emoji Deck">
+              <img src="assets/screenshots/emoji-deck.png" alt="Emoji Deck screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Emoji Deck screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -934,12 +1086,19 @@
           <div class="deck-entry" style="margin-top:1.4rem;">
             <div class="deck-text">
               <h3>GIF Deck</h3>
+              <div class="plain-terms">
+                <span class="plain-terms-label">In Plain Terms</span>
+                <p>If you already communicate through GIFs and memes online, this lets you do the same
+                  thing face-to-face &mdash; pull up the exact reaction instead of trying to describe it in
+                  words to someone who'd get it instantly if they could just see it.</p>
+              </div>
               <p>Memes. A powerful communication medium online, now ready to use in real space. Store and
                 organize GIFs that you'd like to play at any time here. Modifiers for GIF prompts enable
                 better display of different aspect ratio content. Add in text to your GIF prompt to reduce
                 load on the recipient.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/gifs/gif-deck.gif" data-shot-name="GIF Deck">
+              <img src="assets/gifs/gif-deck.gif" alt="GIF Deck screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View GIF Deck screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -950,11 +1109,18 @@
           <div class="deck-entry" style="margin-top:1.4rem;">
             <div class="deck-text">
               <h3>Manual Override</h3>
+              <div class="plain-terms">
+                <span class="plain-terms-label">In Plain Terms</span>
+                <p>A plain text box for anything that doesn't fit a pre-built deck &mdash; type it once,
+                  then either save it for later or just say it now and let it go. The escape hatch for
+                  whatever the other decks didn't anticipate.</p>
+              </div>
               <p>A standard textbox input that can be used to store phrases and prompts to a category of
                 your choosing. These can be played with a quick tap. You can also use this to issue an
                 ephemeral reply, if the message isn't worth saving.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/manual-override.png" data-shot-name="Manual Override">
+              <img src="assets/screenshots/manual-override.png" alt="Manual Override screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Manual Override screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -965,12 +1131,19 @@
           <div class="deck-entry" style="margin-top:1.4rem;">
             <div class="deck-text">
               <h3>Target Computer</h3>
+              <div class="plain-terms">
+                <span class="plain-terms-label">In Plain Terms</span>
+                <p>Rather than rewriting "Thanks, [name]" or "Meet me at [place]" from scratch every time,
+                  save the name or place once as a Target, then tap it into whatever phrase you're about to
+                  send &mdash; the sentence stays put, only the specific detail changes.</p>
+              </div>
               <p>Eight "targets" for any prompt you issue using ACK. These can be configured to prepend or
                 append any simple prompt issued via a MATRIX or Quick Actions deck. Add a quick name,
                 place, identity, or callout with a quick tap before issuing a prompt to see it added to
                 your statement.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/target-computer.png" data-shot-name="Target Computer">
+              <img src="assets/screenshots/target-computer.png" alt="Target Computer screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Target Computer screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -979,6 +1152,12 @@
 
         <div class="profile-pane" data-profile="audio" id="profile-audio" hidden>
           <h3 style="margin-top:1.4rem;">Audio Architect</h3>
+          <div class="plain-terms">
+            <span class="plain-terms-label">In Plain Terms</span>
+            <p>This is where the voice that speaks for you gets shaped until it actually feels like yours
+              &mdash; not just picking a robotic default, but adjusting pitch, speed, and texture until the
+              output matches how you'd want to sound saying it.</p>
+          </div>
           <p>Audio Architect splits into two layers. Global Output settings shape ACK's speech no matter
             which voice is active &mdash; Master Gain for volume, Global Cadence for dynamic pacing
             (letting output speed up and slow down through a phrase rather than reading at one flat rate),
@@ -992,6 +1171,12 @@
 
         <div class="profile-pane" data-profile="variables" id="profile-variables" hidden>
           <h3 style="margin-top:1.4rem;">Variables &amp; Root Overrides</h3>
+          <div class="plain-terms">
+            <span class="plain-terms-label">In Plain Terms</span>
+            <p>If the same detail &mdash; a name, a place, today's date &mdash; shows up across a bunch of
+              your saved phrases, a variable means you fill it in once instead of hunting down and editing
+              every phrase that mentions it.</p>
+          </div>
           <p>Any phrase can hold a variable &mdash; write <span class="kbd">{VAR}</span> in the Live Save
             Editor and ACK prompts for that value, or tag it <span class="kbd">{VAR:A}</span>,
             <span class="kbd">{VAR:B}</span>, or <span class="kbd">{VAR:C}</span> to make it targeted
@@ -1015,13 +1200,31 @@
 
         <div class="profile-pane" data-profile="ground" id="profile-ground">
           <h3>Training Ground</h3>
+          <div class="plain-terms">
+            <span class="plain-terms-label">In Plain Terms</span>
+            <p>A practice space that doesn't count &mdash; nothing here actually plays out loud or sends
+              anywhere. It's just you and the watch, building the muscle memory for a gesture before you're
+              relying on it in a real moment.</p>
+          </div>
           <p>Free-form gesture practice with live telemetry and normal pacing &mdash; nothing you do
             here actually plays back or sends output. A safe space to get the arm/lock/modify/fire
             cycle into muscle memory.</p>
+          <div class="deeper-cut">
+            <span class="deeper-cut-label">The Deeper Cut</span>
+            <p>This follows a well-established idea in AAC motor-planning instruction: automaticity comes
+              from repetition under safe, low-stakes conditions, not from getting a gesture right the first
+              time it actually matters.</p>
+          </div>
         </div>
 
         <div class="profile-pane" data-profile="trainer" id="profile-trainer" hidden>
           <h3>Deck Trainer</h3>
+          <div class="plain-terms">
+            <span class="plain-terms-label">In Plain Terms</span>
+            <p>Same practice idea as Training Ground, but scored against your actual deck &mdash; so you're
+              rehearsing the layout you'll really use, not a generic example that won't match your real
+              phrases.</p>
+          </div>
           <p>Scored practice against your own real Matrix or Quick Actions deck, so you're rehearsing
             the actual layout you'll use &mdash; not a generic demo.</p>
         </div>
@@ -1033,6 +1236,12 @@
 
         <div class="profile-pane" data-profile="pairing" id="profile-pairing">
           <h3>Pairing &amp; Sync</h3>
+          <div class="plain-terms">
+            <span class="plain-terms-label">In Plain Terms</span>
+            <p>Set up once, then forget about it. There's no separate ACK-specific pairing step &mdash; as
+              long as the watch is already paired to your phone through Wear OS, that's all this needs, and
+              it keeps listening in the background without the watch screen needing to stay on.</p>
+          </div>
           <p>The watch side is deliberately small: it's what senses the pose, watches for a wake gesture (by
             default, a triple wrist twist so commands can't fire by accident), and pushes that event to the
             phone. The phone stays in charge of decks, profiles, and playback. A background sensor service
@@ -1065,12 +1274,19 @@
           <div class="deck-entry" style="margin-top:1.4rem;">
             <div class="deck-text">
               <h3>Shake Kill Switch</h3>
+              <div class="plain-terms">
+                <span class="plain-terms-label">In Plain Terms</span>
+                <p>A shake of the phone immediately stops whatever's currently playing or on screen &mdash;
+                  the fastest way to cut something off if a gesture misfires or you tapped the wrong
+                  thing.</p>
+              </div>
               <p>You need multiple ways to stop a bad tap, gesture recognition, or statement from leaving
                 your device or completing. One of these methods is a 'Shake to cancel' service that cancels
                 any queued prompt or state traversal on the watch by shaking the phone. Configure
                 sensitivity and test the configuration under PROTOCOL from any deck.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/settings-shake-kill-switch.gif" data-shot-name="Shake Kill Switch">
+              <img src="assets/screenshots/settings-shake-kill-switch.gif" alt="Shake Kill Switch screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Shake Kill Switch screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -1081,6 +1297,13 @@
           <div class="deck-entry" style="margin-top:1.4rem;">
             <div class="deck-text">
               <h3>Shaky-Hands Mode</h3>
+              <div class="plain-terms">
+                <span class="plain-terms-label">In Plain Terms</span>
+                <p>For the days your hands aren't as steady or precise as usual &mdash; stress, fatigue,
+                  whatever the reason &mdash; this gives the watch more time and more tolerance before it
+                  decides a gesture is finished, so you're not fighting the tool on top of everything
+                  else.</p>
+              </div>
               <p>There are moments throughout a day that accuracy might take a hit. You might struggle to
                 continuously trigger the poses you've practiced, you shouldn't be denied access to your
                 tool when this happens. A new 'Shaky hands' mode increases the time needed to navigate
@@ -1092,6 +1315,7 @@
                 method out in the Training Grounds.</p>
             </div>
             <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/watch-shaky-hands-indicator.jpg" data-shot-name="Shaky-Hands Mode">
+              <img src="assets/screenshots/watch-shaky-hands-indicator.jpg" alt="Shaky-Hands Mode screenshot" loading="lazy" decoding="async">
               <span class="shot-thumb-sr">View Shaky-Hands Mode screenshot, full size</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </button>
@@ -1101,6 +1325,12 @@
         <div class="profile-pane" data-profile="wayout" id="profile-wayout" hidden>
           <div class="panel" style="margin-top:1.4rem;">
             <h3>A way out before it fires</h3>
+            <div class="plain-terms">
+              <span class="plain-terms-label">In Plain Terms</span>
+              <p>If a gesture starts locking in but you didn't actually mean it, a single tap anywhere on
+                the watch cancels it before anything plays &mdash; a mistake doesn't have to finish just
+                because it started.</p>
+            </div>
             <p>Misfires happen. Sometimes a pose isn't recognized properly for a host of reasons. You can
               always halt playback of these erroneous replies by tapping anywhere within ACK Wear to clear
               the current progression through the state machine, preventing the error from leaking
@@ -1112,6 +1342,13 @@
           <div class="deck-entry" style="margin-top:1.4rem;">
             <div class="deck-text">
               <h3>REPLAY: bring back what you missed</h3>
+              <div class="plain-terms">
+                <span class="plain-terms-label">In Plain Terms</span>
+                <p>If someone missed what you just said &mdash; didn't hear it, wasn't looking, got
+                  distracted &mdash; you don't have to redo the whole gesture or dig back through decks. A
+                  quick replay button sits on screen for twenty seconds, and everything you've said is still
+                  sitting in the Terminal log if you need it later than that.</p>
+              </div>
               <p>Issuing a prompt doesn't always land on first play. Things can prevent others from reading
                 or hearing them, distractions happen, the situation at work can evolve at a rapid pace. You
                 should have a little security here when it comes to managing this type of interaction. For
@@ -1123,10 +1360,12 @@
             </div>
             <div style="display:flex; flex-direction:column; gap:0.5rem; flex:0 0 auto;">
               <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/replay-chip.png" data-shot-name="REPLAY chip">
+                <img src="assets/screenshots/replay-chip.png" alt="REPLAY chip screenshot" loading="lazy" decoding="async">
                 <span class="shot-thumb-sr">View REPLAY chip screenshot, full size</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
               </button>
               <button type="button" class="shot-thumb" data-shot-src="assets/screenshots/terminal-log-replay.png" data-shot-name="Terminal log replay">
+                <img src="assets/screenshots/terminal-log-replay.png" alt="Terminal log replay screenshot" loading="lazy" decoding="async">
                 <span class="shot-thumb-sr">View Terminal log replay screenshot, full size</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
               </button>
@@ -1143,18 +1382,36 @@
       <div class="ctx-pane" data-ctx="help" id="ctx-help">
         <p class="eyebrow">Help, onboarding &amp; transparency</p>
         <h2>A tutorial system that only advances when you actually do the thing.</h2>
+        <div class="plain-terms">
+          <span class="plain-terms-label">In Plain Terms</span>
+          <p>Instead of reading a manual up front, ACK teaches by having you actually do the thing &mdash;
+            tap the button, feel the gesture &mdash; and only moves on once you've genuinely done it. You
+            can't accidentally "finish" a tutorial without having tried the real feature.</p>
+        </div>
         <p>ACK's in-app help isn't a slideshow. Each module only steps forward when a real event fires
           from the real UI &mdash; a specific tap, a committed text field, a cleared overlay, an actual
           watch gesture broadcast &mdash; so finishing a walkthrough means you've genuinely done it once,
           not just read about it.</p>
         <div class="panel" style="margin-top:1.5rem;">
           <h3>Your Data, Your Rules</h3>
+          <div class="plain-terms">
+            <span class="plain-terms-label">In Plain Terms</span>
+            <p>Everything you've built &mdash; every deck, every phrase, every saved voice &mdash; lives on
+              your device. Exporting a backup means you have a copy that survives a lost phone, a factory
+              reset, or switching devices; without one, that copy only ever exists in one place.</p>
+          </div>
           <p>Backup and restore live under Settings. Your decks, profiles, configurations,
             personification, and variables are yours &mdash; the Data Port exists so you can move them,
             keep copies, and never be locked into a single install.</p>
         </div>
         <div class="panel" style="margin-top:1.5rem;">
           <h3>Terminal</h3>
+          <div class="plain-terms">
+            <span class="plain-terms-label">In Plain Terms</span>
+            <p>A running, timestamped record of everything ACK has said or received this session &mdash;
+              useful for double-checking what actually went out, or replaying something from a few minutes
+              ago. It clears when you close the app, so it's not a permanent history.</p>
+          </div>
           <p>Every system, output, and watch event gets a timestamped, color-coded line in the Terminal
             &mdash; what ACK received, resolved, and sent. Any line that's an actual spoken phrase gets a
             replay control, and replaying an Emergency message keeps its safety behavior intact: forced
@@ -1250,6 +1507,12 @@
         reaches your phone or a server; everything is saved only in this browser.</p>
 
       <div class="ctx-pane" data-ctx="matrix" id="ctx-sim-matrix">
+        <div class="plain-terms">
+          <span class="plain-terms-label">In Plain Terms</span>
+          <p>This is a live, in-browser stand-in for the MATRIX deck described above &mdash; build a
+            phrase, fill in a variable, hit play, and see the exact full-screen visual the real app would
+            show. It just can't speak it out loud, since a browser tab isn't your phone's speaker.</p>
+        </div>
         <div class="mtx-intro-note" id="mtxIntroNote">Simulating the <strong>MATRIX</strong> deck: 3 fixed root poses (IDENTITY /
           DEFEND / CONNECT) &times; 4 phrases each, across the app's 5 fixed profiles. Voice output isn't
           simulated &mdash; PLAY shows the same full-screen visual prompt the app displays, without audio.</div>
@@ -4362,7 +4625,6 @@
   var shotOpener = null;
   document.querySelectorAll('.shot-thumb').forEach(function(btn){
     var src = btn.getAttribute('data-shot-src');
-    if(src){ btn.style.backgroundImage = "url('" + src + "')"; }
     btn.addEventListener('click', function(){
       var name = btn.getAttribute('data-shot-name') || 'Screenshot';
       if(!src){
