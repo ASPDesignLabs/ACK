@@ -20,8 +20,9 @@ object PersonalizationHelp {
                 title = "GLOBAL OUTPUT",
                 body = "Global Output settings affect ACK's overall speech " +
                     "behavior. Master Gain controls output level. Global Cadence " +
-                    "adjusts pacing. Force Speaker changes routing behavior, and " +
-                    "Guide Vox controls whether spoken tutorial feedback is used."
+                    "adjusts pacing. Force Speaker, Guide Vox, and Silent Mode " +
+                    "now live in PROTOCOL, alongside the rest of ACK's system-wide " +
+                    "configuration."
             ),
             HelpStep(
                 id = "master_gain",
@@ -32,16 +33,6 @@ object PersonalizationHelp {
                     "understandable in your common environments.",
                 action = HelpAction.Interact(AckTags.AUDIO_MASTER_GAIN),
                 targetTag = AckTags.AUDIO_MASTER_GAIN
-            ),
-            HelpStep(
-                id = "output_routing",
-                title = "SPEAKER AND GUIDE VOX",
-                body = "Force Speaker can direct speech toward the device speaker " +
-                    "when that is appropriate for your setup. Guide Vox controls " +
-                    "spoken tutorial and system guidance. These settings let you " +
-                    "shape how much audible feedback ACK provides.",
-                action = HelpAction.Interact(AckTags.AUDIO_OUTPUT_ROUTING),
-                targetTag = AckTags.AUDIO_OUTPUT_ROUTING
             ),
             HelpStep(
                 id = "factory_presets",

@@ -6,23 +6,24 @@ import android.speech.tts.Voice
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.besu.ui.theme.ErrorRed
 import com.example.besu.ui.theme.Graphite
 import com.example.besu.ui.theme.NeonPalette
@@ -55,9 +56,6 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
 
     var userProfile by remember { mutableStateOf(prefs.getString("USER_VOX_PROFILE", "CYBER") ?: "CYBER") }
     var cadenceAmount by remember { mutableFloatStateOf(prefs.getFloat("VOX_CADENCE", 0.0f)) }
-    var forceSpeaker by remember { mutableStateOf(prefs.getBoolean("FORCE_SPEAKER", false)) }
-    var silentOutput by remember { mutableStateOf(prefs.getBoolean("SILENT_OUTPUT", false)) }
-    var isVoxEnabled by remember { mutableStateOf(prefs.getBoolean("TUTORIAL_VOX", true)) }
     var masterGain by remember { mutableFloatStateOf(prefs.getFloat("MASTER_GAIN", 1.0f)) }
 
     // A SnapshotStateList so mutating an entry in place (rename, DSP edits)
@@ -87,9 +85,6 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         prefs.edit()
             .putString("USER_VOX_PROFILE", userProfile)
             .putFloat("VOX_CADENCE", cadenceAmount)
-            .putBoolean("FORCE_SPEAKER", forceSpeaker)
-            .putBoolean("SILENT_OUTPUT", silentOutput)
-            .putBoolean("TUTORIAL_VOX", isVoxEnabled)
             .putFloat("MASTER_GAIN", masterGain)
             .putString("CUSTOM_VOICES", Json.encodeToString(customVoices.toList()))
             .apply()
@@ -98,9 +93,6 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             action = "UPDATE_DSP"
             putExtra("user_profile", userProfile)
             putExtra("cadence", cadenceAmount)
-            putExtra("speaker", forceSpeaker)
-            putExtra("silent_output", silentOutput)
-            putExtra("guide_vox", isVoxEnabled)
             putExtra("master_gain", masterGain)
             putExtra("custom_voices_json", Json.encodeToString(customVoices.toList()))
         }
@@ -174,49 +166,6 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         Text("AUDIO ARCHITECT", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(10.dp))
 
-        // --- TOP: SAFETY / ROUTING (kept at the top on purpose) ---
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NeonButton(
-                "FORCE SPKR: ${if (forceSpeaker) "ON" else "OFF"}",
-                Modifier.weight(1f).helpTarget(AckTags.AUDIO_OUTPUT_ROUTING, primaryColor),
-                isActive = forceSpeaker,
-                mainColor = primaryColor
-            ) {
-                forceSpeaker = !forceSpeaker
-                syncDsp()
-                reportHelpInteraction(AckTags.AUDIO_OUTPUT_ROUTING)
-            }
-            NeonButton(
-                "GUIDE VOX: ${if (isVoxEnabled) "ON" else "OFF"}",
-                Modifier.weight(1f).helpTarget(AckTags.AUDIO_OUTPUT_ROUTING, primaryColor),
-                isActive = isVoxEnabled,
-                mainColor = primaryColor
-            ) {
-                isVoxEnabled = !isVoxEnabled
-                syncDsp()
-                reportHelpInteraction(AckTags.AUDIO_OUTPUT_ROUTING)
-            }
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        NeonButton(
-            "SILENT MODE: ${if (silentOutput) "ON" else "OFF"}",
-            Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_OUTPUT_ROUTING, primaryColor),
-            isActive = silentOutput,
-            mainColor = primaryColor
-        ) {
-            silentOutput = !silentOutput
-            syncDsp()
-            reportHelpInteraction(AckTags.AUDIO_OUTPUT_ROUTING)
-        }
-        Text(
-            "Shows prompts as normal but never speaks them out loud -- for places where sound itself is the problem. Emergency messages and tutorial narration are never silenced.",
-            color = Color.Gray,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
         // --- GLOBAL OUTPUT ---
         Text("MASTER GAIN: ${(masterGain * 100).toInt()}%", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
         Slider(
@@ -247,23 +196,23 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
 
         // --- VOICE PROFILE SELECTOR ---
         Text("VOICE PROFILE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-        Spacer(modifier = Modifier.height(6.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Spacer(modifier = Modifier.height(8.dp))
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             listOf("CYBER", "MECH", "ORGANIC").forEach { name ->
-                ThemeOption(0, name, if (userProfile == name) 0 else -1, primaryColor) {
+                AudioProfileChip(name, userProfile == name, primaryColor) {
                     userProfile = name
                     syncDsp()
                 }
             }
             for (i in customVoices.indices) {
                 val profile = customVoices[i]
-                ThemeOption(
-                    0,
+                AudioProfileChip(
                     profile.label,
-                    if (userProfile == profile.id) 0 else -1,
+                    userProfile == profile.id,
                     primaryColor,
                     modifier = Modifier
                         .testTag(AckTags.AUDIO_PROFILE_SELECT)
@@ -275,10 +224,10 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                 }
             }
             if (customVoices.size < MAX_CUSTOM_PROFILES) {
-                ThemeOption(0, "+ NEW", -1, primaryColor) { createProfile() }
+                AudioProfileChip("+ NEW", false, primaryColor) { createProfile() }
             }
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         NeonButton(
             "MANAGE PROFILES",
             Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_PROFILE_MANAGE, primaryColor),
@@ -418,168 +367,245 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     }
 
     if (showVoicePicker) {
-        AlertDialog(
-            onDismissRequest = { showVoicePicker = false },
-            containerColor = Graphite,
-            title = { Text("SELECT SYSTEM VOICE", color = primaryColor, fontFamily = FontFamily.Monospace) },
-            text = {
-                LazyColumn(modifier = Modifier.height(300.dp)) {
-                    items(systemVoices) { voice ->
-                        val isSelected = editingProfile?.systemVoiceName == voice.name
-                        Row(modifier = Modifier.fillMaxWidth().background(if (isSelected) primaryColor.copy(alpha = 0.2f) else Color.Transparent).clickable {
-                            editingProfile = editingProfile?.copy(systemVoiceName = voice.name)
-                            showVoicePicker = false
-                            reportHelpInteraction(AckTags.AUDIO_VOICE_PICKER)
-                        }.padding(12.dp)) {
-                            Text(voice.name, color = if (isSelected) primaryColor else Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                        }
-                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+        AudioDialogFrame(onDismissRequest = { showVoicePicker = false }, primaryColor = primaryColor, title = "SELECT SYSTEM VOICE") {
+            LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                items(systemVoices) { voice ->
+                    val isSelected = editingProfile?.systemVoiceName == voice.name
+                    Row(modifier = Modifier.fillMaxWidth().background(if (isSelected) primaryColor.copy(alpha = 0.2f) else Color.Transparent).clickable {
+                        editingProfile = editingProfile?.copy(systemVoiceName = voice.name)
+                        showVoicePicker = false
+                        reportHelpInteraction(AckTags.AUDIO_VOICE_PICKER)
+                    }.padding(12.dp)) {
+                        Text(voice.name, color = if (isSelected) primaryColor else Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     }
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
                 }
-            },
-            confirmButton = {},
-            dismissButton = { Text("CANCEL", color = Color.Red, modifier = Modifier.clickable { showVoicePicker = false }.padding(8.dp)) }
-        )
+            }
+            Spacer(modifier = Modifier.height(14.dp))
+            Text("CANCEL", color = Color.Red, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showVoicePicker = false }.padding(8.dp))
+        }
     }
 
     if (showRoboticEditor && editingProfile != null) {
         val p = editingProfile!!
-        AlertDialog(
-            onDismissRequest = { showRoboticEditor = false },
-            containerColor = Graphite,
-            title = { Text("ROBOTIC OVERLAY", color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text(
-                        "Ring-modulates the base voice for a mechanical character. Frequency sets the modulation rate, Depth blends between the clean and modulated signal.",
-                        color = Color.Gray,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    DspSlider("FREQUENCY (HZ)", p.modFreq, 0f..100f, primaryColor) { editingProfile = p.copy(modFreq = it) }
-                    DspSlider("DEPTH (%)", p.modDepth, 0f..1f, primaryColor) { editingProfile = p.copy(modDepth = it) }
+        AudioDialogFrame(onDismissRequest = { showRoboticEditor = false }, primaryColor = primaryColor, title = "ROBOTIC OVERLAY") {
+            Text(
+                "Ring-modulates the base voice for a mechanical character. Frequency sets the modulation rate, Depth blends between the clean and modulated signal.",
+                color = Color.Gray,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            DspSlider("FREQUENCY (HZ)", p.modFreq, 0f..100f, primaryColor) { editingProfile = p.copy(modFreq = it) }
+            DspSlider("DEPTH (%)", p.modDepth, 0f..1f, primaryColor) { editingProfile = p.copy(modDepth = it) }
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                NeonButton("TEST", Modifier.weight(1f), mainColor = primaryColor) { previewCurrentEdit() }
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text("DONE", color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showRoboticEditor = false }.padding(8.dp))
                 }
-            },
-            confirmButton = {
-                NeonButton("TEST", mainColor = primaryColor) { previewCurrentEdit() }
-            },
-            dismissButton = { Text("DONE", color = primaryColor, modifier = Modifier.clickable { showRoboticEditor = false }.padding(8.dp)) }
-        )
+            }
+        }
     }
 
     if (showManageProfiles) {
-        AlertDialog(
-            onDismissRequest = { showManageProfiles = false },
-            containerColor = Graphite,
-            title = { Text("MANAGE CUSTOM PROFILES", color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
-            text = {
-                Column {
-                    if (customVoices.isEmpty()) {
-                        Text("NO CUSTOM PROFILES YET.", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-                    }
-                    LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
-                        items(customVoices, key = { it.id }) { profile ->
-                            var renaming by remember(profile.id) { mutableStateOf(false) }
-                            var draftLabel by remember(profile.id) { mutableStateOf(profile.label) }
+        AudioDialogFrame(onDismissRequest = { showManageProfiles = false }, primaryColor = primaryColor, title = "MANAGE CUSTOM PROFILES") {
+            if (customVoices.isEmpty()) {
+                Text("NO CUSTOM PROFILES YET.", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+            }
+            LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
+                items(customVoices, key = { it.id }) { profile ->
+                    var renaming by remember(profile.id) { mutableStateOf(false) }
+                    var draftLabel by remember(profile.id) { mutableStateOf(profile.label) }
 
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                                if (renaming) {
-                                    OutlinedTextField(
-                                        value = draftLabel,
-                                        onValueChange = { draftLabel = it },
-                                        singleLine = true,
-                                        colors = NeonTextFieldColors(primaryColor),
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Text(
-                                        "SAVE",
-                                        color = primaryColor,
-                                        fontSize = 10.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.clickable {
-                                            renameProfile(profile.id, draftLabel)
-                                            renaming = false
-                                        }.padding(8.dp)
-                                    )
-                                } else {
-                                    Text(
-                                        profile.label,
-                                        color = if (profile.id == userProfile) primaryColor else Color.White,
-                                        fontSize = 12.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Text(
-                                        "RENAME",
-                                        color = Color.Gray,
-                                        fontSize = 9.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        modifier = Modifier.clickable {
-                                            draftLabel = profile.label
-                                            renaming = true
-                                        }.padding(6.dp)
-                                    )
-                                }
-                                Text(
-                                    "DELETE",
-                                    color = ErrorRed,
-                                    fontSize = 9.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.clickable { deleteTargetId = profile.id }.padding(6.dp)
-                                )
-                            }
-                            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                        if (renaming) {
+                            AckInlineTextField(
+                                value = draftLabel,
+                                primaryColor = primaryColor,
+                                onValueChange = { draftLabel = it },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                "SAVE",
+                                color = primaryColor,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.clickable {
+                                    renameProfile(profile.id, draftLabel)
+                                    renaming = false
+                                }.padding(8.dp)
+                            )
+                        } else {
+                            Text(
+                                profile.label,
+                                color = if (profile.id == userProfile) primaryColor else Color.White,
+                                fontSize = 12.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                "RENAME",
+                                color = Color.Gray,
+                                fontSize = 9.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.clickable {
+                                    draftLabel = profile.label
+                                    renaming = true
+                                }.padding(6.dp)
+                            )
                         }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    if (customVoices.size < MAX_CUSTOM_PROFILES) {
                         Text(
-                            "+ NEW SLOT",
-                            color = primaryColor,
+                            "DELETE",
+                            color = ErrorRed,
+                            fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            modifier = Modifier.clickable { createProfile() }.padding(8.dp)
+                            modifier = Modifier.clickable { deleteTargetId = profile.id }.padding(6.dp)
                         )
-                    } else {
-                        Text("SLOT LIMIT REACHED ($MAX_CUSTOM_PROFILES)", color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
                     }
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
                 }
-            },
-            confirmButton = {},
-            dismissButton = { Text("CLOSE", color = primaryColor, modifier = Modifier.clickable { showManageProfiles = false }.padding(8.dp)) }
-        )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            if (customVoices.size < MAX_CUSTOM_PROFILES) {
+                Text(
+                    "+ NEW SLOT",
+                    color = primaryColor,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    modifier = Modifier.clickable { createProfile() }.padding(8.dp)
+                )
+            } else {
+                Text("SLOT LIMIT REACHED ($MAX_CUSTOM_PROFILES)", color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("CLOSE", color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showManageProfiles = false }.padding(8.dp))
+        }
     }
 
     if (deleteTargetId != null) {
         val target = customVoices.find { it.id == deleteTargetId }
-        AlertDialog(
-            onDismissRequest = { deleteTargetId = null },
-            containerColor = Graphite,
-            title = { Text("DELETE PROFILE?", color = ErrorRed, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    "Delete \"${target?.label ?: ""}\" permanently? This cannot be undone.",
-                    color = Color.White,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp
-                )
-            },
-            confirmButton = {
-                Text(
-                    "DELETE",
-                    color = ErrorRed,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable {
-                        deleteTargetId?.let { deleteProfile(it) }
-                        deleteTargetId = null
-                    }.padding(8.dp)
-                )
-            },
-            dismissButton = { Text("CANCEL", color = Color.Gray, modifier = Modifier.clickable { deleteTargetId = null }.padding(8.dp)) }
+        AudioDialogFrame(onDismissRequest = { deleteTargetId = null }, primaryColor = ErrorRed, title = "DELETE PROFILE?") {
+            Text(
+                "Delete \"${target?.label ?: ""}\" permanently? This cannot be undone.",
+                color = Color.White,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text("CANCEL", color = Color.Gray, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { deleteTargetId = null }.padding(8.dp))
+                }
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text(
+                        "DELETE",
+                        color = ErrorRed,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable {
+                            deleteTargetId?.let { deleteProfile(it) }
+                            deleteTargetId = null
+                        }.padding(8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// The app's own modal chrome (cut-corner border/background, matching
+// CreateDeckDialog.kt) instead of Material3 AlertDialog's fixed rounded
+// shape, which clashes with the cut-corner look used everywhere else.
+@Composable
+private fun AudioDialogFrame(
+    onDismissRequest: () -> Unit,
+    primaryColor: Color,
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val shape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
+
+    Dialog(onDismissRequest = onDismissRequest) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Graphite, shape)
+                .border(1.dp, primaryColor, shape)
+                .padding(18.dp)
+        ) {
+            Text(
+                title,
+                color = primaryColor,
+                fontSize = 14.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+private fun AckInlineTextField(
+    value: String,
+    primaryColor: Color,
+    modifier: Modifier = Modifier,
+    onValueChange: (String) -> Unit
+) {
+    val shape = CutCornerShape(4.dp)
+
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = TextStyle(
+            color = primaryColor,
+            fontSize = 13.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold
+        ),
+        modifier = modifier
+            .background(VoidBlack, shape)
+            .border(1.dp, primaryColor.copy(alpha = 0.75f), shape)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+    )
+}
+
+// Bigger and more legible than the shared ThemeOption chip (which is fixed
+// at 60x40dp for compact settings toggles) -- profile names here need to
+// stay readable at a glance, so this gets its own sizing.
+@Composable
+private fun AudioProfileChip(
+    label: String,
+    isActive: Boolean,
+    primaryColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val shape = CutCornerShape(8.dp)
+
+    Box(
+        modifier = modifier
+            .defaultMinSize(minWidth = 92.dp, minHeight = 52.dp)
+            .background(if (isActive) primaryColor.copy(alpha = 0.16f) else VoidBlack, shape)
+            .border(if (isActive) 2.dp else 1.dp, if (isActive) primaryColor else Color.DarkGray, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            color = if (isActive) primaryColor else Color.White,
+            fontSize = 13.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 2
         )
     }
 }
