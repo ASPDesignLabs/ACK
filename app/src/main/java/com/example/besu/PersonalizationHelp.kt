@@ -55,10 +55,19 @@ object PersonalizationHelp {
                 id = "custom_profiles",
                 title = "CUSTOM PROFILE SLOTS",
                 body = "Custom profile slots can store your own voice designs. " +
-                    "Select one of the custom placeholder slots below to open " +
+                    "Select one of the custom slots below to open " +
                     "its editable DSP Chain configuration.",
                 action = HelpAction.Interact(AckTags.AUDIO_PROFILE_SELECT),
                 targetTag = AckTags.AUDIO_PROFILE_SELECT
+            ),
+            HelpStep(
+                id = "manage_profiles",
+                title = "MANAGE PROFILES",
+                body = "Use MANAGE to create a new custom slot, rename an " +
+                    "existing one, or delete one you no longer want. " +
+                    "Deleting a profile always asks for confirmation first.",
+                action = HelpAction.Interact(AckTags.AUDIO_PROFILE_MANAGE),
+                targetTag = AckTags.AUDIO_PROFILE_MANAGE
             ),
             HelpStep(
                 id = "dsp_chain",
@@ -84,18 +93,19 @@ object PersonalizationHelp {
                     "Speed changes how quickly it speaks. Small adjustments can " +
                     "make a profile clearer, calmer, more expressive, or more " +
                     "recognizably yours.",
-                // action = HelpAction.Interact(AckTags.AUDIO_PITCH_SPEED),
-                // targetTag = AckTags.AUDIO_PITCH_SPEED
+                action = HelpAction.Interact(AckTags.AUDIO_PITCH_SPEED),
+                targetTag = AckTags.AUDIO_PITCH_SPEED
             ),
             HelpStep(
                 id = "robotic_overlay",
                 title = "ROBOTIC OVERLAY",
-                body = "The Robotic Overlay adds modulation to the selected voice. " +
-                    "Enable it to reveal frequency and depth controls. Frequency " +
-                    "changes the character of the effect, while depth controls " +
-                    "how strongly the processed signal replaces the base voice.",
-                // action = HelpAction.Interact(AckTags.AUDIO_ROBOTIC_OVERLAY),
-                // targetTag = AckTags.AUDIO_ROBOTIC_OVERLAY
+                body = "The Robotic Overlay ring-modulates the selected voice. " +
+                    "Enable it and use EDIT to reveal frequency and depth " +
+                    "controls. Frequency changes the character of the effect, " +
+                    "while depth controls how strongly the processed signal " +
+                    "replaces the base voice.",
+                action = HelpAction.Interact(AckTags.AUDIO_ROBOTIC_OVERLAY),
+                targetTag = AckTags.AUDIO_ROBOTIC_OVERLAY
             ),
             HelpStep(
                 id = "bitcrush",
@@ -103,8 +113,8 @@ object PersonalizationHelp {
                 body = "Bitcrush adds a deliberately digital texture to the voice. " +
                     "Use subtle values for a lightly synthesized edge, or higher " +
                     "values for a more aggressively processed communication style.",
-                // action = HelpAction.Interact(AckTags.AUDIO_BITCRUSH),
-                // targetTag = AckTags.AUDIO_BITCRUSH
+                action = HelpAction.Interact(AckTags.AUDIO_BITCRUSH),
+                targetTag = AckTags.AUDIO_BITCRUSH
             ),
             HelpStep(
                 id = "save_profile",
