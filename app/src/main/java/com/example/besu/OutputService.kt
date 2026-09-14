@@ -27,6 +27,8 @@ import kotlin.math.sin
 import kotlin.random.Random
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.PI
+import kotlin.math.pow
+import kotlin.math.round
 
 class OutputService : Service(), TextToSpeech.OnInitListener {
 
@@ -49,6 +51,12 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     // is the barrier, not just being heard. Tutorial/guide narration has
     // its own separate toggle (isVoxEnabled on the phone) and is untouched.
     private var silentOutput = false
+
+    // Guide Vox: whether tutorial/guide narration is spoken aloud. The
+    // coach dialog itself (HelpCoachDialog) always shows step title/body
+    // visually regardless of this -- this only gates the redundant spoken
+    // read-aloud.
+    private var guideVoxEnabled = true
 
     // Gain State
     private var masterGain = 1.0f
@@ -154,6 +162,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         cadenceFactor = prefs.getFloat("VOX_CADENCE", 0.0f)
         forceSpeaker = prefs.getBoolean("FORCE_SPEAKER", false)
         silentOutput = prefs.getBoolean("SILENT_OUTPUT", false)
+        guideVoxEnabled = prefs.getBoolean("TUTORIAL_VOX", true)
         masterGain = prefs.getFloat("MASTER_GAIN", 1.0f)
         
         val customJson = prefs.getString("CUSTOM_VOICES", "[]") ?: "[]"
@@ -175,6 +184,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 cadenceFactor = intent.getFloatExtra("cadence", cadenceFactor)
                 forceSpeaker = intent.getBooleanExtra("speaker", forceSpeaker)
                 silentOutput = intent.getBooleanExtra("silent_output", silentOutput)
+                guideVoxEnabled = intent.getBooleanExtra("guide_vox", guideVoxEnabled)
                 masterGain = intent.getFloatExtra("master_gain", masterGain)
                 
                 val rawCustoms = intent.getStringExtra("custom_voices_json")
@@ -370,6 +380,13 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                         )
             }
 
+        // Guide Vox off: skip synthesis/playback of tutorial/guide narration.
+        // The coach dialog already shows the same title/body text visually,
+        // so nothing is lost -- this only silences the redundant read-aloud.
+        if (isTutorialOverride && !guideVoxEnabled) {
+            return
+        }
+
         // Silent mode skips synthesis/playback for regular output only --
         // never for an emergency message, which relies on being audible to
         // get a bystander's attention, and never for tutorial narration,
@@ -469,8 +486,11 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             val effectiveGain = getEffectiveGain(emergency)
             applyAudioEffects(
                 audioData = audioData,
+                modFreq = profile.modFreq,
+                modDepth = profile.modDepth,
                 crush = profile.crush,
-                gain = effectiveGain
+                gain = effectiveGain,
+                sampleRate = sampleRate
             )
 
             /*
@@ -516,17 +536,36 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
 
     private fun applyAudioEffects(
         audioData: ShortArray,
+        modFreq: Float,
+        modDepth: Float,
         crush: Float,
-        gain: Float
+        gain: Float,
+        sampleRate: Int
     ) {
+        val applyRobotic = modDepth > 0.01f
+        // A literal 0 Hz carrier is sin(0) = 0 for every sample, which would
+        // silence the voice outright at high depth -- floor it so "0" on the
+        // slider still reads as a (very) slow modulation instead of mute.
+        val carrierFreq = modFreq.coerceAtLeast(1f)
+
         val applyCrush = crush > 0.01f
-        val quantize = 1 + (crush * 100f).toInt()
+        // Sweep effective bit depth from 16 (clean) down to ~2 bits (harsh
+        // crunch) as crush goes 0..1, then quantize each sample to the
+        // nearest step of that resolution.
+        val bits = 16f - crush.coerceIn(0f, 1f) * 14f
+        val levels = 2.0.pow(bits.toDouble())
+        val step = 65536.0 / levels
 
         for (index in audioData.indices) {
             var sample = audioData[index].toDouble()
 
+            if (applyRobotic) {
+                val carrier = sin(2.0 * PI * carrierFreq * index / sampleRate)
+                sample = sample * (1.0 - modDepth) + (sample * carrier * modDepth)
+            }
+
             if (applyCrush) {
-                sample = (sample.toInt() / quantize * quantize).toDouble()
+                sample = round(sample / step) * step
             }
 
             sample *= gain

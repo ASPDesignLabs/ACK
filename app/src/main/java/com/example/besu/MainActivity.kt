@@ -344,6 +344,7 @@ fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>
         intent.putExtra("tutorial_profile", prefs.getString("TUT_VOX_PROFILE", "MECH"))
         intent.putExtra("cadence", prefs.getFloat("VOX_CADENCE", 0f))
         intent.putExtra("speaker", prefs.getBoolean("FORCE_SPEAKER", false))
+        intent.putExtra("guide_vox", prefs.getBoolean("TUTORIAL_VOX", true))
         intent.putExtra("master_gain", prefs.getFloat("MASTER_GAIN", 1.0f))
         intent.putExtra("custom_voices_json", prefs.getString("CUSTOM_VOICES", "[]"))
         context.startService(intent)

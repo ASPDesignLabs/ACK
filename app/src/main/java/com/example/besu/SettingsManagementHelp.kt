@@ -5,7 +5,7 @@ object SettingsManagementHelp {
         id = "settings_management",
         category = HelpCategory.BASICS_SETTINGS,
         title = "SETTINGS MANAGEMENT",
-        summary = "WATCH AUDIO, HARDWARE, SENSORS, SHORTCUTS, AND DATA.",
+        summary = "AUDIO ROUTING, WATCH AUDIO, HARDWARE, SENSORS, SHORTCUTS, AND DATA.",
         destination = HelpDestination.SETTINGS,
         steps = listOf(
             HelpStep(
@@ -14,6 +14,16 @@ object SettingsManagementHelp {
                 body = "PROTOCOL contains ACK's system-wide configuration. " +
                         "These controls affect the application independently of " +
                         "the currently active deck."
+            ),
+            HelpStep(
+                id = "audio_output_routing",
+                title = "AUDIO OUTPUT ROUTING",
+                body = "Force Speaker can direct speech toward the device speaker " +
+                        "when that is appropriate for your setup. Guide Vox controls " +
+                        "whether tutorial and guide narration is spoken aloud. Silent " +
+                        "Mode shows prompts as normal but never speaks them out loud.",
+                action = HelpAction.Interact(AckTags.SETTINGS_AUDIO_ROUTING),
+                targetTag = AckTags.SETTINGS_AUDIO_ROUTING
             ),
             HelpStep(
                 id = "watch_audio",
@@ -72,8 +82,9 @@ object SettingsManagementHelp {
                 id = "completion",
                 title = "SETTINGS MANAGEMENT COMPLETE",
                 body = "Protocol training complete. You now know where to tune " +
-                        "watch feedback, hardware response, environmental scanning, " +
-                        "header shortcuts, and configuration backups."
+                        "audio output routing, watch feedback, hardware response, " +
+                        "environmental scanning, header shortcuts, and configuration " +
+                        "backups."
             )
         )
     )

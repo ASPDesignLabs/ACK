@@ -37,6 +37,46 @@ import kotlinx.coroutines.delay
 
 
 @Composable
+private fun SettingsToggleRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    primaryColor: Color,
+    modifier: Modifier = Modifier,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                color = if (checked) primaryColor else Color.White,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                description,
+                color = Color.Gray,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        NeonToggle(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            activeColor = primaryColor
+        )
+    }
+}
+
+@Composable
 fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Unit) {
     val prefs = context.getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
 
@@ -61,6 +101,26 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
     var headerShortcuts by remember { mutableStateOf(CommandRepository.getHeaderShortcuts(context)) }
     var forceDeviceRotation by remember {
         mutableStateOf(OverlayDisplayPrefs.isDeviceRotationEnabled(context))
+    }
+
+    var forceSpeaker by remember { mutableStateOf(prefs.getBoolean("FORCE_SPEAKER", false)) }
+    var silentOutput by remember { mutableStateOf(prefs.getBoolean("SILENT_OUTPUT", false)) }
+    var guideVoxEnabled by remember { mutableStateOf(prefs.getBoolean("TUTORIAL_VOX", true)) }
+
+    fun syncPhoneAudio() {
+        prefs.edit()
+            .putBoolean("FORCE_SPEAKER", forceSpeaker)
+            .putBoolean("SILENT_OUTPUT", silentOutput)
+            .putBoolean("TUTORIAL_VOX", guideVoxEnabled)
+            .apply()
+
+        val intent = Intent(context, OutputService::class.java).apply {
+            action = "UPDATE_DSP"
+            putExtra("speaker", forceSpeaker)
+            putExtra("silent_output", silentOutput)
+            putExtra("guide_vox", guideVoxEnabled)
+        }
+        context.startService(intent)
     }
 
 
@@ -193,6 +253,52 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         LazyColumn(modifier = Modifier.weight(1f)) {
+            item {
+                Text("AUDIO OUTPUT ROUTING", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                SettingsToggleRow(
+                    title = "FORCE SPEAKER",
+                    description = "Routes speech to the device's built-in speaker instead of the current audio route.",
+                    checked = forceSpeaker,
+                    primaryColor = primaryColor,
+                    modifier = Modifier.testTag(AckTags.SETTINGS_AUDIO_ROUTING).helpTarget(AckTags.SETTINGS_AUDIO_ROUTING, primaryColor)
+                ) { enabled ->
+                    forceSpeaker = enabled
+                    syncPhoneAudio()
+                    reportHelpInteraction(AckTags.SETTINGS_AUDIO_ROUTING)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SettingsToggleRow(
+                    title = "GUIDE VOX",
+                    description = "Controls whether tutorial and guide narration is spoken aloud.",
+                    checked = guideVoxEnabled,
+                    primaryColor = primaryColor,
+                    modifier = Modifier.helpTarget(AckTags.SETTINGS_AUDIO_ROUTING, primaryColor)
+                ) { enabled ->
+                    guideVoxEnabled = enabled
+                    syncPhoneAudio()
+                    reportHelpInteraction(AckTags.SETTINGS_AUDIO_ROUTING)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SettingsToggleRow(
+                    title = "SILENT MODE",
+                    description = "Shows prompts as normal but never speaks them out loud -- for places where sound itself is the problem. Emergency messages and tutorial narration are never silenced.",
+                    checked = silentOutput,
+                    primaryColor = primaryColor,
+                    modifier = Modifier.helpTarget(AckTags.SETTINGS_AUDIO_ROUTING, primaryColor)
+                ) { enabled ->
+                    silentOutput = enabled
+                    syncPhoneAudio()
+                    reportHelpInteraction(AckTags.SETTINGS_AUDIO_ROUTING)
+                }
+            }
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
             item {
                 Text("WATCH AUDIO FEEDBACK", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(12.dp))
