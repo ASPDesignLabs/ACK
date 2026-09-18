@@ -99,7 +99,13 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         val text: String,
         val roboticOverride: Boolean,
         val source: String,
-        val emergency: EmergencyOptions = EmergencyOptions()
+        val emergency: EmergencyOptions = EmergencyOptions(),
+        // Per-dispatch modifiers -- currently only reachable from the
+        // Terminal prompt's slash commands (/quiet, /nosave, /sticky), but
+        // general enough that any future caller could use them too.
+        val quiet: Boolean = false,
+        val skipLog: Boolean = false,
+        val sticky: Boolean = false
     )
 
 
@@ -257,12 +263,19 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                     )
                 )
 
+                val quiet = intent.getBooleanExtra("quiet", false)
+                val skipLog = intent.getBooleanExtra("skip_log", false)
+                val sticky = intent.getBooleanExtra("sticky", false)
+
                 if (!phrase.isNullOrEmpty()) {
                     val request = QueuedSpeech(
                         text = phrase,
                         roboticOverride = isRobotic,
                         source = source,
-                        emergency = emergency
+                        emergency = emergency,
+                        quiet = quiet,
+                        skipLog = skipLog,
+                        sticky = sticky
                     )
 
                     if (isTtsReady) {
@@ -270,7 +283,10 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                             rawText = request.text,
                             isTutorialOverride = request.roboticOverride,
                             source = request.source,
-                            emergency = request.emergency
+                            emergency = request.emergency,
+                            quiet = request.quiet,
+                            skipLog = request.skipLog,
+                            sticky = request.sticky
                         )
                     } else {
                         speechQueue.add(request)
@@ -297,7 +313,10 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 rawText = item.text,
                 isTutorialOverride = item.roboticOverride,
                 source = item.source,
-                emergency = item.emergency
+                emergency = item.emergency,
+                quiet = item.quiet,
+                skipLog = item.skipLog,
+                sticky = item.sticky
             )
         }
     }
@@ -318,7 +337,10 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
 
     private fun showVisualPrompt(
         rawText: String,
-        emergency: EmergencyOptions
+        emergency: EmergencyOptions,
+        // /sticky forces the same hold-to-clear behavior an emergency
+        // message gets, independent of emergency mode itself.
+        sticky: Boolean = false
     ) {
         if (!android.provider.Settings.canDrawOverlays(this)) {
             return
@@ -342,11 +364,11 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
              */
             putExtra(
                 "prevent_timed_clear",
-                emergency.enabled && emergency.preventTimedClear
+                (emergency.enabled && emergency.preventTimedClear) || sticky
             )
             putExtra(
                 "require_hold_to_clear",
-                emergency.enabled && emergency.requireHoldToClear
+                (emergency.enabled && emergency.requireHoldToClear) || sticky
             )
         }
 
@@ -357,7 +379,10 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         rawText: String,
         isTutorialOverride: Boolean,
         source: String,
-        emergency: EmergencyOptions = EmergencyOptions()
+        emergency: EmergencyOptions = EmergencyOptions(),
+        quiet: Boolean = false,
+        skipLog: Boolean = false,
+        sticky: Boolean = false
     ) {
         val targetId = if (isTutorialOverride) {
             tutorialProfileId
@@ -377,24 +402,33 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         // Only a real communicated phrase is replayable from the log --
         // never tutorial/system narration, which isn't something a user
         // "said" and shouldn't be offered back as if it were.
-        val logMsg = if (source == SOURCE_TERMINAL_PROMPT) {
-            // Echoes back like a real shell would -- makes it obvious at a
-            // glance that this line came from typing directly at the
-            // Terminal's own prompt, not from a deck or Manual Override.
-            "$ $rawText"
-        } else {
-            "$source > \"$rawText\""
+        if (!skipLog) {
+            val logMsg = if (source == SOURCE_TERMINAL_PROMPT) {
+                // Echoes back like a real shell would -- makes it obvious at
+                // a glance that this line came from typing directly at the
+                // Terminal's own prompt, not from a deck or Manual Override,
+                // and which modifiers (if any) were active on it.
+                val flagTags = buildString {
+                    if (quiet) append("[Q]")
+                    if (sticky) append("[S]")
+                    if (emergency.enabled) append("[E]")
+                }
+                if (flagTags.isEmpty()) "$ $rawText" else "$ $flagTags $rawText"
+            } else {
+                "$source > \"$rawText\""
+            }
+            broadcastLog(
+                logMsg,
+                logType,
+                replayText = if (isTutorialOverride) null else rawText
+            )
         }
-        broadcastLog(
-            logMsg,
-            logType,
-            replayText = if (isTutorialOverride) null else rawText
-        )
 
         if (!isTutorialOverride) {
             showVisualPrompt(
                 rawText = rawText,
-                emergency = emergency
+                emergency = emergency,
+                sticky = sticky
                         )
             }
 
@@ -405,11 +439,12 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             return
         }
 
-        // Silent mode skips synthesis/playback for regular output only --
-        // never for an emergency message, which relies on being audible to
-        // get a bystander's attention, and never for tutorial narration,
-        // which has its own separate toggle.
-        if (!isTutorialOverride && silentOutput && !emergency.enabled) {
+        // Silent mode (persisted or a one-off /quiet) skips synthesis/
+        // playback for regular output only -- never for an emergency
+        // message, which relies on being audible to get a bystander's
+        // attention, and never for tutorial narration, which has its own
+        // separate toggle.
+        if (!isTutorialOverride && (silentOutput || quiet) && !emergency.enabled) {
             return
         }
 

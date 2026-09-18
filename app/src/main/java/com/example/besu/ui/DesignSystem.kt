@@ -153,6 +153,120 @@ fun RowScope.ThemeOption(
 //            COMPLEX SCREENS
 // ==========================================
 
+// --- TERMINAL SLASH COMMANDS ---
+// A real TUI carries context, so the bottom prompt understands a small set
+// of slash-prefixed modifiers. Stack any number of them before a phrase
+// ("/q /s help is on the way") and they compose; /help and /? never carry a
+// phrase and short-circuit everything else.
+private data class TerminalFlags(
+    val quiet: Boolean = false,
+    val skipLog: Boolean = false,
+    val sticky: Boolean = false,
+    val emergency: Boolean = false
+)
+
+private sealed class TerminalPromptResult {
+    data class Dispatch(val flags: TerminalFlags, val phrase: String) : TerminalPromptResult()
+    object HelpShown : TerminalPromptResult()
+    object Error : TerminalPromptResult()
+}
+
+private val TERMINAL_HELP_LINES = listOf(
+    "SLASH COMMANDS:",
+    "/help, /?        SHOW THIS LIST",
+    "/q, /quiet       SEND WITHOUT AUDIO",
+    "/n, /nosave      SEND WITHOUT LOGGING",
+    "/s, /sticky      SEND, HOLD TO CLEAR",
+    "/e, /emergency   SEND WITH EMERGENCY OVERRIDES"
+)
+
+// Logs a line straight into the Terminal without dispatching any speech --
+// matches the same local ACK_LOG broadcast pattern MatrixCategory already
+// uses for its own "CONTEXT FOCUS" line.
+private fun logTerminalLocal(context: Context, message: String, type: String = "SYS") {
+    context.sendBroadcast(
+        Intent("ACK_LOG").apply {
+            setPackage(context.packageName)
+            putExtra("type", type)
+            putExtra("msg", message)
+        }
+    )
+}
+
+// Splits a raw prompt submission into recognized flags plus whatever phrase
+// is left. Returns Error/HelpShown (having already logged its own output)
+// when there's nothing left to dispatch, so the caller only ever has to
+// react to the result, never log anything itself.
+private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptResult {
+    if (!raw.startsWith("/")) {
+        return TerminalPromptResult.Dispatch(TerminalFlags(), raw)
+    }
+
+    val tokens = raw.split(Regex("\\s+"))
+    val first = tokens.first().lowercase()
+    if (first == "/help" || first == "/?") {
+        TERMINAL_HELP_LINES.forEach { logTerminalLocal(context, it) }
+        return TerminalPromptResult.HelpShown
+    }
+
+    var flags = TerminalFlags()
+    var index = 0
+    while (index < tokens.size && tokens[index].startsWith("/")) {
+        when (tokens[index].lowercase()) {
+            "/q", "/quiet" -> flags = flags.copy(quiet = true)
+            "/n", "/nosave" -> flags = flags.copy(skipLog = true)
+            "/s", "/sticky" -> flags = flags.copy(sticky = true)
+            "/e", "/emergency" -> flags = flags.copy(emergency = true)
+            else -> {
+                logTerminalLocal(context, "UNKNOWN COMMAND: ${tokens[index]} -- TRY /help", "ERR")
+                return TerminalPromptResult.Error
+            }
+        }
+        index++
+    }
+
+    val phrase = tokens.drop(index).joinToString(" ").trim()
+    if (phrase.isEmpty()) {
+        logTerminalLocal(context, "NO PHRASE GIVEN", "WARN")
+        return TerminalPromptResult.Error
+    }
+
+    return TerminalPromptResult.Dispatch(flags, phrase)
+}
+
+// /emergency pulls the deck-level overrides (tone, force speaker, boost
+// volume, prevent-timed-clear, require-hold-to-clear) from whichever deck
+// is *currently active*, exactly the way EmergencyDeck.kt's own PLAY button
+// dispatches -- but only when that active deck is actually an Emergency
+// deck. If it isn't, the phrase still goes out (never silently drop a
+// communication attempt), just without the overrides, and a warning says so.
+private fun dispatchTerminalPhrase(context: Context, phrase: String, flags: TerminalFlags) {
+    val intent = Intent(context, OutputService::class.java).apply {
+        putExtra("phrase", phrase)
+        putExtra("robotic", false)
+        putExtra("source", OutputService.SOURCE_TERMINAL_PROMPT)
+        putExtra("quiet", flags.quiet)
+        putExtra("skip_log", flags.skipLog)
+        putExtra("sticky", flags.sticky)
+    }
+
+    if (flags.emergency) {
+        if (CommandRepository.getDeckType(context) == DeckType.EMERGENCY) {
+            val config = CommandRepository.getEmergencyConfig(context)
+            intent.putExtra("emergency_mode", true)
+            intent.putExtra("emergency_force_speaker", config.forceSpeaker)
+            intent.putExtra("emergency_boost_volume", config.boostVolume)
+            intent.putExtra("emergency_tone", config.tone.name)
+            intent.putExtra("emergency_prevent_timed_clear", config.preventTimedClear)
+            intent.putExtra("emergency_require_hold_to_clear", config.requireHoldToClear)
+        } else {
+            logTerminalLocal(context, "NO EMERGENCY DECK ACTIVE -- /e SENT PLAIN", "WARN")
+        }
+    }
+
+    context.startService(intent)
+}
+
 // --- TERMINAL VIEW ---
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -200,14 +314,22 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     val promptHaptic = LocalHapticFeedback.current
 
     fun submitPrompt() {
-        val text = promptText.trim()
-        if (text.isNotEmpty()) {
-            val intent = Intent(context, OutputService::class.java)
-            intent.putExtra("phrase", text)
-            intent.putExtra("robotic", false)
-            intent.putExtra("source", OutputService.SOURCE_TERMINAL_PROMPT)
-            context.startService(intent)
-            promptText = ""
+        val raw = promptText.trim()
+        if (raw.isNotEmpty()) {
+            when (val result = parseTerminalCommand(context, raw)) {
+                is TerminalPromptResult.Dispatch -> {
+                    dispatchTerminalPhrase(context, result.phrase, result.flags)
+                    promptText = ""
+                }
+                TerminalPromptResult.HelpShown -> {
+                    promptText = ""
+                }
+                TerminalPromptResult.Error -> {
+                    // Leave the text in place -- a typo'd command or a
+                    // flag with no phrase after it shouldn't cost a full
+                    // retype, just a fix.
+                }
+            }
         }
         promptFocusRequester.requestFocus()
     }
