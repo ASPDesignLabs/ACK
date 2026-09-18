@@ -97,6 +97,7 @@ fun SettingsView(
 
     var hideSystemMessages by remember { mutableStateOf(TerminalLogStore.getHideSystemMessages(context)) }
     var hidePathTrace by remember { mutableStateOf(TerminalLogStore.getHidePathTrace(context)) }
+    var monospaceTerminal by remember { mutableStateOf(TerminalLogStore.getMonospaceEnabled(context)) }
     var retentionDays by remember { mutableFloatStateOf(TerminalLogStore.getRetentionDays(context).toFloat()) }
 
     var toneTheme by remember { mutableIntStateOf(prefs.getInt("TONE_THEME", 1)) }
@@ -661,6 +662,20 @@ fun SettingsView(
                 ) { enabled ->
                     hidePathTrace = enabled
                     TerminalLogStore.setHidePathTrace(context, enabled)
+                    reportHelpInteraction(AckTags.SETTINGS_TERMINAL_LOG)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SettingsToggleRow(
+                    title = "MONOSPACE TERMINAL",
+                    description = "Renders the Terminal screen -- log rows, the prompt line, command output -- in a true monospace font so columns line up like a real terminal. Off by default to keep the existing look.",
+                    checked = monospaceTerminal,
+                    primaryColor = primaryColor,
+                    modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
+                ) { enabled ->
+                    monospaceTerminal = enabled
+                    TerminalLogStore.setMonospaceEnabled(context, enabled)
                     reportHelpInteraction(AckTags.SETTINGS_TERMINAL_LOG)
                 }
 

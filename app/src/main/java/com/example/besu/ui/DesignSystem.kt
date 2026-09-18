@@ -1,6 +1,7 @@
 package com.example.besu.ui
 
 import com.example.besu.*
+import com.example.besu.backup.*
 import com.example.besu.computer.*
 import com.example.besu.data.*
 import com.example.besu.decks.*
@@ -10,6 +11,9 @@ import com.example.besu.settings.*
 import com.example.besu.ui.theme.*
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.expandVertically
@@ -24,7 +28,11 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
@@ -32,12 +40,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -145,6 +157,212 @@ fun RowScope.ThemeOption(
 //            COMPLEX SCREENS
 // ==========================================
 
+// --- TERMINAL SLASH COMMANDS ---
+// A real TUI carries context, so the bottom prompt understands a small set
+// of slash-prefixed modifiers. Stack any number of them before a phrase
+// ("/q /s help is on the way") and they compose; /help, /cls, /backup, and
+// /repair are local-only actions that never carry a phrase and
+// short-circuit everything else.
+private data class TerminalFlags(
+    val quiet: Boolean = false,
+    val skipLog: Boolean = false,
+    val sticky: Boolean = false,
+    val emergency: Boolean = false
+)
+
+private sealed class TerminalPromptResult {
+    data class Dispatch(val flags: TerminalFlags, val phrase: String) : TerminalPromptResult()
+    object HelpShown : TerminalPromptResult()
+    object Error : TerminalPromptResult()
+    // These three need things only the composable has (the log list, the
+    // export file picker launcher) so parsing just identifies the intent
+    // and logs its own confirmation prompt -- submitPrompt() in
+    // TerminalView does the actual work.
+    object ClearLog : TerminalPromptResult()
+    object RunBackup : TerminalPromptResult()
+    object RunRepair : TerminalPromptResult()
+}
+
+private val TERMINAL_HELP_LINES = listOf(
+    "SLASH COMMANDS:",
+    "/help, /?        SHOW THIS LIST",
+    "/q, /quiet       SEND WITHOUT AUDIO",
+    "/n, /nosave      SEND WITHOUT LOGGING",
+    "/s, /sticky      SEND, HOLD TO CLEAR",
+    "/e, /emergency   SEND WITH EMERGENCY OVERRIDES",
+    "/v(A,B,C)        INSERT A SHARED ROOT VARIABLE",
+    "/cls             CLEAR THE LOG (CONFIRM REQUIRED)",
+    "/b, /backup      EXPORT ACK DATA (CONFIRM REQUIRED)",
+    "/repair          RESTART BACKGROUND SERVICES"
+)
+
+// Logs a line straight into the Terminal without dispatching any speech --
+// matches the same local ACK_LOG broadcast pattern MatrixCategory already
+// uses for its own "CONTEXT FOCUS" line. The CMD types render as a bare
+// terminal-response block (see TerminalView) instead of the usual
+// [time] TYPE :: msg row -- they're feedback about a command, never a
+// played prompt, so they don't earn the same log-line treatment.
+private fun logTerminalLocal(context: Context, message: String, type: String = "CMD") {
+    context.sendBroadcast(
+        Intent("ACK_LOG").apply {
+            setPackage(context.packageName)
+            putExtra("type", type)
+            putExtra("msg", message)
+        }
+    )
+}
+
+// --- VARIABLE PICKER (/v) ---
+// Not a submit-time flag like the others -- a live composition aid. As
+// soon as "/v(" appears anywhere in the prompt, TerminalView shows
+// tappable chips for the Shared Root Variables: the same A/B/C slots
+// RootOverrideStrip edits (RootOverrideRepository), scoped to whichever
+// category is currently active, using the exact [A-C] schema
+// TemplateEngine's {VAR:A} tokens already use everywhere else in the app.
+// Tapping one inserts its *current resolved value* -- not the {VAR:A}
+// token -- directly into the phrase, so what's typed is exactly what gets
+// said, no separate resolution step at send time.
+private val ROOT_VARIABLE_TAGS = listOf("A", "B", "C")
+private val VARIABLE_TRIGGER_REGEX = Regex("""/v\(([^)]*)\)?""", RegexOption.IGNORE_CASE)
+
+private data class VariableTrigger(val range: IntRange, val letters: List<String>)
+
+private fun findVariableTrigger(text: String): VariableTrigger? {
+    val match = VARIABLE_TRIGGER_REGEX.findAll(text).lastOrNull() ?: return null
+    val requested = match.groupValues[1]
+        .split(",")
+        .map { it.trim().uppercase() }
+        .filter { it in ROOT_VARIABLE_TAGS }
+        .distinct()
+    return VariableTrigger(match.range, requested.ifEmpty { ROOT_VARIABLE_TAGS })
+}
+
+// Splits a raw prompt submission into recognized flags plus whatever phrase
+// is left. Returns Error/HelpShown/ClearLog/RunBackup/RunRepair (having
+// already logged its own output) when there's nothing left to dispatch, so
+// the caller only ever has to react to the result.
+private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptResult {
+    if (findVariableTrigger(raw) != null) {
+        logTerminalLocal(context, "RESOLVE /v(...) FIRST -- TAP A VARIABLE OR DELETE IT", "CMD_WARN")
+        return TerminalPromptResult.Error
+    }
+
+    if (!raw.startsWith("/")) {
+        return TerminalPromptResult.Dispatch(TerminalFlags(), raw)
+    }
+
+    val tokens = raw.split(Regex("\\s+"))
+    val first = tokens.first().lowercase()
+    val rest = tokens.drop(1).joinToString(" ").trim().lowercase()
+
+    if (first == "/help" || first == "/?") {
+        logTerminalLocal(context, TERMINAL_HELP_LINES.joinToString("\n"))
+        return TerminalPromptResult.HelpShown
+    }
+
+    if (first == "/cls") {
+        if (rest == "confirm") {
+            return TerminalPromptResult.ClearLog
+        }
+        logTerminalLocal(
+            context,
+            "CLEAR ENTIRE LOG? THIS CANNOT BE UNDONE.\nTYPE /cls CONFIRM TO PROCEED.",
+            "CMD_WARN"
+        )
+        return TerminalPromptResult.Error
+    }
+
+    if (first == "/b" || first == "/backup") {
+        if (rest == "confirm") {
+            return TerminalPromptResult.RunBackup
+        }
+        logTerminalLocal(
+            context,
+            "EXPORT ACK BACKUP?\nTYPE /backup CONFIRM TO PROCEED."
+        )
+        return TerminalPromptResult.Error
+    }
+
+    if (first == "/repair") {
+        return TerminalPromptResult.RunRepair
+    }
+
+    var flags = TerminalFlags()
+    var index = 0
+    while (index < tokens.size && tokens[index].startsWith("/")) {
+        when (tokens[index].lowercase()) {
+            "/q", "/quiet" -> flags = flags.copy(quiet = true)
+            "/n", "/nosave" -> flags = flags.copy(skipLog = true)
+            "/s", "/sticky" -> flags = flags.copy(sticky = true)
+            "/e", "/emergency" -> flags = flags.copy(emergency = true)
+            else -> {
+                logTerminalLocal(context, "UNKNOWN COMMAND: ${tokens[index]} -- TRY /help", "CMD_ERR")
+                return TerminalPromptResult.Error
+            }
+        }
+        index++
+    }
+
+    val phrase = tokens.drop(index).joinToString(" ").trim()
+    if (phrase.isEmpty()) {
+        logTerminalLocal(context, "NO PHRASE GIVEN", "CMD_WARN")
+        return TerminalPromptResult.Error
+    }
+
+    return TerminalPromptResult.Dispatch(flags, phrase)
+}
+
+// /emergency pulls the deck-level overrides (tone, force speaker, boost
+// volume, prevent-timed-clear, require-hold-to-clear) from whichever deck
+// is *currently active*, exactly the way EmergencyDeck.kt's own PLAY button
+// dispatches -- but only when that active deck is actually an Emergency
+// deck. If it isn't, the phrase still goes out (never silently drop a
+// communication attempt), just without the overrides, and a warning says so.
+private fun dispatchTerminalPhrase(context: Context, phrase: String, flags: TerminalFlags) {
+    val intent = Intent(context, OutputService::class.java).apply {
+        putExtra("phrase", phrase)
+        putExtra("robotic", false)
+        putExtra("source", OutputService.SOURCE_TERMINAL_PROMPT)
+        putExtra("quiet", flags.quiet)
+        putExtra("skip_log", flags.skipLog)
+        putExtra("sticky", flags.sticky)
+    }
+
+    if (flags.emergency) {
+        if (CommandRepository.getDeckType(context) == DeckType.EMERGENCY) {
+            val config = CommandRepository.getEmergencyConfig(context)
+            intent.putExtra("emergency_mode", true)
+            intent.putExtra("emergency_force_speaker", config.forceSpeaker)
+            intent.putExtra("emergency_boost_volume", config.boostVolume)
+            intent.putExtra("emergency_tone", config.tone.name)
+            intent.putExtra("emergency_prevent_timed_clear", config.preventTimedClear)
+            intent.putExtra("emergency_require_hold_to_clear", config.requireHoldToClear)
+        } else {
+            logTerminalLocal(context, "NO EMERGENCY DECK ACTIVE -- /e SENT PLAIN", "CMD_WARN")
+        }
+    }
+
+    context.startService(intent)
+}
+
+// /repair -- a lightweight, non-destructive "turn it off and on again" for
+// ACK's two long-running foreground services. No confirmation needed, hence
+// no gate in parseTerminalCommand: unlike /cls this is easily repeatable
+// and never loses anything.
+private fun restartBackgroundServices(context: Context) {
+    listOf(
+        Intent(context, OutputService::class.java),
+        Intent(context, AccelerometerTapService::class.java)
+    ).forEach { intent ->
+        context.stopService(intent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+    }
+}
+
 // --- TERMINAL VIEW ---
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -156,15 +374,30 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     val hideSystemMessages = TerminalLogStore.getHideSystemMessages(context)
     val hidePathTrace = TerminalLogStore.getHidePathTrace(context)
 
+    // Off by default -- keeps the existing look unless explicitly opted
+    // into from PROTOCOL. On, the whole terminal window (log rows, the
+    // prompt line, command output, the variable picker) switches to a
+    // true monospace font so columns actually line up like a real
+    // terminal's; the SAVE TO MEMORY BANK dialog is unaffected, same as
+    // every other dialog in the app.
+    val terminalFontFamily = if (TerminalLogStore.getMonospaceEnabled(context)) {
+        FontFamily.Monospace
+    } else {
+        FontFamily.Default
+    }
+
     // PATH is the verbose per-tag RESOLVE trace (CommandRepository.debugResolvedPhrase);
     // OUT/EMERGENCY are the actual rationalized phrases that went out and stay
-    // visible either way. Everything else (SYS, GEO, ERR, WARN, INPUT, DATA...)
-    // is general system/status noise, gated by the other toggle. With both
-    // toggles on, only OUT/EMERGENCY lines remain.
+    // visible either way. CMD/CMD_WARN/CMD_ERR are direct feedback on a
+    // command the user just typed right here -- hiding those would make the
+    // prompt feel like it swallowed the input, so they always show too.
+    // Everything else (SYS, GEO, ERR, WARN, INPUT, DATA...) is general
+    // system/status noise, gated by the other toggle. With both toggles on,
+    // only OUT/EMERGENCY lines remain.
     val visibleLogs = logs.filter { log ->
         when (log.type) {
             "PATH" -> !hidePathTrace
-            "OUT", "EMERGENCY" -> true
+            "OUT", "EMERGENCY", "CMD", "CMD_WARN", "CMD_ERR" -> true
             else -> !hideSystemMessages
         }
     }
@@ -181,9 +414,135 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     val savedPhrases = remember(saveRefreshKey) { CommandRepository.getQuickPhrases(context) }
     val savedPhraseTexts = remember(savedPhrases) { savedPhrases.map { it.text }.toSet() }
 
+    // --- BOTTOM PROMPT: a raw command line, not another flyout ---
+    // No target browser, no memory banks, no quick-access row -- just a
+    // keyboard and a phrase. Tapping the field is the only affordance;
+    // typing and hitting Send/the glyph transmits it exactly like Manual
+    // Override does, and focus is reclaimed afterward so the prompt stays
+    // ready for the next line without having to tap back in.
+    var promptText by remember { mutableStateOf("") }
+    val promptFocusRequester = remember { FocusRequester() }
+    val promptHaptic = LocalHapticFeedback.current
+
+    // /backup confirm reuses PROTOCOL's own export flow exactly --
+    // TransferManager.generateBackupJson written to wherever the system
+    // document picker points.
+    val backupExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val jsonStr = TransferManager.generateBackupJson(context)
+                context.contentResolver.openOutputStream(uri)?.use { os ->
+                    os.write(jsonStr.toByteArray())
+                }
+                logTerminalLocal(context, "BACKUP EXPORTED")
+            } catch (e: Exception) {
+                logTerminalLocal(context, "BACKUP EXPORT FAILED: ${e.message}", "CMD_ERR")
+            }
+        } else {
+            logTerminalLocal(context, "BACKUP CANCELLED", "CMD_WARN")
+        }
+    }
+
+    // Live /v(...) detection -- recomputed on every keystroke since
+    // promptText is already the key, so there's nothing worth memoizing.
+    val variableTrigger = findVariableTrigger(promptText)
+    val activeCategory = remember { CommandRepository.getActiveCategoryFocus(context) }
+    val rootVariableConfig = if (variableTrigger != null) {
+        RootOverrideRepository.getConfig(context, activeCategory)
+    } else {
+        null
+    }
+
+    fun insertVariable(value: String) {
+        val trigger = variableTrigger ?: return
+        promptText = promptText.replaceRange(trigger.range, value)
+        promptFocusRequester.requestFocus()
+    }
+
+    fun submitPrompt() {
+        val raw = promptText.trim()
+        if (raw.isNotEmpty()) {
+            when (val result = parseTerminalCommand(context, raw)) {
+                is TerminalPromptResult.Dispatch -> {
+                    dispatchTerminalPhrase(context, result.phrase, result.flags)
+                    promptText = ""
+                }
+                TerminalPromptResult.HelpShown -> {
+                    promptText = ""
+                }
+                TerminalPromptResult.ClearLog -> {
+                    TerminalLogStore.clearAll(context, logs)
+                    logTerminalLocal(context, "LOG CLEARED")
+                    promptText = ""
+                }
+                TerminalPromptResult.RunBackup -> {
+                    backupExportLauncher.launch("ack_backup_${System.currentTimeMillis()}.json")
+                    promptText = ""
+                }
+                TerminalPromptResult.RunRepair -> {
+                    restartBackgroundServices(context)
+                    logTerminalLocal(context, "BACKGROUND SERVICES RESTARTED")
+                    promptText = ""
+                }
+                TerminalPromptResult.Error -> {
+                    // Leave the text in place -- a typo'd command or a
+                    // flag with no phrase after it shouldn't cost a full
+                    // retype, just a fix.
+                }
+            }
+        }
+        promptFocusRequester.requestFocus()
+    }
+
+    val listState = rememberLazyListState()
+
+    // Sticks the scrollback to the newest line as it arrives -- but only
+    // when the user is already sitting at the bottom. Scroll up to review
+    // history and new output won't yank you back down.
+    LaunchedEffect(visibleLogs.size) {
+        if (visibleLogs.isNotEmpty() && listState.firstVisibleItemIndex <= 1) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-        LazyColumn(modifier = Modifier.weight(1f)) {
+        // reverseLayout draws the newest line at the bottom and the log
+        // grows upward from there, like a real terminal's scrollback --
+        // visibleLogs is already newest-first, so index 0 lands at the
+        // visual bottom with no re-sorting needed.
+        LazyColumn(state = listState, reverseLayout = true, modifier = Modifier.weight(1f)) {
             items(visibleLogs) { log ->
+                // CMD/CMD_WARN/CMD_ERR are command feedback, not a played
+                // prompt -- no timestamp, no type badge, left-justified
+                // against its own background block instead of drawn past
+                // the usual columns, closer to what a real shell prints.
+                if (log.type == "CMD" || log.type == "CMD_WARN" || log.type == "CMD_ERR") {
+                    val cmdColor = when (log.type) {
+                        "CMD_ERR" -> RadicalRed
+                        "CMD_WARN" -> DataOrange
+                        else -> FluxCyan
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 3.dp)
+                            .background(Graphite)
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            log.msg,
+                            color = cmdColor,
+                            fontFamily = terminalFontFamily,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    return@items
+                }
+
                 val typeColor = when(log.type) {
                     "ERR" -> RadicalRed
                     "WARN" -> DataOrange
@@ -241,23 +600,137 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                         Text(
                             if (replayText != null) "▶" else " ",
                             color = FluxCyan,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = terminalFontFamily,
                             fontSize = 12.sp
                         )
                         if (isSaved) {
                             Text(
                                 "✓",
                                 color = BioGreen,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = terminalFontFamily,
                                 fontSize = 9.sp
                             )
                         }
                     }
-                    Text("[${log.time}]", color = Color.DarkGray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.width(70.dp))
-                    Text(log.type, color = typeColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
-                    Text(" :: ${log.msg}", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                    Text("[${log.time}]", color = Color.DarkGray, fontFamily = terminalFontFamily, fontSize = 12.sp, modifier = Modifier.width(70.dp))
+                    Text(log.type, color = typeColor, fontFamily = terminalFontFamily, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
+                    Text(" :: ${log.msg}", color = Color.White, fontFamily = terminalFontFamily, fontSize = 12.sp)
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(FluxCyan.copy(alpha = 0.3f)))
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // --- VARIABLE PICKER: shows only while /v(...) is live in the
+        // prompt, just above the keyboard. Tapping a slot inserts its
+        // current resolved value and the picker closes on its own since
+        // the trigger text that summoned it is gone.
+        if (variableTrigger != null && rootVariableConfig != null) {
+            Text(
+                "SHARED ROOT VARIABLES ($activeCategory) -- TAP TO INSERT",
+                color = Color.Gray,
+                fontSize = 9.sp,
+                fontFamily = terminalFontFamily
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                variableTrigger.letters.forEach { tag ->
+                    val slot = rootVariableConfig.slots[tag] ?: RootOverrideValue()
+                    val hasValue = slot.enabled && slot.value.isNotBlank()
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 44.dp)
+                            .border(1.dp, if (hasValue) FluxCyan else Color.DarkGray, AckHelpShape)
+                            .background(
+                                if (hasValue) FluxCyan.copy(alpha = 0.08f) else Color.Transparent,
+                                AckHelpShape
+                            )
+                            .then(
+                                if (hasValue) {
+                                    Modifier.clickable { insertVariable(slot.value) }
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .padding(6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                tag,
+                                color = if (hasValue) FluxCyan else Color.DarkGray,
+                                fontFamily = terminalFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                            Text(
+                                if (hasValue) slot.value else "EMPTY",
+                                color = if (hasValue) Color.White else Color.DarkGray,
+                                fontFamily = terminalFontFamily,
+                                fontSize = 9.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "> ",
+                color = FluxCyan,
+                fontFamily = terminalFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+            Box(modifier = Modifier.weight(1f)) {
+                if (promptText.isEmpty()) {
+                    Text(
+                        "TYPE A COMMAND...",
+                        color = Color.DarkGray,
+                        fontFamily = terminalFontFamily,
+                        fontSize = 14.sp
+                    )
+                }
+                BasicTextField(
+                    value = promptText,
+                    onValueChange = { promptText = it },
+                    modifier = Modifier.fillMaxWidth().focusRequester(promptFocusRequester),
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = FluxCyan,
+                        fontFamily = terminalFontFamily,
+                        fontSize = 14.sp
+                    ),
+                    singleLine = true,
+                    cursorBrush = SolidColor(FluxCyan),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { submitPrompt() })
+                )
+            }
+            Text(
+                "▶",
+                color = if (promptText.isNotBlank()) FluxCyan else Color.DarkGray,
+                fontFamily = terminalFontFamily,
+                fontSize = 16.sp,
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .clickable {
+                        promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        submitPrompt()
+                    }
+                    .padding(6.dp)
+            )
         }
     }
 
