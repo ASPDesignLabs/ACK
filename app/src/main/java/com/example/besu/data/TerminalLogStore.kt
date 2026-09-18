@@ -107,6 +107,14 @@ object TerminalLogStore {
         pruneAndPersist(context, logs)
     }
 
+    // /cls -- wipes the in-memory buffer and the on-disk copy together so
+    // a cleared log actually stays cleared across a restart, not just
+    // until the next addLog re-persists the old contents.
+    fun clearAll(context: Context, logs: SnapshotStateList<LogEntry>) {
+        logs.clear()
+        persist(context, emptyList())
+    }
+
     private fun pruneInPlace(logs: SnapshotStateList<LogEntry>, retentionDays: Int) {
         val cutoffMillis = System.currentTimeMillis() - retentionDays * DAY_MILLIS
         while (logs.isNotEmpty() && logs.last().epochMillis < cutoffMillis) {
