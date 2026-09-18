@@ -7,9 +7,11 @@ import androidx.compose.animation.core.*
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -62,6 +64,7 @@ val FluxCyan = Color(0xFF00F3FF)
 val RadicalRed = Color(0xFFFF0055)
 val BioGreen = Color(0xFF00FF41)
 val DataOrange = Color(0xFFFF9900)
+val NeonViolet = Color(0xFFBD00FF)
 
 // ==========================================
 //        ATOMIC COMPONENTS (BUTTONS)
@@ -135,62 +138,198 @@ fun RowScope.ThemeOption(
 // ==========================================
 
 // --- TERMINAL VIEW ---
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TerminalView(logs: List<LogEntry>, context: Context) {
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-        items(logs) { log ->
-            val typeColor = when(log.type) {
-                "ERR" -> RadicalRed
-                "WARN" -> DataOrange
-                "EMERGENCY" -> RadicalRed
-                "SYS" -> BioGreen
-                "OUT" -> FluxCyan
-                else -> Color.White
-            }
-            // Only an actual communicated phrase carries replayText (see
-            // OutputService.processSpeech) -- status/system log lines never
-            // do, so they render plain with no tap affordance.
-            val replayText = log.replayText
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 2.dp)
-                    .then(
-                        if (replayText != null) {
-                            Modifier
-                                .background(FluxCyan.copy(alpha = 0.08f))
-                                .clickable {
-                                    val intent = Intent(context, OutputService::class.java)
-                                    intent.putExtra("phrase", replayText)
-                                    intent.putExtra("robotic", false)
-                                    intent.putExtra("source", "LOG/REPLAY")
-                                    // An emergency message's own boost/tone
-                                    // settings aren't in the log, but its
-                                    // core safety properties -- audible and
-                                    // not auto-clearing -- shouldn't be lost
-                                    // just because it's being replayed.
-                                    if (log.type == "EMERGENCY") {
-                                        intent.putExtra("emergency_mode", true)
-                                        intent.putExtra("emergency_force_speaker", true)
-                                        intent.putExtra("emergency_prevent_timed_clear", true)
-                                    }
-                                    context.startService(intent)
-                                }
-                        } else {
-                            Modifier
+fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>, context: Context) {
+    // Visibility filters live in PROTOCOL now (SettingsView) -- read fresh
+    // here rather than owned as local toggle state, since this composable
+    // is torn down and rebuilt every time the user leaves and returns to
+    // the TERMINAL tab, which already picks up whatever was last set there.
+    val hideSystemMessages = TerminalLogStore.getHideSystemMessages(context)
+    val hidePathTrace = TerminalLogStore.getHidePathTrace(context)
+
+    // PATH is the verbose per-tag RESOLVE trace (CommandRepository.debugResolvedPhrase);
+    // OUT/EMERGENCY are the actual rationalized phrases that went out and stay
+    // visible either way. Everything else (SYS, GEO, ERR, WARN, INPUT, DATA...)
+    // is general system/status noise, gated by the other toggle. With both
+    // toggles on, only OUT/EMERGENCY lines remain.
+    val visibleLogs = logs.filter { log ->
+        when (log.type) {
+            "PATH" -> !hidePathTrace
+            "OUT", "EMERGENCY" -> true
+            else -> !hideSystemMessages
+        }
+    }
+
+    // Long-pressing a replayable line offers to save it into Manual Input's
+    // Memory Banks (CommandRepository's QuickPhrase store) under one of the
+    // user's existing tags or a new one -- same "ENCODE TO BANK" flow TYPE
+    // already uses. saveRefreshKey forces savedPhrases to re-read after a
+    // save so the checkmark below PLAY appears immediately.
+    var saveDialogTarget by remember { mutableStateOf<LogEntry?>(null) }
+    var newTagInput by remember { mutableStateOf("") }
+    var saveRefreshKey by remember { mutableIntStateOf(0) }
+
+    val savedPhrases = remember(saveRefreshKey) { CommandRepository.getQuickPhrases(context) }
+    val savedPhraseTexts = remember(savedPhrases) { savedPhrases.map { it.text }.toSet() }
+
+    Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            items(visibleLogs) { log ->
+                val typeColor = when(log.type) {
+                    "ERR" -> RadicalRed
+                    "WARN" -> DataOrange
+                    "EMERGENCY" -> RadicalRed
+                    "SYS" -> BioGreen
+                    "OUT" -> FluxCyan
+                    "PATH" -> NeonViolet
+                    else -> Color.White
+                }
+                // Only an actual communicated phrase carries replayText (see
+                // OutputService.processSpeech) -- status/system log lines never
+                // do, so they render plain with no tap/long-press affordance.
+                val replayText = log.replayText
+                val isSaved = replayText != null && savedPhraseTexts.contains(replayText)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp)
+                        .then(
+                            if (replayText != null) {
+                                Modifier
+                                    .background(FluxCyan.copy(alpha = 0.08f))
+                                    .combinedClickable(
+                                        onClick = {
+                                            val intent = Intent(context, OutputService::class.java)
+                                            intent.putExtra("phrase", replayText)
+                                            intent.putExtra("robotic", false)
+                                            intent.putExtra("source", "LOG/REPLAY")
+                                            // An emergency message's own boost/tone
+                                            // settings aren't in the log, but its
+                                            // core safety properties -- audible and
+                                            // not auto-clearing -- shouldn't be lost
+                                            // just because it's being replayed.
+                                            if (log.type == "EMERGENCY") {
+                                                intent.putExtra("emergency_mode", true)
+                                                intent.putExtra("emergency_force_speaker", true)
+                                                intent.putExtra("emergency_prevent_timed_clear", true)
+                                            }
+                                            context.startService(intent)
+                                        },
+                                        onLongClick = {
+                                            newTagInput = ""
+                                            saveDialogTarget = log
+                                        }
+                                    )
+                            } else {
+                                Modifier
+                            }
+                        )
+                ) {
+                    Column(
+                        modifier = Modifier.width(14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            if (replayText != null) "▶" else " ",
+                            color = FluxCyan,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp
+                        )
+                        if (isSaved) {
+                            Text(
+                                "✓",
+                                color = BioGreen,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 9.sp
+                            )
                         }
-                    )
-            ) {
+                    }
+                    Text("[${log.time}]", color = Color.DarkGray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.width(70.dp))
+                    Text(log.type, color = typeColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
+                    Text(" :: ${log.msg}", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+
+    val savingEntry = saveDialogTarget
+    val textToSave = savingEntry?.replayText
+    if (savingEntry != null && textToSave != null) {
+        val existingTags = savedPhrases.map { it.tag }.distinct().sorted()
+        val alreadySavedTags = savedPhrases.filter { it.text == textToSave }.map { it.tag }
+
+        TightDialogSurface(
+            onDismiss = { saveDialogTarget = null; newTagInput = "" },
+            primaryColor = FluxCyan,
+            title = "SAVE TO MEMORY BANK"
+        ) {
+            Text(
+                "\"$textToSave\"",
+                color = Color.White,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp
+            )
+
+            if (alreadySavedTags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    if (replayText != null) "▶" else " ",
-                    color = FluxCyan,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    modifier = Modifier.width(14.dp)
+                    "ALREADY SAVED: ${alreadySavedTags.joinToString(", ")}",
+                    color = BioGreen,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
                 )
-                Text("[${log.time}]", color = Color.DarkGray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.width(70.dp))
-                Text(log.type, color = typeColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
-                Text(" :: ${log.msg}", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            TightSectionLabel("ASSIGN A TAG")
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (existingTags.isNotEmpty()) {
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                    existingTags.forEach { tag ->
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .heightIn(min = 44.dp)
+                                .border(1.dp, if (newTagInput == tag) FluxCyan else Color.Gray, AckHelpShape)
+                                .clickable { newTagInput = tag }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(tag, color = if (newTagInput == tag) FluxCyan else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            OutlinedTextField(
+                value = newTagInput,
+                onValueChange = { newTagInput = it.uppercase() },
+                placeholder = { Text("NEW TAG") },
+                shape = AckHelpShape,
+                colors = TextFieldDefaults.colors(focusedTextColor = FluxCyan, unfocusedTextColor = FluxCyan, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = FluxCyan)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TightPanelButton("SAVE", modifier = Modifier.weight(1f), mainColor = FluxCyan) {
+                    if (newTagInput.isNotEmpty()) {
+                        CommandRepository.saveQuickPhrase(context, textToSave, newTagInput)
+                        saveRefreshKey++
+                        saveDialogTarget = null
+                        newTagInput = ""
+                    }
+                }
+                TightPanelButton("CANCEL", modifier = Modifier.weight(1f), isActive = false, mainColor = FluxCyan) {
+                    saveDialogTarget = null
+                    newTagInput = ""
+                }
             }
         }
     }
@@ -2111,7 +2250,10 @@ fun MatrixCategory(
                             context.sendBroadcast(
                                 Intent("ACK_LOG").apply {
                                     setPackage(context.packageName)
-                                    putExtra("type", "SYS")
+                                    // PATH, not SYS -- this is the verbose per-tag
+                                    // resolution trace, gated by its own Terminal
+                                    // toggle independent of general system messages.
+                                    putExtra("type", "PATH")
                                     putExtra("msg", debug.replace("\n", " | "))
                                 }
                             )
