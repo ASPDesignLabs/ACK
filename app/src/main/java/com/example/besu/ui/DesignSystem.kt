@@ -24,7 +24,11 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
@@ -32,12 +36,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -181,8 +189,46 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     val savedPhrases = remember(saveRefreshKey) { CommandRepository.getQuickPhrases(context) }
     val savedPhraseTexts = remember(savedPhrases) { savedPhrases.map { it.text }.toSet() }
 
+    // --- BOTTOM PROMPT: a raw command line, not another flyout ---
+    // No target browser, no memory banks, no quick-access row -- just a
+    // keyboard and a phrase. Tapping the field is the only affordance;
+    // typing and hitting Send/the glyph transmits it exactly like Manual
+    // Override does, and focus is reclaimed afterward so the prompt stays
+    // ready for the next line without having to tap back in.
+    var promptText by remember { mutableStateOf("") }
+    val promptFocusRequester = remember { FocusRequester() }
+    val promptHaptic = LocalHapticFeedback.current
+
+    fun submitPrompt() {
+        val text = promptText.trim()
+        if (text.isNotEmpty()) {
+            val intent = Intent(context, OutputService::class.java)
+            intent.putExtra("phrase", text)
+            intent.putExtra("robotic", false)
+            intent.putExtra("source", OutputService.SOURCE_TERMINAL_PROMPT)
+            context.startService(intent)
+            promptText = ""
+        }
+        promptFocusRequester.requestFocus()
+    }
+
+    val listState = rememberLazyListState()
+
+    // Sticks the scrollback to the newest line as it arrives -- but only
+    // when the user is already sitting at the bottom. Scroll up to review
+    // history and new output won't yank you back down.
+    LaunchedEffect(visibleLogs.size) {
+        if (visibleLogs.isNotEmpty() && listState.firstVisibleItemIndex <= 1) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-        LazyColumn(modifier = Modifier.weight(1f)) {
+        // reverseLayout draws the newest line at the bottom and the log
+        // grows upward from there, like a real terminal's scrollback --
+        // visibleLogs is already newest-first, so index 0 lands at the
+        // visual bottom with no re-sorting needed.
+        LazyColumn(state = listState, reverseLayout = true, modifier = Modifier.weight(1f)) {
             items(visibleLogs) { log ->
                 val typeColor = when(log.type) {
                     "ERR" -> RadicalRed
@@ -258,6 +304,60 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                     Text(" :: ${log.msg}", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(FluxCyan.copy(alpha = 0.3f)))
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "> ",
+                color = FluxCyan,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+            Box(modifier = Modifier.weight(1f)) {
+                if (promptText.isEmpty()) {
+                    Text(
+                        "TYPE A COMMAND...",
+                        color = Color.DarkGray,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 14.sp
+                    )
+                }
+                BasicTextField(
+                    value = promptText,
+                    onValueChange = { promptText = it },
+                    modifier = Modifier.fillMaxWidth().focusRequester(promptFocusRequester),
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = FluxCyan,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 14.sp
+                    ),
+                    singleLine = true,
+                    cursorBrush = SolidColor(FluxCyan),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { submitPrompt() })
+                )
+            }
+            Text(
+                "▶",
+                color = if (promptText.isNotBlank()) FluxCyan else Color.DarkGray,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 16.sp,
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .clickable {
+                        promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        submitPrompt()
+                    }
+                    .padding(6.dp)
+            )
         }
     }
 

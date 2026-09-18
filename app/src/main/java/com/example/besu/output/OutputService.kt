@@ -34,6 +34,14 @@ import kotlin.math.round
 
 class OutputService : Service(), TextToSpeech.OnInitListener {
 
+    companion object {
+        // The Terminal screen's own bottom prompt -- distinct from
+        // TERM/INPUT (Manual Override on the TYPE screen) so processSpeech
+        // can echo it back shell-style ("$ phrase") instead of the usual
+        // "SOURCE > \"phrase\"" log format.
+        const val SOURCE_TERMINAL_PROMPT = "TERM/PROMPT"
+    }
+
     private var tts: TextToSpeech? = null
     private var isTtsReady = false
     
@@ -369,8 +377,16 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         // Only a real communicated phrase is replayable from the log --
         // never tutorial/system narration, which isn't something a user
         // "said" and shouldn't be offered back as if it were.
+        val logMsg = if (source == SOURCE_TERMINAL_PROMPT) {
+            // Echoes back like a real shell would -- makes it obvious at a
+            // glance that this line came from typing directly at the
+            // Terminal's own prompt, not from a deck or Manual Override.
+            "$ $rawText"
+        } else {
+            "$source > \"$rawText\""
+        }
         broadcastLog(
-            "$source > \"$rawText\"",
+            logMsg,
             logType,
             replayText = if (isTutorialOverride) null else rawText
         )
