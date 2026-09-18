@@ -77,10 +77,19 @@ private fun SettingsToggleRow(
 }
 
 @Composable
-fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Unit) {
+fun SettingsView(
+    context: Context,
+    primaryColor: Color,
+    logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>,
+    onUploadClick: () -> Unit
+) {
     val prefs = context.getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
 
     val helpManager = LocalHelpManager.current
+
+    var hideSystemMessages by remember { mutableStateOf(TerminalLogStore.getHideSystemMessages(context)) }
+    var hidePathTrace by remember { mutableStateOf(TerminalLogStore.getHidePathTrace(context)) }
+    var retentionDays by remember { mutableFloatStateOf(TerminalLogStore.getRetentionDays(context).toFloat()) }
 
     var toneTheme by remember { mutableIntStateOf(prefs.getInt("TONE_THEME", 1)) }
     var toneVolume by remember { mutableFloatStateOf(prefs.getFloat("TONE_VOLUME", 0.8f)) }
@@ -613,6 +622,66 @@ fun SettingsView(context: Context, primaryColor: Color, onUploadClick: () -> Uni
                         )
                     }
                 }
+            }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            item {
+                Text("TERMINAL LOG", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                SettingsToggleRow(
+                    title = "HIDE SYSTEM MESSAGES",
+                    description = "Filters boot, status, and error lines out of the Terminal view. The underlying log is untouched -- switch off to see them again.",
+                    checked = hideSystemMessages,
+                    primaryColor = primaryColor,
+                    modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
+                ) { enabled ->
+                    hideSystemMessages = enabled
+                    TerminalLogStore.setHideSystemMessages(context, enabled)
+                    reportHelpInteraction(AckTags.SETTINGS_TERMINAL_LOG)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SettingsToggleRow(
+                    title = "HIDE PATH RESOLUTION",
+                    description = "Filters out the verbose per-tag RESOLVE trace logged every time a Matrix phrase plays, independent of the toggle above.",
+                    checked = hidePathTrace,
+                    primaryColor = primaryColor,
+                    modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
+                ) { enabled ->
+                    hidePathTrace = enabled
+                    TerminalLogStore.setHidePathTrace(context, enabled)
+                    reportHelpInteraction(AckTags.SETTINGS_TERMINAL_LOG)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "LOG RETENTION: ${retentionDays.toInt()} DAY${if (retentionDays.toInt() == 1) "" else "S"} (ROLLING)",
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Text(
+                    "Entries older than this roll off on a continuous window, not a calendar day -- up to ${TerminalLogStore.MAX_ENTRIES} kept either way.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Slider(
+                    value = retentionDays,
+                    onValueChange = { retentionDays = it },
+                    onValueChangeFinished = {
+                        TerminalLogStore.applyRetention(context, logs, retentionDays.toInt())
+                        reportHelpInteraction(AckTags.SETTINGS_TERMINAL_LOG)
+                    },
+                    valueRange = TerminalLogStore.MIN_RETENTION_DAYS.toFloat()..TerminalLogStore.MAX_RETENTION_DAYS.toFloat(),
+                    steps = TerminalLogStore.MAX_RETENTION_DAYS - TerminalLogStore.MIN_RETENTION_DAYS - 1,
+                    colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor, inactiveTrackColor = Color.DarkGray),
+                    modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
+                )
             }
 
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }

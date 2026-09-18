@@ -1247,6 +1247,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             "SETTINGS" -> SettingsView(
                                 context = context,
                                 primaryColor = primaryColor,
+                                logs = logs,
                                 onUploadClick = {
                                     WatchSync.sendDeckList(context)
 
