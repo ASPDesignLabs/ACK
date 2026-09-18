@@ -62,6 +62,7 @@ val FluxCyan = Color(0xFF00F3FF)
 val RadicalRed = Color(0xFFFF0055)
 val BioGreen = Color(0xFF00FF41)
 val DataOrange = Color(0xFFFF9900)
+val NeonViolet = Color(0xFFBD00FF)
 
 // ==========================================
 //        ATOMIC COMPONENTS (BUTTONS)
@@ -136,61 +137,160 @@ fun RowScope.ThemeOption(
 
 // --- TERMINAL VIEW ---
 @Composable
-fun TerminalView(logs: List<LogEntry>, context: Context) {
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-        items(logs) { log ->
-            val typeColor = when(log.type) {
-                "ERR" -> RadicalRed
-                "WARN" -> DataOrange
-                "EMERGENCY" -> RadicalRed
-                "SYS" -> BioGreen
-                "OUT" -> FluxCyan
-                else -> Color.White
-            }
-            // Only an actual communicated phrase carries replayText (see
-            // OutputService.processSpeech) -- status/system log lines never
-            // do, so they render plain with no tap affordance.
-            val replayText = log.replayText
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 2.dp)
-                    .then(
-                        if (replayText != null) {
-                            Modifier
-                                .background(FluxCyan.copy(alpha = 0.08f))
-                                .clickable {
-                                    val intent = Intent(context, OutputService::class.java)
-                                    intent.putExtra("phrase", replayText)
-                                    intent.putExtra("robotic", false)
-                                    intent.putExtra("source", "LOG/REPLAY")
-                                    // An emergency message's own boost/tone
-                                    // settings aren't in the log, but its
-                                    // core safety properties -- audible and
-                                    // not auto-clearing -- shouldn't be lost
-                                    // just because it's being replayed.
-                                    if (log.type == "EMERGENCY") {
-                                        intent.putExtra("emergency_mode", true)
-                                        intent.putExtra("emergency_force_speaker", true)
-                                        intent.putExtra("emergency_prevent_timed_clear", true)
+fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>, context: Context) {
+    var hideSystemMessages by remember { mutableStateOf(TerminalLogStore.getHideSystemMessages(context)) }
+    var hidePathTrace by remember { mutableStateOf(TerminalLogStore.getHidePathTrace(context)) }
+    var retentionDays by remember { mutableFloatStateOf(TerminalLogStore.getRetentionDays(context).toFloat()) }
+
+    // PATH is the verbose per-tag RESOLVE trace (CommandRepository.debugResolvedPhrase);
+    // OUT/EMERGENCY are the actual rationalized phrases that went out and stay
+    // visible either way. Everything else (SYS, GEO, ERR, WARN, INPUT, DATA...)
+    // is general system/status noise, gated by the other toggle. With both
+    // toggles on, only OUT/EMERGENCY lines remain.
+    val visibleLogs = logs.filter { log ->
+        when (log.type) {
+            "PATH" -> !hidePathTrace
+            "OUT", "EMERGENCY" -> true
+            else -> !hideSystemMessages
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "HIDE SYSTEM MESSAGES",
+                color = if (hideSystemMessages) FluxCyan else Color.Gray,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+            NeonToggle(
+                checked = hideSystemMessages,
+                onCheckedChange = {
+                    hideSystemMessages = it
+                    TerminalLogStore.setHideSystemMessages(context, it)
+                },
+                activeColor = FluxCyan
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "HIDE PATH RESOLUTION",
+                color = if (hidePathTrace) FluxCyan else Color.Gray,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+            NeonToggle(
+                checked = hidePathTrace,
+                onCheckedChange = {
+                    hidePathTrace = it
+                    TerminalLogStore.setHidePathTrace(context, it)
+                },
+                activeColor = FluxCyan
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            "LOG RETENTION: ${retentionDays.toInt()} DAY${if (retentionDays.toInt() == 1) "" else "S"} (ROLLING)",
+            color = Color.Gray,
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace
+        )
+        Text(
+            "Entries older than this roll off on a continuous window, not a calendar day -- up to ${TerminalLogStore.MAX_ENTRIES} kept either way.",
+            color = Color.Gray,
+            fontSize = 9.sp,
+            fontFamily = FontFamily.Monospace
+        )
+        Slider(
+            value = retentionDays,
+            onValueChange = { retentionDays = it },
+            onValueChangeFinished = {
+                TerminalLogStore.applyRetention(context, logs, retentionDays.toInt())
+            },
+            valueRange = TerminalLogStore.MIN_RETENTION_DAYS.toFloat()..TerminalLogStore.MAX_RETENTION_DAYS.toFloat(),
+            steps = TerminalLogStore.MAX_RETENTION_DAYS - TerminalLogStore.MIN_RETENTION_DAYS - 1,
+            colors = SliderDefaults.colors(
+                thumbColor = FluxCyan,
+                activeTrackColor = FluxCyan,
+                inactiveTrackColor = Color.DarkGray
+            )
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+        Spacer(modifier = Modifier.height(4.dp))
+
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            items(visibleLogs) { log ->
+                val typeColor = when(log.type) {
+                    "ERR" -> RadicalRed
+                    "WARN" -> DataOrange
+                    "EMERGENCY" -> RadicalRed
+                    "SYS" -> BioGreen
+                    "OUT" -> FluxCyan
+                    "PATH" -> NeonViolet
+                    else -> Color.White
+                }
+                // Only an actual communicated phrase carries replayText (see
+                // OutputService.processSpeech) -- status/system log lines never
+                // do, so they render plain with no tap affordance.
+                val replayText = log.replayText
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp)
+                        .then(
+                            if (replayText != null) {
+                                Modifier
+                                    .background(FluxCyan.copy(alpha = 0.08f))
+                                    .clickable {
+                                        val intent = Intent(context, OutputService::class.java)
+                                        intent.putExtra("phrase", replayText)
+                                        intent.putExtra("robotic", false)
+                                        intent.putExtra("source", "LOG/REPLAY")
+                                        // An emergency message's own boost/tone
+                                        // settings aren't in the log, but its
+                                        // core safety properties -- audible and
+                                        // not auto-clearing -- shouldn't be lost
+                                        // just because it's being replayed.
+                                        if (log.type == "EMERGENCY") {
+                                            intent.putExtra("emergency_mode", true)
+                                            intent.putExtra("emergency_force_speaker", true)
+                                            intent.putExtra("emergency_prevent_timed_clear", true)
+                                        }
+                                        context.startService(intent)
                                     }
-                                    context.startService(intent)
-                                }
-                        } else {
-                            Modifier
-                        }
+                            } else {
+                                Modifier
+                            }
+                        )
+                ) {
+                    Text(
+                        if (replayText != null) "▶" else " ",
+                        color = FluxCyan,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        modifier = Modifier.width(14.dp)
                     )
-            ) {
-                Text(
-                    if (replayText != null) "▶" else " ",
-                    color = FluxCyan,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    modifier = Modifier.width(14.dp)
-                )
-                Text("[${log.time}]", color = Color.DarkGray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.width(70.dp))
-                Text(log.type, color = typeColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
-                Text(" :: ${log.msg}", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                    Text("[${log.time}]", color = Color.DarkGray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.width(70.dp))
+                    Text(log.type, color = typeColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
+                    Text(" :: ${log.msg}", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                }
             }
         }
     }
@@ -2111,7 +2211,10 @@ fun MatrixCategory(
                             context.sendBroadcast(
                                 Intent("ACK_LOG").apply {
                                     setPackage(context.packageName)
-                                    putExtra("type", "SYS")
+                                    // PATH, not SYS -- this is the verbose per-tag
+                                    // resolution trace, gated by its own Terminal
+                                    // toggle independent of general system messages.
+                                    putExtra("type", "PATH")
                                     putExtra("msg", debug.replace("\n", " | "))
                                 }
                             )

@@ -109,6 +109,8 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         startOutputService()
         startAccelerometerTapService()
 
+        logBuffer.addAll(TerminalLogStore.load(this))
+
         setContent {
             MainScreen(logs = logBuffer, context = this, systemVoices = availableSystemVoices)
         }
@@ -165,9 +167,10 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun addLog(text: String, type: String, replayText: String? = null) {
-        val timestamp = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
-        logBuffer.add(0, LogEntry(timestamp, type, text, replayText))
-        if (logBuffer.size > 100) logBuffer.removeLast()
+        val now = System.currentTimeMillis()
+        val timestamp = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date(now))
+        logBuffer.add(0, LogEntry(timestamp, type, text, replayText, now))
+        TerminalLogStore.pruneAndPersist(this, logBuffer)
     }
 
     override fun onDestroy() {
@@ -177,21 +180,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     }
 }
 
-data class LogEntry(
-    val time: String,
-    val type: String,
-    val msg: String,
-    // Set only for a real communicated phrase (OUT/EMERGENCY, never
-    // tutorial/system narration) -- the already-resolved text, not the
-    // template that produced it, so TerminalView can replay it directly
-    // through OutputService without depending on whatever deck is
-    // currently active.
-    val replayText: String? = null
-)
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MainScreen(logs: List<LogEntry>, context: Context, systemVoices: List<Voice>) {
+fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>, context: Context, systemVoices: List<Voice>) {
     var viewMode by remember { mutableStateOf("TERMINAL") }
     var headerShortcuts by remember(viewMode) {
         mutableStateOf(CommandRepository.getHeaderShortcuts(context))
