@@ -1,0 +1,638 @@
+package com.example.besu.backup
+
+import com.example.besu.computer.*
+import com.example.besu.data.*
+import com.example.besu.decks.*
+import com.example.besu.output.*
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.util.Log
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.io.BufferedReader
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStreamReader
+import java.util.Base64
+import java.util.zip.GZIPInputStream
+
+// Note: Data classes (AckBackup, DspConfig) are now imported from AckBackup.kt
+
+object TransferManager {
+    private const val PREFS_MATRIX = "ack_matrix_config"
+    private const val PREFS_DSP = "ack_prefs"
+    
+    // Internal Keys (We filter these out of the raw matrix dump)
+    private const val KEY_QUICK = "saved_quick_phrases"
+    private const val KEY_DECKS = "custom_decks_meta"
+    private const val KEY_CATS = "custom_categories"
+
+    private const val KEY_ACTIVE_DECK_ID = "active_deck_id"
+    private const val KEY_ACTIVE_DECK_COLOR = "active_deck_color_idx"
+    private const val KEY_ACTIVE_PROFILE = "ACTIVE_PROFILE"
+    private const val KEY_ACTIVE_CATEGORY = "active_category_focus"
+    private const val KEY_HEADER_SHORTCUTS = "header_shortcuts"
+
+    private const val ROOT_OVERRIDE_PREFIX = "root_override_"
+
+    // --- SECURITY CONSTANTS ---
+    private const val MAX_DECOMPRESSED_SIZE = 1024 * 1024 // 1MB Limit
+    private const val MAX_PHRASE_LENGTH = 300
+    private const val MAX_KEY_LENGTH = 150
+    // Regex: Alphanumeric, underscores, hyphens, slashes, spaces.
+    private val SAFE_KEY_PATTERN = Regex("^[a-zA-Z0-9_\\-/ ]+$")
+
+    // Targeting Computer category tree limits.
+    private const val MAX_LABEL_LENGTH = 60
+    private const val MAX_COMPUTER_CATEGORIES = 40
+    private const val MAX_NODES_PER_CATEGORY = 500
+    private const val MAX_TREE_DEPTH = 12
+    private val CATEGORY_ID_PATTERN = Regex("^[A-Z0-9_]{1,$MAX_KEY_LENGTH}$")
+
+    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; encodeDefaults = true }
+
+    // --- EXPORT (GENERATOR) ---
+    fun generateBackupJson(context: Context): String {
+        // 1. Gather DSP Settings & Custom Voices
+        val dspPrefs = context.getSharedPreferences(PREFS_DSP, Context.MODE_PRIVATE)
+        
+        // Deserialize Custom Voices from string storage to Object List
+        val customVoicesRaw = dspPrefs.getString("CUSTOM_VOICES", "[]") ?: "[]"
+        val customVoicesList = try {
+            json.decodeFromString<List<VoiceProfile>>(customVoicesRaw)
+        } catch (e: Exception) { emptyList() }
+
+        val dspConfig = DspConfig(
+            userProfile = dspPrefs.getString("USER_VOX_PROFILE", "CYBER") ?: "CYBER",
+            tutorialProfile = dspPrefs.getString("TUT_VOX_PROFILE", "MECH") ?: "MECH",
+            crush = dspPrefs.getFloat("VOX_CRUSH", 0f),
+            cadence = dspPrefs.getFloat("VOX_CADENCE", 0f),
+            forceSpeaker = dspPrefs.getBoolean("FORCE_SPEAKER", false),
+            silentOutput = dspPrefs.getBoolean("SILENT_OUTPUT", false),
+            toneTheme = dspPrefs.getInt("TONE_THEME", 1),
+            toneVolume = dspPrefs.getFloat("TONE_VOLUME", 0.8f),
+            isVoxEnabled = dspPrefs.getBoolean("TUTORIAL_VOX", true),
+            // V2 Fields
+            masterGain = dspPrefs.getFloat("MASTER_GAIN", 1.0f),
+            motionTwist = dspPrefs.getFloat("MOT_TWIST", 7.0f),
+            motionPose = dspPrefs.getFloat("MOT_POSE", 6.0f),
+            crownSens = dspPrefs.getInt("CROWN_SENS", 2),
+            autoCryoMinutes = dspPrefs.getInt("AUTO_CRYO", 10),
+            fireGraceMs = dspPrefs.getInt("FIRE_GRACE_MS", 500),
+            wakeWindowMs = dspPrefs.getInt("WAKE_WINDOW_MS", 1800),
+            customVoices = customVoicesList
+        )
+
+        // 2. Gather Matrix Data (sparse export).
+        val matrixPrefs = context.getSharedPreferences(
+            PREFS_MATRIX,
+            Context.MODE_PRIVATE
+        )
+
+        val allMatrixEntries = matrixPrefs.all
+        val matrixMap = mutableMapOf<String, String>()
+
+// 3. Deserialize deck metadata before collecting typed deck data.
+        val decksRaw = matrixPrefs.getString(KEY_DECKS, "[]") ?: "[]"
+
+        val decksList = try {
+            json.decodeFromString<List<DeckMeta>>(decksRaw)
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+// 4. Gather Quick Actions configuration for Quick Actions decks only.
+        val quickActionsDecks = decksList
+            .filter { deck ->
+                deck.type == DeckType.QUICK_ACTIONS
+            }
+            .map { deck ->
+                CommandRepository.getQuickActionsConfig(
+                    context = context,
+                    deckId = deck.id
+                )
+            }
+
+// 4b. Gather Emergency configuration for Emergency decks, plus the
+// user's own (non-deck-scoped) medical ID card.
+        val emergencyDecks = decksList
+            .filter { deck ->
+                deck.type == DeckType.EMERGENCY
+            }
+            .map { deck ->
+                CommandRepository.getEmergencyConfig(
+                    context = context,
+                    deckId = deck.id
+                )
+            }
+
+        val emergencyInfoCard = CommandRepository.getEmergencyInfoCard(context)
+
+// Create a lookup map of system defaults: path -> factory phrase.
+        val systemDefaults = CommandRepository.BASE_TEMPLATE.associate {
+            it.path to it.defaultPhrase
+        }
+
+// Filter out system keys and retain actual sparse matrix/deck phrase data.
+        allMatrixEntries.forEach { (key, value) ->
+            if (
+                value is String &&
+                key != KEY_QUICK &&
+                key != KEY_DECKS &&
+                key != KEY_CATS &&
+                key != KEY_ACTIVE_DECK_ID &&
+                key != KEY_ACTIVE_DECK_COLOR &&
+                key != KEY_ACTIVE_PROFILE &&
+                key != KEY_ACTIVE_CATEGORY &&
+                key != KEY_HEADER_SHORTCUTS &&
+                !key.startsWith(ROOT_OVERRIDE_PREFIX)
+            ) {
+                var shouldExport = true
+
+                val pathStart = key.indexOf("/std/")
+                if (pathStart != -1) {
+                    val path = key.substring(pathStart)
+                    val defaultPhrase = systemDefaults[path]
+
+                    if (value == defaultPhrase) {
+                        shouldExport = false
+                    }
+                }
+
+                if (shouldExport) {
+                    matrixMap[key] = value
+                }
+            }
+        }
+
+// 5. Gather Quick Phrases.
+        val quickPhrases = CommandRepository.getQuickPhrases(context)
+
+        // 5. Gather root override configurations.
+//
+// Root overrides are category-scoped rather than phrase-scoped. Store them
+// explicitly so restore behavior is not dependent on raw preference keys.
+        val rootOverrides = matrixPrefs.all
+            .filter { (key, value) ->
+                key.startsWith(ROOT_OVERRIDE_PREFIX) && value is String
+            }
+            .mapNotNull { (key, value) ->
+                val category = key.removePrefix(ROOT_OVERRIDE_PREFIX)
+                val rawConfig = value as? String ?: return@mapNotNull null
+
+                val config = try {
+                    Json.decodeFromString<RootOverrideConfig>(rawConfig)
+                } catch (_: Exception) {
+                    return@mapNotNull null
+                }
+
+                category to config
+            }
+            .toMap()
+
+// 6. Gather custom context layers (name, assigned base pose, and order).
+        val customContextEntries = CommandRepository.getCustomContextEntries(context)
+
+// 7. Gather current operating context.
+        val activeDeckId = CommandRepository.getActiveDeckId(context)
+        val activeDeckColorIndex = CommandRepository.getActiveColorIndex(context)
+        val activeProfile = CommandRepository.getActiveProfile(context)
+        val activeCategoryFocus = CommandRepository.getActiveCategoryFocus(context)
+
+// 8. Gather header shortcuts.
+        val headerShortcuts = CommandRepository.getHeaderShortcuts(context)
+
+// 9. Gather Target Computer data (legacy flat slots + the new category
+// tree). Both are exported unconditionally so restoring a backup never
+// leaves either shape behind.
+        val targets = TargetRepository.getTargets(context)
+        val syntaxRules = TargetRepository.getSyntaxRules(context)
+        val computerCategories = ComputerRepository.getCategories(context)
+
+// 10. Wrap and encode.
+        val backup = AckBackup(
+            dsp = dspConfig,
+            matrixData = matrixMap,
+            decks = decksList,
+            quickPhrases = quickPhrases,
+            rootOverrides = rootOverrides,
+            customContextEntries = customContextEntries,
+            activeDeckId = activeDeckId,
+            activeDeckColorIndex = activeDeckColorIndex,
+            activeProfile = activeProfile,
+            activeCategoryFocus = activeCategoryFocus,
+            headerShortcuts = headerShortcuts,
+            quickActionsDecks = quickActionsDecks,
+            emergencyDecks = emergencyDecks,
+            emergencyInfoCard = emergencyInfoCard,
+            targets = targets,
+            syntaxRules = syntaxRules,
+            computerCategories = computerCategories,
+        )
+
+        return json.encodeToString(backup)
+    }
+
+    // Writes a backup snapshot to app-internal storage (not a user-facing
+    // export) as a safety net before a one-time, non-reversible-feeling data
+    // transform such as the Target Computer's legacy-slot migration. Returns
+    // false if the snapshot couldn't be written, so the caller can decline
+    // to proceed rather than transform data with no rollback copy.
+    fun writeInternalSnapshot(context: Context, label: String): Boolean {
+        return try {
+            val dir = java.io.File(context.filesDir, "auto_backups").apply { mkdirs() }
+            val file = java.io.File(dir, "${label}_${System.currentTimeMillis()}.json")
+            file.writeText(generateBackupJson(context))
+            true
+        } catch (e: Exception) {
+            Log.e("ACK_BACKUP", "Automatic snapshot failed: $label", e)
+            false
+        }
+    }
+
+    // --- RESTORE (SECURE) ---
+    fun restoreBackup(context: Context, rawPayload: String): Boolean {
+        return try {
+            // STEP 1: PARSE
+            val backup = parseQrPayload(rawPayload) ?: return false
+
+            // STEP 2: SANITIZE (The Firewall)
+            if (!validateDataIntegrity(backup)) {
+                Log.e("ACK_IMPORT", "Data integrity check failed.")
+                return false
+            }
+
+
+            // STEP 3: APPLY
+            applyBackupToStorage(context, backup)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    // --- SECURITY LOGIC ---
+    private fun validateDataIntegrity(backup: AckBackup): Boolean {
+        // 1. Validate DSP Limits
+        if (backup.dsp.crush !in 0.0f..1.0f) return false
+        if (backup.dsp.cadence !in 0.0f..1.0f) return false
+        if (backup.dsp.masterGain !in 0.0f..5.0f) return false
+        
+        // Physics Sanity
+        if (backup.dsp.motionTwist !in 1.0f..20.0f) return false 
+        if (backup.dsp.motionPose !in 1.0f..10.0f) return false
+        
+        // 2. Validate Voices
+        if (backup.dsp.customVoices.size > 20) return false // Prevent storage spam
+        backup.dsp.customVoices.forEach { 
+            if (it.label.length > 50) return false
+            if (it.pitch !in 0.1f..4.0f) return false
+        }
+
+        // 3. Validate Matrix Data & Keys
+        for ((key, value) in backup.matrixData) {
+            if (key.length > MAX_KEY_LENGTH) return false
+            if (!SAFE_KEY_PATTERN.matches(key)) {
+                Log.e("ACK_IMPORT", "Invalid Key Detected: $key")
+                return false 
+            }
+            if (value.length > MAX_PHRASE_LENGTH) return false 
+        }
+
+        // 4. Validate Decks
+        if (backup.decks.size > 20) return false
+        backup.decks.forEach {
+            if (it.name.length > 30) return false
+            if (!SAFE_KEY_PATTERN.matches(it.id)) return false
+        }
+// 5. Validate root override configurations.
+        if (backup.rootOverrides.size > 50) return false
+
+        backup.rootOverrides.forEach { (category, config) ->
+            if (category.length > 50) return false
+            if (!SAFE_KEY_PATTERN.matches(category)) return false
+
+            config.slots.forEach { (tag, override) ->
+                if (tag !in setOf("A", "B", "C")) return false
+                if (override.value.length > MAX_PHRASE_LENGTH) return false
+            }
+        }
+
+// 6. Validate custom context layers.
+        if (backup.customContextEntries.size > 20) return false
+
+        val contextNamePattern = Regex("^[A-Z0-9 _-]{1,24}$")
+
+        backup.customContextEntries.forEach { entry ->
+            if (!contextNamePattern.matches(entry.name)) return false
+            if (entry.name in POSE_CATEGORIES) return false
+            if (entry.basePose !in POSE_CATEGORIES) return false
+        }
+
+        if (
+            backup.customContextEntries.map { it.name }.distinct().size !=
+            backup.customContextEntries.size
+        ) {
+            return false
+        }
+
+// 7. Validate header shortcuts.
+        if (backup.headerShortcuts.size > 3) return false
+
+        backup.headerShortcuts.forEach { shortcut ->
+            if (shortcut.label.length > 30) return false
+            if (shortcut.phrase.length > MAX_PHRASE_LENGTH) return false
+        }
+
+// 8. Validate emergency deck configs.
+        if (backup.emergencyDecks.size > 20) return false
+
+        backup.emergencyDecks.forEach { config ->
+            if (!SAFE_KEY_PATTERN.matches(config.deckId)) return false
+            if (config.slots.size > 20) return false
+
+            config.slots.forEach { slot ->
+                if (slot.label.length > 60) return false
+                if (slot.template.length > MAX_PHRASE_LENGTH) return false
+                if (slot.localValues.size > 20) return false
+                slot.localValues.forEach { if (it.length > MAX_PHRASE_LENGTH) return false }
+            }
+        }
+
+// 9. Validate the medical ID card.
+        val card = backup.emergencyInfoCard
+        if (card.fullName.length > 100) return false
+        if (card.dateOfBirth.length > 40) return false
+        if (card.bloodType.length > 20) return false
+        if (card.communicationNote.length > MAX_PHRASE_LENGTH) return false
+        if (card.conditions.length > MAX_PHRASE_LENGTH) return false
+        if (card.allergies.length > MAX_PHRASE_LENGTH) return false
+        if (card.medications.length > MAX_PHRASE_LENGTH) return false
+        if (card.notes.length > MAX_PHRASE_LENGTH) return false
+        if (card.contacts.size > 5) return false
+        card.contacts.forEach { contact ->
+            if (contact.name.length > 100) return false
+            if (contact.relationship.length > 60) return false
+            if (contact.phone.length > 40) return false
+        }
+
+// 10. Validate legacy target slots and their syntax rules.
+        if (backup.targets.size > 50) return false
+        backup.targets.forEach { slot ->
+            if (slot.label.length > MAX_LABEL_LENGTH) return false
+            if (slot.defaultStrategy !in setOf("PRE", "POST")) return false
+        }
+
+        if (backup.syntaxRules.size > 200) return false
+        backup.syntaxRules.forEach { (key, value) ->
+            if (key.length > MAX_KEY_LENGTH) return false
+            if (!SAFE_KEY_PATTERN.matches(key)) return false
+            if (value !in setOf("PRE", "POST")) return false
+        }
+
+// 11. Validate the Targeting Computer category tree.
+        if (backup.computerCategories.size > MAX_COMPUTER_CATEGORIES) return false
+
+        backup.computerCategories.forEach { category ->
+            if (!CATEGORY_ID_PATTERN.matches(category.id)) return false
+            if (category.label.length > MAX_LABEL_LENGTH) return false
+            if (!isComputerNodeValid(category.root)) return false
+
+            val (nodeCount, depth) = countComputerNodes(category.root)
+            if (nodeCount > MAX_NODES_PER_CATEGORY) return false
+            if (depth > MAX_TREE_DEPTH) return false
+        }
+
+        if (
+            backup.computerCategories.map { it.id }.distinct().size !=
+            backup.computerCategories.size
+        ) {
+            return false
+        }
+
+        return true
+    }
+
+    private fun isComputerNodeValid(node: ComputerNode): Boolean {
+        if (node.id.length > MAX_KEY_LENGTH) return false
+        if (node.label.length > MAX_LABEL_LENGTH) return false
+        if (node.legacyStrategy != null && node.legacyStrategy !in setOf("PRE", "POST")) return false
+        return node.children.all { isComputerNodeValid(it) }
+    }
+
+    // Returns (total node count, max depth) for the subtree rooted at node.
+    private fun countComputerNodes(node: ComputerNode, depth: Int = 1): Pair<Int, Int> {
+        var count = 1
+        var maxDepth = depth
+
+        for (child in node.children) {
+            val (childCount, childDepth) = countComputerNodes(child, depth + 1)
+            count += childCount
+            maxDepth = maxOf(maxDepth, childDepth)
+        }
+
+        return count to maxDepth
+    }
+
+    // --- UTILITIES ---
+    fun parseQrPayload(rawPayload: String): AckBackup? {
+        if (rawPayload.trim().startsWith("{")) {
+            return try {
+                json.decodeFromString<AckBackup>(rawPayload)
+            } catch (e: Exception) { null }
+        }
+
+        return try {
+            val compressedBytes = Base64.getDecoder().decode(rawPayload)
+            val inputStream = GZIPInputStream(ByteArrayInputStream(compressedBytes))
+            val outputStream = ByteArrayOutputStream()
+            val buffer = ByteArray(1024)
+            var totalBytesRead = 0
+            var bytesRead: Int
+
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                totalBytesRead += bytesRead
+                if (totalBytesRead > MAX_DECOMPRESSED_SIZE) {
+                    throw SecurityException("Payload exceeds safe size.")
+                }
+                outputStream.write(buffer, 0, bytesRead)
+            }
+            val jsonString = outputStream.toString("UTF-8")
+            json.decodeFromString<AckBackup>(jsonString)
+        } catch (e: Exception) {
+            e.printStackTrace() 
+            null
+        }
+    }
+
+    private fun applyBackupToStorage(
+        context: Context,
+        backup: AckBackup
+    ) {
+        // 1. Restore DSP, physics, and custom voices.
+        val dspPrefs = context.getSharedPreferences(
+            PREFS_DSP,
+            Context.MODE_PRIVATE
+        )
+
+        with(dspPrefs.edit()) {
+            putString("USER_VOX_PROFILE", backup.dsp.userProfile)
+            putString("TUT_VOX_PROFILE", backup.dsp.tutorialProfile)
+            putFloat("VOX_CRUSH", backup.dsp.crush)
+            putFloat("VOX_CADENCE", backup.dsp.cadence)
+            putBoolean("FORCE_SPEAKER", backup.dsp.forceSpeaker)
+            putBoolean("SILENT_OUTPUT", backup.dsp.silentOutput)
+            putInt("TONE_THEME", backup.dsp.toneTheme)
+            putFloat("TONE_VOLUME", backup.dsp.toneVolume)
+            putBoolean("TUTORIAL_VOX", backup.dsp.isVoxEnabled)
+
+            putFloat("MASTER_GAIN", backup.dsp.masterGain)
+            putFloat("MOT_TWIST", backup.dsp.motionTwist)
+            putFloat("MOT_POSE", backup.dsp.motionPose)
+            putInt("CROWN_SENS", backup.dsp.crownSens)
+            putInt("AUTO_CRYO", backup.dsp.autoCryoMinutes)
+            putInt("FIRE_GRACE_MS", backup.dsp.fireGraceMs)
+            putInt("WAKE_WINDOW_MS", backup.dsp.wakeWindowMs)
+
+            putString(
+                "CUSTOM_VOICES",
+                json.encodeToString(backup.dsp.customVoices)
+            )
+
+            apply()
+        }
+
+        // 2. Replace the complete matrix configuration.
+        //
+        // This is intentionally not additive. A restore should make the matrix
+        // match the backup, including removal of old phrases, _vars entries,
+        // _visual entries, root_override_* entries, old decks, and categories.
+        //
+        // Built-in phrases omitted by sparse export safely fall back to their
+        // factory defaults after their saved override is cleared.
+        val matrixPrefs = context.getSharedPreferences(
+            PREFS_MATRIX,
+            Context.MODE_PRIVATE
+        )
+
+        val editor = matrixPrefs.edit()
+
+        editor.clear()
+
+        // Restore phrase templates, live-saved local variables, visual settings,
+        // root override storage, and custom deck phrase data.
+        backup.matrixData.forEach { (key, value) ->
+            editor.putString(key, value)
+        }
+
+        // Restore deck metadata.
+        editor.putString(
+            KEY_DECKS,
+            json.encodeToString(backup.decks)
+        )
+
+        // Restore quick phrases.
+        editor.putString(
+            KEY_QUICK,
+            json.encodeToString(backup.quickPhrases)
+        )
+
+        // Rebuild custom context layers from the restored data only.
+        //
+        // Do this even when empty, so layers deleted before backup do not
+        // survive from a previous local configuration.
+        if (backup.customContextEntries.isNotEmpty()) {
+            // Modern backups carry the ordered layer list directly, assigned
+            // base pose included.
+            editor.putString(
+                KEY_CATS,
+                json.encodeToString(backup.customContextEntries)
+            )
+        } else {
+            // Backups made before MANAGE CONTEXT existed have no structured
+            // list -- fall back to deriving bare names from the sparse key
+            // dump. CommandRepository migrates this legacy Set<String> to
+            // the ordered format (IDENTITY-based, matching prior behavior)
+            // the next time it is read.
+            val customCategories = mutableSetOf<String>()
+
+            backup.matrixData.keys.forEach { key ->
+                if (key.contains("/custom/")) {
+                    val parts = key.split("/")
+                    val customIndex = parts.indexOf("custom")
+
+                    if (
+                        customIndex != -1 &&
+                        parts.size > customIndex + 1
+                    ) {
+                        customCategories.add(parts[customIndex + 1])
+                    }
+                }
+            }
+
+            editor.putStringSet(KEY_CATS, customCategories)
+        }
+
+        editor.apply()
+
+        // 2b. Restore structured data that lives outside the sparse matrix
+        // dump above -- root overrides, per-deck configs, header shortcuts,
+        // the medical ID card, and the active-context selection. These are
+        // gathered on export (see generateBackupJson) but need their own
+        // restore calls since editor.clear() above only wiped the matrix
+        // preferences file; each of these has its own storage shape.
+        backup.rootOverrides.forEach { (category, config) ->
+            RootOverrideRepository.saveConfig(context, category, config)
+        }
+
+        backup.quickActionsDecks.forEach { config ->
+            CommandRepository.saveQuickActionsConfig(context, config)
+        }
+
+        backup.emergencyDecks.forEach { config ->
+            CommandRepository.saveEmergencyConfig(context, config)
+        }
+
+        CommandRepository.saveEmergencyInfoCard(context, backup.emergencyInfoCard)
+
+        CommandRepository.saveHeaderShortcuts(context, backup.headerShortcuts)
+
+        // Restore Target Computer data. Legacy slots first, since the
+        // category-tree fallback below migrates from whatever
+        // TargetRepository now holds when the backup predates the tree.
+        TargetRepository.restoreTargets(context, backup.targets, backup.syntaxRules)
+
+        if (backup.computerCategories.isNotEmpty()) {
+            ComputerRepository.replaceCategories(context, backup.computerCategories)
+        } else if (backup.targets.isNotEmpty()) {
+            ComputerRepository.replaceCategories(context, emptyList())
+            ComputerRepository.migrateLegacyTargetsIfNeeded(context)
+        } else {
+            ComputerRepository.replaceCategories(context, emptyList())
+        }
+
+        CommandRepository.activateDeck(
+            context = context,
+            deckId = backup.activeDeckId,
+            colorIndex = backup.activeDeckColorIndex
+        )
+        CommandRepository.setActiveProfile(context, backup.activeProfile)
+        CommandRepository.setActiveCategoryFocus(context, backup.activeCategoryFocus)
+
+        // 3. Make the active audio stack reread restored DSP values immediately.
+        context.startService(
+            Intent(context, OutputService::class.java).apply {
+                action = "UPDATE_DSP"
+            }
+        )
+    }
+    
+    fun readTextFromUri(context: Context, uri: Uri): String {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Cannot open file")
+        if (inputStream.available() > MAX_DECOMPRESSED_SIZE) throw SecurityException("File too large")
+        val reader = BufferedReader(InputStreamReader(inputStream))
+        return reader.use { it.readText() }
+    }
+}

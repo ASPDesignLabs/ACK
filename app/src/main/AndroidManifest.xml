@@ -39,7 +39,7 @@
         android:theme="@android:style/Theme.Material.NoActionBar">
     <!-- WIDGET PROVIDER -->
     <receiver
-        android:name=".ProfileWidget"
+        android:name=".settings.ProfileWidget"
         android:exported="true">
         <intent-filter>
             <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -53,7 +53,7 @@
 
         <!-- GEO-PROTOCOL RECEIVER -->
         <receiver
-            android:name=".GeoBroadcastReceiver"
+            android:name=".geo.GeoBroadcastReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.example.besu.GEO_ENGAGE" />
@@ -76,28 +76,28 @@
 
         <!-- ADDED: The missing ghost activity from our diagnostic -->
         <activity 
-            android:name=".SensorDebugActivity"
+            android:name=".watch.SensorDebugActivity"
             android:theme="@android:style/Theme.Material.NoActionBar" />
 
         <!-- ADD THIS: The Custom Scanner -->
         <activity
-            android:name=".MosaicScannerActivity"
+            android:name=".backup.MosaicScannerActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar" />
 
         <!-- CHANGED: Service is now explicitly handling Audio/Media -->
         <service
-            android:name=".OutputService"
+            android:name=".output.OutputService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback">
         </service>
 
         <service
-            android:name=".VisualPromptService"
+            android:name=".output.VisualPromptService"
             android:exported="false" />
 
         <service
-            android:name=".WearListenerService"
+            android:name=".watch.WearListenerService"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
@@ -110,7 +110,7 @@
              If they reject 'specialUse' for this, you might need to drop this feature 
              or argue it is a vital accessibility input method. -->
         <service
-            android:name=".AccelerometerTapService"
+            android:name=".output.AccelerometerTapService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
