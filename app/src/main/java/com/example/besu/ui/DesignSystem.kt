@@ -374,6 +374,18 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     val hideSystemMessages = TerminalLogStore.getHideSystemMessages(context)
     val hidePathTrace = TerminalLogStore.getHidePathTrace(context)
 
+    // Off by default -- keeps the existing look unless explicitly opted
+    // into from PROTOCOL. On, the whole terminal window (log rows, the
+    // prompt line, command output, the variable picker) switches to a
+    // true monospace font so columns actually line up like a real
+    // terminal's; the SAVE TO MEMORY BANK dialog is unaffected, same as
+    // every other dialog in the app.
+    val terminalFontFamily = if (TerminalLogStore.getMonospaceEnabled(context)) {
+        FontFamily.Monospace
+    } else {
+        FontFamily.Default
+    }
+
     // PATH is the verbose per-tag RESOLVE trace (CommandRepository.debugResolvedPhrase);
     // OUT/EMERGENCY are the actual rationalized phrases that went out and stay
     // visible either way. CMD/CMD_WARN/CMD_ERR are direct feedback on a
@@ -522,7 +534,7 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                         Text(
                             log.msg,
                             color = cmdColor,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = terminalFontFamily,
                             fontSize = 12.sp,
                             textAlign = TextAlign.Start,
                             modifier = Modifier.fillMaxWidth()
@@ -588,21 +600,21 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                         Text(
                             if (replayText != null) "▶" else " ",
                             color = FluxCyan,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = terminalFontFamily,
                             fontSize = 12.sp
                         )
                         if (isSaved) {
                             Text(
                                 "✓",
                                 color = BioGreen,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = terminalFontFamily,
                                 fontSize = 9.sp
                             )
                         }
                     }
-                    Text("[${log.time}]", color = Color.DarkGray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.width(70.dp))
-                    Text(log.type, color = typeColor, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
-                    Text(" :: ${log.msg}", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                    Text("[${log.time}]", color = Color.DarkGray, fontFamily = terminalFontFamily, fontSize = 12.sp, modifier = Modifier.width(70.dp))
+                    Text(log.type, color = typeColor, fontFamily = terminalFontFamily, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
+                    Text(" :: ${log.msg}", color = Color.White, fontFamily = terminalFontFamily, fontSize = 12.sp)
                 }
             }
         }
@@ -620,7 +632,7 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                 "SHARED ROOT VARIABLES ($activeCategory) -- TAP TO INSERT",
                 color = Color.Gray,
                 fontSize = 9.sp,
-                fontFamily = FontFamily.Monospace
+                fontFamily = terminalFontFamily
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(
@@ -653,14 +665,14 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                             Text(
                                 tag,
                                 color = if (hasValue) FluxCyan else Color.DarkGray,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = terminalFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
                             )
                             Text(
                                 if (hasValue) slot.value else "EMPTY",
                                 color = if (hasValue) Color.White else Color.DarkGray,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = terminalFontFamily,
                                 fontSize = 9.sp,
                                 maxLines = 1
                             )
@@ -678,7 +690,7 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
             Text(
                 "> ",
                 color = FluxCyan,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = terminalFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
@@ -687,7 +699,7 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                     Text(
                         "TYPE A COMMAND...",
                         color = Color.DarkGray,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = terminalFontFamily,
                         fontSize = 14.sp
                     )
                 }
@@ -697,7 +709,7 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                     modifier = Modifier.fillMaxWidth().focusRequester(promptFocusRequester),
                     textStyle = androidx.compose.ui.text.TextStyle(
                         color = FluxCyan,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = terminalFontFamily,
                         fontSize = 14.sp
                     ),
                     singleLine = true,
@@ -709,7 +721,7 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
             Text(
                 "▶",
                 color = if (promptText.isNotBlank()) FluxCyan else Color.DarkGray,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = terminalFontFamily,
                 fontSize = 16.sp,
                 modifier = Modifier
                     .padding(start = 10.dp)

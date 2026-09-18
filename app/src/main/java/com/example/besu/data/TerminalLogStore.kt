@@ -33,6 +33,7 @@ object TerminalLogStore {
     private const val KEY_RETENTION_DAYS = "TERMINAL_LOG_RETENTION_DAYS"
     private const val KEY_HIDE_SYSTEM = "TERMINAL_HIDE_SYSTEM_MSGS"
     private const val KEY_HIDE_PATH = "TERMINAL_HIDE_PATH_TRACE"
+    private const val KEY_MONOSPACE = "TERMINAL_MONOSPACE_ENABLED"
 
     const val MAX_ENTRIES = 400
     const val MIN_RETENTION_DAYS = 1
@@ -67,6 +68,15 @@ object TerminalLogStore {
 
     fun setHidePathTrace(context: Context, hide: Boolean) {
         prefs(context).edit().putBoolean(KEY_HIDE_PATH, hide).apply()
+    }
+
+    // Off by default -- the terminal keeps its existing (non-monospace)
+    // look unless explicitly opted into from PROTOCOL.
+    fun getMonospaceEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_MONOSPACE, false)
+
+    fun setMonospaceEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_MONOSPACE, enabled).apply()
     }
 
     // Loads the persisted log, applying the current retention window so a
