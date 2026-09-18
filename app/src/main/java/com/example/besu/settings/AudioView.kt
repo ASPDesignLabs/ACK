@@ -47,6 +47,7 @@ import java.util.UUID
 // importer enforces (TransferManager.kt).
 private const val MAX_CUSTOM_PROFILES = 8
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List<Voice>) {
     val prefs = context.getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
