@@ -140,6 +140,37 @@ fun PulsingStatusBox(color: Color) {
     Box(modifier = Modifier.size(16.dp).border(1.dp, color, CutCornerShape(4.dp)).padding(3.dp).alpha(alpha).background(color, CutCornerShape(2.dp)))
 }
 
+// A single tappable chip inside the Terminal's STATUSBOX -- shared by /v's
+// grouping/variable rows and /t's category/target rows so both pickers
+// stay visually identical. "highlighted" means bright/bordered (selected,
+// or just always-actionable); unhighlighted is the dim, low-emphasis look.
+@Composable
+private fun StatusBoxChip(
+    label: String,
+    highlighted: Boolean,
+    color: Color,
+    fontFamily: FontFamily,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .heightIn(min = 32.dp)
+            .border(1.dp, if (highlighted) color else color.copy(alpha = 0.35f), AckHelpShape)
+            .background(if (highlighted) color.copy(alpha = 0.15f) else Color.Transparent, AckHelpShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            color = if (highlighted) color else color.copy(alpha = 0.6f),
+            fontFamily = fontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp
+        )
+    }
+}
+
 @Composable
 fun RowScope.ThemeOption(
     id: Int, 
@@ -199,6 +230,7 @@ private val TERMINAL_HELP_LINES = listOf(
     "/s, /sticky      SEND, HOLD TO CLEAR",
     "/e, /emergency   SEND WITH EMERGENCY OVERRIDES",
     "/v               BROWSE SHARED ROOT VARIABLES",
+    "/t               BROWSE TARGET COMPUTER ENTRIES",
     "/cls             CLEAR THE LOG (CONFIRM REQUIRED)",
     "/b, /backup      EXPORT ACK DATA (CONFIRM REQUIRED)",
     "/repair          RESTART BACKGROUND SERVICES"
@@ -235,11 +267,30 @@ private fun logTerminalLocal(context: Context, message: String, type: String = "
 private val ROOT_VARIABLE_TAGS = listOf("A", "B", "C")
 private val VARIABLE_TRIGGER_REGEX = Regex("""(?<![\w/])/v(?![\w])""", RegexOption.IGNORE_CASE)
 
-// Finds the last standalone "/v" in the prompt (not "/verify" or similar,
-// and not a second slash run into it) and hands back its character range
-// so a caller can either flag it as unresolved or replace it in place.
+// Finds the last standalone occurrence of a one-letter slash trigger (not
+// "/verify" matching "/v", not a second slash run into it) and hands back
+// its character range so a caller can either flag it as unresolved or
+// replace it in place. Shared by /v and /t below.
+private fun findTrigger(text: String, regex: Regex): IntRange? =
+    regex.findAll(text).lastOrNull()?.range
+
 private fun findVariableTrigger(text: String): IntRange? =
-    VARIABLE_TRIGGER_REGEX.findAll(text).lastOrNull()?.range
+    findTrigger(text, VARIABLE_TRIGGER_REGEX)
+
+// --- TARGET PICKER (/t) ---
+// The same live composition aid as /v, aimed at Target Computer entries
+// instead of Shared Root Variables. Row 1 lists every Target Computer
+// category (ComputerRepository.getCategories -- an unlimited, user-editable
+// list, same shape as /v's grouping row). Row 2 browses that category's
+// tree: Target Computer entries aren't a flat A/B/C, they're an
+// arbitrarily-nested tree of CATEGORY/ENTRY nodes (ComputerNode), so row 2
+// tracks a drill-down path instead of fixed slots -- tapping a CATEGORY
+// node descends into it, tapping an ENTRY node inserts its label. Same
+// insert-then-space-then-close behavior as /v either way.
+private val TARGET_TRIGGER_REGEX = Regex("""(?<![\w/])/t(?![\w])""", RegexOption.IGNORE_CASE)
+
+private fun findTargetTrigger(text: String): IntRange? =
+    findTrigger(text, TARGET_TRIGGER_REGEX)
 
 // Splits a raw prompt submission into recognized flags plus whatever phrase
 // is left. Returns Error/HelpShown/ClearLog/RunBackup/RunRepair (having
@@ -248,6 +299,11 @@ private fun findVariableTrigger(text: String): IntRange? =
 private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptResult {
     if (findVariableTrigger(raw) != null) {
         logTerminalLocal(context, "RESOLVE /v FIRST -- TAP A VARIABLE OR DELETE IT", "CMD_WARN")
+        return TerminalPromptResult.Error
+    }
+
+    if (findTargetTrigger(raw) != null) {
+        logTerminalLocal(context, "RESOLVE /t FIRST -- TAP A TARGET OR DELETE IT", "CMD_WARN")
         return TerminalPromptResult.Error
     }
 
@@ -451,10 +507,11 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
 
     // --- STATUSBOX state ---
     // A two-row strip that lives above the prompt: a "TYPING" indicator by
-    // default, or the /v grouping+variable picker once that trigger is
-    // live. It shows whenever the software keyboard is up, and hides the
-    // moment the keyboard closes -- the small glyph left of "> " brings it
-    // back manually without needing the keyboard open.
+    // default, or a live picker (the /v grouping+variable picker, or the
+    // /t category+target picker) once one of those triggers is live. It
+    // shows whenever the software keyboard is up, and hides the moment the
+    // keyboard closes -- the small glyph left of "> " brings it back
+    // manually without needing the keyboard open.
     val keyboardVisible = WindowInsets.isImeVisible
     var statusBoxManualVisible by remember { mutableStateOf(false) }
     val showStatusBox = keyboardVisible || statusBoxManualVisible
@@ -465,10 +522,24 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
         if (keyboardVisible) statusBoxManualVisible = false
     }
 
-    // Live /v detection -- recomputed on every keystroke since promptValue
-    // is already the key, so there's nothing worth memoizing here.
+    // Live /v and /t detection -- recomputed on every keystroke since
+    // promptValue is already the key, so there's nothing worth memoizing
+    // here. It's vanishingly unlikely for both to be live at once (each
+    // closes its own picker on insertion), but if they ever are, whichever
+    // one appears later in the text -- i.e. whichever was typed most
+    // recently -- wins.
     val variableTriggerRange = findVariableTrigger(promptValue.text)
-    val variableTriggerActive = variableTriggerRange != null
+    val targetTriggerRange = findTargetTrigger(promptValue.text)
+    val activeTriggerMode = when {
+        variableTriggerRange != null && targetTriggerRange != null -> {
+            if (targetTriggerRange.first > variableTriggerRange.first) "TARGET" else "VARIABLE"
+        }
+        variableTriggerRange != null -> "VARIABLE"
+        targetTriggerRange != null -> "TARGET"
+        else -> null
+    }
+    val variableTriggerActive = activeTriggerMode == "VARIABLE"
+    val targetTriggerActive = activeTriggerMode == "TARGET"
 
     var selectedVGrouping by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(variableTriggerActive) {
@@ -476,6 +547,19 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
         // by a tap) -- next time /v appears it should start over at the
         // grouping list, not reopen wherever it was left.
         if (!variableTriggerActive) selectedVGrouping = null
+    }
+
+    // /t's picker tracks a category plus a drill-down path (a list of
+    // CATEGORY node IDs from that category's root down to the level
+    // currently shown in row 2) since Target Computer entries are an
+    // arbitrarily-nested tree, not a flat A/B/C.
+    var selectedTCategoryId by remember { mutableStateOf<String?>(null) }
+    var tDrillPath by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(targetTriggerActive) {
+        if (!targetTriggerActive) {
+            selectedTCategoryId = null
+            tDrillPath = emptyList()
+        }
     }
 
     // Row 1's grouping list: the three fixed poses plus any custom context
@@ -492,18 +576,46 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
 
     val vRootConfig = selectedVGrouping?.let { RootOverrideRepository.getConfig(context, it) }
 
+    // /t's row 1: every Target Computer category (unlimited, user-editable
+    // -- same shape as vGroupings above).
+    val tCategories = if (targetTriggerActive) {
+        remember(targetTriggerActive) { ComputerRepository.getCategories(context) }
+    } else {
+        emptyList()
+    }
+
+    val tSelectedCategory = selectedTCategoryId?.let { id -> tCategories.find { it.id == id } }
+    // Row 2's current level: the selected category's root children, or --
+    // once drilled down -- whichever CATEGORY node is last on the path.
+    val tCurrentChildren = tSelectedCategory?.let { category ->
+        val parent = tDrillPath.lastOrNull()?.let { ComputerRepository.findNode(category, it) }
+            ?: category.root
+        parent.children
+    } ?: emptyList()
+
     val statusboxTextColor = NeonPalette.getColor(TerminalLogStore.getStatusboxColorIndex(context))
 
-    fun insertVariable(value: String) {
-        val trigger = variableTriggerRange ?: return
-        // Insert the resolved value plus a trailing space so the cursor
-        // lands ready for the next word instead of jammed against it.
+    // Shared by /v and /t: replaces whichever trigger range is still live
+    // with the resolved value plus a trailing space, so the cursor lands
+    // ready for the next word instead of jammed against it.
+    fun insertAtTrigger(trigger: IntRange?, value: String) {
+        trigger ?: return
         val insertion = "$value "
         val newText = promptValue.text.replaceRange(trigger, insertion)
         val newCursor = trigger.first + insertion.length
         promptValue = TextFieldValue(newText, TextRange(newCursor))
-        selectedVGrouping = null
         promptFocusRequester.requestFocus()
+    }
+
+    fun insertVariable(value: String) {
+        insertAtTrigger(variableTriggerRange, value)
+        selectedVGrouping = null
+    }
+
+    fun insertTarget(value: String) {
+        insertAtTrigger(targetTriggerRange, value)
+        selectedTCategoryId = null
+        tDrillPath = emptyList()
     }
 
     fun submitPrompt() {
@@ -669,9 +781,10 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
         Spacer(modifier = Modifier.height(6.dp))
 
         // --- STATUSBOX: a fixed two-row strip that mirrors the keyboard --
-        // "TYPING" by default, the /v grouping+variable picker while that
-        // trigger is live. Both rows are always reserved so switching
-        // between the two never reflows the prompt row beneath it.
+        // "TYPING" by default, the /v grouping+variable picker or the /t
+        // category+target picker while one of those triggers is live. Both
+        // rows are always reserved so switching between modes never
+        // reflows the prompt row beneath it.
         AnimatedVisibility(
             visible = showStatusBox,
             enter = expandVertically(),
@@ -683,7 +796,8 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                     .background(StatusBoxBg, CutCornerShape(4.dp))
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
-                // Row 1: TYPING indicator, or the tappable grouping list.
+                // Row 1: TYPING indicator, or whichever picker's top-level
+                // list (/v's groupings, /t's categories).
                 Row(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -694,33 +808,41 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             vGroupings.forEach { grouping ->
-                                val active = grouping == selectedVGrouping
-                                Box(
-                                    modifier = Modifier
-                                        .heightIn(min = 32.dp)
-                                        .border(
-                                            1.dp,
-                                            if (active) statusboxTextColor else statusboxTextColor.copy(alpha = 0.35f),
-                                            AckHelpShape
-                                        )
-                                        .background(
-                                            if (active) statusboxTextColor.copy(alpha = 0.15f) else Color.Transparent,
-                                            AckHelpShape
-                                        )
-                                        .clickable {
-                                            promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            selectedVGrouping = grouping
-                                        }
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
+                                StatusBoxChip(
+                                    label = grouping,
+                                    highlighted = grouping == selectedVGrouping,
+                                    color = statusboxTextColor,
+                                    fontFamily = terminalFontFamily
                                 ) {
-                                    Text(
-                                        grouping,
-                                        color = if (active) statusboxTextColor else statusboxTextColor.copy(alpha = 0.6f),
-                                        fontFamily = terminalFontFamily,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
-                                    )
+                                    promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    selectedVGrouping = grouping
+                                }
+                            }
+                        }
+                    } else if (targetTriggerActive) {
+                        if (tCategories.isEmpty()) {
+                            Text(
+                                "NO TARGET CATEGORIES -- ADD SOME FROM THE TARGET COMPUTER TAB.",
+                                color = statusboxTextColor.copy(alpha = 0.5f),
+                                fontFamily = terminalFontFamily,
+                                fontSize = 9.sp
+                            )
+                        } else {
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                tCategories.forEach { category ->
+                                    StatusBoxChip(
+                                        label = category.label,
+                                        highlighted = category.id == selectedTCategoryId,
+                                        color = statusboxTextColor,
+                                        fontFamily = terminalFontFamily
+                                    ) {
+                                        promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        selectedTCategoryId = category.id
+                                        tDrillPath = emptyList()
+                                    }
                                 }
                             }
                         }
@@ -740,8 +862,8 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Row 2: the selected grouping's A/B/C slots, or a live
-                // status line while nothing's tapped yet / not in /v mode.
+                // Row 2: /v's selected grouping's A/B/C slots, /t's current
+                // drill-down level, or a live status line in TYPING mode.
                 Row(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -805,6 +927,58 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                                 fontFamily = terminalFontFamily,
                                 fontSize = 9.sp
                             )
+                        }
+                    } else if (targetTriggerActive) {
+                        val category = tSelectedCategory
+                        if (category == null) {
+                            Text(
+                                "TAP A CATEGORY ABOVE TO BROWSE IT",
+                                color = statusboxTextColor.copy(alpha = 0.5f),
+                                fontFamily = terminalFontFamily,
+                                fontSize = 9.sp
+                            )
+                        } else if (tCurrentChildren.isEmpty()) {
+                            Text(
+                                "NOTHING HERE YET.",
+                                color = statusboxTextColor.copy(alpha = 0.5f),
+                                fontFamily = terminalFontFamily,
+                                fontSize = 9.sp
+                            )
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (tDrillPath.isNotEmpty()) {
+                                    StatusBoxChip(
+                                        label = "◄ BACK",
+                                        highlighted = true,
+                                        color = statusboxTextColor,
+                                        fontFamily = terminalFontFamily
+                                    ) {
+                                        promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        tDrillPath = tDrillPath.dropLast(1)
+                                    }
+                                }
+                                tCurrentChildren.forEach { node ->
+                                    val isFolder = node.type == ComputerNodeType.CATEGORY
+                                    StatusBoxChip(
+                                        label = if (isFolder) "${node.label} ▸" else node.label,
+                                        highlighted = true,
+                                        color = statusboxTextColor,
+                                        fontFamily = terminalFontFamily
+                                    ) {
+                                        promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        if (isFolder) {
+                                            tDrillPath = tDrillPath + node.id
+                                        } else {
+                                            insertTarget(node.label)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     } else {
                         Text(
