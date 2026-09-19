@@ -34,6 +34,7 @@ object TerminalLogStore {
     private const val KEY_HIDE_SYSTEM = "TERMINAL_HIDE_SYSTEM_MSGS"
     private const val KEY_HIDE_PATH = "TERMINAL_HIDE_PATH_TRACE"
     private const val KEY_MONOSPACE = "TERMINAL_MONOSPACE_ENABLED"
+    private const val KEY_STATUSBOX_COLOR = "TERMINAL_STATUSBOX_COLOR_INDEX"
 
     const val MAX_ENTRIES = 400
     const val MIN_RETENTION_DAYS = 1
@@ -77,6 +78,18 @@ object TerminalLogStore {
 
     fun setMonospaceEnabled(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_MONOSPACE, enabled).apply()
+    }
+
+    // Text color for the STATUSBOX (the live typing/variable-picker strip
+    // above the Terminal prompt) -- an index into NeonPalette.SWATCHES,
+    // same index scheme SettingsView already uses for deck identity colors.
+    // Defaults to swatch 0 (cyan), matching the rest of the Terminal's
+    // existing FluxCyan accent.
+    fun getStatusboxColorIndex(context: Context): Int =
+        prefs(context).getInt(KEY_STATUSBOX_COLOR, 0)
+
+    fun setStatusboxColorIndex(context: Context, index: Int) {
+        prefs(context).edit().putInt(KEY_STATUSBOX_COLOR, index).apply()
     }
 
     // Loads the persisted log, applying the current retention window so a

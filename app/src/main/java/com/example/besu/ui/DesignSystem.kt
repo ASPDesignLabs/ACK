@@ -62,6 +62,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 
 
@@ -85,6 +86,13 @@ val RadicalRed = Color(0xFFFF0055)
 val BioGreen = Color(0xFF00FF41)
 val DataOrange = Color(0xFFFF9900)
 val NeonViolet = Color(0xFFBD00FF)
+
+// STATUSBOX -- the live TYPING / root-variable strip above the Terminal
+// prompt. Deliberately brighter than Graphite (the CMD-block background)
+// with the red/green channels held back so it reads as a cyan-tinted panel
+// rather than a neutral gray one, distinguishing it from every other
+// surface in the Terminal at a glance.
+val StatusBoxBg = Color(0xFF1C3238)
 
 // ==========================================
 //        ATOMIC COMPONENTS (BUTTONS)
@@ -190,7 +198,7 @@ private val TERMINAL_HELP_LINES = listOf(
     "/n, /nosave      SEND WITHOUT LOGGING",
     "/s, /sticky      SEND, HOLD TO CLEAR",
     "/e, /emergency   SEND WITH EMERGENCY OVERRIDES",
-    "/v(A,B,C)        INSERT A SHARED ROOT VARIABLE",
+    "/v               BROWSE SHARED ROOT VARIABLES",
     "/cls             CLEAR THE LOG (CONFIRM REQUIRED)",
     "/b, /backup      EXPORT ACK DATA (CONFIRM REQUIRED)",
     "/repair          RESTART BACKGROUND SERVICES"
@@ -214,28 +222,24 @@ private fun logTerminalLocal(context: Context, message: String, type: String = "
 
 // --- VARIABLE PICKER (/v) ---
 // Not a submit-time flag like the others -- a live composition aid. As
-// soon as "/v(" appears anywhere in the prompt, TerminalView shows
-// tappable chips for the Shared Root Variables: the same A/B/C slots
-// RootOverrideStrip edits (RootOverrideRepository), scoped to whichever
-// category is currently active, using the exact [A-C] schema
-// TemplateEngine's {VAR:A} tokens already use everywhere else in the app.
-// Tapping one inserts its *current resolved value* -- not the {VAR:A}
-// token -- directly into the phrase, so what's typed is exactly what gets
-// said, no separate resolution step at send time.
+// soon as a standalone "/v" token appears in the prompt, TerminalView's
+// STATUSBOX switches from its TYPING indicator to a tap-driven picker:
+// row 1 lists every Shared Root Variable grouping (the three fixed poses
+// plus any custom context layers), row 2 shows that grouping's A/B/C
+// slots (RootOverrideRepository) once one is tapped -- the same [A-C]
+// schema TemplateEngine's {VAR:A} tokens use everywhere else in the app.
+// Tapping a slot inserts its *current resolved value*, followed by a
+// space, at the "/v" token's own position -- not the {VAR:A} token --
+// so what's typed is exactly what gets said, no separate resolution step
+// at send time.
 private val ROOT_VARIABLE_TAGS = listOf("A", "B", "C")
-private val VARIABLE_TRIGGER_REGEX = Regex("""/v\(([^)]*)\)?""", RegexOption.IGNORE_CASE)
+private val VARIABLE_TRIGGER_REGEX = Regex("""(?<![\w/])/v(?![\w])""", RegexOption.IGNORE_CASE)
 
-private data class VariableTrigger(val range: IntRange, val letters: List<String>)
-
-private fun findVariableTrigger(text: String): VariableTrigger? {
-    val match = VARIABLE_TRIGGER_REGEX.findAll(text).lastOrNull() ?: return null
-    val requested = match.groupValues[1]
-        .split(",")
-        .map { it.trim().uppercase() }
-        .filter { it in ROOT_VARIABLE_TAGS }
-        .distinct()
-    return VariableTrigger(match.range, requested.ifEmpty { ROOT_VARIABLE_TAGS })
-}
+// Finds the last standalone "/v" in the prompt (not "/verify" or similar,
+// and not a second slash run into it) and hands back its character range
+// so a caller can either flag it as unresolved or replace it in place.
+private fun findVariableTrigger(text: String): IntRange? =
+    VARIABLE_TRIGGER_REGEX.findAll(text).lastOrNull()?.range
 
 // Splits a raw prompt submission into recognized flags plus whatever phrase
 // is left. Returns Error/HelpShown/ClearLog/RunBackup/RunRepair (having
@@ -243,7 +247,7 @@ private fun findVariableTrigger(text: String): VariableTrigger? {
 // the caller only ever has to react to the result.
 private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptResult {
     if (findVariableTrigger(raw) != null) {
-        logTerminalLocal(context, "RESOLVE /v(...) FIRST -- TAP A VARIABLE OR DELETE IT", "CMD_WARN")
+        logTerminalLocal(context, "RESOLVE /v FIRST -- TAP A VARIABLE OR DELETE IT", "CMD_WARN")
         return TerminalPromptResult.Error
     }
 
@@ -364,7 +368,7 @@ private fun restartBackgroundServices(context: Context) {
 }
 
 // --- TERMINAL VIEW ---
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>, context: Context) {
     // Visibility filters live in PROTOCOL now (SettingsView) -- read fresh
@@ -420,7 +424,7 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     // typing and hitting Send/the glyph transmits it exactly like Manual
     // Override does, and focus is reclaimed afterward so the prompt stays
     // ready for the next line without having to tap back in.
-    var promptText by remember { mutableStateOf("") }
+    var promptValue by remember { mutableStateOf(TextFieldValue("")) }
     val promptFocusRequester = remember { FocusRequester() }
     val promptHaptic = LocalHapticFeedback.current
 
@@ -445,46 +449,87 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
         }
     }
 
-    // Live /v(...) detection -- recomputed on every keystroke since
-    // promptText is already the key, so there's nothing worth memoizing.
-    val variableTrigger = findVariableTrigger(promptText)
-    val activeCategory = remember { CommandRepository.getActiveCategoryFocus(context) }
-    val rootVariableConfig = if (variableTrigger != null) {
-        RootOverrideRepository.getConfig(context, activeCategory)
-    } else {
-        null
+    // --- STATUSBOX state ---
+    // A two-row strip that lives above the prompt: a "TYPING" indicator by
+    // default, or the /v grouping+variable picker once that trigger is
+    // live. It shows whenever the software keyboard is up, and hides the
+    // moment the keyboard closes -- the small glyph left of "> " brings it
+    // back manually without needing the keyboard open.
+    val keyboardVisible = WindowInsets.isImeVisible
+    var statusBoxManualVisible by remember { mutableStateOf(false) }
+    val showStatusBox = keyboardVisible || statusBoxManualVisible
+
+    LaunchedEffect(keyboardVisible) {
+        // The keyboard reopening is itself a fresh reason to show the box --
+        // don't let a stale manual toggle suppress it on the next close.
+        if (keyboardVisible) statusBoxManualVisible = false
     }
 
+    // Live /v detection -- recomputed on every keystroke since promptValue
+    // is already the key, so there's nothing worth memoizing here.
+    val variableTriggerRange = findVariableTrigger(promptValue.text)
+    val variableTriggerActive = variableTriggerRange != null
+
+    var selectedVGrouping by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(variableTriggerActive) {
+        // The trigger text is gone (typed over, deleted, or just resolved
+        // by a tap) -- next time /v appears it should start over at the
+        // grouping list, not reopen wherever it was left.
+        if (!variableTriggerActive) selectedVGrouping = null
+    }
+
+    // Row 1's grouping list: the three fixed poses plus any custom context
+    // layers the user has created (CommandRepository), so a layer added
+    // after IDENTITY/DEFEND/CONNECT still gets its own Shared Root
+    // Variables here, not just those three.
+    val vGroupings = if (variableTriggerActive) {
+        remember(variableTriggerActive) {
+            POSE_CATEGORIES + CommandRepository.getCustomContextEntries(context).map { it.name }
+        }
+    } else {
+        emptyList()
+    }
+
+    val vRootConfig = selectedVGrouping?.let { RootOverrideRepository.getConfig(context, it) }
+
+    val statusboxTextColor = NeonPalette.getColor(TerminalLogStore.getStatusboxColorIndex(context))
+
     fun insertVariable(value: String) {
-        val trigger = variableTrigger ?: return
-        promptText = promptText.replaceRange(trigger.range, value)
+        val trigger = variableTriggerRange ?: return
+        // Insert the resolved value plus a trailing space so the cursor
+        // lands ready for the next word instead of jammed against it.
+        val insertion = "$value "
+        val newText = promptValue.text.replaceRange(trigger, insertion)
+        val newCursor = trigger.first + insertion.length
+        promptValue = TextFieldValue(newText, TextRange(newCursor))
+        selectedVGrouping = null
         promptFocusRequester.requestFocus()
     }
 
     fun submitPrompt() {
-        val raw = promptText.trim()
+        val raw = promptValue.text.trim()
         if (raw.isNotEmpty()) {
             when (val result = parseTerminalCommand(context, raw)) {
                 is TerminalPromptResult.Dispatch -> {
                     dispatchTerminalPhrase(context, result.phrase, result.flags)
-                    promptText = ""
+                    promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.HelpShown -> {
-                    promptText = ""
+                    promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.ClearLog -> {
                     TerminalLogStore.clearAll(context, logs)
                     logTerminalLocal(context, "LOG CLEARED")
-                    promptText = ""
+                    promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.RunBackup -> {
                     backupExportLauncher.launch("ack_backup_${System.currentTimeMillis()}.json")
-                    promptText = ""
+                    promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.RunRepair -> {
                     restartBackgroundServices(context)
                     logTerminalLocal(context, "BACKGROUND SERVICES RESTARTED")
-                    promptText = ""
+                    promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.Error -> {
                     // Leave the text in place -- a typo'd command or a
@@ -623,70 +668,178 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(FluxCyan.copy(alpha = 0.3f)))
         Spacer(modifier = Modifier.height(6.dp))
 
-        // --- VARIABLE PICKER: shows only while /v(...) is live in the
-        // prompt, just above the keyboard. Tapping a slot inserts its
-        // current resolved value and the picker closes on its own since
-        // the trigger text that summoned it is gone.
-        if (variableTrigger != null && rootVariableConfig != null) {
-            Text(
-                "SHARED ROOT VARIABLES ($activeCategory) -- TAP TO INSERT",
-                color = Color.Gray,
-                fontSize = 9.sp,
-                fontFamily = terminalFontFamily
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        // --- STATUSBOX: a fixed two-row strip that mirrors the keyboard --
+        // "TYPING" by default, the /v grouping+variable picker while that
+        // trigger is live. Both rows are always reserved so switching
+        // between the two never reflows the prompt row beneath it.
+        AnimatedVisibility(
+            visible = showStatusBox,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(StatusBoxBg, CutCornerShape(4.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
-                variableTrigger.letters.forEach { tag ->
-                    val slot = rootVariableConfig.slots[tag] ?: RootOverrideValue()
-                    val hasValue = slot.enabled && slot.value.isNotBlank()
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 44.dp)
-                            .border(1.dp, if (hasValue) FluxCyan else Color.DarkGray, AckHelpShape)
-                            .background(
-                                if (hasValue) FluxCyan.copy(alpha = 0.08f) else Color.Transparent,
-                                AckHelpShape
-                            )
-                            .then(
-                                if (hasValue) {
-                                    Modifier.clickable { insertVariable(slot.value) }
-                                } else {
-                                    Modifier
+                // Row 1: TYPING indicator, or the tappable grouping list.
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (variableTriggerActive) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            vGroupings.forEach { grouping ->
+                                val active = grouping == selectedVGrouping
+                                Box(
+                                    modifier = Modifier
+                                        .heightIn(min = 32.dp)
+                                        .border(
+                                            1.dp,
+                                            if (active) statusboxTextColor else statusboxTextColor.copy(alpha = 0.35f),
+                                            AckHelpShape
+                                        )
+                                        .background(
+                                            if (active) statusboxTextColor.copy(alpha = 0.15f) else Color.Transparent,
+                                            AckHelpShape
+                                        )
+                                        .clickable {
+                                            promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            selectedVGrouping = grouping
+                                        }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        grouping,
+                                        color = if (active) statusboxTextColor else statusboxTextColor.copy(alpha = 0.6f),
+                                        fontFamily = terminalFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
                                 }
-                            )
-                            .padding(6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                tag,
-                                color = if (hasValue) FluxCyan else Color.DarkGray,
-                                fontFamily = terminalFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                if (hasValue) slot.value else "EMPTY",
-                                color = if (hasValue) Color.White else Color.DarkGray,
-                                fontFamily = terminalFontFamily,
-                                fontSize = 9.sp,
-                                maxLines = 1
-                            )
+                            }
                         }
+                    } else {
+                        PulsingStatusBox(color = statusboxTextColor)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "TYPING",
+                            color = statusboxTextColor,
+                            fontFamily = terminalFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            letterSpacing = 2.sp
+                        )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Row 2: the selected grouping's A/B/C slots, or a live
+                // status line while nothing's tapped yet / not in /v mode.
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (variableTriggerActive) {
+                        val config = vRootConfig
+                        if (selectedVGrouping != null && config != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                ROOT_VARIABLE_TAGS.forEach { tag ->
+                                    val slot = config.slots[tag] ?: RootOverrideValue()
+                                    val hasValue = slot.enabled && slot.value.isNotBlank()
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .heightIn(min = 32.dp)
+                                            .border(
+                                                1.dp,
+                                                if (hasValue) statusboxTextColor else statusboxTextColor.copy(alpha = 0.25f),
+                                                AckHelpShape
+                                            )
+                                            .background(
+                                                if (hasValue) statusboxTextColor.copy(alpha = 0.1f) else Color.Transparent,
+                                                AckHelpShape
+                                            )
+                                            .then(
+                                                if (hasValue) {
+                                                    Modifier.clickable { insertVariable(slot.value) }
+                                                } else {
+                                                    Modifier
+                                                }
+                                            )
+                                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                tag,
+                                                color = if (hasValue) statusboxTextColor else statusboxTextColor.copy(alpha = 0.4f),
+                                                fontFamily = terminalFontFamily,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp
+                                            )
+                                            Text(
+                                                if (hasValue) slot.value else "EMPTY",
+                                                color = if (hasValue) statusboxTextColor.copy(alpha = 0.85f) else statusboxTextColor.copy(alpha = 0.3f),
+                                                fontFamily = terminalFontFamily,
+                                                fontSize = 9.sp,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Text(
+                                "TAP A ROOT ABOVE TO VIEW ITS VARIABLES",
+                                color = statusboxTextColor.copy(alpha = 0.5f),
+                                fontFamily = terminalFontFamily,
+                                fontSize = 9.sp
+                            )
+                        }
+                    } else {
+                        Text(
+                            if (promptValue.text.isNotEmpty()) {
+                                "${promptValue.text.length} CHAR${if (promptValue.text.length == 1) "" else "S"}"
+                            } else {
+                                "AWAITING INPUT"
+                            },
+                            color = statusboxTextColor.copy(alpha = 0.5f),
+                            fontFamily = terminalFontFamily,
+                            fontSize = 9.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
             }
-            Spacer(modifier = Modifier.height(8.dp))
         }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(
+                "▣",
+                color = if (showStatusBox) statusboxTextColor else Color.DarkGray,
+                fontFamily = terminalFontFamily,
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .clickable {
+                        promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        statusBoxManualVisible = !statusBoxManualVisible
+                    }
+                    .padding(6.dp)
+            )
             Text(
                 "> ",
                 color = FluxCyan,
@@ -695,7 +848,7 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                 fontSize = 14.sp
             )
             Box(modifier = Modifier.weight(1f)) {
-                if (promptText.isEmpty()) {
+                if (promptValue.text.isEmpty()) {
                     Text(
                         "TYPE A COMMAND...",
                         color = Color.DarkGray,
@@ -704,8 +857,8 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                     )
                 }
                 BasicTextField(
-                    value = promptText,
-                    onValueChange = { promptText = it },
+                    value = promptValue,
+                    onValueChange = { promptValue = it },
                     modifier = Modifier.fillMaxWidth().focusRequester(promptFocusRequester),
                     textStyle = androidx.compose.ui.text.TextStyle(
                         color = FluxCyan,
@@ -720,7 +873,7 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
             }
             Text(
                 "▶",
-                color = if (promptText.isNotBlank()) FluxCyan else Color.DarkGray,
+                color = if (promptValue.text.isNotBlank()) FluxCyan else Color.DarkGray,
                 fontFamily = terminalFontFamily,
                 fontSize = 16.sp,
                 modifier = Modifier

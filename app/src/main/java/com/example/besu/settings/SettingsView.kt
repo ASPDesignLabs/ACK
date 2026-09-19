@@ -98,6 +98,7 @@ fun SettingsView(
     var hideSystemMessages by remember { mutableStateOf(TerminalLogStore.getHideSystemMessages(context)) }
     var hidePathTrace by remember { mutableStateOf(TerminalLogStore.getHidePathTrace(context)) }
     var monospaceTerminal by remember { mutableStateOf(TerminalLogStore.getMonospaceEnabled(context)) }
+    var statusboxColorIdx by remember { mutableIntStateOf(TerminalLogStore.getStatusboxColorIndex(context)) }
     var retentionDays by remember { mutableFloatStateOf(TerminalLogStore.getRetentionDays(context).toFloat()) }
 
     var toneTheme by remember { mutableIntStateOf(prefs.getInt("TONE_THEME", 1)) }
@@ -677,6 +678,42 @@ fun SettingsView(
                     monospaceTerminal = enabled
                     TerminalLogStore.setMonospaceEnabled(context, enabled)
                     reportHelpInteraction(AckTags.SETTINGS_TERMINAL_LOG)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "STATUSBOX TEXT COLOR",
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Text(
+                    "Color of the live TYPING / shared root variable strip above the Terminal prompt.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
+                ) {
+                    NeonPalette.SWATCHES.forEachIndexed { index, color ->
+                        Box(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .size(36.dp)
+                                .background(color, CutCornerShape(4.dp))
+                                .border(2.dp, if (statusboxColorIdx == index) Color.White else Color.Transparent, CutCornerShape(4.dp))
+                                .clickable {
+                                    statusboxColorIdx = index
+                                    TerminalLogStore.setStatusboxColorIndex(context, index)
+                                    reportHelpInteraction(AckTags.SETTINGS_TERMINAL_LOG)
+                                }
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
