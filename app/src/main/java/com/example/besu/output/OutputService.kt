@@ -215,6 +215,24 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             "TEST_SIGNAL" -> {
                 processSpeech("Audio Check. 1, 2, 3.", false, "SYS/TEST")
             }
+            "PREVIEW_RECORDING" -> {
+                // The bare "PLAY" button inside QuickActionEditorDialog and
+                // MANAGE RECORDINGS -- a recording (already saved, by id;
+                // or not yet saved, by a temp file path) played through the
+                // same routed playPcm() a real dispatch uses, but with no
+                // visual prompt and no log entry, since previewing isn't a
+                // communication event.
+                val recordingId = intent.getStringExtra("recording_id")
+                val recordingPath = intent.getStringExtra("recording_path")
+                val loaded = when {
+                    !recordingId.isNullOrEmpty() -> VoiceRecordingRepository.loadPcm(this, recordingId)
+                    !recordingPath.isNullOrEmpty() -> VoiceRecordingRepository.loadPcmFromFile(recordingPath)
+                    else -> null
+                }
+                if (loaded != null) {
+                    previewRecording(loaded.first, loaded.second)
+                }
+            }
             "CHANGE_PROFILE" -> {
                 val newProfile = intent.getStringExtra("NEW_PROFILE") ?: "DEFAULT"
                 CommandRepository.setActiveProfile(this, newProfile)
@@ -673,6 +691,39 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         }.start()
 
         return true
+    }
+
+    // The "PLAY" preview button inside QuickActionEditorDialog and MANAGE
+    // RECORDINGS -- same playPcm() routing as a real dispatch (force
+    // speaker, and here ALWAYS volume-enforced, since the whole point of a
+    // preview is to actually hear it) but with none of playRecording's
+    // communication-event side effects: no log entry, no visual prompt,
+    // no emergency handling. Previously this used a standalone AudioTrack
+    // that never called ensureStreamVolume, which is why it could be
+    // silent if the device's media stream volume happened to be low --
+    // routing through the same pipeline as everything else fixes that for
+    // good rather than re-solving it in a second place.
+    private fun previewRecording(pcm: ShortArray, sampleRate: Int) {
+        val recordingGainMultiplier = VoiceRecordingRepository.getPlaybackGainPercent(this) / 100f
+
+        val playablePcm = pcm.copyOf()
+        applyAudioEffects(
+            audioData = playablePcm,
+            modFreq = 0f,
+            modDepth = 0f,
+            crush = 0f,
+            gain = getEffectiveGain(EmergencyOptions()) * recordingGainMultiplier,
+            sampleRate = sampleRate
+        )
+
+        Thread {
+            playPcm(
+                audioData = playablePcm,
+                sampleRate = sampleRate,
+                forceSpeakerForRequest = forceSpeaker,
+                allowVolumeEnforcement = true
+            )
+        }.start()
     }
 
     private fun getEffectiveGain(emergency: EmergencyOptions): Float {

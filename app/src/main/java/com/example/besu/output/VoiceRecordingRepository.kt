@@ -1,13 +1,7 @@
 package com.example.besu.output
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
 import android.util.Base64
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -151,6 +145,30 @@ object VoiceRecordingRepository {
         }
     }
 
+    // Same as loadPcm, but by an arbitrary file path rather than a saved
+    // recording's id -- backs previewing a not-yet-accepted recording
+    // (see writeTempPreviewFile), which has no id of its own yet.
+    fun loadPcmFromFile(path: String): Pair<ShortArray, Int>? {
+        val file = File(path)
+        if (!file.exists()) return null
+        return try {
+            readWav(file)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    // Writes an in-progress (not yet accepted) recording to a scratch file
+    // in the cache dir so OutputService's PREVIEW_RECORDING action can play
+    // it the same way it plays an already-saved one -- overwritten on each
+    // call, since only one preview is ever in flight within a single EDIT
+    // QUICK ACTION session.
+    fun writeTempPreviewFile(context: Context, pcm: ShortArray, sampleRate: Int): File {
+        val file = File(context.cacheDir, "voice_preview_temp.wav")
+        writeWav(file, pcm, sampleRate)
+        return file
+    }
+
     // --- BACKUP ---
 
     fun exportForBackup(context: Context): List<VoiceRecordingBackupEntry> {
@@ -247,60 +265,4 @@ object VoiceRecordingRepository {
         return "%d:%02d".format(minutes, seconds)
     }
 
-    // A minimal, un-routed AudioTrack player -- shared by the record/
-    // preview flow in QuickActionEditorDialog and the MANAGE RECORDINGS
-    // popup under PROTOCOL. Deliberately doesn't go through OutputService's
-    // force-speaker/kill-switch/logging pipeline, since previewing isn't a
-    // communication event; the real, routed playback only happens once a
-    // recording is actually issued as a prompt (see OutputService.playRecording).
-    // Applies the same playback gain a real dispatch would (see
-    // OutputService.playRecording) so what you preview -- whether that's
-    // mid-recording in QuickActionEditorDialog or replaying an existing
-    // one from MANAGE RECORDINGS -- actually matches what you'll hear when
-    // the prompt is issued for real.
-    suspend fun playPreview(context: Context, pcm: ShortArray, sampleRate: Int) {
-        val gained = applyGain(pcm, getPlaybackGainPercent(context) / 100f)
-
-        withContext(Dispatchers.IO) {
-            val track = AudioTrack.Builder()
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build()
-                )
-                .setAudioFormat(
-                    AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(sampleRate)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build()
-                )
-                .setBufferSizeInBytes(gained.size * 2)
-                .build()
-
-            try {
-                track.play()
-                track.write(gained, 0, gained.size)
-                while (
-                    track.playState == AudioTrack.PLAYSTATE_PLAYING &&
-                    track.playbackHeadPosition < gained.size
-                ) {
-                    delay(10)
-                }
-            } finally {
-                track.stop()
-                track.release()
-            }
-        }
-    }
-
-    private fun applyGain(pcm: ShortArray, gain: Float): ShortArray {
-        if (gain == 1f) return pcm
-        return ShortArray(pcm.size) { i ->
-            (pcm[i] * gain).toInt()
-                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                .toShort()
-        }
-    }
 }

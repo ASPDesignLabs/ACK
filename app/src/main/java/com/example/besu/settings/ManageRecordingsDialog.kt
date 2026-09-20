@@ -5,6 +5,7 @@ import com.example.besu.help.*
 import com.example.besu.output.*
 import com.example.besu.ui.*
 import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // PROTOCOL -> "MANAGE RECORDINGS": every voice recording across every
@@ -79,11 +81,17 @@ fun ManageRecordingsDialog(
                         recording = recording,
                         isPlaying = isPlayingId == recording.id,
                         onPlay = {
-                            val loaded = VoiceRecordingRepository.loadPcm(context, recording.id)
-                            if (loaded != null && isPlayingId == null) {
+                            if (isPlayingId == null) {
                                 isPlayingId = recording.id
+                                // Routed through OutputService -- the same DSP/volume
+                                // pipeline every other prompt plays through, rather than
+                                // a standalone AudioTrack that could end up silent.
+                                context.startService(Intent(context, OutputService::class.java).apply {
+                                    action = "PREVIEW_RECORDING"
+                                    putExtra("recording_id", recording.id)
+                                })
                                 coroutineScope.launch {
-                                    VoiceRecordingRepository.playPreview(context, loaded.first, loaded.second)
+                                    delay(recording.durationMs + 300)
                                     isPlayingId = null
                                 }
                             }

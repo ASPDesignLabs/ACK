@@ -679,11 +679,18 @@ private fun VoiceRecordingSection(
                             isActive = !isPlayingPreview,
                             mainColor = primaryColor
                         ) {
-                            val loaded = VoiceRecordingRepository.loadPcm(context, existingRecording.id)
-                            if (loaded != null && !isPlayingPreview) {
+                            if (!isPlayingPreview) {
                                 isPlayingPreview = true
+                                // Routed through OutputService -- the same DSP/volume
+                                // pipeline every other prompt plays through (raises the
+                                // relevant stream's volume, honors FORCE SPEAKER), rather
+                                // than a standalone AudioTrack that could end up silent.
+                                context.startService(Intent(context, OutputService::class.java).apply {
+                                    action = "PREVIEW_RECORDING"
+                                    putExtra("recording_id", existingRecording.id)
+                                })
                                 coroutineScope.launch {
-                                    VoiceRecordingRepository.playPreview(context, loaded.first, loaded.second)
+                                    delay(existingRecording.durationMs + 300)
                                     isPlayingPreview = false
                                 }
                             }
@@ -786,8 +793,15 @@ private fun VoiceRecordingSection(
                         val pcm = previewPcm
                         if (pcm != null && !isPlayingPreview) {
                             isPlayingPreview = true
+                            // Not-yet-saved audio has no recording id yet -- stage it to
+                            // a scratch file so OutputService can play it the same way.
+                            val tempFile = VoiceRecordingRepository.writeTempPreviewFile(context, pcm, previewSampleRate)
+                            context.startService(Intent(context, OutputService::class.java).apply {
+                                action = "PREVIEW_RECORDING"
+                                putExtra("recording_path", tempFile.absolutePath)
+                            })
                             coroutineScope.launch {
-                                VoiceRecordingRepository.playPreview(context, pcm, previewSampleRate)
+                                delay(recordingDurationMs + 300)
                                 isPlayingPreview = false
                             }
                         }
