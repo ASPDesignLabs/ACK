@@ -208,6 +208,7 @@ fun SettingsView(
     }
 
     var showImportDialog by remember { mutableStateOf(false) }
+    var showManageRecordings by remember { mutableStateOf(false) }
     var importedBackup by remember { mutableStateOf<AckBackup?>(null) }
     var newDeckName by remember { mutableStateOf("") }
     var selectedColorIdx by remember { mutableIntStateOf(0) }
@@ -777,6 +778,27 @@ fun SettingsView(
                     NeonButton("IMPORT .JSON", Modifier.weight(1f), mainColor = primaryColor) { importLauncher.launch(arrayOf("application/json")) }
                 }
             }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            item {
+                Text("VOICE RECORDINGS", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Manage voice clips recorded for Quick Actions prompts.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                NeonButton(
+                    "MANAGE RECORDINGS",
+                    Modifier.fillMaxWidth(),
+                    mainColor = primaryColor
+                ) {
+                    showManageRecordings = true
+                }
+            }
         }
         HeroButton("UPLOAD PROTOCOL", Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
     }
@@ -803,6 +825,14 @@ fun SettingsView(
                 }
             },
             dismissButton = { Text("CANCEL", color = Color.Red, modifier = Modifier.clickable { showImportDialog = false }.padding(8.dp)) }
+        )
+    }
+
+    if (showManageRecordings) {
+        ManageRecordingsDialog(
+            context = context,
+            primaryColor = primaryColor,
+            onDismiss = { showManageRecordings = false }
         )
     }
 }

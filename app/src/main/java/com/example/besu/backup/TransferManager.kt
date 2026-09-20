@@ -210,6 +210,10 @@ object TransferManager {
         val syntaxRules = TargetRepository.getSyntaxRules(context)
         val computerCategories = ComputerRepository.getCategories(context)
 
+// 9b. Gather voice recordings bound to Quick Actions slots, audio
+// included (base64) -- see VoiceRecordingRepository.exportForBackup.
+        val voiceRecordings = VoiceRecordingRepository.exportForBackup(context)
+
 // 10. Wrap and encode.
         val backup = AckBackup(
             dsp = dspConfig,
@@ -229,6 +233,7 @@ object TransferManager {
             targets = targets,
             syntaxRules = syntaxRules,
             computerCategories = computerCategories,
+            voiceRecordings = voiceRecordings,
         )
 
         return json.encodeToString(backup)
@@ -612,6 +617,12 @@ object TransferManager {
         } else {
             ComputerRepository.replaceCategories(context, emptyList())
         }
+
+        // The quickActionsDecks restore above already brought back each
+        // slot's recordingId reference -- this brings back the actual
+        // audio those ids point to, so they resolve to real files again
+        // instead of a slot with a recordingId pointing at nothing.
+        VoiceRecordingRepository.replaceFromBackup(context, backup.voiceRecordings)
 
         CommandRepository.activateDeck(
             context = context,

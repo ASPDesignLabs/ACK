@@ -3,11 +3,12 @@ package com.example.besu.backup
 import com.example.besu.computer.*
 import com.example.besu.data.*
 import com.example.besu.decks.*
+import com.example.besu.output.VoiceRecordingBackupEntry
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class AckBackup(
-    val version: Int = 5,
+    val version: Int = 6,
     val timestamp: Long = System.currentTimeMillis(),
     val dsp: DspConfig,
     val matrixData: Map<String, String>,
@@ -46,7 +47,13 @@ data class AckBackup(
     val computerCategories: List<ComputerCategory> = emptyList(),
 
     // Header macro buttons, if your current build uses them.
-    val headerShortcuts: List<CommandRepository.HeaderShortcut> = emptyList()
+    val headerShortcuts: List<CommandRepository.HeaderShortcut> = emptyList(),
+
+    // Voice recordings bound to Quick Actions slots, audio included
+    // (base64 inline -- see VoiceRecordingBackupEntry). Empty on backups
+    // made before this field existed; nothing to restore, same as every
+    // other field here defaulting to empty.
+    val voiceRecordings: List<VoiceRecordingBackupEntry> = emptyList()
 )
 
 @Serializable

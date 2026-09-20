@@ -206,6 +206,41 @@ object CommandRepository {
         )
     }
 
+    // Separate from updateQuickActionSlot above -- recording a voice clip
+    // is its own flow (the mic button in QuickActionEditorDialog), distinct
+    // from editing the label/template text fields, so it gets its own
+    // narrow setter rather than being folded into the text-field save.
+    fun setQuickActionSlotRecording(
+        context: Context,
+        deckId: String,
+        groupIndex: Int,
+        slotIndex: Int,
+        recordingId: String?
+    ) {
+        val current = getQuickActionsConfig(context, deckId)
+
+        val updatedGroups = current.groups.map { group ->
+            if (group.groupIndex != groupIndex) {
+                group
+            } else {
+                group.copy(
+                    slots = group.slots.map { slot ->
+                        if (slot.slotIndex != slotIndex) {
+                            slot
+                        } else {
+                            slot.copy(recordingId = recordingId)
+                        }
+                    }
+                )
+            }
+        }
+
+        saveQuickActionsConfig(
+            context = context,
+            config = current.copy(groups = updatedGroups)
+        )
+    }
+
     fun updateQuickActionGroup(
         context: Context,
         deckId: String,

@@ -237,6 +237,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             }
             else -> {
                 val phrase = intent.getStringExtra("phrase")
+                val recordingId = intent.getStringExtra("recording_id")
                 val isRobotic = intent.getBooleanExtra("robotic", false)
                 val source = intent.getStringExtra("source") ?: "EXT"
 
@@ -267,7 +268,27 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 val skipLog = intent.getBooleanExtra("skip_log", false)
                 val sticky = intent.getBooleanExtra("sticky", false)
 
-                if (!phrase.isNullOrEmpty()) {
+                // A Quick Actions slot with a recording attached tries that
+                // first; playRecording() returns false (metadata present
+                // but the file's missing/corrupt, or nothing matched) if it
+                // can't, in which case this falls straight through to the
+                // normal phrase/TTS dispatch below rather than dropping the
+                // communication attempt.
+                val playedRecording = if (!recordingId.isNullOrEmpty()) {
+                    playRecording(
+                        recordingId = recordingId,
+                        rawText = phrase.orEmpty(),
+                        source = source,
+                        emergency = emergency,
+                        quiet = quiet,
+                        skipLog = skipLog,
+                        sticky = sticky
+                    )
+                } else {
+                    false
+                }
+
+                if (!playedRecording && !phrase.isNullOrEmpty()) {
                     val request = QueuedSpeech(
                         text = phrase,
                         roboticOverride = isRobotic,
@@ -571,6 +592,80 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         } finally {
             file.delete()
         }
+    }
+
+    // Plays a stored voice recording instead of synthesizing TTS -- the
+    // Quick Actions execute path routes here first when a slot has a
+    // recordingId, falling back to the normal phrase/TTS path if this
+    // returns false (metadata exists but the file is missing/corrupt, or
+    // the id doesn't resolve to anything). rawText still drives the log
+    // line, the visual prompt, and LOG/REPLAY's text (replaying later
+    // always falls back to TTS -- only the live original dispatch plays
+    // the recording), exactly as if this were a normal phrase.
+    //
+    // Mirrors processAndPlayAudio's own side effects and playPcm call as
+    // closely as possible so a played-back recording behaves identically
+    // to synthesized speech in every way except the actual audio source --
+    // same force-speaker routing, same volume enforcement rule, same
+    // emergency tone-before-speech ordering, same kill-switch reach (via
+    // playPcm's own activeTrack tracking). The only audio effects applied
+    // are gain (modFreq/modDepth/crush are zeroed) -- a real recorded
+    // voice shouldn't get the robotic/crush character effects meant for
+    // synthesized speech.
+    private fun playRecording(
+        recordingId: String,
+        rawText: String,
+        source: String,
+        emergency: EmergencyOptions,
+        quiet: Boolean,
+        skipLog: Boolean,
+        sticky: Boolean
+    ): Boolean {
+        val loaded = VoiceRecordingRepository.loadPcm(this, recordingId) ?: return false
+        val (pcm, sampleRate) = loaded
+
+        val logType = if (emergency.enabled) "EMERGENCY" else "OUT"
+
+        if (!skipLog) {
+            broadcastLog("$source > \"$rawText\"", logType, replayText = rawText)
+        }
+
+        showVisualPrompt(rawText = rawText, emergency = emergency, sticky = sticky)
+
+        // Silent mode (persisted or a one-off /quiet) skips playback for
+        // regular output only -- never for an emergency message. Same rule
+        // processSpeech applies to synthesized speech.
+        if ((silentOutput || quiet) && !emergency.enabled) {
+            return true
+        }
+
+        val playablePcm = pcm.copyOf()
+        applyAudioEffects(
+            audioData = playablePcm,
+            modFreq = 0f,
+            modDepth = 0f,
+            crush = 0f,
+            gain = getEffectiveGain(emergency),
+            sampleRate = sampleRate
+        )
+
+        Thread {
+            if (emergency.enabled && emergency.tone != EmergencyTone.OFF) {
+                playEmergencyTone(
+                    tone = emergency.tone,
+                    forceSpeaker = emergency.forceSpeaker || forceSpeaker
+                )
+            }
+
+            playPcm(
+                audioData = playablePcm,
+                sampleRate = sampleRate,
+                forceSpeakerForRequest = emergency.forceSpeaker || forceSpeaker,
+                allowVolumeEnforcement = !emergency.enabled && masterGain > 1.2f
+            )
+        }.start()
+
+        return true
     }
 
     private fun getEffectiveGain(emergency: EmergencyOptions): Float {
