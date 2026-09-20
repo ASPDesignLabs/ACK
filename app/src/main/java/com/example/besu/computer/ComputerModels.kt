@@ -20,7 +20,54 @@ data class ComputerNode(
     // PRE/POST hint carried over from a migrated TargetSlot, so the legacy
     // auto-inject behavior (TargetRepository.processPhrase) can keep working
     // unchanged after migration. Unused by anything else.
-    val legacyStrategy: String? = null
+    val legacyStrategy: String? = null,
+
+    // Only ever set on an ENTRY node, never a CATEGORY -- an optional
+    // contact card (a person or a place) attached to that specific entry.
+    // Null/NONE means "no card"; see ContactCard below.
+    val contactCard: ContactCard? = null
+)
+
+// NONE means the entry has no contact card. PERSON and PLACE each surface a
+// different subset of ContactCard's fields in the editor -- see ContactCard.
+@Serializable
+enum class ContactCardType { NONE, PERSON, PLACE }
+
+// One day's hours on a PLACE card. enabled = "open this day"; open/close are
+// free-text (e.g. "9:00 AM"), matching how every other value in this app is
+// a plain text field rather than a dedicated time-picker widget.
+@Serializable
+data class ContactHours(
+    val day: String,
+    val enabled: Boolean = false,
+    val open: String = "",
+    val close: String = ""
+)
+
+val CONTACT_CARD_DAYS = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
+private val CONTACT_CARD_DEFAULT_HOURS = CONTACT_CARD_DAYS.map { ContactHours(day = it) }
+
+// All fields a contact card could ever hold, regardless of type -- toggling
+// an entry between PERSON and PLACE (or back to NONE) in EDIT ENTRY only
+// changes which subset the editor shows, it never discards what's already
+// been filled in on the other type's fields.
+//
+// name is PLACE-only (a formal name distinct from the entry's own short
+// label, e.g. label "Tops" / name "Tops Friendly Markets"). PERSON has no
+// separate name field -- the entry's own label already is the person's
+// name. phone and address are shared by both types. email and the three
+// socials are PERSON-only; hours is PLACE-only.
+@Serializable
+data class ContactCard(
+    val type: ContactCardType = ContactCardType.NONE,
+    val name: String = "",
+    val phone: String = "",
+    val address: String = "",
+    val email: String = "",
+    val socialX: String = "",
+    val socialFacebook: String = "",
+    val socialLinkedIn: String = "",
+    val hours: List<ContactHours> = CONTACT_CARD_DEFAULT_HOURS
 )
 
 @Serializable

@@ -13,6 +13,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -53,6 +55,11 @@ fun TargetView(context: Context, primaryColor: Color) {
     var showWizard by remember { mutableStateOf(false) }
     var wizardStartCategoryId by remember { mutableStateOf<String?>(null) }
     var initialized by remember { mutableStateOf(false) }
+    // categoryId to nodeId -- set from the tree window's [CARD] badge, its
+    // EDIT ENTRY "OPEN CONTACT CARD" button, or a tap in the CONTACT CARDS
+    // browser below. One piece of state at this level regardless of entry
+    // point, so there's only ever one ContactCardDialog instantiation.
+    var openContactCard by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     fun refresh() {
         refreshKey++
@@ -141,6 +148,20 @@ fun TargetView(context: Context, primaryColor: Color) {
                     }
                 }
             }
+
+            // Anchored below the grid (which already claims the flexible
+            // space via weight(1f) above), not scrolling away with it --
+            // every contact card across every category, reachable without
+            // remembering which category and how deep it's nested in.
+            val allCards = remember(refreshKey) { ComputerRepository.findAllContactCards(context) }
+            if (allCards.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                ContactCardBrowserPanel(
+                    primaryColor = primaryColor,
+                    cards = allCards,
+                    onOpen = { categoryId, nodeId -> openContactCard = categoryId to nodeId }
+                )
+            }
         }
 
         // --- SUB-MODE: VISUALS ---
@@ -179,7 +200,23 @@ fun TargetView(context: Context, primaryColor: Color) {
             primaryColor = primaryColor,
             categoryId = treeCategoryId,
             onDismiss = { openTreeCategoryId = null },
-            onChanged = { refresh() }
+            onChanged = { refresh() },
+            onOpenContactCard = { nodeId -> openContactCard = treeCategoryId to nodeId }
+        )
+    }
+
+    val cardTarget = openContactCard
+    if (cardTarget != null) {
+        val (cardCategoryId, cardNodeId) = cardTarget
+        ContactCardDialog(
+            context = context,
+            primaryColor = primaryColor,
+            categoryId = cardCategoryId,
+            nodeId = cardNodeId,
+            onDismiss = {
+                openContactCard = null
+                refresh()
+            }
         )
     }
 
@@ -468,6 +505,96 @@ private fun AddCategoryTile(primaryColor: Color, onClick: () -> Unit) {
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+// Anchored strip below the categories grid listing every contact card
+// across every category (ComputerRepository.findAllContactCards), split
+// into NAMES/PLACES and sorted alphabetically -- reaching a card doesn't
+// require remembering which category or how deep in its tree it lives.
+// Only rendered at all once at least one card exists (see caller).
+@Composable
+private fun ContactCardBrowserPanel(
+    primaryColor: Color,
+    cards: List<ComputerRepository.ContactCardListing>,
+    onOpen: (categoryId: String, nodeId: String) -> Unit
+) {
+    val names = remember(cards) {
+        cards.filter { it.node.contactCard?.type == ContactCardType.PERSON }
+            .sortedBy { it.node.label.uppercase() }
+    }
+    val places = remember(cards) {
+        cards.filter { it.node.contactCard?.type == ContactCardType.PLACE }
+            .sortedBy { listing -> (listing.node.contactCard?.name?.ifBlank { listing.node.label } ?: listing.node.label).uppercase() }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 180.dp)
+            .border(1.dp, primaryColor.copy(alpha = 0.4f), CutCornerShape(8.dp))
+            .background(primaryColor.copy(alpha = 0.04f), CutCornerShape(8.dp))
+            .padding(10.dp)
+    ) {
+        Text(
+            text = "CONTACT CARDS",
+            color = primaryColor,
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+            if (names.isNotEmpty()) {
+                item { ContactCardBrowserSectionLabel("NAMES") }
+                items(names, key = { it.node.id }) { listing ->
+                    ContactCardBrowserRow(listing.node.label, primaryColor) {
+                        onOpen(listing.categoryId, listing.node.id)
+                    }
+                }
+            }
+            if (places.isNotEmpty()) {
+                item { ContactCardBrowserSectionLabel("PLACES") }
+                items(places, key = { it.node.id }) { listing ->
+                    val displayName = listing.node.contactCard?.name?.ifBlank { listing.node.label } ?: listing.node.label
+                    ContactCardBrowserRow(displayName, primaryColor) {
+                        onOpen(listing.categoryId, listing.node.id)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContactCardBrowserSectionLabel(text: String) {
+    Text(
+        text = text,
+        color = Color.Gray,
+        fontSize = 9.sp,
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+    )
+}
+
+@Composable
+private fun ContactCardBrowserRow(label: String, primaryColor: Color, onTap: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 36.dp)
+            .clickable(onClick = onTap)
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = Color.LightGray, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+        Text("›", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
     }
 }
 
