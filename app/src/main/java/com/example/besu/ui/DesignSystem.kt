@@ -3453,9 +3453,21 @@ fun MatrixCategory(
                     )
                     val recordingIsActive = nodeRecording?.enabled == true
 
+                    // The user has already "resolved" this node by hand once
+                    // they bind a recording -- its visual override (if set)
+                    // is the authoritative display text from here on, not
+                    // whatever the live variable/root-override state would
+                    // otherwise compute. Falls back to the normal resolved
+                    // phrase when no override is set, same as before.
+                    val recordedDisplayPhrase = if (recordingIsActive) {
+                        CommandRepository.getVisualOverride(context, node.path).ifBlank { resolvedPhrase }
+                    } else {
+                        resolvedPhrase
+                    }
+
                     MatrixNodeItem(
                         label = node.label,
-                        phrase = resolvedPhrase,
+                        phrase = recordedDisplayPhrase,
                         variableValues = if (recordingIsActive) emptyList() else variableValues,
                         computerTagChips = if (recordingIsActive) emptyList() else computerTagChips,
                         isRecorded = recordingIsActive,
@@ -3474,18 +3486,14 @@ fun MatrixCategory(
                             }
 
                             if (recordingIsActive && nodeRecording != null) {
-                                // The visual override (if the user set one while
-                                // recording this entry) replaces the raw template
-                                // for both the log line and the on-screen prompt --
-                                // otherwise either could show a literal, unresolved
-                                // {VAR}/[COMPUTER:X] token. Blank falls back to the
-                                // raw template exactly as before.
-                                val displayText = CommandRepository
-                                    .getVisualOverride(context, node.path)
-                                    .ifBlank { rawPhrase }
-
+                                // Same text the row itself is showing right now
+                                // (recordedDisplayPhrase) -- the visual override
+                                // if one is set, otherwise the normal resolved
+                                // phrase. Keeps the log line and on-screen prompt
+                                // from ever disagreeing with what's on screen in
+                                // the MATRIX list.
                                 val intent = Intent(context, OutputService::class.java).apply {
-                                    putExtra("phrase", displayText)
+                                    putExtra("phrase", recordedDisplayPhrase)
                                     putExtra("recording_id", nodeRecording.id)
                                     putExtra("robotic", false)
                                     putExtra("source", "MTX/${title.uppercase()}")
