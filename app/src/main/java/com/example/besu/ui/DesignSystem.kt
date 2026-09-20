@@ -15,6 +15,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -94,6 +95,15 @@ val NeonViolet = Color(0xFFBD00FF)
 // surface in the Terminal at a glance.
 val StatusBoxBg = Color(0xFF1C3238)
 
+// STATUSBOX is deliberately POSIX-menu styled, not another set of neon
+// chips: one uniform monospace size for every string that appears in it,
+// plain text joined by " - "/" / " delimiters instead of bordered boxes,
+// and reverse video (solid fill, dark text) for whatever's currently
+// selected instead of a tinted border. STATUSBOX_FONT_SIZE and
+// STATUSBOX_PAGE_SIZE are its only tunables.
+val STATUSBOX_FONT_SIZE = 14.sp
+private const val STATUSBOX_PAGE_SIZE = 3
+
 // ==========================================
 //        ATOMIC COMPONENTS (BUTTONS)
 // ==========================================
@@ -140,34 +150,143 @@ fun PulsingStatusBox(color: Color) {
     Box(modifier = Modifier.size(16.dp).border(1.dp, color, CutCornerShape(4.dp)).padding(3.dp).alpha(alpha).background(color, CutCornerShape(2.dp)))
 }
 
-// A single tappable chip inside the Terminal's STATUSBOX -- shared by /v's
-// grouping/variable rows and /t's category/target rows so both pickers
-// stay visually identical. "highlighted" means bright/bordered (selected,
-// or just always-actionable); unhighlighted is the dim, low-emphasis look.
+// One entry in a STATUSBOX list row -- shared by /v's groupings/variables
+// and /t's categories/tree nodes so every picker renders through the same
+// two composables below instead of four near-copies of the same styling.
+private data class StatusBoxItem(
+    val label: String,
+    val clickable: Boolean = true,
+    val onClick: () -> Unit = {}
+)
+
+// A page of items rendered POSIX-select-style: plain monospace text joined
+// by " - ", the item at highlightedIndex reverse-videoed (solid fill, dark
+// text) instead of bordered/tinted, and a non-clickable item shown dim.
+// Pages with more than STATUSBOX_PAGE_SIZE items get "<"/">" tap targets
+// at the edges -- discrete paging, no scroll gesture, so it behaves like a
+// real terminal select menu rather than a chip carousel. A horizontalScroll
+// is still wrapped around the row as a safety net for a page whose labels
+// are simply too wide for the screen, but paging is the primary way to
+// reach anything beyond the first page.
 @Composable
-private fun StatusBoxChip(
-    label: String,
-    highlighted: Boolean,
+private fun StatusBoxItemRow(
+    items: List<StatusBoxItem>,
+    highlightedIndex: Int?,
+    page: Int,
+    onPageChange: (Int) -> Unit,
     color: Color,
-    fontFamily: FontFamily,
-    onClick: () -> Unit
+    pageSize: Int = STATUSBOX_PAGE_SIZE
 ) {
-    Box(
-        modifier = Modifier
-            .heightIn(min = 32.dp)
-            .border(1.dp, if (highlighted) color else color.copy(alpha = 0.35f), AckHelpShape)
-            .background(if (highlighted) color.copy(alpha = 0.15f) else Color.Transparent, AckHelpShape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
+    val pageCount = if (items.isEmpty()) 1 else (items.size + pageSize - 1) / pageSize
+    val clampedPage = page.coerceIn(0, pageCount - 1)
+    val start = clampedPage * pageSize
+    val visible = items.drop(start).take(pageSize)
+    val hasPrev = clampedPage > 0
+    val hasNext = start + pageSize < items.size
+
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            label,
-            color = if (highlighted) color else color.copy(alpha = 0.6f),
-            fontFamily = fontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 11.sp
-        )
+        if (hasPrev) {
+            Text(
+                "<",
+                color = color,
+                fontFamily = FontFamily.Monospace,
+                fontSize = STATUSBOX_FONT_SIZE,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clickable { onPageChange(clampedPage - 1) }
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
+            )
+        }
+        visible.forEachIndexed { i, item ->
+            val globalIndex = start + i
+            val isHighlighted = globalIndex == highlightedIndex
+            Text(
+                item.label,
+                color = when {
+                    isHighlighted -> StatusBoxBg
+                    !item.clickable -> color.copy(alpha = 0.35f)
+                    else -> color
+                },
+                fontFamily = FontFamily.Monospace,
+                fontSize = STATUSBOX_FONT_SIZE,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .then(
+                        if (isHighlighted) {
+                            Modifier.background(color, AckHelpShape)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .then(
+                        if (item.clickable) {
+                            Modifier.clickable(onClick = item.onClick)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .padding(horizontal = 4.dp, vertical = 6.dp)
+            )
+            if (i < visible.lastIndex) {
+                Text(
+                    " - ",
+                    color = color.copy(alpha = 0.4f),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = STATUSBOX_FONT_SIZE
+                )
+            }
+        }
+        if (hasNext) {
+            Text(
+                ">",
+                color = color,
+                fontFamily = FontFamily.Monospace,
+                fontSize = STATUSBOX_FONT_SIZE,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clickable { onPageChange(clampedPage + 1) }
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
+            )
+        }
+    }
+}
+
+// A tappable path trail -- /t's drill-down breadcrumb ("PLACES / DOWNTOWN"),
+// or /v's single-segment "which grouping am I in" line. Every segment but
+// the last is dim and clickable (tap to jump back to that level); the last
+// segment is bright and inert -- you're already there.
+@Composable
+private fun StatusBoxBreadcrumb(segments: List<StatusBoxItem>, color: Color) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        segments.forEachIndexed { i, segment ->
+            val isCurrent = i == segments.lastIndex
+            Text(
+                segment.label,
+                color = if (isCurrent) color else color.copy(alpha = 0.55f),
+                fontFamily = FontFamily.Monospace,
+                fontSize = STATUSBOX_FONT_SIZE,
+                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                modifier = if (!isCurrent && segment.clickable) {
+                    Modifier.clickable(onClick = segment.onClick)
+                } else {
+                    Modifier
+                }
+            )
+            if (i < segments.lastIndex) {
+                Text(
+                    " / ",
+                    color = color.copy(alpha = 0.4f),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = STATUSBOX_FONT_SIZE
+                )
+            }
+        }
     }
 }
 
@@ -542,24 +661,39 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     val targetTriggerActive = activeTriggerMode == "TARGET"
 
     var selectedVGrouping by remember { mutableStateOf<String?>(null) }
+    var vGroupingPage by remember { mutableIntStateOf(0) }
     LaunchedEffect(variableTriggerActive) {
         // The trigger text is gone (typed over, deleted, or just resolved
         // by a tap) -- next time /v appears it should start over at the
         // grouping list, not reopen wherever it was left.
-        if (!variableTriggerActive) selectedVGrouping = null
+        if (!variableTriggerActive) {
+            selectedVGrouping = null
+            vGroupingPage = 0
+        }
     }
 
     // /t's picker tracks a category plus a drill-down path (a list of
     // CATEGORY node IDs from that category's root down to the level
-    // currently shown in row 2) since Target Computer entries are an
-    // arbitrarily-nested tree, not a flat A/B/C.
+    // currently shown in row 3) since Target Computer entries are an
+    // arbitrarily-nested tree, not a flat A/B/C. Each row pages
+    // independently -- row 1 (categories) and row 3 (whatever level the
+    // drill-down is currently on) can each overflow on their own.
     var selectedTCategoryId by remember { mutableStateOf<String?>(null) }
     var tDrillPath by remember { mutableStateOf<List<String>>(emptyList()) }
+    var tCategoryPage by remember { mutableIntStateOf(0) }
+    var tEntryPage by remember { mutableIntStateOf(0) }
     LaunchedEffect(targetTriggerActive) {
         if (!targetTriggerActive) {
             selectedTCategoryId = null
             tDrillPath = emptyList()
+            tCategoryPage = 0
+            tEntryPage = 0
         }
+    }
+    // Changing category or drill depth always lands on a fresh level --
+    // row 3's page index from the level you just left doesn't apply here.
+    LaunchedEffect(selectedTCategoryId, tDrillPath) {
+        tEntryPage = 0
     }
 
     // Row 1's grouping list: the three fixed poses plus any custom context
@@ -585,11 +719,32 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     }
 
     val tSelectedCategory = selectedTCategoryId?.let { id -> tCategories.find { it.id == id } }
-    // Row 2's current level: the selected category's root children, or --
+    // The drill-down nodes on the path, resolved once so both the
+    // breadcrumb (row 2) and the current level's children (row 3) read
+    // from the same resolved list instead of re-walking the tree twice.
+    val tPathNodes = tSelectedCategory?.let { category ->
+        tDrillPath.mapNotNull { id -> ComputerRepository.findNode(category, id) }
+    } ?: emptyList()
+
+    // Row 2's breadcrumb: the category name, then one segment per drilled
+    // level. Every segment but the last is tappable and jumps back to that
+    // depth; tapping the category name itself (index 0) returns to the
+    // category's own root.
+    val tBreadcrumbSegments = tSelectedCategory?.let { category ->
+        val labels = listOf(category.label) + tPathNodes.map { it.label }
+        labels.mapIndexed { index, label ->
+            StatusBoxItem(
+                label = label,
+                clickable = index != labels.lastIndex,
+                onClick = { tDrillPath = tPathNodes.take(index).map { it.id } }
+            )
+        }
+    } ?: emptyList()
+
+    // Row 3's current level: the selected category's root children, or --
     // once drilled down -- whichever CATEGORY node is last on the path.
     val tCurrentChildren = tSelectedCategory?.let { category ->
-        val parent = tDrillPath.lastOrNull()?.let { ComputerRepository.findNode(category, it) }
-            ?: category.root
+        val parent = tPathNodes.lastOrNull() ?: category.root
         parent.children
     } ?: emptyList()
 
@@ -780,11 +935,11 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(FluxCyan.copy(alpha = 0.3f)))
         Spacer(modifier = Modifier.height(6.dp))
 
-        // --- STATUSBOX: a fixed two-row strip that mirrors the keyboard --
-        // "TYPING" by default, the /v grouping+variable picker or the /t
-        // category+target picker while one of those triggers is live. Both
-        // rows are always reserved so switching between modes never
-        // reflows the prompt row beneath it.
+        // --- STATUSBOX: POSIX-menu styled, not another set of neon chips.
+        // TYPING mode is a compact two-line block; /v and /t expand it to
+        // three rows (grouping/category picker, a breadcrumb, the actual
+        // entries) via animateContentSize so the height change animates
+        // instead of yanking the prompt row beneath it.
         AnimatedVisibility(
             visible = showStatusBox,
             enter = expandVertically(),
@@ -795,206 +950,181 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                     .fillMaxWidth()
                     .background(StatusBoxBg, CutCornerShape(4.dp))
                     .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .animateContentSize()
             ) {
-                // Row 1: TYPING indicator, or whichever picker's top-level
-                // list (/v's groupings, /t's categories).
-                Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (variableTriggerActive) {
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            vGroupings.forEach { grouping ->
-                                StatusBoxChip(
-                                    label = grouping,
-                                    highlighted = grouping == selectedVGrouping,
-                                    color = statusboxTextColor,
-                                    fontFamily = terminalFontFamily
-                                ) {
-                                    promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    selectedVGrouping = grouping
-                                }
+                if (variableTriggerActive) {
+                    // Row 1: every Shared Root Variable grouping.
+                    StatusBoxItemRow(
+                        items = vGroupings.map { grouping ->
+                            StatusBoxItem(label = grouping) {
+                                promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                selectedVGrouping = grouping
+                                vGroupingPage = 0
                             }
-                        }
-                    } else if (targetTriggerActive) {
-                        if (tCategories.isEmpty()) {
-                            Text(
-                                "NO TARGET CATEGORIES -- ADD SOME FROM THE TARGET COMPUTER TAB.",
-                                color = statusboxTextColor.copy(alpha = 0.5f),
-                                fontFamily = terminalFontFamily,
-                                fontSize = 9.sp
-                            )
-                        } else {
-                            Row(
-                                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                tCategories.forEach { category ->
-                                    StatusBoxChip(
-                                        label = category.label,
-                                        highlighted = category.id == selectedTCategoryId,
-                                        color = statusboxTextColor,
-                                        fontFamily = terminalFontFamily
-                                    ) {
+                        },
+                        highlightedIndex = vGroupings.indexOf(selectedVGrouping).takeIf { it >= 0 },
+                        page = vGroupingPage,
+                        onPageChange = { vGroupingPage = it },
+                        color = statusboxTextColor
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Row 2: which grouping you're in -- /v never drills
+                    // down, so this is always a single segment (or a dash
+                    // until one's tapped).
+                    if (selectedVGrouping != null) {
+                        StatusBoxBreadcrumb(
+                            segments = listOf(StatusBoxItem(label = selectedVGrouping!!, clickable = false)),
+                            color = statusboxTextColor
+                        )
+                    } else {
+                        Text(
+                            "--",
+                            color = statusboxTextColor.copy(alpha = 0.35f),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = STATUSBOX_FONT_SIZE
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Row 3: the selected grouping's A/B/C slots.
+                    val config = vRootConfig
+                    if (selectedVGrouping != null && config != null) {
+                        StatusBoxItemRow(
+                            items = ROOT_VARIABLE_TAGS.map { tag ->
+                                val slot = config.slots[tag] ?: RootOverrideValue()
+                                val hasValue = slot.enabled && slot.value.isNotBlank()
+                                StatusBoxItem(
+                                    label = "$tag:${if (hasValue) slot.value else "EMPTY"}",
+                                    clickable = hasValue,
+                                    onClick = {
                                         promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        selectedTCategoryId = category.id
-                                        tDrillPath = emptyList()
+                                        insertVariable(slot.value)
+                                    }
+                                )
+                            },
+                            highlightedIndex = null,
+                            page = 0,
+                            onPageChange = {},
+                            color = statusboxTextColor
+                        )
+                    } else {
+                        Text(
+                            "TAP A ROOT ABOVE TO VIEW ITS VARIABLES",
+                            color = statusboxTextColor.copy(alpha = 0.5f),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = STATUSBOX_FONT_SIZE
+                        )
+                    }
+                } else if (targetTriggerActive) {
+                    // Row 1: every Target Computer category.
+                    if (tCategories.isEmpty()) {
+                        Text(
+                            "NO TARGET CATEGORIES -- ADD SOME FROM THE TARGET COMPUTER TAB.",
+                            color = statusboxTextColor.copy(alpha = 0.5f),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = STATUSBOX_FONT_SIZE
+                        )
+                    } else {
+                        StatusBoxItemRow(
+                            items = tCategories.map { category ->
+                                StatusBoxItem(label = category.label) {
+                                    promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    selectedTCategoryId = category.id
+                                    tDrillPath = emptyList()
+                                    tCategoryPage = 0
+                                }
+                            },
+                            highlightedIndex = tCategories.indexOfFirst { it.id == selectedTCategoryId }
+                                .takeIf { it >= 0 },
+                            page = tCategoryPage,
+                            onPageChange = { tCategoryPage = it },
+                            color = statusboxTextColor
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Row 2: the drill-down breadcrumb -- tap any segment
+                    // but the last to climb back up to that depth.
+                    if (tBreadcrumbSegments.isNotEmpty()) {
+                        StatusBoxBreadcrumb(segments = tBreadcrumbSegments, color = statusboxTextColor)
+                    } else {
+                        Text(
+                            "--",
+                            color = statusboxTextColor.copy(alpha = 0.35f),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = STATUSBOX_FONT_SIZE
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Row 3: whatever's at the current drill-down level.
+                    if (tSelectedCategory == null) {
+                        Text(
+                            "TAP A CATEGORY ABOVE TO BROWSE IT",
+                            color = statusboxTextColor.copy(alpha = 0.5f),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = STATUSBOX_FONT_SIZE
+                        )
+                    } else if (tCurrentChildren.isEmpty()) {
+                        Text(
+                            "NOTHING HERE YET.",
+                            color = statusboxTextColor.copy(alpha = 0.5f),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = STATUSBOX_FONT_SIZE
+                        )
+                    } else {
+                        StatusBoxItemRow(
+                            items = tCurrentChildren.map { node ->
+                                val isFolder = node.type == ComputerNodeType.CATEGORY
+                                StatusBoxItem(label = if (isFolder) "${node.label} ▸" else node.label) {
+                                    promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (isFolder) {
+                                        tDrillPath = tDrillPath + node.id
+                                    } else {
+                                        insertTarget(node.label)
                                     }
                                 }
-                            }
-                        }
-                    } else {
+                            },
+                            highlightedIndex = null,
+                            page = tEntryPage,
+                            onPageChange = { tEntryPage = it },
+                            color = statusboxTextColor
+                        )
+                    }
+                } else {
+                    // TYPING: a compact two-line block, not the full
+                    // three-row picker layout -- there's nothing to browse.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         PulsingStatusBox(color = statusboxTextColor)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "TYPING",
                             color = statusboxTextColor,
-                            fontFamily = terminalFontFamily,
+                            fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
+                            fontSize = STATUSBOX_FONT_SIZE,
                             letterSpacing = 2.sp
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                // Row 2: /v's selected grouping's A/B/C slots, /t's current
-                // drill-down level, or a live status line in TYPING mode.
-                Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (variableTriggerActive) {
-                        val config = vRootConfig
-                        if (selectedVGrouping != null && config != null) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                ROOT_VARIABLE_TAGS.forEach { tag ->
-                                    val slot = config.slots[tag] ?: RootOverrideValue()
-                                    val hasValue = slot.enabled && slot.value.isNotBlank()
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .heightIn(min = 32.dp)
-                                            .border(
-                                                1.dp,
-                                                if (hasValue) statusboxTextColor else statusboxTextColor.copy(alpha = 0.25f),
-                                                AckHelpShape
-                                            )
-                                            .background(
-                                                if (hasValue) statusboxTextColor.copy(alpha = 0.1f) else Color.Transparent,
-                                                AckHelpShape
-                                            )
-                                            .then(
-                                                if (hasValue) {
-                                                    Modifier.clickable { insertVariable(slot.value) }
-                                                } else {
-                                                    Modifier
-                                                }
-                                            )
-                                            .padding(horizontal = 6.dp, vertical = 4.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(
-                                                tag,
-                                                color = if (hasValue) statusboxTextColor else statusboxTextColor.copy(alpha = 0.4f),
-                                                fontFamily = terminalFontFamily,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 11.sp
-                                            )
-                                            Text(
-                                                if (hasValue) slot.value else "EMPTY",
-                                                color = if (hasValue) statusboxTextColor.copy(alpha = 0.85f) else statusboxTextColor.copy(alpha = 0.3f),
-                                                fontFamily = terminalFontFamily,
-                                                fontSize = 9.sp,
-                                                maxLines = 1
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                    Text(
+                        if (promptValue.text.isNotEmpty()) {
+                            "${promptValue.text.length} CHAR${if (promptValue.text.length == 1) "" else "S"}"
                         } else {
-                            Text(
-                                "TAP A ROOT ABOVE TO VIEW ITS VARIABLES",
-                                color = statusboxTextColor.copy(alpha = 0.5f),
-                                fontFamily = terminalFontFamily,
-                                fontSize = 9.sp
-                            )
-                        }
-                    } else if (targetTriggerActive) {
-                        val category = tSelectedCategory
-                        if (category == null) {
-                            Text(
-                                "TAP A CATEGORY ABOVE TO BROWSE IT",
-                                color = statusboxTextColor.copy(alpha = 0.5f),
-                                fontFamily = terminalFontFamily,
-                                fontSize = 9.sp
-                            )
-                        } else if (tCurrentChildren.isEmpty()) {
-                            Text(
-                                "NOTHING HERE YET.",
-                                color = statusboxTextColor.copy(alpha = 0.5f),
-                                fontFamily = terminalFontFamily,
-                                fontSize = 9.sp
-                            )
-                        } else {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                if (tDrillPath.isNotEmpty()) {
-                                    StatusBoxChip(
-                                        label = "◄ BACK",
-                                        highlighted = true,
-                                        color = statusboxTextColor,
-                                        fontFamily = terminalFontFamily
-                                    ) {
-                                        promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        tDrillPath = tDrillPath.dropLast(1)
-                                    }
-                                }
-                                tCurrentChildren.forEach { node ->
-                                    val isFolder = node.type == ComputerNodeType.CATEGORY
-                                    StatusBoxChip(
-                                        label = if (isFolder) "${node.label} ▸" else node.label,
-                                        highlighted = true,
-                                        color = statusboxTextColor,
-                                        fontFamily = terminalFontFamily
-                                    ) {
-                                        promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        if (isFolder) {
-                                            tDrillPath = tDrillPath + node.id
-                                        } else {
-                                            insertTarget(node.label)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        Text(
-                            if (promptValue.text.isNotEmpty()) {
-                                "${promptValue.text.length} CHAR${if (promptValue.text.length == 1) "" else "S"}"
-                            } else {
-                                "AWAITING INPUT"
-                            },
-                            color = statusboxTextColor.copy(alpha = 0.5f),
-                            fontFamily = terminalFontFamily,
-                            fontSize = 9.sp
-                        )
-                    }
+                            "AWAITING INPUT"
+                        },
+                        color = statusboxTextColor.copy(alpha = 0.5f),
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = STATUSBOX_FONT_SIZE
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
             }
         }
 
