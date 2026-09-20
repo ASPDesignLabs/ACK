@@ -119,6 +119,50 @@ object ComputerRepository {
     fun findNode(category: ComputerCategory, nodeId: String): ComputerNode? =
         findNode(category.root, nodeId)
 
+    // --- CONTACT CARDS ---
+    // Only ever touches an ENTRY node's contactCard field -- callers are
+    // responsible for only offering this UI on entries, never categories.
+
+    // Switches which type's fields the editor shows without discarding
+    // whatever's already been filled in on the other type -- see
+    // ContactCard's own doc comment for why.
+    fun setContactCardType(context: Context, categoryId: String, nodeId: String, type: ContactCardType) {
+        updateCategory(context, categoryId) { category ->
+            category.copy(root = mapNode(category.root, nodeId) { node ->
+                val existing = node.contactCard ?: ContactCard()
+                node.copy(contactCard = existing.copy(type = type))
+            })
+        }
+    }
+
+    // Full replace, called on every field edit from the contact card editor
+    // (live-save, same pattern MatrixEditor's macro template field uses).
+    fun saveContactCard(context: Context, categoryId: String, nodeId: String, card: ContactCard) {
+        updateCategory(context, categoryId) { category ->
+            category.copy(root = mapNode(category.root, nodeId) { it.copy(contactCard = card) })
+        }
+    }
+
+    data class ContactCardListing(val categoryId: String, val node: ComputerNode)
+
+    // Every ENTRY node across every category that has an active (non-NONE)
+    // contact card -- backs the CONTACT CARDS browser at the bottom of
+    // TargetView, so a card is reachable without remembering which
+    // category and how deep it's nested.
+    fun findAllContactCards(context: Context): List<ContactCardListing> {
+        val result = mutableListOf<ContactCardListing>()
+
+        fun walk(categoryId: String, node: ComputerNode) {
+            if (node.type == ComputerNodeType.ENTRY && node.contactCard?.type?.let { it != ContactCardType.NONE } == true) {
+                result.add(ContactCardListing(categoryId, node))
+            }
+            node.children.forEach { walk(categoryId, it) }
+        }
+
+        getCategories(context).forEach { category -> walk(category.id, category.root) }
+        return result
+    }
+
     fun findPath(category: ComputerCategory, nodeId: String): List<ComputerNode> {
         val path = mutableListOf<ComputerNode>()
 

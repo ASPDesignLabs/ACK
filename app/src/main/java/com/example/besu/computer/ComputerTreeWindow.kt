@@ -51,7 +51,8 @@ fun ComputerTreeWindow(
     primaryColor: Color,
     categoryId: String,
     onDismiss: () -> Unit,
-    onChanged: () -> Unit
+    onChanged: () -> Unit,
+    onOpenContactCard: (nodeId: String) -> Unit
 ) {
     var refreshKey by remember { mutableIntStateOf(0) }
     val category = remember(categoryId, refreshKey) {
@@ -196,7 +197,8 @@ fun ComputerTreeWindow(
                                 selectOrClear(row.node.id)
                             }
                         },
-                        onLongPress = { editingNode = row.node }
+                        onLongPress = { editingNode = row.node },
+                        onOpenCard = { onOpenContactCard(row.node.id) }
                     )
                 }
             }
@@ -267,10 +269,18 @@ fun ComputerTreeWindow(
             node = editing,
             primaryColor = primaryColor,
             onDismiss = { editingNode = null },
-            onRename = { newLabel ->
+            onSave = { newLabel, cardType ->
                 ComputerRepository.renameNode(context, categoryId, editing.id, newLabel)
+                if (editing.type == ComputerNodeType.ENTRY) {
+                    ComputerRepository.setContactCardType(context, categoryId, editing.id, cardType)
+                }
                 editingNode = null
                 refresh()
+                // Checking PERSON/PLACE and saving goes straight to the
+                // card editor -- no separate "now go fill it in" step.
+                if (editing.type == ComputerNodeType.ENTRY && cardType != ContactCardType.NONE) {
+                    onOpenContactCard(editing.id)
+                }
             },
             onDelete = {
                 ComputerRepository.deleteNode(context, categoryId, editing.id)
@@ -279,7 +289,8 @@ fun ComputerTreeWindow(
                 dropdownPath = dropdownPath.takeWhile { it != editing.id }
                 editingNode = null
                 refresh()
-            }
+            },
+            onOpenContactCard = { onOpenContactCard(editing.id) }
         )
     }
 }
@@ -328,10 +339,16 @@ internal fun ComputerTreeVisualRow(
     isExpanded: Boolean,
     primaryColor: Color,
     onTap: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    // Defaulted rather than required so ManualOverrideTargetBrowser.kt's
+    // browse-and-insert panel (which has nowhere to navigate a card open
+    // to) doesn't need to change -- the [CARD] badge still shows there for
+    // information, it just doesn't do anything when tapped.
+    onOpenCard: () -> Unit = {}
 ) {
     val node = row.node
     val isCategory = node.type == ComputerNodeType.CATEGORY
+    val hasCard = node.contactCard?.type?.let { it != ContactCardType.NONE } == true
 
     Row(
         modifier = Modifier
@@ -367,6 +384,20 @@ internal fun ComputerTreeVisualRow(
             fontWeight = if (isActive || isCategory) FontWeight.Bold else FontWeight.Normal,
             modifier = Modifier.weight(1f)
         )
+
+        if (hasCard) {
+            Text(
+                text = "[CARD]",
+                color = primaryColor,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .heightIn(min = 32.dp)
+                    .clickable(onClick = onOpenCard)
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
+            )
+        }
 
         if (isActive) {
             Text(
@@ -531,12 +562,16 @@ private fun EditTreeNodeDialog(
     node: ComputerNode,
     primaryColor: Color,
     onDismiss: () -> Unit,
-    onRename: (String) -> Unit,
-    onDelete: () -> Unit
+    onSave: (newLabel: String, cardType: ContactCardType) -> Unit,
+    onDelete: () -> Unit,
+    onOpenContactCard: () -> Unit
 ) {
     var name by remember(node.id) { mutableStateOf(node.label) }
+    var cardType by remember(node.id) { mutableStateOf(node.contactCard?.type ?: ContactCardType.NONE) }
     var confirmingDelete by remember { mutableStateOf(false) }
     val isValid = name.trim().isNotEmpty()
+    val isEntry = node.type == ComputerNodeType.ENTRY
+    val hasExistingCard = node.contactCard?.type?.let { it != ContactCardType.NONE } == true
 
     TightDialogSurface(
         onDismiss = onDismiss,
@@ -556,12 +591,49 @@ private fun EditTreeNodeDialog(
             )
         )
 
+        // Contact cards only ever attach to an ENTRY -- a category never
+        // offers this.
+        if (isEntry) {
+            Spacer(modifier = Modifier.height(16.dp))
+            TightSectionLabel("CONTACT CARD")
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                // Checking one disables the other until it's cleared back
+                // to NONE -- an entry is a person's card or a place's card,
+                // never both at once.
+                ContactCardTypeCheckbox(
+                    label = "PERSON",
+                    checked = cardType == ContactCardType.PERSON,
+                    enabled = cardType != ContactCardType.PLACE,
+                    color = primaryColor
+                ) {
+                    cardType = if (cardType == ContactCardType.PERSON) ContactCardType.NONE else ContactCardType.PERSON
+                }
+                ContactCardTypeCheckbox(
+                    label = "PLACE",
+                    checked = cardType == ContactCardType.PLACE,
+                    enabled = cardType != ContactCardType.PERSON,
+                    color = primaryColor
+                ) {
+                    cardType = if (cardType == ContactCardType.PLACE) ContactCardType.NONE else ContactCardType.PLACE
+                }
+            }
+
+            if (hasExistingCard) {
+                Spacer(modifier = Modifier.height(10.dp))
+                TightPanelButton("OPEN CONTACT CARD", Modifier.fillMaxWidth(), mainColor = primaryColor) {
+                    onOpenContactCard()
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         if (!confirmingDelete) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("SAVE NAME", Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
-                    if (isValid) onRename(name.trim())
+                TightPanelButton("SAVE", Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
+                    if (isValid) onSave(name.trim(), cardType)
                 }
                 TightPanelButton("DELETE", Modifier.weight(1f), mainColor = DangerRed, onClick = { confirmingDelete = true })
             }
@@ -588,6 +660,56 @@ private fun EditTreeNodeDialog(
                 }
             }
         }
+    }
+}
+
+// A real checkbox (square, checkmark glyph) rather than the app's usual
+// NeonToggle switch -- PERSON/PLACE is a pick-one-of-two, not an on/off
+// setting, and the user specifically wants checkbox styling here. Dims and
+// stops responding to taps when disabled (the other type is checked).
+// Visibility widened to internal (not private) so ContactCardView.kt can
+// reuse it for the PLACE card's per-day hours checkboxes.
+@Composable
+internal fun ContactCardTypeCheckbox(
+    label: String,
+    checked: Boolean,
+    enabled: Boolean,
+    color: Color,
+    onToggle: () -> Unit
+) {
+    val displayColor = when {
+        checked -> color
+        enabled -> Color.Gray
+        else -> Color.DarkGray
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .heightIn(min = 44.dp)
+            .then(if (enabled) Modifier.clickable(onClick = onToggle) else Modifier)
+            .padding(vertical = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(18.dp)
+                .border(1.dp, displayColor, AckHelpShape)
+                .background(if (checked) color.copy(alpha = 0.15f) else Color.Transparent, AckHelpShape),
+            contentAlignment = Alignment.Center
+        ) {
+            if (checked) {
+                Text("✓", color = color, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            label,
+            color = displayColor,
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
     }
 }
 
