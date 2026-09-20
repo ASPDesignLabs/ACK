@@ -700,10 +700,14 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     // layers the user has created (CommandRepository), so a layer added
     // after IDENTITY/DEFEND/CONNECT still gets its own Shared Root
     // Variables here, not just those three.
+    // Deliberately not remember()'d: /v can stay "active" in the prompt
+    // across a trip to another screen (e.g. adding a custom context layer)
+    // and back, and this needs to pick up that change the moment the user
+    // returns rather than hold onto whatever the list looked like when /v
+    // was first typed. Reading SharedPreferences on every keystroke while
+    // /v is live is negligible for a handful of groupings.
     val vGroupings = if (variableTriggerActive) {
-        remember(variableTriggerActive) {
-            POSE_CATEGORIES + CommandRepository.getCustomContextEntries(context).map { it.name }
-        }
+        POSE_CATEGORIES + CommandRepository.getCustomContextEntries(context).map { it.name }
     } else {
         emptyList()
     }
@@ -712,8 +716,11 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
 
     // /t's row 1: every Target Computer category (unlimited, user-editable
     // -- same shape as vGroupings above).
+    // Same reasoning as vGroupings above -- not remember()'d, so a category
+    // created on the Target Computer tab while /t is still live shows up
+    // the moment the user comes back, not just on a fresh "/t" retype.
     val tCategories = if (targetTriggerActive) {
-        remember(targetTriggerActive) { ComputerRepository.getCategories(context) }
+        ComputerRepository.getCategories(context)
     } else {
         emptyList()
     }
