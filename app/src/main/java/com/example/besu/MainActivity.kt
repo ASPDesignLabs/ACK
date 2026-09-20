@@ -625,7 +625,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        headerShortcuts.forEach { shortcut ->
+                                        headerShortcuts.forEachIndexed { shortcutIndex, shortcut ->
                                             if (shortcut.phrase.isNotEmpty()) {
                                                 Box(
                                                     modifier = Modifier
@@ -648,6 +648,17 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                                             )
                                                             intent.putExtra("robotic", false)
                                                             intent.putExtra("source", "M-KEY")
+
+                                                            // OutputService tries this recording first and
+                                                            // falls back to the phrase above if it can't
+                                                            // load it -- same fallback contract as a Quick
+                                                            // Actions slot's bound recording.
+                                                            VoiceRecordingRepository.getForQuickAccessKey(
+                                                                context,
+                                                                shortcutIndex
+                                                            )?.let { recording ->
+                                                                intent.putExtra("recording_id", recording.id)
+                                                            }
 
                                                             context.startService(intent)
                                                         }

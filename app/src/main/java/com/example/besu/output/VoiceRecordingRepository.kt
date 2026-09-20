@@ -10,12 +10,39 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
 
+// What a recording is bound to. QUICK_ACTION keeps the original shape
+// (deckId+groupIndex+slotIndex); the other two owners use whichever of
+// the fields below actually apply to them, leaving the rest null.
+@Serializable
+enum class RecordingOwner {
+    QUICK_ACTION, QUICK_ACCESS_KEY, MATRIX_NODE
+}
+
 @Serializable
 data class VoiceRecording(
     val id: String,
-    val deckId: String,
-    val groupIndex: Int,
-    val slotIndex: Int,
+    // Defaults to QUICK_ACTION so recordings saved before this field
+    // existed -- which are all Quick Actions recordings -- still decode
+    // correctly.
+    val owner: RecordingOwner = RecordingOwner.QUICK_ACTION,
+    val deckId: String? = null,
+    val groupIndex: Int? = null,
+    val slotIndex: Int? = null,
+    // MATRIX_NODE only: deck+profile+path, matching exactly how the node's
+    // own phrase text is scoped (CommandRepository.generateStorageKey) --
+    // switching profile switches which recording plays, same as it already
+    // switches which text is shown.
+    val profile: String? = null,
+    val path: String? = null,
+    // MATRIX_NODE only: whether this recording currently plays. Editing a
+    // node's template text after a recording is bound flips this to false
+    // rather than deleting the recording -- see setMatrixRecordingEnabled.
+    // Always true and unused for the other two owners.
+    val enabled: Boolean = true,
+    // MATRIX_NODE only: the exact template text this recording was bound
+    // (or last re-enabled) against. A live mismatch against the node's
+    // current text is what "stale" means for a disabled recording.
+    val boundPhraseSnapshot: String? = null,
     val durationMs: Long,
     val createdAt: Long = System.currentTimeMillis()
 )
@@ -85,10 +112,32 @@ object VoiceRecordingRepository {
         }
     }
 
-    fun getForSlot(context: Context, deckId: String, groupIndex: Int, slotIndex: Int): VoiceRecording? =
-        getAll(context).find {
-            it.deckId == deckId && it.groupIndex == groupIndex && it.slotIndex == slotIndex
-        }
+    private fun findByOwnerKey(
+        context: Context,
+        owner: RecordingOwner,
+        deckId: String? = null,
+        groupIndex: Int? = null,
+        slotIndex: Int? = null,
+        profile: String? = null,
+        path: String? = null
+    ): VoiceRecording? = getAll(context).find {
+        it.owner == owner && it.deckId == deckId && it.groupIndex == groupIndex &&
+            it.slotIndex == slotIndex && it.profile == profile && it.path == path
+    }
+
+    fun getForQuickAction(context: Context, deckId: String, groupIndex: Int, slotIndex: Int): VoiceRecording? =
+        findByOwnerKey(context, RecordingOwner.QUICK_ACTION, deckId = deckId, groupIndex = groupIndex, slotIndex = slotIndex)
+
+    // Quick-Access keys are a flat, global, always-exactly-3 list (see
+    // CommandRepository.HeaderShortcut) -- no deckId, just the fixed 0-2
+    // index.
+    fun getForQuickAccessKey(context: Context, slotIndex: Int): VoiceRecording? =
+        findByOwnerKey(context, RecordingOwner.QUICK_ACCESS_KEY, slotIndex = slotIndex)
+
+    // Matches CommandRepository.generateStorageKey's own deck+profile+path
+    // scoping for a node's phrase text.
+    fun getForMatrixNode(context: Context, deckId: String, profile: String, path: String): VoiceRecording? =
+        findByOwnerKey(context, RecordingOwner.MATRIX_NODE, deckId = deckId, profile = profile, path = path)
 
     private fun saveAll(context: Context, recordings: List<VoiceRecording>) {
         prefs(context).edit().putString(KEY_RECORDINGS, json.encodeToString(recordings)).apply()
@@ -96,25 +145,37 @@ object VoiceRecordingRepository {
 
     // Writes the WAV file and records its metadata, replacing (and
     // deleting the audio file for) any existing recording already bound to
-    // this exact slot -- a slot only ever holds one recording at a time.
-    fun save(
+    // this exact owner key -- an owner key only ever holds one recording
+    // at a time.
+    private fun saveInternal(
         context: Context,
-        deckId: String,
-        groupIndex: Int,
-        slotIndex: Int,
+        owner: RecordingOwner,
+        deckId: String?,
+        groupIndex: Int?,
+        slotIndex: Int?,
+        profile: String?,
+        path: String?,
         pcm: ShortArray,
-        sampleRate: Int
+        sampleRate: Int,
+        boundPhraseSnapshot: String?
     ): VoiceRecording {
-        deleteForSlot(context, deckId, groupIndex, slotIndex)
+        findByOwnerKey(context, owner, deckId, groupIndex, slotIndex, profile, path)?.let {
+            delete(context, it.id)
+        }
 
         val id = UUID.randomUUID().toString()
         writeWav(audioFile(context, id), pcm, sampleRate)
 
         val recording = VoiceRecording(
             id = id,
+            owner = owner,
             deckId = deckId,
             groupIndex = groupIndex,
             slotIndex = slotIndex,
+            profile = profile,
+            path = path,
+            enabled = true,
+            boundPhraseSnapshot = boundPhraseSnapshot,
             durationMs = pcm.size.toLong() * 1000L / sampleRate
         )
 
@@ -122,14 +183,78 @@ object VoiceRecordingRepository {
         return recording
     }
 
-    fun deleteForSlot(context: Context, deckId: String, groupIndex: Int, slotIndex: Int) {
-        val existing = getForSlot(context, deckId, groupIndex, slotIndex) ?: return
-        delete(context, existing.id)
+    fun saveForQuickAction(
+        context: Context,
+        deckId: String,
+        groupIndex: Int,
+        slotIndex: Int,
+        pcm: ShortArray,
+        sampleRate: Int
+    ): VoiceRecording = saveInternal(
+        context, RecordingOwner.QUICK_ACTION, deckId, groupIndex, slotIndex, null, null,
+        pcm, sampleRate, boundPhraseSnapshot = null
+    )
+
+    fun saveForQuickAccessKey(
+        context: Context,
+        slotIndex: Int,
+        pcm: ShortArray,
+        sampleRate: Int
+    ): VoiceRecording = saveInternal(
+        context, RecordingOwner.QUICK_ACCESS_KEY, null, null, slotIndex, null, null,
+        pcm, sampleRate, boundPhraseSnapshot = null
+    )
+
+    // phraseSnapshot is the node's exact template text at the moment this
+    // recording was accepted -- setMatrixRecordingEnabled compares against
+    // it later to tell whether the template has since changed underneath
+    // an enabled recording.
+    fun saveForMatrixNode(
+        context: Context,
+        deckId: String,
+        profile: String,
+        path: String,
+        pcm: ShortArray,
+        sampleRate: Int,
+        phraseSnapshot: String
+    ): VoiceRecording = saveInternal(
+        context, RecordingOwner.MATRIX_NODE, deckId, null, null, profile, path,
+        pcm, sampleRate, boundPhraseSnapshot = phraseSnapshot
+    )
+
+    fun deleteForQuickAction(context: Context, deckId: String, groupIndex: Int, slotIndex: Int) {
+        getForQuickAction(context, deckId, groupIndex, slotIndex)?.let { delete(context, it.id) }
+    }
+
+    fun deleteForQuickAccessKey(context: Context, slotIndex: Int) {
+        getForQuickAccessKey(context, slotIndex)?.let { delete(context, it.id) }
+    }
+
+    fun deleteForMatrixNode(context: Context, deckId: String, profile: String, path: String) {
+        getForMatrixNode(context, deckId, profile, path)?.let { delete(context, it.id) }
     }
 
     fun delete(context: Context, id: String) {
         audioFile(context, id).delete()
         saveAll(context, getAll(context).filter { it.id != id })
+    }
+
+    // MATRIX_NODE only. Flips playback on/off without deleting the
+    // recording -- used both when a template edit invalidates an enabled
+    // recording (enabled=false, snapshot left as-is so staleness is still
+    // detectable) and when the user deliberately re-enables one
+    // (enabled=true, newSnapshot brings the bound text back in sync with
+    // whatever the template says now, since there's no way to un-change
+    // live-saved text).
+    fun setMatrixRecordingEnabled(context: Context, id: String, enabled: Boolean, newSnapshot: String? = null) {
+        val updated = getAll(context).map {
+            if (it.id == id) {
+                it.copy(enabled = enabled, boundPhraseSnapshot = newSnapshot ?: it.boundPhraseSnapshot)
+            } else {
+                it
+            }
+        }
+        saveAll(context, updated)
     }
 
     // Returns the recording's PCM plus its own sample rate, or null if the

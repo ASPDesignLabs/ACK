@@ -35,11 +35,13 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// PROTOCOL -> "MANAGE RECORDINGS": every voice recording across every
-// Quick Actions deck, one place to browse/play/delete them regardless of
-// which deck or group they're bound to. Recording itself only ever happens
-// from a Quick Actions slot's own EDIT screen (QuickActionsDeck.kt) --
-// this dialog is management only, no record button here.
+// PROTOCOL -> "MANAGE RECORDINGS": every voice recording in the app --
+// Quick Actions slots, Quick-Access keys, and Matrix nodes -- one place to
+// browse/play/delete them regardless of what they're bound to. Recording
+// itself only ever happens from each feature's own edit UI (a Quick
+// Actions slot's EDIT dialog, a Quick-Access key's REC button in
+// PROTOCOL, or a Matrix node's editor) -- this dialog is management only,
+// no record button here.
 @Composable
 fun ManageRecordingsDialog(
     context: Context,
@@ -62,7 +64,7 @@ fun ManageRecordingsDialog(
     ) {
         if (recordings.isEmpty()) {
             Text(
-                "NO RECORDINGS YET. RECORD ONE FROM A QUICK ACTIONS PROMPT'S EDIT SCREEN (HOLD A SLOT TO EDIT IT).",
+                "NO RECORDINGS YET. RECORD ONE FROM A QUICK ACTIONS SLOT'S EDIT SCREEN, A QUICK-ACCESS KEY'S REC BUTTON, OR A MATRIX NODE'S EDITOR.",
                 color = Color.DarkGray,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -113,7 +115,7 @@ fun ManageRecordingsDialog(
             dismissLabel = "CANCEL"
         ) {
             Text(
-                "This removes the recording. The prompt it's bound to stays and falls back to synthesized speech. This cannot be undone.",
+                "This removes the recording. Whatever it's bound to stays and falls back to synthesized speech (or, for a Matrix entry, its normal variable-resolved text). This cannot be undone.",
                 color = Color.White,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -125,13 +127,21 @@ fun ManageRecordingsDialog(
                 TightPanelButton("DELETE", Modifier.weight(1f), mainColor = RadicalRed) {
                     if (target != null) {
                         VoiceRecordingRepository.delete(context, target.id)
-                        CommandRepository.setQuickActionSlotRecording(
-                            context = context,
-                            deckId = target.deckId,
-                            groupIndex = target.groupIndex,
-                            slotIndex = target.slotIndex,
-                            recordingId = null
-                        )
+                        // Only a Quick Actions slot stores a pointer back to
+                        // the recording (QuickActionSlot.recordingId) --
+                        // Quick-Access keys and Matrix nodes look theirs up
+                        // live by index/path, nothing else to clear.
+                        if (target.owner == RecordingOwner.QUICK_ACTION &&
+                            target.deckId != null && target.groupIndex != null && target.slotIndex != null
+                        ) {
+                            CommandRepository.setQuickActionSlotRecording(
+                                context = context,
+                                deckId = target.deckId,
+                                groupIndex = target.groupIndex,
+                                slotIndex = target.slotIndex,
+                                recordingId = null
+                            )
+                        }
                     }
                     confirmingDeleteId = null
                     refreshKey++
@@ -154,17 +164,35 @@ private fun RecordingRow(
     onDeleteRequested: () -> Unit
 ) {
     // Resolved fresh each time this dialog opens -- cheap SharedPreferences
-    // reads over a handful of decks/slots, and it means a rename of the
-    // deck or the slot's own label since the recording was made still
-    // shows up correctly here instead of a stale snapshot.
-    val deckName = remember(recording.deckId) {
-        CommandRepository.getDeckName(context, recording.deckId)
-    }
-    val slotLabel = remember(recording.deckId, recording.groupIndex, recording.slotIndex) {
-        val config = CommandRepository.getQuickActionsConfig(context, recording.deckId)
-        val group = config.groups.find { it.groupIndex == recording.groupIndex }
-        group?.slots?.find { it.slotIndex == recording.slotIndex }?.label
-            ?: "SLOT ${recording.slotIndex + 1}"
+    // reads, and it means a rename of the deck/key/node label since the
+    // recording was made still shows up correctly here instead of a stale
+    // snapshot.
+    val boundToLabel = remember(recording.id) {
+        when (recording.owner) {
+            RecordingOwner.QUICK_ACTION -> {
+                val deckId = recording.deckId ?: "DEFAULT"
+                val deckName = CommandRepository.getDeckName(context, deckId)
+                val config = CommandRepository.getQuickActionsConfig(context, deckId)
+                val group = config.groups.find { it.groupIndex == recording.groupIndex }
+                val slotLabel = group?.slots?.find { it.slotIndex == recording.slotIndex }?.label
+                    ?: "SLOT ${(recording.slotIndex ?: 0) + 1}"
+                "$deckName / G${(recording.groupIndex ?: 0) + 1} / $slotLabel"
+            }
+            RecordingOwner.QUICK_ACCESS_KEY -> {
+                val keyLabel = CommandRepository.getHeaderShortcuts(context)
+                    .getOrNull(recording.slotIndex ?: -1)
+                    ?.label
+                    ?: "M${(recording.slotIndex ?: 0) + 1}"
+                "QUICK-ACCESS KEY / $keyLabel"
+            }
+            RecordingOwner.MATRIX_NODE -> {
+                val deckId = recording.deckId ?: "DEFAULT"
+                val deckName = CommandRepository.getDeckName(context, deckId)
+                val nodeLabel = recording.path?.let { CommandRepository.findMatrixNode(context, it)?.label }
+                    ?: "UNKNOWN NODE"
+                "$deckName / ${recording.profile ?: "DEFAULT"} / $nodeLabel"
+            }
+        }
     }
 
     Column(
@@ -175,7 +203,7 @@ private fun RecordingRow(
             .padding(10.dp)
     ) {
         Text(
-            text = "$deckName / G${recording.groupIndex + 1} / $slotLabel",
+            text = boundToLabel,
             color = primaryColor,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
@@ -187,6 +215,15 @@ private fun RecordingRow(
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace
         )
+        if (recording.owner == RecordingOwner.MATRIX_NODE && !recording.enabled) {
+            Text(
+                text = "DISABLED -- entry text changed since this was recorded",
+                color = RadicalRed,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 

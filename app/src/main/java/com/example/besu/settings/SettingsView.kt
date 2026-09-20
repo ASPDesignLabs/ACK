@@ -119,6 +119,8 @@ fun SettingsView(
     var shakeDetectedCount by remember { mutableIntStateOf(0) }
     var isShakeDetectedFlash by remember { mutableStateOf(false) }
     var headerShortcuts by remember { mutableStateOf(CommandRepository.getHeaderShortcuts(context)) }
+    var recordingKeyIndex by remember { mutableStateOf<Int?>(null) }
+    var recordingRefreshKey by remember { mutableIntStateOf(0) }
     var forceDeviceRotation by remember {
         mutableStateOf(OverlayDisplayPrefs.isDeviceRotationEnabled(context))
     }
@@ -611,6 +613,9 @@ fun SettingsView(
 
                 for (i in 0..2) {
                     val shortcut = headerShortcuts.getOrNull(i) ?: CommandRepository.HeaderShortcut("M${i+1}", "")
+                    val hasRecording = remember(i, recordingRefreshKey) {
+                        VoiceRecordingRepository.getForQuickAccessKey(context, i) != null
+                    }
                     Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = shortcut.label,
@@ -619,7 +624,7 @@ fun SettingsView(
                                 reportHelpInteraction(AckTags.SETTINGS_SHORTCUTS)
                                 CommandRepository.saveHeaderShortcuts(context, updated)
                             },
-                            modifier = Modifier.weight(0.3f).helpTarget(AckTags.SETTINGS_SHORTCUTS, primaryColor),
+                            modifier = Modifier.weight(0.25f).helpTarget(AckTags.SETTINGS_SHORTCUTS, primaryColor),
                             colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.DarkGray),
                             textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 10.sp),
                             placeholder = { Text("LBL") }
@@ -630,11 +635,28 @@ fun SettingsView(
                                 val updated = headerShortcuts.toMutableList(); updated[i] = shortcut.copy(phrase = newPhrase); headerShortcuts = updated
                                 CommandRepository.saveHeaderShortcuts(context, updated)
                             },
-                            modifier = Modifier.weight(0.7f),
+                            modifier = Modifier.weight(0.6f),
                             colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.DarkGray),
                             textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 10.sp),
                             placeholder = { Text("TARGET PHRASE") }
                         )
+                        Box(
+                            modifier = Modifier
+                                .weight(0.15f)
+                                .heightIn(min = 56.dp)
+                                .border(1.dp, if (hasRecording) primaryColor else Color.DarkGray, CutCornerShape(4.dp))
+                                .background((if (hasRecording) primaryColor else Color.DarkGray).copy(alpha = 0.12f), CutCornerShape(4.dp))
+                                .clickable { recordingKeyIndex = i },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (hasRecording) "REC" else "+REC",
+                                color = if (hasRecording) primaryColor else Color.Gray,
+                                fontSize = 9.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -863,5 +885,31 @@ fun SettingsView(
             primaryColor = primaryColor,
             onDismiss = { showManageRecordings = false }
         )
+    }
+
+    val keyIndex = recordingKeyIndex
+    if (keyIndex != null) {
+        val keyLabel = headerShortcuts.getOrNull(keyIndex)?.label ?: "M${keyIndex + 1}"
+        TightDialogSurface(
+            onDismiss = { recordingKeyIndex = null },
+            primaryColor = primaryColor,
+            title = "$keyLabel RECORDING"
+        ) {
+            VoiceRecordingPanel(
+                context = context,
+                primaryColor = primaryColor,
+                panelKey = "qk_$keyIndex",
+                existingRecording = VoiceRecordingRepository.getForQuickAccessKey(context, keyIndex),
+                description = "WHEN SET, THIS PLAYS INSTEAD OF THE KEY'S TARGET PHRASE.",
+                onAccept = { pcm, sampleRate ->
+                    VoiceRecordingRepository.saveForQuickAccessKey(context, keyIndex, pcm, sampleRate)
+                    recordingRefreshKey++
+                },
+                onRemove = {
+                    VoiceRecordingRepository.deleteForQuickAccessKey(context, keyIndex)
+                    recordingRefreshKey++
+                }
+            )
+        }
     }
 }

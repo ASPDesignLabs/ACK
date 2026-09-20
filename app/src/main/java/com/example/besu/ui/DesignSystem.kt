@@ -1717,6 +1717,28 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             mutableStateOf<String?>(null)
         }
 
+        val activeDeckId = CommandRepository.getActiveDeckId(context)
+        val activeProfile = CommandRepository.getActiveProfile(context)
+
+        var matrixRecording by remember(node.path) {
+            mutableStateOf(
+                VoiceRecordingRepository.getForMatrixNode(context, activeDeckId, activeProfile, node.path)
+            )
+        }
+
+        // One-shot notice shown right after a template edit auto-disables
+        // an enabled recording -- see updateTemplate below.
+        var showStaleWarning by remember(node.path) { mutableStateOf(false) }
+
+        // Recording a variable-containing prompt suppresses its variables
+        // entirely while active, so opening the recording panel for such a
+        // node is gated behind an explicit, one-time acknowledgment of
+        // that tradeoff (recordingPanelUnlocked). Both reset whenever this
+        // dialog is reopened for the node (remember(node.path)), so
+        // attaching a fresh recording later always re-confirms.
+        var showAttachRecordingWarning by remember(node.path) { mutableStateOf(false) }
+        var recordingPanelUnlocked by remember(node.path) { mutableStateOf(false) }
+
         fun closeEditor() {
             // Reload matrix rows from persistent storage so subsequent edits start
             // from the saved prompt rather than the old cached rawPhrase.
@@ -1784,6 +1806,24 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
             saveVariables()
             saveComputerFallbacks()
+
+            // The template is live-saved on every keystroke, so this is
+            // the only point that can catch "the text changed underneath
+            // an enabled recording" -- disable (never delete) and flag the
+            // one-shot notice. Guarded on currentRecording.enabled so this
+            // only fires once per edit, not on every subsequent keystroke.
+            val currentRecording = matrixRecording
+            if (currentRecording != null && currentRecording.enabled &&
+                newTemplate != currentRecording.boundPhraseSnapshot
+            ) {
+                VoiceRecordingRepository.setMatrixRecordingEnabled(
+                    context = context,
+                    id = currentRecording.id,
+                    enabled = false
+                )
+                matrixRecording = currentRecording.copy(enabled = false)
+                showStaleWarning = true
+            }
         }
 
         fun commitEditor() {
@@ -1889,77 +1929,169 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    TightSectionLabel("INSERT VARIABLE TOKEN")
+                    val recordingIsActive = matrixRecording?.enabled == true
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        TightPanelButton(
-                            text = "+ VAR",
-                            modifier = Modifier.weight(1f),
-                            mainColor = primaryColor
-                        ) {
-                            updateTemplate("$tempText {VAR}")
-                        }
-
-                        TightPanelButton(
-                            text = "+ A",
-                            modifier = Modifier.weight(1f),
-                            mainColor = primaryColor
-                        ) {
-                            updateTemplate("$tempText {VAR:A}")
-                        }
-
-                        TightPanelButton(
-                            text = "+ B",
-                            modifier = Modifier.weight(1f),
-                            mainColor = primaryColor
-                        ) {
-                            updateTemplate("$tempText {VAR:B}")
-                        }
-
-                        TightPanelButton(
-                            text = "+ C",
-                            modifier = Modifier.weight(1f),
-                            mainColor = primaryColor
-                        ) {
-                            updateTemplate("$tempText {VAR:C}")
-                        }
-                    }
-
-                    if (computerCategories.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        TightSectionLabel("INSERT TARGET TAG")
+                    if (!recordingIsActive) {
+                        TightSectionLabel("INSERT VARIABLE TOKEN")
 
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag(AckTags.MATRIX_INSERT_COMPUTER_TAG)
-                                .helpTarget(AckTags.MATRIX_INSERT_COMPUTER_TAG, primaryColor)
-                                .horizontalScroll(rememberScrollState()),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            computerCategories.forEach { computerCategory ->
-                                TightPanelButton(
-                                    text = "+ ${computerCategory.label}",
-                                    mainColor = primaryColor
-                                ) {
-                                    updateTemplate("$tempText [COMPUTER:${computerCategory.id}]")
-                                    helpManager?.onEvent(
-                                        HelpEvent.Interacted(AckTags.MATRIX_INSERT_COMPUTER_TAG)
-                                    )
+                            TightPanelButton(
+                                text = "+ VAR",
+                                modifier = Modifier.weight(1f),
+                                mainColor = primaryColor
+                            ) {
+                                updateTemplate("$tempText {VAR}")
+                            }
+
+                            TightPanelButton(
+                                text = "+ A",
+                                modifier = Modifier.weight(1f),
+                                mainColor = primaryColor
+                            ) {
+                                updateTemplate("$tempText {VAR:A}")
+                            }
+
+                            TightPanelButton(
+                                text = "+ B",
+                                modifier = Modifier.weight(1f),
+                                mainColor = primaryColor
+                            ) {
+                                updateTemplate("$tempText {VAR:B}")
+                            }
+
+                            TightPanelButton(
+                                text = "+ C",
+                                modifier = Modifier.weight(1f),
+                                mainColor = primaryColor
+                            ) {
+                                updateTemplate("$tempText {VAR:C}")
+                            }
+                        }
+
+                        if (computerCategories.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            TightSectionLabel("INSERT TARGET TAG")
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag(AckTags.MATRIX_INSERT_COMPUTER_TAG)
+                                    .helpTarget(AckTags.MATRIX_INSERT_COMPUTER_TAG, primaryColor)
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                computerCategories.forEach { computerCategory ->
+                                    TightPanelButton(
+                                        text = "+ ${computerCategory.label}",
+                                        mainColor = primaryColor
+                                    ) {
+                                        updateTemplate("$tempText [COMPUTER:${computerCategory.id}]")
+                                        helpManager?.onEvent(
+                                            HelpEvent.Interacted(AckTags.MATRIX_INSERT_COMPUTER_TAG)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    if (variableCount > 0) {
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    val hasDynamicTokens = variableCount > 0 || computerTagCount > 0
+
+                    if (recordingIsActive || !hasDynamicTokens || recordingPanelUnlocked) {
+                        VoiceRecordingPanel(
+                            context = context,
+                            primaryColor = primaryColor,
+                            panelKey = "mtx_${activeDeckId}_${activeProfile}_${node.path}",
+                            existingRecording = matrixRecording,
+                            description = if (recordingIsActive) {
+                                "RECORDED PROMPT -- VARIABLES BELOW ARE HIDDEN AND INACTIVE WHILE THIS PLAYS. THEIR VALUES ARE KEPT. REMOVE THIS RECORDING TO GET THEM BACK."
+                            } else {
+                                "WHEN SET, THIS PLAYS INSTEAD OF THE TEMPLATE ABOVE."
+                            },
+                            onAccept = { pcm, sampleRate ->
+                                val saved = VoiceRecordingRepository.saveForMatrixNode(
+                                    context = context,
+                                    deckId = activeDeckId,
+                                    profile = activeProfile,
+                                    path = node.path,
+                                    pcm = pcm,
+                                    sampleRate = sampleRate,
+                                    phraseSnapshot = tempText
+                                )
+                                matrixRecording = saved
+                            },
+                            onRemove = {
+                                VoiceRecordingRepository.deleteForMatrixNode(context, activeDeckId, activeProfile, node.path)
+                                matrixRecording = null
+                            }
+                        )
+                    } else {
+                        // Locked behind an explicit, one-time acknowledgment
+                        // that recording this entry disables its variables
+                        // while active -- see showAttachRecordingWarning.
+                        Text(
+                            text = "VOICE RECORDING",
+                            color = primaryColor,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "This entry has $variableCount variable(s) and $computerTagCount target tag(s). " +
+                                "Recording a voice prompt disables them while active.",
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TightPanelButton(
+                            text = "ATTACH VOICE RECORDING",
+                            modifier = Modifier.fillMaxWidth(),
+                            mainColor = primaryColor
+                        ) {
+                            showAttachRecordingWarning = true
+                        }
+                    }
+
+                    if (matrixRecording?.enabled == false) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "DISABLED -- this entry's text changed since this recording was made. " +
+                                "It won't play until you re-enable it above.",
+                            color = RadicalRed,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TightPanelButton(
+                            text = "RE-ENABLE (MATCH CURRENT TEXT)",
+                            modifier = Modifier.fillMaxWidth(),
+                            mainColor = primaryColor
+                        ) {
+                            val current = matrixRecording ?: return@TightPanelButton
+                            VoiceRecordingRepository.setMatrixRecordingEnabled(
+                                context = context,
+                                id = current.id,
+                                enabled = true,
+                                newSnapshot = tempText
+                            )
+                            matrixRecording = current.copy(enabled = true, boundPhraseSnapshot = tempText)
+                        }
+                    }
+
+                    if (variableCount > 0 && !recordingIsActive) {
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
@@ -2039,7 +2171,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         }
                     }
 
-                    if (computerTagCount > 0) {
+                    if (computerTagCount > 0 && !recordingIsActive) {
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
@@ -2286,6 +2418,78 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     ) {
                         clearMode = null
                     }
+                }
+            }
+        }
+
+        if (showAttachRecordingWarning) {
+            TightDialogSurface(
+                onDismiss = { showAttachRecordingWarning = false },
+                primaryColor = primaryColor,
+                title = "VOICE RECORDING",
+                dismissLabel = "CANCEL"
+            ) {
+                Text(
+                    text = "This entry has $variableCount variable(s) and $computerTagCount " +
+                        "target tag(s). Attaching a recording plays it back exactly as " +
+                        "recorded, ignoring what they'd resolve to. Their values are kept, " +
+                        "not deleted -- remove the recording at any time to get them back.",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
+                        text = "CONFIRM",
+                        modifier = Modifier.weight(1f),
+                        mainColor = primaryColor
+                    ) {
+                        recordingPanelUnlocked = true
+                        showAttachRecordingWarning = false
+                    }
+                    TightPanelButton(
+                        text = "CANCEL",
+                        modifier = Modifier.weight(1f),
+                        isActive = false,
+                        mainColor = primaryColor
+                    ) {
+                        showAttachRecordingWarning = false
+                    }
+                }
+            }
+        }
+
+        if (showStaleWarning) {
+            TightDialogSurface(
+                onDismiss = { showStaleWarning = false },
+                primaryColor = RadicalRed,
+                title = "RECORDING DISABLED",
+                dismissLabel = "OK"
+            ) {
+                Text(
+                    text = "This entry's text changed since its recording was made, so the " +
+                        "recording has been disabled to avoid mismatched audio. It hasn't " +
+                        "been deleted -- re-enable it from the VOICE RECORDING panel above " +
+                        "once you're happy with the new wording.",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TightPanelButton(
+                    text = "OK, GOT IT",
+                    modifier = Modifier.fillMaxWidth(),
+                    mainColor = RadicalRed
+                ) {
+                    showStaleWarning = false
                 }
             }
         }
@@ -3169,11 +3373,26 @@ fun MatrixCategory(
                         categoryLabel to displayValue
                     }
 
+                    // A recording here plays verbatim, ignoring whatever
+                    // the variables/tags above would resolve to -- see
+                    // MatrixEditor. Only a currently-enabled recording
+                    // changes the row's playback and display; a disabled
+                    // (stale) one falls back to normal template resolution
+                    // exactly like having no recording at all.
+                    val nodeRecording = VoiceRecordingRepository.getForMatrixNode(
+                        context,
+                        CommandRepository.getActiveDeckId(context),
+                        CommandRepository.getActiveProfile(context),
+                        node.path
+                    )
+                    val recordingIsActive = nodeRecording?.enabled == true
+
                     MatrixNodeItem(
                         label = node.label,
                         phrase = resolvedPhrase,
-                        variableValues = variableValues,
-                        computerTagChips = computerTagChips,
+                        variableValues = if (recordingIsActive) emptyList() else variableValues,
+                        computerTagChips = if (recordingIsActive) emptyList() else computerTagChips,
+                        isRecorded = recordingIsActive,
                         onOpenComputerTag = { onEdit(Triple(node, rawPhrase, resolvedPhrase)) },
                         modifier = itemMod,
                         playModifier = if (isTarget) Modifier
@@ -3187,6 +3406,18 @@ fun MatrixCategory(
                                     HelpEvent.Interacted(AckTags.MATRIX_PLAY_BUTTON)
                                 )
                             }
+
+                            if (recordingIsActive && nodeRecording != null) {
+                                val intent = Intent(context, OutputService::class.java).apply {
+                                    putExtra("phrase", rawPhrase)
+                                    putExtra("recording_id", nodeRecording.id)
+                                    putExtra("robotic", false)
+                                    putExtra("source", "MTX/${title.uppercase()}")
+                                }
+                                context.startService(intent)
+                                return@MatrixNodeItem
+                            }
+
                             val debug = CommandRepository.debugResolvedPhrase(
                                 context = context,
                                 storagePath = node.path
@@ -3665,7 +3896,12 @@ fun MatrixNodeItem(
     // text below with nothing marking that it was ever there -- these
     // chips are the only visible sign the tag exists at all.
     computerTagChips: List<Pair<String, String>> = emptyList(),
-    onOpenComputerTag: () -> Unit = {}
+    onOpenComputerTag: () -> Unit = {},
+    // True when an enabled voice recording plays instead of this node's
+    // template -- variableValues/computerTagChips are expected to already
+    // be passed empty by the caller in that case (they're inert), and this
+    // just adds the visible marker explaining why.
+    isRecorded: Boolean = false
 ) {
     Row(
         modifier = modifier
@@ -3718,6 +3954,17 @@ fun MatrixNodeItem(
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
                 )
+
+                if (isRecorded) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "● RECORDED",
+                        color = RadicalRed,
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
 
                 if (variableValues.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(6.dp))

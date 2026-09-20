@@ -1203,6 +1203,43 @@ object CommandRepository {
         }.orEmpty()
     }
 
+    // Node identity (path/label/category) is deck+profile-independent --
+    // only its phrase text is scoped that way (see getPhrase) -- so this
+    // is a plain lookup, not a resolution. Used by MANAGE RECORDINGS to
+    // show which node a Matrix-bound recording belongs to.
+    fun findMatrixNode(context: Context, path: String): MatrixNode? {
+        refreshCache(context)
+        return cachedNodes.find { it.path == path }
+    }
+
+    // Same tiered lookup as resolveSignalToPhrase's MATRIX branch (focused
+    // root first, then DEFEND/CONNECT, then IDENTITY), but returns the
+    // resolved node itself rather than its text -- callers that need to
+    // check for a bound voice recording before deciding whether to
+    // resolve the phrase at all (WearListenerService) need the node's
+    // path, which the phrase-only function doesn't expose. Returns null
+    // for anything but a MATRIX deck, matching resolveSignalToPhrase.
+    fun resolveSignalToNode(context: Context, signalPath: String): MatrixNode? {
+        if (getDeckType(context) != DeckType.MATRIX) return null
+
+        refreshCache(context)
+
+        val focusedCategory = getActiveCategoryFocus(context)
+
+        cachedNodes.find { node ->
+            node.category == focusedCategory && node.triggerPath == signalPath
+        }?.let { return it }
+
+        cachedNodes.find { node ->
+            node.triggerPath == signalPath &&
+                (node.category == "DEFEND" || node.category == "CONNECT")
+        }?.let { return it }
+
+        return cachedNodes.find { node ->
+            node.category == "IDENTITY" && node.triggerPath == signalPath
+        }
+    }
+
     // --- UNIVERSAL KEY GENERATOR ---
     private fun generateStorageKey(deckId: String, profile: String, path: String): String {
         val deckPrefix = if (deckId == "DEFAULT") "" else "${deckId}_"
