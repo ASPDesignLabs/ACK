@@ -1297,21 +1297,28 @@ object CommandRepository {
         prefs.edit().putString(key, phrase).apply()
     }
 
-    fun getVisualOverride(context: Context, storagePath: String): String {
+    fun getVisualOverride(
+        context: Context,
+        storagePath: String,
+        deckId: String = getActiveDeckId(context),
+        profile: String = getActiveProfile(context)
+    ): String {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                val activeDeckId = getActiveDeckId(context)
-                val activeProfile = getActiveProfile(context)
 
-                val key = generateStorageKey(activeDeckId, activeProfile, storagePath) + "_visual"
+                val key = generateStorageKey(deckId, profile, storagePath) + "_visual"
                 return prefs.getString(key, null) ?: ""
             }
 
-        fun setVisualOverride(context: Context, storagePath: String, overrideText: String) {
+        fun setVisualOverride(
+            context: Context,
+            storagePath: String,
+            overrideText: String,
+            deckId: String = getActiveDeckId(context),
+            profile: String = getActiveProfile(context)
+        ) {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                val activeDeckId = getActiveDeckId(context)
-                val activeProfile = getActiveProfile(context)
 
-                val key = generateStorageKey(activeDeckId, activeProfile, storagePath) + "_visual"
+                val key = generateStorageKey(deckId, profile, storagePath) + "_visual"
                 prefs.edit().putString(key, overrideText).apply()
             }
 

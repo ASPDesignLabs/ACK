@@ -103,6 +103,12 @@ object VoiceRecordingRepository {
     private fun audioFile(context: Context, id: String): File =
         File(recordingsDir(context), "$id.wav")
 
+    // File.length() already returns 0 for a missing file, matching how
+    // loadPcm/loadPcmFromFile already treat "no file" as "nothing to load"
+    // rather than an error -- callers don't need a null case here.
+    fun getAudioFileSizeBytes(context: Context, id: String): Long =
+        audioFile(context, id).length()
+
     fun getAll(context: Context): List<VoiceRecording> {
         val raw = prefs(context).getString(KEY_RECORDINGS, null) ?: return emptyList()
         return try {
@@ -388,6 +394,13 @@ object VoiceRecordingRepository {
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
         return "%d:%02d".format(minutes, seconds)
+    }
+
+    fun formatFileSize(bytes: Long): String {
+        if (bytes < 1024) return "$bytes B"
+        val kb = bytes / 1024.0
+        if (kb < 1024) return "%.1f KB".format(kb)
+        return "%.1f MB".format(kb / 1024.0)
     }
 
 }

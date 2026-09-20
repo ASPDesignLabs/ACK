@@ -1717,6 +1717,11 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             mutableStateOf<String?>(null)
         }
 
+        // Collapsed by default -- these buttons are rarely used but used to
+        // always push the COMMIT/CLOSE row further down the scroll,
+        // especially once a recording panel is also showing above.
+        var destructiveControlsExpanded by remember(node.path) { mutableStateOf(false) }
+
         val activeDeckId = CommandRepository.getActiveDeckId(context)
         val activeProfile = CommandRepository.getActiveProfile(context)
 
@@ -2320,42 +2325,57 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    TightSectionLabel("DESTRUCTIVE CONTROLS", color = RadicalRed)
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { destructiveControlsExpanded = !destructiveControlsExpanded },
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TightPanelButton(
-                            text = "CLEAR VARS",
-                            modifier = Modifier.weight(1f),
-                            isActive = false,
-                            mainColor = RadicalRed
-                        ) {
-                            clearMode = "VARS"
-                        }
-
-                        TightPanelButton(
-                            text = "CLEAR PROMPT",
-                            modifier = Modifier.weight(1f),
-                            isActive = false,
-                            mainColor = RadicalRed
-                        ) {
-                            clearMode = "PROMPT"
-                        }
+                        Text(
+                            text = if (destructiveControlsExpanded) "▾ " else "▸ ",
+                            color = RadicalRed,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        TightSectionLabel("DESTRUCTIVE CONTROLS", color = RadicalRed)
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    if (destructiveControlsExpanded) {
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                    TightPanelButton(
-                        text = "CLEAR ALL",
-                        modifier = Modifier.fillMaxWidth(),
-                        isActive = false,
-                        mainColor = RadicalRed
-                    ) {
-                        clearMode = "ALL"
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            TightPanelButton(
+                                text = "CLEAR VARS",
+                                modifier = Modifier.weight(1f),
+                                isActive = false,
+                                mainColor = RadicalRed
+                            ) {
+                                clearMode = "VARS"
+                            }
+
+                            TightPanelButton(
+                                text = "CLEAR PROMPT",
+                                modifier = Modifier.weight(1f),
+                                isActive = false,
+                                mainColor = RadicalRed
+                            ) {
+                                clearMode = "PROMPT"
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        TightPanelButton(
+                            text = "CLEAR ALL",
+                            modifier = Modifier.fillMaxWidth(),
+                            isActive = false,
+                            mainColor = RadicalRed
+                        ) {
+                            clearMode = "ALL"
+                        }
                     }
                 }
 
