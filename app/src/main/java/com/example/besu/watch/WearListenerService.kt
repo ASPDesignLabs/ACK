@@ -33,8 +33,14 @@ class WearListenerService : WearableListenerService() {
             }
 
             if (node != null && recording != null && recording.enabled) {
-                val rawText = CommandRepository.getPhrase(this, node.path)
-                triggerVoice(rawText, recording.id)
+                // The visual override (if set while recording this entry)
+                // replaces the raw template for the log line/on-screen
+                // prompt -- otherwise either could show a literal,
+                // unresolved {VAR}/[COMPUTER:X] token. Blank falls back to
+                // the raw template, same as before this existed.
+                val displayText = CommandRepository.getVisualOverride(this, node.path)
+                    .ifBlank { CommandRepository.getPhrase(this, node.path) }
+                triggerVoice(displayText, recording.id)
             } else {
                 // A. Resolve Base Phrase from Matrix (e.g. "Systems Online")
                 // This is a genuine dispatch (about to become real spoken output),

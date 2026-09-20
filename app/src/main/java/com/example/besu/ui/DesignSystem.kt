@@ -1739,6 +1739,20 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         var showAttachRecordingWarning by remember(node.path) { mutableStateOf(false) }
         var recordingPanelUnlocked by remember(node.path) { mutableStateOf(false) }
 
+        // What shows on screen while an enabled recording plays, in place
+        // of the raw template text (which can carry literal {VAR}/
+        // [COMPUTER:X] tokens once resolution is skipped for a recorded
+        // node -- see the dispatch sites in MatrixCategory and
+        // WearListenerService). Backed by CommandRepository's existing
+        // per-node visual override storage (already deck+profile+path
+        // scoped and already swept into backups) -- this never touches
+        // the template/variable configuration itself, so clearing it (or
+        // just removing the recording) falls straight back to today's
+        // normal resolved display.
+        var visualOverrideText by remember(node.path) {
+            mutableStateOf(CommandRepository.getVisualOverride(context, node.path))
+        }
+
         fun closeEditor() {
             // Reload matrix rows from persistent storage so subsequent edits start
             // from the saved prompt rather than the old cached rawPhrase.
@@ -2063,6 +2077,58 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         ) {
                             showAttachRecordingWarning = true
                         }
+                    }
+
+                    if (recordingIsActive) {
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        TightSectionLabel("VISUAL PROMPT OVERRIDE", color = primaryColor)
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = "WHAT SHOWS ON SCREEN WHILE THIS RECORDING PLAYS. LEAVE BLANK " +
+                                "TO SHOW THE RAW TEMPLATE TEXT ABOVE AS-IS (VARIABLE TOKENS " +
+                                "INCLUDED, UNRESOLVED). YOUR TEMPLATE AND VARIABLES ARE NEVER " +
+                                "CHANGED BY THIS -- IT ONLY REPLACES WHAT'S DISPLAYED.",
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        OutlinedTextField(
+                            value = visualOverrideText,
+                            onValueChange = { newValue ->
+                                visualOverrideText = newValue
+                                CommandRepository.setVisualOverride(context, node.path, newValue)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = AckHelpShape,
+                            minLines = 2,
+                            maxLines = 3,
+                            placeholder = {
+                                Text(
+                                    text = "e.g. \"Hi Sarah, nice to see you\"",
+                                    color = Color.DarkGray,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            },
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = primaryColor,
+                                fontFamily = FontFamily.Monospace
+                            ),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = VoidBlack,
+                                unfocusedContainerColor = VoidBlack,
+                                focusedIndicatorColor = primaryColor,
+                                unfocusedIndicatorColor = Color.DarkGray,
+                                focusedTextColor = primaryColor,
+                                unfocusedTextColor = primaryColor,
+                                cursorColor = primaryColor
+                            )
+                        )
                     }
 
                     if (matrixRecording?.enabled == false) {
@@ -3408,8 +3474,18 @@ fun MatrixCategory(
                             }
 
                             if (recordingIsActive && nodeRecording != null) {
+                                // The visual override (if the user set one while
+                                // recording this entry) replaces the raw template
+                                // for both the log line and the on-screen prompt --
+                                // otherwise either could show a literal, unresolved
+                                // {VAR}/[COMPUTER:X] token. Blank falls back to the
+                                // raw template exactly as before.
+                                val displayText = CommandRepository
+                                    .getVisualOverride(context, node.path)
+                                    .ifBlank { rawPhrase }
+
                                 val intent = Intent(context, OutputService::class.java).apply {
-                                    putExtra("phrase", rawPhrase)
+                                    putExtra("phrase", displayText)
                                     putExtra("recording_id", nodeRecording.id)
                                     putExtra("robotic", false)
                                     putExtra("source", "MTX/${title.uppercase()}")
