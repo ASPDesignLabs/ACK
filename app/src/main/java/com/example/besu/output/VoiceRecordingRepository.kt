@@ -70,6 +70,7 @@ object VoiceRecordingRepository {
     private const val KEY_PLAYBACK_GAIN_PERCENT = "playback_gain_percent"
     const val DEFAULT_PLAYBACK_GAIN_PERCENT = 100
     const val MAX_PLAYBACK_GAIN_PERCENT = 300
+    private const val KEY_SHOW_OVERLAY_ON_PREVIEW = "show_overlay_on_preview"
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -92,6 +93,19 @@ object VoiceRecordingRepository {
         prefs(context).edit()
             .putInt(KEY_PLAYBACK_GAIN_PERCENT, snapped.coerceIn(0, MAX_PLAYBACK_GAIN_PERCENT))
             .apply()
+    }
+
+    // MANAGE RECORDINGS' PLAY button -- off by default (matches the
+    // original "no visual prompt" preview behavior), so a user who wants
+    // a second, text-based way to confirm they've found the right
+    // recording (especially one that's highly personalized and hard to
+    // place by audio alone) can opt into seeing its stored text on the
+    // overlay each time they tap PLAY there.
+    fun getShowOverlayOnPreview(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_SHOW_OVERLAY_ON_PREVIEW, false)
+
+    fun setShowOverlayOnPreview(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_SHOW_OVERLAY_ON_PREVIEW, enabled).apply()
     }
 
     private fun recordingsDir(context: Context): File {

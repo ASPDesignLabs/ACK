@@ -250,6 +250,9 @@ fun ManageRecordingsDialog(
     var isPlayingId by remember { mutableStateOf<String?>(null) }
     var confirmingDeleteId by remember { mutableStateOf<String?>(null) }
     var reRecordTargetId by remember { mutableStateOf<String?>(null) }
+    var showOverlayOnPreview by remember {
+        mutableStateOf(VoiceRecordingRepository.getShowOverlayOnPreview(context))
+    }
     val coroutineScope = rememberCoroutineScope()
 
     fun playRecording(recording: VoiceRecording) {
@@ -261,6 +264,14 @@ fun ManageRecordingsDialog(
         context.startService(Intent(context, OutputService::class.java).apply {
             action = "PREVIEW_RECORDING"
             putExtra("recording_id", recording.id)
+            // The overlay toggle sends this recording's own stored text to
+            // the overlay -- a second, visual way to confirm this is the
+            // prompt being looked for, especially one personalized enough
+            // that the audio alone doesn't immediately place it. Preview
+            // stays a non-logged, non-dispatch action either way.
+            if (showOverlayOnPreview) {
+                putExtra("preview_visual_text", resolveOverlayText(context, recording))
+            }
         })
         coroutineScope.launch {
             delay(recording.durationMs + 300)
@@ -272,7 +283,23 @@ fun ManageRecordingsDialog(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
         title = "MANAGE RECORDINGS",
-        subtitle = "${recordings.size} RECORDING${if (recordings.size == 1) "" else "S"}"
+        subtitle = "${recordings.size} RECORDING${if (recordings.size == 1) "" else "S"}",
+        headerActions = {
+            Text(
+                text = if (showOverlayOnPreview) "[OVERLAY: ON]" else "[OVERLAY: OFF]",
+                color = if (showOverlayOnPreview) primaryColor else Color.Gray,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .heightIn(min = 44.dp)
+                    .clickable {
+                        showOverlayOnPreview = !showOverlayOnPreview
+                        VoiceRecordingRepository.setShowOverlayOnPreview(context, showOverlayOnPreview)
+                    }
+                    .padding(horizontal = 4.dp)
+            )
+        }
     ) {
         if (recordings.isEmpty()) {
             Text(

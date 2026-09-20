@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -51,6 +52,12 @@ fun TightDialogSurface(
     subtitle: String? = null,
     dismissLabel: String = "CLOSE",
     surfaceModifier: Modifier = Modifier,
+    // Rendered in the header row immediately before [dismissLabel] -- for a
+    // small toggle/action that belongs next to the close control rather
+    // than inside the scrollable content (MANAGE RECORDINGS' overlay-on-
+    // play toggle, for instance). Absent by default, so every existing
+    // caller's header is unchanged.
+    headerActions: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Dialog(
@@ -103,18 +110,25 @@ fun TightDialogSurface(
                             }
                         }
 
-                        Text(
-                            text = "[$dismissLabel]",
-                            color = Color.Gray,
-                            fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .heightIn(min = MIN_TOUCH_TARGET)
-                                .clickable(onClick = onDismiss)
-                                .padding(horizontal = 4.dp),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.End
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (headerActions != null) {
+                                headerActions()
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+
+                            Text(
+                                text = "[$dismissLabel]",
+                                color = Color.Gray,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .heightIn(min = MIN_TOUCH_TARGET)
+                                    .clickable(onClick = onDismiss)
+                                    .padding(horizontal = 4.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.End
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))

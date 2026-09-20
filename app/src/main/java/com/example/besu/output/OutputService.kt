@@ -220,17 +220,21 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 // MANAGE RECORDINGS -- a recording (already saved, by id;
                 // or not yet saved, by a temp file path) played through the
                 // same routed playPcm() a real dispatch uses, but with no
-                // visual prompt and no log entry, since previewing isn't a
-                // communication event.
+                // log entry, since previewing isn't a communication event.
+                // MANAGE RECORDINGS' overlay-on-play toggle can still opt a
+                // specific preview into showing text on screen (its own
+                // stored text, not a genuine dispatch) without that toggle
+                // turning previews into logged communication events.
                 val recordingId = intent.getStringExtra("recording_id")
                 val recordingPath = intent.getStringExtra("recording_path")
+                val previewVisualText = intent.getStringExtra("preview_visual_text")
                 val loaded = when {
                     !recordingId.isNullOrEmpty() -> VoiceRecordingRepository.loadPcm(this, recordingId)
                     !recordingPath.isNullOrEmpty() -> VoiceRecordingRepository.loadPcmFromFile(recordingPath)
                     else -> null
                 }
                 if (loaded != null) {
-                    previewRecording(loaded.first, loaded.second)
+                    previewRecording(loaded.first, loaded.second, previewVisualText)
                 }
             }
             "CHANGE_PROFILE" -> {
@@ -697,13 +701,18 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     // RECORDINGS -- same playPcm() routing as a real dispatch (force
     // speaker, and here ALWAYS volume-enforced, since the whole point of a
     // preview is to actually hear it) but with none of playRecording's
-    // communication-event side effects: no log entry, no visual prompt,
-    // no emergency handling. Previously this used a standalone AudioTrack
-    // that never called ensureStreamVolume, which is why it could be
-    // silent if the device's media stream volume happened to be low --
-    // routing through the same pipeline as everything else fixes that for
-    // good rather than re-solving it in a second place.
-    private fun previewRecording(pcm: ShortArray, sampleRate: Int) {
+    // communication-event side effects: no log entry, no emergency
+    // handling. Previously this used a standalone AudioTrack that never
+    // called ensureStreamVolume, which is why it could be silent if the
+    // device's media stream volume happened to be low -- routing through
+    // the same pipeline as everything else fixes that for good rather
+    // than re-solving it in a second place.
+    //
+    // visualText is MANAGE RECORDINGS' overlay-on-play toggle opting a
+    // specific preview into showing text on screen -- still not a real
+    // dispatch (no log entry either way), just the stored text the user
+    // asked to see while browsing for a recording.
+    private fun previewRecording(pcm: ShortArray, sampleRate: Int, visualText: String? = null) {
         val recordingGainMultiplier = VoiceRecordingRepository.getPlaybackGainPercent(this) / 100f
 
         val playablePcm = pcm.copyOf()
@@ -715,6 +724,10 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             gain = getEffectiveGain(EmergencyOptions()) * recordingGainMultiplier,
             sampleRate = sampleRate
         )
+
+        if (!visualText.isNullOrBlank()) {
+            showVisualPrompt(rawText = visualText, emergency = EmergencyOptions(), sticky = false)
+        }
 
         Thread {
             playPcm(
