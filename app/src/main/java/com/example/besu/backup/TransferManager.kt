@@ -213,6 +213,7 @@ object TransferManager {
 // 9b. Gather voice recordings bound to Quick Actions slots, audio
 // included (base64) -- see VoiceRecordingRepository.exportForBackup.
         val voiceRecordings = VoiceRecordingRepository.exportForBackup(context)
+        val voiceRecordingGainPercent = VoiceRecordingRepository.getPlaybackGainPercent(context)
 
 // 10. Wrap and encode.
         val backup = AckBackup(
@@ -234,6 +235,7 @@ object TransferManager {
             syntaxRules = syntaxRules,
             computerCategories = computerCategories,
             voiceRecordings = voiceRecordings,
+            voiceRecordingGainPercent = voiceRecordingGainPercent,
         )
 
         return json.encodeToString(backup)
@@ -623,6 +625,7 @@ object TransferManager {
         // audio those ids point to, so they resolve to real files again
         // instead of a slot with a recordingId pointing at nothing.
         VoiceRecordingRepository.replaceFromBackup(context, backup.voiceRecordings)
+        VoiceRecordingRepository.setPlaybackGainPercent(context, backup.voiceRecordingGainPercent)
 
         CommandRepository.activateDeck(
             context = context,

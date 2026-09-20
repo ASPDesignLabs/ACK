@@ -40,6 +40,7 @@ import com.example.besu.ui.theme.Graphite
 import com.example.besu.ui.theme.NeonPalette
 import com.example.besu.ui.theme.VoidBlack
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 
 
@@ -209,6 +210,9 @@ fun SettingsView(
 
     var showImportDialog by remember { mutableStateOf(false) }
     var showManageRecordings by remember { mutableStateOf(false) }
+    var recordingGainPercent by remember {
+        mutableFloatStateOf(VoiceRecordingRepository.getPlaybackGainPercent(context).toFloat())
+    }
     var importedBackup by remember { mutableStateOf<AckBackup?>(null) }
     var newDeckName by remember { mutableStateOf("") }
     var selectedColorIdx by remember { mutableIntStateOf(0) }
@@ -798,6 +802,31 @@ fun SettingsView(
                 ) {
                     showManageRecordings = true
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "RECORDING PLAYBACK GAIN: ${recordingGainPercent.toInt()}%",
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Text(
+                    "Trims volume for recorded voice prompts only, on top of the master gain above -- everything else (synthesized speech) is unaffected.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Slider(
+                    value = recordingGainPercent,
+                    onValueChange = { recordingGainPercent = (it / 5f).roundToInt() * 5f },
+                    onValueChangeFinished = {
+                        VoiceRecordingRepository.setPlaybackGainPercent(context, recordingGainPercent.toInt())
+                    },
+                    valueRange = 0f..VoiceRecordingRepository.MAX_PLAYBACK_GAIN_PERCENT.toFloat(),
+                    steps = (VoiceRecordingRepository.MAX_PLAYBACK_GAIN_PERCENT / 5) - 1,
+                    colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor, inactiveTrackColor = Color.DarkGray)
+                )
             }
         }
         HeroButton("UPLOAD PROTOCOL", Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }

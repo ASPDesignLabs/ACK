@@ -639,13 +639,20 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             return true
         }
 
+        // Multiplicative with the general master gain, not a replacement
+        // for it -- PROTOCOL's recording-only gain slider trims recording
+        // playback specifically (recorded voice tends to sit quieter than
+        // synthesized speech at the same level), on top of whatever the
+        // user already has master gain set to, not instead of it.
+        val recordingGainMultiplier = VoiceRecordingRepository.getPlaybackGainPercent(this) / 100f
+
         val playablePcm = pcm.copyOf()
         applyAudioEffects(
             audioData = playablePcm,
             modFreq = 0f,
             modDepth = 0f,
             crush = 0f,
-            gain = getEffectiveGain(emergency),
+            gain = getEffectiveGain(emergency) * recordingGainMultiplier,
             sampleRate = sampleRate
         )
 

@@ -27,6 +27,15 @@ object AudioDsp {
     private const val OVERSUBTRACTION_FACTOR = 1.5
     private const val SPECTRAL_FLOOR = 0.05
 
+    // trimSilence's own tunables. A window's RMS counts as "speech" once it
+    // clears SILENCE_RELATIVE_THRESHOLD of the recording's own loudest
+    // window -- relative rather than a fixed absolute level, so this
+    // adapts to how loud or quiet a given recording naturally is instead
+    // of assuming everyone talks at the same volume into the mic.
+    private const val SILENCE_WINDOW_MS = 20
+    private const val SILENCE_RELATIVE_THRESHOLD = 0.08
+    private const val SILENCE_PADDING_MS = 150
+
     fun reduceNoise(pcm: ShortArray, sampleRate: Int): ShortArray {
         // Too short to extract a meaningful noise profile and still leave
         // frames worth processing -- return unchanged rather than risk
@@ -70,6 +79,51 @@ object AudioDsp {
                 .toShort()
         }
         return result
+    }
+
+    // Cuts the dead air off the start and end of a recording automatically
+    // -- no scrubbing/editing UI, just "record, and don't make the user
+    // manually trim it." Call this AFTER reduceNoise, not before: reduceNoise
+    // relies on genuine quiet at the very start of the clip to estimate its
+    // noise profile, and trimming first would remove that.
+    //
+    // Splits the clip into 20ms windows, measures each window's RMS, and
+    // treats a window as "speech" once its RMS clears a threshold relative
+    // to the clip's own loudest window (not a fixed absolute level, so this
+    // adapts to how loud a given recording naturally is). Keeps a padding
+    // buffer around the detected speech region so words don't get clipped
+    // at the edges. If nothing clears the threshold at all -- a silent or
+    // near-silent recording -- returns the clip unchanged rather than
+    // risking trimming it down to nothing.
+    fun trimSilence(pcm: ShortArray, sampleRate: Int): ShortArray {
+        val windowSize = (sampleRate * SILENCE_WINDOW_MS / 1000).coerceAtLeast(1)
+        val windowCount = pcm.size / windowSize
+        if (windowCount == 0) return pcm
+
+        val rms = DoubleArray(windowCount)
+        for (w in 0 until windowCount) {
+            var sum = 0.0
+            val start = w * windowSize
+            for (i in start until start + windowSize) {
+                val sample = pcm[i].toDouble()
+                sum += sample * sample
+            }
+            rms[w] = kotlin.math.sqrt(sum / windowSize)
+        }
+
+        val peakRms = rms.maxOrNull() ?: 0.0
+        if (peakRms <= 0.0) return pcm
+
+        val threshold = peakRms * SILENCE_RELATIVE_THRESHOLD
+        val firstSpeechWindow = rms.indexOfFirst { it > threshold }
+        val lastSpeechWindow = rms.indexOfLast { it > threshold }
+        if (firstSpeechWindow == -1) return pcm
+
+        val paddingSamples = sampleRate * SILENCE_PADDING_MS / 1000
+        val startSample = (firstSpeechWindow * windowSize - paddingSamples).coerceAtLeast(0)
+        val endSample = ((lastSpeechWindow + 1) * windowSize + paddingSamples).coerceAtMost(pcm.size)
+
+        return pcm.copyOfRange(startSample, endSample)
     }
 
     private fun estimateNoiseProfile(pcm: ShortArray, sampleRate: Int, window: DoubleArray): DoubleArray {

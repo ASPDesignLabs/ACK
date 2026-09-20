@@ -612,11 +612,19 @@ private fun VoiceRecordingSection(
         val raw = recorder.stop()
         phase = RecordingPhase.PROCESSING
         coroutineScope.launch {
-            val reduced = withContext(Dispatchers.Default) {
-                AudioDsp.reduceNoise(raw, VoiceRecorder.SAMPLE_RATE)
+            val processed = withContext(Dispatchers.Default) {
+                // Noise reduction first -- it relies on genuine quiet at
+                // the very start of the clip to estimate its noise
+                // profile, so trimming that away first would throw off
+                // its calibration. Trimming runs on the denoised result.
+                val denoised = AudioDsp.reduceNoise(raw, VoiceRecorder.SAMPLE_RATE)
+                AudioDsp.trimSilence(denoised, VoiceRecorder.SAMPLE_RATE)
             }
-            previewPcm = reduced
+            previewPcm = processed
             previewSampleRate = VoiceRecorder.SAMPLE_RATE
+            // The live ticker's duration no longer matches once dead air's
+            // been trimmed off -- reflect what the preview actually plays.
+            recordingDurationMs = processed.size.toLong() * 1000L / VoiceRecorder.SAMPLE_RATE
             phase = RecordingPhase.PREVIEW
         }
     }
@@ -675,7 +683,7 @@ private fun VoiceRecordingSection(
                             if (loaded != null && !isPlayingPreview) {
                                 isPlayingPreview = true
                                 coroutineScope.launch {
-                                    VoiceRecordingRepository.playPreview(loaded.first, loaded.second)
+                                    VoiceRecordingRepository.playPreview(context, loaded.first, loaded.second)
                                     isPlayingPreview = false
                                 }
                             }
@@ -749,7 +757,7 @@ private fun VoiceRecordingSection(
 
             RecordingPhase.PROCESSING -> {
                 Text(
-                    text = "REDUCING BACKGROUND NOISE...",
+                    text = "REDUCING NOISE & TRIMMING SILENCE...",
                     color = Color.Gray,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
@@ -779,7 +787,7 @@ private fun VoiceRecordingSection(
                         if (pcm != null && !isPlayingPreview) {
                             isPlayingPreview = true
                             coroutineScope.launch {
-                                VoiceRecordingRepository.playPreview(pcm, previewSampleRate)
+                                VoiceRecordingRepository.playPreview(context, pcm, previewSampleRate)
                                 isPlayingPreview = false
                             }
                         }

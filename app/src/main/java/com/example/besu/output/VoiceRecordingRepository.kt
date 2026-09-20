@@ -46,11 +46,32 @@ data class VoiceRecordingBackupEntry(
 object VoiceRecordingRepository {
     private const val PREFS_NAME = "ack_voice_recordings"
     private const val KEY_RECORDINGS = "recordings"
+    private const val KEY_PLAYBACK_GAIN_PERCENT = "playback_gain_percent"
+    const val DEFAULT_PLAYBACK_GAIN_PERCENT = 100
+    const val MAX_PLAYBACK_GAIN_PERCENT = 300
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    // A gain trim that applies only to voice recording playback -- PERSON/
+    // PLACE recordings tend to sit quieter than synthesized speech at the
+    // same system volume, and this lets the user compensate without
+    // touching the general master gain everything else also uses. Stored
+    // as a whole percent, always a multiple of 5 (the PROTOCOL slider only
+    // ever writes multiples of 5, but this clamps defensively regardless
+    // of what's on disk).
+    fun getPlaybackGainPercent(context: Context): Int =
+        prefs(context).getInt(KEY_PLAYBACK_GAIN_PERCENT, DEFAULT_PLAYBACK_GAIN_PERCENT)
+            .coerceIn(0, MAX_PLAYBACK_GAIN_PERCENT)
+
+    fun setPlaybackGainPercent(context: Context, percent: Int) {
+        val snapped = (percent / 5) * 5
+        prefs(context).edit()
+            .putInt(KEY_PLAYBACK_GAIN_PERCENT, snapped.coerceIn(0, MAX_PLAYBACK_GAIN_PERCENT))
+            .apply()
+    }
 
     private fun recordingsDir(context: Context): File {
         val dir = File(context.filesDir, "recordings")
@@ -232,7 +253,14 @@ object VoiceRecordingRepository {
     // force-speaker/kill-switch/logging pipeline, since previewing isn't a
     // communication event; the real, routed playback only happens once a
     // recording is actually issued as a prompt (see OutputService.playRecording).
-    suspend fun playPreview(pcm: ShortArray, sampleRate: Int) {
+    // Applies the same playback gain a real dispatch would (see
+    // OutputService.playRecording) so what you preview -- whether that's
+    // mid-recording in QuickActionEditorDialog or replaying an existing
+    // one from MANAGE RECORDINGS -- actually matches what you'll hear when
+    // the prompt is issued for real.
+    suspend fun playPreview(context: Context, pcm: ShortArray, sampleRate: Int) {
+        val gained = applyGain(pcm, getPlaybackGainPercent(context) / 100f)
+
         withContext(Dispatchers.IO) {
             val track = AudioTrack.Builder()
                 .setAudioAttributes(
@@ -248,15 +276,15 @@ object VoiceRecordingRepository {
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build()
                 )
-                .setBufferSizeInBytes(pcm.size * 2)
+                .setBufferSizeInBytes(gained.size * 2)
                 .build()
 
             try {
                 track.play()
-                track.write(pcm, 0, pcm.size)
+                track.write(gained, 0, gained.size)
                 while (
                     track.playState == AudioTrack.PLAYSTATE_PLAYING &&
-                    track.playbackHeadPosition < pcm.size
+                    track.playbackHeadPosition < gained.size
                 ) {
                     delay(10)
                 }
@@ -264,6 +292,15 @@ object VoiceRecordingRepository {
                 track.stop()
                 track.release()
             }
+        }
+    }
+
+    private fun applyGain(pcm: ShortArray, gain: Float): ShortArray {
+        if (gain == 1f) return pcm
+        return ShortArray(pcm.size) { i ->
+            (pcm[i] * gain).toInt()
+                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                .toShort()
         }
     }
 }

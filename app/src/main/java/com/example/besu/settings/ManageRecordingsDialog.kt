@@ -83,7 +83,7 @@ fun ManageRecordingsDialog(
                             if (loaded != null && isPlayingId == null) {
                                 isPlayingId = recording.id
                                 coroutineScope.launch {
-                                    VoiceRecordingRepository.playPreview(loaded.first, loaded.second)
+                                    VoiceRecordingRepository.playPreview(context, loaded.first, loaded.second)
                                     isPlayingId = null
                                 }
                             }

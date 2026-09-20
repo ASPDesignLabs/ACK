@@ -53,7 +53,12 @@ data class AckBackup(
     // (base64 inline -- see VoiceRecordingBackupEntry). Empty on backups
     // made before this field existed; nothing to restore, same as every
     // other field here defaulting to empty.
-    val voiceRecordings: List<VoiceRecordingBackupEntry> = emptyList()
+    val voiceRecordings: List<VoiceRecordingBackupEntry> = emptyList(),
+
+    // PROTOCOL's recording-only playback gain (a whole percent, always a
+    // multiple of 5). Defaults to 100 (unchanged) on backups made before
+    // this field existed.
+    val voiceRecordingGainPercent: Int = 100
 )
 
 @Serializable
