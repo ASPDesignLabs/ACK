@@ -206,6 +206,41 @@ object CommandRepository {
         )
     }
 
+    // Separate from updateQuickActionSlot above -- recording a voice clip
+    // is its own flow (the mic button in QuickActionEditorDialog), distinct
+    // from editing the label/template text fields, so it gets its own
+    // narrow setter rather than being folded into the text-field save.
+    fun setQuickActionSlotRecording(
+        context: Context,
+        deckId: String,
+        groupIndex: Int,
+        slotIndex: Int,
+        recordingId: String?
+    ) {
+        val current = getQuickActionsConfig(context, deckId)
+
+        val updatedGroups = current.groups.map { group ->
+            if (group.groupIndex != groupIndex) {
+                group
+            } else {
+                group.copy(
+                    slots = group.slots.map { slot ->
+                        if (slot.slotIndex != slotIndex) {
+                            slot
+                        } else {
+                            slot.copy(recordingId = recordingId)
+                        }
+                    }
+                )
+            }
+        }
+
+        saveQuickActionsConfig(
+            context = context,
+            config = current.copy(groups = updatedGroups)
+        )
+    }
+
     fun updateQuickActionGroup(
         context: Context,
         deckId: String,
@@ -1168,6 +1203,43 @@ object CommandRepository {
         }.orEmpty()
     }
 
+    // Node identity (path/label/category) is deck+profile-independent --
+    // only its phrase text is scoped that way (see getPhrase) -- so this
+    // is a plain lookup, not a resolution. Used by MANAGE RECORDINGS to
+    // show which node a Matrix-bound recording belongs to.
+    fun findMatrixNode(context: Context, path: String): MatrixNode? {
+        refreshCache(context)
+        return cachedNodes.find { it.path == path }
+    }
+
+    // Same tiered lookup as resolveSignalToPhrase's MATRIX branch (focused
+    // root first, then DEFEND/CONNECT, then IDENTITY), but returns the
+    // resolved node itself rather than its text -- callers that need to
+    // check for a bound voice recording before deciding whether to
+    // resolve the phrase at all (WearListenerService) need the node's
+    // path, which the phrase-only function doesn't expose. Returns null
+    // for anything but a MATRIX deck, matching resolveSignalToPhrase.
+    fun resolveSignalToNode(context: Context, signalPath: String): MatrixNode? {
+        if (getDeckType(context) != DeckType.MATRIX) return null
+
+        refreshCache(context)
+
+        val focusedCategory = getActiveCategoryFocus(context)
+
+        cachedNodes.find { node ->
+            node.category == focusedCategory && node.triggerPath == signalPath
+        }?.let { return it }
+
+        cachedNodes.find { node ->
+            node.triggerPath == signalPath &&
+                (node.category == "DEFEND" || node.category == "CONNECT")
+        }?.let { return it }
+
+        return cachedNodes.find { node ->
+            node.category == "IDENTITY" && node.triggerPath == signalPath
+        }
+    }
+
     // --- UNIVERSAL KEY GENERATOR ---
     private fun generateStorageKey(deckId: String, profile: String, path: String): String {
         val deckPrefix = if (deckId == "DEFAULT") "" else "${deckId}_"
@@ -1225,21 +1297,28 @@ object CommandRepository {
         prefs.edit().putString(key, phrase).apply()
     }
 
-    fun getVisualOverride(context: Context, storagePath: String): String {
+    fun getVisualOverride(
+        context: Context,
+        storagePath: String,
+        deckId: String = getActiveDeckId(context),
+        profile: String = getActiveProfile(context)
+    ): String {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                val activeDeckId = getActiveDeckId(context)
-                val activeProfile = getActiveProfile(context)
 
-                val key = generateStorageKey(activeDeckId, activeProfile, storagePath) + "_visual"
+                val key = generateStorageKey(deckId, profile, storagePath) + "_visual"
                 return prefs.getString(key, null) ?: ""
             }
 
-        fun setVisualOverride(context: Context, storagePath: String, overrideText: String) {
+        fun setVisualOverride(
+            context: Context,
+            storagePath: String,
+            overrideText: String,
+            deckId: String = getActiveDeckId(context),
+            profile: String = getActiveProfile(context)
+        ) {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                val activeDeckId = getActiveDeckId(context)
-                val activeProfile = getActiveProfile(context)
 
-                val key = generateStorageKey(activeDeckId, activeProfile, storagePath) + "_visual"
+                val key = generateStorageKey(deckId, profile, storagePath) + "_visual"
                 prefs.edit().putString(key, overrideText).apply()
             }
 

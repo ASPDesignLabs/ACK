@@ -131,4 +131,27 @@ object AckTags {
     const val AUDIO_BITCRUSH = "AUDIO_BITCRUSH"
     const val AUDIO_PROFILE_MANAGE = "AUDIO_PROFILE_MANAGE"
 
+    // --- VOICE RECORDINGS HELP TARGETS ---
+    // Shared VoiceRecordingPanel buttons -- tagged once, so these apply
+    // wherever the panel is embedded (Quick Actions slot, Quick-Access key,
+    // Matrix node, and MANAGE RECORDINGS' RE-RECORD panel alike).
+    const val VOICE_REC_RECORD_BTN = "VOICE_REC_RECORD_BTN"
+    const val VOICE_REC_STOP_BTN = "VOICE_REC_STOP_BTN"
+    const val VOICE_REC_PLAY_BTN = "VOICE_REC_PLAY_BTN"
+    const val VOICE_REC_ACCEPT_BTN = "VOICE_REC_ACCEPT_BTN"
+    const val VOICE_REC_DISCARD_BTN = "VOICE_REC_DISCARD_BTN"
+    const val VOICE_REC_REMOVE_BTN = "VOICE_REC_REMOVE_BTN"
+
+    // Matrix-only recording controls (DesignSystem.kt's node editor).
+    const val VOICE_REC_MATRIX_ATTACH_BTN = "VOICE_REC_MATRIX_ATTACH_BTN"
+    const val VOICE_REC_MATRIX_OVERRIDE_FIELD = "VOICE_REC_MATRIX_OVERRIDE_FIELD"
+    const val VOICE_REC_MATRIX_REENABLE_BTN = "VOICE_REC_MATRIX_REENABLE_BTN"
+
+    // MANAGE RECORDINGS (SettingsView.kt's launch button, and the tree
+    // browser itself).
+    const val VOICE_REC_MANAGE_BTN = "VOICE_REC_MANAGE_BTN"
+    const val VOICE_REC_MANAGE_TREE = "VOICE_REC_MANAGE_TREE"
+    const val VOICE_REC_MANAGE_LEAF = "VOICE_REC_MANAGE_LEAF"
+    const val VOICE_REC_MANAGE_OVERLAY_TOGGLE = "VOICE_REC_MANAGE_OVERLAY_TOGGLE"
+
 }

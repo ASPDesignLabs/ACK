@@ -193,6 +193,14 @@ fun QuickActionsDeck(
                                 putExtra("phrase", phrase)
                                 putExtra("robotic", false)
                                 putExtra("source", "QUICK_ACTION")
+                                // OutputService tries this recording first
+                                // and falls back to synthesizing the
+                                // phrase above if it can't load it, so
+                                // nothing else here needs to change based
+                                // on whether the slot has one.
+                                if (slot.recordingId != null) {
+                                    putExtra("recording_id", slot.recordingId)
+                                }
                             }
                         )
                     }
@@ -209,6 +217,9 @@ fun QuickActionsDeck(
 
     editingSlot?.let { slot ->
         QuickActionEditorDialog(
+            context = context,
+            deckId = deckId,
+            groupIndex = activeGroup.groupIndex,
             slot = slot,
             primaryColor = primaryColor,
             onDismiss = {
@@ -232,6 +243,12 @@ fun QuickActionsDeck(
 
                 reportTextCommit(AckTags.QUICK_ACTION_SAVE)
                 editingSlot = null
+            },
+            onRecordingChanged = {
+                config = CommandRepository.getQuickActionsConfig(
+                    context = context,
+                    deckId = deckId
+                )
             }
         )
     }
@@ -374,6 +391,9 @@ private fun QuickActionButton(
 
 @Composable
 private fun QuickActionEditorDialog(
+    context: Context,
+    deckId: String,
+    groupIndex: Int,
     slot: QuickActionSlot,
     primaryColor: Color,
     onDismiss: () -> Unit,
@@ -381,7 +401,8 @@ private fun QuickActionEditorDialog(
         label: String,
         template: String,
         localValues: List<String>
-    ) -> Unit
+    ) -> Unit,
+    onRecordingChanged: () -> Unit
 ) {
     var label by remember(slot.slotIndex) {
         mutableStateOf(slot.label)
@@ -468,6 +489,17 @@ private fun QuickActionEditorDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                VoiceRecordingSection(
+                    context = context,
+                    primaryColor = primaryColor,
+                    deckId = deckId,
+                    groupIndex = groupIndex,
+                    slotIndex = slot.slotIndex,
+                    onBindingChanged = onRecordingChanged
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -496,6 +528,68 @@ private fun QuickActionEditorDialog(
                     )
                 }
     }
+}
+
+// Thin wrapper around the shared VoiceRecordingPanel, bound to this
+// slot's owner key. Recording is its own persistence flow, independent of
+// the dialog's SAVE button above -- accepting or removing a recording
+// writes immediately (VoiceRecordingRepository +
+// CommandRepository.setQuickActionSlotRecording), the same "commits the
+// moment you act" pattern MatrixEditor's live-save template field and the
+// Target Computer contact card editor already use. That way backing out
+// of the label/template edit with CANCEL never undoes a recording you
+// already accepted.
+@Composable
+private fun VoiceRecordingSection(
+    context: Context,
+    primaryColor: Color,
+    deckId: String,
+    groupIndex: Int,
+    slotIndex: Int,
+    onBindingChanged: () -> Unit
+) {
+    var refreshKey by remember { mutableIntStateOf(0) }
+    val existingRecording = remember(deckId, groupIndex, slotIndex, refreshKey) {
+        VoiceRecordingRepository.getForQuickAction(context, deckId, groupIndex, slotIndex)
+    }
+
+    VoiceRecordingPanel(
+        context = context,
+        primaryColor = primaryColor,
+        panelKey = "qa_${deckId}_${groupIndex}_$slotIndex",
+        existingRecording = existingRecording,
+        onAccept = { pcm, sampleRate ->
+            val saved = VoiceRecordingRepository.saveForQuickAction(
+                context = context,
+                deckId = deckId,
+                groupIndex = groupIndex,
+                slotIndex = slotIndex,
+                pcm = pcm,
+                sampleRate = sampleRate
+            )
+            CommandRepository.setQuickActionSlotRecording(
+                context = context,
+                deckId = deckId,
+                groupIndex = groupIndex,
+                slotIndex = slotIndex,
+                recordingId = saved.id
+            )
+            refreshKey++
+            onBindingChanged()
+        },
+        onRemove = {
+            VoiceRecordingRepository.deleteForQuickAction(context, deckId, groupIndex, slotIndex)
+            CommandRepository.setQuickActionSlotRecording(
+                context = context,
+                deckId = deckId,
+                groupIndex = groupIndex,
+                slotIndex = slotIndex,
+                recordingId = null
+            )
+            refreshKey++
+            onBindingChanged()
+        }
+    )
 }
 
 @Composable

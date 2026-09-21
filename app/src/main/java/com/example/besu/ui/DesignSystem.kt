@@ -9,8 +9,10 @@ import com.example.besu.help.*
 import com.example.besu.output.*
 import com.example.besu.settings.*
 import com.example.besu.ui.theme.*
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -65,6 +67,9 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 data class VariableEditRequest(
@@ -339,6 +344,10 @@ private sealed class TerminalPromptResult {
     object ClearLog : TerminalPromptResult()
     object RunBackup : TerminalPromptResult()
     object RunRepair : TerminalPromptResult()
+    // Needs the composable's own reveal coroutine (line-by-line, shake to
+    // stop) -- same "parsing just identifies the intent" split as the
+    // three above.
+    object ShowInfo : TerminalPromptResult()
 }
 
 private val TERMINAL_HELP_LINES = listOf(
@@ -352,7 +361,48 @@ private val TERMINAL_HELP_LINES = listOf(
     "/t               BROWSE TARGET COMPUTER ENTRIES",
     "/cls             CLEAR THE LOG (CONFIRM REQUIRED)",
     "/b, /backup      EXPORT ACK DATA (CONFIRM REQUIRED)",
-    "/repair          RESTART BACKGROUND SERVICES"
+    "/repair          RESTART BACKGROUND SERVICES",
+    "/info            SHOW PATCH NOTES"
+)
+
+// --- PATCH NOTES (/info) ---
+// One entry here = one line revealed every ~2s by TerminalView's reveal
+// loop, not a paragraph to be pre-wrapped -- long lines still wrap fine
+// inside a CMD block, but keeping each entry to a single idea is what
+// makes the line-by-line pacing actually read as a rundown instead of a
+// wall of text arriving one row at a time. No blank-string entries --
+// each CMD line renders as its own bordered block (see TerminalView), so
+// an empty one shows up as a bare box rather than a clean gap; section
+// headers do the separating instead. Update this list (and CHANGELOG.md
+// at the repo root, which carries the same notes) with each beta.
+private val PATCH_NOTES = listOf(
+    "=== ACK v1.0-BETA.5 PATCH NOTES ===",
+    "-- VOICE RECORDINGS --",
+    "- RECORD A VOICE CLIP FOR ANY QUICK ACTION, QUICK-ACCESS KEY, OR MATRIX ENTRY",
+    "- AUTOMATIC NOISE REDUCTION + SILENCE TRIMMING ON EVERY RECORDING",
+    "- ADJUSTABLE RECORDING-ONLY PLAYBACK GAIN IN PROTOCOL",
+    "- MATRIX RECORDINGS CAN SET THEIR OWN VISUAL PROMPT OVERRIDE",
+    "- NOTHING DESTRUCTIVE: REMOVING A RECORDING ALWAYS FALLS BACK TO YOUR",
+    "  EXISTING TEMPLATE/VARIABLE SETUP, UNCHANGED",
+    "- NEW: VOICE RECORDINGS CATEGORY IN HELP -- RECORDING, MATRIX CAVEATS,",
+    "  AND MANAGING RECORDINGS, EACH AS ITS OWN WALKTHROUGH",
+    "-- MANAGE RECORDINGS --",
+    "- REBUILT AS A DRILL-DOWN TREE: DECK > PROFILE > POSE > SLOT",
+    "- EACH ENTRY SHOWS ITS OVERLAY TEXT, PLAY TIME, AND FILE SIZE",
+    "- RE-RECORD, PLAY, OR DELETE DIRECTLY FROM THE TREE",
+    "- NEW: OVERLAY-ON-PLAY TOGGLE NEXT TO CLOSE -- SEE A RECORDING'S TEXT",
+    "  ON SCREEN WHILE PREVIEWING IT",
+    "-- MATRIX EDITOR --",
+    "- DESTRUCTIVE CONTROLS NOW COLLAPSED BY DEFAULT -- LESS SCROLLING",
+    "-- TERMINAL --",
+    "- NEW: /info SHOWS THESE PATCH NOTES, OR TAP THE STATUSBOX SHORTCUT",
+    "- SHAKE TO STOP THE READOUT EARLY",
+    "- NEW: TYPING /cls OR /backup NOW SHOWS A ONE-TAP CONFIRM SHORTCUT IN",
+    "  THE STATUSBOX INSTEAD OF RETYPING THE COMMAND WITH CONFIRM ADDED",
+    "-- FIXES --",
+    "- FIXED RECORDING PREVIEW PLAYBACK GOING SILENT ON LOW DEVICE VOLUME",
+    "- FIXED LEADING SILENCE NOT BEING TRIMMED FROM VOICE RECORDINGS",
+    "=== END PATCH NOTES ==="
 )
 
 // Logs a line straight into the Terminal without dispatching any speech --
@@ -464,6 +514,10 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
 
     if (first == "/repair") {
         return TerminalPromptResult.RunRepair
+    }
+
+    if (first == "/info") {
+        return TerminalPromptResult.ShowInfo
     }
 
     var flags = TerminalFlags()
@@ -603,6 +657,52 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     val promptFocusRequester = remember { FocusRequester() }
     val promptHaptic = LocalHapticFeedback.current
 
+    // --- /info (PATCH NOTES) ---
+    // Reveals PATCH_NOTES one line every 2s via the same local-log path
+    // every other command uses (logTerminalLocal), rather than pushing
+    // the whole list in at once like /help does -- both the typed command
+    // and the STATUSBOX shortcut button below call this same function, so
+    // there's exactly one place that owns the reveal's timing/cancellation.
+    val infoRevealScope = rememberCoroutineScope()
+    var infoRevealJob by remember { mutableStateOf<Job?>(null) }
+
+    fun startInfoReveal() {
+        infoRevealJob?.cancel()
+        promptValue = TextFieldValue("")
+        infoRevealJob = infoRevealScope.launch {
+            for (line in PATCH_NOTES) {
+                logTerminalLocal(context, line, "CMD")
+                delay(2000)
+            }
+            infoRevealJob = null
+        }
+    }
+
+    // Phone-shake kill switch doubles as this reveal's interrupt -- the
+    // same broadcast AccelerometerTapService already sends to silence
+    // audio/clear the visual overlay, listened for exactly the way
+    // SettingsView's shake-test panel already does.
+    DisposableEffect(Unit) {
+        val shakeReceiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                infoRevealJob?.cancel()
+                infoRevealJob = null
+            }
+        }
+        val filter = IntentFilter(AccelerometerTapService.ACTION_SHAKE_DETECTED)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(shakeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(shakeReceiver, filter)
+        }
+
+        onDispose {
+            infoRevealJob?.cancel()
+            context.unregisterReceiver(shakeReceiver)
+        }
+    }
+
     // /backup confirm reuses PROTOCOL's own export flow exactly --
     // TransferManager.generateBackupJson written to wherever the system
     // document picker points.
@@ -659,6 +759,27 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     }
     val variableTriggerActive = activeTriggerMode == "VARIABLE"
     val targetTriggerActive = activeTriggerMode == "TARGET"
+
+    // /info is a whole-command match, not an insertable mid-text token
+    // like /v or /t, so it doesn't need to share activeTriggerMode's
+    // range-based priority system -- typing exactly "/info" can't also
+    // contain a live /v or /t trigger.
+    val infoTriggerActive = promptValue.text.trim().equals("/info", ignoreCase = true)
+
+    // /cls and /b(/backup) need a second "... confirm" submission before
+    // they actually run (see parseTerminalCommand's own CMD_WARN prompt).
+    // Same live-detection idea as /info above, but for whichever of the
+    // two is currently typed in its bare (not-yet-confirmed) form -- lets
+    // a one-tap STATUSBOX button send the confirmed version instead of
+    // retyping the whole command.
+    val confirmPromptTokens = promptValue.text.trim().split(Regex("\\s+"))
+    val confirmPromptFirst = confirmPromptTokens.firstOrNull()?.lowercase().orEmpty()
+    val confirmPromptRest = confirmPromptTokens.drop(1).joinToString(" ").trim().lowercase()
+    val confirmTriggerCommand: String? = when {
+        confirmPromptFirst == "/cls" && confirmPromptRest != "confirm" -> "/cls"
+        (confirmPromptFirst == "/b" || confirmPromptFirst == "/backup") && confirmPromptRest != "confirm" -> "/backup"
+        else -> null
+    }
 
     var selectedVGrouping by remember { mutableStateOf<String?>(null) }
     var vGroupingPage by remember { mutableIntStateOf(0) }
@@ -804,6 +925,10 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                     restartBackgroundServices(context)
                     logTerminalLocal(context, "BACKGROUND SERVICES RESTARTED")
                     promptValue = TextFieldValue("")
+                }
+                TerminalPromptResult.ShowInfo -> {
+                    // Clears promptValue itself -- see startInfoReveal.
+                    startInfoReveal()
                 }
                 TerminalPromptResult.Error -> {
                     // Leave the text in place -- a typo'd command or a
@@ -1103,6 +1228,59 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                             color = statusboxTextColor
                         )
                     }
+                } else if (infoTriggerActive) {
+                    // Live /info detection, same idea as /v and /t above but
+                    // with nothing to pick -- the prompt text is already the
+                    // whole command. Replaces the TYPING block entirely with
+                    // a single forced-highlighted StatusBoxItem reading
+                    // "INFO", the same reverse-video POSIX look /t's picker
+                    // uses for its selected item. Only appears while the
+                    // prompt is exactly "/info"; tapping it (or just hitting
+                    // Send) starts the reveal either way.
+                    StatusBoxItemRow(
+                        items = listOf(
+                            StatusBoxItem(label = "INFO") {
+                                promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                startInfoReveal()
+                            }
+                        ),
+                        highlightedIndex = 0,
+                        page = 0,
+                        onPageChange = {},
+                        color = statusboxTextColor
+                    )
+                } else if (confirmTriggerCommand != null) {
+                    // Live /cls or /b(/backup) detection, in its bare
+                    // (not-yet-confirmed) form -- replaces TYPING with a
+                    // warning line and a single forced-highlighted CONFIRM
+                    // item. Tapping it sends the confirmed form directly
+                    // (submitPrompt() runs the exact same parse/dispatch
+                    // path a manually typed "... confirm" would), so
+                    // there's no separate confirm logic to keep in sync
+                    // with parseTerminalCommand's own.
+                    Text(
+                        "THIS COMMAND REQUIRES CONFIRMATION",
+                        color = statusboxTextColor,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = STATUSBOX_FONT_SIZE
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    StatusBoxItemRow(
+                        items = listOf(
+                            StatusBoxItem(label = "CONFIRM") {
+                                promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                promptValue = TextFieldValue("$confirmTriggerCommand confirm")
+                                submitPrompt()
+                            }
+                        ),
+                        highlightedIndex = 0,
+                        page = 0,
+                        onPageChange = {},
+                        color = statusboxTextColor
+                    )
                 } else {
                     // TYPING: a compact two-line block, not the full
                     // three-row picker layout -- there's nothing to browse.
@@ -1717,6 +1895,47 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             mutableStateOf<String?>(null)
         }
 
+        // Collapsed by default -- these buttons are rarely used but used to
+        // always push the COMMIT/CLOSE row further down the scroll,
+        // especially once a recording panel is also showing above.
+        var destructiveControlsExpanded by remember(node.path) { mutableStateOf(false) }
+
+        val activeDeckId = CommandRepository.getActiveDeckId(context)
+        val activeProfile = CommandRepository.getActiveProfile(context)
+
+        var matrixRecording by remember(node.path) {
+            mutableStateOf(
+                VoiceRecordingRepository.getForMatrixNode(context, activeDeckId, activeProfile, node.path)
+            )
+        }
+
+        // One-shot notice shown right after a template edit auto-disables
+        // an enabled recording -- see updateTemplate below.
+        var showStaleWarning by remember(node.path) { mutableStateOf(false) }
+
+        // Recording a variable-containing prompt suppresses its variables
+        // entirely while active, so opening the recording panel for such a
+        // node is gated behind an explicit, one-time acknowledgment of
+        // that tradeoff (recordingPanelUnlocked). Both reset whenever this
+        // dialog is reopened for the node (remember(node.path)), so
+        // attaching a fresh recording later always re-confirms.
+        var showAttachRecordingWarning by remember(node.path) { mutableStateOf(false) }
+        var recordingPanelUnlocked by remember(node.path) { mutableStateOf(false) }
+
+        // What shows on screen while an enabled recording plays, in place
+        // of the raw template text (which can carry literal {VAR}/
+        // [COMPUTER:X] tokens once resolution is skipped for a recorded
+        // node -- see the dispatch sites in MatrixCategory and
+        // WearListenerService). Backed by CommandRepository's existing
+        // per-node visual override storage (already deck+profile+path
+        // scoped and already swept into backups) -- this never touches
+        // the template/variable configuration itself, so clearing it (or
+        // just removing the recording) falls straight back to today's
+        // normal resolved display.
+        var visualOverrideText by remember(node.path) {
+            mutableStateOf(CommandRepository.getVisualOverride(context, node.path))
+        }
+
         fun closeEditor() {
             // Reload matrix rows from persistent storage so subsequent edits start
             // from the saved prompt rather than the old cached rawPhrase.
@@ -1784,6 +2003,24 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
             saveVariables()
             saveComputerFallbacks()
+
+            // The template is live-saved on every keystroke, so this is
+            // the only point that can catch "the text changed underneath
+            // an enabled recording" -- disable (never delete) and flag the
+            // one-shot notice. Guarded on currentRecording.enabled so this
+            // only fires once per edit, not on every subsequent keystroke.
+            val currentRecording = matrixRecording
+            if (currentRecording != null && currentRecording.enabled &&
+                newTemplate != currentRecording.boundPhraseSnapshot
+            ) {
+                VoiceRecordingRepository.setMatrixRecordingEnabled(
+                    context = context,
+                    id = currentRecording.id,
+                    enabled = false
+                )
+                matrixRecording = currentRecording.copy(enabled = false)
+                showStaleWarning = true
+            }
         }
 
         fun commitEditor() {
@@ -1889,77 +2126,236 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    TightSectionLabel("INSERT VARIABLE TOKEN")
+                    val recordingIsActive = matrixRecording?.enabled == true
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        TightPanelButton(
-                            text = "+ VAR",
-                            modifier = Modifier.weight(1f),
-                            mainColor = primaryColor
-                        ) {
-                            updateTemplate("$tempText {VAR}")
-                        }
-
-                        TightPanelButton(
-                            text = "+ A",
-                            modifier = Modifier.weight(1f),
-                            mainColor = primaryColor
-                        ) {
-                            updateTemplate("$tempText {VAR:A}")
-                        }
-
-                        TightPanelButton(
-                            text = "+ B",
-                            modifier = Modifier.weight(1f),
-                            mainColor = primaryColor
-                        ) {
-                            updateTemplate("$tempText {VAR:B}")
-                        }
-
-                        TightPanelButton(
-                            text = "+ C",
-                            modifier = Modifier.weight(1f),
-                            mainColor = primaryColor
-                        ) {
-                            updateTemplate("$tempText {VAR:C}")
-                        }
-                    }
-
-                    if (computerCategories.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        TightSectionLabel("INSERT TARGET TAG")
+                    if (!recordingIsActive) {
+                        TightSectionLabel("INSERT VARIABLE TOKEN")
 
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag(AckTags.MATRIX_INSERT_COMPUTER_TAG)
-                                .helpTarget(AckTags.MATRIX_INSERT_COMPUTER_TAG, primaryColor)
-                                .horizontalScroll(rememberScrollState()),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            computerCategories.forEach { computerCategory ->
-                                TightPanelButton(
-                                    text = "+ ${computerCategory.label}",
-                                    mainColor = primaryColor
-                                ) {
-                                    updateTemplate("$tempText [COMPUTER:${computerCategory.id}]")
-                                    helpManager?.onEvent(
-                                        HelpEvent.Interacted(AckTags.MATRIX_INSERT_COMPUTER_TAG)
-                                    )
+                            TightPanelButton(
+                                text = "+ VAR",
+                                modifier = Modifier.weight(1f),
+                                mainColor = primaryColor
+                            ) {
+                                updateTemplate("$tempText {VAR}")
+                            }
+
+                            TightPanelButton(
+                                text = "+ A",
+                                modifier = Modifier.weight(1f),
+                                mainColor = primaryColor
+                            ) {
+                                updateTemplate("$tempText {VAR:A}")
+                            }
+
+                            TightPanelButton(
+                                text = "+ B",
+                                modifier = Modifier.weight(1f),
+                                mainColor = primaryColor
+                            ) {
+                                updateTemplate("$tempText {VAR:B}")
+                            }
+
+                            TightPanelButton(
+                                text = "+ C",
+                                modifier = Modifier.weight(1f),
+                                mainColor = primaryColor
+                            ) {
+                                updateTemplate("$tempText {VAR:C}")
+                            }
+                        }
+
+                        if (computerCategories.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            TightSectionLabel("INSERT TARGET TAG")
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag(AckTags.MATRIX_INSERT_COMPUTER_TAG)
+                                    .helpTarget(AckTags.MATRIX_INSERT_COMPUTER_TAG, primaryColor)
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                computerCategories.forEach { computerCategory ->
+                                    TightPanelButton(
+                                        text = "+ ${computerCategory.label}",
+                                        mainColor = primaryColor
+                                    ) {
+                                        updateTemplate("$tempText [COMPUTER:${computerCategory.id}]")
+                                        helpManager?.onEvent(
+                                            HelpEvent.Interacted(AckTags.MATRIX_INSERT_COMPUTER_TAG)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    if (variableCount > 0) {
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    val hasDynamicTokens = variableCount > 0 || computerTagCount > 0
+
+                    if (recordingIsActive || !hasDynamicTokens || recordingPanelUnlocked) {
+                        VoiceRecordingPanel(
+                            context = context,
+                            primaryColor = primaryColor,
+                            panelKey = "mtx_${activeDeckId}_${activeProfile}_${node.path}",
+                            existingRecording = matrixRecording,
+                            description = if (recordingIsActive) {
+                                "RECORDED PROMPT -- VARIABLES BELOW ARE HIDDEN AND INACTIVE WHILE THIS PLAYS. THEIR VALUES ARE KEPT. REMOVE THIS RECORDING TO GET THEM BACK."
+                            } else {
+                                "WHEN SET, THIS PLAYS INSTEAD OF THE TEMPLATE ABOVE."
+                            },
+                            onAccept = { pcm, sampleRate ->
+                                val saved = VoiceRecordingRepository.saveForMatrixNode(
+                                    context = context,
+                                    deckId = activeDeckId,
+                                    profile = activeProfile,
+                                    path = node.path,
+                                    pcm = pcm,
+                                    sampleRate = sampleRate,
+                                    phraseSnapshot = tempText
+                                )
+                                matrixRecording = saved
+                            },
+                            onRemove = {
+                                VoiceRecordingRepository.deleteForMatrixNode(context, activeDeckId, activeProfile, node.path)
+                                matrixRecording = null
+                            }
+                        )
+                    } else {
+                        // Locked behind an explicit, one-time acknowledgment
+                        // that recording this entry disables its variables
+                        // while active -- see showAttachRecordingWarning.
+                        Text(
+                            text = "VOICE RECORDING",
+                            color = primaryColor,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "This entry has $variableCount variable(s) and $computerTagCount target tag(s). " +
+                                "Recording a voice prompt disables them while active.",
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TightPanelButton(
+                            text = "ATTACH VOICE RECORDING",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag(AckTags.VOICE_REC_MATRIX_ATTACH_BTN)
+                                .helpTarget(AckTags.VOICE_REC_MATRIX_ATTACH_BTN, primaryColor),
+                            mainColor = primaryColor
+                        ) {
+                            showAttachRecordingWarning = true
+                            helpManager?.onEvent(
+                                HelpEvent.Interacted(AckTags.VOICE_REC_MATRIX_ATTACH_BTN)
+                            )
+                        }
+                    }
+
+                    if (recordingIsActive) {
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        TightSectionLabel("VISUAL PROMPT OVERRIDE", color = primaryColor)
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = "WHAT SHOWS ON SCREEN WHILE THIS RECORDING PLAYS. LEAVE BLANK " +
+                                "TO SHOW THE RAW TEMPLATE TEXT ABOVE AS-IS (VARIABLE TOKENS " +
+                                "INCLUDED, UNRESOLVED). YOUR TEMPLATE AND VARIABLES ARE NEVER " +
+                                "CHANGED BY THIS -- IT ONLY REPLACES WHAT'S DISPLAYED.",
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        OutlinedTextField(
+                            value = visualOverrideText,
+                            onValueChange = { newValue ->
+                                visualOverrideText = newValue
+                                CommandRepository.setVisualOverride(context, node.path, newValue)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag(AckTags.VOICE_REC_MATRIX_OVERRIDE_FIELD)
+                                .helpTarget(AckTags.VOICE_REC_MATRIX_OVERRIDE_FIELD, primaryColor),
+                            shape = AckHelpShape,
+                            minLines = 2,
+                            maxLines = 3,
+                            placeholder = {
+                                Text(
+                                    text = "e.g. \"Hi Sarah, nice to see you\"",
+                                    color = Color.DarkGray,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            },
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = primaryColor,
+                                fontFamily = FontFamily.Monospace
+                            ),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = VoidBlack,
+                                unfocusedContainerColor = VoidBlack,
+                                focusedIndicatorColor = primaryColor,
+                                unfocusedIndicatorColor = Color.DarkGray,
+                                focusedTextColor = primaryColor,
+                                unfocusedTextColor = primaryColor,
+                                cursorColor = primaryColor
+                            )
+                        )
+                    }
+
+                    if (matrixRecording?.enabled == false) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "DISABLED -- this entry's text changed since this recording was made. " +
+                                "It won't play until you re-enable it above.",
+                            color = RadicalRed,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TightPanelButton(
+                            text = "RE-ENABLE (MATCH CURRENT TEXT)",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag(AckTags.VOICE_REC_MATRIX_REENABLE_BTN)
+                                .helpTarget(AckTags.VOICE_REC_MATRIX_REENABLE_BTN, primaryColor),
+                            mainColor = primaryColor
+                        ) {
+                            val current = matrixRecording ?: return@TightPanelButton
+                            VoiceRecordingRepository.setMatrixRecordingEnabled(
+                                context = context,
+                                id = current.id,
+                                enabled = true,
+                                newSnapshot = tempText
+                            )
+                            matrixRecording = current.copy(enabled = true, boundPhraseSnapshot = tempText)
+                            helpManager?.onEvent(
+                                HelpEvent.Interacted(AckTags.VOICE_REC_MATRIX_REENABLE_BTN)
+                            )
+                        }
+                    }
+
+                    if (variableCount > 0 && !recordingIsActive) {
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
@@ -2039,7 +2435,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         }
                     }
 
-                    if (computerTagCount > 0) {
+                    if (computerTagCount > 0 && !recordingIsActive) {
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
@@ -2122,42 +2518,57 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    TightSectionLabel("DESTRUCTIVE CONTROLS", color = RadicalRed)
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { destructiveControlsExpanded = !destructiveControlsExpanded },
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TightPanelButton(
-                            text = "CLEAR VARS",
-                            modifier = Modifier.weight(1f),
-                            isActive = false,
-                            mainColor = RadicalRed
-                        ) {
-                            clearMode = "VARS"
-                        }
-
-                        TightPanelButton(
-                            text = "CLEAR PROMPT",
-                            modifier = Modifier.weight(1f),
-                            isActive = false,
-                            mainColor = RadicalRed
-                        ) {
-                            clearMode = "PROMPT"
-                        }
+                        Text(
+                            text = if (destructiveControlsExpanded) "▾ " else "▸ ",
+                            color = RadicalRed,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        TightSectionLabel("DESTRUCTIVE CONTROLS", color = RadicalRed)
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    if (destructiveControlsExpanded) {
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                    TightPanelButton(
-                        text = "CLEAR ALL",
-                        modifier = Modifier.fillMaxWidth(),
-                        isActive = false,
-                        mainColor = RadicalRed
-                    ) {
-                        clearMode = "ALL"
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            TightPanelButton(
+                                text = "CLEAR VARS",
+                                modifier = Modifier.weight(1f),
+                                isActive = false,
+                                mainColor = RadicalRed
+                            ) {
+                                clearMode = "VARS"
+                            }
+
+                            TightPanelButton(
+                                text = "CLEAR PROMPT",
+                                modifier = Modifier.weight(1f),
+                                isActive = false,
+                                mainColor = RadicalRed
+                            ) {
+                                clearMode = "PROMPT"
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        TightPanelButton(
+                            text = "CLEAR ALL",
+                            modifier = Modifier.fillMaxWidth(),
+                            isActive = false,
+                            mainColor = RadicalRed
+                        ) {
+                            clearMode = "ALL"
+                        }
                     }
                 }
 
@@ -2286,6 +2697,78 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     ) {
                         clearMode = null
                     }
+                }
+            }
+        }
+
+        if (showAttachRecordingWarning) {
+            TightDialogSurface(
+                onDismiss = { showAttachRecordingWarning = false },
+                primaryColor = primaryColor,
+                title = "VOICE RECORDING",
+                dismissLabel = "CANCEL"
+            ) {
+                Text(
+                    text = "This entry has $variableCount variable(s) and $computerTagCount " +
+                        "target tag(s). Attaching a recording plays it back exactly as " +
+                        "recorded, ignoring what they'd resolve to. Their values are kept, " +
+                        "not deleted -- remove the recording at any time to get them back.",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TightPanelButton(
+                        text = "CONFIRM",
+                        modifier = Modifier.weight(1f),
+                        mainColor = primaryColor
+                    ) {
+                        recordingPanelUnlocked = true
+                        showAttachRecordingWarning = false
+                    }
+                    TightPanelButton(
+                        text = "CANCEL",
+                        modifier = Modifier.weight(1f),
+                        isActive = false,
+                        mainColor = primaryColor
+                    ) {
+                        showAttachRecordingWarning = false
+                    }
+                }
+            }
+        }
+
+        if (showStaleWarning) {
+            TightDialogSurface(
+                onDismiss = { showStaleWarning = false },
+                primaryColor = RadicalRed,
+                title = "RECORDING DISABLED",
+                dismissLabel = "OK"
+            ) {
+                Text(
+                    text = "This entry's text changed since its recording was made, so the " +
+                        "recording has been disabled to avoid mismatched audio. It hasn't " +
+                        "been deleted -- re-enable it from the VOICE RECORDING panel above " +
+                        "once you're happy with the new wording.",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TightPanelButton(
+                    text = "OK, GOT IT",
+                    modifier = Modifier.fillMaxWidth(),
+                    mainColor = RadicalRed
+                ) {
+                    showStaleWarning = false
                 }
             }
         }
@@ -3169,11 +3652,38 @@ fun MatrixCategory(
                         categoryLabel to displayValue
                     }
 
+                    // A recording here plays verbatim, ignoring whatever
+                    // the variables/tags above would resolve to -- see
+                    // MatrixEditor. Only a currently-enabled recording
+                    // changes the row's playback and display; a disabled
+                    // (stale) one falls back to normal template resolution
+                    // exactly like having no recording at all.
+                    val nodeRecording = VoiceRecordingRepository.getForMatrixNode(
+                        context,
+                        CommandRepository.getActiveDeckId(context),
+                        CommandRepository.getActiveProfile(context),
+                        node.path
+                    )
+                    val recordingIsActive = nodeRecording?.enabled == true
+
+                    // The user has already "resolved" this node by hand once
+                    // they bind a recording -- its visual override (if set)
+                    // is the authoritative display text from here on, not
+                    // whatever the live variable/root-override state would
+                    // otherwise compute. Falls back to the normal resolved
+                    // phrase when no override is set, same as before.
+                    val recordedDisplayPhrase = if (recordingIsActive) {
+                        CommandRepository.getVisualOverride(context, node.path).ifBlank { resolvedPhrase }
+                    } else {
+                        resolvedPhrase
+                    }
+
                     MatrixNodeItem(
                         label = node.label,
-                        phrase = resolvedPhrase,
-                        variableValues = variableValues,
-                        computerTagChips = computerTagChips,
+                        phrase = recordedDisplayPhrase,
+                        variableValues = if (recordingIsActive) emptyList() else variableValues,
+                        computerTagChips = if (recordingIsActive) emptyList() else computerTagChips,
+                        isRecorded = recordingIsActive,
                         onOpenComputerTag = { onEdit(Triple(node, rawPhrase, resolvedPhrase)) },
                         modifier = itemMod,
                         playModifier = if (isTarget) Modifier
@@ -3187,6 +3697,24 @@ fun MatrixCategory(
                                     HelpEvent.Interacted(AckTags.MATRIX_PLAY_BUTTON)
                                 )
                             }
+
+                            if (recordingIsActive && nodeRecording != null) {
+                                // Same text the row itself is showing right now
+                                // (recordedDisplayPhrase) -- the visual override
+                                // if one is set, otherwise the normal resolved
+                                // phrase. Keeps the log line and on-screen prompt
+                                // from ever disagreeing with what's on screen in
+                                // the MATRIX list.
+                                val intent = Intent(context, OutputService::class.java).apply {
+                                    putExtra("phrase", recordedDisplayPhrase)
+                                    putExtra("recording_id", nodeRecording.id)
+                                    putExtra("robotic", false)
+                                    putExtra("source", "MTX/${title.uppercase()}")
+                                }
+                                context.startService(intent)
+                                return@MatrixNodeItem
+                            }
+
                             val debug = CommandRepository.debugResolvedPhrase(
                                 context = context,
                                 storagePath = node.path
@@ -3665,7 +4193,12 @@ fun MatrixNodeItem(
     // text below with nothing marking that it was ever there -- these
     // chips are the only visible sign the tag exists at all.
     computerTagChips: List<Pair<String, String>> = emptyList(),
-    onOpenComputerTag: () -> Unit = {}
+    onOpenComputerTag: () -> Unit = {},
+    // True when an enabled voice recording plays instead of this node's
+    // template -- variableValues/computerTagChips are expected to already
+    // be passed empty by the caller in that case (they're inert), and this
+    // just adds the visible marker explaining why.
+    isRecorded: Boolean = false
 ) {
     Row(
         modifier = modifier
@@ -3718,6 +4251,17 @@ fun MatrixNodeItem(
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
                 )
+
+                if (isRecorded) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "● RECORDED",
+                        color = RadicalRed,
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
 
                 if (variableValues.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(6.dp))

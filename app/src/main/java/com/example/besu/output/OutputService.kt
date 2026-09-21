@@ -215,6 +215,28 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             "TEST_SIGNAL" -> {
                 processSpeech("Audio Check. 1, 2, 3.", false, "SYS/TEST")
             }
+            "PREVIEW_RECORDING" -> {
+                // The bare "PLAY" button inside QuickActionEditorDialog and
+                // MANAGE RECORDINGS -- a recording (already saved, by id;
+                // or not yet saved, by a temp file path) played through the
+                // same routed playPcm() a real dispatch uses, but with no
+                // log entry, since previewing isn't a communication event.
+                // MANAGE RECORDINGS' overlay-on-play toggle can still opt a
+                // specific preview into showing text on screen (its own
+                // stored text, not a genuine dispatch) without that toggle
+                // turning previews into logged communication events.
+                val recordingId = intent.getStringExtra("recording_id")
+                val recordingPath = intent.getStringExtra("recording_path")
+                val previewVisualText = intent.getStringExtra("preview_visual_text")
+                val loaded = when {
+                    !recordingId.isNullOrEmpty() -> VoiceRecordingRepository.loadPcm(this, recordingId)
+                    !recordingPath.isNullOrEmpty() -> VoiceRecordingRepository.loadPcmFromFile(recordingPath)
+                    else -> null
+                }
+                if (loaded != null) {
+                    previewRecording(loaded.first, loaded.second, previewVisualText)
+                }
+            }
             "CHANGE_PROFILE" -> {
                 val newProfile = intent.getStringExtra("NEW_PROFILE") ?: "DEFAULT"
                 CommandRepository.setActiveProfile(this, newProfile)
@@ -237,6 +259,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             }
             else -> {
                 val phrase = intent.getStringExtra("phrase")
+                val recordingId = intent.getStringExtra("recording_id")
                 val isRobotic = intent.getBooleanExtra("robotic", false)
                 val source = intent.getStringExtra("source") ?: "EXT"
 
@@ -267,7 +290,27 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 val skipLog = intent.getBooleanExtra("skip_log", false)
                 val sticky = intent.getBooleanExtra("sticky", false)
 
-                if (!phrase.isNullOrEmpty()) {
+                // A Quick Actions slot with a recording attached tries that
+                // first; playRecording() returns false (metadata present
+                // but the file's missing/corrupt, or nothing matched) if it
+                // can't, in which case this falls straight through to the
+                // normal phrase/TTS dispatch below rather than dropping the
+                // communication attempt.
+                val playedRecording = if (!recordingId.isNullOrEmpty()) {
+                    playRecording(
+                        recordingId = recordingId,
+                        rawText = phrase.orEmpty(),
+                        source = source,
+                        emergency = emergency,
+                        quiet = quiet,
+                        skipLog = skipLog,
+                        sticky = sticky
+                    )
+                } else {
+                    false
+                }
+
+                if (!playedRecording && !phrase.isNullOrEmpty()) {
                     val request = QueuedSpeech(
                         text = phrase,
                         roboticOverride = isRobotic,
@@ -571,6 +614,129 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         } finally {
             file.delete()
         }
+    }
+
+    // Plays a stored voice recording instead of synthesizing TTS -- the
+    // Quick Actions execute path routes here first when a slot has a
+    // recordingId, falling back to the normal phrase/TTS path if this
+    // returns false (metadata exists but the file is missing/corrupt, or
+    // the id doesn't resolve to anything). rawText still drives the log
+    // line, the visual prompt, and LOG/REPLAY's text (replaying later
+    // always falls back to TTS -- only the live original dispatch plays
+    // the recording), exactly as if this were a normal phrase.
+    //
+    // Mirrors processAndPlayAudio's own side effects and playPcm call as
+    // closely as possible so a played-back recording behaves identically
+    // to synthesized speech in every way except the actual audio source --
+    // same force-speaker routing, same volume enforcement rule, same
+    // emergency tone-before-speech ordering, same kill-switch reach (via
+    // playPcm's own activeTrack tracking). The only audio effects applied
+    // are gain (modFreq/modDepth/crush are zeroed) -- a real recorded
+    // voice shouldn't get the robotic/crush character effects meant for
+    // synthesized speech.
+    private fun playRecording(
+        recordingId: String,
+        rawText: String,
+        source: String,
+        emergency: EmergencyOptions,
+        quiet: Boolean,
+        skipLog: Boolean,
+        sticky: Boolean
+    ): Boolean {
+        val loaded = VoiceRecordingRepository.loadPcm(this, recordingId) ?: return false
+        val (pcm, sampleRate) = loaded
+
+        val logType = if (emergency.enabled) "EMERGENCY" else "OUT"
+
+        if (!skipLog) {
+            broadcastLog("$source > \"$rawText\"", logType, replayText = rawText)
+        }
+
+        showVisualPrompt(rawText = rawText, emergency = emergency, sticky = sticky)
+
+        // Silent mode (persisted or a one-off /quiet) skips playback for
+        // regular output only -- never for an emergency message. Same rule
+        // processSpeech applies to synthesized speech.
+        if ((silentOutput || quiet) && !emergency.enabled) {
+            return true
+        }
+
+        // Multiplicative with the general master gain, not a replacement
+        // for it -- PROTOCOL's recording-only gain slider trims recording
+        // playback specifically (recorded voice tends to sit quieter than
+        // synthesized speech at the same level), on top of whatever the
+        // user already has master gain set to, not instead of it.
+        val recordingGainMultiplier = VoiceRecordingRepository.getPlaybackGainPercent(this) / 100f
+
+        val playablePcm = pcm.copyOf()
+        applyAudioEffects(
+            audioData = playablePcm,
+            modFreq = 0f,
+            modDepth = 0f,
+            crush = 0f,
+            gain = getEffectiveGain(emergency) * recordingGainMultiplier,
+            sampleRate = sampleRate
+        )
+
+        Thread {
+            if (emergency.enabled && emergency.tone != EmergencyTone.OFF) {
+                playEmergencyTone(
+                    tone = emergency.tone,
+                    forceSpeaker = emergency.forceSpeaker || forceSpeaker
+                )
+            }
+
+            playPcm(
+                audioData = playablePcm,
+                sampleRate = sampleRate,
+                forceSpeakerForRequest = emergency.forceSpeaker || forceSpeaker,
+                allowVolumeEnforcement = !emergency.enabled && masterGain > 1.2f
+            )
+        }.start()
+
+        return true
+    }
+
+    // The "PLAY" preview button inside QuickActionEditorDialog and MANAGE
+    // RECORDINGS -- same playPcm() routing as a real dispatch (force
+    // speaker, and here ALWAYS volume-enforced, since the whole point of a
+    // preview is to actually hear it) but with none of playRecording's
+    // communication-event side effects: no log entry, no emergency
+    // handling. Previously this used a standalone AudioTrack that never
+    // called ensureStreamVolume, which is why it could be silent if the
+    // device's media stream volume happened to be low -- routing through
+    // the same pipeline as everything else fixes that for good rather
+    // than re-solving it in a second place.
+    //
+    // visualText is MANAGE RECORDINGS' overlay-on-play toggle opting a
+    // specific preview into showing text on screen -- still not a real
+    // dispatch (no log entry either way), just the stored text the user
+    // asked to see while browsing for a recording.
+    private fun previewRecording(pcm: ShortArray, sampleRate: Int, visualText: String? = null) {
+        val recordingGainMultiplier = VoiceRecordingRepository.getPlaybackGainPercent(this) / 100f
+
+        val playablePcm = pcm.copyOf()
+        applyAudioEffects(
+            audioData = playablePcm,
+            modFreq = 0f,
+            modDepth = 0f,
+            crush = 0f,
+            gain = getEffectiveGain(EmergencyOptions()) * recordingGainMultiplier,
+            sampleRate = sampleRate
+        )
+
+        if (!visualText.isNullOrBlank()) {
+            showVisualPrompt(rawText = visualText, emergency = EmergencyOptions(), sticky = false)
+        }
+
+        Thread {
+            playPcm(
+                audioData = playablePcm,
+                sampleRate = sampleRate,
+                forceSpeakerForRequest = forceSpeaker,
+                allowVolumeEnforcement = true
+            )
+        }.start()
     }
 
     private fun getEffectiveGain(emergency: EmergencyOptions): Float {

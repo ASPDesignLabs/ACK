@@ -8,7 +8,14 @@ data class QuickActionSlot(
     val slotIndex: Int,
     val label: String = "ACTION ${slotIndex + 1}",
     val template: String = "",
-    val localValues: List<String> = emptyList()
+    val localValues: List<String> = emptyList(),
+
+    // Id of a VoiceRecording (output/VoiceRecordingRepository.kt) bound to
+    // this slot, or null for none. When set, issuing this prompt plays the
+    // recording instead of synthesizing template through TTS -- see
+    // QuickActionsDeck's execute path and OutputService's recording_id
+    // intent extra.
+    val recordingId: String? = null
 )
 
 @Serializable
