@@ -17,6 +17,7 @@ All notable changes to ACK are logged here. These same notes are available in-ap
 
 ### Fixed
 - Recording preview playback (the PLAY button in the EDIT QUICK ACTIONS UI and MANAGE RECORDINGS) could go silent when the device's media volume was low. Preview now routes through the same volume-enforced pipeline every other prompt in the app already uses.
+- Leading silence wasn't being trimmed from voice recordings (only trailing silence was). Speech onset now requires several consecutive above-threshold windows rather than just one, so a brief capture-start transient can't be mistaken for the start of speech.
 
 ## [1.0-beta.3] and earlier
 

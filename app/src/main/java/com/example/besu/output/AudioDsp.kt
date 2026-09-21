@@ -36,41 +36,23 @@ object AudioDsp {
     private const val SILENCE_RELATIVE_THRESHOLD = 0.08
     private const val SILENCE_PADDING_MS = 150
 
-    // Candidate-specific tunables -- see the SilenceTrimMethod variants
-    // below. Kept separate from the baseline constants above so tuning one
-    // candidate during testing never risks accidentally drifting the
-    // baseline everyone's already used to.
-    private const val GUARD_DISCARD_MS = 75
+    // Speech onset requires this many consecutive windows above threshold,
+    // not just one -- fixes a reported bug where leading silence never got
+    // trimmed (only trailing did). Root cause: VoiceRecorder prefers
+    // MediaRecorder.AudioSource.UNPROCESSED, which opts out of the
+    // platform's own pop/click/AGC-settle suppression, so a brief
+    // elevated-energy transient right at capture start would exceed the
+    // threshold on its own, making the old single-window rule land speech
+    // onset at/near sample 0 regardless of when real speech started.
+    // Requiring a sustained run filters that out while still catching
+    // genuine speech; self-adapts to however long the transient actually
+    // lasts rather than assuming a fixed duration. (Chosen after on-device
+    // A/B testing against three other candidates -- a fixed leading
+    // discard, dual-threshold hysteresis, and a noise-floor-relative
+    // threshold -- this one held up best.) Trailing edge still uses a
+    // single-window rule -- there's no reported problem there to fix, and
+    // capture end has no equivalent transient.
     private const val ONSET_CONSECUTIVE_WINDOWS = 3
-    private const val DUAL_ONSET_RELATIVE_THRESHOLD = 0.15
-    private const val DUAL_CONTINUE_RELATIVE_THRESHOLD = 0.05
-    private const val NOISE_FLOOR_THRESHOLD_MULTIPLIER = 4.0
-
-    // Reported bug: trimSilence only ever clips trailing dead air, never
-    // leading -- while VoiceRecorder's chosen source (UNPROCESSED, on API
-    // 24+) explicitly opts out of the platform's own pop/click/AGC-settle
-    // suppression, a brief elevated-energy transient right at capture
-    // start is a known quirk of raw/unprocessed Android audio sources.
-    // That transient would both (a) exceed the baseline's peak-relative
-    // threshold on its own, making firstSpeechWindow land at/near 0
-    // regardless of when real speech starts, and (b) sit inside
-    // reduceNoise's leading-300ms profile window, skewing what "noise"
-    // means for the whole clip. Nothing symmetric happens at capture end,
-    // which fits trailing trim working fine.
-    //
-    // Four candidate fixes below, each targeting the theory differently,
-    // for on-device A/B testing via PROTOCOL's (temporary) SILENCE TRIM
-    // METHOD selector -- see VoiceRecordingRepository.getSilenceTrimMethod.
-    // Once one is confirmed to actually work, the other three and this
-    // whole selector should come out; there's no reason to ship four
-    // implementations of the same feature.
-    enum class SilenceTrimMethod {
-        BASELINE,
-        GUARD_DISCARD,
-        ONSET_HYSTERESIS,
-        DUAL_THRESHOLD,
-        NOISE_FLOOR_RELATIVE
-    }
 
     fun reduceNoise(pcm: ShortArray, sampleRate: Int): ShortArray {
         // Too short to extract a meaningful noise profile and still leave
@@ -123,103 +105,18 @@ object AudioDsp {
     // relies on genuine quiet at the very start of the clip to estimate its
     // noise profile, and trimming first would remove that.
     //
-    // method picks which candidate implementation runs -- see
-    // SilenceTrimMethod above. Every candidate shares the same window size,
-    // padding, and RMS measurement (computeWindowRms below); only how the
-    // speech region's boundaries get decided differs between them.
-    fun trimSilence(
-        pcm: ShortArray,
-        sampleRate: Int,
-        method: SilenceTrimMethod = SilenceTrimMethod.BASELINE
-    ): ShortArray = when (method) {
-        SilenceTrimMethod.BASELINE -> trimSilenceBaseline(pcm, sampleRate)
-        SilenceTrimMethod.GUARD_DISCARD -> trimSilenceGuardDiscard(pcm, sampleRate)
-        SilenceTrimMethod.ONSET_HYSTERESIS -> trimSilenceOnsetHysteresis(pcm, sampleRate)
-        SilenceTrimMethod.DUAL_THRESHOLD -> trimSilenceDualThreshold(pcm, sampleRate)
-        SilenceTrimMethod.NOISE_FLOOR_RELATIVE -> trimSilenceNoiseFloorRelative(pcm, sampleRate)
-    }
-
-    // Splits pcm into SILENCE_WINDOW_MS windows and measures each one's RMS
-    // -- shared by every trim candidate below so they're all reasoning
-    // about the exact same measurement, differing only in how they turn it
-    // into a start/end decision.
-    private fun computeWindowRms(pcm: ShortArray, windowSize: Int, windowCount: Int): DoubleArray {
-        val rms = DoubleArray(windowCount)
-        for (w in 0 until windowCount) {
-            var sum = 0.0
-            val start = w * windowSize
-            for (i in start until start + windowSize) {
-                val sample = pcm[i].toDouble()
-                sum += sample * sample
-            }
-            rms[w] = kotlin.math.sqrt(sum / windowSize)
-        }
-        return rms
-    }
-
-    private fun windowToSampleRange(
-        pcm: ShortArray,
-        sampleRate: Int,
-        windowSize: Int,
-        firstSpeechWindow: Int,
-        lastSpeechWindow: Int
-    ): ShortArray {
-        val paddingSamples = sampleRate * SILENCE_PADDING_MS / 1000
-        val startSample = (firstSpeechWindow * windowSize - paddingSamples).coerceAtLeast(0)
-        val endSample = ((lastSpeechWindow + 1) * windowSize + paddingSamples).coerceAtMost(pcm.size)
-        return pcm.copyOfRange(startSample, endSample)
-    }
-
-    // The original implementation, unchanged: a window counts as "speech"
-    // once its RMS clears SILENCE_RELATIVE_THRESHOLD of the recording's own
-    // loudest window. Relative rather than a fixed absolute level, so this
-    // adapts to how loud or quiet a given recording naturally is -- but
-    // nothing here guards against a single loud window right at the start
-    // (a capture-start transient, say) being mistaken for speech onset.
-    private fun trimSilenceBaseline(pcm: ShortArray, sampleRate: Int): ShortArray {
-        val windowSize = (sampleRate * SILENCE_WINDOW_MS / 1000).coerceAtLeast(1)
-        val windowCount = pcm.size / windowSize
-        if (windowCount == 0) return pcm
-
-        val rms = computeWindowRms(pcm, windowSize, windowCount)
-        val peakRms = rms.maxOrNull() ?: 0.0
-        if (peakRms <= 0.0) return pcm
-
-        val threshold = peakRms * SILENCE_RELATIVE_THRESHOLD
-        val firstSpeechWindow = rms.indexOfFirst { it > threshold }
-        val lastSpeechWindow = rms.indexOfLast { it > threshold }
-        if (firstSpeechWindow == -1) return pcm
-
-        return windowToSampleRange(pcm, sampleRate, windowSize, firstSpeechWindow, lastSpeechWindow)
-    }
-
-    // Candidate 1: unconditionally discards the first GUARD_DISCARD_MS of
-    // the (already noise-reduced) clip before running the baseline scan on
-    // what's left -- treating a capture-start transient as known garbage
-    // rather than something worth measuring at all. Simplest and cheapest
-    // candidate, but it always costs the same fixed amount regardless of
-    // whether a transient is actually present, and would clip real speech
-    // if someone starts talking within that guard window.
-    private fun trimSilenceGuardDiscard(pcm: ShortArray, sampleRate: Int): ShortArray {
-        val guardSamples = (sampleRate * GUARD_DISCARD_MS / 1000).coerceAtMost(pcm.size)
-        // A clip no longer than the guard period itself has nothing left
-        // to discard from -- fall back to scanning it whole rather than
-        // handing trimSilenceBaseline an empty array (which would return
-        // that empty array right back, violating "never trim to nothing").
-        if (guardSamples <= 0 || guardSamples >= pcm.size) return trimSilenceBaseline(pcm, sampleRate)
-
-        val guarded = pcm.copyOfRange(guardSamples, pcm.size)
-        return trimSilenceBaseline(guarded, sampleRate)
-    }
-
-    // Candidate 2: speech onset requires ONSET_CONSECUTIVE_WINDOWS in a row
-    // above threshold, not just one -- a lone transient (a capture-start
-    // click, say) doesn't sustain long enough to trigger it, but real
-    // speech does. Self-adapts to however long the transient actually
-    // lasts, unlike the fixed-duration guard discard above. Trailing edge
-    // uses the same single-window rule as baseline -- there's no reported
-    // problem there to fix.
-    private fun trimSilenceOnsetHysteresis(pcm: ShortArray, sampleRate: Int): ShortArray {
+    // Splits the clip into SILENCE_WINDOW_MS windows and measures each
+    // window's RMS. A window counts as "speech" once its RMS clears
+    // SILENCE_RELATIVE_THRESHOLD of the recording's own loudest window --
+    // relative rather than a fixed absolute level, so this adapts to how
+    // loud or quiet a given recording naturally is. Speech onset
+    // specifically requires ONSET_CONSECUTIVE_WINDOWS in a row above
+    // threshold (see its own comment above); the trailing edge only needs
+    // one. Keeps a padding buffer around the detected speech region so
+    // words don't get clipped at the edges. If nothing clears the
+    // threshold at all -- a silent or near-silent recording -- returns the
+    // clip unchanged rather than risking trimming it down to nothing.
+    fun trimSilence(pcm: ShortArray, sampleRate: Int): ShortArray {
         val windowSize = (sampleRate * SILENCE_WINDOW_MS / 1000).coerceAtLeast(1)
         val windowCount = pcm.size / windowSize
         if (windowCount == 0) return pcm
@@ -246,69 +143,26 @@ object AudioDsp {
         if (firstSpeechWindow == -1) return pcm
 
         val lastSpeechWindow = rms.indexOfLast { it > threshold }
-        return windowToSampleRange(pcm, sampleRate, windowSize, firstSpeechWindow, lastSpeechWindow)
+
+        val paddingSamples = sampleRate * SILENCE_PADDING_MS / 1000
+        val startSample = (firstSpeechWindow * windowSize - paddingSamples).coerceAtLeast(0)
+        val endSample = ((lastSpeechWindow + 1) * windowSize + paddingSamples).coerceAtMost(pcm.size)
+
+        return pcm.copyOfRange(startSample, endSample)
     }
 
-    // Candidate 3: a higher bar to START the speech region
-    // (DUAL_ONSET_RELATIVE_THRESHOLD) than to CONTINUE it once started
-    // (DUAL_CONTINUE_RELATIVE_THRESHOLD) -- the classic two-threshold
-    // hysteresis approach behind tools like ffmpeg's silenceremove. The
-    // stricter onset bar makes a brief transient less likely to qualify on
-    // its own; once genuine speech is confirmed, the looser bar walks
-    // outward in both directions so quieter syllables right at the edges
-    // of a word don't get clipped just for falling under the stricter bar.
-    private fun trimSilenceDualThreshold(pcm: ShortArray, sampleRate: Int): ShortArray {
-        val windowSize = (sampleRate * SILENCE_WINDOW_MS / 1000).coerceAtLeast(1)
-        val windowCount = pcm.size / windowSize
-        if (windowCount == 0) return pcm
-
-        val rms = computeWindowRms(pcm, windowSize, windowCount)
-        val peakRms = rms.maxOrNull() ?: 0.0
-        if (peakRms <= 0.0) return pcm
-
-        val onsetThreshold = peakRms * DUAL_ONSET_RELATIVE_THRESHOLD
-        val continueThreshold = peakRms * DUAL_CONTINUE_RELATIVE_THRESHOLD
-
-        val onsetWindow = rms.indexOfFirst { it > onsetThreshold }
-        if (onsetWindow == -1) return pcm
-        val lastOnsetWindow = rms.indexOfLast { it > onsetThreshold }
-
-        var startWindow = onsetWindow
-        while (startWindow - 1 >= 0 && rms[startWindow - 1] > continueThreshold) startWindow--
-
-        var endWindow = lastOnsetWindow
-        while (endWindow + 1 < windowCount && rms[endWindow + 1] > continueThreshold) endWindow++
-
-        return windowToSampleRange(pcm, sampleRate, windowSize, startWindow, endWindow)
-    }
-
-    // Candidate 4: a different theory of the bug -- rather than a
-    // transient specifically, maybe the residual noise floor left behind
-    // by reduceNoise just isn't quiet enough relative to peak for
-    // baseline's fixed 8%-of-peak threshold to tell silence from speech.
-    // This measures the clip's own typical "quiet" directly (the MEDIAN
-    // window RMS -- resistant to a single outlier spike skewing it, unlike
-    // using the first window or a mean would be) and requires several
-    // times louder than that, rather than assuming a fixed fraction of
-    // peak already accounts for it.
-    private fun trimSilenceNoiseFloorRelative(pcm: ShortArray, sampleRate: Int): ShortArray {
-        val windowSize = (sampleRate * SILENCE_WINDOW_MS / 1000).coerceAtLeast(1)
-        val windowCount = pcm.size / windowSize
-        if (windowCount == 0) return pcm
-
-        val rms = computeWindowRms(pcm, windowSize, windowCount)
-        val peakRms = rms.maxOrNull() ?: 0.0
-        if (peakRms <= 0.0) return pcm
-
-        val sorted = rms.sortedArray()
-        val noiseFloor = sorted[sorted.size / 2]
-
-        val threshold = (noiseFloor * NOISE_FLOOR_THRESHOLD_MULTIPLIER).coerceAtMost(peakRms * 0.5)
-        val firstSpeechWindow = rms.indexOfFirst { it > threshold }
-        val lastSpeechWindow = rms.indexOfLast { it > threshold }
-        if (firstSpeechWindow == -1) return pcm
-
-        return windowToSampleRange(pcm, sampleRate, windowSize, firstSpeechWindow, lastSpeechWindow)
+    private fun computeWindowRms(pcm: ShortArray, windowSize: Int, windowCount: Int): DoubleArray {
+        val rms = DoubleArray(windowCount)
+        for (w in 0 until windowCount) {
+            var sum = 0.0
+            val start = w * windowSize
+            for (i in start until start + windowSize) {
+                val sample = pcm[i].toDouble()
+                sum += sample * sample
+            }
+            rms[w] = kotlin.math.sqrt(sum / windowSize)
+        }
+        return rms
     }
 
     private fun estimateNoiseProfile(pcm: ShortArray, sampleRate: Int, window: DoubleArray): DoubleArray {

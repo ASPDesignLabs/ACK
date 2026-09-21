@@ -215,13 +215,6 @@ fun SettingsView(
     var recordingGainPercent by remember {
         mutableFloatStateOf(VoiceRecordingRepository.getPlaybackGainPercent(context).toFloat())
     }
-    // Temporary, for on-device A/B testing of AudioDsp's leading-silence
-    // trim candidates -- see AudioDsp.SilenceTrimMethod and the section
-    // below. Remove this state (and the section) once a method is picked
-    // and hardwired in place of the selector.
-    var silenceTrimMethod by remember {
-        mutableStateOf(VoiceRecordingRepository.getSilenceTrimMethod(context))
-    }
     var importedBackup by remember { mutableStateOf<AckBackup?>(null) }
     var newDeckName by remember { mutableStateOf("") }
     var selectedColorIdx by remember { mutableIntStateOf(0) }
@@ -856,46 +849,6 @@ fun SettingsView(
                     steps = (VoiceRecordingRepository.MAX_PLAYBACK_GAIN_PERCENT / 5) - 1,
                     colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor, inactiveTrackColor = Color.DarkGray)
                 )
-            }
-
-            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
-
-            // TEMPORARY: A/B testing surface for AudioDsp's leading-silence
-            // trim candidates. Record the same test phrase under each
-            // method and listen back -- once one is confirmed to actually
-            // fix leading silence, this whole section (and the other three
-            // candidates in AudioDsp) should come out in favor of just
-            // hardwiring the winner.
-            item {
-                Text("SILENCE TRIM METHOD (TESTING)", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    "Temporary, for comparing leading-silence trim approaches. Record the same test phrase under each and listen back -- this section goes away once one is picked.",
-                    color = Color.Gray,
-                    fontSize = 9.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                val trimMethodOptions = listOf(
-                    AudioDsp.SilenceTrimMethod.BASELINE to "BASELINE (CURRENT)",
-                    AudioDsp.SilenceTrimMethod.GUARD_DISCARD to "GUARD DISCARD",
-                    AudioDsp.SilenceTrimMethod.ONSET_HYSTERESIS to "ONSET HYSTERESIS",
-                    AudioDsp.SilenceTrimMethod.DUAL_THRESHOLD to "DUAL THRESHOLD",
-                    AudioDsp.SilenceTrimMethod.NOISE_FLOOR_RELATIVE to "NOISE-FLOOR RELATIVE"
-                )
-
-                trimMethodOptions.forEach { (method, label) ->
-                    TightPanelButton(
-                        text = label,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-                        isActive = silenceTrimMethod == method,
-                        mainColor = primaryColor
-                    ) {
-                        silenceTrimMethod = method
-                        VoiceRecordingRepository.setSilenceTrimMethod(context, method)
-                    }
-                }
             }
         }
         HeroButton("UPLOAD PROTOCOL", Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
