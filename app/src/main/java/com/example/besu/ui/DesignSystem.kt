@@ -9,8 +9,10 @@ import com.example.besu.help.*
 import com.example.besu.output.*
 import com.example.besu.settings.*
 import com.example.besu.ui.theme.*
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -65,6 +67,9 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 data class VariableEditRequest(
@@ -339,6 +344,10 @@ private sealed class TerminalPromptResult {
     object ClearLog : TerminalPromptResult()
     object RunBackup : TerminalPromptResult()
     object RunRepair : TerminalPromptResult()
+    // Needs the composable's own reveal coroutine (line-by-line, shake to
+    // stop) -- same "parsing just identifies the intent" split as the
+    // three above.
+    object ShowInfo : TerminalPromptResult()
 }
 
 private val TERMINAL_HELP_LINES = listOf(
@@ -352,7 +361,43 @@ private val TERMINAL_HELP_LINES = listOf(
     "/t               BROWSE TARGET COMPUTER ENTRIES",
     "/cls             CLEAR THE LOG (CONFIRM REQUIRED)",
     "/b, /backup      EXPORT ACK DATA (CONFIRM REQUIRED)",
-    "/repair          RESTART BACKGROUND SERVICES"
+    "/repair          RESTART BACKGROUND SERVICES",
+    "/info            SHOW PATCH NOTES"
+)
+
+// --- PATCH NOTES (/info) ---
+// One entry here = one line revealed every ~2s by TerminalView's reveal
+// loop, not a paragraph to be pre-wrapped -- long lines still wrap fine
+// inside a CMD block, but keeping each entry to a single idea is what
+// makes the line-by-line pacing actually read as a rundown instead of a
+// wall of text arriving one row at a time. No blank-string entries --
+// each CMD line renders as its own bordered block (see TerminalView), so
+// an empty one shows up as a bare box rather than a clean gap; section
+// headers do the separating instead. Update this list (and CHANGELOG.md
+// at the repo root, which carries the same notes) with each beta.
+private val PATCH_NOTES = listOf(
+    "=== ACK v1.0-BETA.4 PATCH NOTES ===",
+    "-- VOICE RECORDINGS --",
+    "- RECORD A VOICE CLIP FOR ANY QUICK ACTION, QUICK-ACCESS KEY, OR MATRIX ENTRY",
+    "- AUTOMATIC NOISE REDUCTION + SILENCE TRIMMING ON EVERY RECORDING",
+    "- ADJUSTABLE RECORDING-ONLY PLAYBACK GAIN IN PROTOCOL",
+    "- MATRIX RECORDINGS CAN SET THEIR OWN VISUAL PROMPT OVERRIDE",
+    "- NOTHING DESTRUCTIVE: REMOVING A RECORDING ALWAYS FALLS BACK TO YOUR",
+    "  EXISTING TEMPLATE/VARIABLE SETUP, UNCHANGED",
+    "-- MANAGE RECORDINGS --",
+    "- REBUILT AS A DRILL-DOWN TREE: DECK > PROFILE > POSE > SLOT",
+    "- EACH ENTRY SHOWS ITS OVERLAY TEXT, PLAY TIME, AND FILE SIZE",
+    "- RE-RECORD, PLAY, OR DELETE DIRECTLY FROM THE TREE",
+    "- NEW: OVERLAY-ON-PLAY TOGGLE NEXT TO CLOSE -- SEE A RECORDING'S TEXT",
+    "  ON SCREEN WHILE PREVIEWING IT",
+    "-- MATRIX EDITOR --",
+    "- DESTRUCTIVE CONTROLS NOW COLLAPSED BY DEFAULT -- LESS SCROLLING",
+    "-- TERMINAL --",
+    "- NEW: /info SHOWS THESE PATCH NOTES, OR TAP THE STATUSBOX SHORTCUT",
+    "- SHAKE TO STOP THE READOUT EARLY",
+    "-- FIXES --",
+    "- FIXED RECORDING PREVIEW PLAYBACK GOING SILENT ON LOW DEVICE VOLUME",
+    "=== END PATCH NOTES ==="
 )
 
 // Logs a line straight into the Terminal without dispatching any speech --
@@ -464,6 +509,10 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
 
     if (first == "/repair") {
         return TerminalPromptResult.RunRepair
+    }
+
+    if (first == "/info") {
+        return TerminalPromptResult.ShowInfo
     }
 
     var flags = TerminalFlags()
@@ -602,6 +651,52 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     var promptValue by remember { mutableStateOf(TextFieldValue("")) }
     val promptFocusRequester = remember { FocusRequester() }
     val promptHaptic = LocalHapticFeedback.current
+
+    // --- /info (PATCH NOTES) ---
+    // Reveals PATCH_NOTES one line every 2s via the same local-log path
+    // every other command uses (logTerminalLocal), rather than pushing
+    // the whole list in at once like /help does -- both the typed command
+    // and the STATUSBOX shortcut button below call this same function, so
+    // there's exactly one place that owns the reveal's timing/cancellation.
+    val infoRevealScope = rememberCoroutineScope()
+    var infoRevealJob by remember { mutableStateOf<Job?>(null) }
+
+    fun startInfoReveal() {
+        infoRevealJob?.cancel()
+        promptValue = TextFieldValue("")
+        infoRevealJob = infoRevealScope.launch {
+            for (line in PATCH_NOTES) {
+                logTerminalLocal(context, line, "CMD")
+                delay(2000)
+            }
+            infoRevealJob = null
+        }
+    }
+
+    // Phone-shake kill switch doubles as this reveal's interrupt -- the
+    // same broadcast AccelerometerTapService already sends to silence
+    // audio/clear the visual overlay, listened for exactly the way
+    // SettingsView's shake-test panel already does.
+    DisposableEffect(Unit) {
+        val shakeReceiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                infoRevealJob?.cancel()
+                infoRevealJob = null
+            }
+        }
+        val filter = IntentFilter(AccelerometerTapService.ACTION_SHAKE_DETECTED)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(shakeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(shakeReceiver, filter)
+        }
+
+        onDispose {
+            infoRevealJob?.cancel()
+            context.unregisterReceiver(shakeReceiver)
+        }
+    }
 
     // /backup confirm reuses PROTOCOL's own export flow exactly --
     // TransferManager.generateBackupJson written to wherever the system
@@ -804,6 +899,10 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                     restartBackgroundServices(context)
                     logTerminalLocal(context, "BACKGROUND SERVICES RESTARTED")
                     promptValue = TextFieldValue("")
+                }
+                TerminalPromptResult.ShowInfo -> {
+                    // Clears promptValue itself -- see startInfoReveal.
+                    startInfoReveal()
                 }
                 TerminalPromptResult.Error -> {
                     // Leave the text in place -- a typo'd command or a
@@ -1106,16 +1205,41 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                 } else {
                     // TYPING: a compact two-line block, not the full
                     // three-row picker layout -- there's nothing to browse.
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        PulsingStatusBox(color = statusboxTextColor)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "TYPING",
-                            color = statusboxTextColor,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = STATUSBOX_FONT_SIZE,
-                            letterSpacing = 2.sp
+                    // The /INFO shortcut rides on the same row, right-
+                    // aligned, reusing StatusBoxItemRow (forced-highlighted,
+                    // single item) so it's the exact same reverse-video
+                    // POSIX-menu look /t's picker already uses -- a one-tap
+                    // shortcut for startInfoReveal(), equivalent to typing
+                    // /info and sending it.
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            PulsingStatusBox(color = statusboxTextColor)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "TYPING",
+                                color = statusboxTextColor,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = STATUSBOX_FONT_SIZE,
+                                letterSpacing = 2.sp
+                            )
+                        }
+
+                        StatusBoxItemRow(
+                            items = listOf(
+                                StatusBoxItem(label = "/INFO") {
+                                    promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    startInfoReveal()
+                                }
+                            ),
+                            highlightedIndex = 0,
+                            page = 0,
+                            onPageChange = {},
+                            color = statusboxTextColor
                         )
                     }
 
