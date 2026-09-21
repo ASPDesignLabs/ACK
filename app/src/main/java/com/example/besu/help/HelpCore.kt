@@ -42,6 +42,10 @@ enum class HelpCategory(
     FIELD_OPS(
         title = "FIELD OPS // GESTURE TRAINING",
         subtitle = "ARM, POSE, MODIFY, AND FIRE FROM THE WATCH"
+    ),
+    VOICE_RECORDINGS(
+        title = "VOICE RECORDINGS",
+        subtitle = "RECORD, ATTACH, AND MANAGE YOUR OWN VOICE PROMPTS"
     )
 }
 

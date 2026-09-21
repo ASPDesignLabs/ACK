@@ -1,5 +1,6 @@
 package com.example.besu.settings
 
+import com.example.besu.AckTags
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.output.*
@@ -30,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -254,6 +256,11 @@ fun ManageRecordingsDialog(
         mutableStateOf(VoiceRecordingRepository.getShowOverlayOnPreview(context))
     }
     val coroutineScope = rememberCoroutineScope()
+    val helpManager = LocalHelpManager.current
+
+    var hasSeenHelpOffer by remember {
+        mutableStateOf(VoiceRecordingRepository.hasSeenHelpOffer(context))
+    }
 
     fun playRecording(recording: VoiceRecording) {
         if (isPlayingId != null) return
@@ -293,14 +300,33 @@ fun ManageRecordingsDialog(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .heightIn(min = 44.dp)
+                    .testTag(AckTags.VOICE_REC_MANAGE_OVERLAY_TOGGLE)
+                    .helpTarget(AckTags.VOICE_REC_MANAGE_OVERLAY_TOGGLE, primaryColor)
                     .clickable {
                         showOverlayOnPreview = !showOverlayOnPreview
                         VoiceRecordingRepository.setShowOverlayOnPreview(context, showOverlayOnPreview)
+                        helpManager?.onEvent(
+                            HelpEvent.Interacted(AckTags.VOICE_REC_MANAGE_OVERLAY_TOGGLE)
+                        )
                     }
                     .padding(horizontal = 4.dp)
             )
         }
     ) {
+        if (!hasSeenHelpOffer) {
+            HelpOfferBanner(
+                message = "NEW: VOICE RECORDINGS HAS A HELP WALKTHROUGH -- RECORDING, " +
+                    "MATRIX NOTES, AND MANAGING WHAT YOU'VE RECORDED. FIND IT UNDER HELP " +
+                    "ANYTIME.",
+                primaryColor = primaryColor,
+                onDismiss = {
+                    VoiceRecordingRepository.markHelpOfferSeen(context)
+                    hasSeenHelpOffer = true
+                }
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+
         if (recordings.isEmpty()) {
             Text(
                 "NO RECORDINGS YET. RECORD ONE FROM A QUICK ACTIONS SLOT'S EDIT SCREEN, A QUICK-ACCESS KEY'S REC BUTTON, OR A MATRIX NODE'S EDITOR.",
@@ -312,6 +338,8 @@ fun ManageRecordingsDialog(
             Column(
                 modifier = Modifier
                     .heightIn(max = 460.dp)
+                    .testTag(AckTags.VOICE_REC_MANAGE_TREE)
+                    .helpTarget(AckTags.VOICE_REC_MANAGE_TREE, primaryColor)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -447,6 +475,8 @@ private fun RecTreeLeafCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = (row.depth * 14).dp, top = 2.dp)
+                .testTag(AckTags.VOICE_REC_MANAGE_LEAF)
+                .helpTarget(AckTags.VOICE_REC_MANAGE_LEAF, primaryColor)
                 .border(1.dp, primaryColor.copy(alpha = 0.4f), AckHelpShape)
                 .background(primaryColor.copy(alpha = 0.05f), AckHelpShape)
                 .padding(10.dp)

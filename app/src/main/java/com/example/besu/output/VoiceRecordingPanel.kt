@@ -24,12 +24,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.core.content.ContextCompat
+import com.example.besu.AckTags
+import com.example.besu.help.HelpEvent
+import com.example.besu.help.HelpOfferBanner
+import com.example.besu.help.LocalHelpManager
+import com.example.besu.help.helpTarget
 import com.example.besu.ui.RadicalRed
 import com.example.besu.ui.TightPanelButton
 import com.example.besu.ui.TightSectionLabel
@@ -64,6 +70,11 @@ fun VoiceRecordingPanel(
 ) {
     val recorder = remember(panelKey) { VoiceRecorder() }
     val coroutineScope = rememberCoroutineScope()
+    val helpManager = LocalHelpManager.current
+
+    var hasSeenHelpOffer by remember {
+        mutableStateOf(VoiceRecordingRepository.hasSeenHelpOffer(context))
+    }
 
     // The dialog hosting this panel can be dismissed (back, tap-outside,
     // SAVE, CANCEL) while a recording is still in progress -- without
@@ -149,6 +160,20 @@ fun VoiceRecordingPanel(
 
         when (phase) {
             RecordingPanelPhase.IDLE -> {
+                if (!hasSeenHelpOffer) {
+                    HelpOfferBanner(
+                        message = "NEW: VOICE RECORDINGS HAS A HELP WALKTHROUGH -- " +
+                            "RECORDING, MATRIX NOTES, AND MANAGING WHAT YOU'VE RECORDED. " +
+                            "FIND IT UNDER HELP ANYTIME.",
+                        primaryColor = primaryColor,
+                        onDismiss = {
+                            VoiceRecordingRepository.markHelpOfferSeen(context)
+                            hasSeenHelpOffer = true
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 if (existingRecording != null) {
                     Text(
                         text = "RECORDED (${VoiceRecordingRepository.formatDurationMs(existingRecording.durationMs)})",
@@ -167,10 +192,14 @@ fun VoiceRecordingPanel(
                     if (existingRecording != null) {
                         TightPanelButton(
                             text = if (isPlayingPreview) "PLAYING..." else "PLAY",
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag(AckTags.VOICE_REC_PLAY_BTN)
+                                .helpTarget(AckTags.VOICE_REC_PLAY_BTN, primaryColor),
                             isActive = !isPlayingPreview,
                             mainColor = primaryColor
                         ) {
+                            helpManager?.onEvent(HelpEvent.Interacted(AckTags.VOICE_REC_PLAY_BTN))
                             if (!isPlayingPreview) {
                                 isPlayingPreview = true
                                 // Routed through OutputService -- the same DSP/volume
@@ -189,18 +218,26 @@ fun VoiceRecordingPanel(
                         }
                         TightPanelButton(
                             text = "REMOVE",
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag(AckTags.VOICE_REC_REMOVE_BTN)
+                                .helpTarget(AckTags.VOICE_REC_REMOVE_BTN, primaryColor),
                             mainColor = RadicalRed,
                             isActive = true
                         ) {
+                            helpManager?.onEvent(HelpEvent.Interacted(AckTags.VOICE_REC_REMOVE_BTN))
                             onRemove()
                         }
                     }
                     TightPanelButton(
                         text = if (existingRecording != null) "RE-RECORD" else "RECORD",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(AckTags.VOICE_REC_RECORD_BTN)
+                            .helpTarget(AckTags.VOICE_REC_RECORD_BTN, primaryColor),
                         mainColor = primaryColor
                     ) {
+                        helpManager?.onEvent(HelpEvent.Interacted(AckTags.VOICE_REC_RECORD_BTN))
                         if (micPermissionGranted) {
                             if (recorder.start(context)) {
                                 recordingDurationMs = 0L
@@ -228,9 +265,13 @@ fun VoiceRecordingPanel(
                 ) {
                     TightPanelButton(
                         text = "STOP",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(AckTags.VOICE_REC_STOP_BTN)
+                            .helpTarget(AckTags.VOICE_REC_STOP_BTN, primaryColor),
                         mainColor = primaryColor
                     ) {
+                        helpManager?.onEvent(HelpEvent.Interacted(AckTags.VOICE_REC_STOP_BTN))
                         finishRecording()
                     }
                     TightPanelButton(
@@ -269,10 +310,14 @@ fun VoiceRecordingPanel(
                 ) {
                     TightPanelButton(
                         text = if (isPlayingPreview) "PLAYING..." else "PLAY",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(AckTags.VOICE_REC_PLAY_BTN)
+                            .helpTarget(AckTags.VOICE_REC_PLAY_BTN, primaryColor),
                         isActive = !isPlayingPreview,
                         mainColor = primaryColor
                     ) {
+                        helpManager?.onEvent(HelpEvent.Interacted(AckTags.VOICE_REC_PLAY_BTN))
                         val pcm = previewPcm
                         if (pcm != null && !isPlayingPreview) {
                             isPlayingPreview = true
@@ -291,18 +336,26 @@ fun VoiceRecordingPanel(
                     }
                     TightPanelButton(
                         text = "DISCARD",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(AckTags.VOICE_REC_DISCARD_BTN)
+                            .helpTarget(AckTags.VOICE_REC_DISCARD_BTN, primaryColor),
                         isActive = false,
                         mainColor = primaryColor
                     ) {
+                        helpManager?.onEvent(HelpEvent.Interacted(AckTags.VOICE_REC_DISCARD_BTN))
                         previewPcm = null
                         phase = RecordingPanelPhase.IDLE
                     }
                     TightPanelButton(
                         text = "ACCEPT",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(AckTags.VOICE_REC_ACCEPT_BTN)
+                            .helpTarget(AckTags.VOICE_REC_ACCEPT_BTN, primaryColor),
                         mainColor = primaryColor
                     ) {
+                        helpManager?.onEvent(HelpEvent.Interacted(AckTags.VOICE_REC_ACCEPT_BTN))
                         val pcm = previewPcm ?: return@TightPanelButton
                         onAccept(pcm, previewSampleRate)
                         previewPcm = null

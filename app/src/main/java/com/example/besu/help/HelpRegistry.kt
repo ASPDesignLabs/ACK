@@ -39,5 +39,5 @@ object HelpRegistry {
         EmojiDeckHelp.module,
         GifDeckHelp.module
     ) + MatrixDeckHelp.modules + PersonalizationHelp.module + SettingsManagementHelp.module +
-        TargetComputerHelp.module + FieldOpsHelp.modules
+        TargetComputerHelp.module + FieldOpsHelp.modules + VoiceRecordingsHelp.modules
 }

@@ -384,6 +384,8 @@ private val PATCH_NOTES = listOf(
     "- MATRIX RECORDINGS CAN SET THEIR OWN VISUAL PROMPT OVERRIDE",
     "- NOTHING DESTRUCTIVE: REMOVING A RECORDING ALWAYS FALLS BACK TO YOUR",
     "  EXISTING TEMPLATE/VARIABLE SETUP, UNCHANGED",
+    "- NEW: VOICE RECORDINGS CATEGORY IN HELP -- RECORDING, MATRIX CAVEATS,",
+    "  AND MANAGING RECORDINGS, EACH AS ITS OWN WALKTHROUGH",
     "-- MANAGE RECORDINGS --",
     "- REBUILT AS A DRILL-DOWN TREE: DECK > PROFILE > POSE > SLOT",
     "- EACH ENTRY SHOWS ITS OVERLAY TEXT, PLAY TIME, AND FILE SIZE",
@@ -2253,10 +2255,16 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(6.dp))
                         TightPanelButton(
                             text = "ATTACH VOICE RECORDING",
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag(AckTags.VOICE_REC_MATRIX_ATTACH_BTN)
+                                .helpTarget(AckTags.VOICE_REC_MATRIX_ATTACH_BTN, primaryColor),
                             mainColor = primaryColor
                         ) {
                             showAttachRecordingWarning = true
+                            helpManager?.onEvent(
+                                HelpEvent.Interacted(AckTags.VOICE_REC_MATRIX_ATTACH_BTN)
+                            )
                         }
                     }
 
@@ -2285,7 +2293,10 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 visualOverrideText = newValue
                                 CommandRepository.setVisualOverride(context, node.path, newValue)
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag(AckTags.VOICE_REC_MATRIX_OVERRIDE_FIELD)
+                                .helpTarget(AckTags.VOICE_REC_MATRIX_OVERRIDE_FIELD, primaryColor),
                             shape = AckHelpShape,
                             minLines = 2,
                             maxLines = 3,
@@ -2324,7 +2335,10 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(6.dp))
                         TightPanelButton(
                             text = "RE-ENABLE (MATCH CURRENT TEXT)",
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag(AckTags.VOICE_REC_MATRIX_REENABLE_BTN)
+                                .helpTarget(AckTags.VOICE_REC_MATRIX_REENABLE_BTN, primaryColor),
                             mainColor = primaryColor
                         ) {
                             val current = matrixRecording ?: return@TightPanelButton
@@ -2335,6 +2349,9 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 newSnapshot = tempText
                             )
                             matrixRecording = current.copy(enabled = true, boundPhraseSnapshot = tempText)
+                            helpManager?.onEvent(
+                                HelpEvent.Interacted(AckTags.VOICE_REC_MATRIX_REENABLE_BTN)
+                            )
                         }
                     }
 

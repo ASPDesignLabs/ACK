@@ -71,6 +71,7 @@ object VoiceRecordingRepository {
     const val DEFAULT_PLAYBACK_GAIN_PERCENT = 100
     const val MAX_PLAYBACK_GAIN_PERCENT = 300
     private const val KEY_SHOW_OVERLAY_ON_PREVIEW = "show_overlay_on_preview"
+    private const val KEY_SEEN_HELP_OFFER = "seen_help_offer"
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -106,6 +107,17 @@ object VoiceRecordingRepository {
 
     fun setShowOverlayOnPreview(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_SHOW_OVERLAY_ON_PREVIEW, enabled).apply()
+    }
+
+    // One-shot flag behind the small HELP tip shown either the first time
+    // someone taps RECORD in a VoiceRecordingPanel, or the first time they
+    // open MANAGE RECORDINGS -- whichever happens first. Shared across both
+    // trigger points so dismissing it anywhere hides it everywhere.
+    fun hasSeenHelpOffer(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_SEEN_HELP_OFFER, false)
+
+    fun markHelpOfferSeen(context: Context) {
+        prefs(context).edit().putBoolean(KEY_SEEN_HELP_OFFER, true).apply()
     }
 
     private fun recordingsDir(context: Context): File {

@@ -280,6 +280,9 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     var showPoseSelector by remember {
         mutableStateOf(false)
     }
+    var showVoiceRecHelpSelector by remember {
+        mutableStateOf(false)
+    }
     // Set when a HelpModule needs a deck that doesn't exist yet (e.g. Quick
     // Actions Deck's tutorial) -- showCreateDeckDialog opens with that deck
     // type pre-selected, and once CreateDeckDialog's onCreate fires, this
@@ -1393,7 +1396,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             // but aren't listed directly -- poseTrainingEntryModule is
                             // the single visible entry point into them.
                             modules = HelpRegistry.modules.filterNot {
-                                it.id in FieldOpsHelp.pacedModuleIds
+                                it.id in FieldOpsHelp.pacedModuleIds ||
+                                    it.id in VoiceRecordingsHelp.hiddenModuleIds
                             },
                             context = HelpContext(
                                 viewMode = viewMode,
@@ -1426,6 +1430,12 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         showTrainingGround = false
                                         showDeckTrainer = false
                                         showPoseSelector = true
+                                    }
+                                    VoiceRecordingsHelp.entryModule.id -> {
+                                        showTrainingGround = false
+                                        showDeckTrainer = false
+                                        showPoseSelector = false
+                                        showVoiceRecHelpSelector = true
                                     }
                                     QuickActionsDeckHelp.module.id -> {
                                         showTrainingGround = false
@@ -1468,6 +1478,43 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             },
                             onDismiss = {
                                 showPoseSelector = false
+                            }
+                        )
+                    }
+
+                    if (showVoiceRecHelpSelector) {
+                        VoiceRecordingsHelpSelectorDialog(
+                            options = VoiceRecordingsHelp.options,
+                            primaryColor = primaryColor,
+                            onSelect = { moduleId ->
+                                showVoiceRecHelpSelector = false
+                                // The recording walkthrough is anchored in a Quick
+                                // Actions slot -- same "find or ask to create one
+                                // first" handling as QuickActionsDeckHelp.module.id
+                                // below. The other two modules have no deck
+                                // dependency (the Matrix one force-switches to the
+                                // DEFAULT deck itself via requiresMatrixDeck).
+                                if (moduleId == VoiceRecordingsHelp.recordingModule.id) {
+                                    val existingDeck = decks.firstOrNull {
+                                        it.type == DeckType.QUICK_ACTIONS
+                                    }
+
+                                    if (existingDeck != null) {
+                                        activateDeck(
+                                            id = existingDeck.id,
+                                            colorIdx = existingDeck.colorIndex
+                                        )
+                                        helpManager.start(moduleId)
+                                    } else {
+                                        pendingHelpModuleId = moduleId
+                                        showCreateDeckDialog = true
+                                    }
+                                } else {
+                                    helpManager.start(moduleId)
+                                }
+                            },
+                            onDismiss = {
+                                showVoiceRecHelpSelector = false
                             }
                         )
                     }
@@ -1579,6 +1626,10 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 // and just drop the pending tutorial silently.
                                 val pendingId = pendingHelpModuleId
                                 if (pendingId == QuickActionsDeckHelp.module.id &&
+                                    type == DeckType.QUICK_ACTIONS
+                                ) {
+                                    helpManager.start(pendingId)
+                                } else if (pendingId == VoiceRecordingsHelp.recordingModule.id &&
                                     type == DeckType.QUICK_ACTIONS
                                 ) {
                                     helpManager.start(pendingId)

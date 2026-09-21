@@ -819,10 +819,14 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(12.dp))
                 NeonButton(
                     "MANAGE RECORDINGS",
-                    Modifier.fillMaxWidth(),
+                    Modifier
+                        .fillMaxWidth()
+                        .testTag(AckTags.VOICE_REC_MANAGE_BTN)
+                        .helpTarget(AckTags.VOICE_REC_MANAGE_BTN, primaryColor),
                     mainColor = primaryColor
                 ) {
                     showManageRecordings = true
+                    reportHelpInteraction(AckTags.VOICE_REC_MANAGE_BTN)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

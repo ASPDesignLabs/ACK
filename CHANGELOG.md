@@ -11,6 +11,7 @@ All notable changes to ACK are logged here. These same notes are available in-ap
 - **Overlay-on-play toggle in MANAGE RECORDINGS.** A persisted switch next to CLOSE — when on, tapping PLAY also shows the recording's own text on the overlay, a second way to confirm you've found the right one.
 - **`/info` in the TERMINAL.** Type `/info` and send it to read these patch notes line-by-line right in the app. While the command bar reads exactly `/info`, the STATUSBOX's TYPING indicator is replaced by a one-tap `INFO` shortcut. Shake to stop the readout early.
 - **One-tap confirmation for `/cls` and `/backup`.** Both commands still require confirming before they run, but you no longer have to retype the whole command with `confirm` added — while the bar holds the bare (unconfirmed) form of either, the STATUSBOX shows "THIS COMMAND REQUIRES CONFIRMATION" and a one-tap `CONFIRM` shortcut.
+- **A VOICE RECORDINGS category in HELP.** Three walkthroughs — recording a prompt, Matrix-specific caveats (variables, the visual override, re-enabling after an edit), and MANAGE RECORDINGS' tree browser — reachable from HELP's new VOICE RECORDINGS tab at any time. A small, dismissible one-time tip also points you there the first time you tap RECORD or open MANAGE RECORDINGS.
 
 ### Changed
 - The Matrix Live-Save Editor's DESTRUCTIVE CONTROLS section is now collapsed by default, cutting the scroll distance to COMMIT/CLOSE.
