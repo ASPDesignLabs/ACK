@@ -376,7 +376,7 @@ private val TERMINAL_HELP_LINES = listOf(
 // headers do the separating instead. Update this list (and CHANGELOG.md
 // at the repo root, which carries the same notes) with each beta.
 private val PATCH_NOTES = listOf(
-    "=== ACK v1.0-BETA.4 PATCH NOTES ===",
+    "=== ACK v1.0-BETA.5 PATCH NOTES ===",
     "-- VOICE RECORDINGS --",
     "- RECORD A VOICE CLIP FOR ANY QUICK ACTION, QUICK-ACCESS KEY, OR MATRIX ENTRY",
     "- AUTOMATIC NOISE REDUCTION + SILENCE TRIMMING ON EVERY RECORDING",
@@ -395,6 +395,8 @@ private val PATCH_NOTES = listOf(
     "-- TERMINAL --",
     "- NEW: /info SHOWS THESE PATCH NOTES, OR TAP THE STATUSBOX SHORTCUT",
     "- SHAKE TO STOP THE READOUT EARLY",
+    "- NEW: TYPING /cls OR /backup NOW SHOWS A ONE-TAP CONFIRM SHORTCUT IN",
+    "  THE STATUSBOX INSTEAD OF RETYPING THE COMMAND WITH CONFIRM ADDED",
     "-- FIXES --",
     "- FIXED RECORDING PREVIEW PLAYBACK GOING SILENT ON LOW DEVICE VOLUME",
     "=== END PATCH NOTES ==="
@@ -760,6 +762,21 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     // range-based priority system -- typing exactly "/info" can't also
     // contain a live /v or /t trigger.
     val infoTriggerActive = promptValue.text.trim().equals("/info", ignoreCase = true)
+
+    // /cls and /b(/backup) need a second "... confirm" submission before
+    // they actually run (see parseTerminalCommand's own CMD_WARN prompt).
+    // Same live-detection idea as /info above, but for whichever of the
+    // two is currently typed in its bare (not-yet-confirmed) form -- lets
+    // a one-tap STATUSBOX button send the confirmed version instead of
+    // retyping the whole command.
+    val confirmPromptTokens = promptValue.text.trim().split(Regex("\\s+"))
+    val confirmPromptFirst = confirmPromptTokens.firstOrNull()?.lowercase().orEmpty()
+    val confirmPromptRest = confirmPromptTokens.drop(1).joinToString(" ").trim().lowercase()
+    val confirmTriggerCommand: String? = when {
+        confirmPromptFirst == "/cls" && confirmPromptRest != "confirm" -> "/cls"
+        (confirmPromptFirst == "/b" || confirmPromptFirst == "/backup") && confirmPromptRest != "confirm" -> "/backup"
+        else -> null
+    }
 
     var selectedVGrouping by remember { mutableStateOf<String?>(null) }
     var vGroupingPage by remember { mutableIntStateOf(0) }
@@ -1222,6 +1239,38 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                             StatusBoxItem(label = "INFO") {
                                 promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 startInfoReveal()
+                            }
+                        ),
+                        highlightedIndex = 0,
+                        page = 0,
+                        onPageChange = {},
+                        color = statusboxTextColor
+                    )
+                } else if (confirmTriggerCommand != null) {
+                    // Live /cls or /b(/backup) detection, in its bare
+                    // (not-yet-confirmed) form -- replaces TYPING with a
+                    // warning line and a single forced-highlighted CONFIRM
+                    // item. Tapping it sends the confirmed form directly
+                    // (submitPrompt() runs the exact same parse/dispatch
+                    // path a manually typed "... confirm" would), so
+                    // there's no separate confirm logic to keep in sync
+                    // with parseTerminalCommand's own.
+                    Text(
+                        "THIS COMMAND REQUIRES CONFIRMATION",
+                        color = statusboxTextColor,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = STATUSBOX_FONT_SIZE
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    StatusBoxItemRow(
+                        items = listOf(
+                            StatusBoxItem(label = "CONFIRM") {
+                                promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                promptValue = TextFieldValue("$confirmTriggerCommand confirm")
+                                submitPrompt()
                             }
                         ),
                         highlightedIndex = 0,
