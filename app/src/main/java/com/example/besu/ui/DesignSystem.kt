@@ -755,6 +755,12 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
     val variableTriggerActive = activeTriggerMode == "VARIABLE"
     val targetTriggerActive = activeTriggerMode == "TARGET"
 
+    // /info is a whole-command match, not an insertable mid-text token
+    // like /v or /t, so it doesn't need to share activeTriggerMode's
+    // range-based priority system -- typing exactly "/info" can't also
+    // contain a live /v or /t trigger.
+    val infoTriggerActive = promptValue.text.trim().equals("/info", ignoreCase = true)
+
     var selectedVGrouping by remember { mutableStateOf<String?>(null) }
     var vGroupingPage by remember { mutableIntStateOf(0) }
     LaunchedEffect(variableTriggerActive) {
@@ -1202,44 +1208,40 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                             color = statusboxTextColor
                         )
                     }
+                } else if (infoTriggerActive) {
+                    // Live /info detection, same idea as /v and /t above but
+                    // with nothing to pick -- the prompt text is already the
+                    // whole command. Replaces the TYPING block entirely with
+                    // a single forced-highlighted StatusBoxItem reading
+                    // "INFO", the same reverse-video POSIX look /t's picker
+                    // uses for its selected item. Only appears while the
+                    // prompt is exactly "/info"; tapping it (or just hitting
+                    // Send) starts the reveal either way.
+                    StatusBoxItemRow(
+                        items = listOf(
+                            StatusBoxItem(label = "INFO") {
+                                promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                startInfoReveal()
+                            }
+                        ),
+                        highlightedIndex = 0,
+                        page = 0,
+                        onPageChange = {},
+                        color = statusboxTextColor
+                    )
                 } else {
                     // TYPING: a compact two-line block, not the full
                     // three-row picker layout -- there's nothing to browse.
-                    // The /INFO shortcut rides on the same row, right-
-                    // aligned, reusing StatusBoxItemRow (forced-highlighted,
-                    // single item) so it's the exact same reverse-video
-                    // POSIX-menu look /t's picker already uses -- a one-tap
-                    // shortcut for startInfoReveal(), equivalent to typing
-                    // /info and sending it.
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            PulsingStatusBox(color = statusboxTextColor)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "TYPING",
-                                color = statusboxTextColor,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = STATUSBOX_FONT_SIZE,
-                                letterSpacing = 2.sp
-                            )
-                        }
-
-                        StatusBoxItemRow(
-                            items = listOf(
-                                StatusBoxItem(label = "/INFO") {
-                                    promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    startInfoReveal()
-                                }
-                            ),
-                            highlightedIndex = 0,
-                            page = 0,
-                            onPageChange = {},
-                            color = statusboxTextColor
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PulsingStatusBox(color = statusboxTextColor)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "TYPING",
+                            color = statusboxTextColor,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = STATUSBOX_FONT_SIZE,
+                            letterSpacing = 2.sp
                         )
                     }
 
