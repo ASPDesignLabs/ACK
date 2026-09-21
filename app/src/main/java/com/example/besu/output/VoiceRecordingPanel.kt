@@ -108,9 +108,13 @@ fun VoiceRecordingPanel(
                 // Noise reduction first -- it relies on genuine quiet at
                 // the very start of the clip to estimate its noise
                 // profile, so trimming that away first would throw off
-                // its calibration. Trimming runs on the denoised result.
+                // its calibration. Trimming runs on the denoised result,
+                // using whichever candidate method PROTOCOL's (temporary)
+                // SILENCE TRIM METHOD selector currently has picked -- see
+                // VoiceRecordingRepository.getSilenceTrimMethod.
                 val denoised = AudioDsp.reduceNoise(raw, VoiceRecorder.SAMPLE_RATE)
-                AudioDsp.trimSilence(denoised, VoiceRecorder.SAMPLE_RATE)
+                val trimMethod = VoiceRecordingRepository.getSilenceTrimMethod(context)
+                AudioDsp.trimSilence(denoised, VoiceRecorder.SAMPLE_RATE, trimMethod)
             }
             previewPcm = processed
             previewSampleRate = VoiceRecorder.SAMPLE_RATE

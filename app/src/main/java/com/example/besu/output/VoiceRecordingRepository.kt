@@ -71,6 +71,7 @@ object VoiceRecordingRepository {
     const val DEFAULT_PLAYBACK_GAIN_PERCENT = 100
     const val MAX_PLAYBACK_GAIN_PERCENT = 300
     private const val KEY_SHOW_OVERLAY_ON_PREVIEW = "show_overlay_on_preview"
+    private const val KEY_SILENCE_TRIM_METHOD = "silence_trim_method_testing"
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -106,6 +107,25 @@ object VoiceRecordingRepository {
 
     fun setShowOverlayOnPreview(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_SHOW_OVERLAY_ON_PREVIEW, enabled).apply()
+    }
+
+    // Temporary, for A/B testing AudioDsp's leading-silence trim
+    // candidates on-device -- see PROTOCOL's SILENCE TRIM METHOD
+    // (TESTING) section and AudioDsp.SilenceTrimMethod. Defaults to
+    // BASELINE (today's shipped behavior) so nothing changes until a
+    // method is deliberately picked. Remove this once a winner is chosen
+    // and hardwired in place of the selector.
+    fun getSilenceTrimMethod(context: Context): AudioDsp.SilenceTrimMethod {
+        val raw = prefs(context).getString(KEY_SILENCE_TRIM_METHOD, null) ?: return AudioDsp.SilenceTrimMethod.BASELINE
+        return try {
+            AudioDsp.SilenceTrimMethod.valueOf(raw)
+        } catch (_: IllegalArgumentException) {
+            AudioDsp.SilenceTrimMethod.BASELINE
+        }
+    }
+
+    fun setSilenceTrimMethod(context: Context, method: AudioDsp.SilenceTrimMethod) {
+        prefs(context).edit().putString(KEY_SILENCE_TRIM_METHOD, method.name).apply()
     }
 
     private fun recordingsDir(context: Context): File {
