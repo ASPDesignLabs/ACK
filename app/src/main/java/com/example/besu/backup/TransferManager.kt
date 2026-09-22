@@ -215,6 +215,12 @@ object TransferManager {
         val voiceRecordings = VoiceRecordingRepository.exportForBackup(context)
         val voiceRecordingGainPercent = VoiceRecordingRepository.getPlaybackGainPercent(context)
 
+// 9c. Gather autocomplete suggestion history -- its own dedicated prefs
+// file, so a clean whole-file export needs no key-prefix filtering the
+// way rootOverrides (sharing "ack_matrix_config" with everything else)
+// does above.
+        val autocompleteHistory = AutocompleteHistoryRepository.exportForBackup(context)
+
 // 10. Wrap and encode.
         val backup = AckBackup(
             dsp = dspConfig,
@@ -236,6 +242,7 @@ object TransferManager {
             computerCategories = computerCategories,
             voiceRecordings = voiceRecordings,
             voiceRecordingGainPercent = voiceRecordingGainPercent,
+            autocompleteHistory = autocompleteHistory,
         )
 
         return json.encodeToString(backup)
@@ -417,6 +424,24 @@ object TransferManager {
             backup.computerCategories.size
         ) {
             return false
+        }
+
+// 12. Validate autocomplete suggestion history. Scope keys are generated
+// internally (see AutocompleteHistoryRepository's *ScopeKey functions),
+// not user-typed, but still validated on the way in like every other
+// backup key -- a corrupted or hand-edited backup shouldn't be trusted
+// just because this field's keys aren't normally free text.
+        if (backup.autocompleteHistory.size > 2000) return false
+
+        backup.autocompleteHistory.forEach { (scopeKey, entries) ->
+            if (scopeKey.length > MAX_KEY_LENGTH) return false
+            if (!SAFE_KEY_PATTERN.matches(scopeKey)) return false
+            if (entries.size > 20) return false
+
+            entries.forEach { entry ->
+                if (entry.value.length > MAX_PHRASE_LENGTH) return false
+                if (entry.count !in 1..100_000) return false
+            }
         }
 
         return true
@@ -626,6 +651,8 @@ object TransferManager {
         // instead of a slot with a recordingId pointing at nothing.
         VoiceRecordingRepository.replaceFromBackup(context, backup.voiceRecordings)
         VoiceRecordingRepository.setPlaybackGainPercent(context, backup.voiceRecordingGainPercent)
+
+        AutocompleteHistoryRepository.restoreFromBackup(context, backup.autocompleteHistory)
 
         CommandRepository.activateDeck(
             context = context,

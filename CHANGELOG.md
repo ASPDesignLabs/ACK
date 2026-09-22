@@ -4,6 +4,9 @@ All notable changes to ACK are logged here. These same notes are available in-ap
 
 ## [1.0-beta.7] - Unreleased
 
+### Added
+- **Autocomplete for variable and Shared Root Variable fields.** ACK now remembers what you've typed into a Matrix node's local variable fields, a Quick Actions slot's local variable fields, and Shared Root Variables' A/B/C values, and offers your most-used past entries back as tappable chips right under the field -- tap one to fill the field with it. Matrix and Quick Actions history is scoped to the exact field it came from; Shared Root Variables history is scoped globally per category, matching how those values already work today. Included in EXPORT .JSON backups, and clearable in one action from a new AUTOCOMPLETE section in PROTOCOL.
+
 ### Fixed
 - Output could go quiet or fail to reach the car's speakers at all when connected to Android Auto. ACK never requested audio focus on any playback path -- fine on a phone with nothing else competing, but Android Auto is strict about the standard Android focus handshake while it's juggling navigation, music, and calls, and an app that never asks has no standing in that negotiation. Every dispatch now briefly requests audio focus before playing (and releases it right after), the same signal every well-behaved Android app sends to say "let this through."
 

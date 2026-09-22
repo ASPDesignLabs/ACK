@@ -484,6 +484,21 @@ private fun QuickActionEditorDialog(
                             singleLine = true,
                             colors = NeonTextFieldColors(primaryColor)
                         )
+
+                        AutocompleteChipRow(
+                            suggestions = AutocompleteHistoryRepository.getSuggestions(
+                                context,
+                                AutocompleteHistoryRepository.quickActionVariableScopeKey(
+                                    deckId, groupIndex, slot.slotIndex, index
+                                )
+                            ),
+                            primaryColor = primaryColor,
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) { suggestion ->
+                            localValues = localValues.toMutableList().apply {
+                                this[index] = suggestion
+                            }
+                        }
                     }
                 }
 
@@ -512,6 +527,16 @@ private fun QuickActionEditorDialog(
                             .helpTarget(AckTags.QUICK_ACTION_SAVE, primaryColor),
                         mainColor = primaryColor
                     ) {
+                        localValues.forEachIndexed { index, value ->
+                            AutocompleteHistoryRepository.recordUsage(
+                                context,
+                                AutocompleteHistoryRepository.quickActionVariableScopeKey(
+                                    deckId, groupIndex, slot.slotIndex, index
+                                ),
+                                value
+                            )
+                        }
+
                         onSave(
                             label,
                             template,

@@ -328,6 +328,7 @@ fun SettingsView(
     }
 
     var showImportDialog by remember { mutableStateOf(false) }
+    var showClearAutocompleteConfirm by remember { mutableStateOf(false) }
     var showManageRecordings by remember { mutableStateOf(false) }
     var recordingGainPercent by remember {
         mutableFloatStateOf(VoiceRecordingRepository.getPlaybackGainPercent(context).toFloat())
@@ -1094,8 +1095,57 @@ fun SettingsView(
                     colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor, inactiveTrackColor = Color.DarkGray)
                 )
             }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            item {
+                Text("AUTOCOMPLETE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "ACK remembers what you've typed into Matrix and Quick Actions variable fields and Shared Root Variables, offering your most-used past values back as tappable chips. Local to this device, and included in EXPORT .JSON backups.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                NeonButton(
+                    "CLEAR AUTOCOMPLETE HISTORY",
+                    Modifier.fillMaxWidth(),
+                    mainColor = RadicalRed
+                ) {
+                    showClearAutocompleteConfirm = true
+                }
+            }
         }
         HeroButton("UPLOAD PROTOCOL", Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
+    }
+
+    if (showClearAutocompleteConfirm) {
+        TightDialogSurface(
+            onDismiss = { showClearAutocompleteConfirm = false },
+            primaryColor = RadicalRed,
+            title = "CLEAR AUTOCOMPLETE HISTORY",
+            dismissLabel = "CANCEL"
+        ) {
+            Text(
+                "This clears every remembered value across every Matrix node, Quick Actions slot, and Shared Root Variable bank. Nothing about your decks, phrases, or the variable values currently set is touched -- only the suggestion history. This cannot be undone.",
+                color = Color.White,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TightPanelButton("CLEAR", Modifier.weight(1f), mainColor = RadicalRed) {
+                    AutocompleteHistoryRepository.clearAll(context)
+                    showClearAutocompleteConfirm = false
+                }
+                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
+                    showClearAutocompleteConfirm = false
+                }
+            }
+        }
     }
 
     if (showImportDialog && importedBackup != null) {

@@ -377,6 +377,12 @@ private val TERMINAL_HELP_LINES = listOf(
 // at the repo root, which carries the same notes) with each beta.
 private val PATCH_NOTES = listOf(
     "=== ACK v1.0-BETA.7 PATCH NOTES ===",
+    "-- AUTOCOMPLETE --",
+    "- NEW: ACK REMEMBERS WHAT YOU'VE TYPED INTO MATRIX/QUICK ACTIONS",
+    "  VARIABLE FIELDS AND SHARED ROOT VARIABLES, OFFERING YOUR MOST-USED",
+    "  PAST ENTRIES BACK AS TAPPABLE CHIPS UNDER THE FIELD",
+    "- INCLUDED IN EXPORT .JSON BACKUPS",
+    "- CLEARABLE IN ONE ACTION FROM A NEW AUTOCOMPLETE SECTION IN PROTOCOL",
     "-- FIXES --",
     "- FIXED OUTPUT GOING QUIET OR NOT REACHING THE CAR'S SPEAKERS AT ALL",
     "  ON ANDROID AUTO. ACK NEVER REQUESTED AUDIO FOCUS ON ANY PLAYBACK",
@@ -2371,6 +2377,13 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 "VARIABLE ${index + 1} // ROOT $tag"
                             }
 
+                            // Per node, per variable slot -- typing the
+                            // same name into a different node (or a
+                            // different variable on this same node)
+                            // doesn't cross-suggest here, by design.
+                            val autocompleteScopeKey = AutocompleteHistoryRepository
+                                .matrixVariableScopeKey(activeDeckId, activeProfile, node.path, index)
+
                             OutlinedTextField(
                                 value = tempVars[index],
                                 onValueChange = { newValue ->
@@ -2379,7 +2392,22 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(min = 52.dp),
+                                    .heightIn(min = 52.dp)
+                                    .onFocusChanged { state ->
+                                        // Local variables live-save on every
+                                        // keystroke already -- focus-loss is
+                                        // this field's only natural "the
+                                        // user is done typing" moment, so
+                                        // that's what counts as one usage
+                                        // rather than every keystroke.
+                                        if (!state.isFocused) {
+                                            AutocompleteHistoryRepository.recordUsage(
+                                                context,
+                                                autocompleteScopeKey,
+                                                tempVars[index]
+                                            )
+                                        }
+                                    },
                                 shape = AckHelpShape,
                                 singleLine = true,
                                 label = {
@@ -2410,6 +2438,16 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                     cursorColor = NeonPalette.SWATCHES[3]
                                 )
                             )
+
+                            AutocompleteChipRow(
+                                suggestions = AutocompleteHistoryRepository
+                                    .getSuggestions(context, autocompleteScopeKey),
+                                primaryColor = NeonPalette.SWATCHES[3],
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) { suggestion ->
+                                tempVars[index] = suggestion
+                                saveVariables()
+                            }
 
                             if (index < variableCount - 1) {
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -2799,6 +2837,22 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             cursorColor = primaryColor
                         )
                     )
+
+                    AutocompleteChipRow(
+                        suggestions = AutocompleteHistoryRepository.getSuggestions(
+                            context,
+                            AutocompleteHistoryRepository.matrixVariableScopeKey(
+                                CommandRepository.getActiveDeckId(context),
+                                CommandRepository.getActiveProfile(context),
+                                request.nodePath,
+                                request.index
+                            )
+                        ),
+                        primaryColor = primaryColor,
+                        modifier = Modifier.padding(top = 6.dp)
+                    ) { suggestion ->
+                        value = suggestion
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -2827,6 +2881,17 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             context,
                             request.nodePath,
                             existingValues
+                        )
+
+                        AutocompleteHistoryRepository.recordUsage(
+                            context,
+                            AutocompleteHistoryRepository.matrixVariableScopeKey(
+                                CommandRepository.getActiveDeckId(context),
+                                CommandRepository.getActiveProfile(context),
+                                request.nodePath,
+                                request.index
+                            ),
+                            value
                         )
 
                         refreshKey++
@@ -4067,6 +4132,7 @@ fun RootOverrideStrip(
             tag = tag,
             category = category,
             initialValue = config.slots[tag]?.value.orEmpty(),
+            context = context,
             primaryColor = primaryColor,
             onDismiss = {
                 editingTag = null
@@ -4087,6 +4153,7 @@ fun RootOverrideValueDialog(
     tag: String,
     category: String,
     initialValue: String,
+    context: Context,
     primaryColor: Color,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
@@ -4094,6 +4161,8 @@ fun RootOverrideValueDialog(
     var value by remember(tag, initialValue) {
         mutableStateOf(initialValue)
     }
+
+    val autocompleteScopeKey = AutocompleteHistoryRepository.rootOverrideScopeKey(category, tag)
 
     TightDialogSurface(
         onDismiss = onDismiss,
@@ -4132,6 +4201,17 @@ fun RootOverrideValueDialog(
                     )
                 )
 
+                AutocompleteChipRow(
+                    suggestions = AutocompleteHistoryRepository.getSuggestions(
+                        context,
+                        autocompleteScopeKey
+                    ),
+                    primaryColor = primaryColor,
+                    modifier = Modifier.padding(top = 6.dp)
+                ) { suggestion ->
+                    value = suggestion
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
@@ -4143,6 +4223,7 @@ fun RootOverrideValueDialog(
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
+                        AutocompleteHistoryRepository.recordUsage(context, autocompleteScopeKey, value)
                         onSave(value)
                     }
 

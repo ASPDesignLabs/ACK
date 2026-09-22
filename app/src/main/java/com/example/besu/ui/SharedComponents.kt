@@ -8,7 +8,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,6 +22,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.besu.ui.theme.Graphite
@@ -131,6 +134,55 @@ fun NeonToggle(
                 .size(20.dp)
                 .background(if (checked) activeColor else Color.Gray, CutCornerShape(3.dp))
         )
+    }
+}
+
+// "You've typed this here before" suggestions -- AutocompleteHistoryRepository
+// supplies the ranked values, this just renders them. Renders nothing at
+// all when there's nothing to suggest, rather than an empty row, so a
+// field with no history yet doesn't reserve dead space or look like a
+// broken control. Tapping a chip only calls onSelect with its text; every
+// current call site treats that as "replace this field's whole value,"
+// since all three fields this backs (Matrix/Quick Actions local variables,
+// Shared Root Variables) hold one short value rather than a composed
+// phrase.
+@Composable
+fun AutocompleteChipRow(
+    suggestions: List<String>,
+    primaryColor: Color,
+    modifier: Modifier = Modifier,
+    onSelect: (String) -> Unit
+) {
+    if (suggestions.isEmpty()) {
+        return
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        suggestions.forEach { suggestion ->
+            Box(
+                modifier = Modifier
+                    .border(1.dp, primaryColor.copy(alpha = 0.5f), CutCornerShape(6.dp))
+                    .background(primaryColor.copy(alpha = 0.08f), CutCornerShape(6.dp))
+                    .clickable { onSelect(suggestion) }
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = suggestion,
+                    color = primaryColor,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 120.dp)
+                )
+            }
+        }
     }
 }
 
