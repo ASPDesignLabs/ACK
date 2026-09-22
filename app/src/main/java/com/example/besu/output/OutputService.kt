@@ -606,7 +606,10 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 audioData = audioData,
                 sampleRate = sampleRate,
                 forceSpeakerForRequest = emergency.forceSpeaker || forceSpeaker,
-                allowVolumeEnforcement = !emergency.enabled && masterGain > 1.2f
+                // Always enforced -- see the note on ensureStreamVolume's
+                // call site in playRecording below for why this used to be
+                // conditional and no longer is.
+                allowVolumeEnforcement = true
             )
         } catch (error: Exception) {
             error.printStackTrace()
@@ -686,11 +689,24 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 )
             }
 
+            // Always enforced, for every dispatch -- this used to be
+            // conditional (only above a certain Master Gain, and never
+            // during Emergency) on the theory that a user who hadn't
+            // touched Master Gain hadn't opted into ACK adjusting system
+            // volume. In practice that left ordinary output exposed to
+            // whatever the OS media stream happened to be sitting at --
+            // turned down for a song over Bluetooth, a notification
+            // volume rocker, or anything else outside ACK's control --
+            // silently masking a communication prompt. For an
+            // accessibility tool, being heard isn't optional, so this
+            // floor-raise (see ensureStreamVolume -- it only ever raises
+            // toward a target, never lowers, and leaves an already-loud
+            // stream alone) now runs unconditionally, Emergency included.
             playPcm(
                 audioData = playablePcm,
                 sampleRate = sampleRate,
                 forceSpeakerForRequest = emergency.forceSpeaker || forceSpeaker,
-                allowVolumeEnforcement = !emergency.enabled && masterGain > 1.2f
+                allowVolumeEnforcement = true
             )
         }.start()
 
@@ -833,8 +849,12 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
 
         try {
             /*
-             * Preserve the existing normal-output behavior, but explicitly do
-             * not alter system volume for an Emergency request.
+             * Nudges the target stream up toward an audible floor if it's
+             * currently below that -- never lowers it, so an already-loud
+             * stream is untouched. Every real dispatch (TTS, a recorded
+             * prompt, Emergency included) asks for this; only the
+             * Emergency tone itself opts out, since it's a non-verbal cue
+             * rather than content that needs to be intelligible.
              */
             if (allowVolumeEnforcement) {
                 ensureStreamVolume(targetStreamType)
