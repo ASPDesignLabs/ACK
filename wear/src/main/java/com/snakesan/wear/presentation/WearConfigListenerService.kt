@@ -111,6 +111,14 @@ class WearConfigListenerService : WearableListenerService() {
                     Log.e("ACK_WEAR", "Failed to sync target list", e)
                 }
             }
+
+            // 5. RELAYED PHRASE AUDIO (a fully-processed recording or TTS
+            // render, sent when PROTOCOL's OUTPUT DEVICE is set to ACK
+            // WATCH). One chunk per message -- AudioRelay buffers by
+            // transfer id and plays once every chunk has arrived.
+            "/audio/relay_chunk" -> {
+                AudioRelay.onChunkReceived(messageEvent.data)
+            }
         }
     }
 

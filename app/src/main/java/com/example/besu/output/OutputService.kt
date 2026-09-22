@@ -18,6 +18,9 @@ import android.os.IBinder
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.core.app.NotificationCompat
+import com.example.besu.watch.WatchAudioRelay
+import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.wearable.Wearable
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.nio.ByteBuffer
@@ -25,6 +28,7 @@ import java.nio.ByteOrder
 import java.util.Locale
 import java.util.Queue
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlin.math.sin
 import kotlin.random.Random
 import java.util.concurrent.ConcurrentHashMap
@@ -67,6 +71,14 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     // visually regardless of this -- this only gates the redundant spoken
     // read-aloud.
     private var guideVoxEnabled = true
+
+    // Where non-forced output goes -- "AUTO" (system default route, today's
+    // existing behavior), "BLUETOOTH" (pinned to outputRouteBtAddress via
+    // AudioTrack.preferredDevice), or "WATCH" (relayed to the paired ACK
+    // Wear app instead of played locally). FORCE SPEAKER always overrides
+    // this. See applyOutputRouting's call site in playPcm.
+    private var outputRouteMode = "AUTO"
+    private var outputRouteBtAddress: String? = null
 
     // Gain State
     private var masterGain = 1.0f
@@ -180,7 +192,9 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         silentOutput = prefs.getBoolean("SILENT_OUTPUT", false)
         guideVoxEnabled = prefs.getBoolean("TUTORIAL_VOX", true)
         masterGain = prefs.getFloat("MASTER_GAIN", 1.0f)
-        
+        outputRouteMode = prefs.getString("OUTPUT_ROUTE_MODE", "AUTO") ?: "AUTO"
+        outputRouteBtAddress = prefs.getString("OUTPUT_ROUTE_BT_ADDRESS", null)
+
         val customJson = prefs.getString("CUSTOM_VOICES", "[]") ?: "[]"
         try { 
             customVoices = jsonParser.decodeFromString(customJson) 
@@ -202,7 +216,18 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 silentOutput = intent.getBooleanExtra("silent_output", silentOutput)
                 guideVoxEnabled = intent.getBooleanExtra("guide_vox", guideVoxEnabled)
                 masterGain = intent.getFloatExtra("master_gain", masterGain)
-                
+
+                // Gated on the mode extra's presence, not just null-coalesced
+                // like tutorial_profile above -- outputRouteBtAddress is
+                // meant to legitimately become null (switching back to
+                // AUTO), and an unrelated UPDATE_DSP call (e.g. AudioView's
+                // voice-profile sync) never includes either extra at all, so
+                // it must leave routing untouched rather than wiping it.
+                if (intent.hasExtra("output_route_mode")) {
+                    outputRouteMode = intent.getStringExtra("output_route_mode") ?: "AUTO"
+                    outputRouteBtAddress = intent.getStringExtra("output_route_bt_address")
+                }
+
                 val rawCustoms = intent.getStringExtra("custom_voices_json")
                 if (rawCustoms != null) { 
                     try { 
@@ -821,6 +846,16 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         forceSpeakerForRequest: Boolean,
         allowVolumeEnforcement: Boolean
     ) {
+        // WATCH routing pre-empts local playback entirely rather than
+        // running alongside it -- if the watch is reachable, this is the
+        // only place the prompt plays. FORCE SPEAKER still wins over WATCH,
+        // same as it wins over a selected Bluetooth device.
+        if (!forceSpeakerForRequest && outputRouteMode == "WATCH" &&
+            relayToWatchIfReachable(audioData, sampleRate)
+        ) {
+            return
+        }
+
         val attributes = AudioAttributes.Builder()
 
         val targetStreamType = if (forceSpeakerForRequest) {
@@ -860,7 +895,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 ensureStreamVolume(targetStreamType)
             }
 
-            routeToSpeakerIfRequested(
+            applyPreferredOutputDevice(
                 audioTrack = track,
                 forceSpeakerForRequest = forceSpeakerForRequest
             )
@@ -889,28 +924,58 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun routeToSpeakerIfRequested(
+    // FORCE SPEAKER always wins (pins to the built-in speaker, exactly as
+    // before this generalized what used to be routeToSpeakerIfRequested);
+    // otherwise, a selected Bluetooth device is pinned if it's currently
+    // connected. AUTO, or a selected device that isn't connected right
+    // now, leaves preferredDevice unset entirely so the OS's own normal
+    // default routing applies -- today's original behavior either way.
+    private fun applyPreferredOutputDevice(
         audioTrack: AudioTrack,
         forceSpeakerForRequest: Boolean
     ) {
-        if (
-            !forceSpeakerForRequest ||
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.M
-        ) {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+
+        if (forceSpeakerForRequest) {
+            devices.find { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                ?.let { audioTrack.preferredDevice = it }
             return
         }
 
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-
-        val speaker = audioManager
-            .getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-            .find { device ->
-                device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-            }
-
-        if (speaker != null) {
-            audioTrack.preferredDevice = speaker
+        if (outputRouteMode != "BLUETOOTH") {
+            return
         }
+
+        val address = outputRouteBtAddress ?: return
+        devices
+            .filter { AudioRouting.isBluetoothOutputType(it.type) }
+            .find { it.address == address }
+            ?.let { audioTrack.preferredDevice = it }
+    }
+
+    // Checks for a currently-connected watch node and, if there is one,
+    // hands the already fully-processed PCM off to WatchAudioRelay instead
+    // of playing it locally -- returns false (never having sent anything)
+    // if no watch is reachable right now, so the caller falls through to
+    // local playback exactly as AUTO would. This runs on the same
+    // background thread every playPcm call already runs on (the TTS
+    // utterance callback thread, or a dedicated Thread{} in playRecording/
+    // previewRecording), so a short blocking wait here is safe -- it never
+    // touches the main thread.
+    private fun relayToWatchIfReachable(audioData: ShortArray, sampleRate: Int): Boolean {
+        val nodes = try {
+            Tasks.await(Wearable.getNodeClient(this).connectedNodes, 2, TimeUnit.SECONDS)
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+        if (nodes.isEmpty()) {
+            return false
+        }
+
+        WatchAudioRelay.send(this, nodes, audioData, sampleRate)
+        return true
     }
 
     private fun playEmergencyTone(

@@ -14,7 +14,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Build
+import com.google.android.gms.wearable.Wearable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -85,6 +89,63 @@ private fun SettingsToggleRow(
     }
 }
 
+// One selectable row inside the OUTPUT DEVICE picker -- AUTO, ACK WATCH, or
+// a connected Bluetooth device. enabled=false renders the row (so a
+// currently-selected-but-disconnected device still shows, using its cached
+// label) without letting it be tapped -- there's nothing useful to select
+// it INTO, it's just context for why routing fell back to AUTO.
+@Composable
+private fun OutputRouteRow(
+    label: String,
+    hint: String,
+    isSelected: Boolean,
+    primaryColor: Color,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    val rowShape = CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)
+    val borderColor = if (isSelected) primaryColor else Color.DarkGray
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, borderColor.copy(alpha = if (enabled) 1f else 0.5f), rowShape)
+            .background(
+                if (isSelected) primaryColor.copy(alpha = 0.12f) else Color.Transparent,
+                rowShape
+            )
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                color = if (!enabled) Color.DarkGray else if (isSelected) primaryColor else Color.White,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = hint,
+                color = Color.Gray,
+                fontSize = 8.sp,
+                fontFamily = FontFamily.Monospace
+            )
+        }
+
+        if (isSelected) {
+            Text(
+                text = "[X]",
+                color = if (enabled) primaryColor else Color.DarkGray,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
 @Composable
 fun SettingsView(
     context: Context,
@@ -129,11 +190,25 @@ fun SettingsView(
     var silentOutput by remember { mutableStateOf(prefs.getBoolean("SILENT_OUTPUT", false)) }
     var guideVoxEnabled by remember { mutableStateOf(prefs.getBoolean("TUTORIAL_VOX", true)) }
 
+    // Where non-forced output goes when it isn't routed to the built-in
+    // speaker -- "AUTO" (today's existing behavior: whatever the OS's
+    // current default route is), "BLUETOOTH" (a specific paired device, by
+    // address -- outputRouteBtLabel is a cached display name so a
+    // temporarily-disconnected device still shows correctly instead of
+    // vanishing from the picker), or "WATCH" (relayed to the paired ACK
+    // Wear app). FORCE SPEAKER always wins over all three.
+    var outputRouteMode by remember { mutableStateOf(prefs.getString("OUTPUT_ROUTE_MODE", "AUTO") ?: "AUTO") }
+    var outputRouteBtAddress by remember { mutableStateOf(prefs.getString("OUTPUT_ROUTE_BT_ADDRESS", null)) }
+    var outputRouteBtLabel by remember { mutableStateOf(prefs.getString("OUTPUT_ROUTE_BT_LABEL", null)) }
+
     fun syncPhoneAudio() {
         prefs.edit()
             .putBoolean("FORCE_SPEAKER", forceSpeaker)
             .putBoolean("SILENT_OUTPUT", silentOutput)
             .putBoolean("TUTORIAL_VOX", guideVoxEnabled)
+            .putString("OUTPUT_ROUTE_MODE", outputRouteMode)
+            .putString("OUTPUT_ROUTE_BT_ADDRESS", outputRouteBtAddress)
+            .putString("OUTPUT_ROUTE_BT_LABEL", outputRouteBtLabel)
             .apply()
 
         val intent = Intent(context, OutputService::class.java).apply {
@@ -141,12 +216,54 @@ fun SettingsView(
             putExtra("speaker", forceSpeaker)
             putExtra("silent_output", silentOutput)
             putExtra("guide_vox", guideVoxEnabled)
+            // Always included together, even when unchanged -- this is how
+            // OutputService tells "this UPDATE_DSP call concerns output
+            // routing" (and should apply outputRouteBtAddress, including
+            // clearing it to null for AUTO) apart from an unrelated DSP
+            // sync (e.g. AudioView's voice-profile changes) that doesn't
+            // carry these extras at all and should leave routing untouched.
+            putExtra("output_route_mode", outputRouteMode)
+            putExtra("output_route_bt_address", outputRouteBtAddress)
         }
         context.startService(intent)
     }
 
+    // Collapsed by default, same as the Matrix editor's DESTRUCTIVE
+    // CONTROLS section.
+    var outputDeviceExpanded by remember { mutableStateOf(false) }
 
+    var connectedBtDevices by remember {
+        mutableStateOf(AudioRouting.listConnectedBluetoothDevices(context))
+    }
 
+    // Live-refreshes while PROTOCOL is open, so pairing/unpairing a device
+    // updates the picker without needing to back out and reopen it.
+    DisposableEffect(Unit) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val callback = object : AudioDeviceCallback() {
+            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+                connectedBtDevices = AudioRouting.listConnectedBluetoothDevices(context)
+            }
+
+            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
+                connectedBtDevices = AudioRouting.listConnectedBluetoothDevices(context)
+            }
+        }
+        audioManager.registerAudioDeviceCallback(callback, null)
+        onDispose { audioManager.unregisterAudioDeviceCallback(callback) }
+    }
+
+    // A one-shot, informational check -- not gating whether WATCH can be
+    // selected (it can, same as picking a currently-disconnected Bluetooth
+    // device), just letting the picker show whether it's actually reachable
+    // right now.
+    var isWatchConnected by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        Wearable.getNodeClient(context).connectedNodes
+            .addOnSuccessListener { nodes -> isWatchConnected = nodes.isNotEmpty() }
+            .addOnFailureListener { isWatchConnected = false }
+    }
 
 
 
@@ -293,6 +410,129 @@ fun SettingsView(
                     forceSpeaker = enabled
                     syncPhoneAudio()
                     reportHelpInteraction(AckTags.SETTINGS_AUDIO_ROUTING)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .helpTarget(AckTags.SETTINGS_AUDIO_ROUTING, primaryColor)
+                        .clickable(enabled = !forceSpeaker) {
+                            outputDeviceExpanded = !outputDeviceExpanded
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (outputDeviceExpanded) "▾ " else "▸ ",
+                        color = if (forceSpeaker) Color.DarkGray else primaryColor,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "OUTPUT DEVICE",
+                            color = if (forceSpeaker) Color.DarkGray else Color.White,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = when {
+                                forceSpeaker -> "OVERRIDDEN BY FORCE SPEAKER ABOVE"
+                                outputRouteMode == "BLUETOOTH" -> outputRouteBtLabel ?: "BLUETOOTH DEVICE"
+                                outputRouteMode == "WATCH" -> "ACK WATCH"
+                                else -> "AUTO (SYSTEM DEFAULT)"
+                            },
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
+
+                if (outputDeviceExpanded && !forceSpeaker) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        OutputRouteRow(
+                            label = "AUTO (SYSTEM DEFAULT)",
+                            hint = "WHATEVER THE PHONE'S CURRENT AUDIO ROUTE IS",
+                            isSelected = outputRouteMode == "AUTO",
+                            primaryColor = primaryColor
+                        ) {
+                            outputRouteMode = "AUTO"
+                            outputRouteBtAddress = null
+                            outputRouteBtLabel = null
+                            syncPhoneAudio()
+                            reportHelpInteraction(AckTags.SETTINGS_AUDIO_ROUTING)
+                        }
+
+                        OutputRouteRow(
+                            label = "ACK WATCH",
+                            hint = if (isWatchConnected) {
+                                "CONNECTED"
+                            } else {
+                                "NOT CURRENTLY CONNECTED -- FALLS BACK TO AUTO WHEN UNREACHABLE"
+                            },
+                            isSelected = outputRouteMode == "WATCH",
+                            primaryColor = primaryColor
+                        ) {
+                            outputRouteMode = "WATCH"
+                            outputRouteBtAddress = null
+                            outputRouteBtLabel = null
+                            syncPhoneAudio()
+                            reportHelpInteraction(AckTags.SETTINGS_AUDIO_ROUTING)
+                        }
+
+                        connectedBtDevices.forEach { device ->
+                            val deviceLabel = AudioRouting.friendlyLabel(device)
+                            OutputRouteRow(
+                                label = deviceLabel,
+                                hint = "CONNECTED",
+                                isSelected = outputRouteMode == "BLUETOOTH" &&
+                                    outputRouteBtAddress == device.address,
+                                primaryColor = primaryColor
+                            ) {
+                                outputRouteMode = "BLUETOOTH"
+                                outputRouteBtAddress = device.address
+                                outputRouteBtLabel = deviceLabel
+                                syncPhoneAudio()
+                                reportHelpInteraction(AckTags.SETTINGS_AUDIO_ROUTING)
+                            }
+                        }
+
+                        // The saved Bluetooth pick isn't in the live
+                        // connected list right now -- still show it (its
+                        // cached label) so picking AUTO or another device
+                        // is the only way to change it, rather than it
+                        // just silently disappearing from the picker.
+                        val selectedBtMissing = outputRouteMode == "BLUETOOTH" &&
+                            outputRouteBtAddress != null &&
+                            connectedBtDevices.none { it.address == outputRouteBtAddress }
+                        if (selectedBtMissing) {
+                            OutputRouteRow(
+                                label = outputRouteBtLabel ?: "BLUETOOTH DEVICE",
+                                hint = "NOT CURRENTLY CONNECTED -- FALLS BACK TO AUTO WHEN UNREACHABLE",
+                                isSelected = true,
+                                primaryColor = primaryColor,
+                                enabled = false,
+                                onClick = {}
+                            )
+                        }
+
+                        if (connectedBtDevices.isEmpty() && !selectedBtMissing) {
+                            Text(
+                                text = "NO BLUETOOTH DEVICES CURRENTLY CONNECTED",
+                                color = Color.DarkGray,
+                                fontSize = 9.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
