@@ -2,6 +2,11 @@
 
 All notable changes to ACK are logged here. These same notes are available in-app from the TERMINAL view — type `/info` and send it.
 
+## [1.0-beta.7] - Unreleased
+
+### Fixed
+- Output could go quiet or fail to reach the car's speakers at all when connected to Android Auto. ACK never requested audio focus on any playback path -- fine on a phone with nothing else competing, but Android Auto is strict about the standard Android focus handshake while it's juggling navigation, music, and calls, and an app that never asks has no standing in that negotiation. Every dispatch now briefly requests audio focus before playing (and releases it right after), the same signal every well-behaved Android app sends to say "let this through."
+
 ## [1.0-beta.6] - 2026-09-22
 
 ### Added

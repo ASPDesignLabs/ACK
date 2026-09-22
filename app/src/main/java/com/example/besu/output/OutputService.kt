@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
+import android.media.AudioFocusRequest
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
@@ -868,8 +869,10 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             AudioManager.STREAM_MUSIC
         }
 
+        val builtAttributes = attributes.build()
+
         val track = AudioTrack.Builder()
-            .setAudioAttributes(attributes.build())
+            .setAudioAttributes(builtAttributes)
             .setAudioFormat(
                 AudioFormat.Builder()
                     .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
@@ -881,6 +884,22 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             .build()
 
         synchronized(activeTrackLock) { activeTrack = track }
+
+        // Requests a brief window of audio focus for this one dispatch.
+        // Without this handshake, an audio-policy-strict context like
+        // Android Auto -- which is constantly juggling navigation, music,
+        // and calls through the standard Android focus system -- has no
+        // signal that ACK needs to be heard right now, and its own audio
+        // policy can duck, delay, or simply decline to route the output to
+        // the car's speakers at all. Best-effort: playback proceeds below
+        // regardless of whether focus is actually granted -- never playing
+        // at all would be worse than playing without it, which is exactly
+        // today's behavior without this call.
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(builtAttributes)
+            .build()
+        audioManager.requestAudioFocus(focusRequest)
 
         try {
             /*
@@ -910,6 +929,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 Thread.sleep(10)
             }
         } finally {
+            audioManager.abandonAudioFocusRequest(focusRequest)
+
             synchronized(activeTrackLock) {
                 try {
                     track.stop()
