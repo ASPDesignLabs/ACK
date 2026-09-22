@@ -2,6 +2,12 @@
 
 All notable changes to ACK are logged here. These same notes are available in-app from the TERMINAL view — type `/info` and send it.
 
+## [1.0-beta.6] - 2026-09-22
+
+### Fixed
+- Recorded voice prompts didn't consistently follow AUDIO ARCHITECT's Master Gain the way synthesized speech does. Master Gain was always being applied correctly — the real problem was that a raw recording's starting loudness depends entirely on how loud you spoke and how close to the mic you were, so multiplying two different recordings by the same gain produced two different results. Every recording is now loudness-normalized to a consistent baseline (right after noise reduction and silence trimming, alongside the existing processing step), so Master Gain multiplies from the same starting point every time — the same way it already does for synthesized speech. Existing recordings are normalized automatically, once, the next time you open the app.
+- Every spoken prompt — synthesized or recorded, Emergency included — now always nudges the device's media volume up to an audible floor before it plays, rather than only doing so once Master Gain was boosted above a threshold. Output could previously go quiet if something outside ACK (a Bluetooth headset's own volume control, the notification volume rocker, anything else touching the same volume stream) had turned system volume down since the last time that threshold was crossed. This never lowers volume you've deliberately set high — only raises a stream that's sitting below the floor.
+
 ## [1.0-beta.5] - 2026-09-21
 
 ### Added

@@ -1,10 +1,12 @@
 package com.example.besu.output
 
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 // Spectral-subtraction noise reduction for a recorded voice clip. This is
 // the classic (Boll 1979 / Berouti et al.) approach: estimate a noise
@@ -53,6 +55,20 @@ object AudioDsp {
     // single-window rule -- there's no reported problem there to fix, and
     // capture end has no equivalent transient.
     private const val ONSET_CONSECUTIVE_WINDOWS = 3
+
+    // normalizeLoudness's own tunables. TARGET_RMS sits at roughly -20
+    // dBFS -- a common conversational-loudness reference -- and
+    // PEAK_CEILING at roughly -1 dBFS, well under full scale (32767).
+    // MAX_NORMALIZE_GAIN caps how far a very quiet clip can be boosted;
+    // past that, amplifying further mostly just raises the noise floor
+    // rather than making the voice itself clearer. Like reduceNoise's
+    // tunables above, these are reasoned defaults, not device-verified by
+    // ear -- if normalized clips come out too quiet, too hot, or too
+    // noisy, these three are the first things worth retuning.
+    private const val TARGET_RMS = 3277.0
+    private const val PEAK_CEILING = 29000.0
+    private const val MIN_RMS_FLOOR = 40.0
+    private const val MAX_NORMALIZE_GAIN = 8.0
 
     fun reduceNoise(pcm: ShortArray, sampleRate: Int): ShortArray {
         // Too short to extract a meaningful noise profile and still leave
@@ -149,6 +165,57 @@ object AudioDsp {
         val endSample = ((lastSpeechWindow + 1) * windowSize + paddingSamples).coerceAtMost(pcm.size)
 
         return pcm.copyOfRange(startSample, endSample)
+    }
+
+    // Brings every accepted recording to the same baseline loudness. Call
+    // this LAST, after reduceNoise + trimSilence -- without it, two
+    // different recordings can come out at very different volumes purely
+    // because of how loud you happened to speak or how close to the mic
+    // you were, and neither AUDIO ARCHITECT's Master Gain nor PROTOCOL's
+    // recording playback gain (both pure multipliers with nothing to
+    // normalize against) can turn that inconsistent starting point into a
+    // consistent, predictable one. Synthesized speech doesn't have this
+    // problem -- the TTS engine always emits it at the same internal
+    // loudness -- this gives a raw recording that same kind of baseline.
+    //
+    // Targets RMS (perceived loudness) rather than just the single
+    // loudest sample, since that's closer to how loud a clip actually
+    // sounds -- but RMS-only normalization can clip on a sudden loud
+    // sound within an otherwise quiet clip, so the applied gain is also
+    // capped at whatever keeps the clip's own peak sample under
+    // PEAK_CEILING, whichever cap is stricter. Can both amplify a quiet
+    // recording and attenuate a loud one -- the goal is convergence
+    // toward one consistent level, not a one-directional boost.
+    fun normalizeLoudness(pcm: ShortArray): ShortArray {
+        if (pcm.isEmpty()) return pcm
+
+        var sumSquares = 0.0
+        var peak = 0.0
+        for (sample in pcm) {
+            val value = sample.toDouble()
+            sumSquares += value * value
+            val magnitude = abs(value)
+            if (magnitude > peak) peak = magnitude
+        }
+        val rms = sqrt(sumSquares / pcm.size)
+
+        // Nothing here but noise floor/silence -- normalizing toward the
+        // target would just amplify hiss, not a voice that isn't there.
+        if (rms < MIN_RMS_FLOOR) return pcm
+
+        var gain = TARGET_RMS / rms
+        if (peak > 0.0) {
+            gain = gain.coerceAtMost(PEAK_CEILING / peak)
+        }
+        gain = gain.coerceAtMost(MAX_NORMALIZE_GAIN)
+
+        val result = ShortArray(pcm.size)
+        for (i in pcm.indices) {
+            result[i] = (pcm[i] * gain).toInt()
+                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                .toShort()
+        }
+        return result
     }
 
     private fun computeWindowRms(pcm: ShortArray, windowSize: Int, windowCount: Int): DoubleArray {
