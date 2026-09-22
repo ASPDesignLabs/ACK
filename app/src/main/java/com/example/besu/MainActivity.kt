@@ -333,6 +333,14 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     }
 
     LaunchedEffect(Unit) {
+        // Normalizes any recordings saved before AudioDsp.normalizeLoudness
+        // existed so their playback volume stops depending on how loud the
+        // original capture happened to be. Its own flag makes every call
+        // after the first a single cheap SharedPreferences read that
+        // returns immediately -- only the one-time real pass (IO-bound
+        // internally) briefly delays the startup work below it.
+        VoiceRecordingRepository.migrateNormalizeExistingRecordingsIfNeeded(context)
+
         val prefs = context.getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
         val existingJson = prefs.getString("CUSTOM_VOICES", "[]") ?: "[]"
         if (existingJson == "[]" || existingJson.length < 10) {

@@ -2,6 +2,8 @@ package com.example.besu.output
 
 import android.content.Context
 import android.util.Base64
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -72,6 +74,7 @@ object VoiceRecordingRepository {
     const val MAX_PLAYBACK_GAIN_PERCENT = 300
     private const val KEY_SHOW_OVERLAY_ON_PREVIEW = "show_overlay_on_preview"
     private const val KEY_SEEN_HELP_OFFER = "seen_help_offer"
+    private const val KEY_NORMALIZED_EXISTING_V1 = "normalized_existing_recordings_v1"
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -118,6 +121,29 @@ object VoiceRecordingRepository {
 
     fun markHelpOfferSeen(context: Context) {
         prefs(context).edit().putBoolean(KEY_SEEN_HELP_OFFER, true).apply()
+    }
+
+    // One-time migration for recordings saved before AudioDsp.normalizeLoudness
+    // existed -- they kept whatever raw level they happened to be captured
+    // at, which is exactly the inconsistent-volume bug that function fixes
+    // for new recordings. Re-processes every existing recording's stored
+    // audio in place (same id, same metadata -- normalization never
+    // changes sample count, so durationMs stays accurate) so old
+    // recordings land on the same baseline new ones do. Safe to call
+    // unconditionally on every app start: no-ops immediately after the
+    // first successful run, via its own flag.
+    suspend fun migrateNormalizeExistingRecordingsIfNeeded(context: Context) {
+        if (prefs(context).getBoolean(KEY_NORMALIZED_EXISTING_V1, false)) return
+
+        withContext(Dispatchers.IO) {
+            getAll(context).forEach { recording ->
+                val (pcm, sampleRate) = loadPcm(context, recording.id) ?: return@forEach
+                val normalized = AudioDsp.normalizeLoudness(pcm)
+                writeWav(audioFile(context, recording.id), normalized, sampleRate)
+            }
+        }
+
+        prefs(context).edit().putBoolean(KEY_NORMALIZED_EXISTING_V1, true).apply()
     }
 
     private fun recordingsDir(context: Context): File {
