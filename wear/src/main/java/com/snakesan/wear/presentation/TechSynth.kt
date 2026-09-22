@@ -31,6 +31,13 @@ object TechSynth {
         Executors.newSingleThreadScheduledExecutor()
 
     private var currentTheme = 1
+
+    // Volatile -- read from AudioRelay's playback thread (a plain
+    // background Thread, not audioExecutor), while every write to it
+    // stays confined to audioExecutor as before. A simple Float flag like
+    // this doesn't need full synchronization, just guaranteed visibility
+    // across threads.
+    @Volatile
     private var masterVolume = 0.8f
 
     private var lastNavToneAt = 0L
@@ -76,6 +83,13 @@ object TechSynth {
             masterVolume = sanitizedVolume
         }
     }
+
+    // Exposes the current watch volume setting (from the WATCH AUDIO
+    // FEEDBACK slider in PROTOCOL, synced via updateConfig above) to
+    // AudioRelay, so relayed phrase audio and gesture SFX share a single
+    // consistent watch volume rather than needing a second, unexplained
+    // one just for relayed phrases.
+    fun currentMasterVolume(): Float = masterVolume
 
     fun play(sfx: Sfx) {
         audioExecutor.execute {
