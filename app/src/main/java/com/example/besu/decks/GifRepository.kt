@@ -233,6 +233,57 @@ object GifRepository {
         }
     }
 
+    // Restore-only: upserts a category by its own id, preserving identity
+    // across an export/import round-trip -- unlike createCategory, which
+    // always dedupes by name and mints a fresh id, this lets a restored
+    // GifEntry's categoryId reference actually resolve to the category
+    // the backup meant, not a same-named-but-different-id duplicate.
+    fun upsertCategory(context: Context, category: GifCategory) {
+        val merged = readCategories(context).associateBy { it.id }.toMutableMap()
+        merged[category.id] = category
+        saveCategories(context, merged.values.toList())
+    }
+
+    // Restore-only: writes gifBytes to entry.fileName (reusing the id the
+    // backup already assigned, so getGifFile resolves the same way it did
+    // on the exporting device) and upserts the entry metadata by id. Runs
+    // the same size-limit and real-GIF-signature checks importGif does,
+    // since these bytes come from an external file the user picked, not
+    // from inside the app.
+    fun restoreEntry(context: Context, entry: GifEntry, gifBytes: ByteArray): Result<Unit> {
+        return runCatching {
+            // entry.fileName becomes a real filesystem path below -- this
+            // repository's own last line of defense against a caller (a
+            // malformed or hand-edited backup archive) trying to write
+            // outside this app's GIF storage directory, independent of
+            // whatever validation that caller already did.
+            if (!entry.fileName.matches(Regex("^[A-Za-z0-9_\\-]{1,100}\\.gif$"))) {
+                error("\"${entry.fileName}\" is not a safe file name.")
+            }
+
+            if (gifBytes.size > MAX_GIF_SIZE_BYTES) {
+                error("GIF exceeds the 20 MB safety limit.")
+            }
+
+            val destinationDirectory = getGifDirectory(context)
+            if (!destinationDirectory.exists()) {
+                destinationDirectory.mkdirs()
+            }
+
+            val destinationFile = File(destinationDirectory, entry.fileName)
+            destinationFile.writeBytes(gifBytes)
+
+            if (!isGifFile(destinationFile)) {
+                destinationFile.delete()
+                error("\"${entry.fileName}\" is not a valid GIF.")
+            }
+
+            val merged = readEntries(context).associateBy { it.id }.toMutableMap()
+            merged[entry.id] = entry
+            saveEntries(context, merged.values.toList())
+        }
+    }
+
     fun deleteGif(
         context: Context,
         entry: GifEntry
