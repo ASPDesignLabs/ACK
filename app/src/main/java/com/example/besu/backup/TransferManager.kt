@@ -36,14 +36,28 @@ object TransferManager {
     private const val ROOT_OVERRIDE_COLLAPSED_PREFIX = "root_override_section_collapsed_"
 
     // --- SECURITY CONSTANTS ---
-    private const val MAX_DECOMPRESSED_SIZE = 1024 * 1024 // 1MB Limit
-    private const val MAX_PHRASE_LENGTH = 300
+    // A generous ceiling against a pathological/corrupted file being read
+    // entirely into memory, not a real-world expectation -- a backup now
+    // carries embedded voice recordings (base64, ~33% larger than their
+    // raw audio) alongside a full history export, so 1MB was never going
+    // to hold up for a daily-driver's worth of real use.
+    private const val MAX_DECOMPRESSED_SIZE = 25 * 1024 * 1024 // 25MB Limit
+    // Applies to actual spoken/displayed content -- matrix phrases, root
+    // override values, header shortcut phrases, emergency templates, and
+    // the medical ID card's free-text fields. Deliberately generous (a
+    // detailed medical note or a long communication phrase should never
+    // come close) since nothing constrains these at the point they're
+    // typed; this is the only ceiling that has ever existed for them.
+    private const val MAX_PHRASE_LENGTH = 2000
     private const val MAX_KEY_LENGTH = 150
     // Regex: Alphanumeric, underscores, hyphens, slashes, spaces.
     private val SAFE_KEY_PATTERN = Regex("^[a-zA-Z0-9_\\-/ ]+$")
 
-    // Targeting Computer category tree limits.
-    private const val MAX_LABEL_LENGTH = 60
+    // Short UI-fitting labels -- Target Computer category/node labels,
+    // legacy Target slot labels, and Emergency slot labels. None of
+    // these are truncated where they're typed either, so this is
+    // generous for the same reason MAX_PHRASE_LENGTH is.
+    private const val MAX_LABEL_LENGTH = 120
     private const val MAX_COMPUTER_CATEGORIES = 40
     private const val MAX_NODES_PER_CATEGORY = 500
     private const val MAX_TREE_DEPTH = 12
@@ -529,8 +543,8 @@ object TransferManager {
             }
 
             config.slots.forEach { slot ->
-                if (slot.label.length > 60) {
-                    Log.e("ACK_IMPORT", "emergencyDeck \"${config.deckId}\" slot label exceeds 60 chars: \"${slot.label}\"")
+                if (slot.label.length > MAX_LABEL_LENGTH) {
+                    Log.e("ACK_IMPORT", "emergencyDeck \"${config.deckId}\" slot label exceeds $MAX_LABEL_LENGTH chars: \"${slot.label}\"")
                     return false
                 }
                 if (slot.template.length > MAX_PHRASE_LENGTH) {
@@ -593,8 +607,8 @@ object TransferManager {
                 Log.e("ACK_IMPORT", "emergencyInfoCard contact name exceeds 100 chars: \"${contact.name}\"")
                 return false
             }
-            if (contact.relationship.length > 60) {
-                Log.e("ACK_IMPORT", "emergencyInfoCard contact \"${contact.name}\" relationship exceeds 60 chars")
+            if (contact.relationship.length > MAX_LABEL_LENGTH) {
+                Log.e("ACK_IMPORT", "emergencyInfoCard contact \"${contact.name}\" relationship exceeds $MAX_LABEL_LENGTH chars")
                 return false
             }
             if (contact.phone.length > 40) {
