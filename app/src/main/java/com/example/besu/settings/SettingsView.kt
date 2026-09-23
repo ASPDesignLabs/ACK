@@ -147,23 +147,6 @@ private fun OutputRouteRow(
     }
 }
 
-// Force-restarts the whole app: relaunches MainActivity fresh, then kills
-// this process. IMPORT MATRIX AS NEW DECK and FULL RESTORE FROM JSON can
-// touch nearly every piece of persisted state at once -- decks, active
-// deck/profile, DSP, Geo-Protocol, visual presets, and more -- much of
-// which is cached in remember{} across the app (MainActivity's deck
-// selector in particular, which only ever re-reads on an explicit
-// deckRevision bump). Patching each of those individually is a losing
-// game; a clean process restart guarantees everything reflects what was
-// just written, the same way a cold launch already does.
-private fun restartApp(context: Context) {
-    val intent = Intent(context, MainActivity::class.java).apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-    }
-    context.startActivity(intent)
-    Runtime.getRuntime().exit(0)
-}
-
 @Composable
 fun SettingsView(
     context: Context,

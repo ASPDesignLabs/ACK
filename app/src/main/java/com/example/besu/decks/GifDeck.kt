@@ -1,13 +1,16 @@
 package com.example.besu.decks
 
 import com.example.besu.*
+import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.output.*
 import com.example.besu.ui.*
 import com.example.besu.ui.theme.*
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.provider.OpenableColumns
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -49,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.besu.ui.theme.Graphite
 import com.example.besu.ui.theme.VoidBlack
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -73,6 +77,27 @@ fun GifDeck(
 
     var pendingUri by remember {
         mutableStateOf<android.net.Uri?>(null)
+    }
+
+    var showBackupMenu by remember {
+        mutableStateOf(false)
+    }
+
+    // Set true right after a successful IMPORT DECK (.ZIP) -- gives the
+    // confirmation toast a moment on screen, then restarts the app so a
+    // newly-created/updated deck actually shows up in the persistent
+    // deck selector (see restartApp; the same staleness this fixes for
+    // FULL RESTORE FROM JSON applies here too, since importing a backup
+    // can create a deck this screen has no way to tell MainActivity about
+    // otherwise).
+    var pendingBackupRestart by remember {
+        mutableStateOf(false)
+    }
+    LaunchedEffect(pendingBackupRestart) {
+        if (pendingBackupRestart) {
+            delay(1500)
+            restartApp(context)
+        }
     }
 
     var refreshToken by remember {
@@ -174,6 +199,43 @@ fun GifDeck(
         }
     }
 
+    // Whole-deck backup -- a standalone .zip (real .gif files in deck/
+    // category folders, plus manifest.json), separate from the main
+    // EXPORT .JSON / FULL RESTORE FROM JSON flow, which knows nothing
+    // about GIF decks. See GifBackupManager.
+    val exportBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val success = GifBackupManager.exportDeck(context, deckId, uri)
+            Toast.makeText(
+                context,
+                if (success) "GIF DECK EXPORTED" else "EXPORT FAILED",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    val importBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val result = GifBackupManager.importBackup(context, uri)
+            if (result.success) {
+                Toast.makeText(
+                    context,
+                    "IMPORTED ${result.importedCount} GIF${if (result.importedCount == 1) "" else "S"}" +
+                        (if (result.skippedCount > 0) ", ${result.skippedCount} SKIPPED" else "") +
+                        " -- RESTARTING",
+                    Toast.LENGTH_LONG
+                ).show()
+                pendingBackupRestart = true
+            } else {
+                Toast.makeText(context, "IMPORT FAILED -- INTEGRITY CHECK", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -193,15 +255,82 @@ fun GifDeck(
                 letterSpacing = 1.sp
             )
 
-            NeonOutlineAction(
-                text = "+ IMPORT",
-                color = primaryColor,
-                modifier = Modifier
-                    .testTag(AckTags.GIF_IMPORT)
-                    .helpTarget(AckTags.GIF_IMPORT, primaryColor)
-            ) {
-                importLauncher.launch(arrayOf("image/gif"))
-                reportHelpInteraction(AckTags.GIF_IMPORT)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box {
+                    NeonOutlineAction(
+                        text = if (showBackupMenu) "BACKUP ▲" else "BACKUP ▼",
+                        color = primaryColor,
+                        modifier = Modifier
+                            .testTag(AckTags.GIF_BACKUP_BTN)
+                            .helpTarget(AckTags.GIF_BACKUP_BTN, primaryColor)
+                    ) {
+                        showBackupMenu = !showBackupMenu
+                        reportHelpInteraction(AckTags.GIF_BACKUP_BTN)
+                    }
+
+                    if (showBackupMenu) {
+                        Column(
+                            modifier = Modifier
+                                .padding(top = 42.dp)
+                                .background(VoidBlack)
+                                .border(
+                                    width = 1.dp,
+                                    color = primaryColor,
+                                    shape = CutCornerShape(4.dp)
+                                )
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = "EXPORT DECK (.ZIP)",
+                                color = primaryColor,
+                                fontSize = 12.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .testTag(AckTags.GIF_BACKUP_EXPORT_BTN)
+                                    .helpTarget(AckTags.GIF_BACKUP_EXPORT_BTN, primaryColor)
+                                    .clickable {
+                                        showBackupMenu = false
+                                        val safeDeckName = CommandRepository.getDeckName(context, deckId)
+                                            .trim()
+                                            .replace(Regex("[^A-Za-z0-9 _\\-]"), "_")
+                                            .ifBlank { "GIF_DECK" }
+                                        exportBackupLauncher.launch("${safeDeckName}_backup.zip")
+                                        reportHelpInteraction(AckTags.GIF_BACKUP_EXPORT_BTN)
+                                    }
+                                    .padding(vertical = 6.dp)
+                            )
+
+                            Text(
+                                text = "IMPORT DECK (.ZIP)",
+                                color = primaryColor,
+                                fontSize = 12.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .testTag(AckTags.GIF_BACKUP_IMPORT_BTN)
+                                    .helpTarget(AckTags.GIF_BACKUP_IMPORT_BTN, primaryColor)
+                                    .clickable {
+                                        showBackupMenu = false
+                                        importBackupLauncher.launch(arrayOf("application/zip"))
+                                        reportHelpInteraction(AckTags.GIF_BACKUP_IMPORT_BTN)
+                                    }
+                                    .padding(vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+
+                NeonOutlineAction(
+                    text = "+ IMPORT",
+                    color = primaryColor,
+                    modifier = Modifier
+                        .testTag(AckTags.GIF_IMPORT)
+                        .helpTarget(AckTags.GIF_IMPORT, primaryColor)
+                ) {
+                    importLauncher.launch(arrayOf("image/gif"))
+                    reportHelpInteraction(AckTags.GIF_IMPORT)
+                }
             }
         }
 

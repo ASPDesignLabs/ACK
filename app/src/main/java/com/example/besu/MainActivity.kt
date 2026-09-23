@@ -75,6 +75,24 @@ private enum class BottomNavIcon {
     AUDIO
 
 }
+
+// Force-restarts the whole app: relaunches MainActivity fresh, then kills
+// this process. An action that changes which decks exist or which one is
+// active (a settings restore, a GIF deck backup import) can't reliably
+// patch every place that data is cached in remember{} across the app --
+// MainActivity's own deck selector in particular, which only re-reads on
+// an explicit deckRevision bump local to this file. A clean process
+// restart guarantees everything reflects what was just written, the same
+// way a cold launch already does. Shared (rather than duplicated) since
+// both SettingsView and GifDeck need it.
+fun restartApp(context: Context) {
+    val intent = Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    }
+    context.startActivity(intent)
+    Runtime.getRuntime().exit(0)
+}
+
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     private val logBuffer = mutableStateListOf<LogEntry>()

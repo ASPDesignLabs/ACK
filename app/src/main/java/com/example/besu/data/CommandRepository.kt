@@ -751,7 +751,20 @@ object CommandRepository {
             emptyList()
         }
     }
-    
+
+    // Restore-only: upserts a deck by its own id rather than minting a new
+    // one the way createDeck/saveDeck do -- lets a standalone import (e.g.
+    // a GIF deck backup) recreate the exact deck it was exported from on a
+    // device that doesn't have it yet, or update it in place if it does,
+    // without disturbing any other deck.
+    fun upsertDeck(context: Context, deck: DeckMeta) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val merged = getDecks(context).associateBy { it.id }.toMutableMap()
+        merged[deck.id] = deck
+        prefs.edit().putString(DECKS_KEY, Json.encodeToString(merged.values.toList())).apply()
+    }
+
+
     fun getActiveDeckId(context: Context): String {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(ACTIVE_DECK_ID, "DEFAULT") ?: "DEFAULT"
