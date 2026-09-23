@@ -149,13 +149,17 @@ private fun wrapToArcLines(label: String, paint: Paint, maxLines: Int, budgetPx:
 // arc slice with its full (word-wrapped, up to 3 lines) label curving
 // along the rim, all visible at once -- not cycled through blind. Crown
 // rotation AND a direct tap on a visible slice both move the highlight;
-// only a long-press (anywhere, not scoped to a specific slice) confirms/
-// activates it, so a stray tap never commits anything. Two fixed control
-// slices -- BACK/EXIT (top) and NEXT (bottom, only when there's more
-// than one page) -- sit alongside up to 4 real rows; entering a category
-// or subcategory pushes a new level rather than picking anything, and
-// NEXT pages within the current level rather than picking anything --
-// only a long-press on an actual leaf entry commits.
+// only a double-tap (anywhere, not scoped to a specific slice) confirms/
+// activates it, so a stray tap never commits anything -- deliberately not
+// a long-press, which this app already uses for tap-tap-hold and shaky-
+// hands and which turned out unreliable to land consistently as this
+// flyout's own entry gesture too (see AckWatchHud's TARGET button, its
+// replacement). Two fixed control slices -- BACK/EXIT (top) and NEXT
+// (bottom, only when there's more than one page) -- sit alongside up to 4
+// real rows; entering a category or subcategory pushes a new level rather
+// than picking anything, and NEXT pages within the current level rather
+// than picking anything -- only a double-tap on an actual leaf entry
+// commits.
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ComputerTargetFlyout(
@@ -232,7 +236,7 @@ fun ComputerTargetFlyout(
     // Deliberately re-reads stack/currentPage/selectionIndex/
     // ComputerCategoryCache itself rather than closing over the rows/
     // pageItems/selectedRow vals above: this is only ever invoked from
-    // the onLongPress handler inside pointerInput(currentLevel) below,
+    // the onDoubleTap handler inside pointerInput(currentLevel) below,
     // whose coroutine (and therefore whatever it captured at launch) only
     // restarts when currentLevel changes -- not on every crown/tap
     // scroll, which only changes selectionIndex or currentPage. Reading
@@ -377,7 +381,17 @@ fun ComputerTargetFlyout(
                                 }
                             }
                         },
-                        onLongPress = {
+                        // Double-tap, not long-press, confirms -- this app
+                        // already has several tap-and-hold gestures
+                        // elsewhere (tap-tap-hold, long-press for shaky-
+                        // hands) that took real practice to land reliably;
+                        // a second design's confirm gesture shouldn't add
+                        // another one. Position-independent on purpose,
+                        // same as the long-press it replaced: it commits
+                        // whatever's currently highlighted regardless of
+                        // where on screen the double-tap itself lands, so
+                        // a slightly-off second tap doesn't miss.
+                        onDoubleTap = {
                             lastInteraction = System.currentTimeMillis()
                             activate()
                         }
@@ -401,11 +415,11 @@ fun ComputerTargetFlyout(
                 else -> CyberGreen
             }
             val footerHint = when {
-                isBackHighlighted && isRoot -> "HOLD TO EXIT"
-                isBackHighlighted -> "HOLD TO GO BACK"
-                isNextHighlighted -> "HOLD FOR NEXT PAGE"
-                selectedRow?.isCategory == true -> "HOLD TO OPEN"
-                isLeafSelected -> "HOLD TO SELECT"
+                isBackHighlighted && isRoot -> "TAP TAP TO EXIT"
+                isBackHighlighted -> "TAP TAP TO GO BACK"
+                isNextHighlighted -> "TAP TAP FOR NEXT PAGE"
+                selectedRow?.isCategory == true -> "TAP TAP TO OPEN"
+                isLeafSelected -> "TAP TAP TO SELECT"
                 else -> ""
             }
 

@@ -290,21 +290,16 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                         }
                     },
                     onTapTapHold = {
+                        // The Target Computer flyout used to also open from
+                        // this gesture on Quick Actions decks -- dropped in
+                        // favor of AckWatchHud's dedicated TARGET tap
+                        // target (see below), which lands reliably where
+                        // tap-tap-hold didn't. tap-tap-hold now always opens
+                        // the legacy overlay again, uniformly across every
+                        // deck type, same as before either ever existed.
                         if (!isCryo()) {
-                            if (activeDeckType == "QUICK_ACTIONS" && ComputerCategoryCache.categories.isNotEmpty()) {
-                                isComputerFlyoutVisible = true
-                                feedback(100, TechSynth.Sfx.MODIFIER)
-                            } else if (activeDeckType == "QUICK_ACTIONS") {
-                                // Quick Actions deck, but none of its slots
-                                // reference a [COMPUTER:X] tag -- nothing to
-                                // offer. A short, distinct buzz (no tone) so
-                                // this reads as "nothing here" rather than
-                                // "gesture not recognized."
-                                feedback(30)
-                            } else {
-                                isTargetMenuVisible = true
-                                feedback(100, TechSynth.Sfx.MODIFIER)
-                            }
+                            isTargetMenuVisible = true
+                            feedback(100, TechSynth.Sfx.MODIFIER)
                         }
                     }
                 ) {
@@ -318,7 +313,16 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                         }
                     } else {
                         // Render State from Background Service
-                        AckWatchHud(uiState, uiPose, uiTwist, activePrimaryColor, activeDeckLabel, activeProfileLabel, isShakyHandsMode)
+                        AckWatchHud(
+                            uiState, uiPose, uiTwist, activePrimaryColor, activeDeckLabel, activeProfileLabel, isShakyHandsMode,
+                            showTargetButton = !isCryo() && activeDeckType == "QUICK_ACTIONS" && ComputerCategoryCache.categories.isNotEmpty(),
+                            onTargetTap = {
+                                if (!isCryo()) {
+                                    isComputerFlyoutVisible = true
+                                    feedback(100, TechSynth.Sfx.MODIFIER)
+                                }
+                            }
+                        )
                     }
 
                     //if (currentStateName == "CRYO") {
