@@ -345,3 +345,208 @@ small prefs file `ack_voice_recordings`, key `seen_help_offer`):
 | `help/PoseSelectorDialog.kt`, `help/VoiceRecordingsHelpSelectorDialog.kt` | Chooser dialogs for the "fan out" pattern |
 | `help/HelpOfferBanner.kt` | Generic dismissible first-use tip banner |
 | `MainActivity.kt` | Owns the single `HelpManager` instance, the `CompositionLocalProvider`, the destination/deck-activation effect, `HelpMenuDialog`'s `onLaunch` interception `when` block, and all chooser/pending-module state |
+
+## The BACKUP & RESTORE system — deep analysis
+
+ACK has two independent backup mechanisms, not one. **Full JSON backup**
+(`backup/TransferManager.kt`) covers almost everything else in the app —
+decks, DSP, root overrides, quick actions, emergency prompts, target
+computer entries, voice recordings, autocomplete history, Geo-Protocol,
+visual presets, output routing, Terminal/STATUSBOX prefs, shake
+sensitivity, Shared Root Variables' collapsed state. **Standalone GIF
+deck backup** (`decks/GifBackupManager.kt`) is a separate `.zip` format,
+built specifically because GIF binaries don't belong in a JSON blob and
+need to be viewable outside the app entirely. They share a philosophy
+(merge-by-id, additive restore, aggressive per-field validation logging)
+but not code — there is no shared backup engine.
+
+### Core philosophy: restore is additive, never destructive
+
+This is a direct consequence of the user's own standing accessibility
+preference — **"Backups should be encouraged, edits need to be
+confirmed"** — applied to its logical conclusion: a restore should never
+be able to silently delete something the user has since added. Both
+backup paths follow the same rule: **an entry with a matching id is
+overwritten in place; an entry the backup doesn't mention is left alone;
+nothing is ever wiped wholesale first.** Concretely, every repository
+function that used to `editor.clear()` or `deleteAll()` before writing
+backup data (`applyBackupToStorage`'s matrix editor, `ComputerRepository
+.replaceCategories`, `VoiceRecordingRepository.replaceFromBackup`,
+`AutocompleteHistoryRepository.restoreFromBackup`) has had that clear
+removed and replaced with a read-merge-write pattern: read the existing
+`SharedPreferences`/list into a `Map` keyed by id (or name, or index —
+whatever the entity's natural stable key is), overwrite with the
+backup's entries by that key, write the merged `.values.toList()` back.
+`ComputerRepository.replaceCategories` was renamed to `mergeCategories`
+specifically so its name stopped lying about what it does. To actually
+delete something, the user must use that feature's own dedicated
+delete/clear action — restore is not a substitute for it, and the UI
+copy in `SettingsView.kt`'s FULL RESTORE confirm dialog says this
+explicitly rather than the old (inaccurate) "cannot be undone" framing.
+
+### Full JSON backup — `backup/TransferManager.kt` + `backup/AckBackup.kt`
+
+- `AckBackup` (in `AckBackup.kt`) is the `@Serializable` root data class
+  for the whole export. **Every field added for a new settings area is
+  nullable** (`geoEngineMode: String?`, `terminalRetentionDays: Int?`,
+  etc.) or defaults to an empty collection (`geoZones: List<GeoZone> =
+  emptyList()`), never a real default value. This is deliberate schema
+  evolution: an *old* backup file, decoded against the *current*
+  `AckBackup` shape, naturally decodes missing fields as `null`/empty —
+  which `applyBackupToStorage` then correctly reads as "this old backup
+  has nothing to say about this field, leave the device's current value
+  alone" rather than as "reset this field to some default." A
+  non-nullable field with a real default would instead silently stomp
+  the field on every restore from an older backup.
+- `generateBackupJson` (export) and `validateDataIntegrity` (import gate)
+  and `applyBackupToStorage` (import apply) are the three stages, always
+  touched together when a new field is added: export reads it from
+  storage into the `AckBackup`, validate checks it's within sane bounds
+  and logs why if not, apply writes it back into the right repository
+  (often gated `if (backup.field != null) { ... }` so a null from an old
+  backup is a true no-op).
+- **Diagnostic logging discipline**: every single `return false` inside
+  `validateDataIntegrity` is preceded by `Log.e("ACK_IMPORT", "<specific
+  field, its value or length, and why it failed>")` — never a generic
+  "validation failed" message. This was added specifically because a
+  generic failure gives the user nothing to act on when a restore is
+  silently refused; the specific version is what let the user self
+  -diagnose a real bug from their own logcat capture (see next point).
+  Any new validation check added to this function must follow the same
+  pattern — log the specific offending value before returning false.
+- **Validation ceilings are a firewall against a corrupted/hostile file,
+  not a practical constraint** — a check must never be able to reject
+  something the app's own UI can legitimately produce. `MAX_PHRASE_LENGTH
+  = 2000` and `MAX_LABEL_LENGTH = 120` are both deliberately set above
+  every real UI input cap in the app (traced per-field, e.g. deck names
+  are capped by matching `createDeck`'s real `.take(40)`, not an
+  arbitrary rounder number). When a new capped field is added anywhere in
+  the app, check its real UI-side `.take(N)`/length limit and set the
+  validator's ceiling to match or exceed it — never guess a number.
+- **`DECK_CONFIG_KEY_PATTERN`/`MAX_DECK_CONFIG_LENGTH`** exist because the
+  sparse `matrixData` map (arbitrary `String` → `String`) stores two very
+  different kinds of values under the same map: ordinary short phrases,
+  AND a couple of keys (`emoji_deck_*_config`, `quick_actions_*_config`)
+  whose value is a *whole serialized deck config* (pages, slots, grid
+  size, nested panels) — categorically bigger data, not just a long
+  phrase. `validateDataIntegrity` matches the key against
+  `Regex("^(emoji_deck_|quick_actions_).*_config$")` and applies
+  `MAX_DECK_CONFIG_LENGTH = 50_000` instead of `MAX_PHRASE_LENGTH` only
+  for keys matching that pattern. **If a future feature adds another
+  "whole-config-blob-in-a-sparse-map" key, extend this pattern rather
+  than raising `MAX_PHRASE_LENGTH` again** — the two kinds of data should
+  never share one ceiling.
+- `MAX_DECOMPRESSED_SIZE = 25MB` — deliberately raised from an original
+  1MB because a communication app's real backups (with any meaningful
+  history/config) routinely exceed 1MB; this is a decompression-bomb
+  guard, not a "your data shouldn't be this big" opinion.
+
+### Standalone GIF deck backup — `decks/GifBackupManager.kt`
+
+A GIF deck's real content (image binaries) cannot live in the JSON
+backup above, and per the user's explicit requirement, the backup file
+itself needs to be **directly browsable/viewable on another device or
+OS without ACK installed at all** — ruling out a base64-in-JSON approach.
+The format is a real `.zip`: actual `.gif` files inside real
+`<deck name>/<category name>/<title>.gif` folders (sanitized,
+collision-deduped), plus an authoritative `manifest.json` carrying the
+real ids/ordering/toggles needed to restore faithfully (folder/file
+*names* are for human browsing only — restore never parses them back
+apart; it trusts the manifest).
+
+- **`fileName` vs `zipPath` are deliberately separate fields** on
+  `GifBackupEntry`. `zipPath` is the human-readable archive path, used
+  only as a `ZipFile.getEntry()` lookup key — it never touches the real
+  filesystem, so it's traversal-safe by construction (worst case is a
+  failed lookup). `fileName` is what gets passed to
+  `File(destinationDirectory, entry.fileName)` on import — a genuine
+  path-traversal vector — so it alone is tightly regex-validated against
+  `SAFE_FILENAME_PATTERN = Regex("^[A-Za-z0-9_\\-]{1,100}\\.gif$")`. If
+  you ever add a new field derived from user/archive-controlled data that
+  ends up in a `File(...)` constructor, treat it like `fileName`: separate
+  it from any display-only path string and validate it narrowly.
+- **That `fileName` check happens twice, independently**: once in
+  `GifBackupManager.validateManifest` (the import gate) and again inside
+  `GifRepository.restoreEntry` itself, using the identical regex,
+  regardless of whether the caller already validated. This is deliberate
+  defense-in-depth — `restoreEntry` doesn't trust its caller.
+- **Import reads via `ZipFile` (random access), not `ZipInputStream`**,
+  specifically so `manifest.json` can be located and parsed *before* any
+  GIF entry is processed, regardless of which order the zip's entries
+  were physically written in. The source `Uri` is first copied to a temp
+  file (`File.createTempFile`, deleted in a `finally`) because
+  `ZipFile`'s random access needs a real file handle, not a stream.
+- **Validation mirrors `TransferManager`'s rigor** at a smaller scale: id
+  pattern/length checks (`SAFE_ID_PATTERN`), label length caps
+  (`MAX_LABEL_LENGTH = 120`, matching the same value used in
+  `TransferManager` — not a coincidence, same "don't reject legitimate
+  data" reasoning), category/entry count caps (`MAX_CATEGORIES = 500`,
+  `MAX_ENTRIES = 5000`), referential integrity (an entry's `categoryId`
+  must exist among the manifest's own categories), duplicate-id
+  rejection, and a `zipPath` blank/`".."`-containment check. Every
+  rejection logs via `Log.e("ACK_GIF_BACKUP", ...)` — same discipline as
+  `ACK_IMPORT` above, same reasoning.
+- **Import refuses to retype an existing non-GIF deck.** If the
+  manifest's `deck.id` collides with an existing deck of a different
+  `DeckType` (including the always-present `"DEFAULT"` Matrix deck), the
+  import is refused outright rather than silently converting it.
+- Merge-by-id on import: `GifRepository.upsertCategory` and
+  `GifRepository.restoreEntry` each do the same read-merge-write pattern
+  as the JSON side; the deck itself is created via
+  `CommandRepository.upsertDeck` only if no deck with that id exists yet.
+
+### The app-restart pattern for post-restore UI staleness
+
+Both backup paths can add a brand-new deck (JSON restore via
+`upsertDeck`/matrix import; GIF import always at least conditionally).
+`MainActivity`'s deck selector
+(`val decks = remember(deckRevision) { CommandRepository.getDecks(context) }`)
+only re-reads `SharedPreferences` when `deckRevision` is manually
+incremented — and screens outside `MainActivity`'s own composable scope
+(`SettingsView`, `GifDeck`) have no clean way to trigger that from
+outside. **A first attempt at a targeted fix (a callback threaded back
+into `MainActivity` to patch `deckRevision`/`currentDeckId`/etc. by
+hand) was tried and explicitly rejected by the user after testing on
+their own device** ("I still end up having to restart the app") — so
+this is not a design choice to revisit casually; a full process restart
+is the deliberate, user-confirmed fix, not a stopgap.
+
+The fix is `fun restartApp(context: Context)`, a **top-level function in
+`MainActivity.kt`** (outside the `MainActivity` class, so any file with
+`import com.example.besu.*` — which most feature files already have —
+can call it with zero new imports):
+```kotlin
+fun restartApp(context: Context) {
+    val intent = Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    }
+    context.startActivity(intent)
+    Runtime.getRuntime().exit(0)
+}
+```
+Both `SettingsView.kt` (CREATE DECK from matrix import, FULL RESTORE) and
+`GifDeck.kt` (successful GIF `.zip` import) use the identical call
+shape: show a short success toast, then set a screen-local
+`pending*Restart` boolean, with a top-level (dialog-dismissal-surviving)
+`LaunchedEffect(pending*Restart) { if (pending*Restart) { delay(1500);
+restartApp(context) } }`. **The 1.5s delay is load-bearing** — calling
+`restartApp` synchronously right after `Toast.show()`/before the effect
+tick cuts the toast off mid-display; don't collapse this into a direct
+call. **Any new import/restore flow that can create a new deck (or
+otherwise mutate state `MainActivity` caches via `remember{}`) should
+reuse this exact pattern** — toast, delayed flag, shared `restartApp` —
+rather than inventing a new targeted-refresh mechanism; that path has
+already been tried and rejected once.
+
+### File map
+
+| File | Owns |
+|---|---|
+| `backup/AckBackup.kt` | The `@Serializable` root data class for the full JSON backup — every new field nullable/empty-default for schema evolution |
+| `backup/TransferManager.kt` | `generateBackupJson` (export), `validateDataIntegrity` (import gate, logs every rejection to `ACK_IMPORT`), `applyBackupToStorage` (merge-by-id apply) |
+| `decks/GifBackupManager.kt` | Standalone `.zip` GIF deck backup: manifest model, `exportDeck`, `importBackup`, `validateManifest` (logs every rejection to `ACK_GIF_BACKUP`) |
+| `decks/GifRepository.kt` | `upsertCategory`, `restoreEntry` (re-validates `fileName` independently of the manifest gate) |
+| `data/CommandRepository.kt` | `upsertDeck` — merge-by-id deck creation/update used by both backup paths |
+| `MainActivity.kt` | Top-level `restartApp(context)`, shared by every import/restore flow that can create a new deck |
+| `settings/SettingsView.kt` | FULL RESTORE FROM JSON + IMPORT MATRIX AS NEW DECK UI, both using the toast → delayed-flag → `restartApp` pattern |
+| `decks/GifDeck.kt` | Per-deck BACKUP dropdown (EXPORT/IMPORT DECK (.ZIP)) UI, same restart pattern |
