@@ -152,7 +152,16 @@ fun SettingsView(
     context: Context,
     primaryColor: Color,
     logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>,
-    onUploadClick: () -> Unit
+    onUploadClick: () -> Unit,
+    // Called after IMPORT MATRIX AS NEW DECK or FULL RESTORE FROM JSON
+    // changes which decks exist or which one/profile is active. Neither
+    // is reflected automatically -- the deck selector and active-deck/
+    // profile state in MainActivity's persistent header are only ever
+    // (re-)read on demand (see deckRevision), unlike this screen's own
+    // fields, which get fresh remember{} state every time SETTINGS is
+    // navigated back into. Without this, the change is real on disk but
+    // invisible until the app restarts.
+    onDataImported: () -> Unit = {}
 ) {
     val prefs = context.getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
 
@@ -1158,6 +1167,7 @@ fun SettingsView(
                     if(newDeckName.isNotEmpty()) {
                         CommandRepository.saveDeck(context, newDeckName, selectedColorIdx, importedBackup!!.matrixData)
                         showImportDialog = false; newDeckName = ""; WatchSync.sendDeckList(context)
+                        onDataImported()
                     }
                 }
             },
@@ -1207,6 +1217,7 @@ fun SettingsView(
                         val success = TransferManager.restoreBackup(context, rawJson)
                         if (success) {
                             WatchSync.sendDeckList(context)
+                            onDataImported()
                             Toast.makeText(context, "PROTOCOL RESTORED", Toast.LENGTH_LONG).show()
                         } else {
                             Toast.makeText(context, "INTEGRITY CHECK FAILED", Toast.LENGTH_SHORT).show()

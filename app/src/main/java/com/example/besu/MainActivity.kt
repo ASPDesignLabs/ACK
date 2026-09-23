@@ -1287,6 +1287,24 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     helpManager.onEvent(
                                         HelpEvent.Interacted(AckTags.UPLOAD_BTN)
                                     )
+                                },
+                                onDataImported = {
+                                    // Refreshes the persistent header's deck
+                                    // selector and active deck/profile/color
+                                    // -- neither is otherwise re-read after a
+                                    // background import/restore (see
+                                    // deckRevision above).
+                                    deckRevision++
+                                    val restoredDeckId = CommandRepository.getActiveDeckId(context)
+                                    currentDeckId = restoredDeckId
+                                    currentDeckName = CommandRepository.getDeckName(
+                                        context = context,
+                                        deckId = restoredDeckId
+                                    )
+                                    primaryColor = NeonPalette.getColor(
+                                        CommandRepository.getActiveColorIndex(context)
+                                    )
+                                    currentProfile = CommandRepository.getActiveProfile(context)
                                 }
                             )
 
