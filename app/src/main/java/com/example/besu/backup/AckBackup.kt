@@ -3,6 +3,8 @@ package com.example.besu.backup
 import com.example.besu.computer.*
 import com.example.besu.data.*
 import com.example.besu.decks.*
+import com.example.besu.geo.GeoZone
+import com.example.besu.output.VisualPreset
 import com.example.besu.output.VoiceRecordingBackupEntry
 import kotlinx.serialization.Serializable
 
@@ -66,7 +68,48 @@ data class AckBackup(
     // with the AutocompleteScopeInfo a management UI needs to label it.
     // Empty on backups made before this field existed, same as every
     // other additive field here.
-    val autocompleteHistory: Map<String, AutocompleteScope> = emptyMap()
+    val autocompleteHistory: Map<String, AutocompleteScope> = emptyMap(),
+
+    // Geo-Protocol: geofenced zones, engine mode ("SOVEREIGN"/"OPTIMIZED"
+    // as a plain string so this file doesn't need to import GeoEngineMode
+    // for one field), and the master enable toggle. The two scalars are
+    // nullable rather than defaulted -- a backup made before this feature
+    // existed decodes them as null ("nothing to apply" on restore) rather
+    // than a false-looking default that would overwrite the device's real
+    // setting. Every backup made by a build that knows this field always
+    // fills in a real value, never null.
+    val geoZones: List<GeoZone> = emptyList(),
+    val geoEngineMode: String? = null,
+    val geoMasterToggle: Boolean? = null,
+
+    // Visual prompt presets (text/outline color, outline width, font
+    // size, style flags), which preset is active, and the force-device-
+    // rotation overlay toggle. Same nullable-scalar convention as above.
+    val visualPresets: List<VisualPreset> = emptyList(),
+    val activeVisualPresetId: String? = null,
+    val forceDeviceRotation: Boolean? = null,
+
+    // Output device routing (PROTOCOL's OUTPUT DEVICE section) -- which
+    // device non-forced playback goes to, and the paired Bluetooth
+    // device it's pinned to, if any.
+    val outputRouteMode: String? = null,
+    val outputRouteBtAddress: String? = null,
+    val outputRouteBtLabel: String? = null,
+
+    // Terminal / STATUSBOX display prefs.
+    val terminalRetentionDays: Int? = null,
+    val terminalHideSystemMessages: Boolean? = null,
+    val terminalHidePathTrace: Boolean? = null,
+    val terminalMonospaceEnabled: Boolean? = null,
+    val terminalStatusboxColorIndex: Int? = null,
+
+    // Shake-to-kill sensitivity threshold (AccelerometerTapService).
+    val shakeThreshold: Float? = null,
+
+    // Whether each Shared Root Variables section is collapsed, per
+    // category -- UI state, but small and cheap to carry along and merges
+    // the same way rootOverrides itself does.
+    val rootOverrideCollapsed: Map<String, Boolean> = emptyMap()
 )
 
 @Serializable
