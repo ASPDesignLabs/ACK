@@ -401,11 +401,13 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         val wakeWindow = prefs.getInt("WAKE_WINDOW_MS", 1800)
         val toneTheme = prefs.getInt("TONE_THEME", 1)
         val toneVol = prefs.getFloat("TONE_VOLUME", 0.8f)
+        val computerFlyoutTimeoutSec = prefs.getInt("COMPUTER_FLYOUT_TIMEOUT_SEC", 10)
 
         WatchSync.sendCrownSensitivity(context, crownSens)
         WatchSync.sendMotionConfig(context, twist, pose)
         WatchSync.sendFireGraceConfig(context, fireGrace)
         WatchSync.sendWakeWindowConfig(context, wakeWindow)
+        WatchSync.sendComputerFlyoutTimeout(context, computerFlyoutTimeoutSec)
         WatchSync.sendAudioConfig(context, toneTheme, toneVol)
     }
 

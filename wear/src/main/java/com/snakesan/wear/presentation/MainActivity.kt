@@ -67,6 +67,10 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
     private val availableDecks = mutableStateListOf<DeckLite>()
     private var crownThresholdPx by mutableFloatStateOf(96f)
 
+    // Phone-configurable (PROTOCOL > HARDWARE CONFIG, WatchSync.
+    // sendComputerFlyoutTimeout) inactivity window for ComputerTargetFlyout.
+    private var computerFlyoutTimeoutSec by mutableIntStateOf(10)
+
     // Deck Selection
     private var isSelectingDeck by mutableStateOf(false)
     private var selectorIndex by mutableIntStateOf(0)
@@ -155,6 +159,7 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
 
         val savedSens = prefs.getInt("crown_sensitivity_level", 2)
         crownThresholdPx = (savedSens * 48f)
+        computerFlyoutTimeoutSec = prefs.getInt("cfg_computer_flyout_timeout_sec", 10).coerceIn(5, 30)
 
         loadCachedDecks()
         loadCachedComputerCategories()
@@ -349,7 +354,8 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                                 feedback(150, TechSynth.Sfx.LOCK)
                                 sendComputerPick(categoryId, nodeId)
                             },
-                            onDismiss = { isComputerFlyoutVisible = false }
+                            onDismiss = { isComputerFlyoutVisible = false },
+                            timeoutMs = computerFlyoutTimeoutSec * 1000L
                         )
                     }
                 }
@@ -739,6 +745,15 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                     i.action = "UPDATE_CONFIG"
                     startService(i)
 
+                    feedback(50, TechSynth.Sfx.TICK)
+                } catch (e: Exception) {}
+            }
+
+            "/sys/computer_flyout_timeout" -> {
+                try {
+                    val seconds = String(e.data).toInt().coerceIn(5, 30)
+                    computerFlyoutTimeoutSec = seconds
+                    prefs.edit().putInt("cfg_computer_flyout_timeout_sec", seconds).apply()
                     feedback(50, TechSynth.Sfx.TICK)
                 } catch (e: Exception) {}
             }

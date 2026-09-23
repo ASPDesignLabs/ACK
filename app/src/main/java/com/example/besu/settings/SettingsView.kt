@@ -172,6 +172,7 @@ fun SettingsView(
     var motPose by remember { mutableFloatStateOf(prefs.getFloat("MOT_POSE", 6.0f)) }
     var fireGraceMs by remember { mutableFloatStateOf(prefs.getInt("FIRE_GRACE_MS", 500).toFloat()) }
     var wakeWindowMs by remember { mutableFloatStateOf(prefs.getInt("WAKE_WINDOW_MS", 1800).toFloat()) }
+    var computerFlyoutTimeoutSec by remember { mutableFloatStateOf(prefs.getInt("COMPUTER_FLYOUT_TIMEOUT_SEC", 10).toFloat()) }
     var shakeThreshold by remember {
         mutableFloatStateOf(
             prefs.getFloat("SHAKE_THRESHOLD", AccelerometerTapService.DEFAULT_SHAKE_THRESHOLD)
@@ -273,7 +274,8 @@ fun SettingsView(
             .putInt("AUTO_CRYO", autoCryo.toInt()).putInt("CROWN_SENS", crownSens.toInt())
             .putFloat("MOT_TWIST", motTwist).putFloat("MOT_POSE", motPose)
             .putInt("FIRE_GRACE_MS", fireGraceMs.toInt())
-            .putInt("WAKE_WINDOW_MS", wakeWindowMs.toInt()).apply()
+            .putInt("WAKE_WINDOW_MS", wakeWindowMs.toInt())
+            .putInt("COMPUTER_FLYOUT_TIMEOUT_SEC", computerFlyoutTimeoutSec.toInt()).apply()
 
         WatchSync.sendAudioConfig(context, toneTheme, toneVolume)
         WatchSync.sendPowerConfig(context, autoCryo.toInt())
@@ -281,6 +283,7 @@ fun SettingsView(
         WatchSync.sendMotionConfig(context, motTwist, motPose)
         WatchSync.sendFireGraceConfig(context, fireGraceMs.toInt())
         WatchSync.sendWakeWindowConfig(context, wakeWindowMs.toInt())
+        WatchSync.sendComputerFlyoutTimeout(context, computerFlyoutTimeoutSec.toInt())
     }
 
     fun updateShakeThreshold() {
@@ -706,6 +709,20 @@ fun SettingsView(
                 )
                 Slider(value = wakeWindowMs, onValueChange = { wakeWindowMs = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 800f..3000f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
+                    modifier = Modifier.helpTarget(
+                        AckTags.SETTINGS_WATCH_CONFIG,
+                        primaryColor
+                    ))
+
+                Text("TARGET FLYOUT TIMEOUT: ${computerFlyoutTimeoutSec.toInt()}s", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(
+                    "How long the watch's Target Computer flyout (tap-tap-hold on a Quick Actions deck) waits with no interaction before closing itself.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Slider(value = computerFlyoutTimeoutSec, onValueChange = { computerFlyoutTimeoutSec = it }, onValueChangeFinished = { syncAll()
+                    reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 5f..30f, steps = 4, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
                         AckTags.SETTINGS_WATCH_CONFIG,
                         primaryColor

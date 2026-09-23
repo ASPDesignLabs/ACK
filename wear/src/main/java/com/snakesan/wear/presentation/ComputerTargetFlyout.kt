@@ -49,8 +49,7 @@ private sealed class FlyoutLevel {
 
 // One rotary/tap-selectable row at the current level -- a category to
 // enter (from the picker), a subcategory to drill into, or a leaf entry
-// to hold-confirm. The synthetic back/exit row (always ring slot 0) isn't
-// represented here; ComputerTargetFlyout handles it directly by index.
+// to hold-confirm.
 private data class FlyoutRow(
     val label: String,
     val categoryId: String,
@@ -58,17 +57,24 @@ private data class FlyoutRow(
     val isCategory: Boolean
 )
 
-// Up to this many real rows show at once, arranged around the ring
-// alongside the fixed back/exit slice -- see RING_SLOT_COUNT below.
-// Scrolling past the last one on a page moves to the next page rather
-// than paging one item at a time; see the crown handler.
-private const val ITEMS_PER_PAGE = 5
+private enum class RingSlotKind { BACK, EXIT, NEXT, CATEGORY, LEAF }
 
-// Ring slot 0 is always the synthetic back/exit control (fixed at the top,
-// every page); slots 1..5 hold the current page's real rows. Fixed slot
-// *angles* regardless of how many are filled on a given page, so a
-// position (e.g. "2 o'clock") means the same thing page to page.
-private const val RING_SLOT_COUNT = 1 + ITEMS_PER_PAGE
+// Everything ComputerRingCanvas needs to draw one ring slice -- built by
+// ComputerTargetFlyout from the current page's rows plus its own
+// back/next bookkeeping, so the canvas itself doesn't need to know
+// anything about levels, pages, or the navigation stack.
+private data class RingSlotContent(val label: String, val kind: RingSlotKind)
+
+// Up to this many real rows show at once. Ring slots 1, 2, 4 and 5 hold
+// them (slot 0 is always BACK/EXIT, slot 3 is always NEXT when there's
+// more than one page) -- fixed positions regardless of how many rows are
+// actually on a given page, so "4 o'clock" means the same thing page to
+// page. ITEM_RING_SLOTS' order is the reading order (first row = slot 1).
+private const val ITEMS_PER_PAGE = 4
+private val ITEM_RING_SLOTS = listOf(1, 2, 4, 5)
+private const val NEXT_RING_SLOT = 3
+
+private const val RING_SLOT_COUNT = 6
 private const val SLICE_WIDTH_DEG = 360f / RING_SLOT_COUNT
 private const val SLICE_GAP_DEG = 6f // leaves a visible gap between adjacent slices' bands
 
@@ -139,20 +145,26 @@ private fun wrapToArcLines(label: String, paint: Paint, maxLines: Int, budgetPx:
 // existing pose+twist gesture" decision this feature was scoped to.
 //
 // Radial menu, modeled on Overseer's watch-face rim bands rather than a
-// single-focus ring: every sibling on the current page gets its own
-// colored arc slice with its full (word-wrapped, up to 3 lines) label
-// curving along the rim, all visible at once -- not cycled through blind.
-// Crown rotation AND a direct tap on a visible slice both move the
-// highlight; only a long-press (anywhere, not scoped to a specific slice)
-// confirms/activates it, so a stray tap never commits anything. A
-// synthetic BACK/EXIT slice always occupies the top position; entering a
-// category or subcategory pushes a new level rather than picking anything
-// -- only a long-press on an actual leaf entry commits.
+// single-focus ring: every row on the current page gets its own colored
+// arc slice with its full (word-wrapped, up to 3 lines) label curving
+// along the rim, all visible at once -- not cycled through blind. Crown
+// rotation AND a direct tap on a visible slice both move the highlight;
+// only a long-press (anywhere, not scoped to a specific slice) confirms/
+// activates it, so a stray tap never commits anything. Two fixed control
+// slices -- BACK/EXIT (top) and NEXT (bottom, only when there's more
+// than one page) -- sit alongside up to 4 real rows; entering a category
+// or subcategory pushes a new level rather than picking anything, and
+// NEXT pages within the current level rather than picking anything --
+// only a long-press on an actual leaf entry commits.
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ComputerTargetFlyout(
     onSelect: (categoryId: String, nodeId: String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    // Caller-configured (PROTOCOL > HARDWARE CONFIG); defaults to
+    // TargetSelectionOverlay's original 5s only as a last-resort fallback
+    // if somehow called without a real synced value.
+    timeoutMs: Long = 5000L
 ) {
     // Defensive only -- the tap-tap-hold handler that shows this already
     // checks there's at least one synced category first.
@@ -175,14 +187,6 @@ fun ComputerTargetFlyout(
         }
     }
 
-    var selectionIndex by remember { mutableIntStateOf(0) }
-    var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
-
-    LaunchedEffect(lastInteraction) {
-        delay(5000) // Same inactivity window as TargetSelectionOverlay.
-        onDismiss()
-    }
-
     fun rowsFor(level: FlyoutLevel): List<FlyoutRow> = when (level) {
         is FlyoutLevel.CategoryPicker -> ComputerCategoryCache.categories.values.map { category ->
             FlyoutRow(label = category.label, categoryId = category.id, nodeId = null, isCategory = true)
@@ -195,55 +199,84 @@ fun ComputerTargetFlyout(
     val currentLevel = stack.last()
     val isRoot = stack.size == 1
     val rows = rowsFor(currentLevel)
-    val slotCount = rows.size + 1 // + the synthetic back/exit row at index 0
-    val selectedRow = rows.getOrNull(selectionIndex - 1)
-
-    // Which page selectionIndex currently falls on, and that page's real
-    // rows -- pure display derivation, recomputed fresh every
-    // recomposition (so, unlike the pointerInput-scoped functions below,
-    // safe to read directly rather than needing its own re-read helper).
-    val page = if (selectionIndex == 0) 0 else (selectionIndex - 1) / ITEMS_PER_PAGE
-    val pageStart = page * ITEMS_PER_PAGE
-    val pageItems = rows.subList(pageStart, minOf(pageStart + ITEMS_PER_PAGE, rows.size))
     val pageCount = if (rows.isEmpty()) 1 else (rows.size + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE
-    val highlightSlot = if (selectionIndex == 0) 0 else ((selectionIndex - 1) % ITEMS_PER_PAGE) + 1
 
-    // Deliberately re-reads stack/selectionIndex/ComputerCategoryCache
-    // itself rather than closing over the rows/selectedRow/isRoot vals
-    // above: this is only ever invoked from the onLongPress handler inside
-    // pointerInput(currentLevel) below, whose coroutine (and therefore
-    // whatever it captured at launch) only restarts when currentLevel
-    // changes -- not on every crown/tap scroll, which only changes
-    // selectionIndex. Reading the outer vals here would silently act on
-    // whatever was selected when the level was first entered instead of
-    // wherever the user actually scrolled to.
+    // Keyed on currentLevel -- entering/leaving a level always starts back
+    // on its first page, and (being remember(key), not a plain reset call)
+    // this can't be forgotten at some future call site the way a manual
+    // "currentPage = 0" sprinkled into activate() could be.
+    var currentPage by remember(currentLevel) { mutableIntStateOf(0) }
+    val pageIndex = currentPage.coerceIn(0, pageCount - 1)
+    val pageStart = pageIndex * ITEMS_PER_PAGE
+    val pageItems = rows.subList(pageStart, minOf(pageStart + ITEMS_PER_PAGE, rows.size))
+
+    // selectionIndex is local to the *current page*: 0 = BACK/EXIT,
+    // 1..pageItems.size = that page's rows (in ITEM_RING_SLOTS order),
+    // pageItems.size+1 = NEXT (only a valid target when pageCount > 1).
+    // Resetting whenever the page changes for the same reason currentPage
+    // itself resets on level change -- keyed remember, not a call site to
+    // forget.
+    var selectionIndex by remember(currentLevel, pageIndex) { mutableIntStateOf(0) }
+    val slotCountThisPage = 1 + pageItems.size + (if (pageCount > 1) 1 else 0)
+
+    var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(lastInteraction, timeoutMs) {
+        delay(timeoutMs)
+        onDismiss()
+    }
+
+    val selectedRow = if (selectionIndex in 1..pageItems.size) pageItems[selectionIndex - 1] else null
+    val isNextHighlighted = selectionIndex == pageItems.size + 1 && pageCount > 1
+
+    // Deliberately re-reads stack/currentPage/selectionIndex/
+    // ComputerCategoryCache itself rather than closing over the rows/
+    // pageItems/selectedRow vals above: this is only ever invoked from
+    // the onLongPress handler inside pointerInput(currentLevel) below,
+    // whose coroutine (and therefore whatever it captured at launch) only
+    // restarts when currentLevel changes -- not on every crown/tap
+    // scroll, which only changes selectionIndex or currentPage. Reading
+    // the outer vals here would silently act on whatever was selected
+    // when the level was first entered instead of wherever the user
+    // actually scrolled to. currentPage/selectionIndex themselves are
+    // fine to read directly even here -- they're real MutableState, not
+    // plain derived vals, so a read always sees the latest value
+    // regardless of which composition's closure is doing the reading.
     fun activate() {
         val level = stack.last()
         val rowsNow = rowsFor(level)
         val isRootNow = stack.size == 1
+        val pageCountNow = if (rowsNow.isEmpty()) 1 else (rowsNow.size + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE
+        val pageNow = currentPage.coerceIn(0, pageCountNow - 1)
+        val pageStartNow = pageNow * ITEMS_PER_PAGE
+        val itemsNow = rowsNow.subList(pageStartNow, minOf(pageStartNow + ITEMS_PER_PAGE, rowsNow.size))
 
         if (selectionIndex == 0) {
             if (isRootNow) {
                 onDismiss()
             } else {
                 stack.removeAt(stack.lastIndex)
-                selectionIndex = 0
                 TechSynth.play(TechSynth.Sfx.TICK)
             }
             return
         }
 
-        val row = rowsNow.getOrNull(selectionIndex - 1) ?: return
+        if (selectionIndex == itemsNow.size + 1 && pageCountNow > 1) {
+            currentPage = (pageNow + 1) % pageCountNow
+            TechSynth.play(TechSynth.Sfx.TICK)
+            return
+        }
+
+        val row = itemsNow.getOrNull(selectionIndex - 1) ?: return
         if (row.isCategory) {
             stack.add(FlyoutLevel.NodeLevel(row.categoryId, row.nodeId ?: "", row.label))
-            selectionIndex = 0
             TechSynth.play(TechSynth.Sfx.TICK)
         } else if (row.nodeId != null) {
             // Haptic + LOCK tone for the actual commit happens in
             // MainActivity's onSelect implementation, same split as
             // TargetSelectionOverlay's onSelect -- this composable only
             // plays its own audio for the in-place navigation it handles
-            // entirely by itself (drill-in/back above).
+            // entirely by itself (drill-in/back/next above).
             onSelect(row.categoryId, row.nodeId)
             onDismiss()
         }
@@ -280,8 +313,8 @@ fun ComputerTargetFlyout(
                         val direction = if (scrollAccumulator > 0) 1 else -1
                         val next = selectionIndex + direction
                         selectionIndex = when {
-                            next >= slotCount -> 0
-                            next < 0 -> slotCount - 1
+                            next >= slotCountThisPage -> 0
+                            next < 0 -> slotCountThisPage - 1
                             else -> next
                         }
                         TechSynth.playNavTone(selectionIndex)
@@ -295,8 +328,9 @@ fun ComputerTargetFlyout(
                 // MutableState, so the gesture coroutine needs restarting
                 // with a fresh closure whenever the level actually
                 // changes, or tap hit-testing (and activate()'s drill-
-                // in/back) would keep acting on the level it was launched
-                // under. See activate()'s own comment for the full reasoning.
+                // in/back/next) would keep acting on the level it was
+                // launched under. See activate()'s own comment for the
+                // full reasoning.
                 .pointerInput(currentLevel) {
                     detectTapGestures(
                         onTap = { offset ->
@@ -304,9 +338,10 @@ fun ComputerTargetFlyout(
 
                             val level = stack.last()
                             val rowsNow = rowsFor(level)
-                            val pageNow = if (selectionIndex == 0) 0 else (selectionIndex - 1) / ITEMS_PER_PAGE
+                            val pageCountNow = if (rowsNow.isEmpty()) 1 else (rowsNow.size + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE
+                            val pageNow = currentPage.coerceIn(0, pageCountNow - 1)
                             val pageStartNow = pageNow * ITEMS_PER_PAGE
-                            val pageItemsNow = rowsNow.subList(
+                            val itemsNow = rowsNow.subList(
                                 pageStartNow,
                                 minOf(pageStartNow + ITEMS_PER_PAGE, rowsNow.size)
                             )
@@ -327,8 +362,17 @@ fun ComputerTargetFlyout(
                                 if (angleDeg < 0) angleDeg += 360.0
                                 val nearestSlot = (((angleDeg + SLICE_WIDTH_DEG / 2) / SLICE_WIDTH_DEG).toInt()) % RING_SLOT_COUNT
 
-                                if (nearestSlot == 0 || nearestSlot - 1 < pageItemsNow.size) {
-                                    selectionIndex = if (nearestSlot == 0) 0 else pageStartNow + nearestSlot
+                                val tappedIndex = when {
+                                    nearestSlot == 0 -> 0
+                                    nearestSlot == NEXT_RING_SLOT -> if (pageCountNow > 1) itemsNow.size + 1 else null
+                                    else -> {
+                                        val itemLocalIndex = ITEM_RING_SLOTS.indexOf(nearestSlot)
+                                        if (itemLocalIndex in 0 until itemsNow.size) itemLocalIndex + 1 else null
+                                    }
+                                }
+
+                                if (tappedIndex != null) {
+                                    selectionIndex = tappedIndex
                                     TechSynth.playNavTone(selectionIndex)
                                 }
                             }
@@ -341,34 +385,59 @@ fun ComputerTargetFlyout(
                 }
         ) {
             val isBackHighlighted = selectionIndex == 0
-            val isLeafSelected = !isBackHighlighted && selectedRow?.isCategory == false
+            val isLeafSelected = !isBackHighlighted && !isNextHighlighted && selectedRow?.isCategory == false
             val levelLabel = when (val level = currentLevel) {
                 is FlyoutLevel.CategoryPicker -> "TARGET COMPUTER"
                 is FlyoutLevel.NodeLevel -> level.levelLabel
             }
-            val highlightedLabel = if (isBackHighlighted) {
-                if (isRoot) "EXIT" else "BACK"
-            } else {
-                selectedRow?.label ?: ""
+            val highlightedLabel = when {
+                isBackHighlighted -> if (isRoot) "EXIT" else "BACK"
+                isNextHighlighted -> "NEXT"
+                else -> selectedRow?.label ?: ""
             }
             val highlightColor = when {
-                isBackHighlighted -> CyberAmber
+                isBackHighlighted || isNextHighlighted -> CyberAmber
                 selectedRow?.isCategory == true -> CyberCyan
                 else -> CyberGreen
             }
             val footerHint = when {
                 isBackHighlighted && isRoot -> "HOLD TO EXIT"
                 isBackHighlighted -> "HOLD TO GO BACK"
+                isNextHighlighted -> "HOLD FOR NEXT PAGE"
                 selectedRow?.isCategory == true -> "HOLD TO OPEN"
                 isLeafSelected -> "HOLD TO SELECT"
                 else -> ""
             }
 
+            val ringContent: Map<Int, RingSlotContent> = remember(pageItems, isRoot, pageCount) {
+                buildMap {
+                    put(
+                        0,
+                        RingSlotContent(
+                            if (isRoot) "EXIT" else "BACK",
+                            if (isRoot) RingSlotKind.EXIT else RingSlotKind.BACK
+                        )
+                    )
+                    pageItems.forEachIndexed { i, row ->
+                        val slot = ITEM_RING_SLOTS.getOrNull(i) ?: return@forEachIndexed
+                        put(slot, RingSlotContent(row.label, if (row.isCategory) RingSlotKind.CATEGORY else RingSlotKind.LEAF))
+                    }
+                    if (pageCount > 1) {
+                        put(NEXT_RING_SLOT, RingSlotContent("NEXT", RingSlotKind.NEXT))
+                    }
+                }
+            }
+            val highlightSlot = when {
+                isBackHighlighted -> 0
+                isNextHighlighted -> NEXT_RING_SLOT
+                selectionIndex in 1..pageItems.size -> ITEM_RING_SLOTS.getOrElse(selectionIndex - 1) { -1 }
+                else -> -1
+            }
+
             ComputerRingCanvas(
                 minDimPx = minDimPx,
-                pageItems = pageItems,
-                highlightSlot = highlightSlot,
-                isRoot = isRoot
+                ringContent = ringContent,
+                highlightSlot = highlightSlot
             )
 
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
@@ -386,7 +455,7 @@ fun ComputerTargetFlyout(
                 if (pageCount > 1) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        "PAGE ${page + 1}/$pageCount",
+                        "PAGE ${pageIndex + 1}/$pageCount",
                         color = Color.Gray,
                         fontSize = 8.sp,
                         fontFamily = FontFamily.Monospace
@@ -401,12 +470,14 @@ fun ComputerTargetFlyout(
     }
 }
 
-// Draws the 6 rim slices -- a colored arc band plus its curved, word-
-// wrapped label -- via the native Android Canvas (Path.addArc +
+// Draws the up-to-6 rim slices -- a colored arc band plus its curved,
+// word-wrapped label -- via the native Android Canvas (Path.addArc +
 // Canvas.drawTextOnPath). Compose has no built-in curved-text primitive,
 // so this drops to nativeCanvas for text only; the band itself could use
 // Compose's own drawArc, but keeping both draw calls on the same
 // native-canvas pass avoids mixing two drawing APIs for one visual unit.
+// Purely a renderer -- everything about which slot holds what (back/next/
+// page contents) is decided by the caller and handed in as ringContent.
 //
 // The one genuinely fiddly part: drawTextOnPath lays a string out along
 // the path's direction of travel, orienting each glyph "upright" relative
@@ -417,16 +488,12 @@ fun ComputerTargetFlyout(
 // slice's own center. Reversing the sweep direction (start from the
 // opposite edge, negative sweep) for any slice centered in the bottom
 // half fixes both problems in one step; isBottomHalfSlice picks out which
-// slices need it. This is the one piece of this file that's hardest to
-// fully verify without seeing it rendered -- if a bottom slice's text
-// comes out backwards or upside down on-device, flipping the sweep-sign
-// branch below (swap the two addArc calls' start/sweep) is the fix.
+// slices need it.
 @Composable
 private fun ComputerRingCanvas(
     minDimPx: Float,
-    pageItems: List<FlyoutRow>,
-    highlightSlot: Int,
-    isRoot: Boolean
+    ringContent: Map<Int, RingSlotContent>,
+    highlightSlot: Int
 ) {
     val bandRadius = minDimPx * BAND_RADIUS_FRACTION
     val textOuterRadius = minDimPx * TEXT_OUTER_RADIUS_FRACTION
@@ -464,20 +531,15 @@ private fun ComputerRingCanvas(
             bandPaint.strokeWidth = bandStrokeWidth
 
             for (slotPos in 0 until RING_SLOT_COUNT) {
-                val row = if (slotPos == 0) null else pageItems.getOrNull(slotPos - 1)
-                if (slotPos != 0 && row == null) continue
+                val content = ringContent[slotPos] ?: continue
 
                 val isHighlighted = slotPos == highlightSlot
-                val color = when {
-                    slotPos == 0 -> CyberAmber
-                    row?.isCategory == true -> CyberCyan
-                    else -> CyberGreen
+                val color = when (content.kind) {
+                    RingSlotKind.BACK, RingSlotKind.EXIT, RingSlotKind.NEXT -> CyberAmber
+                    RingSlotKind.CATEGORY -> CyberCyan
+                    RingSlotKind.LEAF -> CyberGreen
                 }
-                val label = if (slotPos == 0) {
-                    if (isRoot) "EXIT" else "BACK"
-                } else {
-                    row!!.label.uppercase()
-                }
+                val label = content.label.uppercase()
 
                 val displayColor = if (isHighlighted) color else color.copy(alpha = 0.45f)
                 val argb = displayColor.toArgb()
@@ -505,7 +567,25 @@ private fun ComputerRingCanvas(
                 val lines = wrapToArcLines(label, paint, MAX_ARC_LINES, budgetPx)
 
                 lines.forEachIndexed { lineIndex, line ->
-                    val lineRadius = textOuterRadius - lineIndex * lineStep
+                    // Top-half slices read top-to-bottom on screen exactly
+                    // like the radius order they're drawn in (line 0,
+                    // nearest the rim, is physically highest -- read
+                    // first). For a bottom-half slice that relationship
+                    // inverts: "nearest the rim" is physically LOWEST on
+                    // screen there, so without this, line 0 (the first
+                    // word) would be read *last* by anyone scanning the
+                    // slice top-to-bottom, and a 2-word label like "SPOT
+                    // COFFEE" would visually read back-to-front. Mirroring
+                    // the line order for reversed slices (last word
+                    // nearest the rim instead of first) keeps top-to-
+                    // bottom scanning correct in both hemispheres, while
+                    // still anchoring the outermost line to the rim
+                    // (textOuterRadius) either way.
+                    val lineRadius = if (!reversed) {
+                        textOuterRadius - lineIndex * lineStep
+                    } else {
+                        textOuterRadius - (lines.size - 1 - lineIndex) * lineStep
+                    }
                     val path = Path()
                     val rect = RectF(cx - lineRadius, cy - lineRadius, cx + lineRadius, cy + lineRadius)
                     val arcLenPx = lineRadius * Math.toRadians((halfWidthDeg * 2).toDouble()).toFloat()

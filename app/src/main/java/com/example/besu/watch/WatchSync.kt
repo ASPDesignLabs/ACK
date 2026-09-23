@@ -158,6 +158,14 @@ object WatchSync {
         sendMessage(context, path, data, "WAKE WINDOW SYNC")
     }
 
+    // How long the Target Computer flyout (ComputerTargetFlyout, watch-
+    // side) waits with no interaction before auto-dismissing. 5-30s.
+    fun sendComputerFlyoutTimeout(context: Context, seconds: Int) {
+        val path = "/sys/computer_flyout_timeout"
+        val data = "$seconds".toByteArray(Charsets.UTF_8)
+        sendMessage(context, path, data, "FLYOUT TIMEOUT SYNC")
+    }
+
     // --- GESTURE TRAINING MODE ---
     // mode is one of "OFF" / "PACED" / "LIVE":
     //   OFF   - normal live behavior.
