@@ -328,7 +328,7 @@ fun SettingsView(
     }
 
     var showImportDialog by remember { mutableStateOf(false) }
-    var showClearAutocompleteConfirm by remember { mutableStateOf(false) }
+    var showManageAutocomplete by remember { mutableStateOf(false) }
     var showManageRecordings by remember { mutableStateOf(false) }
     var recordingGainPercent by remember {
         mutableFloatStateOf(VoiceRecordingRepository.getPlaybackGainPercent(context).toFloat())
@@ -1109,43 +1109,19 @@ fun SettingsView(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 NeonButton(
-                    "CLEAR AUTOCOMPLETE HISTORY",
-                    Modifier.fillMaxWidth(),
-                    mainColor = RadicalRed
+                    "MANAGE AUTOCOMPLETE",
+                    Modifier
+                        .fillMaxWidth()
+                        .testTag(AckTags.AUTOCOMPLETE_MANAGE_BTN)
+                        .helpTarget(AckTags.AUTOCOMPLETE_MANAGE_BTN, primaryColor),
+                    mainColor = primaryColor
                 ) {
-                    showClearAutocompleteConfirm = true
+                    showManageAutocomplete = true
+                    reportHelpInteraction(AckTags.AUTOCOMPLETE_MANAGE_BTN)
                 }
             }
         }
         HeroButton("UPLOAD PROTOCOL", Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
-    }
-
-    if (showClearAutocompleteConfirm) {
-        TightDialogSurface(
-            onDismiss = { showClearAutocompleteConfirm = false },
-            primaryColor = RadicalRed,
-            title = "CLEAR AUTOCOMPLETE HISTORY",
-            dismissLabel = "CANCEL"
-        ) {
-            Text(
-                "This clears every remembered value across every Matrix node, Quick Actions slot, and Shared Root Variable bank. Nothing about your decks, phrases, or the variable values currently set is touched -- only the suggestion history. This cannot be undone.",
-                color = Color.White,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("CLEAR", Modifier.weight(1f), mainColor = RadicalRed) {
-                    AutocompleteHistoryRepository.clearAll(context)
-                    showClearAutocompleteConfirm = false
-                }
-                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
-                    showClearAutocompleteConfirm = false
-                }
-            }
-        }
     }
 
     if (showImportDialog && importedBackup != null) {
@@ -1178,6 +1154,14 @@ fun SettingsView(
             context = context,
             primaryColor = primaryColor,
             onDismiss = { showManageRecordings = false }
+        )
+    }
+
+    if (showManageAutocomplete) {
+        ManageAutocompleteDialog(
+            context = context,
+            primaryColor = primaryColor,
+            onDismiss = { showManageAutocomplete = false }
         )
     }
 

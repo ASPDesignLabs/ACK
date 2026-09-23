@@ -430,15 +430,39 @@ object TransferManager {
 // internally (see AutocompleteHistoryRepository's *ScopeKey functions),
 // not user-typed, but still validated on the way in like every other
 // backup key -- a corrupted or hand-edited backup shouldn't be trusted
-// just because this field's keys aren't normally free text.
+// just because this field's keys aren't normally free text. The scope's
+// info rides alongside the key rather than being derived from it, so it
+// gets the same treatment -- its string fields with the identifier
+// pattern every other deckId/storagePath-shaped field in this file uses.
         if (backup.autocompleteHistory.size > 2000) return false
 
-        backup.autocompleteHistory.forEach { (scopeKey, entries) ->
+        val validAutocompleteFieldTypes = setOf(
+            AutocompleteScopeInfo.TYPE_MATRIX,
+            AutocompleteScopeInfo.TYPE_QUICK_ACTION,
+            AutocompleteScopeInfo.TYPE_ROOT_OVERRIDE
+        )
+
+        backup.autocompleteHistory.forEach { (scopeKey, scope) ->
             if (scopeKey.length > MAX_KEY_LENGTH) return false
             if (!SAFE_KEY_PATTERN.matches(scopeKey)) return false
-            if (entries.size > 20) return false
+            if (scope.entries.size > 20) return false
 
-            entries.forEach { entry ->
+            if (scope.info.fieldType !in validAutocompleteFieldTypes) return false
+            listOfNotNull(
+                scope.info.deckId,
+                scope.info.profile,
+                scope.info.storagePath,
+                scope.info.category,
+                scope.info.tag
+            ).forEach {
+                if (it.length > MAX_KEY_LENGTH) return false
+                if (!SAFE_KEY_PATTERN.matches(it)) return false
+            }
+            listOfNotNull(scope.info.groupIndex, scope.info.slotIndex, scope.info.tagIndex).forEach {
+                if (it !in 0..10_000) return false
+            }
+
+            scope.entries.forEach { entry ->
                 if (entry.value.length > MAX_PHRASE_LENGTH) return false
                 if (entry.count !in 1..100_000) return false
             }

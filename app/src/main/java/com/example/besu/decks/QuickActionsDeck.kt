@@ -533,6 +533,9 @@ private fun QuickActionEditorDialog(
                                 AutocompleteHistoryRepository.quickActionVariableScopeKey(
                                     deckId, groupIndex, slot.slotIndex, index
                                 ),
+                                AutocompleteScopeInfo.quickAction(
+                                    deckId, groupIndex, slot.slotIndex, index
+                                ),
                                 value
                             )
                         }

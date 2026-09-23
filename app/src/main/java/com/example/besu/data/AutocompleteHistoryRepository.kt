@@ -16,6 +16,68 @@ data class AutocompleteEntry(
     val lastUsedAt: Long = System.currentTimeMillis()
 )
 
+// Identifies which real field a scope's history belongs to, with enough
+// structured detail for a management UI to build a human-readable label
+// (name a deck, resolve a node's actual label, etc.) without ever parsing
+// the opaque scope key string back apart -- the key stays exactly what it
+// always was, a lookup-only string; this rides alongside it instead. A
+// flat, non-polymorphic shape (only the fields a given fieldType actually
+// uses are non-null) rather than a sealed hierarchy, so this stays
+// ordinary data-class serialization rather than needing kotlinx's
+// polymorphic machinery for something this small.
+@Serializable
+data class AutocompleteScopeInfo(
+    val fieldType: String, // one of the TYPE_* constants below
+    val deckId: String? = null,
+    val profile: String? = null,
+    val storagePath: String? = null,
+    val groupIndex: Int? = null,
+    val slotIndex: Int? = null,
+    val tagIndex: Int? = null,
+    val category: String? = null,
+    val tag: String? = null
+) {
+    companion object {
+        const val TYPE_MATRIX = "matrix"
+        const val TYPE_QUICK_ACTION = "quick_action"
+        const val TYPE_ROOT_OVERRIDE = "root_override"
+
+        fun matrix(deckId: String, profile: String, storagePath: String, slotIndex: Int) =
+            AutocompleteScopeInfo(
+                fieldType = TYPE_MATRIX,
+                deckId = deckId,
+                profile = profile,
+                storagePath = storagePath,
+                slotIndex = slotIndex
+            )
+
+        fun quickAction(deckId: String, groupIndex: Int, slotIndex: Int, tagIndex: Int) =
+            AutocompleteScopeInfo(
+                fieldType = TYPE_QUICK_ACTION,
+                deckId = deckId,
+                groupIndex = groupIndex,
+                slotIndex = slotIndex,
+                tagIndex = tagIndex
+            )
+
+        fun rootOverride(category: String, tag: String) =
+            AutocompleteScopeInfo(
+                fieldType = TYPE_ROOT_OVERRIDE,
+                category = category,
+                tag = tag
+            )
+    }
+}
+
+// One field's stored history in full -- what field it is, and the values
+// remembered for it. The unit everything in this file reads/writes as a
+// whole; getSuggestions is the one exception, reading just the values.
+@Serializable
+data class AutocompleteScope(
+    val info: AutocompleteScopeInfo,
+    val entries: List<AutocompleteEntry> = emptyList()
+)
+
 // Local-only "you've typed this here before" suggestions for three field
 // types: a Matrix node's local variable values, a Quick Actions slot's
 // local variable values, and Shared Root Variables' A/B/C values. Each
@@ -56,6 +118,7 @@ object AutocompleteHistoryRepository {
     // SAFE_KEY_PATTERN (letters/digits/underscore/hyphen/slash/space) and
     // can be validated on import the same way every other backup key is,
     // without needing a bespoke pattern just for this field.
+
     // Matrix local variable value -- per node (deckId+profile+storagePath,
     // matching CommandRepository's own node scoping), per variable slot (a
     // node can have more than one {VAR}/{VAR:tag} token, each tracked
@@ -87,7 +150,7 @@ object AutocompleteHistoryRepository {
     // --- READ/WRITE ---
 
     fun getSuggestions(context: Context, scopeKey: String): List<String> {
-        return loadEntries(context, scopeKey)
+        return loadScope(context, scopeKey)?.entries.orEmpty()
             .sortedWith(compareByDescending<AutocompleteEntry> { it.count }.thenByDescending { it.lastUsedAt })
             .take(MAX_SUGGESTIONS)
             .map { it.value }
@@ -95,15 +158,23 @@ object AutocompleteHistoryRepository {
 
     // Blank values are never recorded -- there's nothing useful to suggest
     // back. Safe to call unconditionally from a field's commit point
-    // (focus-loss, a dialog's save button) without the caller needing to
-    // check emptiness itself first.
-    fun recordUsage(context: Context, scopeKey: String, value: String) {
+    // (focus-loss, a dialog's save/commit button) without the caller
+    // needing to check emptiness itself first. info is only actually
+    // written the first time a scope is recorded (or if it somehow
+    // changed) -- cheap to pass on every call regardless, callers already
+    // have every piece of it in hand from building the scope key itself.
+    fun recordUsage(
+        context: Context,
+        scopeKey: String,
+        info: AutocompleteScopeInfo,
+        value: String
+    ) {
         val trimmed = value.trim()
         if (trimmed.isEmpty()) {
             return
         }
 
-        val entries = loadEntries(context, scopeKey).toMutableList()
+        val entries = loadScope(context, scopeKey)?.entries.orEmpty().toMutableList()
         val existingIndex = entries.indexOfFirst { it.value == trimmed }
 
         if (existingIndex != -1) {
@@ -124,28 +195,63 @@ object AutocompleteHistoryRepository {
             entries
         }
 
-        saveEntries(context, scopeKey, trimmedToCap)
+        saveScope(context, scopeKey, AutocompleteScope(info = info, entries = trimmedToCap))
     }
 
-    // The single broad "CLEAR AUTOCOMPLETE HISTORY" action in PROTOCOL --
-    // wipes every scope's history at once. Per-scope/per-value removal is
-    // intentionally not part of this pass; a more granular management UI
-    // is planned as a later PROTOCOL addition.
+    // Every stored scope, key alongside its full record -- backs the
+    // MANAGE AUTOCOMPLETE tree browser. A scope whose stored JSON somehow
+    // fails to decode is silently skipped rather than crashing the browser
+    // over one corrupt entry.
+    fun listAllScopes(context: Context): List<Pair<String, AutocompleteScope>> {
+        return prefs(context).all.mapNotNull { (key, rawValue) ->
+            val raw = rawValue as? String ?: return@mapNotNull null
+            val scope = try {
+                json.decodeFromString<AutocompleteScope>(raw)
+            } catch (_: Exception) {
+                return@mapNotNull null
+            }
+            key to scope
+        }
+    }
+
+    // Removes just one remembered value from one scope's history, leaving
+    // the rest of that scope (and every other scope) untouched. Drops the
+    // scope's key entirely once its last value is removed, rather than
+    // leaving an empty-but-present entry behind.
+    fun removeValue(context: Context, scopeKey: String, value: String) {
+        val scope = loadScope(context, scopeKey) ?: return
+        val updatedEntries = scope.entries.filterNot { it.value == value }
+
+        if (updatedEntries.isEmpty()) {
+            prefs(context).edit().remove(scopeKey).apply()
+        } else {
+            saveScope(context, scopeKey, scope.copy(entries = updatedEntries))
+        }
+    }
+
+    // Removes an entire field's history in one action -- the middle
+    // ground between removeValue (one value) and clearAll (every field).
+    fun clearScope(context: Context, scopeKey: String) {
+        prefs(context).edit().remove(scopeKey).apply()
+    }
+
+    // The broad "CLEAR AUTOCOMPLETE HISTORY" action in PROTOCOL -- wipes
+    // every scope's history at once.
     fun clearAll(context: Context) {
         prefs(context).edit().clear().apply()
     }
 
-    private fun loadEntries(context: Context, scopeKey: String): List<AutocompleteEntry> {
-        val raw = prefs(context).getString(scopeKey, null) ?: return emptyList()
+    private fun loadScope(context: Context, scopeKey: String): AutocompleteScope? {
+        val raw = prefs(context).getString(scopeKey, null) ?: return null
         return try {
             json.decodeFromString(raw)
         } catch (_: Exception) {
-            emptyList()
+            null
         }
     }
 
-    private fun saveEntries(context: Context, scopeKey: String, entries: List<AutocompleteEntry>) {
-        prefs(context).edit().putString(scopeKey, json.encodeToString(entries)).apply()
+    private fun saveScope(context: Context, scopeKey: String, scope: AutocompleteScope) {
+        prefs(context).edit().putString(scopeKey, json.encodeToString(scope)).apply()
     }
 
     // --- BACKUP ---
@@ -154,25 +260,17 @@ object AutocompleteHistoryRepository {
     // dedicated prefs file makes a clean whole-file read/replace safe with
     // no exclusion list needed, since nothing else lives in it.
 
-    fun exportForBackup(context: Context): Map<String, List<AutocompleteEntry>> {
-        return prefs(context).all.mapNotNull { (key, rawValue) ->
-            val raw = rawValue as? String ?: return@mapNotNull null
-            val entries = try {
-                json.decodeFromString<List<AutocompleteEntry>>(raw)
-            } catch (_: Exception) {
-                return@mapNotNull null
-            }
-            key to entries
-        }.toMap()
+    fun exportForBackup(context: Context): Map<String, AutocompleteScope> {
+        return listAllScopes(context).toMap()
     }
 
     // Restore-only: wipes whatever's already stored and replaces it
     // wholesale, same convention as ComputerRepository.replaceCategories
     // and VoiceRecordingRepository.replaceFromBackup.
-    fun restoreFromBackup(context: Context, data: Map<String, List<AutocompleteEntry>>) {
+    fun restoreFromBackup(context: Context, data: Map<String, AutocompleteScope>) {
         val editor = prefs(context).edit().clear()
-        data.forEach { (scopeKey, entries) ->
-            editor.putString(scopeKey, json.encodeToString(entries))
+        data.forEach { (scopeKey, scope) ->
+            editor.putString(scopeKey, json.encodeToString(scope))
         }
         editor.apply()
     }

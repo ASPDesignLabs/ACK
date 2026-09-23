@@ -382,7 +382,9 @@ private val PATCH_NOTES = listOf(
     "  VARIABLE FIELDS AND SHARED ROOT VARIABLES, OFFERING YOUR MOST-USED",
     "  PAST ENTRIES BACK AS TAPPABLE CHIPS UNDER THE FIELD",
     "- INCLUDED IN EXPORT .JSON BACKUPS",
-    "- CLEARABLE IN ONE ACTION FROM A NEW AUTOCOMPLETE SECTION IN PROTOCOL",
+    "- MANAGE AUTOCOMPLETE IN PROTOCOL BROWSES EVERY REMEMBERED VALUE BY",
+    "  FIELD, WITH PER-VALUE REMOVAL, PER-FIELD CLEARING, AND A BROAD",
+    "  CLEAR-ALL",
     "-- FIXES --",
     "- FIXED OUTPUT GOING QUIET OR NOT REACHING THE CAR'S SPEAKERS AT ALL",
     "  ON ANDROID AUTO. ACK NEVER REQUESTED AUDIO FOCUS ON ANY PLAYBACK",
@@ -2404,6 +2406,9 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                             AutocompleteHistoryRepository.recordUsage(
                                                 context,
                                                 autocompleteScopeKey,
+                                                AutocompleteScopeInfo.matrix(
+                                                    activeDeckId, activeProfile, node.path, index
+                                                ),
                                                 tempVars[index]
                                             )
                                         }
@@ -2886,6 +2891,12 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         AutocompleteHistoryRepository.recordUsage(
                             context,
                             AutocompleteHistoryRepository.matrixVariableScopeKey(
+                                CommandRepository.getActiveDeckId(context),
+                                CommandRepository.getActiveProfile(context),
+                                request.nodePath,
+                                request.index
+                            ),
+                            AutocompleteScopeInfo.matrix(
                                 CommandRepository.getActiveDeckId(context),
                                 CommandRepository.getActiveProfile(context),
                                 request.nodePath,
@@ -4223,7 +4234,12 @@ fun RootOverrideValueDialog(
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
-                        AutocompleteHistoryRepository.recordUsage(context, autocompleteScopeKey, value)
+                        AutocompleteHistoryRepository.recordUsage(
+                            context,
+                            autocompleteScopeKey,
+                            AutocompleteScopeInfo.rootOverride(category, tag),
+                            value
+                        )
                         onSave(value)
                     }
 

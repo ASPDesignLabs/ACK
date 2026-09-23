@@ -62,10 +62,11 @@ data class AckBackup(
 
     // Autocomplete suggestion history -- what you've typed into Matrix/
     // Quick Actions variable fields and Shared Root Variables, keyed by
-    // AutocompleteHistoryRepository's own opaque scope keys. Empty on
-    // backups made before this field existed, same as every other
-    // additive field here.
-    val autocompleteHistory: Map<String, List<AutocompleteEntry>> = emptyMap()
+    // AutocompleteHistoryRepository's own opaque scope keys, each paired
+    // with the AutocompleteScopeInfo a management UI needs to label it.
+    // Empty on backups made before this field existed, same as every
+    // other additive field here.
+    val autocompleteHistory: Map<String, AutocompleteScope> = emptyMap()
 )
 
 @Serializable
