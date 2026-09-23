@@ -381,8 +381,9 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         context.startService(intent)
 
         val cIdx = CommandRepository.getActiveColorIndex(context)
-        WatchSync.sendDeckConfig(context, cIdx, currentDeckName)
+        WatchSync.sendDeckConfig(context, cIdx, currentDeckName, currentDeckType().name)
         WatchSync.sendDeckList(context)
+        WatchSync.sendComputerCategoriesForDeck(context, currentDeckId)
         WatchSync.sendProfileConfig(context, currentProfile)
 
         val crownSens = prefs.getInt("CROWN_SENS", 2)

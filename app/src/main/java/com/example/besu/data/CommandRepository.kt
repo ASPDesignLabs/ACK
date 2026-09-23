@@ -990,7 +990,12 @@ object CommandRepository {
         val name = if(deckId == "DEFAULT") "DEFAULT" else {
             getDecks(context).find { it.id == deckId }?.name ?: "UNKNOWN"
         }
-        WatchSync.sendDeckConfig(context, colorIndex, name)
+        WatchSync.sendDeckConfig(context, colorIndex, name, getDeckType(context, deckId).name)
+
+        // Always resent (even when empty) so the watch drops a stale
+        // category set from whichever deck was previously active -- see
+        // WatchSync.sendComputerCategoriesForDeck.
+        WatchSync.sendComputerCategoriesForDeck(context, deckId)
     }
 
     fun deleteDeck(
@@ -1386,6 +1391,20 @@ object CommandRepository {
         return TemplateEngine.getComputerTags(template).distinct().associateWith { categoryId ->
             ComputerRepository.resolveTag(context, categoryId)
         }
+    }
+
+    // Every distinct [COMPUTER:X] category id referenced anywhere across a
+    // Quick Actions deck's groups/slots, in no particular order. Used by
+    // WatchSync.sendComputerCategoriesForDeck to decide which Target
+    // Computer categories (if any) the watch needs a copy of for this deck
+    // -- a deck with none synced nothing; a deck with several drives the
+    // watch's category picker step.
+    fun computerCategoryIdsForQuickActionsDeck(context: Context, deckId: String): List<String> {
+        val config = getQuickActionsConfig(context, deckId)
+        return config.groups
+            .flatMap { it.slots }
+            .flatMap { TemplateEngine.getComputerTags(it.template) }
+            .distinct()
     }
 
     fun debugResolvedPhrase(

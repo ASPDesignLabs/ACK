@@ -38,7 +38,7 @@ import kotlin.math.abs
 import kotlin.system.exitProcess
 
 // Simple data class for Watch-side deck cache
-data class DeckLite(val id: String, val name: String, val colorIdx: Int)
+data class DeckLite(val id: String, val name: String, val colorIdx: Int, val type: String = "MATRIX")
 
 class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener, AmbientModeSupport.AmbientCallbackProvider {
 
@@ -58,6 +58,10 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
     private var activePrimaryColor by mutableStateOf(NeonPalette.DEFAULT_CYAN)
     private var activeDeckLabel by mutableStateOf("DEFAULT")
     private var activeProfileLabel by mutableStateOf("DEFAULT")
+    // Drives which tap-tap-hold overlay opens (legacy TargetSelectionOverlay
+    // vs. the Target Computer flyout) -- see the /sys/deck_update handler
+    // and commitDeckSelection below for where this gets kept current.
+    private var activeDeckType by mutableStateOf("MATRIX")
     
     // --- NAVIGATION STATE ---
     private val availableDecks = mutableStateListOf<DeckLite>()
@@ -140,12 +144,14 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         // Init Defaults
         activePrimaryColor = NeonPalette.getColor(prefs.getInt("active_color_idx", 0))
         activeDeckLabel = prefs.getString("active_deck_name", "DEFAULT") ?: "DEFAULT"
+        activeDeckType = prefs.getString("active_deck_type", "MATRIX") ?: "MATRIX"
         activeProfileLabel = prefs.getString("active_profile_name", "DEFAULT") ?: "DEFAULT"
-        
+
         val savedSens = prefs.getInt("crown_sensitivity_level", 2)
         crownThresholdPx = (savedSens * 48f)
 
         loadCachedDecks()
+        loadCachedComputerCategories()
         
         @Suppress("DEPRECATION")
         vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
@@ -408,6 +414,10 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         if (selectedDeck != null) {
             isSelectingDeck = false
             activeDeckLabel = selectedDeck.name
+            // Set optimistically from the cached deck list so tap-tap-hold
+            // routes correctly right away -- the phone's own /sys/deck_update
+            // push (which also carries type) still follows and reconfirms it.
+            activeDeckType = selectedDeck.type
             sendDeckRequest(selectedDeck.id)
             if (!silent) feedback(150, TechSynth.Sfx.LOCK)
             broadcastDeckToHUD()
@@ -440,14 +450,19 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         parseDeckList(raw)
     }
 
+    private fun loadCachedComputerCategories() {
+        val raw = prefs.getString("cached_computer_categories", "") ?: ""
+        ComputerCategoryCache.update(raw)
+    }
+
     private fun parseDeckList(raw: String) {
         availableDecks.clear()
         var foundValid = false
         if (raw.isNotEmpty()) {
             val list = raw.split(";").mapNotNull { entry ->
                 val parts = entry.split("|")
-                if (parts.size == 3) {
-                    DeckLite(parts[0], parts[1], parts[2].toIntOrNull() ?: 0)
+                if (parts.size >= 3) {
+                    DeckLite(parts[0], parts[1], parts[2].toIntOrNull() ?: 0, parts.getOrElse(3) { "MATRIX" })
                 } else null
             }
             if (list.isNotEmpty()) {
@@ -456,7 +471,7 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
             }
         }
         if (!foundValid) {
-            availableDecks.add(DeckLite("DEFAULT", "DEFAULT", 0))
+            availableDecks.add(DeckLite("DEFAULT", "DEFAULT", 0, "MATRIX"))
         }
     }
 
@@ -625,10 +640,16 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                     if (parts.size >= 2) {
                         val idx = parts[0].toInt()
                         val name = parts[1]
+                        val type = parts.getOrElse(2) { "MATRIX" }
                         val newColor = NeonPalette.getColor(idx)
                         activePrimaryColor = newColor
                         activeDeckLabel = name
-                        prefs.edit().putInt("active_color_idx", idx).putString("active_deck_name", name).apply()
+                        activeDeckType = type
+                        prefs.edit()
+                            .putInt("active_color_idx", idx)
+                            .putString("active_deck_name", name)
+                            .putString("active_deck_type", type)
+                            .apply()
                         feedback(50, TechSynth.Sfx.UNLOCK)
                         broadcastDeckToHUD(overrideDeck = name, overrideColor = newColor.toArgb())
                     }
@@ -705,6 +726,12 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
             "/sys/target_list" -> {
                 val raw = String(e.data, Charsets.UTF_8)
                 TargetCache.update(raw)
+                feedback(20)
+            }
+
+            "/sys/computer_categories" -> {
+                val raw = String(e.data, Charsets.UTF_8)
+                ComputerCategoryCache.update(raw)
                 feedback(20)
             }
         }

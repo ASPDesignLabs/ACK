@@ -386,26 +386,28 @@ class BackgroundSensorService : Service(), SensorEventListener {
         val prefs = getSharedPreferences("AckPrefs", Context.MODE_PRIVATE)
         val rawList = prefs.getString("cached_deck_list", "") ?: ""
         
-        val decks = rawList.split(";").mapNotNull { 
+        val decks = rawList.split(";").mapNotNull {
             val p = it.split("|")
-            if(p.size == 3) DeckLite(p[0], p[1], p[2].toIntOrNull()?:0) else null 
+            if(p.size >= 3) DeckLite(p[0], p[1], p[2].toIntOrNull()?:0, p.getOrElse(3) { "MATRIX" }) else null
         }
-        
+
         if (decks.isEmpty()) return
 
         val currentName = prefs.getString("active_deck_name", "DEFAULT")
         val currentIdx = decks.indexOfFirst { it.name == currentName }.coerceAtLeast(0)
-        
+
         val newIdx = if (next) {
             (currentIdx + 1) % decks.size
         } else {
             if (currentIdx - 1 < 0) decks.size - 1 else currentIdx - 1
         }
-        
+
         val target = decks[newIdx]
-        
+
         prefs.edit().putString("active_deck_name", target.name)
-            .putInt("active_color_idx", target.colorIdx).apply()
+            .putInt("active_color_idx", target.colorIdx)
+            .putString("active_deck_type", target.type)
+            .apply()
             
         broadcastStatus(overrideDeck = target.name, overrideColor = target.colorIdx)
         
