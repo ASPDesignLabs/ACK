@@ -1039,11 +1039,11 @@ fun SettingsView(
 
                         reportHelpInteraction(AckTags.SETTINGS_DATA_PORT)
                     }
-                    NeonButton("IMPORT .JSON", Modifier.weight(1f), mainColor = primaryColor) { importLauncher.launch(arrayOf("application/json")) }
+                    NeonButton("IMPORT MATRIX AS NEW DECK", Modifier.weight(1f), mainColor = primaryColor) { importLauncher.launch(arrayOf("application/json")) }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "IMPORT .JSON brings in a backup's matrix phrases as a new deck. FULL RESTORE below replaces your entire current configuration instead.",
+                    "IMPORT MATRIX AS NEW DECK brings in a backup's matrix phrases as a brand new deck, without touching anything else. FULL RESTORE below applies everything else a backup carries -- overwriting or adding to your current setup, never deleting what it doesn't mention.",
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1055,7 +1055,7 @@ fun SettingsView(
                         .fillMaxWidth()
                         .testTag(AckTags.SETTINGS_FULL_RESTORE_BTN)
                         .helpTarget(AckTags.SETTINGS_FULL_RESTORE_BTN, primaryColor),
-                    mainColor = RadicalRed
+                    mainColor = primaryColor
                 ) {
                     fullRestoreLauncher.launch(arrayOf("application/json"))
                     reportHelpInteraction(AckTags.SETTINGS_FULL_RESTORE_BTN)
@@ -1187,12 +1187,12 @@ fun SettingsView(
                 showFullRestoreConfirm = false
                 pendingFullRestoreJson = null
             },
-            primaryColor = RadicalRed,
+            primaryColor = primaryColor,
             title = "FULL RESTORE FROM JSON",
             dismissLabel = "CANCEL"
         ) {
             Text(
-                "This replaces your entire current configuration -- every deck, DSP setting, root override, quick action, emergency prompt, target computer entry, voice recording, and autocomplete history -- with what's in the selected file. Anything in your current setup that isn't in the backup does not survive. This cannot be undone.",
+                "This applies whatever the selected file contains -- decks, quick actions, root overrides, target computer entries, emergency prompts, voice recordings, autocomplete history, Geo-Protocol zones, visual presets, output routing, and more -- overwriting a matching entry by its id, or adding it if you don't already have one. Nothing on this device that the file doesn't mention is touched or removed. To clear something instead, use that feature's own dedicated clear/delete action.",
                 color = Color.White,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -1201,7 +1201,7 @@ fun SettingsView(
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("RESTORE", Modifier.weight(1f), mainColor = RadicalRed) {
+                TightPanelButton("RESTORE", Modifier.weight(1f), mainColor = primaryColor) {
                     val rawJson = pendingFullRestoreJson
                     if (rawJson != null) {
                         val success = TransferManager.restoreBackup(context, rawJson)

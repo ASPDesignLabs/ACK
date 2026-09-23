@@ -264,11 +264,11 @@ object AutocompleteHistoryRepository {
         return listAllScopes(context).toMap()
     }
 
-    // Restore-only: wipes whatever's already stored and replaces it
-    // wholesale, same convention as ComputerRepository.replaceCategories
-    // and VoiceRecordingRepository.replaceFromBackup.
+    // Restore-only: upserts by scope key -- a scope in the backup
+    // replaces the local one with that key (or is added), and a local
+    // scope whose key isn't in the backup is left untouched.
     fun restoreFromBackup(context: Context, data: Map<String, AutocompleteScope>) {
-        val editor = prefs(context).edit().clear()
+        val editor = prefs(context).edit()
         data.forEach { (scopeKey, scope) ->
             editor.putString(scopeKey, json.encodeToString(scope))
         }

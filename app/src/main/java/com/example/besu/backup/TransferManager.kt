@@ -3,7 +3,9 @@ package com.example.besu.backup
 import com.example.besu.computer.*
 import com.example.besu.data.*
 import com.example.besu.decks.*
+import com.example.besu.geo.*
 import com.example.besu.output.*
+import com.example.besu.ui.theme.NeonPalette
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -31,6 +33,7 @@ object TransferManager {
     private const val KEY_HEADER_SHORTCUTS = "header_shortcuts"
 
     private const val ROOT_OVERRIDE_PREFIX = "root_override_"
+    private const val ROOT_OVERRIDE_COLLAPSED_PREFIX = "root_override_section_collapsed_"
 
     // --- SECURITY CONSTANTS ---
     private const val MAX_DECOMPRESSED_SIZE = 1024 * 1024 // 1MB Limit
@@ -217,6 +220,49 @@ object TransferManager {
 // does above.
         val autocompleteHistory = AutocompleteHistoryRepository.exportForBackup(context)
 
+// 9d. Gather Geo-Protocol: zones, engine mode, master toggle.
+        val geoZones = GeoRepository.getZones(context)
+        val geoEngineMode = GeoRepository.getEngineMode(context).name
+        val geoMasterToggle = GeoRepository.isGeoEnabled(context)
+
+// 9e. Gather visual prompt presets, which one is active, and the
+// device-rotation overlay toggle.
+        val visualPresets = VisualPresetRepository.getPresets(context)
+        val activeVisualPresetId = VisualPresetRepository.getActivePresetId(context)
+        val forceDeviceRotation = OverlayDisplayPrefs.isDeviceRotationEnabled(context)
+
+// 9f. Gather output device routing -- lives in the same "ack_prefs"
+// file already opened above for DSP settings.
+        val outputRouteMode = dspPrefs.getString("OUTPUT_ROUTE_MODE", null)
+        val outputRouteBtAddress = dspPrefs.getString("OUTPUT_ROUTE_BT_ADDRESS", null)
+        val outputRouteBtLabel = dspPrefs.getString("OUTPUT_ROUTE_BT_LABEL", null)
+
+// 9g. Gather Terminal / STATUSBOX display prefs.
+        val terminalRetentionDays = TerminalLogStore.getRetentionDays(context)
+        val terminalHideSystemMessages = TerminalLogStore.getHideSystemMessages(context)
+        val terminalHidePathTrace = TerminalLogStore.getHidePathTrace(context)
+        val terminalMonospaceEnabled = TerminalLogStore.getMonospaceEnabled(context)
+        val terminalStatusboxColorIndex = TerminalLogStore.getStatusboxColorIndex(context)
+
+// 9h. Gather shake-to-kill sensitivity -- also lives in "ack_prefs".
+        val shakeThreshold = dspPrefs.getFloat(
+            "SHAKE_THRESHOLD",
+            AccelerometerTapService.DEFAULT_SHAKE_THRESHOLD
+        )
+
+// 9i. Gather Shared Root Variables' per-category collapsed/expanded UI
+// state -- same matrixPrefs file rootOverrides itself reads above,
+// filtered to the collapsed-state keys (Boolean-valued) instead of the
+// config keys (String-valued), so the two extractions never overlap.
+        val rootOverrideCollapsed = matrixPrefs.all
+            .filter { (key, value) -> key.startsWith(ROOT_OVERRIDE_COLLAPSED_PREFIX) && value is Boolean }
+            .mapNotNull { (key, value) ->
+                val category = key.removePrefix(ROOT_OVERRIDE_COLLAPSED_PREFIX)
+                val collapsed = value as? Boolean ?: return@mapNotNull null
+                category to collapsed
+            }
+            .toMap()
+
 // 10. Wrap and encode.
         val backup = AckBackup(
             dsp = dspConfig,
@@ -239,6 +285,22 @@ object TransferManager {
             voiceRecordings = voiceRecordings,
             voiceRecordingGainPercent = voiceRecordingGainPercent,
             autocompleteHistory = autocompleteHistory,
+            geoZones = geoZones,
+            geoEngineMode = geoEngineMode,
+            geoMasterToggle = geoMasterToggle,
+            visualPresets = visualPresets,
+            activeVisualPresetId = activeVisualPresetId,
+            forceDeviceRotation = forceDeviceRotation,
+            outputRouteMode = outputRouteMode,
+            outputRouteBtAddress = outputRouteBtAddress,
+            outputRouteBtLabel = outputRouteBtLabel,
+            terminalRetentionDays = terminalRetentionDays,
+            terminalHideSystemMessages = terminalHideSystemMessages,
+            terminalHidePathTrace = terminalHidePathTrace,
+            terminalMonospaceEnabled = terminalMonospaceEnabled,
+            terminalStatusboxColorIndex = terminalStatusboxColorIndex,
+            shakeThreshold = shakeThreshold,
+            rootOverrideCollapsed = rootOverrideCollapsed,
         )
 
         return json.encodeToString(backup)
@@ -471,6 +533,73 @@ object TransferManager {
             }
         }
 
+// 13. Validate Geo-Protocol zones and settings.
+        if (backup.geoZones.size > 100) return false
+
+        backup.geoZones.forEach { zone ->
+            if (zone.id.length > MAX_KEY_LENGTH) return false
+            if (zone.name.length > MAX_LABEL_LENGTH) return false
+            if (zone.lat !in -90.0..90.0) return false
+            if (zone.lng !in -180.0..180.0) return false
+            if (zone.radiusMeters !in 1f..100_000f) return false
+            if (!SAFE_KEY_PATTERN.matches(zone.enterDeckId)) return false
+            if (!SAFE_KEY_PATTERN.matches(zone.exitDeckId)) return false
+        }
+
+        if (backup.geoZones.map { it.id }.distinct().size != backup.geoZones.size) return false
+
+        if (backup.geoEngineMode != null && backup.geoEngineMode !in setOf("SOVEREIGN", "OPTIMIZED")) {
+            return false
+        }
+
+// 14. Validate visual prompt presets.
+        if (backup.visualPresets.size > 50) return false
+
+        backup.visualPresets.forEach { preset ->
+            if (preset.id.length > MAX_KEY_LENGTH) return false
+            if (preset.name.length > MAX_LABEL_LENGTH) return false
+            if (preset.outlineWidth !in 0f..50f) return false
+            if (preset.fontSizeSp !in 10f..400f) return false
+        }
+
+        if (backup.visualPresets.map { it.id }.distinct().size != backup.visualPresets.size) return false
+        if (backup.activeVisualPresetId != null && backup.activeVisualPresetId.length > MAX_KEY_LENGTH) {
+            return false
+        }
+
+// 15. Validate output device routing.
+        if (backup.outputRouteMode != null && backup.outputRouteMode !in setOf("AUTO", "BLUETOOTH", "WATCH")) {
+            return false
+        }
+        if (backup.outputRouteBtAddress != null && backup.outputRouteBtAddress.length > MAX_KEY_LENGTH) {
+            return false
+        }
+        if (backup.outputRouteBtLabel != null && backup.outputRouteBtLabel.length > MAX_LABEL_LENGTH) {
+            return false
+        }
+
+// 16. Validate Terminal / STATUSBOX prefs.
+        backup.terminalRetentionDays?.let {
+            if (it !in TerminalLogStore.MIN_RETENTION_DAYS..TerminalLogStore.MAX_RETENTION_DAYS) return false
+        }
+        backup.terminalStatusboxColorIndex?.let {
+            if (it !in NeonPalette.SWATCHES.indices) return false
+        }
+
+// 17. Validate shake-to-kill sensitivity -- generous headroom over the
+// 8f..25f slider range, matching how the DSP physics fields above are
+// validated a bit looser than their own sliders.
+        backup.shakeThreshold?.let {
+            if (it !in 1f..50f) return false
+        }
+
+// 18. Validate Shared Root Variables' collapsed-state map.
+        if (backup.rootOverrideCollapsed.size > 50) return false
+        backup.rootOverrideCollapsed.forEach { (category, _) ->
+            if (category.length > 50) return false
+            if (!SAFE_KEY_PATTERN.matches(category)) return false
+        }
+
         return true
     }
 
@@ -508,7 +637,13 @@ object TransferManager {
         context: Context,
         backup: AckBackup
     ) {
-        // 1. Restore DSP, physics, and custom voices.
+        // 1. Restore DSP, physics, and custom voices -- dsp is
+        // non-optional, so any valid backup always fully specifies it,
+        // and it's always fully overwritten. Output device routing and
+        // shake-to-kill sensitivity share this same "ack_prefs" file, so
+        // they're folded into the same transaction; both are nullable
+        // and only written when the backup actually specifies them,
+        // leaving the device's current value alone otherwise.
         val dspPrefs = context.getSharedPreferences(
             PREFS_DSP,
             Context.MODE_PRIVATE
@@ -538,17 +673,46 @@ object TransferManager {
                 json.encodeToString(backup.dsp.customVoices)
             )
 
+            if (backup.outputRouteMode != null) {
+                putString("OUTPUT_ROUTE_MODE", backup.outputRouteMode)
+                putString("OUTPUT_ROUTE_BT_ADDRESS", backup.outputRouteBtAddress)
+                putString("OUTPUT_ROUTE_BT_LABEL", backup.outputRouteBtLabel)
+            }
+
+            if (backup.shakeThreshold != null) {
+                putFloat("SHAKE_THRESHOLD", backup.shakeThreshold)
+            }
+
             apply()
         }
 
-        // 2. Replace the complete matrix configuration.
-        //
-        // This is intentionally not additive. A restore should make the matrix
-        // match the backup, including removal of old phrases, _vars entries,
-        // _visual entries, root_override_* entries, old decks, and categories.
-        //
-        // Built-in phrases omitted by sparse export safely fall back to their
-        // factory defaults after their saved override is cleared.
+        // 1b. Terminal / STATUSBOX prefs -- also "ack_prefs", but routed
+        // through TerminalLogStore's own setters rather than raw keys
+        // here, matching how every other named repository below gets
+        // its own restore call instead of TransferManager reaching into
+        // its storage directly.
+        if (backup.terminalRetentionDays != null) {
+            TerminalLogStore.setRetentionDays(context, backup.terminalRetentionDays)
+        }
+        if (backup.terminalHideSystemMessages != null) {
+            TerminalLogStore.setHideSystemMessages(context, backup.terminalHideSystemMessages)
+        }
+        if (backup.terminalHidePathTrace != null) {
+            TerminalLogStore.setHidePathTrace(context, backup.terminalHidePathTrace)
+        }
+        if (backup.terminalMonospaceEnabled != null) {
+            TerminalLogStore.setMonospaceEnabled(context, backup.terminalMonospaceEnabled)
+        }
+        if (backup.terminalStatusboxColorIndex != null) {
+            TerminalLogStore.setStatusboxColorIndex(context, backup.terminalStatusboxColorIndex)
+        }
+
+        // 2. Merge the matrix configuration. Unlike a mirror restore,
+        // this never clears the prefs file first -- every key the
+        // backup provides overwrites the device's value (or is added);
+        // a key the backup doesn't mention -- an existing phrase, local
+        // variable, visual override, or custom deck's data -- is left
+        // exactly as it is.
         val matrixPrefs = context.getSharedPreferences(
             PREFS_MATRIX,
             Context.MODE_PRIVATE
@@ -556,72 +720,57 @@ object TransferManager {
 
         val editor = matrixPrefs.edit()
 
-        editor.clear()
-
-        // Restore phrase templates, live-saved local variables, visual settings,
-        // root override storage, and custom deck phrase data.
         backup.matrixData.forEach { (key, value) ->
             editor.putString(key, value)
         }
 
-        // Restore deck metadata.
-        editor.putString(
-            KEY_DECKS,
-            json.encodeToString(backup.decks)
-        )
+        // Decks, Quick Phrases, and custom context layers each live
+        // under their own single key in this same file as one encoded
+        // list -- merge each by its natural id rather than overwriting
+        // the whole list, so a deck/phrase/layer created since the
+        // backup was made survives.
+        val mergedDecks = CommandRepository.getDecks(context).associateBy { it.id }.toMutableMap()
+        backup.decks.forEach { mergedDecks[it.id] = it }
+        editor.putString(KEY_DECKS, json.encodeToString(mergedDecks.values.toList()))
 
-        // Restore quick phrases.
-        editor.putString(
-            KEY_QUICK,
-            json.encodeToString(backup.quickPhrases)
-        )
+        val mergedQuickPhrases = CommandRepository.getQuickPhrases(context).associateBy { it.id }.toMutableMap()
+        backup.quickPhrases.forEach { mergedQuickPhrases[it.id] = it }
+        editor.putString(KEY_QUICK, json.encodeToString(mergedQuickPhrases.values.toList()))
 
-        // Rebuild custom context layers from the restored data only.
-        //
-        // Do this even when empty, so layers deleted before backup do not
-        // survive from a previous local configuration.
-        if (backup.customContextEntries.isNotEmpty()) {
-            // Modern backups carry the ordered layer list directly, assigned
-            // base pose included.
-            editor.putString(
-                KEY_CATS,
-                json.encodeToString(backup.customContextEntries)
-            )
-        } else {
-            // Backups made before MANAGE CONTEXT existed have no structured
-            // list -- fall back to deriving bare names from the sparse key
-            // dump. CommandRepository migrates this legacy Set<String> to
-            // the ordered format (IDENTITY-based, matching prior behavior)
-            // the next time it is read.
-            val customCategories = mutableSetOf<String>()
-
-            backup.matrixData.keys.forEach { key ->
-                if (key.contains("/custom/")) {
-                    val parts = key.split("/")
-                    val customIndex = parts.indexOf("custom")
-
-                    if (
-                        customIndex != -1 &&
-                        parts.size > customIndex + 1
-                    ) {
-                        customCategories.add(parts[customIndex + 1])
-                    }
-                }
-            }
-
-            editor.putStringSet(KEY_CATS, customCategories)
-        }
+        val mergedCustomContext = CommandRepository.getCustomContextEntries(context)
+            .associateBy { it.name }.toMutableMap()
+        backup.customContextEntries.forEach { mergedCustomContext[it.name] = it }
+        editor.putString(KEY_CATS, json.encodeToString(mergedCustomContext.values.toList()))
 
         editor.apply()
 
-        // 2b. Restore structured data that lives outside the sparse matrix
-        // dump above -- root overrides, per-deck configs, header shortcuts,
-        // the medical ID card, and the active-context selection. These are
-        // gathered on export (see generateBackupJson) but need their own
-        // restore calls since editor.clear() above only wiped the matrix
-        // preferences file; each of these has its own storage shape.
+        // 2b. Header shortcuts are fixed slots by array index, with no
+        // id field to merge by -- merge by index instead, skipping a
+        // backup index whose shortcut is blank so it can't clobber a
+        // real local shortcut with an empty placeholder.
+        val mergedShortcuts = CommandRepository.getHeaderShortcuts(context).toMutableList()
+        backup.headerShortcuts.forEachIndexed { index, shortcut ->
+            if (shortcut.label.isNotBlank() || shortcut.phrase.isNotBlank()) {
+                while (mergedShortcuts.size <= index) {
+                    mergedShortcuts.add(CommandRepository.HeaderShortcut("", ""))
+                }
+                mergedShortcuts[index] = shortcut
+            }
+        }
+        CommandRepository.saveHeaderShortcuts(context, mergedShortcuts)
+
+        // 2c. Restore structured data that lives outside the sparse
+        // matrix dump above. Root overrides, per-deck configs, Geo
+        // zones, visual presets, and Target Computer categories are
+        // each upserted by their own repository's save function -- an
+        // entry this device already has that the backup doesn't mention
+        // is left untouched.
         backup.rootOverrides.forEach { (category, config) ->
             RootOverrideRepository.saveConfig(context, category, config)
+        }
+
+        backup.rootOverrideCollapsed.forEach { (category, collapsed) ->
+            RootOverrideRepository.setSectionCollapsed(context, category, collapsed)
         }
 
         backup.quickActionsDecks.forEach { config ->
@@ -632,33 +781,77 @@ object TransferManager {
             CommandRepository.saveEmergencyConfig(context, config)
         }
 
-        CommandRepository.saveEmergencyInfoCard(context, backup.emergencyInfoCard)
-
-        CommandRepository.saveHeaderShortcuts(context, backup.headerShortcuts)
-
-        // Restore Target Computer data. Legacy slots first, since the
-        // category-tree fallback below migrates from whatever
-        // TargetRepository now holds when the backup predates the tree.
-        TargetRepository.restoreTargets(context, backup.targets, backup.syntaxRules)
-
-        if (backup.computerCategories.isNotEmpty()) {
-            ComputerRepository.replaceCategories(context, backup.computerCategories)
-        } else if (backup.targets.isNotEmpty()) {
-            ComputerRepository.replaceCategories(context, emptyList())
-            ComputerRepository.migrateLegacyTargetsIfNeeded(context)
-        } else {
-            ComputerRepository.replaceCategories(context, emptyList())
+        // The medical ID card is a single object, not a per-id
+        // collection -- merge field by field, only overwriting a string
+        // field when the backup's value is non-blank, and merging
+        // contacts by name so an existing contact not in the backup
+        // survives.
+        val existingCard = CommandRepository.getEmergencyInfoCard(context)
+        val backupCard = backup.emergencyInfoCard
+        val mergedContacts = existingCard.contacts.associateBy { it.name }.toMutableMap()
+        backupCard.contacts.forEach { contact ->
+            if (!contact.isBlank) mergedContacts[contact.name] = contact
         }
+        CommandRepository.saveEmergencyInfoCard(
+            context,
+            existingCard.copy(
+                fullName = backupCard.fullName.ifBlank { existingCard.fullName },
+                dateOfBirth = backupCard.dateOfBirth.ifBlank { existingCard.dateOfBirth },
+                bloodType = backupCard.bloodType.ifBlank { existingCard.bloodType },
+                communicationNote = backupCard.communicationNote.ifBlank { existingCard.communicationNote },
+                conditions = backupCard.conditions.ifBlank { existingCard.conditions },
+                allergies = backupCard.allergies.ifBlank { existingCard.allergies },
+                medications = backupCard.medications.ifBlank { existingCard.medications },
+                notes = backupCard.notes.ifBlank { existingCard.notes },
+                contacts = mergedContacts.values.toList()
+            )
+        )
+
+        // Target Computer: legacy targets/syntax rules and the category
+        // tree both merge internally now (see TargetRepository.
+        // restoreTargets and ComputerRepository.mergeCategories) --
+        // there's no longer a separate legacy-to-tree migration branch
+        // here, since an empty/absent backup section is simply nothing
+        // to merge in, not a signal to synthesize anything.
+        TargetRepository.restoreTargets(context, backup.targets, backup.syntaxRules)
+        ComputerRepository.mergeCategories(context, backup.computerCategories)
 
         // The quickActionsDecks restore above already brought back each
         // slot's recordingId reference -- this brings back the actual
         // audio those ids point to, so they resolve to real files again
         // instead of a slot with a recordingId pointing at nothing.
-        VoiceRecordingRepository.replaceFromBackup(context, backup.voiceRecordings)
+        VoiceRecordingRepository.mergeFromBackup(context, backup.voiceRecordings)
         VoiceRecordingRepository.setPlaybackGainPercent(context, backup.voiceRecordingGainPercent)
 
         AutocompleteHistoryRepository.restoreFromBackup(context, backup.autocompleteHistory)
 
+        // Geo-Protocol: zones merge by id; engine mode and the master
+        // toggle are nullable scalars, applied only when specified.
+        backup.geoZones.forEach { zone ->
+            GeoRepository.saveZone(context, zone)
+        }
+        if (backup.geoEngineMode != null) {
+            GeoRepository.setEngineMode(context, GeoEngineMode.valueOf(backup.geoEngineMode))
+        }
+        if (backup.geoMasterToggle != null) {
+            GeoRepository.setGeoEnabled(context, backup.geoMasterToggle)
+        }
+
+        // Visual prompt presets: merge by id; active preset id and the
+        // device-rotation toggle are nullable scalars.
+        backup.visualPresets.forEach { preset ->
+            VisualPresetRepository.savePreset(context, preset)
+        }
+        if (backup.activeVisualPresetId != null) {
+            VisualPresetRepository.setActivePreset(context, backup.activeVisualPresetId)
+        }
+        if (backup.forceDeviceRotation != null) {
+            OverlayDisplayPrefs.setDeviceRotationEnabled(context, backup.forceDeviceRotation)
+        }
+
+        // Restoring adopts the backup's active deck/profile/category
+        // focus -- unchanged from every prior version of this restore
+        // path.
         CommandRepository.activateDeck(
             context = context,
             deckId = backup.activeDeckId,

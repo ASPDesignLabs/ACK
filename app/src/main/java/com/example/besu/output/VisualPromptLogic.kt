@@ -54,9 +54,18 @@ object VisualPresetRepository {
 
     fun getActivePreset(context: Context): VisualPreset {
         val presets = getPresets(context)
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val activeId = prefs.getString(KEY_ACTIVE_ID, null)
+        val activeId = getActivePresetId(context)
         return presets.find { it.id == activeId } ?: presets.firstOrNull() ?: VisualPreset()
+    }
+
+    // The raw stored active id, unresolved -- null when nothing's ever
+    // been set as active. Distinct from getActivePreset, which always
+    // resolves to a real, usable VisualPreset (falling back to the first
+    // preset or a bare default) since most callers need something to
+    // render, not the id itself.
+    fun getActivePresetId(context: Context): String? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(KEY_ACTIVE_ID, null)
     }
 
     fun setActivePreset(context: Context, id: String) {
