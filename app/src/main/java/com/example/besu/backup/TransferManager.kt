@@ -11,11 +11,7 @@ import android.util.Log
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.InputStreamReader
-import java.util.Base64
-import java.util.zip.GZIPInputStream
 
 // Note: Data classes (AckBackup, DspConfig) are now imported from AckBackup.kt
 
@@ -266,10 +262,17 @@ object TransferManager {
     }
 
     // --- RESTORE (SECURE) ---
-    fun restoreBackup(context: Context, rawPayload: String): Boolean {
+    // Whole-protocol restore -- validates then wholesale-overwrites DSP,
+    // decks, quick actions, emergency, root overrides, target computer,
+    // voice recordings, and autocomplete history, all at once (see
+    // applyBackupToStorage). Used by PROTOCOL's FULL RESTORE FROM JSON;
+    // deliberately not what the narrower IMPORT .JSON button calls, since
+    // that one imports just matrix phrases into a new deck rather than
+    // overwriting the whole configuration.
+    fun restoreBackup(context: Context, rawJson: String): Boolean {
         return try {
             // STEP 1: PARSE
-            val backup = parseQrPayload(rawPayload) ?: return false
+            val backup = parseBackupJson(rawJson) ?: return false
 
             // STEP 2: SANITIZE (The Firewall)
             if (!validateDataIntegrity(backup)) {
@@ -493,32 +496,10 @@ object TransferManager {
     }
 
     // --- UTILITIES ---
-    fun parseQrPayload(rawPayload: String): AckBackup? {
-        if (rawPayload.trim().startsWith("{")) {
-            return try {
-                json.decodeFromString<AckBackup>(rawPayload)
-            } catch (e: Exception) { null }
-        }
-
+    fun parseBackupJson(rawJson: String): AckBackup? {
         return try {
-            val compressedBytes = Base64.getDecoder().decode(rawPayload)
-            val inputStream = GZIPInputStream(ByteArrayInputStream(compressedBytes))
-            val outputStream = ByteArrayOutputStream()
-            val buffer = ByteArray(1024)
-            var totalBytesRead = 0
-            var bytesRead: Int
-
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                totalBytesRead += bytesRead
-                if (totalBytesRead > MAX_DECOMPRESSED_SIZE) {
-                    throw SecurityException("Payload exceeds safe size.")
-                }
-                outputStream.write(buffer, 0, bytesRead)
-            }
-            val jsonString = outputStream.toString("UTF-8")
-            json.decodeFromString<AckBackup>(jsonString)
+            json.decodeFromString<AckBackup>(rawJson)
         } catch (e: Exception) {
-            e.printStackTrace() 
             null
         }
     }

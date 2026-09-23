@@ -83,11 +83,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.compose.foundation)
-    val camerax_version = "1.4.1"
-    implementation("androidx.camera:camera-core:$camerax_version")
-    implementation("androidx.camera:camera-camera2:$camerax_version")
-    implementation("androidx.camera:camera-lifecycle:$camerax_version")
-    implementation("androidx.camera:camera-view:$camerax_version")
 // Mapsforge: 100% Java Offline Vector Maps (Zero C++ / Zero ELF errors)
     implementation("org.mapsforge:mapsforge-map-android:0.20.0")
     implementation("org.mapsforge:mapsforge-themes:0.20.0")

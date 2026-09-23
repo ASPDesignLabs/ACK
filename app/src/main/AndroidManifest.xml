@@ -4,8 +4,7 @@
 
     <!-- PERMISSIONS -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    
+
     <!-- CHANGED: Switched from SPECIAL_USE to MEDIA_PLAYBACK for TTS reliability -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     
@@ -77,12 +76,6 @@
         <!-- ADDED: The missing ghost activity from our diagnostic -->
         <activity 
             android:name=".watch.SensorDebugActivity"
-            android:theme="@android:style/Theme.Material.NoActionBar" />
-
-        <!-- ADD THIS: The Custom Scanner -->
-        <activity
-            android:name=".backup.MosaicScannerActivity"
-            android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar" />
 
         <!-- CHANGED: Service is now explicitly handling Audio/Media -->

@@ -18,6 +18,7 @@ import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
+import android.widget.Toast
 import com.google.android.gms.wearable.Wearable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -330,6 +331,8 @@ fun SettingsView(
     var showImportDialog by remember { mutableStateOf(false) }
     var showManageAutocomplete by remember { mutableStateOf(false) }
     var showManageRecordings by remember { mutableStateOf(false) }
+    var showFullRestoreConfirm by remember { mutableStateOf(false) }
+    var pendingFullRestoreJson by remember { mutableStateOf<String?>(null) }
     var recordingGainPercent by remember {
         mutableFloatStateOf(VoiceRecordingRepository.getPlaybackGainPercent(context).toFloat())
     }
@@ -341,7 +344,7 @@ fun SettingsView(
         uri?.let {
             try {
                 val jsonStr = TransferManager.readTextFromUri(context, it)
-                val backup = TransferManager.parseQrPayload(jsonStr)
+                val backup = TransferManager.parseBackupJson(jsonStr)
                 if (backup != null) { importedBackup = backup; showImportDialog = true }
             } catch (e: Exception) { }
         }
@@ -356,13 +359,18 @@ fun SettingsView(
         }
     }
 
-    val customScannerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        WatchSync.sendDeckList(context)
-    }
-
-    fun launchQrScanner() {
-        val intent = Intent(context, MosaicScannerActivity::class.java)
-        customScannerLauncher.launch(intent)
+    // Whole-protocol restore -- unlike importLauncher above (which only ever
+    // imports matrix phrases into a new deck), this overwrites the entire
+    // current configuration. Reads the file, then holds the raw JSON in
+    // pendingFullRestoreJson until the confirm dialog below approves it --
+    // never applied straight from the picker.
+    val fullRestoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            try {
+                pendingFullRestoreJson = TransferManager.readTextFromUri(context, it)
+                showFullRestoreConfirm = true
+            } catch (e: Exception) { }
+        }
     }
 
     // --- DB METER STATE ---
@@ -1017,17 +1025,6 @@ fun SettingsView(
             item {
                 Text("DATA PORT", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(12.dp))
-                NeonButton(
-                    "OPTICAL SYNC [QR]",
-                    Modifier
-                        .fillMaxWidth()
-                        .helpTarget(AckTags.SETTINGS_DATA_PORT, primaryColor),
-                    mainColor = primaryColor
-                ) {
-                    launchQrScanner()
-                    reportHelpInteraction(AckTags.SETTINGS_DATA_PORT)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     NeonButton(
                         "EXPORT .JSON",
@@ -1043,6 +1040,25 @@ fun SettingsView(
                         reportHelpInteraction(AckTags.SETTINGS_DATA_PORT)
                     }
                     NeonButton("IMPORT .JSON", Modifier.weight(1f), mainColor = primaryColor) { importLauncher.launch(arrayOf("application/json")) }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "IMPORT .JSON brings in a backup's matrix phrases as a new deck. FULL RESTORE below replaces your entire current configuration instead.",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                NeonButton(
+                    "FULL RESTORE FROM JSON",
+                    Modifier
+                        .fillMaxWidth()
+                        .testTag(AckTags.SETTINGS_FULL_RESTORE_BTN)
+                        .helpTarget(AckTags.SETTINGS_FULL_RESTORE_BTN, primaryColor),
+                    mainColor = RadicalRed
+                ) {
+                    fullRestoreLauncher.launch(arrayOf("application/json"))
+                    reportHelpInteraction(AckTags.SETTINGS_FULL_RESTORE_BTN)
                 }
             }
 
@@ -1163,6 +1179,48 @@ fun SettingsView(
             primaryColor = primaryColor,
             onDismiss = { showManageAutocomplete = false }
         )
+    }
+
+    if (showFullRestoreConfirm) {
+        TightDialogSurface(
+            onDismiss = {
+                showFullRestoreConfirm = false
+                pendingFullRestoreJson = null
+            },
+            primaryColor = RadicalRed,
+            title = "FULL RESTORE FROM JSON",
+            dismissLabel = "CANCEL"
+        ) {
+            Text(
+                "This replaces your entire current configuration -- every deck, DSP setting, root override, quick action, emergency prompt, target computer entry, voice recording, and autocomplete history -- with what's in the selected file. Anything in your current setup that isn't in the backup does not survive. This cannot be undone.",
+                color = Color.White,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TightPanelButton("RESTORE", Modifier.weight(1f), mainColor = RadicalRed) {
+                    val rawJson = pendingFullRestoreJson
+                    if (rawJson != null) {
+                        val success = TransferManager.restoreBackup(context, rawJson)
+                        if (success) {
+                            WatchSync.sendDeckList(context)
+                            Toast.makeText(context, "PROTOCOL RESTORED", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, "INTEGRITY CHECK FAILED", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    showFullRestoreConfirm = false
+                    pendingFullRestoreJson = null
+                }
+                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
+                    showFullRestoreConfirm = false
+                    pendingFullRestoreJson = null
+                }
+            }
+        }
     }
 
     val keyIndex = recordingKeyIndex
