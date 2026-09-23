@@ -1,5 +1,9 @@
 package com.example.besu.wear
 
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Typeface
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -13,20 +17,20 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Text
 import kotlinx.coroutines.delay
-import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.roundToInt
-import kotlin.math.sin
+import kotlin.math.sqrt
 
 // One screen of the flyout's navigation stack: either the top-level
 // category picker (only ever the first screen, and only when the active
@@ -55,7 +59,7 @@ private data class FlyoutRow(
 )
 
 // Up to this many real rows show at once, arranged around the ring
-// alongside the fixed back/exit position -- see RING_SLOT_COUNT below.
+// alongside the fixed back/exit slice -- see RING_SLOT_COUNT below.
 // Scrolling past the last one on a page moves to the next page rather
 // than paging one item at a time; see the crown handler.
 private const val ITEMS_PER_PAGE = 5
@@ -65,23 +69,65 @@ private const val ITEMS_PER_PAGE = 5
 // *angles* regardless of how many are filled on a given page, so a
 // position (e.g. "2 o'clock") means the same thing page to page.
 private const val RING_SLOT_COUNT = 1 + ITEMS_PER_PAGE
-private const val RING_RADIUS_FRACTION = 0.38f
-private const val CHIP_HIT_RADIUS_DP = 30
+private const val SLICE_WIDTH_DEG = 360f / RING_SLOT_COUNT
+private const val SLICE_GAP_DEG = 6f // leaves a visible gap between adjacent slices' bands
 
-// Clock-position offset (px, relative to center) for ring slot 0..5, slot 0
-// fixed at the top, clockwise from there. Shared by rendering and tap
-// hit-testing so what's drawn and what's tappable can never drift apart.
-private fun ringOffsetPx(radiusPx: Float, slotIndex: Int): Offset {
-    val angleRad = Math.toRadians((slotIndex * (360 / RING_SLOT_COUNT)).toDouble())
-    return Offset(
-        x = (radiusPx * sin(angleRad)).toFloat(),
-        y = (-radiusPx * cos(angleRad)).toFloat()
-    )
+// Radial layout, as fractions of the screen's shorter dimension.
+private const val BAND_RADIUS_FRACTION = 0.46f
+private const val TEXT_OUTER_RADIUS_FRACTION = 0.405f
+private const val LINE_STEP_FRACTION = 0.085f
+private const val MAX_ARC_LINES = 3
+private const val HIT_MIN_RADIUS_FRACTION = 0.14f
+private const val HIT_MAX_RADIUS_FRACTION = 0.50f
+
+// A slice centered in the bottom half of the circle needs its arc swept
+// in the opposite direction from one in the top half, or drawTextOnPath
+// would lay its letters out backwards and upside down -- see
+// ComputerRingCanvas's comment for the full reasoning. slotPos here is in
+// "my" angle convention: 0 = straight up, increasing clockwise.
+private fun isBottomHalfSlice(slotPos: Int): Boolean {
+    val angleRad = Math.toRadians((slotPos * SLICE_WIDTH_DEG).toDouble())
+    return cos(angleRad) < 0.0
 }
 
-// Ring chips only have room for a short preview -- the full label always
-// shows in the center once a chip is highlighted.
-private fun String.toRingLabel(): String = if (length > 8) take(7) + "…" else this
+// Greedy word-wrap against a fixed pixel budget (the narrowest line's arc
+// length, used for every line so no line risks overflowing its arc) --
+// not a general-purpose wrapper, just enough for short entry/category
+// names. A label that still doesn't fit in maxLines has its last line
+// ellipsized rather than silently dropping words.
+private fun wrapToArcLines(label: String, paint: Paint, maxLines: Int, budgetPx: Float): List<String> {
+    val words = label.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (words.isEmpty()) return emptyList()
+
+    val lines = mutableListOf<String>()
+    var current = StringBuilder()
+    var wordIndex = 0
+
+    while (wordIndex < words.size && lines.size < maxLines) {
+        val word = words[wordIndex]
+        val candidate = if (current.isEmpty()) word else "$current $word"
+        if (current.isEmpty() || paint.measureText(candidate) <= budgetPx) {
+            current = StringBuilder(candidate)
+            wordIndex++
+        } else {
+            lines.add(current.toString())
+            current = StringBuilder()
+        }
+    }
+    if (current.isNotEmpty() && lines.size < maxLines) {
+        lines.add(current.toString())
+    }
+
+    if (wordIndex < words.size && lines.isNotEmpty()) {
+        var last = lines.last()
+        while (last.isNotEmpty() && paint.measureText("$last…") > budgetPx) {
+            last = last.dropLast(1).trimEnd()
+        }
+        lines[lines.lastIndex] = "$last…"
+    }
+
+    return lines
+}
 
 // Watch-side Target Computer picker, opened by tap-tap-hold when the
 // active deck is Quick Actions (see wear MainActivity.kt). Lets the user
@@ -92,17 +138,16 @@ private fun String.toRingLabel(): String = if (length > 8) take(7) + "…" else 
 // anything itself, matching the "pick only, fire separately via the
 // existing pose+twist gesture" decision this feature was scoped to.
 //
-// Radial layout by design, not a single-focus ring like
-// TargetSelectionOverlay: every sibling on the current page is visible at
-// once (as short labels around the rim, full label in the center for
-// whichever is highlighted), so the user sees what they're about to act
-// on rather than cycling blind. Crown rotation AND a direct tap on a
-// visible chip both move the highlight; only a long-press (anywhere --
-// not scoped to a specific chip) confirms/activates it, so a stray tap
-// never commits anything. A synthetic "‹ BACK" / "‹ EXIT" chip always
-// occupies the top ring position; entering a category or subcategory
-// pushes a new level rather than picking anything -- only a long-press on
-// an actual leaf entry commits.
+// Radial menu, modeled on Overseer's watch-face rim bands rather than a
+// single-focus ring: every sibling on the current page gets its own
+// colored arc slice with its full (word-wrapped, up to 3 lines) label
+// curving along the rim, all visible at once -- not cycled through blind.
+// Crown rotation AND a direct tap on a visible slice both move the
+// highlight; only a long-press (anywhere, not scoped to a specific slice)
+// confirms/activates it, so a stray tap never commits anything. A
+// synthetic BACK/EXIT slice always occupies the top position; entering a
+// category or subcategory pushes a new level rather than picking anything
+// -- only a long-press on an actual leaf entry commits.
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ComputerTargetFlyout(
@@ -222,7 +267,7 @@ fun ComputerTargetFlyout(
             .background(Color.Black.copy(alpha = 0.95f)),
         contentAlignment = Alignment.Center
     ) {
-        val ringRadiusPx = minOf(constraints.maxWidth, constraints.maxHeight) * RING_RADIUS_FRACTION
+        val minDimPx = minOf(constraints.maxWidth, constraints.maxHeight).toFloat()
 
         Box(
             modifier = Modifier
@@ -231,7 +276,7 @@ fun ComputerTargetFlyout(
                     lastInteraction = System.currentTimeMillis()
                     scrollAccumulator += it.verticalScrollPixels
 
-                    if (abs(scrollAccumulator) > crownThreshold) {
+                    if (kotlin.math.abs(scrollAccumulator) > crownThreshold) {
                         val direction = if (scrollAccumulator > 0) 1 else -1
                         val next = selectionIndex + direction
                         selectionIndex = when {
@@ -266,22 +311,26 @@ fun ComputerTargetFlyout(
                                 minOf(pageStartNow + ITEMS_PER_PAGE, rowsNow.size)
                             )
 
-                            val center = Offset(size.width / 2f, size.height / 2f)
-                            val hitRadiusPx = CHIP_HIT_RADIUS_DP.dp.toPx()
+                            val cx = size.width / 2f
+                            val cy = size.height / 2f
+                            val dx = offset.x - cx
+                            val dy = offset.y - cy
+                            val dist = sqrt(dx * dx + dy * dy)
+                            val minR = HIT_MIN_RADIUS_FRACTION * minOf(size.width, size.height)
+                            val maxR = HIT_MAX_RADIUS_FRACTION * minOf(size.width, size.height)
 
-                            var tappedSlot = -1
-                            for (slotPos in 0 until RING_SLOT_COUNT) {
-                                if (slotPos != 0 && slotPos - 1 >= pageItemsNow.size) continue
-                                val chipCenter = center + ringOffsetPx(ringRadiusPx, slotPos)
-                                if ((offset - chipCenter).getDistance() <= hitRadiusPx) {
-                                    tappedSlot = slotPos
-                                    break
+                            if (dist in minR..maxR) {
+                                // atan2(dx, -dy): 0 = straight up, increasing
+                                // clockwise -- matches the slot-angle
+                                // convention used everywhere else here.
+                                var angleDeg = Math.toDegrees(atan2(dx.toDouble(), -dy.toDouble()))
+                                if (angleDeg < 0) angleDeg += 360.0
+                                val nearestSlot = (((angleDeg + SLICE_WIDTH_DEG / 2) / SLICE_WIDTH_DEG).toInt()) % RING_SLOT_COUNT
+
+                                if (nearestSlot == 0 || nearestSlot - 1 < pageItemsNow.size) {
+                                    selectionIndex = if (nearestSlot == 0) 0 else pageStartNow + nearestSlot
+                                    TechSynth.playNavTone(selectionIndex)
                                 }
-                            }
-
-                            if (tappedSlot >= 0) {
-                                selectionIndex = if (tappedSlot == 0) 0 else pageStartNow + tappedSlot
-                                TechSynth.playNavTone(selectionIndex)
                             }
                         },
                         onLongPress = {
@@ -292,20 +341,20 @@ fun ComputerTargetFlyout(
                 }
         ) {
             val isBackHighlighted = selectionIndex == 0
-            val displayLabel = if (isBackHighlighted) {
-                if (isRoot) "‹ EXIT" else "‹ BACK"
-            } else {
-                selectedRow?.label ?: ""
-            }
             val isLeafSelected = !isBackHighlighted && selectedRow?.isCategory == false
-            val baseColor = when {
-                isBackHighlighted -> CyberAmber
-                selectedRow?.isCategory == true -> CyberCyan
-                else -> CyberGreen
-            }
             val levelLabel = when (val level = currentLevel) {
                 is FlyoutLevel.CategoryPicker -> "TARGET COMPUTER"
                 is FlyoutLevel.NodeLevel -> level.levelLabel
+            }
+            val highlightedLabel = if (isBackHighlighted) {
+                if (isRoot) "EXIT" else "BACK"
+            } else {
+                selectedRow?.label ?: ""
+            }
+            val highlightColor = when {
+                isBackHighlighted -> CyberAmber
+                selectedRow?.isCategory == true -> CyberCyan
+                else -> CyberGreen
             }
             val footerHint = when {
                 isBackHighlighted && isRoot -> "HOLD TO EXIT"
@@ -315,87 +364,27 @@ fun ComputerTargetFlyout(
                 else -> ""
             }
 
-            // Faint boundary ring the chips sit inside -- purely decorative,
-            // matches TargetSelectionOverlay's reticle language.
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val displayColor = if (isLeafSelected) baseColor else baseColor.copy(alpha = 0.6f)
-                drawCircle(
-                    displayColor.copy(alpha = if (isLeafSelected) 0.12f else 0.04f),
-                    radius = size.minDimension / 2.2f
-                )
-                drawCircle(
-                    displayColor.copy(alpha = 0.5f),
-                    radius = size.minDimension / 2.2f,
-                    style = Stroke(width = 1.5f)
-                )
-            }
+            ComputerRingCanvas(
+                minDimPx = minDimPx,
+                pageItems = pageItems,
+                highlightSlot = highlightSlot,
+                isRoot = isRoot
+            )
 
-            // --- RING CHIPS (back/exit at slot 0, current page's rows at
-            // slots 1..5, fixed clock positions regardless of how many are
-            // actually filled) ---
-            for (slotPos in 0 until RING_SLOT_COUNT) {
-                val row = if (slotPos == 0) null else pageItems.getOrNull(slotPos - 1)
-                if (slotPos != 0 && row == null) continue
-
-                val isHighlighted = slotPos == highlightSlot
-                val chipColor = when {
-                    slotPos == 0 -> CyberAmber
-                    row?.isCategory == true -> CyberCyan
-                    else -> CyberGreen
-                }
-                val offsetPx = ringOffsetPx(ringRadiusPx, slotPos)
-
-                Box(
-                    // align(Center) first -- this Box's parent doesn't set
-                    // contentAlignment, so without it the chip would place
-                    // from the parent's default top-start corner and every
-                    // offset below would be wrong. absoluteOffset (not
-                    // offset) after it deliberately -- this is a fixed
-                    // geometric clock position, not a text-direction-
-                    // relative one, so it must not mirror in RTL locales.
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .absoluteOffset {
-                            IntOffset(offsetPx.x.roundToInt(), offsetPx.y.roundToInt())
-                        }
-                ) {
-                    Text(
-                        text = if (slotPos == 0) "‹" else row!!.label.toRingLabel().uppercase(),
-                        color = if (isHighlighted) chipColor else chipColor.copy(alpha = 0.45f),
-                        fontSize = if (slotPos == 0) 16.sp else 9.sp,
-                        fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-            }
-
-            // --- CENTER: full label + context for whichever chip is
-            // currently highlighted ---
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.Center)) {
-                Text(levelLabel.uppercase(), color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
-                Spacer(modifier = Modifier.height(6.dp))
+                Text(levelLabel.uppercase(), color = Color.Gray, fontSize = 8.sp, fontFamily = FontFamily.Monospace)
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = displayLabel.uppercase(),
-                    color = if (isLeafSelected) baseColor else baseColor.copy(alpha = pulseAlpha),
-                    fontSize = if (displayLabel.length > 10) 14.sp else 18.sp,
+                    text = highlightedLabel.uppercase(),
+                    color = if (isLeafSelected) highlightColor else highlightColor.copy(alpha = pulseAlpha),
+                    fontSize = if (highlightedLabel.length > 12) 11.sp else 13.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace
                 )
 
-                Spacer(modifier = Modifier.height(3.dp))
-
-                if (!isBackHighlighted) {
-                    val typeLabel = if (selectedRow?.isCategory == true) "CATEGORY" else "ENTRY"
-                    Text(
-                        "$typeLabel $selectionIndex/${rows.size}",
-                        color = baseColor.copy(alpha = 0.5f),
-                        fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-
                 if (pageCount > 1) {
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         "PAGE ${page + 1}/$pageCount",
                         color = Color.Gray,
@@ -405,8 +394,125 @@ fun ComputerTargetFlyout(
                 }
             }
 
-            Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)) {
+            Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp)) {
                 Text(footerHint, color = Color.DarkGray, fontSize = 8.sp, fontFamily = FontFamily.Monospace)
+            }
+        }
+    }
+}
+
+// Draws the 6 rim slices -- a colored arc band plus its curved, word-
+// wrapped label -- via the native Android Canvas (Path.addArc +
+// Canvas.drawTextOnPath). Compose has no built-in curved-text primitive,
+// so this drops to nativeCanvas for text only; the band itself could use
+// Compose's own drawArc, but keeping both draw calls on the same
+// native-canvas pass avoids mixing two drawing APIs for one visual unit.
+//
+// The one genuinely fiddly part: drawTextOnPath lays a string out along
+// the path's direction of travel, orienting each glyph "upright" relative
+// to that direction. Sweep a slice's arc the same way (start-angle
+// increasing) all the way around a full circle, and the bottom half comes
+// out backwards and upside down -- the second half of the string ends up
+// on the left, and the whole thing reads like it's reflected through the
+// slice's own center. Reversing the sweep direction (start from the
+// opposite edge, negative sweep) for any slice centered in the bottom
+// half fixes both problems in one step; isBottomHalfSlice picks out which
+// slices need it. This is the one piece of this file that's hardest to
+// fully verify without seeing it rendered -- if a bottom slice's text
+// comes out backwards or upside down on-device, flipping the sweep-sign
+// branch below (swap the two addArc calls' start/sweep) is the fix.
+@Composable
+private fun ComputerRingCanvas(
+    minDimPx: Float,
+    pageItems: List<FlyoutRow>,
+    highlightSlot: Int,
+    isRoot: Boolean
+) {
+    val bandRadius = minDimPx * BAND_RADIUS_FRACTION
+    val textOuterRadius = minDimPx * TEXT_OUTER_RADIUS_FRACTION
+    val lineStep = minDimPx * LINE_STEP_FRACTION
+    val bandStrokeWidth = minDimPx * 0.018f
+    val textSizePx = minDimPx * 0.052f
+
+    val paint = remember {
+        Paint().apply {
+            isAntiAlias = true
+            typeface = Typeface.MONOSPACE
+            textAlign = Paint.Align.CENTER
+            style = Paint.Style.FILL
+        }
+    }
+    val bandPaint = remember {
+        Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.STROKE
+        }
+    }
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+
+        drawIntoCanvas { canvas ->
+            val nativeCanvas = canvas.nativeCanvas
+            paint.textSize = textSizePx
+            bandPaint.strokeWidth = bandStrokeWidth
+
+            for (slotPos in 0 until RING_SLOT_COUNT) {
+                val row = if (slotPos == 0) null else pageItems.getOrNull(slotPos - 1)
+                if (slotPos != 0 && row == null) continue
+
+                val isHighlighted = slotPos == highlightSlot
+                val color = when {
+                    slotPos == 0 -> CyberAmber
+                    row?.isCategory == true -> CyberCyan
+                    else -> CyberGreen
+                }
+                val label = if (slotPos == 0) {
+                    if (isRoot) "EXIT" else "BACK"
+                } else {
+                    row!!.label.uppercase()
+                }
+
+                val displayColor = if (isHighlighted) color else color.copy(alpha = 0.45f)
+                val argb = displayColor.toArgb()
+
+                val sliceCenterDeg = slotPos * SLICE_WIDTH_DEG
+                val halfWidthDeg = (SLICE_WIDTH_DEG - SLICE_GAP_DEG) / 2f
+                val androidCenterDeg = sliceCenterDeg - 90f
+                val reversed = isBottomHalfSlice(slotPos)
+
+                // --- Rim band ---
+                bandPaint.color = argb
+                val bandRect = RectF(cx - bandRadius, cy - bandRadius, cx + bandRadius, cy + bandRadius)
+                if (!reversed) {
+                    nativeCanvas.drawArc(bandRect, androidCenterDeg - halfWidthDeg, halfWidthDeg * 2, false, bandPaint)
+                } else {
+                    nativeCanvas.drawArc(bandRect, androidCenterDeg + halfWidthDeg, -(halfWidthDeg * 2), false, bandPaint)
+                }
+
+                // --- Curved label, word-wrapped to fit the slice's arc ---
+                paint.color = argb
+                paint.isFakeBoldText = isHighlighted
+
+                val innermostRadius = textOuterRadius - (MAX_ARC_LINES - 1) * lineStep
+                val budgetPx = innermostRadius * Math.toRadians((halfWidthDeg * 2).toDouble()).toFloat() * 0.92f
+                val lines = wrapToArcLines(label, paint, MAX_ARC_LINES, budgetPx)
+
+                lines.forEachIndexed { lineIndex, line ->
+                    val lineRadius = textOuterRadius - lineIndex * lineStep
+                    val path = Path()
+                    val rect = RectF(cx - lineRadius, cy - lineRadius, cx + lineRadius, cy + lineRadius)
+                    val arcLenPx = lineRadius * Math.toRadians((halfWidthDeg * 2).toDouble()).toFloat()
+
+                    if (!reversed) {
+                        path.addArc(rect, androidCenterDeg - halfWidthDeg, halfWidthDeg * 2)
+                    } else {
+                        path.addArc(rect, androidCenterDeg + halfWidthDeg, -(halfWidthDeg * 2))
+                    }
+
+                    nativeCanvas.drawTextOnPath(line, path, arcLenPx / 2f, 0f, paint)
+                }
             }
         }
     }
