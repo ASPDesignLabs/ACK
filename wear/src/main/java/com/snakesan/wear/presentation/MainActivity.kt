@@ -78,6 +78,12 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
     // --- TARGET SELECTION STATE ---
     private var isTargetMenuVisible by mutableStateOf(false)
     private var activeTargetIndex by mutableIntStateOf(-1) // -1 = None/Clear
+
+    // --- TARGET COMPUTER FLYOUT STATE ---
+    // tap-tap-hold opens this instead of isTargetMenuVisible's legacy
+    // overlay when the active deck is Quick Actions -- see onTapTapHold
+    // below.
+    private var isComputerFlyoutVisible by mutableStateOf(false)
     
     // TELEMETRY
     private var isStreaming = false
@@ -195,7 +201,7 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                         return@onRotaryScrollEvent false
                     }
 
-                    if (isTargetMenuVisible) {
+                    if (isTargetMenuVisible || isComputerFlyoutVisible) {
                         return@onRotaryScrollEvent false
                     }
 
@@ -274,14 +280,26 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                         }
                     },
                     onLongPress = {
-                        if (!isCryo() && !isTargetMenuVisible) {
+                        if (!isCryo() && !isTargetMenuVisible && !isComputerFlyoutVisible) {
                             toggleShakyHandsMode()
                         }
                     },
                     onTapTapHold = {
                         if (!isCryo()) {
-                            isTargetMenuVisible = true
-                            feedback(100, TechSynth.Sfx.MODIFIER)
+                            if (activeDeckType == "QUICK_ACTIONS" && ComputerCategoryCache.categories.isNotEmpty()) {
+                                isComputerFlyoutVisible = true
+                                feedback(100, TechSynth.Sfx.MODIFIER)
+                            } else if (activeDeckType == "QUICK_ACTIONS") {
+                                // Quick Actions deck, but none of its slots
+                                // reference a [COMPUTER:X] tag -- nothing to
+                                // offer. A short, distinct buzz (no tone) so
+                                // this reads as "nothing here" rather than
+                                // "gesture not recognized."
+                                feedback(30)
+                            } else {
+                                isTargetMenuVisible = true
+                                feedback(100, TechSynth.Sfx.MODIFIER)
+                            }
                         }
                     }
                 ) {
@@ -320,6 +338,18 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                                 sendTargetSelection(index, isSticky)
                             },
                             onDismiss = { isTargetMenuVisible = false }
+                        )
+                    }
+
+                    // --- TARGET COMPUTER FLYOUT ---
+                    if (isComputerFlyoutVisible) {
+                        ComputerTargetFlyout(
+                            onSelect = { categoryId, nodeId ->
+                                isComputerFlyoutVisible = false
+                                feedback(150, TechSynth.Sfx.LOCK)
+                                sendComputerPick(categoryId, nodeId)
+                            },
+                            onDismiss = { isComputerFlyoutVisible = false }
                         )
                     }
                 }
@@ -490,10 +520,10 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
     }
     
     // --- NEW: TARGET COMPUTER PICK REQUEST ---
-    // Not called yet -- Milestone 3 wires this to the new Target Computer
-    // flyout's hold-to-confirm leaf selection. Distinct from
-    // sendTargetSelection below (the legacy 8-slot TargetRepository system);
-    // this writes into ComputerRepository via WearListenerService instead.
+    // Called from ComputerTargetFlyout's onSelect once a leaf entry is
+    // hold-confirmed. Distinct from sendTargetSelection below (the legacy
+    // 8-slot TargetRepository system); this writes into ComputerRepository
+    // via WearListenerService instead.
     private fun sendComputerPick(categoryId: String, nodeId: String) {
         val payload = "$categoryId|$nodeId"
         val data = payload.toByteArray(Charsets.UTF_8)
@@ -548,6 +578,7 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         isSelectingDeck = false
         isSelectingContext = false
         isTargetMenuVisible = false
+        isComputerFlyoutVisible = false
 
         updateScreenPower(false)
     }
@@ -580,6 +611,10 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         when {
             isTargetMenuVisible -> {
                 isTargetMenuVisible = false
+            }
+
+            isComputerFlyoutVisible -> {
+                isComputerFlyoutVisible = false
             }
 
             isCryo() -> {
