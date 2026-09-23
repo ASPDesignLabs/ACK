@@ -147,21 +147,29 @@ private fun OutputRouteRow(
     }
 }
 
+// Force-restarts the whole app: relaunches MainActivity fresh, then kills
+// this process. IMPORT MATRIX AS NEW DECK and FULL RESTORE FROM JSON can
+// touch nearly every piece of persisted state at once -- decks, active
+// deck/profile, DSP, Geo-Protocol, visual presets, and more -- much of
+// which is cached in remember{} across the app (MainActivity's deck
+// selector in particular, which only ever re-reads on an explicit
+// deckRevision bump). Patching each of those individually is a losing
+// game; a clean process restart guarantees everything reflects what was
+// just written, the same way a cold launch already does.
+private fun restartApp(context: Context) {
+    val intent = Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    }
+    context.startActivity(intent)
+    Runtime.getRuntime().exit(0)
+}
+
 @Composable
 fun SettingsView(
     context: Context,
     primaryColor: Color,
     logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>,
-    onUploadClick: () -> Unit,
-    // Called after IMPORT MATRIX AS NEW DECK or FULL RESTORE FROM JSON
-    // changes which decks exist or which one/profile is active. Neither
-    // is reflected automatically -- the deck selector and active-deck/
-    // profile state in MainActivity's persistent header are only ever
-    // (re-)read on demand (see deckRevision), unlike this screen's own
-    // fields, which get fresh remember{} state every time SETTINGS is
-    // navigated back into. Without this, the change is real on disk but
-    // invisible until the app restarts.
-    onDataImported: () -> Unit = {}
+    onUploadClick: () -> Unit
 ) {
     val prefs = context.getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
 
@@ -328,6 +336,20 @@ fun SettingsView(
             isShakeDetectedFlash = true
             delay(1500)
             isShakeDetectedFlash = false
+        }
+    }
+
+    // Set true right after a successful IMPORT MATRIX AS NEW DECK or FULL
+    // RESTORE FROM JSON -- gives the confirmation toast a moment on
+    // screen, then restarts the app so the newly-written data actually
+    // shows up (see restartApp above). Declared at this top level, not
+    // inside either action's own dialog, so it keeps running even after
+    // that dialog closes.
+    var pendingRestart by remember { mutableStateOf(false) }
+    LaunchedEffect(pendingRestart) {
+        if (pendingRestart) {
+            delay(1500)
+            restartApp(context)
         }
     }
 
@@ -1167,7 +1189,8 @@ fun SettingsView(
                     if(newDeckName.isNotEmpty()) {
                         CommandRepository.saveDeck(context, newDeckName, selectedColorIdx, importedBackup!!.matrixData)
                         showImportDialog = false; newDeckName = ""; WatchSync.sendDeckList(context)
-                        onDataImported()
+                        Toast.makeText(context, "DECK CREATED -- RESTARTING", Toast.LENGTH_SHORT).show()
+                        pendingRestart = true
                     }
                 }
             },
@@ -1217,8 +1240,8 @@ fun SettingsView(
                         val success = TransferManager.restoreBackup(context, rawJson)
                         if (success) {
                             WatchSync.sendDeckList(context)
-                            onDataImported()
-                            Toast.makeText(context, "PROTOCOL RESTORED", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "PROTOCOL RESTORED -- RESTARTING", Toast.LENGTH_SHORT).show()
+                            pendingRestart = true
                         } else {
                             Toast.makeText(context, "INTEGRITY CHECK FAILED", Toast.LENGTH_SHORT).show()
                         }
