@@ -51,7 +51,7 @@ object TerminalLogStore {
     fun getRetentionDays(context: Context): Int =
         prefs(context).getInt(KEY_RETENTION_DAYS, DEFAULT_RETENTION_DAYS)
 
-    private fun setRetentionDays(context: Context, days: Int) {
+    fun setRetentionDays(context: Context, days: Int) {
         prefs(context).edit()
             .putInt(KEY_RETENTION_DAYS, days.coerceIn(MIN_RETENTION_DAYS, MAX_RETENTION_DAYS))
             .apply()

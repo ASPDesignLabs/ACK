@@ -373,23 +373,24 @@ object VoiceRecordingRepository {
         }
     }
 
-    // Restore-only: mirrors the backup exactly, same convention as
-    // ComputerRepository.replaceCategories -- wipes whatever's already
-    // stored (metadata and audio files alike) and replaces it wholesale.
-    fun replaceFromBackup(context: Context, entries: List<VoiceRecordingBackupEntry>) {
-        recordingsDir(context).listFiles()?.forEach { it.delete() }
+    // Restore-only: upserts by recording id -- a backup entry replaces
+    // (metadata and audio file alike) any local recording sharing its id,
+    // and is added if there's no local match. A local recording whose id
+    // isn't in the backup is left completely alone, audio file included.
+    fun mergeFromBackup(context: Context, entries: List<VoiceRecordingBackupEntry>) {
+        val merged = getAll(context).associateBy { it.id }.toMutableMap()
 
-        val restored = entries.mapNotNull { entry ->
+        entries.forEach { entry ->
             try {
                 val pcm = bytesToPcm(Base64.decode(entry.audioBase64, Base64.NO_WRAP))
                 writeWav(audioFile(context, entry.recording.id), pcm, entry.sampleRate)
-                entry.recording
+                merged[entry.recording.id] = entry.recording
             } catch (_: Exception) {
-                null
+                // Leave whatever local entry (if any) already held this id.
             }
         }
 
-        saveAll(context, restored)
+        saveAll(context, merged.values.toList())
     }
 
     // --- WAV (standard 44-byte PCM header, mono 16-bit -- the same layout

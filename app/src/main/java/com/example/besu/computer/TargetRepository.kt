@@ -140,15 +140,23 @@ object TargetRepository {
         prefs.edit().putString(KEY_SYNTAX, json.encodeToString(map)).apply()
     }
 
-    // Restore-only: replaces both the saved target slots and their syntax
-    // rules wholesale from a backup, mirroring how RootOverrideRepository
-    // and other repositories expose their own restore entry point rather
-    // than TransferManager reaching into this file's storage keys directly.
+    // Restore-only: merges the backup's target slots (by index) and
+    // syntax rules (by matrix path) into what's already saved, rather
+    // than replacing either wholesale -- a slot or rule this device has
+    // that the backup doesn't mention is left untouched. Exposed as its
+    // own entry point (like RootOverrideRepository's saveConfig and
+    // others) rather than TransferManager reaching into this file's
+    // storage keys directly.
     fun restoreTargets(context: Context, targets: List<TargetSlot>, syntaxRules: Map<String, String>) {
+        val mergedTargets = getTargets(context).associateBy { it.index }.toMutableMap()
+        targets.forEach { mergedTargets[it.index] = it }
+
+        val mergedSyntaxRules = getSyntaxRules(context) + syntaxRules
+
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
-            .putString(KEY_TARGETS, json.encodeToString(targets))
-            .putString(KEY_SYNTAX, json.encodeToString(syntaxRules))
+            .putString(KEY_TARGETS, json.encodeToString(mergedTargets.values.sortedBy { it.index }))
+            .putString(KEY_SYNTAX, json.encodeToString(mergedSyntaxRules))
             .apply()
     }
 }

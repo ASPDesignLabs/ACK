@@ -147,6 +147,23 @@ private fun OutputRouteRow(
     }
 }
 
+// Force-restarts the whole app: relaunches MainActivity fresh, then kills
+// this process. IMPORT MATRIX AS NEW DECK and FULL RESTORE FROM JSON can
+// touch nearly every piece of persisted state at once -- decks, active
+// deck/profile, DSP, Geo-Protocol, visual presets, and more -- much of
+// which is cached in remember{} across the app (MainActivity's deck
+// selector in particular, which only ever re-reads on an explicit
+// deckRevision bump). Patching each of those individually is a losing
+// game; a clean process restart guarantees everything reflects what was
+// just written, the same way a cold launch already does.
+private fun restartApp(context: Context) {
+    val intent = Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    }
+    context.startActivity(intent)
+    Runtime.getRuntime().exit(0)
+}
+
 @Composable
 fun SettingsView(
     context: Context,
@@ -319,6 +336,20 @@ fun SettingsView(
             isShakeDetectedFlash = true
             delay(1500)
             isShakeDetectedFlash = false
+        }
+    }
+
+    // Set true right after a successful IMPORT MATRIX AS NEW DECK or FULL
+    // RESTORE FROM JSON -- gives the confirmation toast a moment on
+    // screen, then restarts the app so the newly-written data actually
+    // shows up (see restartApp above). Declared at this top level, not
+    // inside either action's own dialog, so it keeps running even after
+    // that dialog closes.
+    var pendingRestart by remember { mutableStateOf(false) }
+    LaunchedEffect(pendingRestart) {
+        if (pendingRestart) {
+            delay(1500)
+            restartApp(context)
         }
     }
 
@@ -1039,11 +1070,11 @@ fun SettingsView(
 
                         reportHelpInteraction(AckTags.SETTINGS_DATA_PORT)
                     }
-                    NeonButton("IMPORT .JSON", Modifier.weight(1f), mainColor = primaryColor) { importLauncher.launch(arrayOf("application/json")) }
+                    NeonButton("IMPORT MATRIX AS NEW DECK", Modifier.weight(1f), mainColor = primaryColor) { importLauncher.launch(arrayOf("application/json")) }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "IMPORT .JSON brings in a backup's matrix phrases as a new deck. FULL RESTORE below replaces your entire current configuration instead.",
+                    "IMPORT MATRIX AS NEW DECK brings in a backup's matrix phrases as a brand new deck, without touching anything else. FULL RESTORE below applies everything else a backup carries -- overwriting or adding to your current setup, never deleting what it doesn't mention.",
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1055,7 +1086,7 @@ fun SettingsView(
                         .fillMaxWidth()
                         .testTag(AckTags.SETTINGS_FULL_RESTORE_BTN)
                         .helpTarget(AckTags.SETTINGS_FULL_RESTORE_BTN, primaryColor),
-                    mainColor = RadicalRed
+                    mainColor = primaryColor
                 ) {
                     fullRestoreLauncher.launch(arrayOf("application/json"))
                     reportHelpInteraction(AckTags.SETTINGS_FULL_RESTORE_BTN)
@@ -1158,6 +1189,8 @@ fun SettingsView(
                     if(newDeckName.isNotEmpty()) {
                         CommandRepository.saveDeck(context, newDeckName, selectedColorIdx, importedBackup!!.matrixData)
                         showImportDialog = false; newDeckName = ""; WatchSync.sendDeckList(context)
+                        Toast.makeText(context, "DECK CREATED -- RESTARTING", Toast.LENGTH_SHORT).show()
+                        pendingRestart = true
                     }
                 }
             },
@@ -1187,12 +1220,12 @@ fun SettingsView(
                 showFullRestoreConfirm = false
                 pendingFullRestoreJson = null
             },
-            primaryColor = RadicalRed,
+            primaryColor = primaryColor,
             title = "FULL RESTORE FROM JSON",
             dismissLabel = "CANCEL"
         ) {
             Text(
-                "This replaces your entire current configuration -- every deck, DSP setting, root override, quick action, emergency prompt, target computer entry, voice recording, and autocomplete history -- with what's in the selected file. Anything in your current setup that isn't in the backup does not survive. This cannot be undone.",
+                "This applies whatever the selected file contains -- decks, quick actions, root overrides, target computer entries, emergency prompts, voice recordings, autocomplete history, Geo-Protocol zones, visual presets, output routing, and more -- overwriting a matching entry by its id, or adding it if you don't already have one. Nothing on this device that the file doesn't mention is touched or removed. To clear something instead, use that feature's own dedicated clear/delete action.",
                 color = Color.White,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -1201,13 +1234,14 @@ fun SettingsView(
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("RESTORE", Modifier.weight(1f), mainColor = RadicalRed) {
+                TightPanelButton("RESTORE", Modifier.weight(1f), mainColor = primaryColor) {
                     val rawJson = pendingFullRestoreJson
                     if (rawJson != null) {
                         val success = TransferManager.restoreBackup(context, rawJson)
                         if (success) {
                             WatchSync.sendDeckList(context)
-                            Toast.makeText(context, "PROTOCOL RESTORED", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "PROTOCOL RESTORED -- RESTARTING", Toast.LENGTH_SHORT).show()
+                            pendingRestart = true
                         } else {
                             Toast.makeText(context, "INTEGRITY CHECK FAILED", Toast.LENGTH_SHORT).show()
                         }

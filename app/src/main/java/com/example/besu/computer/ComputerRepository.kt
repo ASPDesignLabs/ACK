@@ -53,11 +53,14 @@ object ComputerRepository {
         saveCategories(context, categories)
     }
 
-    // Restore-only: replaces the entire category list wholesale, matching
-    // this app's "a restore mirrors the backup exactly" convention (see
-    // TransferManager.applyBackupToStorage).
-    fun replaceCategories(context: Context, categories: List<ComputerCategory>) {
-        saveCategories(context, categories)
+    // Restore-only: upserts each backup category by id (same as
+    // saveCategory, looped) -- a category this device has that the
+    // backup doesn't mention, including its whole node tree, is left
+    // untouched. A category present in both replaces the local one
+    // wholesale, active selection included (see TransferManager.
+    // applyBackupToStorage).
+    fun mergeCategories(context: Context, categories: List<ComputerCategory>) {
+        categories.forEach { saveCategory(context, it) }
     }
 
     private fun saveCategories(context: Context, categories: List<ComputerCategory>) {
