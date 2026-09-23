@@ -258,6 +258,17 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                 .focusable()
             ) {
                 AckRootContainer(
+                    // Suppress this container's own gesture loop entirely
+                    // while an overlay with its own pointerInput is up --
+                    // see AckRootContainer's gesturesEnabled doc. A guard
+                    // on individual callbacks (e.g. onLongPress checking
+                    // !isComputerFlyoutVisible) isn't enough: this loop's
+                    // independent timers can still be mid-flight against
+                    // the same raw touches a double-tap inside the flyout
+                    // already resolved, and by the time e.g. onLongPress
+                    // fires, isComputerFlyoutVisible has already flipped
+                    // back to false.
+                    gesturesEnabled = !isTargetMenuVisible && !isComputerFlyoutVisible,
                     onDoubleTap = { exitPauseOrCryo() },
                     onTap = {
                         if (currentStateName == "LOCKED") {
