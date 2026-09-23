@@ -489,6 +489,22 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         }
     }
     
+    // --- NEW: TARGET COMPUTER PICK REQUEST ---
+    // Not called yet -- Milestone 3 wires this to the new Target Computer
+    // flyout's hold-to-confirm leaf selection. Distinct from
+    // sendTargetSelection below (the legacy 8-slot TargetRepository system);
+    // this writes into ComputerRepository via WearListenerService instead.
+    private fun sendComputerPick(categoryId: String, nodeId: String) {
+        val payload = "$categoryId|$nodeId"
+        val data = payload.toByteArray(Charsets.UTF_8)
+
+        Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
+            nodes.forEach { node ->
+                Wearable.getMessageClient(this).sendMessage(node.id, "/sys/req_computer_pick", data)
+            }
+        }
+    }
+
     // --- UPDATED: TARGET REQUEST ---
     private fun sendTargetSelection(index: Int, isSticky: Boolean) {
         // Payload: "INDEX|IS_STICKY"

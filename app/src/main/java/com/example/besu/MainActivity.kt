@@ -332,6 +332,14 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         mutableIntStateOf(0)
     }
 
+    // Bumped by the ACK_COMPUTER_PICK broadcast (a watch-driven Target
+    // Computer selection) so TargetView/ComputerSummaryDialog remount and
+    // reflect it if either is open when the pick lands -- see their call
+    // sites below.
+    var computerRevision by remember {
+        mutableIntStateOf(0)
+    }
+
     val decks = remember(deckRevision) {
         CommandRepository.getDecks(context)
     }
@@ -460,6 +468,15 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             HelpEvent.OverlayWasCleared(AckTags.EMOJI_SLOT)
                         )
                     }
+
+                    // Sent by WearListenerService after a watch-driven Target
+                    // Computer pick (/sys/req_computer_pick) actually commits --
+                    // bumps computerRevision so TargetView/ComputerSummaryDialog,
+                    // if either happens to be open, remount and show the new
+                    // active entry instead of a stale one.
+                    "ACK_COMPUTER_PICK" -> {
+                        computerRevision++
+                    }
                 }
             }
         }
@@ -467,6 +484,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
             addAction("ACK_WATCH_STATUS")
             addAction("ACK_DECK_CHANGE")
             addAction("ACK_OVERLAY_CLEARED")
+            addAction("ACK_COMPUTER_PICK")
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -1318,7 +1336,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 onInsertAtCursor = { insertIntoManualOverride(it) }
                             )
                             "AUDIO" -> AudioArchitectView(context, primaryColor, systemVoices)
-                            "TARGETS" -> TargetView(context, primaryColor)
+                            "TARGETS" -> key(computerRevision) { TargetView(context, primaryColor) }
                             "GEO" -> GeoProtocolView(
                                 context = context,
                                 primaryColor = primaryColor
@@ -1611,11 +1629,13 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                     }
 
                     if (showComputerSummary) {
-                        ComputerSummaryDialog(
-                            context = context,
-                            primaryColor = primaryColor,
-                            onDismiss = { showComputerSummary = false }
-                        )
+                        key(computerRevision) {
+                            ComputerSummaryDialog(
+                                context = context,
+                                primaryColor = primaryColor,
+                                onDismiss = { showComputerSummary = false }
+                            )
+                        }
                     }
 
                     if (showCreateDeckDialog) {
