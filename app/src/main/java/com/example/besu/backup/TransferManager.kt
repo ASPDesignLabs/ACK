@@ -353,141 +353,324 @@ object TransferManager {
     }
 
     // --- SECURITY LOGIC ---
+    // Every rejection logs the specific check and value that failed under
+    // the ACK_IMPORT tag before returning false -- restoreBackup's own
+    // "Data integrity check failed" line only ever said that *something*
+    // failed, never what, which made a real failure undiagnosable without
+    // reading this function by hand. Logging here is deliberately the
+    // last line of defense, not the first: every field's real input
+    // constraint (a TextField's own length cap, if it has one) is the
+    // actual source of truth, and this function's limits are meant to be
+    // generous enough to accept anything the app itself can produce.
     private fun validateDataIntegrity(backup: AckBackup): Boolean {
         // 1. Validate DSP Limits
-        if (backup.dsp.crush !in 0.0f..1.0f) return false
-        if (backup.dsp.cadence !in 0.0f..1.0f) return false
-        if (backup.dsp.masterGain !in 0.0f..5.0f) return false
-        
+        if (backup.dsp.crush !in 0.0f..1.0f) {
+            Log.e("ACK_IMPORT", "dsp.crush out of range: ${backup.dsp.crush}")
+            return false
+        }
+        if (backup.dsp.cadence !in 0.0f..1.0f) {
+            Log.e("ACK_IMPORT", "dsp.cadence out of range: ${backup.dsp.cadence}")
+            return false
+        }
+        if (backup.dsp.masterGain !in 0.0f..5.0f) {
+            Log.e("ACK_IMPORT", "dsp.masterGain out of range: ${backup.dsp.masterGain}")
+            return false
+        }
+
         // Physics Sanity
-        if (backup.dsp.motionTwist !in 1.0f..20.0f) return false 
-        if (backup.dsp.motionPose !in 1.0f..10.0f) return false
-        
+        if (backup.dsp.motionTwist !in 1.0f..20.0f) {
+            Log.e("ACK_IMPORT", "dsp.motionTwist out of range: ${backup.dsp.motionTwist}")
+            return false
+        }
+        if (backup.dsp.motionPose !in 1.0f..10.0f) {
+            Log.e("ACK_IMPORT", "dsp.motionPose out of range: ${backup.dsp.motionPose}")
+            return false
+        }
+
         // 2. Validate Voices
-        if (backup.dsp.customVoices.size > 20) return false // Prevent storage spam
-        backup.dsp.customVoices.forEach { 
-            if (it.label.length > 50) return false
-            if (it.pitch !in 0.1f..4.0f) return false
+        if (backup.dsp.customVoices.size > 20) {
+            Log.e("ACK_IMPORT", "customVoices.size exceeds 20: ${backup.dsp.customVoices.size}")
+            return false // Prevent storage spam
+        }
+        backup.dsp.customVoices.forEach {
+            if (it.label.length > 50) {
+                Log.e("ACK_IMPORT", "customVoice label exceeds 50 chars: \"${it.label}\" (${it.label.length})")
+                return false
+            }
+            if (it.pitch !in 0.1f..4.0f) {
+                Log.e("ACK_IMPORT", "customVoice \"${it.label}\" pitch out of range: ${it.pitch}")
+                return false
+            }
         }
 
         // 3. Validate Matrix Data & Keys
         for ((key, value) in backup.matrixData) {
-            if (key.length > MAX_KEY_LENGTH) return false
+            if (key.length > MAX_KEY_LENGTH) {
+                Log.e("ACK_IMPORT", "matrixData key exceeds $MAX_KEY_LENGTH chars: \"$key\" (${key.length})")
+                return false
+            }
             if (!SAFE_KEY_PATTERN.matches(key)) {
                 Log.e("ACK_IMPORT", "Invalid Key Detected: $key")
-                return false 
+                return false
             }
-            if (value.length > MAX_PHRASE_LENGTH) return false 
+            if (value.length > MAX_PHRASE_LENGTH) {
+                Log.e("ACK_IMPORT", "matrixData[\"$key\"] value exceeds $MAX_PHRASE_LENGTH chars: ${value.length}")
+                return false
+            }
         }
 
         // 4. Validate Decks
-        if (backup.decks.size > 20) return false
+        if (backup.decks.size > 20) {
+            Log.e("ACK_IMPORT", "decks.size exceeds 20: ${backup.decks.size}")
+            return false
+        }
         backup.decks.forEach {
-            if (it.name.length > 30) return false
-            if (!SAFE_KEY_PATTERN.matches(it.id)) return false
+            // 40, not 30 -- matches the cap CommandRepository.createDeck
+            // (and every deck-rename flow) has always actually enforced.
+            if (it.name.length > 40) {
+                Log.e("ACK_IMPORT", "deck name exceeds 40 chars: \"${it.name}\" (${it.name.length})")
+                return false
+            }
+            if (!SAFE_KEY_PATTERN.matches(it.id)) {
+                Log.e("ACK_IMPORT", "deck id fails SAFE_KEY_PATTERN: \"${it.id}\"")
+                return false
+            }
         }
 // 5. Validate root override configurations.
-        if (backup.rootOverrides.size > 50) return false
+        if (backup.rootOverrides.size > 50) {
+            Log.e("ACK_IMPORT", "rootOverrides.size exceeds 50: ${backup.rootOverrides.size}")
+            return false
+        }
 
         backup.rootOverrides.forEach { (category, config) ->
-            if (category.length > 50) return false
-            if (!SAFE_KEY_PATTERN.matches(category)) return false
+            if (category.length > 50) {
+                Log.e("ACK_IMPORT", "rootOverrides category exceeds 50 chars: \"$category\"")
+                return false
+            }
+            if (!SAFE_KEY_PATTERN.matches(category)) {
+                Log.e("ACK_IMPORT", "rootOverrides category fails SAFE_KEY_PATTERN: \"$category\"")
+                return false
+            }
 
             config.slots.forEach { (tag, override) ->
-                if (tag !in setOf("A", "B", "C")) return false
-                if (override.value.length > MAX_PHRASE_LENGTH) return false
+                if (tag !in setOf("A", "B", "C")) {
+                    Log.e("ACK_IMPORT", "rootOverrides[\"$category\"] has invalid tag: \"$tag\"")
+                    return false
+                }
+                if (override.value.length > MAX_PHRASE_LENGTH) {
+                    Log.e("ACK_IMPORT", "rootOverrides[\"$category\"][\"$tag\"] value exceeds $MAX_PHRASE_LENGTH chars: ${override.value.length}")
+                    return false
+                }
             }
         }
 
 // 6. Validate custom context layers.
-        if (backup.customContextEntries.size > 20) return false
+        if (backup.customContextEntries.size > 20) {
+            Log.e("ACK_IMPORT", "customContextEntries.size exceeds 20: ${backup.customContextEntries.size}")
+            return false
+        }
 
         val contextNamePattern = Regex("^[A-Z0-9 _-]{1,24}$")
 
         backup.customContextEntries.forEach { entry ->
-            if (!contextNamePattern.matches(entry.name)) return false
-            if (entry.name in POSE_CATEGORIES) return false
-            if (entry.basePose !in POSE_CATEGORIES) return false
+            if (!contextNamePattern.matches(entry.name)) {
+                Log.e("ACK_IMPORT", "customContextEntry name fails pattern: \"${entry.name}\"")
+                return false
+            }
+            if (entry.name in POSE_CATEGORIES) {
+                Log.e("ACK_IMPORT", "customContextEntry name collides with a built-in pose: \"${entry.name}\"")
+                return false
+            }
+            if (entry.basePose !in POSE_CATEGORIES) {
+                Log.e("ACK_IMPORT", "customContextEntry \"${entry.name}\" has invalid basePose: \"${entry.basePose}\"")
+                return false
+            }
         }
 
         if (
             backup.customContextEntries.map { it.name }.distinct().size !=
             backup.customContextEntries.size
         ) {
+            Log.e("ACK_IMPORT", "customContextEntries has duplicate names")
             return false
         }
 
 // 7. Validate header shortcuts.
-        if (backup.headerShortcuts.size > 3) return false
+        if (backup.headerShortcuts.size > 3) {
+            Log.e("ACK_IMPORT", "headerShortcuts.size exceeds 3: ${backup.headerShortcuts.size}")
+            return false
+        }
 
         backup.headerShortcuts.forEach { shortcut ->
-            if (shortcut.label.length > 30) return false
-            if (shortcut.phrase.length > MAX_PHRASE_LENGTH) return false
+            if (shortcut.label.length > 30) {
+                Log.e("ACK_IMPORT", "headerShortcut label exceeds 30 chars: \"${shortcut.label}\"")
+                return false
+            }
+            if (shortcut.phrase.length > MAX_PHRASE_LENGTH) {
+                Log.e("ACK_IMPORT", "headerShortcut \"${shortcut.label}\" phrase exceeds $MAX_PHRASE_LENGTH chars: ${shortcut.phrase.length}")
+                return false
+            }
         }
 
 // 8. Validate emergency deck configs.
-        if (backup.emergencyDecks.size > 20) return false
+        if (backup.emergencyDecks.size > 20) {
+            Log.e("ACK_IMPORT", "emergencyDecks.size exceeds 20: ${backup.emergencyDecks.size}")
+            return false
+        }
 
         backup.emergencyDecks.forEach { config ->
-            if (!SAFE_KEY_PATTERN.matches(config.deckId)) return false
-            if (config.slots.size > 20) return false
+            if (!SAFE_KEY_PATTERN.matches(config.deckId)) {
+                Log.e("ACK_IMPORT", "emergencyDeck id fails SAFE_KEY_PATTERN: \"${config.deckId}\"")
+                return false
+            }
+            if (config.slots.size > 20) {
+                Log.e("ACK_IMPORT", "emergencyDeck \"${config.deckId}\" slots.size exceeds 20: ${config.slots.size}")
+                return false
+            }
 
             config.slots.forEach { slot ->
-                if (slot.label.length > 60) return false
-                if (slot.template.length > MAX_PHRASE_LENGTH) return false
-                if (slot.localValues.size > 20) return false
-                slot.localValues.forEach { if (it.length > MAX_PHRASE_LENGTH) return false }
+                if (slot.label.length > 60) {
+                    Log.e("ACK_IMPORT", "emergencyDeck \"${config.deckId}\" slot label exceeds 60 chars: \"${slot.label}\"")
+                    return false
+                }
+                if (slot.template.length > MAX_PHRASE_LENGTH) {
+                    Log.e("ACK_IMPORT", "emergencyDeck \"${config.deckId}\" slot \"${slot.label}\" template exceeds $MAX_PHRASE_LENGTH chars: ${slot.template.length}")
+                    return false
+                }
+                if (slot.localValues.size > 20) {
+                    Log.e("ACK_IMPORT", "emergencyDeck \"${config.deckId}\" slot \"${slot.label}\" localValues.size exceeds 20: ${slot.localValues.size}")
+                    return false
+                }
+                slot.localValues.forEach {
+                    if (it.length > MAX_PHRASE_LENGTH) {
+                        Log.e("ACK_IMPORT", "emergencyDeck \"${config.deckId}\" slot \"${slot.label}\" localValue exceeds $MAX_PHRASE_LENGTH chars: ${it.length}")
+                        return false
+                    }
+                }
             }
         }
 
 // 9. Validate the medical ID card.
         val card = backup.emergencyInfoCard
-        if (card.fullName.length > 100) return false
-        if (card.dateOfBirth.length > 40) return false
-        if (card.bloodType.length > 20) return false
-        if (card.communicationNote.length > MAX_PHRASE_LENGTH) return false
-        if (card.conditions.length > MAX_PHRASE_LENGTH) return false
-        if (card.allergies.length > MAX_PHRASE_LENGTH) return false
-        if (card.medications.length > MAX_PHRASE_LENGTH) return false
-        if (card.notes.length > MAX_PHRASE_LENGTH) return false
-        if (card.contacts.size > 5) return false
+        if (card.fullName.length > 100) {
+            Log.e("ACK_IMPORT", "emergencyInfoCard.fullName exceeds 100 chars: ${card.fullName.length}")
+            return false
+        }
+        if (card.dateOfBirth.length > 40) {
+            Log.e("ACK_IMPORT", "emergencyInfoCard.dateOfBirth exceeds 40 chars: ${card.dateOfBirth.length}")
+            return false
+        }
+        if (card.bloodType.length > 20) {
+            Log.e("ACK_IMPORT", "emergencyInfoCard.bloodType exceeds 20 chars: ${card.bloodType.length}")
+            return false
+        }
+        if (card.communicationNote.length > MAX_PHRASE_LENGTH) {
+            Log.e("ACK_IMPORT", "emergencyInfoCard.communicationNote exceeds $MAX_PHRASE_LENGTH chars: ${card.communicationNote.length}")
+            return false
+        }
+        if (card.conditions.length > MAX_PHRASE_LENGTH) {
+            Log.e("ACK_IMPORT", "emergencyInfoCard.conditions exceeds $MAX_PHRASE_LENGTH chars: ${card.conditions.length}")
+            return false
+        }
+        if (card.allergies.length > MAX_PHRASE_LENGTH) {
+            Log.e("ACK_IMPORT", "emergencyInfoCard.allergies exceeds $MAX_PHRASE_LENGTH chars: ${card.allergies.length}")
+            return false
+        }
+        if (card.medications.length > MAX_PHRASE_LENGTH) {
+            Log.e("ACK_IMPORT", "emergencyInfoCard.medications exceeds $MAX_PHRASE_LENGTH chars: ${card.medications.length}")
+            return false
+        }
+        if (card.notes.length > MAX_PHRASE_LENGTH) {
+            Log.e("ACK_IMPORT", "emergencyInfoCard.notes exceeds $MAX_PHRASE_LENGTH chars: ${card.notes.length}")
+            return false
+        }
+        if (card.contacts.size > 5) {
+            Log.e("ACK_IMPORT", "emergencyInfoCard.contacts.size exceeds 5: ${card.contacts.size}")
+            return false
+        }
         card.contacts.forEach { contact ->
-            if (contact.name.length > 100) return false
-            if (contact.relationship.length > 60) return false
-            if (contact.phone.length > 40) return false
+            if (contact.name.length > 100) {
+                Log.e("ACK_IMPORT", "emergencyInfoCard contact name exceeds 100 chars: \"${contact.name}\"")
+                return false
+            }
+            if (contact.relationship.length > 60) {
+                Log.e("ACK_IMPORT", "emergencyInfoCard contact \"${contact.name}\" relationship exceeds 60 chars")
+                return false
+            }
+            if (contact.phone.length > 40) {
+                Log.e("ACK_IMPORT", "emergencyInfoCard contact \"${contact.name}\" phone exceeds 40 chars")
+                return false
+            }
         }
 
 // 10. Validate legacy target slots and their syntax rules.
-        if (backup.targets.size > 50) return false
+        if (backup.targets.size > 50) {
+            Log.e("ACK_IMPORT", "targets.size exceeds 50: ${backup.targets.size}")
+            return false
+        }
         backup.targets.forEach { slot ->
-            if (slot.label.length > MAX_LABEL_LENGTH) return false
-            if (slot.defaultStrategy !in setOf("PRE", "POST")) return false
+            if (slot.label.length > MAX_LABEL_LENGTH) {
+                Log.e("ACK_IMPORT", "target label exceeds $MAX_LABEL_LENGTH chars: \"${slot.label}\"")
+                return false
+            }
+            if (slot.defaultStrategy !in setOf("PRE", "POST")) {
+                Log.e("ACK_IMPORT", "target \"${slot.label}\" has invalid defaultStrategy: \"${slot.defaultStrategy}\"")
+                return false
+            }
         }
 
-        if (backup.syntaxRules.size > 200) return false
+        if (backup.syntaxRules.size > 200) {
+            Log.e("ACK_IMPORT", "syntaxRules.size exceeds 200: ${backup.syntaxRules.size}")
+            return false
+        }
         backup.syntaxRules.forEach { (key, value) ->
-            if (key.length > MAX_KEY_LENGTH) return false
-            if (!SAFE_KEY_PATTERN.matches(key)) return false
-            if (value !in setOf("PRE", "POST")) return false
+            if (key.length > MAX_KEY_LENGTH) {
+                Log.e("ACK_IMPORT", "syntaxRules key exceeds $MAX_KEY_LENGTH chars: \"$key\"")
+                return false
+            }
+            if (!SAFE_KEY_PATTERN.matches(key)) {
+                Log.e("ACK_IMPORT", "syntaxRules key fails SAFE_KEY_PATTERN: \"$key\"")
+                return false
+            }
+            if (value !in setOf("PRE", "POST")) {
+                Log.e("ACK_IMPORT", "syntaxRules[\"$key\"] has invalid value: \"$value\"")
+                return false
+            }
         }
 
 // 11. Validate the Targeting Computer category tree.
-        if (backup.computerCategories.size > MAX_COMPUTER_CATEGORIES) return false
+        if (backup.computerCategories.size > MAX_COMPUTER_CATEGORIES) {
+            Log.e("ACK_IMPORT", "computerCategories.size exceeds $MAX_COMPUTER_CATEGORIES: ${backup.computerCategories.size}")
+            return false
+        }
 
         backup.computerCategories.forEach { category ->
-            if (!CATEGORY_ID_PATTERN.matches(category.id)) return false
-            if (category.label.length > MAX_LABEL_LENGTH) return false
-            if (!isComputerNodeValid(category.root)) return false
+            if (!CATEGORY_ID_PATTERN.matches(category.id)) {
+                Log.e("ACK_IMPORT", "computerCategory id fails CATEGORY_ID_PATTERN: \"${category.id}\"")
+                return false
+            }
+            if (category.label.length > MAX_LABEL_LENGTH) {
+                Log.e("ACK_IMPORT", "computerCategory \"${category.id}\" label exceeds $MAX_LABEL_LENGTH chars: \"${category.label}\" (${category.label.length})")
+                return false
+            }
+            if (!isComputerNodeValid(category.id, category.root)) return false
 
             val (nodeCount, depth) = countComputerNodes(category.root)
-            if (nodeCount > MAX_NODES_PER_CATEGORY) return false
-            if (depth > MAX_TREE_DEPTH) return false
+            if (nodeCount > MAX_NODES_PER_CATEGORY) {
+                Log.e("ACK_IMPORT", "computerCategory \"${category.id}\" node count exceeds $MAX_NODES_PER_CATEGORY: $nodeCount")
+                return false
+            }
+            if (depth > MAX_TREE_DEPTH) {
+                Log.e("ACK_IMPORT", "computerCategory \"${category.id}\" tree depth exceeds $MAX_TREE_DEPTH: $depth")
+                return false
+            }
         }
 
         if (
             backup.computerCategories.map { it.id }.distinct().size !=
             backup.computerCategories.size
         ) {
+            Log.e("ACK_IMPORT", "computerCategories has duplicate ids")
             return false
         }
 
@@ -499,7 +682,10 @@ object TransferManager {
 // info rides alongside the key rather than being derived from it, so it
 // gets the same treatment -- its string fields with the identifier
 // pattern every other deckId/storagePath-shaped field in this file uses.
-        if (backup.autocompleteHistory.size > 2000) return false
+        if (backup.autocompleteHistory.size > 2000) {
+            Log.e("ACK_IMPORT", "autocompleteHistory.size exceeds 2000: ${backup.autocompleteHistory.size}")
+            return false
+        }
 
         val validAutocompleteFieldTypes = setOf(
             AutocompleteScopeInfo.TYPE_MATRIX,
@@ -508,11 +694,23 @@ object TransferManager {
         )
 
         backup.autocompleteHistory.forEach { (scopeKey, scope) ->
-            if (scopeKey.length > MAX_KEY_LENGTH) return false
-            if (!SAFE_KEY_PATTERN.matches(scopeKey)) return false
-            if (scope.entries.size > 20) return false
+            if (scopeKey.length > MAX_KEY_LENGTH) {
+                Log.e("ACK_IMPORT", "autocompleteHistory scope key exceeds $MAX_KEY_LENGTH chars: \"$scopeKey\"")
+                return false
+            }
+            if (!SAFE_KEY_PATTERN.matches(scopeKey)) {
+                Log.e("ACK_IMPORT", "autocompleteHistory scope key fails SAFE_KEY_PATTERN: \"$scopeKey\"")
+                return false
+            }
+            if (scope.entries.size > 20) {
+                Log.e("ACK_IMPORT", "autocompleteHistory[\"$scopeKey\"] entries.size exceeds 20: ${scope.entries.size}")
+                return false
+            }
 
-            if (scope.info.fieldType !in validAutocompleteFieldTypes) return false
+            if (scope.info.fieldType !in validAutocompleteFieldTypes) {
+                Log.e("ACK_IMPORT", "autocompleteHistory[\"$scopeKey\"] has invalid fieldType: \"${scope.info.fieldType}\"")
+                return false
+            }
             listOfNotNull(
                 scope.info.deckId,
                 scope.info.profile,
@@ -520,94 +718,186 @@ object TransferManager {
                 scope.info.category,
                 scope.info.tag
             ).forEach {
-                if (it.length > MAX_KEY_LENGTH) return false
-                if (!SAFE_KEY_PATTERN.matches(it)) return false
+                if (it.length > MAX_KEY_LENGTH) {
+                    Log.e("ACK_IMPORT", "autocompleteHistory[\"$scopeKey\"] info field exceeds $MAX_KEY_LENGTH chars: \"$it\"")
+                    return false
+                }
+                if (!SAFE_KEY_PATTERN.matches(it)) {
+                    Log.e("ACK_IMPORT", "autocompleteHistory[\"$scopeKey\"] info field fails SAFE_KEY_PATTERN: \"$it\"")
+                    return false
+                }
             }
             listOfNotNull(scope.info.groupIndex, scope.info.slotIndex, scope.info.tagIndex).forEach {
-                if (it !in 0..10_000) return false
+                if (it !in 0..10_000) {
+                    Log.e("ACK_IMPORT", "autocompleteHistory[\"$scopeKey\"] index field out of range: $it")
+                    return false
+                }
             }
 
             scope.entries.forEach { entry ->
-                if (entry.value.length > MAX_PHRASE_LENGTH) return false
-                if (entry.count !in 1..100_000) return false
+                if (entry.value.length > MAX_PHRASE_LENGTH) {
+                    Log.e("ACK_IMPORT", "autocompleteHistory[\"$scopeKey\"] entry value exceeds $MAX_PHRASE_LENGTH chars: ${entry.value.length}")
+                    return false
+                }
+                if (entry.count !in 1..100_000) {
+                    Log.e("ACK_IMPORT", "autocompleteHistory[\"$scopeKey\"] entry count out of range: ${entry.count}")
+                    return false
+                }
             }
         }
 
 // 13. Validate Geo-Protocol zones and settings.
-        if (backup.geoZones.size > 100) return false
-
-        backup.geoZones.forEach { zone ->
-            if (zone.id.length > MAX_KEY_LENGTH) return false
-            if (zone.name.length > MAX_LABEL_LENGTH) return false
-            if (zone.lat !in -90.0..90.0) return false
-            if (zone.lng !in -180.0..180.0) return false
-            if (zone.radiusMeters !in 1f..100_000f) return false
-            if (!SAFE_KEY_PATTERN.matches(zone.enterDeckId)) return false
-            if (!SAFE_KEY_PATTERN.matches(zone.exitDeckId)) return false
+        if (backup.geoZones.size > 100) {
+            Log.e("ACK_IMPORT", "geoZones.size exceeds 100: ${backup.geoZones.size}")
+            return false
         }
 
-        if (backup.geoZones.map { it.id }.distinct().size != backup.geoZones.size) return false
+        backup.geoZones.forEach { zone ->
+            if (zone.id.length > MAX_KEY_LENGTH) {
+                Log.e("ACK_IMPORT", "geoZone id exceeds $MAX_KEY_LENGTH chars: \"${zone.id}\"")
+                return false
+            }
+            if (zone.name.length > MAX_LABEL_LENGTH) {
+                Log.e("ACK_IMPORT", "geoZone \"${zone.id}\" name exceeds $MAX_LABEL_LENGTH chars: \"${zone.name}\" (${zone.name.length})")
+                return false
+            }
+            if (zone.lat !in -90.0..90.0) {
+                Log.e("ACK_IMPORT", "geoZone \"${zone.id}\" lat out of range: ${zone.lat}")
+                return false
+            }
+            if (zone.lng !in -180.0..180.0) {
+                Log.e("ACK_IMPORT", "geoZone \"${zone.id}\" lng out of range: ${zone.lng}")
+                return false
+            }
+            if (zone.radiusMeters !in 1f..100_000f) {
+                Log.e("ACK_IMPORT", "geoZone \"${zone.id}\" radiusMeters out of range: ${zone.radiusMeters}")
+                return false
+            }
+            if (!SAFE_KEY_PATTERN.matches(zone.enterDeckId)) {
+                Log.e("ACK_IMPORT", "geoZone \"${zone.id}\" enterDeckId fails SAFE_KEY_PATTERN: \"${zone.enterDeckId}\"")
+                return false
+            }
+            if (!SAFE_KEY_PATTERN.matches(zone.exitDeckId)) {
+                Log.e("ACK_IMPORT", "geoZone \"${zone.id}\" exitDeckId fails SAFE_KEY_PATTERN: \"${zone.exitDeckId}\"")
+                return false
+            }
+        }
+
+        if (backup.geoZones.map { it.id }.distinct().size != backup.geoZones.size) {
+            Log.e("ACK_IMPORT", "geoZones has duplicate ids")
+            return false
+        }
 
         if (backup.geoEngineMode != null && backup.geoEngineMode !in setOf("SOVEREIGN", "OPTIMIZED")) {
+            Log.e("ACK_IMPORT", "geoEngineMode is invalid: \"${backup.geoEngineMode}\"")
             return false
         }
 
 // 14. Validate visual prompt presets.
-        if (backup.visualPresets.size > 50) return false
-
-        backup.visualPresets.forEach { preset ->
-            if (preset.id.length > MAX_KEY_LENGTH) return false
-            if (preset.name.length > MAX_LABEL_LENGTH) return false
-            if (preset.outlineWidth !in 0f..50f) return false
-            if (preset.fontSizeSp !in 10f..400f) return false
+        if (backup.visualPresets.size > 50) {
+            Log.e("ACK_IMPORT", "visualPresets.size exceeds 50: ${backup.visualPresets.size}")
+            return false
         }
 
-        if (backup.visualPresets.map { it.id }.distinct().size != backup.visualPresets.size) return false
+        backup.visualPresets.forEach { preset ->
+            if (preset.id.length > MAX_KEY_LENGTH) {
+                Log.e("ACK_IMPORT", "visualPreset id exceeds $MAX_KEY_LENGTH chars: \"${preset.id}\"")
+                return false
+            }
+            if (preset.name.length > MAX_LABEL_LENGTH) {
+                Log.e("ACK_IMPORT", "visualPreset \"${preset.id}\" name exceeds $MAX_LABEL_LENGTH chars: \"${preset.name}\" (${preset.name.length})")
+                return false
+            }
+            if (preset.outlineWidth !in 0f..50f) {
+                Log.e("ACK_IMPORT", "visualPreset \"${preset.id}\" outlineWidth out of range: ${preset.outlineWidth}")
+                return false
+            }
+            if (preset.fontSizeSp !in 10f..400f) {
+                Log.e("ACK_IMPORT", "visualPreset \"${preset.id}\" fontSizeSp out of range: ${preset.fontSizeSp}")
+                return false
+            }
+        }
+
+        if (backup.visualPresets.map { it.id }.distinct().size != backup.visualPresets.size) {
+            Log.e("ACK_IMPORT", "visualPresets has duplicate ids")
+            return false
+        }
         if (backup.activeVisualPresetId != null && backup.activeVisualPresetId.length > MAX_KEY_LENGTH) {
+            Log.e("ACK_IMPORT", "activeVisualPresetId exceeds $MAX_KEY_LENGTH chars")
             return false
         }
 
 // 15. Validate output device routing.
         if (backup.outputRouteMode != null && backup.outputRouteMode !in setOf("AUTO", "BLUETOOTH", "WATCH")) {
+            Log.e("ACK_IMPORT", "outputRouteMode is invalid: \"${backup.outputRouteMode}\"")
             return false
         }
         if (backup.outputRouteBtAddress != null && backup.outputRouteBtAddress.length > MAX_KEY_LENGTH) {
+            Log.e("ACK_IMPORT", "outputRouteBtAddress exceeds $MAX_KEY_LENGTH chars")
             return false
         }
         if (backup.outputRouteBtLabel != null && backup.outputRouteBtLabel.length > MAX_LABEL_LENGTH) {
+            Log.e("ACK_IMPORT", "outputRouteBtLabel exceeds $MAX_LABEL_LENGTH chars")
             return false
         }
 
 // 16. Validate Terminal / STATUSBOX prefs.
         backup.terminalRetentionDays?.let {
-            if (it !in TerminalLogStore.MIN_RETENTION_DAYS..TerminalLogStore.MAX_RETENTION_DAYS) return false
+            if (it !in TerminalLogStore.MIN_RETENTION_DAYS..TerminalLogStore.MAX_RETENTION_DAYS) {
+                Log.e("ACK_IMPORT", "terminalRetentionDays out of range: $it")
+                return false
+            }
         }
         backup.terminalStatusboxColorIndex?.let {
-            if (it !in NeonPalette.SWATCHES.indices) return false
+            if (it !in NeonPalette.SWATCHES.indices) {
+                Log.e("ACK_IMPORT", "terminalStatusboxColorIndex out of range: $it")
+                return false
+            }
         }
 
 // 17. Validate shake-to-kill sensitivity -- generous headroom over the
 // 8f..25f slider range, matching how the DSP physics fields above are
 // validated a bit looser than their own sliders.
         backup.shakeThreshold?.let {
-            if (it !in 1f..50f) return false
+            if (it !in 1f..50f) {
+                Log.e("ACK_IMPORT", "shakeThreshold out of range: $it")
+                return false
+            }
         }
 
 // 18. Validate Shared Root Variables' collapsed-state map.
-        if (backup.rootOverrideCollapsed.size > 50) return false
+        if (backup.rootOverrideCollapsed.size > 50) {
+            Log.e("ACK_IMPORT", "rootOverrideCollapsed.size exceeds 50: ${backup.rootOverrideCollapsed.size}")
+            return false
+        }
         backup.rootOverrideCollapsed.forEach { (category, _) ->
-            if (category.length > 50) return false
-            if (!SAFE_KEY_PATTERN.matches(category)) return false
+            if (category.length > 50) {
+                Log.e("ACK_IMPORT", "rootOverrideCollapsed category exceeds 50 chars: \"$category\"")
+                return false
+            }
+            if (!SAFE_KEY_PATTERN.matches(category)) {
+                Log.e("ACK_IMPORT", "rootOverrideCollapsed category fails SAFE_KEY_PATTERN: \"$category\"")
+                return false
+            }
         }
 
         return true
     }
 
-    private fun isComputerNodeValid(node: ComputerNode): Boolean {
-        if (node.id.length > MAX_KEY_LENGTH) return false
-        if (node.label.length > MAX_LABEL_LENGTH) return false
-        if (node.legacyStrategy != null && node.legacyStrategy !in setOf("PRE", "POST")) return false
-        return node.children.all { isComputerNodeValid(it) }
+    private fun isComputerNodeValid(categoryId: String, node: ComputerNode): Boolean {
+        if (node.id.length > MAX_KEY_LENGTH) {
+            Log.e("ACK_IMPORT", "computerCategory \"$categoryId\" node id exceeds $MAX_KEY_LENGTH chars: \"${node.id}\"")
+            return false
+        }
+        if (node.label.length > MAX_LABEL_LENGTH) {
+            Log.e("ACK_IMPORT", "computerCategory \"$categoryId\" node label exceeds $MAX_LABEL_LENGTH chars: \"${node.label}\" (${node.label.length})")
+            return false
+        }
+        if (node.legacyStrategy != null && node.legacyStrategy !in setOf("PRE", "POST")) {
+            Log.e("ACK_IMPORT", "computerCategory \"$categoryId\" node \"${node.label}\" has invalid legacyStrategy: \"${node.legacyStrategy}\"")
+            return false
+        }
+        return node.children.all { isComputerNodeValid(categoryId, it) }
     }
 
     // Returns (total node count, max depth) for the subtree rooted at node.
