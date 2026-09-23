@@ -376,26 +376,30 @@ private val TERMINAL_HELP_LINES = listOf(
 // headers do the separating instead. Update this list (and CHANGELOG.md
 // at the repo root, which carries the same notes) with each beta.
 private val PATCH_NOTES = listOf(
-    "=== ACK v1.0-BETA.6 PATCH NOTES ===",
-    "-- OUTPUT DEVICE --",
-    "- NEW: PICK WHICH DEVICE ACK'S AUDIO GOES TO -- PROTOCOL, BELOW FORCE",
-    "  SPEAKER. LISTS CURRENTLY-CONNECTED BLUETOOTH DEVICES PLUS ACK WATCH",
-    "- NO OS-LEVEL SETTINGS TOUCHED -- ONLY READS WHAT'S ALREADY CONNECTED",
-    "- FORCE SPEAKER ALWAYS OVERRIDES WHATEVER'S PICKED HERE",
-    "- FALLS BACK TO THE PHONE AUTOMATICALLY IF THE PICKED DEVICE OR THE",
-    "  WATCH ISN'T REACHABLE WHEN A PROMPT FIRES",
+    "=== ACK v1.0-BETA.7 PATCH NOTES ===",
+    "-- AUTOCOMPLETE --",
+    "- NEW: ACK REMEMBERS WHAT YOU'VE TYPED INTO MATRIX/QUICK ACTIONS",
+    "  VARIABLE FIELDS AND SHARED ROOT VARIABLES, OFFERING YOUR MOST-USED",
+    "  PAST ENTRIES BACK AS TAPPABLE CHIPS UNDER THE FIELD",
+    "- INCLUDED IN EXPORT .JSON BACKUPS",
+    "- MANAGE AUTOCOMPLETE IN PROTOCOL BROWSES EVERY REMEMBERED VALUE BY",
+    "  FIELD, WITH PER-VALUE REMOVAL, PER-FIELD CLEARING, AND A BROAD",
+    "  CLEAR-ALL",
+    "-- DATA PORT --",
+    "- NEW: FULL RESTORE FROM JSON REPLACES YOUR ENTIRE CURRENT",
+    "  CONFIGURATION WITH A BACKUP'S -- DECKS, DSP, ROOT OVERRIDES, QUICK",
+    "  ACTIONS, EMERGENCY, TARGET COMPUTER, RECORDINGS, AND AUTOCOMPLETE",
+    "  HISTORY ALIKE. CONFIRMATION REQUIRED; CANNOT BE UNDONE",
+    "- REMOVED: THE OPTICAL [QR] SCANNER AND ITS CAMERA PERMISSION. ITS",
+    "  RESTORE LOGIC LIVES ON BEHIND FULL RESTORE FROM JSON ABOVE, WITHOUT",
+    "  THE CAMERA",
     "-- FIXES --",
-    "- FIXED RECORDED VOICE PROMPTS NOT CONSISTENTLY FOLLOWING AUDIO",
-    "  ARCHITECT'S MASTER GAIN. EVERY RECORDING IS NOW LOUDNESS-NORMALIZED",
-    "  TO A CONSISTENT BASELINE RIGHT AFTER NOISE REDUCTION AND SILENCE",
-    "  TRIMMING, SO MASTER GAIN MULTIPLIES FROM THE SAME STARTING POINT",
-    "  EVERY TIME -- THE SAME WAY IT ALREADY DOES FOR SYNTHESIZED SPEECH.",
-    "  EXISTING RECORDINGS ARE NORMALIZED AUTOMATICALLY, ONCE, THE NEXT",
-    "  TIME YOU OPEN THE APP.",
-    "- FIXED OUTPUT SOMETIMES GOING QUIET IF SOMETHING OUTSIDE ACK TURNED",
-    "  SYSTEM VOLUME DOWN. EVERY SPOKEN PROMPT -- SYNTHESIZED OR RECORDED,",
-    "  EMERGENCY INCLUDED -- NOW ALWAYS NUDGES MEDIA VOLUME UP TO AN",
-    "  AUDIBLE FLOOR BEFORE IT PLAYS. NEVER LOWERS VOLUME YOU'VE SET HIGH.",
+    "- FIXED OUTPUT GOING QUIET OR NOT REACHING THE CAR'S SPEAKERS AT ALL",
+    "  ON ANDROID AUTO. ACK NEVER REQUESTED AUDIO FOCUS ON ANY PLAYBACK",
+    "  PATH -- FINE ON A PHONE WITH NOTHING ELSE COMPETING, BUT ANDROID",
+    "  AUTO IS STRICT ABOUT THE STANDARD FOCUS HANDSHAKE WHILE JUGGLING",
+    "  NAVIGATION, MUSIC, AND CALLS. EVERY DISPATCH NOW BRIEFLY REQUESTS",
+    "  AUDIO FOCUS BEFORE PLAYING AND RELEASES IT RIGHT AFTER.",
     "=== END PATCH NOTES ==="
 )
 
@@ -2383,6 +2387,13 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 "VARIABLE ${index + 1} // ROOT $tag"
                             }
 
+                            // Per node, per variable slot -- typing the
+                            // same name into a different node (or a
+                            // different variable on this same node)
+                            // doesn't cross-suggest here, by design.
+                            val autocompleteScopeKey = AutocompleteHistoryRepository
+                                .matrixVariableScopeKey(activeDeckId, activeProfile, node.path, index)
+
                             OutlinedTextField(
                                 value = tempVars[index],
                                 onValueChange = { newValue ->
@@ -2391,7 +2402,25 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(min = 52.dp),
+                                    .heightIn(min = 52.dp)
+                                    .onFocusChanged { state ->
+                                        // Local variables live-save on every
+                                        // keystroke already -- focus-loss is
+                                        // this field's only natural "the
+                                        // user is done typing" moment, so
+                                        // that's what counts as one usage
+                                        // rather than every keystroke.
+                                        if (!state.isFocused) {
+                                            AutocompleteHistoryRepository.recordUsage(
+                                                context,
+                                                autocompleteScopeKey,
+                                                AutocompleteScopeInfo.matrix(
+                                                    activeDeckId, activeProfile, node.path, index
+                                                ),
+                                                tempVars[index]
+                                            )
+                                        }
+                                    },
                                 shape = AckHelpShape,
                                 singleLine = true,
                                 label = {
@@ -2422,6 +2451,16 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                     cursorColor = NeonPalette.SWATCHES[3]
                                 )
                             )
+
+                            AutocompleteChipRow(
+                                suggestions = AutocompleteHistoryRepository
+                                    .getSuggestions(context, autocompleteScopeKey),
+                                primaryColor = NeonPalette.SWATCHES[3],
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) { suggestion ->
+                                tempVars[index] = suggestion
+                                saveVariables()
+                            }
 
                             if (index < variableCount - 1) {
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -2811,6 +2850,22 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             cursorColor = primaryColor
                         )
                     )
+
+                    AutocompleteChipRow(
+                        suggestions = AutocompleteHistoryRepository.getSuggestions(
+                            context,
+                            AutocompleteHistoryRepository.matrixVariableScopeKey(
+                                CommandRepository.getActiveDeckId(context),
+                                CommandRepository.getActiveProfile(context),
+                                request.nodePath,
+                                request.index
+                            )
+                        ),
+                        primaryColor = primaryColor,
+                        modifier = Modifier.padding(top = 6.dp)
+                    ) { suggestion ->
+                        value = suggestion
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -2839,6 +2894,23 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             context,
                             request.nodePath,
                             existingValues
+                        )
+
+                        AutocompleteHistoryRepository.recordUsage(
+                            context,
+                            AutocompleteHistoryRepository.matrixVariableScopeKey(
+                                CommandRepository.getActiveDeckId(context),
+                                CommandRepository.getActiveProfile(context),
+                                request.nodePath,
+                                request.index
+                            ),
+                            AutocompleteScopeInfo.matrix(
+                                CommandRepository.getActiveDeckId(context),
+                                CommandRepository.getActiveProfile(context),
+                                request.nodePath,
+                                request.index
+                            ),
+                            value
                         )
 
                         refreshKey++
@@ -4079,6 +4151,7 @@ fun RootOverrideStrip(
             tag = tag,
             category = category,
             initialValue = config.slots[tag]?.value.orEmpty(),
+            context = context,
             primaryColor = primaryColor,
             onDismiss = {
                 editingTag = null
@@ -4099,6 +4172,7 @@ fun RootOverrideValueDialog(
     tag: String,
     category: String,
     initialValue: String,
+    context: Context,
     primaryColor: Color,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
@@ -4106,6 +4180,8 @@ fun RootOverrideValueDialog(
     var value by remember(tag, initialValue) {
         mutableStateOf(initialValue)
     }
+
+    val autocompleteScopeKey = AutocompleteHistoryRepository.rootOverrideScopeKey(category, tag)
 
     TightDialogSurface(
         onDismiss = onDismiss,
@@ -4144,6 +4220,17 @@ fun RootOverrideValueDialog(
                     )
                 )
 
+                AutocompleteChipRow(
+                    suggestions = AutocompleteHistoryRepository.getSuggestions(
+                        context,
+                        autocompleteScopeKey
+                    ),
+                    primaryColor = primaryColor,
+                    modifier = Modifier.padding(top = 6.dp)
+                ) { suggestion ->
+                    value = suggestion
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
@@ -4155,6 +4242,12 @@ fun RootOverrideValueDialog(
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
+                        AutocompleteHistoryRepository.recordUsage(
+                            context,
+                            autocompleteScopeKey,
+                            AutocompleteScopeInfo.rootOverride(category, tag),
+                            value
+                        )
                         onSave(value)
                     }
 

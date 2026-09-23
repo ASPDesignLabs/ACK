@@ -72,8 +72,9 @@ object SettingsManagementHelp {
                 id = "data_port",
                 title = "DATA PORT",
                 body = "The Data Port manages configuration transfer and backup. " +
-                        "Use Optical Sync for QR transfer, Export to create a JSON " +
-                        "backup, or Import to deploy compatible saved ACK data. " +
+                        "Export creates a JSON backup, Import deploys a backup's " +
+                        "matrix phrases into a new deck, and Full Restore replaces " +
+                        "your entire current configuration with a backup's. " +
                         "The guide has moved upward so these controls remain visible.",
                 action = HelpAction.Interact(AckTags.SETTINGS_DATA_PORT),
                 targetTag = AckTags.SETTINGS_DATA_PORT,

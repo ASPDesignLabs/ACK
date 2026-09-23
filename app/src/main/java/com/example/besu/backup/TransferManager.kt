@@ -11,11 +11,7 @@ import android.util.Log
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.InputStreamReader
-import java.util.Base64
-import java.util.zip.GZIPInputStream
 
 // Note: Data classes (AckBackup, DspConfig) are now imported from AckBackup.kt
 
@@ -215,6 +211,12 @@ object TransferManager {
         val voiceRecordings = VoiceRecordingRepository.exportForBackup(context)
         val voiceRecordingGainPercent = VoiceRecordingRepository.getPlaybackGainPercent(context)
 
+// 9c. Gather autocomplete suggestion history -- its own dedicated prefs
+// file, so a clean whole-file export needs no key-prefix filtering the
+// way rootOverrides (sharing "ack_matrix_config" with everything else)
+// does above.
+        val autocompleteHistory = AutocompleteHistoryRepository.exportForBackup(context)
+
 // 10. Wrap and encode.
         val backup = AckBackup(
             dsp = dspConfig,
@@ -236,6 +238,7 @@ object TransferManager {
             computerCategories = computerCategories,
             voiceRecordings = voiceRecordings,
             voiceRecordingGainPercent = voiceRecordingGainPercent,
+            autocompleteHistory = autocompleteHistory,
         )
 
         return json.encodeToString(backup)
@@ -259,10 +262,17 @@ object TransferManager {
     }
 
     // --- RESTORE (SECURE) ---
-    fun restoreBackup(context: Context, rawPayload: String): Boolean {
+    // Whole-protocol restore -- validates then wholesale-overwrites DSP,
+    // decks, quick actions, emergency, root overrides, target computer,
+    // voice recordings, and autocomplete history, all at once (see
+    // applyBackupToStorage). Used by PROTOCOL's FULL RESTORE FROM JSON;
+    // deliberately not what the narrower IMPORT .JSON button calls, since
+    // that one imports just matrix phrases into a new deck rather than
+    // overwriting the whole configuration.
+    fun restoreBackup(context: Context, rawJson: String): Boolean {
         return try {
             // STEP 1: PARSE
-            val backup = parseQrPayload(rawPayload) ?: return false
+            val backup = parseBackupJson(rawJson) ?: return false
 
             // STEP 2: SANITIZE (The Firewall)
             if (!validateDataIntegrity(backup)) {
@@ -419,6 +429,48 @@ object TransferManager {
             return false
         }
 
+// 12. Validate autocomplete suggestion history. Scope keys are generated
+// internally (see AutocompleteHistoryRepository's *ScopeKey functions),
+// not user-typed, but still validated on the way in like every other
+// backup key -- a corrupted or hand-edited backup shouldn't be trusted
+// just because this field's keys aren't normally free text. The scope's
+// info rides alongside the key rather than being derived from it, so it
+// gets the same treatment -- its string fields with the identifier
+// pattern every other deckId/storagePath-shaped field in this file uses.
+        if (backup.autocompleteHistory.size > 2000) return false
+
+        val validAutocompleteFieldTypes = setOf(
+            AutocompleteScopeInfo.TYPE_MATRIX,
+            AutocompleteScopeInfo.TYPE_QUICK_ACTION,
+            AutocompleteScopeInfo.TYPE_ROOT_OVERRIDE
+        )
+
+        backup.autocompleteHistory.forEach { (scopeKey, scope) ->
+            if (scopeKey.length > MAX_KEY_LENGTH) return false
+            if (!SAFE_KEY_PATTERN.matches(scopeKey)) return false
+            if (scope.entries.size > 20) return false
+
+            if (scope.info.fieldType !in validAutocompleteFieldTypes) return false
+            listOfNotNull(
+                scope.info.deckId,
+                scope.info.profile,
+                scope.info.storagePath,
+                scope.info.category,
+                scope.info.tag
+            ).forEach {
+                if (it.length > MAX_KEY_LENGTH) return false
+                if (!SAFE_KEY_PATTERN.matches(it)) return false
+            }
+            listOfNotNull(scope.info.groupIndex, scope.info.slotIndex, scope.info.tagIndex).forEach {
+                if (it !in 0..10_000) return false
+            }
+
+            scope.entries.forEach { entry ->
+                if (entry.value.length > MAX_PHRASE_LENGTH) return false
+                if (entry.count !in 1..100_000) return false
+            }
+        }
+
         return true
     }
 
@@ -444,32 +496,10 @@ object TransferManager {
     }
 
     // --- UTILITIES ---
-    fun parseQrPayload(rawPayload: String): AckBackup? {
-        if (rawPayload.trim().startsWith("{")) {
-            return try {
-                json.decodeFromString<AckBackup>(rawPayload)
-            } catch (e: Exception) { null }
-        }
-
+    fun parseBackupJson(rawJson: String): AckBackup? {
         return try {
-            val compressedBytes = Base64.getDecoder().decode(rawPayload)
-            val inputStream = GZIPInputStream(ByteArrayInputStream(compressedBytes))
-            val outputStream = ByteArrayOutputStream()
-            val buffer = ByteArray(1024)
-            var totalBytesRead = 0
-            var bytesRead: Int
-
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                totalBytesRead += bytesRead
-                if (totalBytesRead > MAX_DECOMPRESSED_SIZE) {
-                    throw SecurityException("Payload exceeds safe size.")
-                }
-                outputStream.write(buffer, 0, bytesRead)
-            }
-            val jsonString = outputStream.toString("UTF-8")
-            json.decodeFromString<AckBackup>(jsonString)
+            json.decodeFromString<AckBackup>(rawJson)
         } catch (e: Exception) {
-            e.printStackTrace() 
             null
         }
     }
@@ -626,6 +656,8 @@ object TransferManager {
         // instead of a slot with a recordingId pointing at nothing.
         VoiceRecordingRepository.replaceFromBackup(context, backup.voiceRecordings)
         VoiceRecordingRepository.setPlaybackGainPercent(context, backup.voiceRecordingGainPercent)
+
+        AutocompleteHistoryRepository.restoreFromBackup(context, backup.autocompleteHistory)
 
         CommandRepository.activateDeck(
             context = context,
