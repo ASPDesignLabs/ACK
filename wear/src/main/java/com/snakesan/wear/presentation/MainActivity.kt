@@ -38,7 +38,7 @@ import kotlin.math.abs
 import kotlin.system.exitProcess
 
 // Simple data class for Watch-side deck cache
-data class DeckLite(val id: String, val name: String, val colorIdx: Int)
+data class DeckLite(val id: String, val name: String, val colorIdx: Int, val type: String = "MATRIX")
 
 class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener, AmbientModeSupport.AmbientCallbackProvider {
 
@@ -58,10 +58,18 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
     private var activePrimaryColor by mutableStateOf(NeonPalette.DEFAULT_CYAN)
     private var activeDeckLabel by mutableStateOf("DEFAULT")
     private var activeProfileLabel by mutableStateOf("DEFAULT")
+    // Drives which tap-tap-hold overlay opens (legacy TargetSelectionOverlay
+    // vs. the Target Computer flyout) -- see the /sys/deck_update handler
+    // and commitDeckSelection below for where this gets kept current.
+    private var activeDeckType by mutableStateOf("MATRIX")
     
     // --- NAVIGATION STATE ---
     private val availableDecks = mutableStateListOf<DeckLite>()
     private var crownThresholdPx by mutableFloatStateOf(96f)
+
+    // Phone-configurable (PROTOCOL > HARDWARE CONFIG, WatchSync.
+    // sendComputerFlyoutTimeout) inactivity window for ComputerTargetFlyout.
+    private var computerFlyoutTimeoutSec by mutableIntStateOf(10)
 
     // Deck Selection
     private var isSelectingDeck by mutableStateOf(false)
@@ -74,6 +82,12 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
     // --- TARGET SELECTION STATE ---
     private var isTargetMenuVisible by mutableStateOf(false)
     private var activeTargetIndex by mutableIntStateOf(-1) // -1 = None/Clear
+
+    // --- TARGET COMPUTER FLYOUT STATE ---
+    // tap-tap-hold opens this instead of isTargetMenuVisible's legacy
+    // overlay when the active deck is Quick Actions -- see onTapTapHold
+    // below.
+    private var isComputerFlyoutVisible by mutableStateOf(false)
     
     // TELEMETRY
     private var isStreaming = false
@@ -140,12 +154,15 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         // Init Defaults
         activePrimaryColor = NeonPalette.getColor(prefs.getInt("active_color_idx", 0))
         activeDeckLabel = prefs.getString("active_deck_name", "DEFAULT") ?: "DEFAULT"
+        activeDeckType = prefs.getString("active_deck_type", "MATRIX") ?: "MATRIX"
         activeProfileLabel = prefs.getString("active_profile_name", "DEFAULT") ?: "DEFAULT"
-        
+
         val savedSens = prefs.getInt("crown_sensitivity_level", 2)
         crownThresholdPx = (savedSens * 48f)
+        computerFlyoutTimeoutSec = prefs.getInt("cfg_computer_flyout_timeout_sec", 10).coerceIn(5, 30)
 
         loadCachedDecks()
+        loadCachedComputerCategories()
         
         @Suppress("DEPRECATION")
         vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
@@ -189,7 +206,7 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                         return@onRotaryScrollEvent false
                     }
 
-                    if (isTargetMenuVisible) {
+                    if (isTargetMenuVisible || isComputerFlyoutVisible) {
                         return@onRotaryScrollEvent false
                     }
 
@@ -241,6 +258,17 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                 .focusable()
             ) {
                 AckRootContainer(
+                    // Suppress this container's own gesture loop entirely
+                    // while an overlay with its own pointerInput is up --
+                    // see AckRootContainer's gesturesEnabled doc. A guard
+                    // on individual callbacks (e.g. onLongPress checking
+                    // !isComputerFlyoutVisible) isn't enough: this loop's
+                    // independent timers can still be mid-flight against
+                    // the same raw touches a double-tap inside the flyout
+                    // already resolved, and by the time e.g. onLongPress
+                    // fires, isComputerFlyoutVisible has already flipped
+                    // back to false.
+                    gesturesEnabled = !isTargetMenuVisible && !isComputerFlyoutVisible,
                     onDoubleTap = { exitPauseOrCryo() },
                     onTap = {
                         if (currentStateName == "LOCKED") {
@@ -268,11 +296,18 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                         }
                     },
                     onLongPress = {
-                        if (!isCryo() && !isTargetMenuVisible) {
+                        if (!isCryo() && !isTargetMenuVisible && !isComputerFlyoutVisible) {
                             toggleShakyHandsMode()
                         }
                     },
                     onTapTapHold = {
+                        // The Target Computer flyout used to also open from
+                        // this gesture on Quick Actions decks -- dropped in
+                        // favor of AckWatchHud's dedicated TARGET tap
+                        // target (see below), which lands reliably where
+                        // tap-tap-hold didn't. tap-tap-hold now always opens
+                        // the legacy overlay again, uniformly across every
+                        // deck type, same as before either ever existed.
                         if (!isCryo()) {
                             isTargetMenuVisible = true
                             feedback(100, TechSynth.Sfx.MODIFIER)
@@ -289,7 +324,16 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                         }
                     } else {
                         // Render State from Background Service
-                        AckWatchHud(uiState, uiPose, uiTwist, activePrimaryColor, activeDeckLabel, activeProfileLabel, isShakyHandsMode)
+                        AckWatchHud(
+                            uiState, uiPose, uiTwist, activePrimaryColor, activeDeckLabel, activeProfileLabel, isShakyHandsMode,
+                            showTargetButton = !isCryo() && activeDeckType == "QUICK_ACTIONS" && ComputerCategoryCache.categories.isNotEmpty(),
+                            onTargetTap = {
+                                if (!isCryo()) {
+                                    isComputerFlyoutVisible = true
+                                    feedback(100, TechSynth.Sfx.MODIFIER)
+                                }
+                            }
+                        )
                     }
 
                     //if (currentStateName == "CRYO") {
@@ -314,6 +358,19 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                                 sendTargetSelection(index, isSticky)
                             },
                             onDismiss = { isTargetMenuVisible = false }
+                        )
+                    }
+
+                    // --- TARGET COMPUTER FLYOUT ---
+                    if (isComputerFlyoutVisible) {
+                        ComputerTargetFlyout(
+                            onSelect = { categoryId, nodeId ->
+                                isComputerFlyoutVisible = false
+                                feedback(150, TechSynth.Sfx.LOCK)
+                                sendComputerPick(categoryId, nodeId)
+                            },
+                            onDismiss = { isComputerFlyoutVisible = false },
+                            timeoutMs = computerFlyoutTimeoutSec * 1000L
                         )
                     }
                 }
@@ -408,6 +465,10 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         if (selectedDeck != null) {
             isSelectingDeck = false
             activeDeckLabel = selectedDeck.name
+            // Set optimistically from the cached deck list so tap-tap-hold
+            // routes correctly right away -- the phone's own /sys/deck_update
+            // push (which also carries type) still follows and reconfirms it.
+            activeDeckType = selectedDeck.type
             sendDeckRequest(selectedDeck.id)
             if (!silent) feedback(150, TechSynth.Sfx.LOCK)
             broadcastDeckToHUD()
@@ -440,14 +501,19 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         parseDeckList(raw)
     }
 
+    private fun loadCachedComputerCategories() {
+        val raw = prefs.getString("cached_computer_categories", "") ?: ""
+        ComputerCategoryCache.update(raw)
+    }
+
     private fun parseDeckList(raw: String) {
         availableDecks.clear()
         var foundValid = false
         if (raw.isNotEmpty()) {
             val list = raw.split(";").mapNotNull { entry ->
                 val parts = entry.split("|")
-                if (parts.size == 3) {
-                    DeckLite(parts[0], parts[1], parts[2].toIntOrNull() ?: 0)
+                if (parts.size >= 3) {
+                    DeckLite(parts[0], parts[1], parts[2].toIntOrNull() ?: 0, parts.getOrElse(3) { "MATRIX" })
                 } else null
             }
             if (list.isNotEmpty()) {
@@ -456,7 +522,7 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
             }
         }
         if (!foundValid) {
-            availableDecks.add(DeckLite("DEFAULT", "DEFAULT", 0))
+            availableDecks.add(DeckLite("DEFAULT", "DEFAULT", 0, "MATRIX"))
         }
     }
 
@@ -474,6 +540,22 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         }
     }
     
+    // --- NEW: TARGET COMPUTER PICK REQUEST ---
+    // Called from ComputerTargetFlyout's onSelect once a leaf entry is
+    // hold-confirmed. Distinct from sendTargetSelection below (the legacy
+    // 8-slot TargetRepository system); this writes into ComputerRepository
+    // via WearListenerService instead.
+    private fun sendComputerPick(categoryId: String, nodeId: String) {
+        val payload = "$categoryId|$nodeId"
+        val data = payload.toByteArray(Charsets.UTF_8)
+
+        Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
+            nodes.forEach { node ->
+                Wearable.getMessageClient(this).sendMessage(node.id, "/sys/req_computer_pick", data)
+            }
+        }
+    }
+
     // --- UPDATED: TARGET REQUEST ---
     private fun sendTargetSelection(index: Int, isSticky: Boolean) {
         // Payload: "INDEX|IS_STICKY"
@@ -517,6 +599,7 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         isSelectingDeck = false
         isSelectingContext = false
         isTargetMenuVisible = false
+        isComputerFlyoutVisible = false
 
         updateScreenPower(false)
     }
@@ -549,6 +632,10 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
         when {
             isTargetMenuVisible -> {
                 isTargetMenuVisible = false
+            }
+
+            isComputerFlyoutVisible -> {
+                isComputerFlyoutVisible = false
             }
 
             isCryo() -> {
@@ -625,10 +712,16 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                     if (parts.size >= 2) {
                         val idx = parts[0].toInt()
                         val name = parts[1]
+                        val type = parts.getOrElse(2) { "MATRIX" }
                         val newColor = NeonPalette.getColor(idx)
                         activePrimaryColor = newColor
                         activeDeckLabel = name
-                        prefs.edit().putInt("active_color_idx", idx).putString("active_deck_name", name).apply()
+                        activeDeckType = type
+                        prefs.edit()
+                            .putInt("active_color_idx", idx)
+                            .putString("active_deck_name", name)
+                            .putString("active_deck_type", type)
+                            .apply()
                         feedback(50, TechSynth.Sfx.UNLOCK)
                         broadcastDeckToHUD(overrideDeck = name, overrideColor = newColor.toArgb())
                     }
@@ -671,6 +764,15 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                 } catch (e: Exception) {}
             }
 
+            "/sys/computer_flyout_timeout" -> {
+                try {
+                    val seconds = String(e.data).toInt().coerceIn(5, 30)
+                    computerFlyoutTimeoutSec = seconds
+                    prefs.edit().putInt("cfg_computer_flyout_timeout_sec", seconds).apply()
+                    feedback(50, TechSynth.Sfx.TICK)
+                } catch (e: Exception) {}
+            }
+
             "/sys/wake_window_config" -> {
                 try {
                     val ms = String(e.data).toInt()
@@ -705,6 +807,12 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
             "/sys/target_list" -> {
                 val raw = String(e.data, Charsets.UTF_8)
                 TargetCache.update(raw)
+                feedback(20)
+            }
+
+            "/sys/computer_categories" -> {
+                val raw = String(e.data, Charsets.UTF_8)
+                ComputerCategoryCache.update(raw)
                 feedback(20)
             }
         }

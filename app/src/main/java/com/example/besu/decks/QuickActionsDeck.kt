@@ -1,6 +1,7 @@
 package com.example.besu.decks
 
 import com.example.besu.*
+import com.example.besu.computer.*
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.output.*
@@ -13,6 +14,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -184,7 +188,12 @@ fun QuickActionsDeck(
                         context = context,
                         deckId = deckId,
                         groupIndex = activeGroup.groupIndex,
-                        slotIndex = slot.slotIndex
+                        slotIndex = slot.slotIndex,
+                        // This is a genuine dispatch (about to become real
+                        // spoken output), so single-use [COMPUTER:X] picks
+                        // are allowed to clear here -- same reasoning as
+                        // WearListenerService's gesture-fired path.
+                        consumeSingleUse = true
                     )
 
                     if (phrase.isNotBlank()) {
@@ -225,7 +234,7 @@ fun QuickActionsDeck(
             onDismiss = {
                 editingSlot = null
             },
-            onSave = { label, template, localValues ->
+            onSave = { label, template, localValues, computerFallbacks ->
                 CommandRepository.updateQuickActionSlot(
                     context = context,
                     deckId = deckId,
@@ -233,7 +242,8 @@ fun QuickActionsDeck(
                     slotIndex = slot.slotIndex,
                     label = label,
                     template = template,
-                    localValues = localValues
+                    localValues = localValues,
+                    computerFallbacks = computerFallbacks
                 )
 
                 config = CommandRepository.getQuickActionsConfig(
@@ -400,7 +410,8 @@ private fun QuickActionEditorDialog(
     onSave: (
         label: String,
         template: String,
-        localValues: List<String>
+        localValues: List<String>,
+        computerFallbacks: List<String>
     ) -> Unit,
     onRecordingChanged: () -> Unit
 ) {
@@ -410,6 +421,37 @@ private fun QuickActionEditorDialog(
 
     var template by remember(slot.slotIndex) {
         mutableStateOf(slot.template)
+    }
+
+    // Every category with at least one entry to browse for -- shown as the
+    // insert-tag row below whenever there's at least one.
+    val computerCategories = remember(slot.slotIndex) {
+        ComputerRepository.getCategories(context)
+    }
+
+    // A plain mutableStateListOf (not remember(template)-derived like
+    // localValues below) on purpose: it needs to survive template edits
+    // that don't change the [COMPUTER:X] tag count, and only grow/shrink
+    // when that count actually changes -- see updateTemplate.
+    val computerFallbacks = remember(slot.slotIndex) {
+        mutableStateListOf<String>().apply {
+            val initialCount = TemplateEngine.countComputerTags(slot.template)
+            repeat(initialCount) { index ->
+                add(slot.computerFallbacks.getOrElse(index) { "" })
+            }
+        }
+    }
+
+    fun updateTemplate(newTemplate: String) {
+        template = newTemplate
+
+        val newComputerTagCount = TemplateEngine.countComputerTags(newTemplate)
+        while (computerFallbacks.size > newComputerTagCount) {
+            computerFallbacks.removeAt(computerFallbacks.lastIndex)
+        }
+        while (computerFallbacks.size < newComputerTagCount) {
+            computerFallbacks.add("")
+        }
     }
 
     val tags = remember(template) {
@@ -448,8 +490,8 @@ private fun QuickActionEditorDialog(
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = template,
-                    onValueChange = {
-                        template = it
+                    onValueChange = { newValue ->
+                        updateTemplate(newValue)
                     },
                     label = {
                         Text("PHRASE TEMPLATE")
@@ -458,6 +500,32 @@ private fun QuickActionEditorDialog(
                     colors = NeonTextFieldColors(primaryColor),
                     minLines = 3
                 )
+
+                if (computerCategories.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    TightSectionLabel("INSERT TARGET TAG", color = primaryColor)
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(AckTags.QUICK_ACTION_INSERT_COMPUTER_TAG)
+                            .helpTarget(AckTags.QUICK_ACTION_INSERT_COMPUTER_TAG, primaryColor)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        computerCategories.forEach { computerCategory ->
+                            TightPanelButton(
+                                text = "+ ${computerCategory.label}",
+                                mainColor = primaryColor
+                            ) {
+                                updateTemplate("$template [COMPUTER:${computerCategory.id}]")
+                            }
+                        }
+                    }
+                }
 
                 if (tags.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -502,6 +570,71 @@ private fun QuickActionEditorDialog(
                     }
                 }
 
+                if (computerFallbacks.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    TightSectionLabel("TARGET TAG FALLBACKS", color = primaryColor)
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "[COMPUTER:X] resolves to whichever entry is " +
+                            "currently active for that category in the Target " +
+                            "Computer. If nothing is active, the fallback below " +
+                            "is used instead.",
+                        color = Color.Gray,
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val computerTagsInOrder = remember(template) {
+                        TemplateEngine.getComputerTags(template)
+                    }
+
+                    computerFallbacks.forEachIndexed { index, value ->
+                        val categoryId = computerTagsInOrder.getOrNull(index)
+                        val categoryLabel = computerCategories
+                            .find { it.id == categoryId }
+                            ?.label
+                            ?: categoryId
+                            ?: "?"
+
+                        val autocompleteScopeKey = AutocompleteHistoryRepository
+                            .quickActionComputerFallbackScopeKey(deckId, groupIndex, slot.slotIndex, index)
+
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = value,
+                            onValueChange = { newValue ->
+                                computerFallbacks[index] = newValue
+                            },
+                            label = {
+                                Text("TARGET TAG ${index + 1} // $categoryLabel")
+                            },
+                            shape = AckHelpShape,
+                            singleLine = true,
+                            colors = NeonTextFieldColors(primaryColor)
+                        )
+
+                        AutocompleteChipRow(
+                            suggestions = AutocompleteHistoryRepository.getSuggestions(
+                                context,
+                                autocompleteScopeKey
+                            ),
+                            primaryColor = primaryColor,
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) { suggestion ->
+                            computerFallbacks[index] = suggestion
+                        }
+
+                        if (index < computerFallbacks.size - 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 VoiceRecordingSection(
@@ -540,10 +673,24 @@ private fun QuickActionEditorDialog(
                             )
                         }
 
+                        computerFallbacks.forEachIndexed { index, value ->
+                            AutocompleteHistoryRepository.recordUsage(
+                                context,
+                                AutocompleteHistoryRepository.quickActionComputerFallbackScopeKey(
+                                    deckId, groupIndex, slot.slotIndex, index
+                                ),
+                                AutocompleteScopeInfo.quickActionComputerFallback(
+                                    deckId, groupIndex, slot.slotIndex, index
+                                ),
+                                value
+                            )
+                        }
+
                         onSave(
                             label,
                             template,
-                            localValues
+                            localValues,
+                            computerFallbacks.toList()
                         )
                     }
 

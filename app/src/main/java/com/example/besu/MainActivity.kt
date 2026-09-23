@@ -332,6 +332,14 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         mutableIntStateOf(0)
     }
 
+    // Bumped by the ACK_COMPUTER_PICK broadcast (a watch-driven Target
+    // Computer selection) so TargetView/ComputerSummaryDialog remount and
+    // reflect it if either is open when the pick lands -- see their call
+    // sites below.
+    var computerRevision by remember {
+        mutableIntStateOf(0)
+    }
+
     val decks = remember(deckRevision) {
         CommandRepository.getDecks(context)
     }
@@ -381,8 +389,9 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         context.startService(intent)
 
         val cIdx = CommandRepository.getActiveColorIndex(context)
-        WatchSync.sendDeckConfig(context, cIdx, currentDeckName)
+        WatchSync.sendDeckConfig(context, cIdx, currentDeckName, currentDeckType().name)
         WatchSync.sendDeckList(context)
+        WatchSync.sendComputerCategoriesForDeck(context, currentDeckId)
         WatchSync.sendProfileConfig(context, currentProfile)
 
         val crownSens = prefs.getInt("CROWN_SENS", 2)
@@ -392,11 +401,13 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         val wakeWindow = prefs.getInt("WAKE_WINDOW_MS", 1800)
         val toneTheme = prefs.getInt("TONE_THEME", 1)
         val toneVol = prefs.getFloat("TONE_VOLUME", 0.8f)
+        val computerFlyoutTimeoutSec = prefs.getInt("COMPUTER_FLYOUT_TIMEOUT_SEC", 10)
 
         WatchSync.sendCrownSensitivity(context, crownSens)
         WatchSync.sendMotionConfig(context, twist, pose)
         WatchSync.sendFireGraceConfig(context, fireGrace)
         WatchSync.sendWakeWindowConfig(context, wakeWindow)
+        WatchSync.sendComputerFlyoutTimeout(context, computerFlyoutTimeoutSec)
         WatchSync.sendAudioConfig(context, toneTheme, toneVol)
     }
 
@@ -459,6 +470,15 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             HelpEvent.OverlayWasCleared(AckTags.EMOJI_SLOT)
                         )
                     }
+
+                    // Sent by WearListenerService after a watch-driven Target
+                    // Computer pick (/sys/req_computer_pick) actually commits --
+                    // bumps computerRevision so TargetView/ComputerSummaryDialog,
+                    // if either happens to be open, remount and show the new
+                    // active entry instead of a stale one.
+                    "ACK_COMPUTER_PICK" -> {
+                        computerRevision++
+                    }
                 }
             }
         }
@@ -466,6 +486,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
             addAction("ACK_WATCH_STATUS")
             addAction("ACK_DECK_CHANGE")
             addAction("ACK_OVERLAY_CLEARED")
+            addAction("ACK_COMPUTER_PICK")
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -1317,7 +1338,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 onInsertAtCursor = { insertIntoManualOverride(it) }
                             )
                             "AUDIO" -> AudioArchitectView(context, primaryColor, systemVoices)
-                            "TARGETS" -> TargetView(context, primaryColor)
+                            "TARGETS" -> key(computerRevision) { TargetView(context, primaryColor) }
                             "GEO" -> GeoProtocolView(
                                 context = context,
                                 primaryColor = primaryColor
@@ -1610,11 +1631,13 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                     }
 
                     if (showComputerSummary) {
-                        ComputerSummaryDialog(
-                            context = context,
-                            primaryColor = primaryColor,
-                            onDismiss = { showComputerSummary = false }
-                        )
+                        key(computerRevision) {
+                            ComputerSummaryDialog(
+                                context = context,
+                                primaryColor = primaryColor,
+                                onDismiss = { showComputerSummary = false }
+                            )
+                        }
                     }
 
                     if (showCreateDeckDialog) {

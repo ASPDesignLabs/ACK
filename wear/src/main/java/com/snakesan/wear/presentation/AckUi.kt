@@ -100,7 +100,17 @@ fun AckWatchHud(
     primaryColor: Color = CyberCyan,
     deckName: String = "",
     profileName: String = "DEFAULT", // <--- NEW PARAMETER
-    isShakyHandsMode: Boolean = false
+    isShakyHandsMode: Boolean = false,
+    // Entry point for ComputerTargetFlyout -- shown only when the active
+    // deck is Quick Actions and has at least one synced Target Computer
+    // category (see MainActivity's call site). A dedicated tap target
+    // rather than a gesture (tap-tap-hold was the original entry point,
+    // dropped for being unreliable to land consistently) -- its own
+    // Modifier.pointerInput below explicitly consumes the tap, which is
+    // what stops AckRootContainer's screen-wide gesture loop from *also*
+    // treating the same touch as a plain single tap.
+    showTargetButton: Boolean = false,
+    onTargetTap: (() -> Unit)? = null
 ) {
     // Dynamic Status Color: Uses Deck Color for neutral states
     val statusColor = when (status) {
@@ -133,6 +143,26 @@ fun AckWatchHud(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
+
+            // TARGET COMPUTER entry button -- above the shaky-hands spot
+            // so it's always in the same place regardless of whether that
+            // indicator is currently showing.
+            if (showTargetButton) {
+                Text(
+                    text = "◎ TARGET",
+                    color = CyberAmber,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier
+                        .pointerInput(onTargetTap) {
+                            detectTapGestures(onTap = { onTargetTap?.invoke() })
+                        }
+                        .padding(vertical = 4.dp) // widens the real tap target beyond the glyph's own tight bounds
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+            }
 
             // 0. SHAKY-HANDS INDICATOR -- sits directly above the deck line
             // so it's read as "this deck, in this mode" rather than a

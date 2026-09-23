@@ -5,8 +5,22 @@ import com.example.besu.data.*
 import android.content.Context
 import android.content.Intent
 import com.google.android.gms.wearable.Wearable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 object WatchSync {
+
+    private val json = Json { encodeDefaults = true }
+
+    // Hard ceiling on how many nodes of one category get synced to the
+    // watch -- a defensive cap against a pathological tree blowing past the
+    // Wearable MessageClient payload limit, not a "your tree shouldn't be
+    // this big" opinion. Silent truncation is acceptable here (unlike
+    // TransferManager's validated import path) because this is a live,
+    // repeatedly-resent cache, not a one-shot user action that could lose
+    // data -- the watch just won't offer every entry until the tree's
+    // trimmed down, same as any other sync lag.
+    private const val MAX_SYNCED_NODES_PER_CATEGORY = 400
     
     // --- EXISTING FUNCTIONS ---
 
@@ -28,9 +42,9 @@ object WatchSync {
         sendMessage(context, "/sys/target_list", payload, "TARGET LIST SYNC")
     }
 
-    fun sendDeckConfig(context: Context, colorIndex: Int, deckName: String) {
+    fun sendDeckConfig(context: Context, colorIndex: Int, deckName: String, deckType: String) {
         val path = "/sys/deck_update"
-        val data = "$colorIndex,$deckName".toByteArray(Charsets.UTF_8)
+        val data = "$colorIndex,$deckName,$deckType".toByteArray(Charsets.UTF_8)
         sendMessage(context, path, data)
     }
 
@@ -54,15 +68,62 @@ object WatchSync {
 
     fun sendDeckList(context: Context) {
         val decks = CommandRepository.getDecks(context)
-        val sb = StringBuilder("DEFAULT|DEFAULT|0")
-        
+        val sb = StringBuilder("DEFAULT|DEFAULT|0|MATRIX")
+
         decks.forEach { deck ->
             sb.append(";")
-            sb.append("${deck.id}|${deck.name}|${deck.colorIndex}")
+            sb.append("${deck.id}|${deck.name}|${deck.colorIndex}|${deck.type.name}")
         }
-        
+
         val data = sb.toString().toByteArray(Charsets.UTF_8)
         sendMessage(context, "/sys/deck_list", data, "DECK LIST SYNC")
+    }
+
+    // --- NEW: TARGET COMPUTER CATEGORY SYNC ---
+    // Sends the watch a compact copy of every Target Computer category
+    // referenced by [COMPUTER:X] tags anywhere in the given Quick Actions
+    // deck's slots, so its tap-tap-hold flyout can offer a pick without a
+    // round trip. Always sent (even empty) on every deck activation --
+    // CommandRepository.activateDeck calls this unconditionally -- so a
+    // switch away from a tagged Quick Actions deck clears the watch's
+    // cache instead of leaving the previous deck's categories selectable.
+    fun sendComputerCategoriesForDeck(context: Context, deckId: String) {
+        val categoryIds = CommandRepository.computerCategoryIdsForQuickActionsDeck(context, deckId)
+
+        val payload = if (categoryIds.isEmpty()) {
+            "[]"
+        } else {
+            val allCategories = ComputerRepository.getCategories(context)
+            val synced = categoryIds.mapNotNull { categoryId ->
+                val category = allCategories.find { it.id == categoryId } ?: return@mapNotNull null
+                val nodes = mutableListOf<SyncedComputerNode>()
+                flattenComputerNodes(category.root.children, parentId = "", into = nodes)
+                SyncedComputerCategory(id = category.id, label = category.label, nodes = nodes)
+            }
+            json.encodeToString(synced)
+        }
+
+        sendMessage(context, "/sys/computer_categories", payload.toByteArray(Charsets.UTF_8), "TARGET COMPUTER SYNC")
+    }
+
+    private fun flattenComputerNodes(
+        children: List<ComputerNode>,
+        parentId: String,
+        into: MutableList<SyncedComputerNode>
+    ) {
+        for (child in children) {
+            if (into.size >= MAX_SYNCED_NODES_PER_CATEGORY) return
+
+            into.add(
+                SyncedComputerNode(
+                    id = child.id,
+                    label = child.label,
+                    isCategory = child.type == ComputerNodeType.CATEGORY,
+                    parentId = parentId
+                )
+            )
+            flattenComputerNodes(child.children, child.id, into)
+        }
     }
 
     // --- CROWN SENSITIVITY ---
@@ -95,6 +156,14 @@ object WatchSync {
         val path = "/sys/wake_window_config"
         val data = "$windowMs".toByteArray(Charsets.UTF_8)
         sendMessage(context, path, data, "WAKE WINDOW SYNC")
+    }
+
+    // How long the Target Computer flyout (ComputerTargetFlyout, watch-
+    // side) waits with no interaction before auto-dismissing. 5-30s.
+    fun sendComputerFlyoutTimeout(context: Context, seconds: Int) {
+        val path = "/sys/computer_flyout_timeout"
+        val data = "$seconds".toByteArray(Charsets.UTF_8)
+        sendMessage(context, path, data, "FLYOUT TIMEOUT SYNC")
     }
 
     // --- GESTURE TRAINING MODE ---

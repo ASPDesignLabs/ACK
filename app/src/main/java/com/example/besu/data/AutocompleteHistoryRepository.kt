@@ -40,6 +40,7 @@ data class AutocompleteScopeInfo(
     companion object {
         const val TYPE_MATRIX = "matrix"
         const val TYPE_QUICK_ACTION = "quick_action"
+        const val TYPE_QUICK_ACTION_COMPUTER_FALLBACK = "quick_action_computer_fallback"
         const val TYPE_ROOT_OVERRIDE = "root_override"
 
         fun matrix(deckId: String, profile: String, storagePath: String, slotIndex: Int) =
@@ -54,6 +55,15 @@ data class AutocompleteScopeInfo(
         fun quickAction(deckId: String, groupIndex: Int, slotIndex: Int, tagIndex: Int) =
             AutocompleteScopeInfo(
                 fieldType = TYPE_QUICK_ACTION,
+                deckId = deckId,
+                groupIndex = groupIndex,
+                slotIndex = slotIndex,
+                tagIndex = tagIndex
+            )
+
+        fun quickActionComputerFallback(deckId: String, groupIndex: Int, slotIndex: Int, tagIndex: Int) =
+            AutocompleteScopeInfo(
+                fieldType = TYPE_QUICK_ACTION_COMPUTER_FALLBACK,
                 deckId = deckId,
                 groupIndex = groupIndex,
                 slotIndex = slotIndex,
@@ -78,17 +88,20 @@ data class AutocompleteScope(
     val entries: List<AutocompleteEntry> = emptyList()
 )
 
-// Local-only "you've typed this here before" suggestions for three field
+// Local-only "you've typed this here before" suggestions for four field
 // types: a Matrix node's local variable values, a Quick Actions slot's
-// local variable values, and Shared Root Variables' A/B/C values. Each
-// field type builds its own scope key (see the three *ScopeKey functions
-// below) at the precision that field's own editor UI calls for -- Matrix
-// and Quick Actions per node/slot, Root Override globally per category,
-// matching how Root Override's actual values are already shared globally
-// today. Deliberately its own SharedPreferences file rather than folded
-// into CommandRepository's "ack_matrix_config" -- keeps this feature's
-// storage (and its backup export, which reads this whole file) cleanly
-// separate from everything else living in that shared file.
+// local variable values, a Quick Actions slot's [COMPUTER:X] tag fallback
+// values, and Shared Root Variables' A/B/C values. Each field type builds
+// its own scope key (see the *ScopeKey functions below) at the precision
+// that field's own editor UI calls for -- Matrix and Quick Actions per
+// node/slot (and, for computer fallbacks, per tag occurrence within that
+// slot -- see quickActionComputerFallbackScopeKey for why that can't
+// reuse quickActionVariableScopeKey's shape), Root Override globally per
+// category, matching how Root Override's actual values are already shared
+// globally today. Deliberately its own SharedPreferences file rather than
+// folded into CommandRepository's "ack_matrix_config" -- keeps this
+// feature's storage (and its backup export, which reads this whole file)
+// cleanly separate from everything else living in that shared file.
 object AutocompleteHistoryRepository {
     private const val PREFS_NAME = "ack_autocomplete_history"
 
@@ -138,6 +151,20 @@ object AutocompleteHistoryRepository {
         slotIndex: Int,
         tagIndex: Int
     ): String = "qa/$deckId/$groupIndex/$slotIndex/$tagIndex"
+
+    // Quick Actions [COMPUTER:X] tag fallback value -- same addressing as
+    // quickActionVariableScopeKey above (per slot, per tag occurrence) but
+    // deliberately a different key shape ("qa_computer/..." vs "qa/..."):
+    // {VAR} and [COMPUTER:X] tags are counted/indexed independently within
+    // the same template, so a slot's first {VAR} and first [COMPUTER:X]
+    // would otherwise collide on the exact same key and corrupt each
+    // other's history.
+    fun quickActionComputerFallbackScopeKey(
+        deckId: String,
+        groupIndex: Int,
+        slotIndex: Int,
+        tagIndex: Int
+    ): String = "qa_computer/$deckId/$groupIndex/$slotIndex/$tagIndex"
 
     // Shared Root Variable value -- global per category (pose name or
     // custom context layer) and tag (A/B/C), with no deck/profile in the

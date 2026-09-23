@@ -14,21 +14,23 @@ class WearConfigListenerService : WearableListenerService() {
         val prefs = getSharedPreferences("AckPrefs", Context.MODE_PRIVATE)
 
         when (messageEvent.path) {
-            // 1. DECK UPDATE (Contains Name + Color Index)
-            // Payload: "0,NETRUNNER"
+            // 1. DECK UPDATE (Contains Name + Color Index + Type)
+            // Payload: "0,NETRUNNER,QUICK_ACTIONS"
             "/sys/deck_update" -> {
                 try {
                     val dataStr = String(messageEvent.data, Charsets.UTF_8)
                     val parts = dataStr.split(",")
-                    
+
                     if (parts.size >= 2) {
                         val idx = parts[0].toInt()
                         val deckName = parts[1]
+                        val deckType = parts.getOrElse(2) { "MATRIX" }
 
                         // A. Save locally to ACK App
                         prefs.edit()
                             .putInt("active_color_idx", idx)
                             .putString("active_deck_name", deckName)
+                            .putString("active_deck_type", deckType)
                             .apply()
 
                         // B. Calculate Color Integer
@@ -109,6 +111,21 @@ class WearConfigListenerService : WearableListenerService() {
 
                 } catch (e: Exception) {
                     Log.e("ACK_WEAR", "Failed to sync target list", e)
+                }
+            }
+
+            // 4b. TARGET COMPUTER CATEGORY SYNC (categories referenced by the
+            // now-active Quick Actions deck's [COMPUTER:X] tags, or "[]" for
+            // none). Cached to prefs (unlike MainActivity's own listener,
+            // which only updates the live cache) so a cold-started watch app
+            // has last-known-good data before the next sync arrives.
+            "/sys/computer_categories" -> {
+                try {
+                    val rawData = String(messageEvent.data, Charsets.UTF_8)
+                    ComputerCategoryCache.update(rawData)
+                    prefs.edit().putString("cached_computer_categories", rawData).apply()
+                } catch (e: Exception) {
+                    Log.e("ACK_WEAR", "Failed to sync computer categories", e)
                 }
             }
 

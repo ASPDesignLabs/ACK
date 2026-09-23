@@ -93,6 +93,43 @@ class WearListenerService : WearableListenerService() {
             sendBroadcast(uiIntent)
         }
 
+        // 4b. NEW: TARGET COMPUTER PICK REQUEST -- a watch-driven change to
+        // which entry is active for one Target Computer category, sent by
+        // the watch's tap-tap-hold flyout (see wear MainActivity's
+        // sendComputerPick). Unlike TARGET SELECTION REQUEST above (the
+        // legacy 8-slot TargetRepository system), this writes straight into
+        // ComputerRepository -- the same active-pick state [COMPUTER:X]
+        // tags resolve against everywhere else in the app.
+        else if (path == "/sys/req_computer_pick") {
+            try {
+                // Payload is "categoryId|nodeId" -- split with limit=2 since
+                // a category id itself can't contain "|" (ComputerRepository
+                // ids are generated, not user text) but stay defensive
+                // anyway rather than assume the node id can't.
+                val payload = String(messageEvent.data, Charsets.UTF_8)
+                val parts = payload.split("|", limit = 2)
+
+                if (parts.size == 2) {
+                    val categoryId = parts[0]
+                    val nodeId = parts[1]
+
+                    ComputerRepository.setActiveEntry(this, categoryId, nodeId)
+
+                    val label = ComputerRepository.resolveTag(this, categoryId)
+                    broadcastLog("TARGET COMPUTER: ${label.ifBlank { "(unchanged)" }}", "SYS")
+
+                    // Lets an open TargetView/ComputerSummaryDialog on the
+                    // phone pick this up live -- see MainActivity.kt's
+                    // ACK_COMPUTER_PICK receiver.
+                    val uiIntent = Intent("ACK_COMPUTER_PICK")
+                    uiIntent.setPackage(packageName)
+                    uiIntent.putExtra("categoryId", categoryId)
+                    uiIntent.putExtra("nodeId", nodeId)
+                    sendBroadcast(uiIntent)
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+
         // 4. NEW: TARGET SELECTION REQUEST
         else if (path == "/sys/req_target") {
             try {

@@ -15,7 +15,17 @@ data class QuickActionSlot(
     // recording instead of synthesizing template through TTS -- see
     // QuickActionsDeck's execute path and OutputService's recording_id
     // intent extra.
-    val recordingId: String? = null
+    val recordingId: String? = null,
+
+    // Per-occurrence fallback text for [COMPUTER:X] tags in `template`,
+    // positionally matched the same way localValues is for {VAR} tags --
+    // used by CommandRepository.resolveQuickAction when a tag's category
+    // has no active Target Computer pick. Lives on the slot itself (unlike
+    // Matrix nodes, which store this in CommandRepository's separate
+    // per-path prefs) because nothing about a Quick Actions slot is
+    // profile-scoped -- keeping it here matches localValues rather than
+    // introducing a storage dimension this deck type doesn't otherwise have.
+    val computerFallbacks: List<String> = emptyList()
 )
 
 @Serializable
