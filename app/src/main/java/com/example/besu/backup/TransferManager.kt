@@ -35,6 +35,18 @@ object TransferManager {
     private const val ROOT_OVERRIDE_PREFIX = "root_override_"
     private const val ROOT_OVERRIDE_COLLAPSED_PREFIX = "root_override_section_collapsed_"
 
+    // Emoji and Quick Actions decks each store their whole configuration
+    // (CommandRepository.emojiDeckKey / quickActionsKey) as one JSON-
+    // encoded string inside the same sparse matrixData map ordinary
+    // phrases live in. That value is a serialized deck -- grid size,
+    // every page, every slot's emoji/label/display text, and Emoji's
+    // nested "related panel" sub-slots -- not a single phrase, so it
+    // scales with how built-out the deck is, not with how long one
+    // utterance is. It needs its own, much larger ceiling rather than
+    // sharing MAX_PHRASE_LENGTH.
+    private val DECK_CONFIG_KEY_PATTERN = Regex("^(emoji_deck_|quick_actions_).*_config$")
+    private const val MAX_DECK_CONFIG_LENGTH = 50_000
+
     // --- SECURITY CONSTANTS ---
     // A generous ceiling against a pathological/corrupted file being read
     // entirely into memory, not a real-world expectation -- a backup now
@@ -427,8 +439,14 @@ object TransferManager {
                 Log.e("ACK_IMPORT", "Invalid Key Detected: $key")
                 return false
             }
-            if (value.length > MAX_PHRASE_LENGTH) {
-                Log.e("ACK_IMPORT", "matrixData[\"$key\"] value exceeds $MAX_PHRASE_LENGTH chars: ${value.length}")
+
+            val maxValueLength = if (DECK_CONFIG_KEY_PATTERN.matches(key)) {
+                MAX_DECK_CONFIG_LENGTH
+            } else {
+                MAX_PHRASE_LENGTH
+            }
+            if (value.length > maxValueLength) {
+                Log.e("ACK_IMPORT", "matrixData[\"$key\"] value exceeds $maxValueLength chars: ${value.length}")
                 return false
             }
         }
