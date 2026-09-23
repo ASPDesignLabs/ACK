@@ -174,7 +174,8 @@ object CommandRepository {
         slotIndex: Int,
         label: String,
         template: String,
-        localValues: List<String>
+        localValues: List<String>,
+        computerFallbacks: List<String> = emptyList()
     ) {
         val current = getQuickActionsConfig(context, deckId)
 
@@ -192,7 +193,8 @@ object CommandRepository {
                                     "ACTION ${slotIndex + 1}"
                                 },
                                 template = template,
-                                localValues = localValues
+                                localValues = localValues,
+                                computerFallbacks = computerFallbacks
                             )
                         }
                     }
@@ -289,7 +291,14 @@ object CommandRepository {
         context: Context,
         deckId: String,
         groupIndex: Int,
-        slotIndex: Int
+        slotIndex: Int,
+        // Single-use [COMPUTER:X] categories only clear once a quick action
+        // is actually committed to output -- same explicit, caller-decided
+        // step as getResolvedPhrase's identical param, and for the same
+        // reason: this also gets called for preview/trace purposes (Deck
+        // Trainer, ManageRecordingsDialog's label) that must never consume
+        // a single-use pick just by displaying it.
+        consumeSingleUse: Boolean = false
     ): String {
         val config = getQuickActionsConfig(context, deckId)
 
@@ -310,11 +319,24 @@ object CommandRepository {
             category = group.rootCategory
         )
 
-        return TemplateEngine.resolve(
+        val computerTags = TemplateEngine.getComputerTags(slot.template).distinct()
+        val computerActiveValues = computerActiveValuesFor(context, slot.template)
+
+        val resolved = TemplateEngine.resolve(
             template = slot.template,
             localValues = slot.localValues,
-            overrides = rootConfig.slots
+            overrides = rootConfig.slots,
+            computerFallbacks = slot.computerFallbacks,
+            computerActiveValues = computerActiveValues
         )
+
+        if (consumeSingleUse) {
+            computerTags.forEach { categoryId ->
+                ComputerRepository.consumeIfSingleUse(context, categoryId)
+            }
+        }
+
+        return resolved
     }
 
     private fun normalizeQuickActionsConfig(
@@ -1176,7 +1198,7 @@ object CommandRepository {
             val deckId = getActiveDeckId(context)
             val config = getQuickActionsConfig(context, deckId)
             val group = config.groups.find { it.boundPose == pose } ?: return ""
-            return resolveQuickAction(context, deckId, group.groupIndex, twistIndex)
+            return resolveQuickAction(context, deckId, group.groupIndex, twistIndex, consumeSingleUse = consumeSingleUse)
         }
 
         // Normal watch gesture paths are Matrix routines. Any other deck type
