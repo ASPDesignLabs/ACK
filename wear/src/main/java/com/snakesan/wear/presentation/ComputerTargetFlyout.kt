@@ -438,7 +438,12 @@ private fun ComputerRingCanvas(
         Paint().apply {
             isAntiAlias = true
             typeface = Typeface.MONOSPACE
-            textAlign = Paint.Align.CENTER
+            // LEFT, not CENTER -- Paint.Align.CENTER is not reliably
+            // honored by drawTextOnPath across Android/Skia versions (this
+            // is a known, documented pitfall of that API combination); the
+            // draw loop below computes an explicit left-aligned start
+            // offset instead, so centering doesn't depend on it.
+            textAlign = Paint.Align.LEFT
             style = Paint.Style.FILL
         }
     }
@@ -496,7 +501,7 @@ private fun ComputerRingCanvas(
                 paint.isFakeBoldText = isHighlighted
 
                 val innermostRadius = textOuterRadius - (MAX_ARC_LINES - 1) * lineStep
-                val budgetPx = innermostRadius * Math.toRadians((halfWidthDeg * 2).toDouble()).toFloat() * 0.92f
+                val budgetPx = innermostRadius * Math.toRadians((halfWidthDeg * 2).toDouble()).toFloat() * 0.85f
                 val lines = wrapToArcLines(label, paint, MAX_ARC_LINES, budgetPx)
 
                 lines.forEachIndexed { lineIndex, line ->
@@ -505,13 +510,24 @@ private fun ComputerRingCanvas(
                     val rect = RectF(cx - lineRadius, cy - lineRadius, cx + lineRadius, cy + lineRadius)
                     val arcLenPx = lineRadius * Math.toRadians((halfWidthDeg * 2).toDouble()).toFloat()
 
+                    // Explicit left-aligned start offset, chosen so the
+                    // text's own measured width centers it within the
+                    // slice's arc -- see the paint.textAlign comment above
+                    // for why this isn't just left to Align.CENTER.
+                    // Clamped to 0 so a line that (despite the word-wrap
+                    // budget) still measures wider than the arc starts at
+                    // the slice's near edge instead of before it, rather
+                    // than trying to center something too wide to fit.
+                    val textWidthPx = paint.measureText(line)
+                    val hOffset = ((arcLenPx - textWidthPx) / 2f).coerceAtLeast(0f)
+
                     if (!reversed) {
                         path.addArc(rect, androidCenterDeg - halfWidthDeg, halfWidthDeg * 2)
                     } else {
                         path.addArc(rect, androidCenterDeg + halfWidthDeg, -(halfWidthDeg * 2))
                     }
 
-                    nativeCanvas.drawTextOnPath(line, path, arcLenPx / 2f, 0f, paint)
+                    nativeCanvas.drawTextOnPath(line, path, hOffset, 0f, paint)
                 }
             }
         }
