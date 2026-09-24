@@ -72,6 +72,7 @@ object AckTags {
     const val GIF_BACKUP_BTN = "GIF_BACKUP_BTN"
     const val GIF_BACKUP_EXPORT_BTN = "GIF_BACKUP_EXPORT_BTN"
     const val GIF_BACKUP_IMPORT_BTN = "GIF_BACKUP_IMPORT_BTN"
+    const val GIF_SHARE_BTN = "GIF_SHARE_BTN"
 
 
 
