@@ -170,6 +170,7 @@ object AckTags {
     // into MainActivity's viewMode dispatch -- see CLAUDE.md's HELP system
     // notes when that lands.
     const val COMPOSER_FIELD = "COMPOSER_FIELD"
+    const val COMPOSER_PREVIEW = "COMPOSER_PREVIEW"
     const val COMPOSER_VARIABLE_CONTEXT_ROW = "COMPOSER_VARIABLE_CONTEXT_ROW"
     const val COMPOSER_BROWSE_TARGETS_TOGGLE = "COMPOSER_BROWSE_TARGETS_TOGGLE"
     const val COMPOSER_VARIABLE_TOGGLE = "COMPOSER_VARIABLE_TOGGLE"

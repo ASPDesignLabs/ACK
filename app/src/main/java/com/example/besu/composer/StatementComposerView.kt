@@ -146,7 +146,10 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
             modifier = Modifier
                 .testTag(AckTags.COMPOSER_VARIABLE_CONTEXT_ROW)
                 .helpTarget(AckTags.COMPOSER_VARIABLE_CONTEXT_ROW, primaryColor),
-            onSelect = { variableContext = it }
+            onSelect = {
+                variableContext = it
+                reportHelpInteraction(AckTags.COMPOSER_VARIABLE_CONTEXT_ROW)
+            }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -183,6 +186,8 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag(AckTags.COMPOSER_PREVIEW)
+                .helpTarget(AckTags.COMPOSER_PREVIEW, primaryColor)
                 .border(1.dp, primaryColor.copy(alpha = 0.4f), CutCornerShape(6.dp))
                 .background(primaryColor.copy(alpha = 0.04f), CutCornerShape(6.dp))
                 .padding(10.dp)
@@ -209,7 +214,10 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
             TargetQuickAccessRow(
                 context = context,
                 primaryColor = primaryColor,
-                onInsert = { categoryId, _ -> insertTextAtCursor("[COMPUTER:$categoryId]") },
+                onInsert = { categoryId, _ ->
+                    insertTextAtCursor("[COMPUTER:$categoryId]")
+                    reportHelpInteraction(AckTags.MANUAL_TARGET_QUICK_ROW)
+                },
                 onLongPress = { categoryId -> openTargetCategoryTreeId = categoryId }
             )
         }
@@ -381,7 +389,13 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
                         refreshKey++
                         showSaveDialog = false
                         Toast.makeText(context, "STATEMENT SAVED", Toast.LENGTH_SHORT).show()
-                        reportHelpInteraction(AckTags.COMPOSER_SAVE_BTN)
+                        // CommitText/TextCommitted, not Interact -- matches
+                        // every other "SAVE" action's HELP wiring in the app
+                        // (QUICK_ACTION_SAVE, EMERGENCY_SAVE, AUDIO_SAVE,
+                        // DECK_CREATE_COMMIT).
+                        helpManager?.onEvent(
+                            HelpEvent.TextCommitted(AckTags.COMPOSER_SAVE_BTN)
+                        )
                     }
                 }
                 TightPanelButton(
