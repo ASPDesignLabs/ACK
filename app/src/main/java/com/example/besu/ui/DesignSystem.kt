@@ -348,6 +348,13 @@ private sealed class TerminalPromptResult {
     // stop) -- same "parsing just identifies the intent" split as the
     // three above.
     object ShowInfo : TerminalPromptResult()
+    // /m surfaces legacy Manual Override (TypeView) as an overlay on top of
+    // Terminal, now that the TYPE tab itself shows the statement composer --
+    // see MainActivity's showLegacyManualOverride state. Needs the
+    // composable's own callback (threaded in from MainActivity), same
+    // "parsing just identifies the intent" split as ClearLog/RunBackup/
+    // RunRepair above.
+    object ShowManualOverride : TerminalPromptResult()
 }
 
 private val TERMINAL_HELP_LINES = listOf(
@@ -362,7 +369,8 @@ private val TERMINAL_HELP_LINES = listOf(
     "/cls             CLEAR THE LOG (CONFIRM REQUIRED)",
     "/b, /backup      EXPORT ACK DATA (CONFIRM REQUIRED)",
     "/repair          RESTART BACKGROUND SERVICES",
-    "/info            SHOW PATCH NOTES"
+    "/info            SHOW PATCH NOTES",
+    "/m               OPEN CLASSIC MANUAL OVERRIDE"
 )
 
 // --- PATCH NOTES (/info) ---
@@ -545,6 +553,10 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
         return TerminalPromptResult.ShowInfo
     }
 
+    if (first == "/m") {
+        return TerminalPromptResult.ShowManualOverride
+    }
+
     var flags = TerminalFlags()
     var index = 0
     while (index < tokens.size && tokens[index].startsWith("/")) {
@@ -624,7 +636,11 @@ private fun restartBackgroundServices(context: Context) {
 // --- TERMINAL VIEW ---
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>, context: Context) {
+fun TerminalView(
+    logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>,
+    context: Context,
+    onShowManualOverride: () -> Unit
+) {
     // Visibility filters live in PROTOCOL now (SettingsView) -- read fresh
     // here rather than owned as local toggle state, since this composable
     // is torn down and rebuilt every time the user leaves and returns to
@@ -954,6 +970,10 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                 TerminalPromptResult.ShowInfo -> {
                     // Clears promptValue itself -- see startInfoReveal.
                     startInfoReveal()
+                }
+                TerminalPromptResult.ShowManualOverride -> {
+                    promptValue = TextFieldValue("")
+                    onShowManualOverride()
                 }
                 TerminalPromptResult.Error -> {
                     // Leave the text in place -- a typo'd command or a
