@@ -27,19 +27,27 @@ import androidx.compose.ui.unit.sp
 
 // Manual Override's Target Computer integration: a quick-tap row of
 // currently-active picks, plus a full tree/dropdown browser for anything
-// else. Both insert plain text at the caller's cursor (via onInsert) and
-// never touch ComputerRepository's active-selection state -- browsing here
-// never "turns the target computer on" the way using it from its own tab
-// does. The browser deliberately reuses ComputerTreeWindow.kt's
+// else. Neither touches ComputerRepository's active-selection state --
+// browsing here never "turns the target computer on" the way using it from
+// its own tab does. The browser deliberately reuses ComputerTreeWindow.kt's
 // TreeVisualRow/flattenVisibleTree/ComputerTreeVisualRow/ComputerDropdownPath
 // rendering pieces (widened from private to internal there) rather than
 // duplicating the tree/dropdown drawing logic.
+//
+// onInsert hands back BOTH the picked category's id and the node's label --
+// deliberately, so the caller decides what actually lands in the text field.
+// Legacy Manual Override (TypeView) ignores the id and splices the literal
+// label, exactly as it always has. The statement composer instead builds a
+// [COMPUTER:id] token from the id, the same syntax TemplateEngine already
+// resolves for Matrix/Quick Actions phrases -- so the SAME picker UI here
+// serves both a "type it now" screen and a "save it for later, resolved
+// live" screen without forking the browsing code.
 
 @Composable
 fun TargetQuickAccessRow(
     context: Context,
     primaryColor: Color,
-    onInsert: (String) -> Unit
+    onInsert: (categoryId: String, label: String) -> Unit
 ) {
     // No refresh key: this screen is recomposed fresh each time the user
     // navigates into Manual Override (switching tabs disposes/recreates it),
@@ -83,7 +91,7 @@ fun TargetQuickAccessRow(
                             .background(primaryColor.copy(alpha = 0.10f), CutCornerShape(4.dp))
                             // Insertion always uses the full node.label --
                             // only the on-screen chip text below truncates.
-                            .clickable { onInsert(node.label) }
+                            .clickable { onInsert(category.id, node.label) }
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         contentAlignment = Alignment.CenterStart
                     ) {
@@ -117,7 +125,7 @@ fun TargetQuickAccessRow(
 fun TargetBrowsePanel(
     context: Context,
     primaryColor: Color,
-    onInsert: (String) -> Unit,
+    onInsert: (categoryId: String, label: String) -> Unit,
     // Threaded straight onto the TREE mode's own LazyColumn (not an outer
     // wrapper) so the caller can tighten the bound -- e.g. the header
     // takeover, which shares its vertical budget with the keyboard --
@@ -249,7 +257,7 @@ fun TargetBrowsePanel(
                                         expandedIds + row.node.id
                                     }
                                 } else {
-                                    onInsert(row.node.label)
+                                    onInsert(category.id, row.node.label)
                                 }
                             },
                             // Browse-and-insert only here -- editing stays
@@ -265,7 +273,7 @@ fun TargetBrowsePanel(
                     primaryColor = primaryColor,
                     onPathChanged = { newPath -> dropdownPath = newPath },
                     onLeafPicked = { leafId ->
-                        ComputerRepository.findNode(category, leafId)?.let { onInsert(it.label) }
+                        ComputerRepository.findNode(category, leafId)?.let { onInsert(category.id, it.label) }
                         // Deliberately does not reset dropdownPath -- the
                         // panel stays open at the same level so several
                         // entries can be inserted in a row.
@@ -288,7 +296,7 @@ fun TargetBrowsePanel(
 fun ManualOverrideHeaderTakeover(
     context: Context,
     primaryColor: Color,
-    onInsert: (String) -> Unit
+    onInsert: (categoryId: String, label: String) -> Unit
 ) {
     var browseExpanded by remember { mutableStateOf(false) }
     val helpManager = LocalHelpManager.current

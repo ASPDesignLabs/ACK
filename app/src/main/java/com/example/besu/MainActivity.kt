@@ -647,7 +647,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             ManualOverrideHeaderTakeover(
                                 context = context,
                                 primaryColor = primaryColor,
-                                onInsert = { insertIntoManualOverride(it) }
+                                onInsert = { _, label -> insertIntoManualOverride(label) }
                             )
                         } else {
                         Row(
@@ -1335,7 +1335,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 textFieldValue = manualOverrideText,
                                 onTextFieldValueChange = { manualOverrideText = it },
                                 textFieldFocusRequester = manualOverrideFocusRequester,
-                                onInsertAtCursor = { insertIntoManualOverride(it) }
+                                onInsertAtCursor = { _, label -> insertIntoManualOverride(label) }
                             )
                             "AUDIO" -> AudioArchitectView(context, primaryColor, systemVoices)
                             "TARGETS" -> key(computerRevision) { TargetView(context, primaryColor) }

@@ -1491,7 +1491,7 @@ fun TypeView(
     textFieldValue: TextFieldValue,
     onTextFieldValueChange: (TextFieldValue) -> Unit,
     textFieldFocusRequester: FocusRequester,
-    onInsertAtCursor: (String) -> Unit
+    onInsertAtCursor: (categoryId: String, label: String) -> Unit
 ) {
     val primaryColor = NeonPalette.getColor(CommandRepository.getActiveColorIndex(context))
 
