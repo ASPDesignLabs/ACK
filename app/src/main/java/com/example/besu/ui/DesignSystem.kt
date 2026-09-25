@@ -348,6 +348,13 @@ private sealed class TerminalPromptResult {
     // stop) -- same "parsing just identifies the intent" split as the
     // three above.
     object ShowInfo : TerminalPromptResult()
+    // /m surfaces legacy Manual Override (TypeView) as an overlay on top of
+    // Terminal, now that the TYPE tab itself shows the statement composer --
+    // see MainActivity's showLegacyManualOverride state. Needs the
+    // composable's own callback (threaded in from MainActivity), same
+    // "parsing just identifies the intent" split as ClearLog/RunBackup/
+    // RunRepair above.
+    object ShowManualOverride : TerminalPromptResult()
 }
 
 private val TERMINAL_HELP_LINES = listOf(
@@ -362,7 +369,8 @@ private val TERMINAL_HELP_LINES = listOf(
     "/cls             CLEAR THE LOG (CONFIRM REQUIRED)",
     "/b, /backup      EXPORT ACK DATA (CONFIRM REQUIRED)",
     "/repair          RESTART BACKGROUND SERVICES",
-    "/info            SHOW PATCH NOTES"
+    "/info            SHOW PATCH NOTES",
+    "/m               OPEN CLASSIC MANUAL OVERRIDE"
 )
 
 // --- PATCH NOTES (/info) ---
@@ -376,7 +384,7 @@ private val TERMINAL_HELP_LINES = listOf(
 // headers do the separating instead. Update this list (and CHANGELOG.md
 // at the repo root, which carries the same notes) with each beta.
 private val PATCH_NOTES = listOf(
-    "=== ACK v1.0-BETA.7 PATCH NOTES ===",
+    "=== ACK v1.0-BETA.8 PATCH NOTES ===",
     "-- AUTOCOMPLETE --",
     "- NEW: ACK REMEMBERS WHAT YOU'VE TYPED INTO MATRIX/QUICK ACTIONS",
     "  VARIABLE FIELDS AND SHARED ROOT VARIABLES, OFFERING YOUR MOST-USED",
@@ -413,6 +421,25 @@ private val PATCH_NOTES = listOf(
     "- NEW: QUICK ACTIONS PHRASES CAN NOW REFERENCE TARGET COMPUTER",
     "  ENTRIES VIA [COMPUTER:X] TAGS, WITH INSERT-TAG AND FALLBACK-VALUE",
     "  AUTOCOMPLETE SUPPORT SAME AS THE MATRIX EDITOR ALREADY HAD",
+    "-- STATEMENT COMPOSER --",
+    "- NEW: TYPE IS NOW THE STATEMENT COMPOSER. BUILD MULTI-SENTENCE",
+    "  STATEMENTS FROM TARGET COMPUTER ENTRIES AND SHARED ROOT VARIABLES,",
+    "  WITH A LIVE PREVIEW OF EXACTLY WHAT IT'LL SAY",
+    "- NEW: SAVE, COPY, OR SPEAK A STATEMENT. SAVED STATEMENTS STAY",
+    "  MUTABLE -- THEY KEEP RESOLVING LIVE AGAINST WHATEVER THE ENTRIES OR",
+    "  VARIABLES THEY REFERENCE CURRENTLY HOLD, NEVER A FROZEN SNAPSHOT",
+    "- NEW: TAP A TARGET COMPUTER CHIP FOR A LIVE REFERENCE, OR BROWSE",
+    "  TARGETS FOR A SPECIFIC ENTRY AS PLAIN TEXT. LONG-PRESS A CHIP TO",
+    "  RETARGET ITS ACTIVE ENTRY, APP-WIDE, WITHOUT LEAVING THE COMPOSER",
+    "- NEW: MY STATEMENTS ORGANIZES SAVED STATEMENTS INTO FOLDERS, TREE >",
+    "  LEAF -- SAME SHAPE AS TARGET COMPUTER ENTRIES. RELOAD, COPY, SPEAK,",
+    "  OR DELETE ANY STATEMENT RIGHT FROM THE LIST. INCLUDED IN EXPORT",
+    "  .JSON BACKUPS",
+    "- NEW: FULL SCREEN HIDES THE HEADER AND BOTTOM NAV FOR MORE ROOM WHILE",
+    "  COMPOSING. PINNED TOGGLE, ALWAYS REACHABLE",
+    "- MOVED: CLASSIC MANUAL OVERRIDE (MEMORY BANKS, SAVED PHRASES, DIRECT",
+    "  TEXT OUTPUT) IS UNCHANGED BUT NOW REACHED WITH /m AT THE TERMINAL",
+    "  PROMPT INSTEAD OF THE TYPE TAB",
     "-- FIXES --",
     "- FIXED OUTPUT GOING QUIET OR NOT REACHING THE CAR'S SPEAKERS AT ALL",
     "  ON ANDROID AUTO. ACK NEVER REQUESTED AUDIO FOCUS ON ANY PLAYBACK",
@@ -545,6 +572,10 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
         return TerminalPromptResult.ShowInfo
     }
 
+    if (first == "/m") {
+        return TerminalPromptResult.ShowManualOverride
+    }
+
     var flags = TerminalFlags()
     var index = 0
     while (index < tokens.size && tokens[index].startsWith("/")) {
@@ -624,7 +655,11 @@ private fun restartBackgroundServices(context: Context) {
 // --- TERMINAL VIEW ---
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>, context: Context) {
+fun TerminalView(
+    logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEntry>,
+    context: Context,
+    onShowManualOverride: () -> Unit
+) {
     // Visibility filters live in PROTOCOL now (SettingsView) -- read fresh
     // here rather than owned as local toggle state, since this composable
     // is torn down and rebuilt every time the user leaves and returns to
@@ -954,6 +989,10 @@ fun TerminalView(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogE
                 TerminalPromptResult.ShowInfo -> {
                     // Clears promptValue itself -- see startInfoReveal.
                     startInfoReveal()
+                }
+                TerminalPromptResult.ShowManualOverride -> {
+                    promptValue = TextFieldValue("")
+                    onShowManualOverride()
                 }
                 TerminalPromptResult.Error -> {
                     // Leave the text in place -- a typo'd command or a
@@ -1491,7 +1530,7 @@ fun TypeView(
     textFieldValue: TextFieldValue,
     onTextFieldValueChange: (TextFieldValue) -> Unit,
     textFieldFocusRequester: FocusRequester,
-    onInsertAtCursor: (String) -> Unit
+    onInsertAtCursor: (categoryId: String, label: String) -> Unit
 ) {
     val primaryColor = NeonPalette.getColor(CommandRepository.getActiveColorIndex(context))
 

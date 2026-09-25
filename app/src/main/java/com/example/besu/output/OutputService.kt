@@ -41,9 +41,9 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
 
     companion object {
         // The Terminal screen's own bottom prompt -- distinct from
-        // TERM/INPUT (Manual Override on the TYPE screen) so processSpeech
-        // can echo it back shell-style ("$ phrase") instead of the usual
-        // "SOURCE > \"phrase\"" log format.
+        // TERM/INPUT (legacy Manual Override, reached via Terminal's /m)
+        // so processSpeech can echo it back shell-style ("$ phrase")
+        // instead of the usual "SOURCE > \"phrase\"" log format.
         const val SOURCE_TERMINAL_PROMPT = "TERM/PROMPT"
     }
 

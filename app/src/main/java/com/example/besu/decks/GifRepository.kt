@@ -336,6 +336,17 @@ object GifRepository {
         return File(getGifDirectory(context), entry.fileName)
     }
 
+    fun getGifShareUri(
+        context: Context,
+        entry: GifEntry
+    ): Uri {
+        return androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            getGifFile(context, entry)
+        )
+    }
+
     private fun getGifDirectory(context: Context): File {
         return File(context.filesDir, GIF_DIRECTORY)
     }

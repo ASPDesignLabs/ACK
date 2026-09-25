@@ -533,6 +533,20 @@ fun GifDeck(
                     forceLandscape = forceLandscapeOverlay
                 )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            NeonOutlineAction(
+                text = "SHARE",
+                color = primaryColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(AckTags.GIF_SHARE_BTN)
+                    .helpTarget(AckTags.GIF_SHARE_BTN, primaryColor)
+            ) {
+                shareGif(context = context, entry = selectedGif)
+                reportHelpInteraction(AckTags.GIF_SHARE_BTN)
+            }
         }
     }
 
@@ -828,6 +842,27 @@ private fun showGifOverlay(
                 VisualPromptService.EXTRA_GIF_FORCE_LANDSCAPE,
                 forceLandscape
             )
+        }
+    )
+}
+
+private fun shareGif(
+    context: Context,
+    entry: GifEntry
+) {
+    val uri = GifRepository.getGifShareUri(context, entry)
+
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "image/gif"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_TEXT, entry.title)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    context.startActivity(
+        Intent.createChooser(shareIntent, "SHARE GIF").apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     )
 }
