@@ -645,7 +645,7 @@ migration logic ever needs revisiting.
 "nothing to say about this field" on an old backup) replaced the earlier
 `savedStatements: List<SavedStatement>` field outright, without a
 transition period, since this shipped pre-release (the whole system is
-still inside `[1.0-beta.7] - Unreleased`). Restore
+still inside `[1.0-beta.8] - Unreleased`). Restore
 (`TransferManager.restoreStatementNode`) walks the backup's tree
 pre-order and calls `StatementRepository.upsertNode` on every node
 individually (folders included), which is what keeps this additive: a

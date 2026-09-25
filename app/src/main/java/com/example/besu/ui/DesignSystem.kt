@@ -384,7 +384,7 @@ private val TERMINAL_HELP_LINES = listOf(
 // headers do the separating instead. Update this list (and CHANGELOG.md
 // at the repo root, which carries the same notes) with each beta.
 private val PATCH_NOTES = listOf(
-    "=== ACK v1.0-BETA.7 PATCH NOTES ===",
+    "=== ACK v1.0-BETA.8 PATCH NOTES ===",
     "-- AUTOCOMPLETE --",
     "- NEW: ACK REMEMBERS WHAT YOU'VE TYPED INTO MATRIX/QUICK ACTIONS",
     "  VARIABLE FIELDS AND SHARED ROOT VARIABLES, OFFERING YOUR MOST-USED",

@@ -2,7 +2,7 @@
 
 All notable changes to ACK are logged here. These same notes are available in-app from the TERMINAL view — type `/info` and send it.
 
-## [1.0-beta.7] - Unreleased
+## [1.0-beta.8] - Unreleased
 
 ### Added
 - **Autocomplete for variable and Shared Root Variable fields.** ACK now remembers what you've typed into a Matrix node's local variable fields, a Quick Actions slot's local variable fields, and Shared Root Variables' A/B/C values, and offers your most-used past entries back as tappable chips right under the field -- tap one to fill the field with it. Matrix and Quick Actions history is scoped to the exact field it came from; Shared Root Variables history is scoped globally per category, matching how those values already work today. Included in EXPORT .JSON backups.
