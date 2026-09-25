@@ -265,6 +265,16 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     // takes its place. See TerminalView's onShowManualOverride callback.
     var showLegacyManualOverride by remember { mutableStateOf(false) }
 
+    // The composer's own "give me the whole screen" toggle -- hides
+    // MainActivity's header and bottom nav while on TYPE, so the content
+    // Box's existing weight(1f) claims that reclaimed space automatically.
+    // Reset whenever the user leaves TYPE, so switching tabs never leaves
+    // another screen stuck without its header/nav.
+    var composerFullscreen by remember { mutableStateOf(false) }
+    LaunchedEffect(viewMode) {
+        if (viewMode != "TYPE") composerFullscreen = false
+    }
+
     fun insertIntoManualOverride(insertText: String) {
         val selection = manualOverrideText.selection
         val newText = manualOverrideText.text.replaceRange(selection.start, selection.end, insertText)
@@ -640,6 +650,11 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         ) { paddingValues ->
             Box(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(12.dp)) {
+                    // Hidden in composerFullscreen -- the content Box below
+                    // already has weight(1f), so removing this from
+                    // composition (not just visually hiding it) lets it
+                    // claim the reclaimed space with no extra layout work.
+                    if (!composerFullscreen) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1253,8 +1268,11 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             }
                         }
                     }
+                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    if (!composerFullscreen) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
 
                     Box(
                         modifier = Modifier
@@ -1392,7 +1410,9 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             "TYPE" -> StatementComposerView(
                                 context = context,
-                                primaryColor = primaryColor
+                                primaryColor = primaryColor,
+                                isFullscreen = composerFullscreen,
+                                onToggleFullscreen = { composerFullscreen = !composerFullscreen }
                             )
                             "AUDIO" -> AudioArchitectView(context, primaryColor, systemVoices)
                             "TARGETS" -> key(computerRevision) { TargetView(context, primaryColor) }
@@ -1408,7 +1428,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
 
 
-                    if (viewMode != "SETTINGS") {
+                    if (viewMode != "SETTINGS" && !composerFullscreen) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()

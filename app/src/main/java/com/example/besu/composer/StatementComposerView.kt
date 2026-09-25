@@ -59,7 +59,12 @@ import java.util.UUID
 // alongside relocating legacy Manual Override behind Terminal's /m command,
 // so the daily-driver flow is never without a home in between.
 @Composable
-fun StatementComposerView(context: Context, primaryColor: Color) {
+fun StatementComposerView(
+    context: Context,
+    primaryColor: Color,
+    isFullscreen: Boolean = false,
+    onToggleFullscreen: (() -> Unit)? = null
+) {
     var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     var editingStatementId by remember { mutableStateOf<String?>(null) }
     var variableContext by remember { mutableStateOf("IDENTITY") }
@@ -126,16 +131,49 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            "STATEMENT COMPOSER",
-            color = primaryColor,
-            fontSize = 10.sp,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 2.sp
-        )
+        // Pinned outside the scrollable content below, so FULL SCREEN's own
+        // toggle-back-off control is never scrolled out of reach -- the
+        // whole point of the mode is more room, not a mode with no visible
+        // way out.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "STATEMENT COMPOSER",
+                color = primaryColor,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 2.sp
+            )
+
+            if (onToggleFullscreen != null) {
+                Text(
+                    text = if (isFullscreen) "[EXIT FULL SCREEN]" else "[FULL SCREEN]",
+                    color = primaryColor,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .testTag(AckTags.COMPOSER_FULLSCREEN_TOGGLE)
+                        .helpTarget(AckTags.COMPOSER_FULLSCREEN_TOGGLE, primaryColor)
+                        .clickable {
+                            onToggleFullscreen()
+                            reportHelpInteraction(AckTags.COMPOSER_FULLSCREEN_TOGGLE)
+                        }
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
 
         TightSectionLabel("VARIABLE CONTEXT")
         Spacer(modifier = Modifier.height(6.dp))
@@ -347,6 +385,7 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
                 speakResolvedText(textFieldValue.text, resolvedPreview, "COMPOSER/SPEAK")
                 reportHelpInteraction(AckTags.COMPOSER_SPEAK_BTN)
             }
+        }
         }
     }
 
