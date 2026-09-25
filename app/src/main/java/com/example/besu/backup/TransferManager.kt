@@ -935,6 +935,17 @@ object TransferManager {
                 Log.e("ACK_IMPORT", "savedStatement \"${statement.id}\" template exceeds $MAX_PHRASE_LENGTH chars: ${statement.template.length}")
                 return false
             }
+            // variableContext must be either a fixed pose or a valid custom
+            // context layer name -- same pattern customContextEntries
+            // itself is validated against above, since that's the only
+            // other place this string could have legitimately come from.
+            if (
+                statement.variableContext !in POSE_CATEGORIES &&
+                !contextNamePattern.matches(statement.variableContext)
+            ) {
+                Log.e("ACK_IMPORT", "savedStatement \"${statement.id}\" variableContext is invalid: \"${statement.variableContext}\"")
+                return false
+            }
         }
         if (backup.savedStatements.map { it.id }.distinct().size != backup.savedStatements.size) {
             Log.e("ACK_IMPORT", "savedStatements has duplicate ids")

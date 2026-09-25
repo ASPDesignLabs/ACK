@@ -18,6 +18,14 @@ data class SavedStatement(
     val id: String = UUID.randomUUID().toString(),
     val label: String = "NEW STATEMENT",
     val template: String = "",
+    // Which Shared Root Variables grouping (a fixed pose -- IDENTITY/
+    // DEFEND/CONNECT -- or a custom context layer's name) this statement's
+    // {VAR:A}/{VAR:B}/{VAR:C} tokens resolve against. Required because A/B/C
+    // tags are only unique WITHIN a grouping, exactly like a Matrix phrase's
+    // {VAR:A} resolves against its own node's category -- a statement isn't
+    // anchored to a node, so it carries its chosen grouping explicitly
+    // instead.
+    val variableContext: String = "IDENTITY",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val sortOrder: Long = System.currentTimeMillis()
