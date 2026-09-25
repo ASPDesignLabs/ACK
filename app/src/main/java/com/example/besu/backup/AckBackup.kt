@@ -109,7 +109,16 @@ data class AckBackup(
     // Whether each Shared Root Variables section is collapsed, per
     // category -- UI state, but small and cheap to carry along and merges
     // the same way rootOverrides itself does.
-    val rootOverrideCollapsed: Map<String, Boolean> = emptyMap()
+    val rootOverrideCollapsed: Map<String, Boolean> = emptyMap(),
+
+    // Saved statements from the statement composer. Each entry's
+    // `template` keeps any embedded [COMPUTER:id]/{VAR:A} tokens raw
+    // (see StatementRepository) so restoring one never freezes it --
+    // it keeps resolving against whatever the referenced Target Computer
+    // entry or Shared Root Variable currently holds. Empty on backups
+    // made before this feature existed, same as every other additive
+    // field here.
+    val savedStatements: List<SavedStatement> = emptyList()
 )
 
 @Serializable

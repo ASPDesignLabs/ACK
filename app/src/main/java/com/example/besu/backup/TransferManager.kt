@@ -289,6 +289,9 @@ object TransferManager {
             }
             .toMap()
 
+// 9j. Gather saved statements from the statement composer.
+        val savedStatements = StatementRepository.getStatements(context)
+
 // 10. Wrap and encode.
         val backup = AckBackup(
             dsp = dspConfig,
@@ -327,6 +330,7 @@ object TransferManager {
             terminalStatusboxColorIndex = terminalStatusboxColorIndex,
             shakeThreshold = shakeThreshold,
             rootOverrideCollapsed = rootOverrideCollapsed,
+            savedStatements = savedStatements,
         )
 
         return json.encodeToString(backup)
@@ -913,6 +917,30 @@ object TransferManager {
             }
         }
 
+// 19. Validate saved statements from the statement composer.
+        if (backup.savedStatements.size > 500) {
+            Log.e("ACK_IMPORT", "savedStatements.size exceeds 500: ${backup.savedStatements.size}")
+            return false
+        }
+        backup.savedStatements.forEach { statement ->
+            if (!SAFE_KEY_PATTERN.matches(statement.id)) {
+                Log.e("ACK_IMPORT", "savedStatement id fails SAFE_KEY_PATTERN: \"${statement.id}\"")
+                return false
+            }
+            if (statement.label.length > MAX_LABEL_LENGTH) {
+                Log.e("ACK_IMPORT", "savedStatement \"${statement.id}\" label exceeds $MAX_LABEL_LENGTH chars: \"${statement.label}\"")
+                return false
+            }
+            if (statement.template.length > MAX_PHRASE_LENGTH) {
+                Log.e("ACK_IMPORT", "savedStatement \"${statement.id}\" template exceeds $MAX_PHRASE_LENGTH chars: ${statement.template.length}")
+                return false
+            }
+        }
+        if (backup.savedStatements.map { it.id }.distinct().size != backup.savedStatements.size) {
+            Log.e("ACK_IMPORT", "savedStatements has duplicate ids")
+            return false
+        }
+
         return true
     }
 
@@ -1169,6 +1197,15 @@ object TransferManager {
         }
         if (backup.forceDeviceRotation != null) {
             OverlayDisplayPrefs.setDeviceRotationEnabled(context, backup.forceDeviceRotation)
+        }
+
+        // Saved statements: merge by id, same as every other user-created
+        // list above. `template` is restored raw (tokens intact), so a
+        // restored statement keeps resolving live rather than reverting
+        // to whatever the Target Computer entry/variable said at backup
+        // time.
+        backup.savedStatements.forEach { statement ->
+            StatementRepository.upsertStatement(context, statement)
         }
 
         // Restoring adopts the backup's active deck/profile/category
