@@ -550,3 +550,158 @@ already been tried and rejected once.
 | `MainActivity.kt` | Top-level `restartApp(context)`, shared by every import/restore flow that can create a new deck |
 | `settings/SettingsView.kt` | FULL RESTORE FROM JSON + IMPORT MATRIX AS NEW DECK UI, both using the toast → delayed-flag → `restartApp` pattern |
 | `decks/GifDeck.kt` | Per-deck BACKUP dropdown (EXPORT/IMPORT DECK (.ZIP)) UI, same restart pattern |
+
+## The STATEMENT COMPOSER system — deep analysis
+
+The statement composer (`composer/StatementComposerView.kt`) is what the
+TYPE tab shows now — a screen for building multi-sentence statements out
+of Target Computer entries and Shared Root Variables, saving them, and
+copying or speaking them. It replaced legacy Manual Override on that tab;
+legacy Manual Override still exists verbatim, relocated behind Terminal's
+`/m` command (see its own subsection below). This system reuses
+`TemplateEngine` and the Target Computer picker composables that already
+existed for Matrix/Quick Actions — it introduces almost no new resolution
+machinery, just a new place that writes tokens instead of literal text.
+
+### Core model: statements store tokens, never resolved snapshots
+
+A `SavedStatement` (`data/StatementRepository.kt`) has a `template: String`
+field that holds the raw composed text **with `[COMPUTER:id]`/`{VAR:A}`
+tokens still embedded** — never a resolved/frozen copy. COPY and SPEAK
+both resolve the template fresh, via `TemplateEngine.resolve()`, at the
+moment they're pressed (see `resolveStatementTemplate` in
+`StatementComposerView.kt`). This is the same live-reference philosophy
+`CommandRepository.getResolvedPhrase`/`resolveQuickAction` already use for
+Matrix/Quick Actions phrases — a saved statement is not a snapshot, so
+editing the Target Computer entry or Shared Root Variable it references
+later changes what the statement produces next time, with no migration
+needed. This directly serves the app's own **restore-is-additive/nothing
+is ever a frozen copy** philosophy documented in the BACKUP section above
+— treat "statements store references, not values" as load-bearing the
+same way that section's "merge-by-id, never wipe" rule is.
+
+`SavedStatement.variableContext: String` is required and easy to forget
+why: `{VAR:A}`/`{VAR:B}`/`{VAR:C}` tags are only unique **within one
+Shared Root Variables grouping** (a fixed pose — IDENTITY/DEFEND/CONNECT —
+or a custom context layer's name), exactly like a Matrix phrase's
+`{VAR:A}` always resolves against its own node's category
+(`CommandRepository.getResolvedPhrase` looks this up from
+`cachedNodes.find{...}?.category`) and a Quick Actions slot resolves
+against its own group's `rootCategory`. A statement isn't anchored to a
+node or group, so it has to carry its chosen grouping explicitly instead
+— resolving `{VAR:A}` against the wrong grouping's `RootOverrideConfig`
+would silently produce the wrong value. **If a future field ever lets a
+single statement reference more than one grouping, this single-string
+field stops being enough — don't just widen its type without also
+rethinking how the picker UI decides which grouping is "current."**
+
+### Token insertion vs. literal insertion — the rule that's easy to get backwards
+
+Two Target Computer picker composables are shared with legacy Manual
+Override (`computer/ManualOverrideTargetBrowser.kt`): `TargetQuickAccessRow`
+(the "currently active per category" chip row) and `TargetBrowsePanel`
+(the full tree/dropdown browser, reached via BROWSE TARGETS). Both take an
+`onInsert: (categoryId, label) -> Unit` callback — the callback, not the
+picker, decides what actually lands in the field. The composer's two call
+sites deliberately do **different things**, and this is not
+inconsistency, it's correctness:
+
+- **`TargetQuickAccessRow` (chips) → insert a `[COMPUTER:id]` token.** A
+  chip *is* the category's currently-active entry, which is exactly what
+  a `[COMPUTER:id]` token resolves to. Tapping a chip is the one place in
+  the composer safe to insert a live reference by default.
+- **`TargetBrowsePanel` (BROWSE TARGETS) → insert the literal `label`
+  text, never a token.** The browse panel can land on any entry in the
+  tree, active or not. A token can only ever mean "whatever's currently
+  active in this category" — if the user browses to a *non-active* entry
+  and a token were inserted anyway, it would silently resolve to the
+  wrong value the next time the statement is used (whatever happens to be
+  active then, not what was actually picked). There is no way to make a
+  token correctly represent a specific non-active pick, so literal text
+  is the only correct choice here.
+
+**If this system is ever extended (a new picker, a new insertion
+surface), apply the same test before deciding token vs. literal: does
+this specific UI element only ever represent "whatever's currently
+active"? Only then does a token belong.** `SharedVariablePicker` (this
+file, composer-local, not shared with legacy) inserts `{VAR:tag}` tokens
+unconditionally because RootOverrideRepository slots don't have a
+"non-active" concept the way Target Computer tree entries do — every slot
+shown *is* the live value for that tag.
+
+### Long-press a chip to retarget its category, app-wide
+
+`TargetQuickAccessRow` takes an optional `onLongPress: ((categoryId) ->
+Unit)? = null` parameter (default no-op, so legacy Manual Override's two
+call sites are unaffected — they simply don't pass it). The composer
+supplies it: long-pressing a chip opens `ComputerTreeWindow` — **the
+exact same dialog the Target Computer tab itself uses** — for that
+category, wired identically to how `computer/TargetView.kt` opens it
+(same `onDismiss`/`onChanged`/`onOpenContactCard` shape, including
+`ContactCardDialog` for contact-card entries). Picking a new active entry
+there calls `ComputerRepository.setActiveEntry` for real, exactly as if
+the user had done it from the Target Computer tab — this is a genuine
+app-wide state change, not a composer-local copy of "what's active."
+`targetRefreshKey` (incremented from `ComputerTreeWindow`'s `onChanged`)
+forces both the chip row (via `key(targetRefreshKey) { TargetQuickAccessRow(...) }`
+— that composable has no refresh-key parameter of its own, so it has to
+be torn down and rebuilt to re-read `ComputerRepository`) and the live
+preview (included in `resolvedPreview`'s `remember(...)` keys) to pick up
+the change immediately. **Reuse `ComputerTreeWindow`/`ContactCardDialog`
+wholesale for any future "retarget from elsewhere" affordance rather than
+building a parallel picker** — that's what keeps this a real, single
+source of truth for "what's active" instead of a second one that can
+drift from the Target Computer tab's own.
+
+### Legacy Manual Override lives behind Terminal's `/m`, not a `Dialog`
+
+Legacy Manual Override (`ui/DesignSystem.kt`'s `TypeView` — unchanged code,
+just relocated) is reached by typing `/m` at the Terminal prompt
+(`TerminalPromptResult.ShowManualOverride`, parsed in
+`parseTerminalCommand`, listed in `/help`). `TerminalView` takes an
+`onShowManualOverride: () -> Unit` callback; `MainActivity` sets
+`showLegacyManualOverride = true` there and also dispatches
+`helpManager.onEvent(HelpEvent.WatchInput("MANUAL_OVERRIDE_OPENED"))` —
+the pre-existing `"manual_override"` HELP module (in `HelpRegistry.kt`)
+gates a step on that exact `WatchEvent`, having been fixed to route to
+`HelpDestination.TERMINAL` instead of `.TYPE` (its destination before
+this system existed).
+
+**This is deliberately rendered in place of whatever `viewMode` currently
+shows — `if (showLegacyManualOverride) { TypeView(...) } else { when
+(viewMode) {...} }` inside MainActivity's main content `Box` — rather
+than as a `Dialog`.** A `Compose` `Dialog` renders in its own Android
+Window, layered on top of the *entire* screen including MainActivity's
+own header. `ManualOverrideHeaderTakeover` (the quick-insert controls
+that swap in for MainActivity's header while the keyboard is up) only
+works because it's part of the *same* window as the content below it —
+put `TypeView` in a separate Dialog window and the header takeover would
+still technically "activate" underneath, invisibly, doing nothing
+visible. `viewMode` itself is left untouched while the overlay is
+showing, so dismissing it (`[CLOSE]`, top-right) returns to exactly
+wherever Terminal was. **If a future escape-hatch/overlay screen needs to
+share a keyboard-adjacent header takeover (or any other MainActivity-
+window-scoped UI) with its content, it has to be rendered the same way —
+in-place inside MainActivity's own content tree, never inside a `Dialog`
+composable.**
+
+`showComputerHeaderTakeover` is gated on `showLegacyManualOverride &&
+isKeyboardVisible`, not `viewMode == "TYPE"` — `TYPE` no longer means
+legacy Manual Override, so gating on it would either never fire (correct
+by accident) or fire for the composer (wrong, the composer owns its own
+local text field state and header takeover would insert into
+`manualOverrideText`, which the composer never reads).
+
+### File map
+
+| File | Owns |
+|---|---|
+| `composer/StatementComposerView.kt` | The composer screen: field, variable-context row, live preview, insertion aids, SAVE/COPY/SPEAK, MY STATEMENTS list, the long-press retarget dialogs |
+| `data/StatementRepository.kt` | `SavedStatement` model (`template` raw with tokens, `variableContext`), merge-by-id `StatementRepository` (mirrors `VisualPresetRepository`'s shape) |
+| `help/StatementComposerHelp.kt` | The composer's own HELP module, `destination = HelpDestination.TYPE` |
+| `computer/ManualOverrideTargetBrowser.kt` | `TargetQuickAccessRow`/`TargetBrowsePanel`/`ManualOverrideHeaderTakeover` — shared with legacy Manual Override, `onInsert`/`onLongPress` let each caller decide token vs. literal and whether retargeting is offered |
+| `computer/ComputerTreeWindow.kt`, `computer/ContactCardView.kt` | Reused wholesale (not reimplemented) for the composer's long-press retarget dialog |
+| `ui/DesignSystem.kt` | `TypeView` (legacy Manual Override, unchanged), `TerminalView`'s `/m` parsing (`parseTerminalCommand`, `TerminalPromptResult.ShowManualOverride`) |
+| `MainActivity.kt` | `showLegacyManualOverride` state, the in-place (non-`Dialog`) overlay render, `showComputerHeaderTakeover` gating, the `"TYPE" -> StatementComposerView(...)` dispatch |
+| `help/HelpRegistry.kt` | Both HELP modules registered under `HelpCategory.BASICS_MANUAL_OVERRIDE`; the legacy module's destination fixed to `TERMINAL` |
+| `backup/AckBackup.kt`, `backup/TransferManager.kt` | `savedStatements: List<SavedStatement>` — nullable/empty-default field, validated (size cap, `SAFE_KEY_PATTERN` id, `MAX_PHRASE_LENGTH` template, `variableContext` checked against `POSE_CATEGORIES`/custom-context-name pattern), merged by id on restore |
