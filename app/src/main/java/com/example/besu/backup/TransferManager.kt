@@ -73,6 +73,11 @@ object TransferManager {
     private const val MAX_COMPUTER_CATEGORIES = 40
     private const val MAX_NODES_PER_CATEGORY = 500
     private const val MAX_TREE_DEPTH = 12
+    // The statement composer's tree is a single unified structure (not one
+    // per category like Target Computer), so its own node-count ceiling is
+    // separate from MAX_NODES_PER_CATEGORY -- reuses MAX_TREE_DEPTH as-is,
+    // no reason for the two trees to have different depth limits.
+    private const val MAX_STATEMENT_NODES = 1000
     private val CATEGORY_ID_PATTERN = Regex("^[A-Z0-9_]{1,$MAX_KEY_LENGTH}$")
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; encodeDefaults = true }
@@ -289,8 +294,8 @@ object TransferManager {
             }
             .toMap()
 
-// 9j. Gather saved statements from the statement composer.
-        val savedStatements = StatementRepository.getStatements(context)
+// 9j. Gather the statement composer's saved-statement tree.
+        val savedStatementTree = StatementRepository.getRoot(context)
 
 // 10. Wrap and encode.
         val backup = AckBackup(
@@ -330,7 +335,7 @@ object TransferManager {
             terminalStatusboxColorIndex = terminalStatusboxColorIndex,
             shakeThreshold = shakeThreshold,
             rootOverrideCollapsed = rootOverrideCollapsed,
-            savedStatements = savedStatements,
+            savedStatementTree = savedStatementTree,
         )
 
         return json.encodeToString(backup)
@@ -917,22 +922,43 @@ object TransferManager {
             }
         }
 
-// 19. Validate saved statements from the statement composer.
-        if (backup.savedStatements.size > 500) {
-            Log.e("ACK_IMPORT", "savedStatements.size exceeds 500: ${backup.savedStatements.size}")
+// 19. Validate the statement composer's saved-statement tree.
+        val statementTree = backup.savedStatementTree
+        if (statementTree != null) {
+            if (!isStatementNodeValid(statementTree, contextNamePattern)) return false
+
+            val (nodeCount, depth) = countStatementNodes(statementTree)
+            if (nodeCount > MAX_STATEMENT_NODES) {
+                Log.e("ACK_IMPORT", "savedStatementTree node count exceeds $MAX_STATEMENT_NODES: $nodeCount")
+                return false
+            }
+            if (depth > MAX_TREE_DEPTH) {
+                Log.e("ACK_IMPORT", "savedStatementTree depth exceeds $MAX_TREE_DEPTH: $depth")
+                return false
+            }
+
+            val ids = collectStatementNodeIds(statementTree)
+            if (ids.distinct().size != ids.size) {
+                Log.e("ACK_IMPORT", "savedStatementTree has duplicate node ids")
+                return false
+            }
+        }
+
+        return true
+    }
+
+    private fun isStatementNodeValid(node: StatementNode, contextNamePattern: Regex): Boolean {
+        if (!SAFE_KEY_PATTERN.matches(node.id)) {
+            Log.e("ACK_IMPORT", "savedStatementTree node id fails SAFE_KEY_PATTERN: \"${node.id}\"")
             return false
         }
-        backup.savedStatements.forEach { statement ->
-            if (!SAFE_KEY_PATTERN.matches(statement.id)) {
-                Log.e("ACK_IMPORT", "savedStatement id fails SAFE_KEY_PATTERN: \"${statement.id}\"")
-                return false
-            }
-            if (statement.label.length > MAX_LABEL_LENGTH) {
-                Log.e("ACK_IMPORT", "savedStatement \"${statement.id}\" label exceeds $MAX_LABEL_LENGTH chars: \"${statement.label}\"")
-                return false
-            }
-            if (statement.template.length > MAX_PHRASE_LENGTH) {
-                Log.e("ACK_IMPORT", "savedStatement \"${statement.id}\" template exceeds $MAX_PHRASE_LENGTH chars: ${statement.template.length}")
+        if (node.label.length > MAX_LABEL_LENGTH) {
+            Log.e("ACK_IMPORT", "savedStatementTree node \"${node.id}\" label exceeds $MAX_LABEL_LENGTH chars: \"${node.label}\"")
+            return false
+        }
+        if (node.type == StatementNodeType.STATEMENT) {
+            if (node.template.length > MAX_PHRASE_LENGTH) {
+                Log.e("ACK_IMPORT", "savedStatementTree leaf \"${node.id}\" template exceeds $MAX_PHRASE_LENGTH chars: ${node.template.length}")
                 return false
             }
             // variableContext must be either a fixed pose or a valid custom
@@ -940,19 +966,50 @@ object TransferManager {
             // itself is validated against above, since that's the only
             // other place this string could have legitimately come from.
             if (
-                statement.variableContext !in POSE_CATEGORIES &&
-                !contextNamePattern.matches(statement.variableContext)
+                node.variableContext !in POSE_CATEGORIES &&
+                !contextNamePattern.matches(node.variableContext)
             ) {
-                Log.e("ACK_IMPORT", "savedStatement \"${statement.id}\" variableContext is invalid: \"${statement.variableContext}\"")
+                Log.e("ACK_IMPORT", "savedStatementTree leaf \"${node.id}\" variableContext is invalid: \"${node.variableContext}\"")
                 return false
             }
         }
-        if (backup.savedStatements.map { it.id }.distinct().size != backup.savedStatements.size) {
-            Log.e("ACK_IMPORT", "savedStatements has duplicate ids")
-            return false
+        return node.children.all { isStatementNodeValid(it, contextNamePattern) }
+    }
+
+    // Returns (total node count, max depth) for the subtree rooted at node --
+    // same shape as countComputerNodes.
+    private fun countStatementNodes(node: StatementNode, depth: Int = 1): Pair<Int, Int> {
+        var count = 1
+        var maxDepth = depth
+
+        for (child in node.children) {
+            val (childCount, childDepth) = countStatementNodes(child, depth + 1)
+            count += childCount
+            maxDepth = maxOf(maxDepth, childDepth)
         }
 
-        return true
+        return count to maxDepth
+    }
+
+    private fun collectStatementNodeIds(node: StatementNode): List<String> {
+        return listOf(node.id) + node.children.flatMap { collectStatementNodeIds(it) }
+    }
+
+    // Restores one subtree of the backup's statement tree by upserting
+    // each node individually (root itself always already exists on the
+    // device, so only its children need restoring) -- pre-order, parent
+    // before children, so a node's parentId is always valid by the time
+    // its own children are upserted under it.
+    private fun restoreStatementNode(context: Context, node: StatementNode, parentId: String) {
+        if (node.id == StatementRepository.ROOT_ID) {
+            node.children.forEach { child ->
+                restoreStatementNode(context, child, StatementRepository.ROOT_ID)
+            }
+            return
+        }
+
+        StatementRepository.upsertNode(context, node.copy(children = emptyList()), parentId)
+        node.children.forEach { child -> restoreStatementNode(context, child, node.id) }
     }
 
     private fun isComputerNodeValid(categoryId: String, node: ComputerNode): Boolean {
@@ -1210,13 +1267,16 @@ object TransferManager {
             OverlayDisplayPrefs.setDeviceRotationEnabled(context, backup.forceDeviceRotation)
         }
 
-        // Saved statements: merge by id, same as every other user-created
-        // list above. `template` is restored raw (tokens intact), so a
-        // restored statement keeps resolving live rather than reverting
-        // to whatever the Target Computer entry/variable said at backup
-        // time.
-        backup.savedStatements.forEach { statement ->
-            StatementRepository.upsertStatement(context, statement)
+        // Saved statement tree: restored node-by-node (folders and leaves
+        // alike) via StatementRepository.upsertNode, which merges each one
+        // by id -- an existing node the backup mentions is overwritten in
+        // place (or moved, if its parent changed), one the backup doesn't
+        // mention is left exactly where it is. A leaf's `template` is
+        // restored raw (tokens intact), so it keeps resolving live rather
+        // than reverting to whatever the Target Computer entry/variable
+        // said at backup time.
+        backup.savedStatementTree?.let { tree ->
+            restoreStatementNode(context, tree, StatementRepository.ROOT_ID)
         }
 
         // Restoring adopts the backup's active deck/profile/category
