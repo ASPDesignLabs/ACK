@@ -4,9 +4,11 @@ import com.example.besu.*
 import com.example.besu.help.*
 import com.example.besu.ui.*
 import android.content.Context
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,12 +44,30 @@ import androidx.compose.ui.unit.sp
 // resolves for Matrix/Quick Actions phrases -- so the SAME picker UI here
 // serves both a "type it now" screen and a "save it for later, resolved
 // live" screen without forking the browsing code.
+//
+// A chip in the quick row always represents the category's CURRENTLY
+// ACTIVE entry, which is exactly what a [COMPUTER:id] token resolves to --
+// so a tap there is the one place in this file safe to insert a token by
+// default. TargetBrowsePanel below can browse to any entry, active or not,
+// so a token from there could silently resolve to something other than
+// what was picked; callers that want a live reference from a chip should
+// build it from onInsert's categoryId, and literal text from anywhere
+// else in this file.
+//
+// onLongPress (optional, default no-op) opens whatever the caller wants
+// for retargeting a category's active entry -- e.g. the statement composer
+// opens ComputerTreeWindow, the SAME dialog the Target Computer tab itself
+// uses, so a long-press changes the active entry for real, across the
+// whole app, not a composer-local copy of it. Left null, chips behave
+// exactly as before (tap-to-insert only).
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TargetQuickAccessRow(
     context: Context,
     primaryColor: Color,
-    onInsert: (categoryId: String, label: String) -> Unit
+    onInsert: (categoryId: String, label: String) -> Unit,
+    onLongPress: ((categoryId: String) -> Unit)? = null
 ) {
     // No refresh key: this screen is recomposed fresh each time the user
     // navigates into Manual Override (switching tabs disposes/recreates it),
@@ -91,7 +111,12 @@ fun TargetQuickAccessRow(
                             .background(primaryColor.copy(alpha = 0.10f), CutCornerShape(4.dp))
                             // Insertion always uses the full node.label --
                             // only the on-screen chip text below truncates.
-                            .clickable { onInsert(category.id, node.label) }
+                            .combinedClickable(
+                                onClick = { onInsert(category.id, node.label) },
+                                onLongClick = onLongPress?.let { callback ->
+                                    { callback(category.id) }
+                                }
+                            )
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         contentAlignment = Alignment.CenterStart
                     ) {
@@ -296,7 +321,8 @@ fun TargetBrowsePanel(
 fun ManualOverrideHeaderTakeover(
     context: Context,
     primaryColor: Color,
-    onInsert: (categoryId: String, label: String) -> Unit
+    onInsert: (categoryId: String, label: String) -> Unit,
+    onLongPress: ((categoryId: String) -> Unit)? = null
 ) {
     var browseExpanded by remember { mutableStateOf(false) }
     val helpManager = LocalHelpManager.current
@@ -327,7 +353,8 @@ fun ManualOverrideHeaderTakeover(
         TargetQuickAccessRow(
             context = context,
             primaryColor = primaryColor,
-            onInsert = onInsert
+            onInsert = onInsert,
+            onLongPress = onLongPress
         )
 
         Spacer(modifier = Modifier.height(8.dp))

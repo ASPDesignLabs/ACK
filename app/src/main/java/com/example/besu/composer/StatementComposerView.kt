@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +72,16 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
     var saveLabelInput by remember { mutableStateOf("") }
     var refreshKey by remember { mutableIntStateOf(0) }
 
+    // Long-pressing a quick-access chip opens ComputerTreeWindow (the SAME
+    // dialog the Target Computer tab uses) to retarget that category's
+    // active entry -- a real, app-wide change via ComputerRepository, not a
+    // composer-local one. targetRefreshKey forces the chip row and the live
+    // preview to pick up the change immediately, since neither would
+    // otherwise know that category's active entry moved out from under it.
+    var openTargetCategoryTreeId by remember { mutableStateOf<String?>(null) }
+    var openTargetContactCard by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var targetRefreshKey by remember { mutableIntStateOf(0) }
+
     val savedStatements by remember(refreshKey) {
         mutableStateOf(StatementRepository.getStatements(context))
     }
@@ -80,16 +91,16 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
         helpManager?.onEvent(HelpEvent.Interacted(tag))
     }
 
-    fun insertTokenAtCursor(token: String) {
+    fun insertTextAtCursor(text: String) {
         val selection = textFieldValue.selection
-        val spliced = "$token "
+        val spliced = "$text "
         val newText = textFieldValue.text.replaceRange(selection.start, selection.end, spliced)
         val newCursor = selection.start + spliced.length
         textFieldValue = TextFieldValue(newText, TextRange(newCursor))
         focusRequester.requestFocus()
     }
 
-    val resolvedPreview = remember(textFieldValue.text, variableContext) {
+    val resolvedPreview = remember(textFieldValue.text, variableContext, targetRefreshKey) {
         resolveStatementTemplate(context, textFieldValue.text, variableContext)
     }
 
@@ -187,14 +198,21 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // --- INSERTION AIDS ---
-        // Same picker composables legacy Manual Override uses, but the
-        // callback here builds a token instead of splicing the literal
-        // label -- see ManualOverrideTargetBrowser.kt's onInsert doc.
-        TargetQuickAccessRow(
-            context = context,
-            primaryColor = primaryColor,
-            onInsert = { categoryId, _ -> insertTokenAtCursor("[COMPUTER:$categoryId]") }
-        )
+        // A chip is the category's CURRENTLY ACTIVE entry, so tapping it
+        // inserts a live [COMPUTER:id] token -- exactly what that token
+        // means. Long-pressing opens ComputerTreeWindow to retarget which
+        // entry is active, for real, app-wide (see openTargetCategoryTreeId
+        // below); key() forces the row to re-read activePicks once that
+        // dialog reports a change, since TargetQuickAccessRow itself has no
+        // refresh-key parameter of its own.
+        key(targetRefreshKey) {
+            TargetQuickAccessRow(
+                context = context,
+                primaryColor = primaryColor,
+                onInsert = { categoryId, _ -> insertTextAtCursor("[COMPUTER:$categoryId]") },
+                onLongPress = { categoryId -> openTargetCategoryTreeId = categoryId }
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -251,10 +269,15 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
 
         if (showTargetBrowsePanel) {
             Spacer(modifier = Modifier.height(8.dp))
+            // Browsing here can land on an entry that ISN'T the category's
+            // active one, so a [COMPUTER:id] token would be wrong -- it
+            // always resolves to whatever's active, not whatever was just
+            // picked here. Insert the literal, already-rationalized label
+            // instead, same as legacy Manual Override's own browse panel.
             TargetBrowsePanel(
                 context = context,
                 primaryColor = primaryColor,
-                onInsert = { categoryId, _ -> insertTokenAtCursor("[COMPUTER:$categoryId]") }
+                onInsert = { _, label -> insertTextAtCursor(label) }
             )
         }
 
@@ -264,7 +287,7 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
                 context = context,
                 primaryColor = primaryColor,
                 category = variableContext,
-                onInsert = { tag -> insertTokenAtCursor("{VAR:$tag}") }
+                onInsert = { tag -> insertTextAtCursor("{VAR:$tag}") }
             )
         }
 
@@ -431,6 +454,38 @@ fun StatementComposerView(context: Context, primaryColor: Color) {
                 }
             }
         }
+    }
+
+    // Long-press-on-chip retargeting. Reuses ComputerTreeWindow/
+    // ContactCardDialog wholesale -- the exact same dialogs the Target
+    // Computer tab itself opens -- rather than building a composer-local
+    // picker, so this is genuinely the same "adjust the active entry"
+    // surface, not a parallel one that could drift from it.
+    val treeCategoryId = openTargetCategoryTreeId
+    if (treeCategoryId != null) {
+        ComputerTreeWindow(
+            context = context,
+            primaryColor = primaryColor,
+            categoryId = treeCategoryId,
+            onDismiss = { openTargetCategoryTreeId = null },
+            onChanged = { targetRefreshKey++ },
+            onOpenContactCard = { nodeId -> openTargetContactCard = treeCategoryId to nodeId }
+        )
+    }
+
+    val contactCardTarget = openTargetContactCard
+    if (contactCardTarget != null) {
+        val (cardCategoryId, cardNodeId) = contactCardTarget
+        ContactCardDialog(
+            context = context,
+            primaryColor = primaryColor,
+            categoryId = cardCategoryId,
+            nodeId = cardNodeId,
+            onDismiss = {
+                openTargetContactCard = null
+                targetRefreshKey++
+            }
+        )
     }
 }
 
