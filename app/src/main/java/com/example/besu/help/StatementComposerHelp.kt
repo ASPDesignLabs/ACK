@@ -20,6 +20,16 @@ object StatementComposerHelp {
                     "snapshot."
             ),
             HelpStep(
+                id = "fullscreen",
+                title = "FULL SCREEN",
+                body = "Tap FULL SCREEN to hide the header and bottom navigation " +
+                    "and give the composer the whole screen -- useful for longer " +
+                    "statements. The toggle stays pinned at the top so you can " +
+                    "always tap back out.",
+                action = HelpAction.Interact(AckTags.COMPOSER_FULLSCREEN_TOGGLE),
+                targetTag = AckTags.COMPOSER_FULLSCREEN_TOGGLE
+            ),
+            HelpStep(
                 id = "variable_context",
                 title = "VARIABLE CONTEXT",
                 body = "Pick which Shared Root Variables grouping this statement's " +
@@ -101,9 +111,11 @@ object StatementComposerHelp {
             HelpStep(
                 id = "statements_list",
                 title = "MY STATEMENTS",
-                body = "MY STATEMENTS lists everything you've saved -- tap one to " +
-                    "reload it for editing, or use its COPY/SPEAK/DELETE " +
-                    "actions directly from the list.",
+                body = "MY STATEMENTS organizes everything you've saved into " +
+                    "folders, tree-and-leaf, the same shape as Target Computer " +
+                    "entries. Tap a folder to expand it, or a statement to " +
+                    "reload it for editing, copy, speak, or delete it right " +
+                    "from the list.",
                 action = HelpAction.Interact(AckTags.COMPOSER_STATEMENTS_LIST_BTN),
                 targetTag = AckTags.COMPOSER_STATEMENTS_LIST_BTN
             )

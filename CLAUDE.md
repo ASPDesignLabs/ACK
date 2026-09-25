@@ -565,7 +565,7 @@ machinery, just a new place that writes tokens instead of literal text.
 
 ### Core model: statements store tokens, never resolved snapshots
 
-A `SavedStatement` (`data/StatementRepository.kt`) has a `template: String`
+A `StatementNode` (`data/StatementRepository.kt`) has a `template: String`
 field that holds the raw composed text **with `[COMPUTER:id]`/`{VAR:A}`
 tokens still embedded** — never a resolved/frozen copy. COPY and SPEAK
 both resolve the template fresh, via `TemplateEngine.resolve()`, at the
@@ -580,12 +580,12 @@ is ever a frozen copy** philosophy documented in the BACKUP section above
 — treat "statements store references, not values" as load-bearing the
 same way that section's "merge-by-id, never wipe" rule is.
 
-`SavedStatement.variableContext: String` is required and easy to forget
-why: `{VAR:A}`/`{VAR:B}`/`{VAR:C}` tags are only unique **within one
-Shared Root Variables grouping** (a fixed pose — IDENTITY/DEFEND/CONNECT —
-or a custom context layer's name), exactly like a Matrix phrase's
-`{VAR:A}` always resolves against its own node's category
-(`CommandRepository.getResolvedPhrase` looks this up from
+`StatementNode.variableContext: String` (meaningful only on a `STATEMENT`
+leaf) is required and easy to forget why: `{VAR:A}`/`{VAR:B}`/`{VAR:C}`
+tags are only unique **within one Shared Root Variables grouping** (a
+fixed pose — IDENTITY/DEFEND/CONNECT — or a custom context layer's name),
+exactly like a Matrix phrase's `{VAR:A}` always resolves against its own
+node's category (`CommandRepository.getResolvedPhrase` looks this up from
 `cachedNodes.find{...}?.category`) and a Quick Actions slot resolves
 against its own group's `rootCategory`. A statement isn't anchored to a
 node or group, so it has to carry its chosen grouping explicitly instead
@@ -594,6 +594,64 @@ would silently produce the wrong value. **If a future field ever lets a
 single statement reference more than one grouping, this single-string
 field stops being enough — don't just widen its type without also
 rethinking how the picker UI decides which grouping is "current."**
+
+### Statements are organized tree > leaf, mirroring Target Computer
+
+`StatementNode` (`data/StatementRepository.kt`) is a single unified tree —
+`type` is `FOLDER` (organizational, `children` only) or `STATEMENT` (a
+leaf, carrying `template`/`variableContext`/timestamps directly on the
+node). This deliberately mirrors `ComputerNode`'s own `CATEGORY`/`ENTRY`
+split — leaf-only fields live on the node itself, not nested in a
+separate wrapper object — but it's **one tree with one implicit root**
+(`StatementRepository.ROOT_ID`), not one-tree-per-category the way
+`ComputerCategory` wraps a `root: ComputerNode` per named category.
+Statements don't have Target Computer's `[COMPUTER:id]`-binding
+requirement that forces multiple independently-addressable root
+categories, so a single tree is the more literal read of "tree > leaf"
+and there was no reason to carry the extra `Category` wrapper level over.
+The root node itself is never rendered as a row anywhere (same convention
+as `ComputerCategory.root`) — only its `children`, recursively, are.
+
+`StatementRepository` exposes tree-shaped operations (`getRoot`,
+`upsertNode`, `createFolder`, `deleteNode`, `renameNode`, `findNode`,
+`listFolders`) rather than a flat CRUD list. `upsertNode(context, node,
+parentId)` always removes the node from wherever it currently lives in
+the tree first, then reinserts it under `parentId` — this is what makes
+re-saving a statement under a different folder in the composer's SAVE
+dialog work as a **move**, not a duplicate; no separate "move" operation
+exists or is needed. `computer/ComputerTreeWindow.kt`'s
+`TreeVisualRow`/`flattenVisibleTree`/`ComputerTreeVisualRow` pieces were
+**not** reused for the statement tree browser (`StatementTreeRow`/
+`flattenVisibleStatementTree` in `StatementComposerView.kt` instead) —
+`StatementNode` and `ComputerNode` are different types with different
+per-leaf fields (no contact cards, no legacy strategy; a folder/leaf split
+instead of category/entry), so genuine code reuse there would need
+generics rather than the two node types coexisting as-is. Two small
+parallel tree implementations were judged cheaper than that indirection.
+**If a third tree-shaped feature ever shows up, that's the point to
+reconsider a shared generic tree component — not before.**
+
+**Migration**: before this tree existed, `StatementRepository` stored a
+flat `List<SavedStatement>` under prefs key `saved_statements`.
+`StatementRepository.getRoot()` checks for a tree first; if none exists
+yet, it reads that old flat key once (`LegacySavedStatement`, kept
+private, migration-only), wraps every entry as a direct `STATEMENT` child
+of a fresh root, and writes that as the new tree — same "never silently
+drop what a tester already created" reasoning as every other migration in
+this app. The old key is never deleted, so nothing is destroyed even if
+migration logic ever needs revisiting.
+
+**Backup**: `AckBackup.savedStatementTree: StatementNode?` (nullable —
+"nothing to say about this field" on an old backup) replaced the earlier
+`savedStatements: List<SavedStatement>` field outright, without a
+transition period, since this shipped pre-release (the whole system is
+still inside `[1.0-beta.7] - Unreleased`). Restore
+(`TransferManager.restoreStatementNode`) walks the backup's tree
+pre-order and calls `StatementRepository.upsertNode` on every node
+individually (folders included), which is what keeps this additive: a
+node the backup doesn't mention is left exactly where it is, since
+`upsertNode` only ever touches the specific node id it's given, never a
+whole folder's contents wholesale.
 
 ### Token insertion vs. literal insertion — the rule that's easy to get backwards
 
@@ -692,16 +750,38 @@ by accident) or fire for the composer (wrong, the composer owns its own
 local text field state and header takeover would insert into
 `manualOverrideText`, which the composer never reads).
 
+### FULL SCREEN hides MainActivity's own chrome, not the OS status bar
+
+The composer's `isFullscreen`/`onToggleFullscreen` params (both optional,
+default off/no-op) are hoisted to `MainActivity`'s `composerFullscreen`
+state. When on, `MainActivity` removes its header `Column` and bottom-nav
+`Row` **from composition entirely** (`if (!composerFullscreen) { ... }`),
+not just visually — the content `Box` already has `weight(1f)`, so it
+claims the reclaimed space automatically, no extra layout math needed.
+`composerFullscreen` resets via `LaunchedEffect(viewMode)` the instant
+`viewMode` leaves `"TYPE"`, so no other screen can ever get stuck without
+its own chrome. This is scoped to ACK's own header/nav, deliberately not
+a true OS-level immersive/edge-to-edge mode (no
+`WindowInsetsControllerCompat` calls, status bar untouched) — that's a
+bigger, more invasive surface than "more room within the app" asked for.
+
+Inside the composer itself, the title row (with the FULL SCREEN toggle)
+is pinned **outside** the scrollable content `Column` — if it scrolled
+with everything else, a long statement could scroll the only way back out
+of fullscreen off-screen. Any future full-bleed mode in this app should
+keep the same rule: whatever toggles it back off must live outside
+whatever it makes scrollable.
+
 ### File map
 
 | File | Owns |
 |---|---|
-| `composer/StatementComposerView.kt` | The composer screen: field, variable-context row, live preview, insertion aids, SAVE/COPY/SPEAK, MY STATEMENTS list, the long-press retarget dialogs |
-| `data/StatementRepository.kt` | `SavedStatement` model (`template` raw with tokens, `variableContext`), merge-by-id `StatementRepository` (mirrors `VisualPresetRepository`'s shape) |
+| `composer/StatementComposerView.kt` | The composer screen: field, variable-context row, live preview, insertion aids, SAVE/COPY/SPEAK, MY STATEMENTS tree browser, FULL SCREEN toggle, the long-press retarget dialogs, `StatementTreeRow`/`flattenVisibleStatementTree`/`FolderPickerColumn` |
+| `data/StatementRepository.kt` | `StatementNode` tree model (`FOLDER`/`STATEMENT`, leaf fields on the node), `StatementRepository` (`getRoot` with one-time flat-list migration, `upsertNode`/`createFolder`/`deleteNode`/`renameNode`/`findNode`/`listFolders`) |
 | `help/StatementComposerHelp.kt` | The composer's own HELP module, `destination = HelpDestination.TYPE` |
 | `computer/ManualOverrideTargetBrowser.kt` | `TargetQuickAccessRow`/`TargetBrowsePanel`/`ManualOverrideHeaderTakeover` — shared with legacy Manual Override, `onInsert`/`onLongPress` let each caller decide token vs. literal and whether retargeting is offered |
 | `computer/ComputerTreeWindow.kt`, `computer/ContactCardView.kt` | Reused wholesale (not reimplemented) for the composer's long-press retarget dialog |
 | `ui/DesignSystem.kt` | `TypeView` (legacy Manual Override, unchanged), `TerminalView`'s `/m` parsing (`parseTerminalCommand`, `TerminalPromptResult.ShowManualOverride`) |
-| `MainActivity.kt` | `showLegacyManualOverride` state, the in-place (non-`Dialog`) overlay render, `showComputerHeaderTakeover` gating, the `"TYPE" -> StatementComposerView(...)` dispatch |
+| `MainActivity.kt` | `showLegacyManualOverride` state, the in-place (non-`Dialog`) overlay render, `showComputerHeaderTakeover` gating, `composerFullscreen` state and the header/nav `if (!composerFullscreen)` guards, the `"TYPE" -> StatementComposerView(...)` dispatch |
 | `help/HelpRegistry.kt` | Both HELP modules registered under `HelpCategory.BASICS_MANUAL_OVERRIDE`; the legacy module's destination fixed to `TERMINAL` |
-| `backup/AckBackup.kt`, `backup/TransferManager.kt` | `savedStatements: List<SavedStatement>` — nullable/empty-default field, validated (size cap, `SAFE_KEY_PATTERN` id, `MAX_PHRASE_LENGTH` template, `variableContext` checked against `POSE_CATEGORIES`/custom-context-name pattern), merged by id on restore |
+| `backup/AckBackup.kt`, `backup/TransferManager.kt` | `savedStatementTree: StatementNode?` — nullable field, validated recursively (`isStatementNodeValid`/`countStatementNodes`/`collectStatementNodeIds`: node count cap, `SAFE_KEY_PATTERN` id, `MAX_PHRASE_LENGTH` template, `variableContext` checked against `POSE_CATEGORIES`/custom-context-name pattern, tree-wide duplicate-id check), restored node-by-node pre-order (`restoreStatementNode`) so an unmentioned node is never touched |

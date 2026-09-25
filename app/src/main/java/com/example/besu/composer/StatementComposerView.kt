@@ -75,6 +75,25 @@ fun StatementComposerView(
     var showSaveDialog by remember { mutableStateOf(false) }
     var showStatementsList by remember { mutableStateOf(false) }
     var saveLabelInput by remember { mutableStateOf("") }
+    // Which folder SAVE files the statement under -- defaults to the tree
+    // root every time the dialog opens; a resaved statement is MOVED here
+    // if this differs from wherever it currently lives (StatementRepository
+    // .upsertNode always removes-then-reinserts by id).
+    var saveDestinationFolderId by remember { mutableStateOf(StatementRepository.ROOT_ID) }
+    var showNewFolderDialog by remember { mutableStateOf(false) }
+    var newFolderLabelInput by remember { mutableStateOf("") }
+    // Which folder a NEW FOLDER goes under -- distinct from
+    // saveDestinationFolderId since MY STATEMENTS' own [NEW FOLDER] button
+    // can create one without the SAVE dialog being open at all.
+    var newFolderParentId by remember { mutableStateOf(StatementRepository.ROOT_ID) }
+    var expandedFolderIds by remember {
+        mutableStateOf(setOf(StatementRepository.ROOT_ID))
+    }
+    // At most one row's delete confirmation showing at a time, in either
+    // MY STATEMENTS' tree or the SAVE dialog's folder picker -- a bare
+    // [DELETE] tap always asks first for a folder (which can cascade),
+    // never applies without a second, explicit tap.
+    var confirmingDeleteId by remember { mutableStateOf<String?>(null) }
     var refreshKey by remember { mutableIntStateOf(0) }
 
     // Long-pressing a quick-access chip opens ComputerTreeWindow (the SAME
@@ -87,9 +106,10 @@ fun StatementComposerView(
     var openTargetContactCard by remember { mutableStateOf<Pair<String, String>?>(null) }
     var targetRefreshKey by remember { mutableIntStateOf(0) }
 
-    val savedStatements by remember(refreshKey) {
-        mutableStateOf(StatementRepository.getStatements(context))
+    val statementRoot by remember(refreshKey) {
+        mutableStateOf(StatementRepository.getRoot(context))
     }
+    val statementCount = remember(statementRoot) { countLeaves(statementRoot) }
 
     val helpManager = LocalHelpManager.current
     fun reportHelpInteraction(tag: String) {
@@ -294,8 +314,8 @@ fun StatementComposerView(
             )
 
             Text(
-                text = if (savedStatements.isNotEmpty()) {
-                    "[MY STATEMENTS (${savedStatements.size})]"
+                text = if (statementCount > 0) {
+                    "[MY STATEMENTS ($statementCount)]"
                 } else {
                     "[MY STATEMENTS]"
                 },
@@ -353,10 +373,12 @@ fun StatementComposerView(
                 mainColor = primaryColor
             ) {
                 if (textFieldValue.text.isNotBlank()) {
-                    saveLabelInput = editingStatementId
-                        ?.let { id -> savedStatements.firstOrNull { it.id == id } }
-                        ?.label
-                        ?: ""
+                    val existing = editingStatementId
+                        ?.let { id -> StatementRepository.findNode(statementRoot, id) }
+                    saveLabelInput = existing?.label ?: ""
+                    saveDestinationFolderId = existing
+                        ?.let { findParentFolderId(statementRoot, it.id) }
+                        ?: StatementRepository.ROOT_ID
                     showSaveDialog = true
                 }
             }
@@ -405,6 +427,37 @@ fun StatementComposerView(
                 colors = NeonTextFieldColors(primaryColor),
                 modifier = Modifier.fillMaxWidth()
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TightSectionLabel("FOLDER")
+                Text(
+                    text = "[+ NEW FOLDER]",
+                    color = primaryColor,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable {
+                        newFolderParentId = saveDestinationFolderId
+                        newFolderLabelInput = ""
+                        showNewFolderDialog = true
+                    }
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            FolderPickerColumn(
+                root = statementRoot,
+                selectedId = saveDestinationFolderId,
+                primaryColor = primaryColor,
+                modifier = Modifier.heightIn(max = 160.dp),
+                onSelect = { saveDestinationFolderId = it }
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -413,18 +466,18 @@ fun StatementComposerView(
                 TightPanelButton("SAVE", modifier = Modifier.weight(1f), mainColor = primaryColor) {
                     if (saveLabelInput.isNotBlank()) {
                         val existing = editingStatementId
-                            ?.let { id -> savedStatements.firstOrNull { it.id == id } }
-                        val statement = SavedStatement(
+                            ?.let { id -> StatementRepository.findNode(statementRoot, id) }
+                        val node = StatementNode(
                             id = existing?.id ?: UUID.randomUUID().toString(),
                             label = saveLabelInput.trim(),
+                            type = StatementNodeType.STATEMENT,
                             template = textFieldValue.text,
                             variableContext = variableContext,
                             createdAt = existing?.createdAt ?: System.currentTimeMillis(),
-                            updatedAt = System.currentTimeMillis(),
-                            sortOrder = System.currentTimeMillis()
+                            updatedAt = System.currentTimeMillis()
                         )
-                        StatementRepository.upsertStatement(context, statement)
-                        editingStatementId = statement.id
+                        StatementRepository.upsertNode(context, node, saveDestinationFolderId)
+                        editingStatementId = node.id
                         refreshKey++
                         showSaveDialog = false
                         Toast.makeText(context, "STATEMENT SAVED", Toast.LENGTH_SHORT).show()
@@ -449,60 +502,182 @@ fun StatementComposerView(
         }
     }
 
+    if (showNewFolderDialog) {
+        TightDialogSurface(
+            onDismiss = { showNewFolderDialog = false },
+            primaryColor = primaryColor,
+            title = "NEW FOLDER"
+        ) {
+            TightSectionLabel("LABEL")
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = newFolderLabelInput,
+                onValueChange = { newFolderLabelInput = it },
+                placeholder = { Text("E.G. \"CAFE VISITS\"") },
+                shape = AckHelpShape,
+                colors = NeonTextFieldColors(primaryColor),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            FolderPickerColumn(
+                root = statementRoot,
+                selectedId = newFolderParentId,
+                primaryColor = primaryColor,
+                modifier = Modifier.heightIn(max = 160.dp),
+                onSelect = { newFolderParentId = it }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TightPanelButton("CREATE", modifier = Modifier.weight(1f), mainColor = primaryColor) {
+                    if (newFolderLabelInput.isNotBlank()) {
+                        val folder = StatementRepository.createFolder(
+                            context,
+                            newFolderLabelInput.trim(),
+                            newFolderParentId
+                        )
+                        expandedFolderIds = expandedFolderIds + newFolderParentId
+                        // If SAVE's own picker is what opened this, land the
+                        // new folder selected there immediately rather than
+                        // making the user find and tap it a second time.
+                        if (showSaveDialog) {
+                            saveDestinationFolderId = folder.id
+                        }
+                        refreshKey++
+                        showNewFolderDialog = false
+                    }
+                }
+                TightPanelButton(
+                    "CANCEL",
+                    modifier = Modifier.weight(1f),
+                    isActive = false,
+                    mainColor = primaryColor
+                ) {
+                    showNewFolderDialog = false
+                }
+            }
+        }
+    }
+
     if (showStatementsList) {
         TightDialogSurface(
-            onDismiss = { showStatementsList = false },
+            onDismiss = {
+                showStatementsList = false
+                confirmingDeleteId = null
+            },
             primaryColor = primaryColor,
             title = "MY STATEMENTS",
             dismissLabel = "CLOSE"
         ) {
-            if (savedStatements.isEmpty()) {
+            Text(
+                text = "[+ NEW FOLDER]",
+                color = primaryColor,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable {
+                    newFolderParentId = StatementRepository.ROOT_ID
+                    newFolderLabelInput = ""
+                    showNewFolderDialog = true
+                }
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (statementRoot.children.isEmpty()) {
                 Text(
-                    text = "NO SAVED STATEMENTS YET. COMPOSE ONE ABOVE AND TAP SAVE.",
+                    text = "NOTHING SAVED YET. COMPOSE A STATEMENT ABOVE AND TAP SAVE, " +
+                        "OR ADD A FOLDER TO GET ORGANIZED FIRST.",
                     color = Color.DarkGray,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
                 )
             } else {
-                LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
-                    items(savedStatements, key = { it.id }) { statement ->
-                        SavedStatementRow(
-                            statement = statement,
-                            primaryColor = primaryColor,
-                            onLoad = {
-                                textFieldValue = TextFieldValue(
-                                    statement.template,
-                                    TextRange(statement.template.length)
-                                )
-                                editingStatementId = statement.id
-                                variableContext = statement.variableContext
-                                showStatementsList = false
-                                focusRequester.requestFocus()
-                            },
-                            onCopy = {
-                                val resolved = resolveStatementTemplate(
-                                    context,
-                                    statement.template,
-                                    statement.variableContext
-                                )
-                                copyResolvedText(statement.template, resolved)
-                            },
-                            onSpeak = {
-                                val resolved = resolveStatementTemplate(
-                                    context,
-                                    statement.template,
-                                    statement.variableContext
-                                )
-                                speakResolvedText(statement.template, resolved, "COMPOSER/BANK")
-                            },
-                            onDelete = {
-                                StatementRepository.deleteStatement(context, statement.id)
-                                refreshKey++
-                                if (editingStatementId == statement.id) {
-                                    editingStatementId = null
-                                }
-                            }
+                val rows = remember(statementRoot, expandedFolderIds) {
+                    mutableListOf<StatementTreeRow>().apply {
+                        flattenVisibleStatementTree(
+                            statementRoot.children,
+                            0,
+                            expandedFolderIds,
+                            this
                         )
+                    }
+                }
+
+                LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
+                    items(rows, key = { it.node.id }) { row ->
+                        when (row.node.type) {
+                            StatementNodeType.FOLDER -> StatementFolderRow(
+                                node = row.node,
+                                depth = row.depth,
+                                primaryColor = primaryColor,
+                                isExpanded = row.node.id in expandedFolderIds,
+                                isConfirmingDelete = confirmingDeleteId == row.node.id,
+                                onToggleExpand = {
+                                    expandedFolderIds = if (row.node.id in expandedFolderIds) {
+                                        expandedFolderIds - row.node.id
+                                    } else {
+                                        expandedFolderIds + row.node.id
+                                    }
+                                },
+                                onAddSubfolder = {
+                                    newFolderParentId = row.node.id
+                                    newFolderLabelInput = ""
+                                    showNewFolderDialog = true
+                                },
+                                onDeleteRequest = { confirmingDeleteId = row.node.id },
+                                onDeleteCancel = { confirmingDeleteId = null },
+                                onDeleteConfirm = {
+                                    StatementRepository.deleteNode(context, row.node.id)
+                                    confirmingDeleteId = null
+                                    refreshKey++
+                                }
+                            )
+
+                            StatementNodeType.STATEMENT -> StatementLeafRow(
+                                node = row.node,
+                                depth = row.depth,
+                                primaryColor = primaryColor,
+                                isConfirmingDelete = confirmingDeleteId == row.node.id,
+                                onLoad = {
+                                    textFieldValue = TextFieldValue(
+                                        row.node.template,
+                                        TextRange(row.node.template.length)
+                                    )
+                                    editingStatementId = row.node.id
+                                    variableContext = row.node.variableContext
+                                    showStatementsList = false
+                                    focusRequester.requestFocus()
+                                },
+                                onCopy = {
+                                    val resolved = resolveStatementTemplate(
+                                        context,
+                                        row.node.template,
+                                        row.node.variableContext
+                                    )
+                                    copyResolvedText(row.node.template, resolved)
+                                },
+                                onSpeak = {
+                                    val resolved = resolveStatementTemplate(
+                                        context,
+                                        row.node.template,
+                                        row.node.variableContext
+                                    )
+                                    speakResolvedText(row.node.template, resolved, "COMPOSER/BANK")
+                                },
+                                onDeleteRequest = { confirmingDeleteId = row.node.id },
+                                onDeleteCancel = { confirmingDeleteId = null },
+                                onDeleteConfirm = {
+                                    StatementRepository.deleteNode(context, row.node.id)
+                                    confirmingDeleteId = null
+                                    refreshKey++
+                                    if (editingStatementId == row.node.id) {
+                                        editingStatementId = null
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -660,25 +835,153 @@ private fun SharedVariablePicker(
     }
 }
 
+// One visible row in MY STATEMENTS' flattened tree -- a FOLDER or a
+// STATEMENT leaf, at a given indent depth. Mirrors ComputerTreeWindow's
+// own TreeVisualRow/flattenVisibleTree shape, but written fresh for
+// StatementNode rather than shared code: the two node types differ enough
+// (ComputerNode has no folders-vs-leaves distinction of its own, StatementNode
+// has no contact cards) that a generic tree component would need more
+// indirection than two small parallel implementations cost.
+private data class StatementTreeRow(val node: StatementNode, val depth: Int)
+
+private fun flattenVisibleStatementTree(
+    nodes: List<StatementNode>,
+    depth: Int,
+    expandedIds: Set<String>,
+    out: MutableList<StatementTreeRow>
+) {
+    nodes.forEach { node ->
+        out.add(StatementTreeRow(node, depth))
+        if (node.type == StatementNodeType.FOLDER && node.id in expandedIds) {
+            flattenVisibleStatementTree(node.children, depth + 1, expandedIds, out)
+        }
+    }
+}
+
+private fun countLeaves(node: StatementNode): Int {
+    return if (node.type == StatementNodeType.STATEMENT) {
+        1
+    } else {
+        node.children.sumOf { countLeaves(it) }
+    }
+}
+
+private fun findParentFolderId(root: StatementNode, childId: String): String? {
+    if (root.children.any { it.id == childId }) return root.id
+    root.children.forEach { child ->
+        findParentFolderId(child, childId)?.let { return it }
+    }
+    return null
+}
+
 @Composable
-private fun SavedStatementRow(
-    statement: SavedStatement,
+private fun StatementFolderRow(
+    node: StatementNode,
+    depth: Int,
     primaryColor: Color,
-    onLoad: () -> Unit,
-    onCopy: () -> Unit,
-    onSpeak: () -> Unit,
-    onDelete: () -> Unit
+    isExpanded: Boolean,
+    isConfirmingDelete: Boolean,
+    onToggleExpand: () -> Unit,
+    onAddSubfolder: () -> Unit,
+    onDeleteRequest: () -> Unit,
+    onDeleteCancel: () -> Unit,
+    onDeleteConfirm: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 10.dp)
+            .padding(start = (depth * 16).dp, bottom = 6.dp)
+            .border(1.dp, primaryColor.copy(alpha = 0.5f), CutCornerShape(6.dp))
+            .background(primaryColor.copy(alpha = 0.06f), CutCornerShape(6.dp))
+            .clickable { onToggleExpand() }
+            .padding(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${if (isExpanded) "▾" else "▸"} ${node.label.uppercase()}",
+                color = primaryColor,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+
+            if (isConfirmingDelete) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "DELETE ALL?",
+                        color = Color(0xFFFF4444),
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "[YES]",
+                        color = Color(0xFFFF4444),
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onDeleteConfirm() }
+                    )
+                    Text(
+                        "[NO]",
+                        color = primaryColor,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onDeleteCancel() }
+                    )
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "[+ SUB]",
+                        color = primaryColor,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onAddSubfolder() }
+                    )
+                    Text(
+                        "[DELETE]",
+                        color = Color(0xFFFF4444),
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onDeleteRequest() }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatementLeafRow(
+    node: StatementNode,
+    depth: Int,
+    primaryColor: Color,
+    isConfirmingDelete: Boolean,
+    onLoad: () -> Unit,
+    onCopy: () -> Unit,
+    onSpeak: () -> Unit,
+    onDeleteRequest: () -> Unit,
+    onDeleteCancel: () -> Unit,
+    onDeleteConfirm: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = (depth * 16).dp, bottom = 6.dp)
             .border(1.dp, primaryColor.copy(alpha = 0.4f), CutCornerShape(6.dp))
             .clickable { onLoad() }
             .padding(10.dp)
     ) {
         Text(
-            text = statement.label,
+            text = node.label,
             color = primaryColor,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
@@ -686,7 +989,7 @@ private fun SavedStatementRow(
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = statement.template,
+            text = node.template,
             color = Color.Gray,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
@@ -694,37 +997,112 @@ private fun SavedStatementRow(
             overflow = TextOverflow.Ellipsis
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(
-                "[COPY]",
-                color = primaryColor,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { onCopy() }
-            )
-            Text(
-                "[SPEAK]",
-                color = primaryColor,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { onSpeak() }
-            )
-            Text(
-                "[DELETE]",
-                color = Color(0xFFFF4444),
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { onDelete() }
-            )
+        if (isConfirmingDelete) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    "DELETE?",
+                    color = Color(0xFFFF4444),
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "[YES]",
+                    color = Color(0xFFFF4444),
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable { onDeleteConfirm() }
+                )
+                Text(
+                    "[NO]",
+                    color = primaryColor,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable { onDeleteCancel() }
+                )
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    "[COPY]",
+                    color = primaryColor,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable { onCopy() }
+                )
+                Text(
+                    "[SPEAK]",
+                    color = primaryColor,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable { onSpeak() }
+                )
+                Text(
+                    "[DELETE]",
+                    color = Color(0xFFFF4444),
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable { onDeleteRequest() }
+                )
+            }
+        }
+    }
+}
+
+// A flattened, indented list of every FOLDER in the tree (root included,
+// labeled "STATEMENTS" as the top level) -- the shared "pick a destination"
+// picker for both SAVE's folder field and NEW FOLDER's parent field, so
+// there's one folder-browsing UI in this file, not two.
+@Composable
+private fun FolderPickerColumn(
+    root: StatementNode,
+    selectedId: String,
+    primaryColor: Color,
+    modifier: Modifier = Modifier,
+    onSelect: (String) -> Unit
+) {
+    val folders = remember(root) { StatementRepository.listFolders(root) }
+
+    LazyColumn(modifier = modifier.fillMaxWidth()) {
+        items(folders, key = { it.first.id }) { (folder, depth) ->
+            val isSelected = folder.id == selectedId
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = (depth * 16).dp, bottom = 4.dp)
+                    .heightIn(min = 40.dp)
+                    .border(
+                        1.dp,
+                        if (isSelected) primaryColor else Color.DarkGray,
+                        CutCornerShape(6.dp)
+                    )
+                    .background(
+                        if (isSelected) primaryColor.copy(alpha = 0.12f) else Color.Transparent,
+                        CutCornerShape(6.dp)
+                    )
+                    .clickable { onSelect(folder.id) }
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = folder.label.uppercase(),
+                    color = if (isSelected) primaryColor else Color.Gray,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                )
+            }
         }
     }
 }
 
 // Resolves a statement's raw template against a specific Shared Root
-// Variable grouping (SavedStatement.variableContext) plus whatever's
+// Variable grouping (StatementNode.variableContext) plus whatever's
 // currently active in any referenced Target Computer categories -- the
 // exact same TemplateEngine.resolve() call Matrix/Quick Actions phrases go
 // through (CommandRepository.getResolvedPhrase/resolveQuickAction), just
