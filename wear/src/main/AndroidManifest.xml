@@ -44,6 +44,7 @@
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/training_fire_ready" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/training_reset_listen" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/target_list" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/computer_categories" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/audio/relay_chunk" />
                 <!-- Keep existing ones -->
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/besu/config_push" />

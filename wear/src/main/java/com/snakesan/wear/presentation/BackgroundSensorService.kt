@@ -188,8 +188,21 @@ class BackgroundSensorService : Service(), SensorEventListener {
                 val cmdRaw = intent.getStringExtra("CMD") ?: ""
 
 
+                // 0. Handle Target Computer Pick (From Overseer's new module)
+                // Distinct from SET_TARGET below (the legacy 8-slot system) --
+                // this just forwards the same "categoryId|nodeId" payload
+                // ACK Wear's own ComputerTargetFlyout already sends via
+                // sendComputerPick, straight through to the phone's
+                // WearListenerService (/sys/req_computer_pick).
+                if (cmdRaw.startsWith("SET_COMPUTER_PICK:")) {
+                    val payload = cmdRaw.substringAfter(":")
+                    if (payload.split("|", limit = 2).size == 2) {
+                        sendToPhone("/sys/req_computer_pick", payload.toByteArray(Charsets.UTF_8))
+                        feedback(50)
+                    }
+                }
                 // 1. Handle Explicit Target Set (From Overlay List)
-                if (cmdRaw.startsWith("SET_TARGET:")) {
+                else if (cmdRaw.startsWith("SET_TARGET:")) {
                     try {
                         val index = cmdRaw.substringAfter(":").toInt()
 

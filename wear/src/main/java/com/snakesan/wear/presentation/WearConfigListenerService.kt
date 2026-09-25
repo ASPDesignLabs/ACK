@@ -124,6 +124,7 @@ class WearConfigListenerService : WearableListenerService() {
                     val rawData = String(messageEvent.data, Charsets.UTF_8)
                     ComputerCategoryCache.update(rawData)
                     prefs.edit().putString("cached_computer_categories", rawData).apply()
+                    relayComputerCategoriesToOverseer(this, rawData)
                 } catch (e: Exception) {
                     Log.e("ACK_WEAR", "Failed to sync computer categories", e)
                 }
@@ -158,14 +159,29 @@ class WearConfigListenerService : WearableListenerService() {
     private fun broadcastToOverseer(deckName: String, contextName: String, color: Int) {
         val intent = Intent("com.snakesan.overseer.UPDATE_STATUS")
         intent.setPackage("com.snakesan.overseer") // Explicitly target the Face
-        
+
         intent.putExtra("source_app", "ACK")
         intent.putExtra("active_deck", deckName.uppercase())
         intent.putExtra("active_context", contextName.uppercase())
-        
+
         // Overseer expects "deck_color" as an Int
-        intent.putExtra("deck_color", color) 
+        intent.putExtra("deck_color", color)
 
         sendBroadcast(intent)
     }
+}
+
+// Relays the raw Target Computer categories JSON (as received from the phone
+// at /sys/computer_categories, including each category's activeNodeId) on to
+// OVERSEER, mirroring the "ACK_LIST_SYNC" pattern used for the legacy flat
+// target list above. Called from both places that receive this message --
+// this service's manifest-declared onMessageReceived above, and MainActivity's
+// own live MessageClient listener -- since either can be the one that fires
+// depending on whether ACK Wear's UI is currently foregrounded.
+fun relayComputerCategoriesToOverseer(context: Context, rawJson: String) {
+    val intent = Intent("com.snakesan.overseer.SYNC_COMPUTER")
+    intent.setPackage("com.snakesan.overseer")
+    intent.putExtra("source_app", "ACK_COMPUTER_SYNC")
+    intent.putExtra("raw_categories", rawJson)
+    context.sendBroadcast(intent)
 }

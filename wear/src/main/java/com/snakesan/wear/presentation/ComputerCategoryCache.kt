@@ -22,7 +22,11 @@ data class SyncedComputerNode(
 data class SyncedComputerCategory(
     val id: String,
     val label: String,
-    val nodes: List<SyncedComputerNode>
+    val nodes: List<SyncedComputerNode>,
+    // Mirrors the phone's own ComputerCategory.activeNodeId (see
+    // watch/ComputerSyncModels.kt's copy of this DTO) -- lets a consumer show
+    // which entry is currently active without a separate round trip.
+    val activeNodeId: String? = null
 )
 
 // Watch-side cache of Target Computer categories, scoped to whatever the

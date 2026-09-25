@@ -30,5 +30,10 @@ data class SyncedComputerNode(
 data class SyncedComputerCategory(
     val id: String,
     val label: String,
-    val nodes: List<SyncedComputerNode>
+    val nodes: List<SyncedComputerNode>,
+    // Mirrors this category's own activeNodeId (computer/ComputerModels.kt) so a
+    // watch-side consumer (ACK Wear, and OVERSEER relayed through it) can show
+    // which entry is currently active without a separate round trip. Null/blank
+    // means no active pick, same meaning as the phone-side field.
+    val activeNodeId: String? = null
 )

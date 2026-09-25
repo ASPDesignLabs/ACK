@@ -813,6 +813,8 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
             "/sys/computer_categories" -> {
                 val raw = String(e.data, Charsets.UTF_8)
                 ComputerCategoryCache.update(raw)
+                prefs.edit().putString("cached_computer_categories", raw).apply()
+                relayComputerCategoriesToOverseer(this, raw)
                 feedback(20)
             }
         }

@@ -98,7 +98,12 @@ object WatchSync {
                 val category = allCategories.find { it.id == categoryId } ?: return@mapNotNull null
                 val nodes = mutableListOf<SyncedComputerNode>()
                 flattenComputerNodes(category.root.children, parentId = "", into = nodes)
-                SyncedComputerCategory(id = category.id, label = category.label, nodes = nodes)
+                SyncedComputerCategory(
+                    id = category.id,
+                    label = category.label,
+                    nodes = nodes,
+                    activeNodeId = category.activeNodeId
+                )
             }
             json.encodeToString(synced)
         }
