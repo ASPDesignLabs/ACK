@@ -817,6 +817,11 @@ class MainActivity : FragmentActivity(), MessageClient.OnMessageReceivedListener
                 relayComputerCategoriesToOverseer(this, raw)
                 feedback(20)
             }
+
+            "/sys/computer_categories_all" -> {
+                val raw = String(e.data, Charsets.UTF_8)
+                relayAllComputerCategoriesToOverseer(this, raw)
+            }
         }
     }
 }

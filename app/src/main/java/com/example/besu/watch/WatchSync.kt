@@ -111,6 +111,32 @@ object WatchSync {
         sendMessage(context, "/sys/computer_categories", payload.toByteArray(Charsets.UTF_8), "TARGET COMPUTER SYNC")
     }
 
+    // --- NEW: UNSCOPED TARGET COMPUTER SYNC (ALL CATEGORIES) ---
+    // Sends every Target Computer category on the phone, regardless of which
+    // deck (if any) references it -- unlike sendComputerCategoriesForDeck,
+    // this ignores deck scoping entirely. Feeds OVERSEER's "ALL TARGETS"
+    // browser (relayed onward by ACK Wear); ACK Wear's own UI has no use for
+    // this and doesn't cache it locally, only relays it through. Sent
+    // alongside the deck-scoped resync on every pick/clear (see
+    // ComputerRepository.setActiveEntry/clearActiveEntry) so it's never
+    // staler than any pick made anywhere.
+    fun sendAllComputerCategories(context: Context) {
+        val allCategories = ComputerRepository.getCategories(context)
+        val synced = allCategories.map { category ->
+            val nodes = mutableListOf<SyncedComputerNode>()
+            flattenComputerNodes(category.root.children, parentId = "", into = nodes)
+            SyncedComputerCategory(
+                id = category.id,
+                label = category.label,
+                nodes = nodes,
+                activeNodeId = category.activeNodeId
+            )
+        }
+
+        val payload = json.encodeToString(synced)
+        sendMessage(context, "/sys/computer_categories_all", payload.toByteArray(Charsets.UTF_8), "ALL TARGET COMPUTER SYNC")
+    }
+
     private fun flattenComputerNodes(
         children: List<ComputerNode>,
         parentId: String,

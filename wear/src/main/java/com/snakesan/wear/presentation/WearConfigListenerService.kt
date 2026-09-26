@@ -130,6 +130,19 @@ class WearConfigListenerService : WearableListenerService() {
                 }
             }
 
+            // 4c. UNSCOPED TARGET COMPUTER SYNC (every category on the phone,
+            // not just the ones tagged to the active deck). ACK Wear's own UI
+            // has no use for this -- it's relayed straight through to
+            // OVERSEER's ALL TARGETS browser and never cached here.
+            "/sys/computer_categories_all" -> {
+                try {
+                    val rawData = String(messageEvent.data, Charsets.UTF_8)
+                    relayAllComputerCategoriesToOverseer(this, rawData)
+                } catch (e: Exception) {
+                    Log.e("ACK_WEAR", "Failed to relay all computer categories", e)
+                }
+            }
+
             // 5. RELAYED PHRASE AUDIO (a fully-processed recording or TTS
             // render, sent when PROTOCOL's OUTPUT DEVICE is set to ACK
             // WATCH). One chunk per message -- AudioRelay buffers by
@@ -182,6 +195,17 @@ fun relayComputerCategoriesToOverseer(context: Context, rawJson: String) {
     val intent = Intent("com.snakesan.overseer.SYNC_COMPUTER")
     intent.setPackage("com.snakesan.overseer")
     intent.putExtra("source_app", "ACK_COMPUTER_SYNC")
+    intent.putExtra("raw_categories", rawJson)
+    context.sendBroadcast(intent)
+}
+
+// Same relay, for the unscoped "every category" payload -- see
+// /sys/computer_categories_all above and WatchSync.sendAllComputerCategories
+// on the phone side.
+fun relayAllComputerCategoriesToOverseer(context: Context, rawJson: String) {
+    val intent = Intent("com.snakesan.overseer.SYNC_COMPUTER_ALL")
+    intent.setPackage("com.snakesan.overseer")
+    intent.putExtra("source_app", "ACK_COMPUTER_SYNC_ALL")
     intent.putExtra("raw_categories", rawJson)
     context.sendBroadcast(intent)
 }

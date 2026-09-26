@@ -224,6 +224,9 @@ object ComputerRepository {
         // three call sites (phone UI, or the watch's own /sys/req_computer_pick
         // handler) triggered the change -- see WatchSync.sendComputerCategoriesForDeck.
         WatchSync.sendComputerCategoriesForDeck(context, CommandRepository.getActiveDeckId(context))
+        // Also keep the unscoped ALL TARGETS snapshot (OVERSEER) no staler
+        // than this pick -- see WatchSync.sendAllComputerCategories.
+        WatchSync.sendAllComputerCategories(context)
     }
 
     fun clearActiveEntry(context: Context, categoryId: String) {
@@ -233,6 +236,7 @@ object ComputerRepository {
         // a change to activeNodeId as a pick is, including when this runs via
         // consumeIfSingleUse below.
         WatchSync.sendComputerCategoriesForDeck(context, CommandRepository.getActiveDeckId(context))
+        WatchSync.sendAllComputerCategories(context)
     }
 
     fun getActiveEntry(context: Context, categoryId: String): ComputerNode? {
