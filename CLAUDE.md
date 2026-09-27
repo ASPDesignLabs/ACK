@@ -550,3 +550,138 @@ already been tried and rejected once.
 | `MainActivity.kt` | Top-level `restartApp(context)`, shared by every import/restore flow that can create a new deck |
 | `settings/SettingsView.kt` | FULL RESTORE FROM JSON + IMPORT MATRIX AS NEW DECK UI, both using the toast → delayed-flag → `restartApp` pattern |
 | `decks/GifDeck.kt` | Per-deck BACKUP dropdown (EXPORT/IMPORT DECK (.ZIP)) UI, same restart pattern |
+
+## The CUSTOM TRAINED VOICE system — deep analysis
+
+Lets a user speak arbitrary typed text in their own cloned voice, trained
+*outside* the app (a Piper/VITS voice, fine-tuned on a PC from the user's
+own recordings) and then run entirely on-device inside ACK — no network
+dependency, matching the app's own "must always be able to communicate"
+requirement. Only one such voice can be installed at a time.
+
+### Engine: sherpa-onnx, not a bespoke ONNX/espeak-ng integration
+
+The actual neural inference + phonemization runs through
+[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (k2-fsa), which
+bundles ONNX Runtime and espeak-ng together with a Kotlin API
+(`com.k2fsa.sherpa.onnx.OfflineTts`) and native Piper/VITS support. This
+was chosen specifically because hand-rolling an espeak-ng Android JNI
+build plus onnxruntime-android wiring would have been a much larger,
+riskier undertaking — sherpa-onnx already solves exactly that. It is
+**not published to Maven Central**: the `.aar` is downloaded manually and
+vendored in `app/libs/` (see that folder's `README.md`), and is
+deliberately **excluded from git** (`.gitignore`) since it's a large
+third-party binary, not source the team wrote. Same treatment for the
+shared `espeak-ng-data` phonemization asset (`app/src/main/assets/
+espeak-ng-data/`, own `README.md`, also gitignored) — it's identical
+across every Piper voice regardless of who trained it, so it ships once
+as a bundled asset rather than being re-imported per voice.
+
+**Critical, easy-to-miss fact**: sherpa-onnx's VITS/Piper loader
+(`OfflineTtsVitsModelConfig`) wants a plain-text `tokens.txt` (`<symbol>
+<id>` per line), **not** Piper's own `.onnx.json` training config
+directly. `PiperVoiceEngine.generateTokensFile` derives `tokens.txt` from
+the installed config's `phoneme_id_map` every time the engine (re)loads,
+so it's always regenerated fresh from whatever voice is currently
+installed rather than being a one-time conversion step. This conversion
+was reverse-engineered from public sherpa-onnx examples (this repo's own
+docs site, k2-fsa.github.io, was unreachable from the environment this
+was built in) — worth a first-run sanity check on real hardware.
+
+### Storage — `output/CustomVoiceRepository.kt`
+
+Two fixed files, `context.filesDir/custom_voice/model.onnx` and
+`.../model.onnx.json` (plus a generated `tokens.txt` sitting alongside,
+owned by `PiperVoiceEngine`, not this repository). Deliberately **no
+separate "installed" flag** — `hasCustomVoice()` just checks both files
+exist on disk, so metadata and files can never disagree, unlike a
+prefs-flag-plus-files design. No id/list at all, since only one voice is
+ever supported — this is simpler than `VoiceRecordingRepository`'s
+multi-entry JSON-list pattern on purpose.
+
+Validates on import: exactly 2 files selected, identified by filename
+suffix (`.onnx` / `.onnx.json` — Android's SAF gives these no reliable
+MIME type, so this mirrors `GifRepository.importGif`'s tolerance for a
+null MIME), size ceilings as a corruption/hostile-file firewall (not a
+practical constraint — 300MB comfortably covers even a "high" quality
+Piper model), and a light content check on the config
+(`looksLikePiperConfig` — must parse as JSON and contain both
+`phoneme_id_map` and `audio` keys, which every real Piper config has).
+`installFromValidatedFiles` is the shared, independently-re-validating
+landing point for **both** the direct-file-picker import path and
+`CustomVoiceBackupManager`'s zip-restore path — same defense-in-depth
+reasoning as `GifRepository.restoreEntry`.
+
+### Synthesis engine — `output/PiperVoiceEngine.kt`
+
+A singleton wrapping one lazily-loaded `OfflineTts` instance (native model
+load is expensive — tens of MB, not instant — so it happens once per
+process, not per utterance). `generate(context, text)` is **synchronous
+and blocking**, returning `Pair<ShortArray, Int>?` (PCM + sample rate) or
+`null` on any failure — deliberately simple compared to system TTS's
+async callback dance, since there's no `UtteranceProgressListener`
+machinery to hook into for a different engine. `release()` frees the
+native session (called from `OutputService.onDestroy()`); a later
+`generate()` call rebuilds it lazily. `requestStop()` is a stop-flag
+checked right after native generation completes, so `OutputService`'s
+phone-shake `KILL_OUTPUT` handler can abort an in-flight custom-voice
+utterance the same way it already clears queued/active system-TTS work.
+
+### Integration seam — `OutputService.kt`
+
+The DSP chain (`applyAudioEffects`) and playback (`playPcm`, with its
+kill-switch/audio-focus/routing logic) already operate on raw
+`ShortArray` PCM + sample rate, completely decoupled from *how* that PCM
+was produced — this is what made the whole feature a relatively clean
+addition rather than a parallel pipeline. `processSpeech()` branches on
+`VoiceProfile.useCustomVoice` right after computing `finalText`: true
+spins a `Thread { ... }` (matching the existing `playRecording`/
+`previewRecording` off-main-thread pattern — this class has no coroutine
+scope) that calls `PiperVoiceEngine.generate()`, then feeds the result
+through `applyAudioEffects()` with `modFreq=modDepth=crush=0` (gain-only,
+**treated like a recording, not like robotic-overlay-eligible system
+TTS** — a cloned voice shouldn't get the robotic/crush character effects)
+and the same `playPcm()` everyone else uses. **On synthesis failure, it
+falls back to system TTS for that one utterance** rather than going
+silent (`speakWithSystemTts`, the extracted original synthesis body) —
+non-negotiable for an AAC app. `false` (the default, so old saved
+`VoiceProfile`s behave exactly as before) is untouched, unchanged
+`speakWithSystemTts` path.
+
+### Backup — `output/CustomVoiceBackupManager.kt`
+
+A standalone `.zip` export/import (`model.onnx` + `model.onnx.json`, no
+manifest needed since there's only ever one voice) — same reasoning as
+`GifBackupManager`: a trained voice model is a real binary, tens of MB,
+which has no business inside `TransferManager`'s JSON blob. Deliberately
+separate from EXPORT .JSON / FULL RESTORE FROM JSON, exactly as GIF
+backups are separate from it today.
+
+### UI — `settings/AudioView.kt`
+
+"CUSTOM VOICE" section (status line + IMPORT/RE-IMPORT button, plus
+EXPORT/IMPORT VOICE BACKUP once one exists) sits between MANAGE PROFILES
+and the DSP chain editor button. Import uses
+`ActivityResultContracts.OpenMultipleDocuments()` (both files picked in
+one go) and reuses the established toast → `pending*Restart` flag →
+`LaunchedEffect { delay(1500); restartApp(context) }` pattern from GIF
+deck import, since a newly-imported voice is exactly the kind of state
+`OutputService`'s `PiperVoiceEngine` singleton needs a clean process
+restart to pick up. Inside the DSP chain editor, a "USE MY VOICE" toggle
+sits next to "BASE VOICE" (disabled with a "NO VOICE IMPORTED" hint until
+one exists); turning it on hides the ROBOTIC OVERLAY and BITCRUSH
+sections entirely, since this engine ignores them by design (PITCH/SPEED
+are left visible but are also inert for this engine — harmless to leave
+alone rather than worth the complexity of hiding them too).
+
+### File map
+
+| File | Owns |
+|---|---|
+| `output/CustomVoiceRepository.kt` | File storage + validation for the one installed voice |
+| `output/PiperVoiceEngine.kt` | sherpa-onnx `OfflineTts` wrapper, `tokens.txt` generation, `generate()`/`release()`/`requestStop()` |
+| `output/CustomVoiceBackupManager.kt` | Standalone `.zip` export/import, mirrors `GifBackupManager.kt` |
+| `output/OutputService.kt` | `processSpeech()`'s `useCustomVoice` branch, `speakWithSystemTts` (extracted fallback path), kill-switch hook, `onDestroy` cleanup |
+| `settings/AudioView.kt` | Import/backup UI, "USE MY VOICE" DSP chain editor toggle |
+| `data/VoiceProfile.kt` | `useCustomVoice: Boolean = false` |
+| `app/libs/README.md`, `app/src/main/assets/espeak-ng-data/README.md` | Manual one-time download steps for the vendored, gitignored sherpa-onnx `.aar` and shared phonemization data |
