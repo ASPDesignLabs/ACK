@@ -577,16 +577,37 @@ espeak-ng-data/`, own `README.md`, also gitignored) — it's identical
 across every Piper voice regardless of who trained it, so it ships once
 as a bundled asset rather than being re-imported per voice.
 
-**Critical, easy-to-miss fact**: sherpa-onnx's VITS/Piper loader
+**Critical, easy-to-miss fact #1**: sherpa-onnx's VITS/Piper loader
 (`OfflineTtsVitsModelConfig`) wants a plain-text `tokens.txt` (`<symbol>
 <id>` per line), **not** Piper's own `.onnx.json` training config
 directly. `PiperVoiceEngine.generateTokensFile` derives `tokens.txt` from
-the installed config's `phoneme_id_map` every time the engine (re)loads,
-so it's always regenerated fresh from whatever voice is currently
-installed rather than being a one-time conversion step. This conversion
-was reverse-engineered from public sherpa-onnx examples (this repo's own
-docs site, k2-fsa.github.io, was unreachable from the environment this
-was built in) — worth a first-run sanity check on real hardware.
+the installed config's `phoneme_id_map` every time the engine (re)loads
+(skipping the literal `"\n"` symbol key, matching sherpa-onnx's own
+official conversion script's one quirk — see fact #2), so it's always
+regenerated fresh from whatever voice is currently installed rather than
+being a one-time conversion step.
+
+**Critical, easy-to-miss fact #2 — the .onnx file itself needs patching,
+and this cannot be done on-device**: sherpa-onnx's VITS loader
+(`sherpa-onnx/csrc/offline-tts-vits-model.cc`) reads several fields —
+`sample_rate`, `n_speakers`, `language`, `comment` — as **required ONNX
+model metadata (`metadata_props`), with no fallback default**. `comment`
+must contain the substring `"piper"` for the model to even be treated as
+a Piper-style model at inference time. piper1-gpl's own `export_onnx.py`
+does not embed any of this — a voice exported straight from the training
+pipeline in this repo's earlier session and imported as-is **crashes the
+app** on first synthesis attempt, logging `'sample_rate' does not exist
+in the metadata` right before the process dies. This has nothing to do
+with ACK's own code; it's a real gap between what piper1-gpl exports and
+what sherpa-onnx's loader requires, and there's no way to patch an
+already-exported `.onnx`'s embedded metadata from inside the Android app
+— it has to happen before import, on the machine that trained the voice.
+Fix: `tools/patch_voice_for_sherpa_onnx.py` (mirrors sherpa-onnx's own
+official `scripts/piper/add_meta_data.py`) — run it once against the raw
+trained `.onnx`, then (re-)import the patched file into ACK. **Any future
+change to piper1-gpl's export script, or a switch to a different Piper
+training toolkit, should be re-checked against this same requirement**
+rather than assumed fixed.
 
 ### Storage — `output/CustomVoiceRepository.kt`
 

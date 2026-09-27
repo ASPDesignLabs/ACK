@@ -83,6 +83,11 @@ object PiperVoiceEngine {
 
             tokensFile(context).bufferedWriter().use { writer ->
                 phonemeMap.entries
+                    // Matches sherpa-onnx's own official conversion script
+                    // (scripts/piper/add_meta_data.py) exactly, including
+                    // its one quirk: the literal newline symbol is skipped
+                    // rather than written as a blank/malformed line.
+                    .filterNot { it.key == "\n" }
                     .sortedBy { it.value.jsonArray.first().jsonPrimitive.int }
                     .forEach { (symbol, ids) ->
                         val id = ids.jsonArray.first().jsonPrimitive.int
