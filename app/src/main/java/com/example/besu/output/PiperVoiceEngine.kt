@@ -83,11 +83,27 @@ object PiperVoiceEngine {
 
             tokensFile(context).bufferedWriter().use { writer ->
                 phonemeMap.entries
-                    // Matches sherpa-onnx's own official conversion script
-                    // (scripts/piper/add_meta_data.py) exactly, including
-                    // its one quirk: the literal newline symbol is skipped
-                    // rather than written as a blank/malformed line.
-                    .filterNot { it.key == "\n" }
+                    .filterNot {
+                        // The literal newline symbol would corrupt tokens.txt's
+                        // line-based format if written -- matches sherpa-onnx's
+                        // own official conversion script (scripts/piper/
+                        // add_meta_data.py), which skips it for the same reason.
+                        it.key == "\n" ||
+                            // sherpa-onnx's tokenizer (piper-phonemize-lexicon.cc:
+                            // ReadTokens) maps a single Unicode codepoint to an id
+                            // -- it has no way to represent a multi-character
+                            // symbol at all. piper1-gpl can optionally merge
+                            // diphthongs (e.g. "eɪ") into one compound vocabulary
+                            // entry via --data.vowel_clusters, which this app's
+                            // training command never passes, so any such entries
+                            // reflect the base checkpoint's fixed vocabulary, not
+                            // something this voice's own fine-tuning actually
+                            // relied on -- safe to skip rather than a lossy
+                            // workaround. (If a future voice ever IS trained with
+                            // vowel_clusters set, this would need real handling,
+                            // not just skipping.)
+                            it.key.codePointCount(0, it.key.length) != 1
+                    }
                     .sortedBy { it.value.jsonArray.first().jsonPrimitive.int }
                     .forEach { (symbol, ids) ->
                         val id = ids.jsonArray.first().jsonPrimitive.int

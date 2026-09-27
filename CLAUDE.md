@@ -581,11 +581,31 @@ as a bundled asset rather than being re-imported per voice.
 (`OfflineTtsVitsModelConfig`) wants a plain-text `tokens.txt` (`<symbol>
 <id>` per line), **not** Piper's own `.onnx.json` training config
 directly. `PiperVoiceEngine.generateTokensFile` derives `tokens.txt` from
-the installed config's `phoneme_id_map` every time the engine (re)loads
-(skipping the literal `"\n"` symbol key, matching sherpa-onnx's own
-official conversion script's one quirk — see fact #2), so it's always
-regenerated fresh from whatever voice is currently installed rather than
-being a one-time conversion step.
+the installed config's `phoneme_id_map` every time the engine (re)loads,
+so it's always regenerated fresh from whatever voice is currently
+installed rather than being a one-time conversion step. Two entries get
+filtered out while generating it, both required, neither optional:
+- The literal `"\n"` symbol key — writing it would embed a real newline
+  inside a `tokens.txt` line, corrupting the line-based file format.
+  Matches sherpa-onnx's own official conversion script's one quirk
+  (`scripts/piper/add_meta_data.py`).
+- **Any symbol that isn't exactly one Unicode codepoint**
+  (`key.codePointCount(0, key.length) != 1`). sherpa-onnx's tokenizer
+  (`sherpa-onnx/csrc/piper-phonemize-lexicon.cc:ReadTokens`) maps a
+  single codepoint to an id — it has **no representation at all** for a
+  multi-character symbol; this isn't a formatting quirk to work around,
+  it's a hard structural limit of its lookup table. piper1-gpl can
+  optionally merge diphthongs (e.g. `"eɪ"`, `"aɪ"`) into single compound
+  vocabulary entries via `--data.vowel_clusters` (default `None`/off).
+  This app's training command never passes that flag, so any such
+  entries in a voice's `phoneme_id_map` reflect the *base checkpoint's*
+  fixed vocabulary size, not something this voice's own fine-tuning
+  actually learned to rely on — skipping them is correct, not a lossy
+  compromise, **for a voice trained the way this app's docs instruct**.
+  **If a future voice is ever trained with `vowel_clusters` actually
+  set, this stops being safe** — skipping would silently mispronounce
+  every word containing one of those diphthongs, and would need real
+  on-device merge logic instead of a skip.
 
 **Critical, easy-to-miss fact #2 — the .onnx file itself needs patching,
 and this cannot be done on-device**: sherpa-onnx's VITS loader
