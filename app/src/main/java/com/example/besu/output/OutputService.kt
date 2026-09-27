@@ -87,9 +87,15 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     private var customVoices: List<VoiceProfile> = emptyList()
 
     private val FACTORY_PRESETS = mapOf(
-        "CYBER" to VoiceProfile("CYBER", "CYBER", 1.2f, 1.2f, 50f, 0.6f, 0.3f), 
-        "MECH" to VoiceProfile("MECH", "MECH", 0.7f, 0.85f, 30f, 0.85f, 0.4f), 
-        "ORGANIC" to VoiceProfile("ORGANIC", "ORGANIC", 1.0f, 1.0f, 0f, 0f, 0f) 
+        "CYBER" to VoiceProfile("CYBER", "CYBER", 1.2f, 1.2f, 50f, 0.6f, 0.3f),
+        "MECH" to VoiceProfile("MECH", "MECH", 0.7f, 0.85f, 30f, 0.85f, 0.4f),
+        "ORGANIC" to VoiceProfile("ORGANIC", "ORGANIC", 1.0f, 1.0f, 0f, 0f, 0f),
+        // A fourth fixed, non-editable preset (same "select, don't edit"
+        // treatment as the other three) rather than something the user has
+        // to build themselves via a custom slot's DSP editor toggle -- the
+        // whole point is that importing a voice should make it immediately
+        // selectable as output, not just theoretically assignable.
+        "MY_VOICE" to VoiceProfile("MY_VOICE", "MY VOICE", 1.0f, 1.0f, 0f, 0f, 0f, useCustomVoice = true)
     )
 
     private data class EmergencyOptions(

@@ -667,12 +667,32 @@ one go) and reuses the established toast → `pending*Restart` flag →
 `LaunchedEffect { delay(1500); restartApp(context) }` pattern from GIF
 deck import, since a newly-imported voice is exactly the kind of state
 `OutputService`'s `PiperVoiceEngine` singleton needs a clean process
-restart to pick up. Inside the DSP chain editor, a "USE MY VOICE" toggle
-sits next to "BASE VOICE" (disabled with a "NO VOICE IMPORTED" hint until
-one exists); turning it on hides the ROBOTIC OVERLAY and BITCRUSH
-sections entirely, since this engine ignores them by design (PITCH/SPEED
-are left visible but are also inert for this engine — harmless to leave
-alone rather than worth the complexity of hiding them too).
+restart to pick up.
+
+**Two ways to actually put the voice on output, not one:**
+1. **A fourth fixed preset, `"MY VOICE"`** — a real entry in
+   `OutputService`'s `FACTORY_PRESETS` map (id `"MY_VOICE"`,
+   `useCustomVoice = true`), given the exact same "select, don't edit"
+   treatment as CYBER/MECH/ORGANIC in the main VOICE PROFILE chip row.
+   This is the primary, obvious path: import a voice, tap the chip, done
+   — no detour through a custom slot's DSP editor. The chip only renders
+   when `hasCustomVoice(context)` is true (same "hide rather than show
+   disabled" convention the "+ NEW" chip already uses), and the DSP chain
+   editor's locked-placeholder box shows a voice-specific message
+   ("THIS ENGINE HAS NO DSP CONTROLS OF ITS OWN") when `userProfile ==
+   "MY_VOICE"` rather than the generic factory-preset one.
+2. **A "USE MY VOICE" toggle inside any custom slot's DSP chain editor**,
+   next to "BASE VOICE" (disabled with a "NO VOICE IMPORTED" hint until
+   one exists) — for a user who wants a distinctly *named/labeled* slot
+   using the trained voice rather than the fixed "MY VOICE" preset.
+   Turning it on hides the ROBOTIC OVERLAY and BITCRUSH sections
+   entirely, since this engine ignores them by design (PITCH/SPEED are
+   left visible but are also inert for this engine — harmless to leave
+   alone rather than worth the complexity of hiding them too).
+
+Both paths set the same `VoiceProfile.useCustomVoice = true` flag
+`OutputService.processSpeech()` branches on — there is no separate "which
+mechanism did you use" state to keep in sync.
 
 ### File map
 

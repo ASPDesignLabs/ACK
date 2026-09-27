@@ -284,6 +284,15 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     syncDsp()
                 }
             }
+            // Only appears once a voice is actually imported -- same "hide
+            // rather than show disabled" convention as the "+ NEW" chip
+            // below, which only appears while under the profile cap.
+            if (hasCustomVoice) {
+                AudioProfileChip("MY VOICE", userProfile == "MY_VOICE", primaryColor) {
+                    userProfile = "MY_VOICE"
+                    syncDsp()
+                }
+            }
             for (i in customVoices.indices) {
                 val profile = customVoices[i]
                 AudioProfileChip(
@@ -367,7 +376,17 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             }
         } else {
             Box(modifier = Modifier.fillMaxWidth().border(1.dp, Color.Gray, CutCornerShape(12.dp)).padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("FACTORY PRESET LOCKED\nSELECT OR CREATE A CUSTOM SLOT TO EDIT", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, textAlign = TextAlign.Center)
+                Text(
+                    if (userProfile == "MY_VOICE") {
+                        "MY VOICE ACTIVE\nTHIS ENGINE HAS NO DSP CONTROLS OF ITS OWN"
+                    } else {
+                        "FACTORY PRESET LOCKED\nSELECT OR CREATE A CUSTOM SLOT TO EDIT"
+                    },
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
