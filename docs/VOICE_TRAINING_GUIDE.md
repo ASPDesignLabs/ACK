@@ -78,6 +78,47 @@ one at the right format (22050 Hz mono WAV) automatically.
   a folder of `.wav` files — copy these somewhere under your training
   workspace, e.g. `~/piper/my-dataset/`.
 
+### Recording from your phone instead (avoiding Windows Bluetooth headset quality)
+
+Windows force-switches a Bluetooth headset from A2DP (clean, output-only)
+down to HFP/mSBC (narrowband, bidirectional) the instant any app touches
+the mic, to allow a return channel — this tanks quality on both ends
+(recording *and* playback), independent of which recording app is used,
+and there's no real fix for it on the Windows side. A phone's own
+built-in mic sidesteps the problem entirely since there's no Bluetooth
+codec switch involved at all.
+
+`piper-recording-studio` is just a local web server, so you can run it
+exactly as above but reach it from your phone's browser over Wi-Fi —
+recordings still land in the same `output/` folder on your PC, no
+separate transfer step:
+
+1. One-time: since this runs inside WSL2, which has its own virtual
+   network by default (invisible to other devices on your LAN), enable
+   WSL2's **mirrored networking mode** (Windows 11 22H2+, a stable
+   feature, not experimental). Create/edit `%UserProfile%\.wslconfig` on
+   the Windows side:
+   ```
+   [wsl2]
+   networkingMode=mirrored
+   ```
+   Then, in PowerShell: `wsl --shutdown`, then reopen your WSL terminal.
+   (If your build reports mirrored mode as unsupported, the fallback is
+   a manual `netsh interface portproxy` rule forwarding a port from
+   Windows to WSL's internal IP — more fragile since that IP can change
+   across reboots, but works everywhere.)
+2. Start the server bound to all interfaces, not just localhost:
+   ```bash
+   python3 -m piper_recording_studio --host 0.0.0.0
+   ```
+   Allow it through the Windows Defender Firewall prompt if one appears.
+3. Find your PC's LAN IP (`ipconfig` in PowerShell, the Wi-Fi adapter's
+   IPv4 address), and visit `http://<that-ip>:8000` in your phone's
+   browser.
+4. Record using your **phone's built-in mic** — not Bluetooth headphones
+   connected to the phone, which would just move the same class of
+   problem rather than remove it.
+
 ---
 
 ## 3. Get a base checkpoint
