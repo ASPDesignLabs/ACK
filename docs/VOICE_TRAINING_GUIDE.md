@@ -71,12 +71,34 @@ Use [`piper-recording-studio`](https://github.com/rhasspy/piper-recording-studio
 — a local web app that prompts you with sentences and records/labels each
 one at the right format (22050 Hz mono WAV) automatically.
 
+**This is a completely separate tool from `piper1-gpl`** — its own repo,
+its own venv, its own dependencies (`quart`, `hypercorn`, ...). It does
+not live inside `piper1-gpl`'s environment, and trying to run it from
+there fails with `No module named piper_recording_studio`. Give it its
+own directory, e.g. `~/piper-recording-studio`, entirely separate from
+`~/piper1-gpl`:
+
+```bash
+cd ~
+git clone https://github.com/rhasspy/piper-recording-studio.git
+cd piper-recording-studio
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+
+python3 -m piper_recording_studio
+```
+Visit `http://localhost:8000` (or see the phone-recording section below
+to reach it from your phone instead).
+
 - Aim for more than a token sample — a few hundred sentences (an hour+)
   gets noticeably closer to "actually sounds like you" than 10 minutes.
   Quiet room, consistent mic distance, no clipping.
 - It produces a `metadata.csv` (pipe-delimited: `filename.wav|Text.`) and
-  a folder of `.wav` files — copy these somewhere under your training
-  workspace, e.g. `~/piper/my-dataset/`.
+  a folder of `.wav` files, both under `output/<language>/` inside
+  `~/piper-recording-studio` — copy these somewhere under your training
+  workspace, e.g. `~/piper/my-dataset/`, before training (see §4).
 
 ### Recording from your phone instead (avoiding Windows Bluetooth headset quality)
 
@@ -107,8 +129,12 @@ separate transfer step:
    a manual `netsh interface portproxy` rule forwarding a port from
    Windows to WSL's internal IP — more fragile since that IP can change
    across reboots, but works everywhere.)
-2. Start the server bound to all interfaces, not just localhost:
+2. From `~/piper-recording-studio` (its own venv active — **not**
+   `~/piper1-gpl`, a separate environment entirely), start the server
+   bound to all interfaces, not just localhost:
    ```bash
+   cd ~/piper-recording-studio
+   source .venv/bin/activate
    python3 -m piper_recording_studio --host 0.0.0.0
    ```
    Allow it through the Windows Defender Firewall prompt if one appears.
