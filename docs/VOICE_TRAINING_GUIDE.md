@@ -155,34 +155,66 @@ on an **insecure origin**: plain HTTP to anything other than
 was always going to hit this wall once you got the phone actually
 talking to the server.
 
-The standard fix (this is Google's own documented approach for testing
-local dev servers on a real Android device, not a workaround) is to
-make Chrome treat the connection as `localhost` via USB port
-forwarding, using Chrome's own remote-debugging tooling:
+**Fix used here: a locally-trusted HTTPS certificate via `mkcert`**,
+fully wireless, one-time setup. (An alternative exists — USB port
+forwarding through Chrome's remote-debugging tools, tunneling the
+phone's `localhost` to the PC's — if you'd rather not touch
+`piper-recording-studio`'s source; ask if you want that version
+instead. The steps below are the one actually in use.)
 
-1. On the phone: Settings → About Phone → tap "Build Number" seven
-   times to unlock Developer Options → enable **USB debugging** under
-   Developer Options.
-2. Plug the phone into the PC via USB. Accept the "Allow USB
-   debugging?" prompt on the phone.
-3. On the PC, in **desktop** Chrome, go to `chrome://inspect/#devices`.
-   Your phone should appear once Windows recognizes it (accept any
-   driver prompt Windows shows).
-4. Click **"Port forwarding..."** on that page, add a mapping: device
-   port `8000` → `localhost:8000`, and make sure port forwarding is
-   enabled (checkbox at the top of that dialog).
-5. On the **phone's** Chrome, visit `http://localhost:8000` — not the
-   LAN IP. It's now tunneled over USB to the PC's own `localhost:8000`,
-   which WSL2 already forwards into the server (confirmed working
-   earlier), and since the phone's browser sees the origin as literally
-   `localhost`, it's treated as secure and `getUserMedia` works.
+1. Install `mkcert` in WSL:
+   ```bash
+   sudo apt install libnss3-tools
+   curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
+   chmod +x mkcert-v*-linux-amd64
+   sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
+   mkcert -install
+   ```
+2. Generate a certificate covering your PC's LAN IP (adjust the IP if
+   it's changed since `ipconfig`):
+   ```bash
+   mkdir -p ~/piper-recording-studio/certs && cd ~/piper-recording-studio/certs
+   mkcert 192.168.1.2 localhost 127.0.0.1
+   ```
+   Produces `192.168.1.2+2.pem` (certificate) and
+   `192.168.1.2+2-key.pem` (private key) in that folder.
+3. **Trust mkcert's root CA on the phone, once.** `mkcert -CAROOT`
+   prints the folder containing `rootCA.pem` — get just that file onto
+   the phone (email it to yourself, a cloud-synced folder, whatever's
+   easiest for one small file — no need for any network setup for
+   this single transfer). Open it on the phone; Android prompts to
+   install it: Settings → Security (wording varies by device) →
+   **Install a certificate → CA certificate**.
 
-Trade-off: the phone needs to stay plugged into the PC via USB while
-recording this way — you lose the fully-wireless setup from the section
-above. If that's worse than the original Bluetooth headset problem for
-your setup, a fully wireless alternative exists (a locally-trusted
-HTTPS certificate via a tool like `mkcert`, installed once on the
-phone) — ask if you want that walked through instead.
+   Once installed, Android shows a persistent "Network may be
+   monitored" notification — expected and benign here, it's just
+   Android's standard warning for any manually-trusted CA regardless of
+   who issued it.
+4. **Patch `piper-recording-studio` to actually serve HTTPS** — it
+   doesn't expose this by default. Back up
+   `~/piper-recording-studio/piper_recording_studio/__main__.py` first,
+   then add two arguments right after the existing `--port` one:
+   ```python
+       parser.add_argument("--certfile", help="Path to TLS certificate file (enables HTTPS)")
+       parser.add_argument("--keyfile", help="Path to TLS private key file (enables HTTPS)")
+   ```
+   and, right before `asyncio.run(hypercorn.asyncio.serve(app, hyp_config))`, add:
+   ```python
+       if args.certfile and args.keyfile:
+           hyp_config.certfile = args.certfile
+           hyp_config.keyfile = args.keyfile
+   ```
+5. Run with HTTPS enabled:
+   ```bash
+   cd ~/piper-recording-studio
+   source .venv/bin/activate
+   python3 -m piper_recording_studio --host 0.0.0.0 \
+     --certfile certs/192.168.1.2+2.pem \
+     --keyfile certs/192.168.1.2+2-key.pem
+   ```
+6. From the phone, visit `https://192.168.1.2:8000` — **https**, same
+   IP and port as before. Should load with a valid padlock (the phone
+   trusts mkcert's CA now) and `getUserMedia` works, fully wireless.
 
 ### Splitting longer takes back into training-sized pieces
 
