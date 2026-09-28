@@ -145,6 +145,75 @@ separate transfer step:
    connected to the phone, which would just move the same class of
    problem rather than remove it.
 
+### "getUserMedia is not implemented" on the phone's browser
+
+This isn't a Chrome bug or something a different Android browser would
+avoid — every modern mobile browser refuses to expose microphone access
+at all (not just deny the permission prompt, the API itself is absent)
+on an **insecure origin**: plain HTTP to anything other than
+`localhost`. `http://<your-PC's-LAN-IP>:8000` is exactly that, so this
+was always going to hit this wall once you got the phone actually
+talking to the server.
+
+The standard fix (this is Google's own documented approach for testing
+local dev servers on a real Android device, not a workaround) is to
+make Chrome treat the connection as `localhost` via USB port
+forwarding, using Chrome's own remote-debugging tooling:
+
+1. On the phone: Settings → About Phone → tap "Build Number" seven
+   times to unlock Developer Options → enable **USB debugging** under
+   Developer Options.
+2. Plug the phone into the PC via USB. Accept the "Allow USB
+   debugging?" prompt on the phone.
+3. On the PC, in **desktop** Chrome, go to `chrome://inspect/#devices`.
+   Your phone should appear once Windows recognizes it (accept any
+   driver prompt Windows shows).
+4. Click **"Port forwarding..."** on that page, add a mapping: device
+   port `8000` → `localhost:8000`, and make sure port forwarding is
+   enabled (checkbox at the top of that dialog).
+5. On the **phone's** Chrome, visit `http://localhost:8000` — not the
+   LAN IP. It's now tunneled over USB to the PC's own `localhost:8000`,
+   which WSL2 already forwards into the server (confirmed working
+   earlier), and since the phone's browser sees the origin as literally
+   `localhost`, it's treated as secure and `getUserMedia` works.
+
+Trade-off: the phone needs to stay plugged into the PC via USB while
+recording this way — you lose the fully-wireless setup from the section
+above. If that's worse than the original Bluetooth headset problem for
+your setup, a fully wireless alternative exists (a locally-trusted
+HTTPS certificate via a tool like `mkcert`, installed once on the
+phone) — ask if you want that walked through instead.
+
+### Splitting longer takes back into training-sized pieces
+
+If you're recording the longer, paragraph-style prompts (multiple
+sentences per take, read in one comfortable pass rather than one
+sentence at a time), don't feed the resulting long audio files to the
+trainer as single utterances — see `tools/split_long_takes.py`.
+Longer recordings are great for your hands, but VITS training's
+memory use scales roughly with the *product* of text length and audio
+length per utterance, not the sum, so a handful of 30-second takes
+mixed into training at the usual batch size can risk an out-of-memory
+crash on an 8GB card. The script splits each long take back into
+individual sentence-level (wav, text) pairs using silence detection
+between sentences, so you get both: comfortable long reads, and
+short, VRAM-safe training examples.
+
+```bash
+pip install pydub   # requires ffmpeg on PATH, per §6's export step
+
+python3 /path/to/ACK/tools/split_long_takes.py \
+  --input-dir ~/piper-recording-studio/output/en-US \
+  --output-dir ~/piper/my-dataset-split
+```
+Point `--data.audio_dir` at `~/piper/my-dataset-split/wav` and
+`--data.csv_path` at `~/piper/my-dataset-split/metadata.csv` for
+training. Anything the silence detector couldn't confidently split
+(sentence count didn't match detected pause count) lands in
+`needs_review/` instead of being silently mismatched — see the
+script's `--dry-run` flag and `--silence-thresh`/`--min-silence-len`
+options if a lot of takes end up there on the first pass.
+
 ---
 
 ## 3. Get a base checkpoint
