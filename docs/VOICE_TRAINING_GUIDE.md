@@ -311,6 +311,23 @@ progress and restart from the base voice every time:
 ```
 (use the highest `version_N` you have).
 
+### Switching to a different/bigger dataset partway through
+
+Resuming with a different `--data.csv_path`/`--data.audio_dir` than a
+previous run (e.g. moving from your original recordings to a
+newly-split batch from `split_long_takes.py`) is a normal, supported
+thing to do — the checkpoint is just model weights, and it doesn't
+care that the data changed between runs.
+
+**Use a fresh `--data.cache_dir` whenever the dataset changes.** That
+folder holds preprocessed mel-spectrograms/alignments keyed to
+whatever data last ran through it; reusing the same cache path with
+different underlying audio/text risks silently training against stale
+cached data instead of your new recordings. Give each distinct dataset
+its own cache folder (e.g. `cache-marathon` vs the original `cache`) —
+`--data.config_path` and everything else can stay put, since those
+regenerate fresh from the current run regardless.
+
 ### How long to train, and how to stop
 
 There's no fixed answer — with a small personal dataset fine-tuned onto
