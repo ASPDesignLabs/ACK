@@ -75,3 +75,12 @@ def test_auto_snapshot_and_ids_and_defaults():
 def test_empty_input():
     assert build_segments({"segments": []}, 1.0) == []
     assert build_segments({"segments": [{"id": 0, "words": [{"w": " ", "s": 0, "e": 1, "p": 1}]}]}, 1.0) == []
+
+
+def test_joined_pieces_rebuild_the_original_text_without_stray_spaces():
+    asr = words([("The", .3, .02), ("archive", .5, .02), ("cataloged", .6, .02), ("11", .4, 0), (",000", .5, .02),
+                 ("testimonies", .8, .02), ("before", .5, .02), ("admitting,", .8, 0)])
+    asr["segments"][0]["words"][4]["j"] = True
+    (seg,) = build_segments(asr, 6.0)
+    assert seg["text"] == "The archive cataloged 11,000 testimonies before admitting,"
+    assert any(w.get("j") for w in seg["words"])  # kept, so the review screen can re-join after edits

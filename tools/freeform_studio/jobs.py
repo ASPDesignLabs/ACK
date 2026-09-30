@@ -11,7 +11,8 @@ from .asr import AsrEngine, AsrOptions, EngineError, make_engine
 from .audio import FfmpegError, compute_peaks, decode_to_wav, wav_info
 from .config import Config
 from .edit import new_edit_doc
-from .segmenter import SegOptions, build_segments
+from .pipeline import propose_segments
+from .segmenter import SegOptions
 from .storage import ChunkGap, NoChunks, TakeStore, atomic_write_bytes, ext_for_mime, now_iso
 
 _LOG = logging.getLogger(__name__)
@@ -212,9 +213,12 @@ class JobRunner:
             self.store.write(take_id, "asr.json", result)
             edit = self.store.read(take_id, "edit.json")
             if edit is None or opts.get("regenerate"):
-                segs = build_segments(result, float(take.get("duration") or result.get("duration") or 0.0), SegOptions(
-                    max_s=self.cfg.max_segment_s, min_s=self.cfg.min_segment_s,
-                    pad_lead_s=self.cfg.pad_lead_s, pad_tail_s=self.cfg.pad_tail_s))
+                segs, refine_stats = propose_segments(
+                    result, audio, float(take.get("duration") or result.get("duration") or 0.0), SegOptions(
+                        max_s=self.cfg.max_segment_s, min_s=self.cfg.min_segment_s,
+                        pad_lead_s=self.cfg.pad_lead_s, pad_tail_s=self.cfg.pad_tail_s))
+                result["refine"] = refine_stats
+                self.store.write(take_id, "asr.json", result)
                 if edit is not None:
                     self.store.archive(take_id, "edit.json", "edit_history", f"pre-regen-{tag}")
                 self.store.write(take_id, "edit.json", new_edit_doc(segs, rev=(edit or {}).get("rev", 0) + 1))

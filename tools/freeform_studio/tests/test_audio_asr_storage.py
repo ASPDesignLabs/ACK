@@ -169,3 +169,22 @@ def test_model_load_failures_become_short_readable_messages(tmp_path):
     with pytest.raises(EngineError) as e:
         odd.transcribe(tmp_path / "x.wav", AsrOptions())
     assert "[RuntimeError: something unexpected]" in str(e.value) and "second line" not in str(e.value)
+
+
+def test_split_number_pieces_are_marked_as_joined_not_spaced(tmp_path):
+    from types import SimpleNamespace
+    words = [SimpleNamespace(word=" cataloged", start=0.0, end=0.5, probability=0.9),
+             SimpleNamespace(word=" 11", start=0.5, end=0.8, probability=0.9),
+             SimpleNamespace(word=",000", start=0.8, end=1.2, probability=0.9),
+             SimpleNamespace(word=" testimonies", start=1.2, end=1.9, probability=0.9)]
+    seg = SimpleNamespace(start=0.0, end=1.9, text=" cataloged 11,000 testimonies", avg_logprob=-0.2,
+                          no_speech_prob=0.01, compression_ratio=1.2, words=words)
+
+    class M:
+        def transcribe(self, path, **kw):
+            return iter([seg]), SimpleNamespace(duration=2.0, language="en")
+
+    engine = FasterWhisperEngine("m", model_factory=lambda name, **kw: M())
+    res = engine.transcribe(tmp_path / "x.wav", AsrOptions())
+    ws = res["segments"][0]["words"]
+    assert [w.get("j", False) for w in ws] == [False, False, True, False]

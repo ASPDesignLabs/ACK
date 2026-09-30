@@ -188,10 +188,15 @@ class FasterWhisperEngine(AsrEngine):
         for i, seg in enumerate(seg_iter):
             words = []
             for w in (getattr(seg, "words", None) or []):
-                text = (w.word or "").strip()
-                if text:
-                    words.append({"w": text, "s": round(float(w.start), 3), "e": round(float(w.end), 3),
-                                  "p": round(float(w.probability), 3)})
+                raw = w.word or ""
+                text = raw.strip()
+                if not text:
+                    continue
+                entry = {"w": text, "s": round(float(w.start), 3), "e": round(float(w.end), 3),
+                         "p": round(float(w.probability), 3)}
+                if words and not raw.startswith(" "):
+                    entry["j"] = True  # continuation piece (e.g. ",000" after "11"): no space before it
+                words.append(entry)
             segments.append({"id": i, "start": round(float(seg.start), 3), "end": round(float(seg.end), 3),
                              "text": (seg.text or "").strip(),
                              "avg_logprob": _f(getattr(seg, "avg_logprob", None)),

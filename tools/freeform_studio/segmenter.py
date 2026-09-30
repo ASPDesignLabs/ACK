@@ -34,6 +34,15 @@ def _is_sentence_end(word: str) -> bool:
     return bool(_TERMINAL.search(word)) and word.lower().rstrip("\"'”’)]") not in _ABBREV
 
 
+def join_words(words: List[Dict[str, Any]]) -> str:
+    out = ""
+    for i, w in enumerate(words):
+        if i and not w.get("j"):
+            out += " "
+        out += w["w"]
+    return out
+
+
 def _span(words: List[Dict[str, Any]]) -> float:
     return words[-1]["e"] - words[0]["s"]
 
@@ -141,7 +150,12 @@ def build_segments(asr: Dict[str, Any], duration: float, opts: Optional[SegOptio
             if not str(w.get("w", "")).strip():
                 continue
             s, e = float(w["s"]), float(w["e"])
-            words.append({"w": str(w["w"]).strip(), "s": s, "e": max(s, e), "p": float(w.get("p", 1.0)), "_st": stats})
+            item = {"w": str(w["w"]).strip(), "s": s, "e": max(s, e), "p": float(w.get("p", 1.0)), "_st": stats}
+            if w.get("j"):
+                item["j"] = True
+            if w.get("m"):
+                item["m"] = True
+            words.append(item)
     words.sort(key=lambda w: (w["s"], w["e"]))
     if not words:
         return []
@@ -162,13 +176,19 @@ def build_segments(asr: Dict[str, Any], duration: float, opts: Optional[SegOptio
         if next_start is not None:
             end = min(end, (g[-1]["e"] + next_start) / 2)
         start, end = max(0.0, start), min(duration, end)
-        text = " ".join(w["w"] for w in g)
+        text = join_words(g)
         stats = {
             "no_speech_prob": max((w["_st"]["no_speech_prob"] for w in g if w["_st"]["no_speech_prob"] is not None), default=None),
             "avg_logprob": min((w["_st"]["avg_logprob"] for w in g if w["_st"]["avg_logprob"] is not None), default=None),
             "compression_ratio": max((w["_st"]["compression_ratio"] for w in g if w["_st"]["compression_ratio"] is not None), default=None),
         }
-        clean_words = [{"w": w["w"], "s": round(w["s"], 3), "e": round(w["e"], 3), "p": round(w["p"], 3)} for w in g]
+        clean_words = []
+        for w in g:
+            cw = {"w": w["w"], "s": round(w["s"], 3), "e": round(w["e"], 3), "p": round(w["p"], 3)}
+            for k in ("j", "m"):
+                if w.get(k):
+                    cw[k] = True
+            clean_words.append(cw)
         out.append({
             "id": f"s{idx + 1:03d}",
             "start": round(start, 3), "end": round(end, 3),

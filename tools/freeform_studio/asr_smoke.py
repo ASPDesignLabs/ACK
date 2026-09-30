@@ -15,7 +15,8 @@ from pathlib import Path
 
 from .asr import AsrOptions, EngineError, FakeEngine, FasterWhisperEngine
 from .audio import decode_to_wav, wav_info
-from .segmenter import SegOptions, build_segments
+from .pipeline import propose_segments
+from .segmenter import SegOptions
 
 
 def main(argv=None) -> int:
@@ -54,14 +55,17 @@ def main(argv=None) -> int:
             return 1
         print()
         took = time.monotonic() - t0
+        segments, refine_stats = propose_segments(result, wav, duration, SegOptions())
 
     print(f"\ntranscribed in {took:.1f}s ({duration / max(took, 0.01):.1f}x realtime)\n")
     for seg in result["segments"]:
         low = [w for w in seg["words"] if w["p"] < 0.5]
         print(f"  [{seg['start']:6.2f} - {seg['end']:6.2f}] {seg['text']}" + (f"   ({len(low)} shaky word(s))" if low else ""))
 
-    print("\nHow the review screen would propose to cut it:\n")
-    for s in build_segments(result, duration, SegOptions()):
+    fixed = refine_stats["moved"] + refine_stats["trimmed"]
+    print(f"\nHow the review screen would propose to cut it "
+          f"({fixed} word timing(s) corrected against the audio):\n")
+    for s in segments:
         flags = f"   flags: {', '.join(s['flags'])}" if s["flags"] else ""
         print(f"  {s['id']} [{s['start']:6.2f} - {s['end']:6.2f}] ({s['end'] - s['start']:4.1f}s) {s['text']}{flags}")
     return 0
