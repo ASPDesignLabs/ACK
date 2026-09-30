@@ -246,6 +246,37 @@ training. Anything the silence detector couldn't confidently split
 script's `--dry-run` flag and `--silence-thresh`/`--min-silence-len`
 options if a lot of takes end up there on the first pass.
 
+### Training on free-speech recordings (Freeform Studio)
+
+Recordings made with Freeform Studio (`tools/freeform_studio/`) live under
+`~/piper-recording-studio/output/_freeform/en-US/takes/`, not in the folders the recorder and the splitter use, so they
+need their own step to become a dataset. **Back up first** (the raw recordings are the one thing you can't regenerate):
+
+```bash
+mkdir -p ~/backups
+tar czf ~/backups/freeform-takes-$(date +%Y%m%d-%H%M%S).tar.gz -C ~/piper-recording-studio/output _freeform
+```
+
+Then, from `~/ack-tools/tools` with the Freeform Studio venv active:
+
+```bash
+python -m freeform_studio.build_dataset --dry-run      # preview: what goes in, what is left out and why. Writes nothing.
+python -m freeform_studio.build_dataset                # build a NEW dataset folder (~/piper/freeform-dataset-<date-time>)
+```
+
+It prints the exact `piper.train fit` command to run, with a **new `--data.cache_dir`** (the trainer caches each clip
+under its row number plus the start of its text, so reusing a cache after the audio changes silently trains on stale
+audio). Useful options: `--also ~/piper/my-dataset-split` mixes in your earlier prompted recordings;
+`--allow low_confidence` brings back pieces the recognizer was unsure about (read `excluded.txt` in the dataset folder
+first); `--include approved` uses only pieces you approved in review (once the review screens exist); `--no-normalize`
+keeps original loudness. It never changes your takes and never overwrites an existing dataset folder.
+
+What it does to each piece: cuts it from the take, brings it to a consistent level (peak about -3 dB), adds a
+few-millisecond fade so cuts never click, and converts to 22050 Hz mono 16-bit. It leaves out pieces shorter than
+1 s or longer than 11.5 s (long ones can run an 8 GB card out of memory), pieces that are too quiet or repeatedly clip,
+and anything whose text would break the training file. Training itself trims leading and trailing silence, so none is
+trimmed here.
+
 ---
 
 ## 3. Get a base checkpoint

@@ -4,9 +4,9 @@ Capture free speech from your phone, have your PC transcribe it with word timing
 training clips for Piper. It runs next to `piper-recording-studio` (its own port, its own venv) and shares its
 `output/` folder.
 
-**Status: Phase 2 of 7 (phone capture works).** You can record from your phone, everything is saved to your PC as you
-speak, the PC transcribes it, and you can read what was heard. Cutting, correcting, and exporting clips (the review
-screens) come in the next phases.
+**Status: Phase 2 of 7 (phone capture works), plus dataset export.** You can record from your phone, everything is saved
+to your PC as you speak, the PC transcribes it, and you can read what was heard. You can already turn your takes into a
+training dataset (see below). The review screens, where you correct words and approve pieces, come in the next phases.
 
 ## Install (once)
 
@@ -57,6 +57,32 @@ certificate is missing, unreadable, or the port is taken, instead of printing a 
 It prints two links: one for your phone and one for this PC, each with a private token. Open the phone link once and the
 phone remembers it. The token is stored in `output/_freeform/token` (readable only by you). Use `--asr-engine fake` to
 run without any speech model (placeholder words, for testing).
+
+## Turn your takes into a training dataset
+
+```bash
+cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
+python -m freeform_studio.build_dataset --dry-run     # preview only; writes nothing
+python -m freeform_studio.build_dataset               # builds a NEW folder, never overwrites one
+```
+
+It reads the takes (and never changes them), keeps the pieces that are safe to train on, and writes `wav/` plus
+`metadata.csv`, exactly what `piper.train fit` reads, along with `manifest.json` (where every clip came from) and
+`excluded.txt` (everything left out, with the reason and the text, so you can judge the choices yourself). It then
+prints the training command to run, including a fresh cache folder.
+
+| Option | What it does |
+|---|---|
+| `--include clean` (default) | pieces you approved, plus pieces the recognizer was confident about |
+| `--include approved` | only pieces you approved in review |
+| `--include all` | everything not dropped; flags ignored |
+| `--allow low_confidence,has_digits` | accept pieces carrying these flags anyway (`has_digits` is allowed by default) |
+| `--also ~/piper/my-dataset-split` | mix in an existing dataset (repeatable) |
+| `--min-seconds` / `--max-seconds` | length limits, default 1.0 and 11.5 |
+| `--no-normalize` | keep each clip's original loudness |
+| `--out DIR` | where to write it (default `~/piper/freeform-dataset-<date-time>`) |
+
+Pieces are also left out when they are too quiet, or clip repeatedly (a single stray full-scale sample is fine).
 
 ## If the page won't load
 
