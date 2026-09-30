@@ -4,9 +4,9 @@ Capture free speech from your phone, have your PC transcribe it with word timing
 training clips for Piper. It runs next to `piper-recording-studio` (its own port, its own venv) and shares its
 `output/` folder.
 
-**Status: Phase 1 of 7 (backend only).** Upload, decoding, waveform data, transcription, segmenting, and safe
-edit-saving all work and are tested. The phone pages (capture, review) arrive in the next phases, so for now there is
-no screen to tap; this phase gives you the engine and a way to test real speech recognition on your machine.
+**Status: Phase 2 of 7 (phone capture works).** You can record from your phone, everything is saved to your PC as you
+speak, the PC transcribes it, and you can read what was heard. Cutting, correcting, and exporting clips (the review
+screens) come in the next phases.
 
 ## Install (once)
 
@@ -54,6 +54,29 @@ It prints a link containing a private token; open that link once on the phone an
 is stored in `output/_freeform/token` (readable only by you). Use `--asr-engine fake` to run without any speech model
 (placeholder words, for testing). Everything here reuses the mkcert certificates you already made for the recorder.
 
+## Using it on your phone
+
+Open the link the server printed (the one with `?token=...`) in Chrome on your phone, once. After that the phone
+remembers it. Tap **Start recording** and talk or read for as long as you like; there is no per-line tapping.
+
+- **Everything is saved to your PC as you go**, in one-second parts. Each part is also kept on the phone until the PC
+  confirms it, so a dropped Wi-Fi connection, a refresh, or a crash cannot lose what you said. If something didn't finish
+  sending, the page offers **Send it now** the next time you open it.
+- **Keep the screen on and this page in front.** The page asks the phone to stay awake, and warns you if the phone
+  refuses or the page goes to the background (Android can stop the microphone for background pages).
+- **The microphone is requested with echo cancellation, noise suppression, and auto gain turned off**, which is better
+  for training data. The page shows what your phone actually applied. The recorder you used before asked for the
+  browser's defaults, which normally have all three on; compare a take from each by ear.
+- **Pause** stops recording without ending the take. **Stop and save** ends it and sends the last part.
+- **Text I'm about to read (optional)**: paste a passage before you start; it is saved with the recording and will be
+  used in a later phase to correct what the PC hears.
+- **Stop automatically after** is off by default. Nothing else ever happens on a timer.
+- Under **Recent recordings**, tap **What was heard** to read the transcript. Problems show in plain words with
+  **Try again**.
+
+The page loads only its own files (no outside scripts, no tracking), and its colors meet WCAG AA contrast in both light
+and dark mode; a test guards that.
+
 ## Where things are saved
 
 ```
@@ -67,7 +90,7 @@ output/_freeform/<code>/takes/<take id>/
 This folder is deliberately outside `output/<code>/`, so `split_long_takes.py` can never pick up half-reviewed audio.
 Approved clips will be exported into `output/<code>/freeform/` in the same layout as your prompted recordings.
 
-## API (Phase 1)
+## API
 
 | | |
 |---|---|
@@ -88,3 +111,5 @@ Approved clips will be exported into `output/<code>/freeform/` in the same layou
 cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
 pip install pytest && python -m pytest freeform_studio/tests -q
 ```
+The browser tests (`test_capture_ui.py`) also need `pip install playwright` and a Chromium; they skip themselves
+if either is missing.

@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import hmac
 import re
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Optional
 
-from quart import Quart, Response, g, jsonify, request, send_file
+from quart import Quart, Response, g, jsonify, request, send_file, send_from_directory
 
 from . import __version__
 from .asr import AsrEngine
@@ -18,6 +19,10 @@ from .storage import InvalidTakeId, TakeStore, read_json
 MODEL_RE = re.compile(r"^[A-Za-z0-9._/-]{1,80}$")
 LANG_RE = re.compile(r"^[a-z]{2,3}$")
 COOKIE = "fs_token"
+STATIC_DIR = Path(__file__).parent / "static"
+# The pages load only their own files: no inline scripts or styles, nothing from other sites.
+CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; "
+       "connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 
 
 class ApiError(Exception):
@@ -68,10 +73,13 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
         return None
 
     @app.after_request
-    async def _cookie(resp: Response) -> Response:
+    async def _after(resp: Response) -> Response:
         if getattr(g, "set_cookie", False):
             resp.set_cookie(COOKIE, cfg.token or "", httponly=True, samesite="Strict",
                             secure=request.is_secure, max_age=60 * 60 * 24 * 90)
+        resp.headers["Content-Security-Policy"] = CSP
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+        resp.headers["Referrer-Policy"] = "no-referrer"
         return resp
 
     @app.errorhandler(ApiError)
@@ -95,10 +103,12 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
 
     @app.route("/")
     async def index():
-        return ("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
-                "<title>Freeform Studio</title><body style='font:16px system-ui;padding:1rem'>"
-                "<h1>Freeform Studio</h1><p>Backend is running (API only in this version). "
-                "<a href='/api/status'>Status</a> &middot; <a href='/api/takes'>Takes</a></p></body>")
+        return await send_from_directory(STATIC_DIR, "index.html", cache_timeout=0)
+
+    @app.route("/static/<path:filename>")
+    async def static_files(filename: str):
+        # no-cache: the browser re-checks each time, so a `git pull` shows up on the next reload
+        return await send_from_directory(STATIC_DIR, filename, cache_timeout=0)
 
     @app.route("/api/status")
     async def status():
