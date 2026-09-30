@@ -257,6 +257,30 @@ on Hugging Face, matching quality tier (e.g. `medium`) and sample rate
 (22050 Hz) to what you'll train with. Put it somewhere stable, e.g.
 `~/piper/checkpoints/base.ckpt`.
 
+**Not every checkpoint in that repo works with `piper1-gpl`'s current
+trainer.** The oldest entries (e.g. `en/en_US/lessac/medium`) predate
+the piper1-gpl rewrite and were saved by an older training codebase —
+their embedded hyperparameters include fields the current model class
+doesn't accept (`sample_bytes`) and long-removed PyTorch Lightning
+Trainer args (`resume_from_checkpoint`, `auto_select_gpus`, `tpu_cores`,
+`amp_backend`, ...), plus the original author's own machine paths. Using
+one as `--ckpt_path` fails with `Subcommand 'fit' does not accept option
+'model.sample_bytes'` / `Parsing of ckpt_path hyperparameters failed`
+([reported upstream too](https://github.com/OHF-Voice/piper1-gpl/discussions/138)).
+`en/en_US/hfc_male/medium` (added October 2023, after the rewrite) has
+been confirmed by other users to work as a base instead. To check any
+candidate before committing to a full run:
+
+```bash
+python3 -c "
+import torch
+ckpt = torch.load('/path/to/candidate.ckpt', map_location='cpu', weights_only=False)
+print(ckpt.get('hyper_parameters'))
+"
+```
+Old-format ones show original-author paths like `/home/hansenm/larynx2/...`
+and Lightning args that no longer exist; a compatible one won't.
+
 ---
 
 ## 4. Training
