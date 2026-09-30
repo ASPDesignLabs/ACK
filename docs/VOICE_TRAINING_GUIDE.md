@@ -343,14 +343,31 @@ newly-split batch from `split_long_takes.py`) is a normal, supported
 thing to do — the checkpoint is just model weights, and it doesn't
 care that the data changed between runs.
 
-**Use a fresh `--data.cache_dir` whenever the dataset changes.** That
-folder holds preprocessed mel-spectrograms/alignments keyed to
-whatever data last ran through it; reusing the same cache path with
-different underlying audio/text risks silently training against stale
-cached data instead of your new recordings. Give each distinct dataset
-its own cache folder (e.g. `cache-marathon` vs the original `cache`) —
-`--data.config_path` and everything else can stay put, since those
-regenerate fresh from the current run regardless.
+**Use a fresh `--data.cache_dir` whenever the *audio* changes.** The
+trainer caches each utterance's processed audio and spectrogram under a
+name built only from the **row number in `metadata.csv` plus the first
+~45 characters of that row's text** (`get_cache_id` in piper1-gpl's
+`vits/utils.py`), and if a cache file already exists it is used as-is —
+your audio file is not read again. So if a row keeps the same position
+and opening words but you re-recorded, re-trimmed, or re-split its
+audio, training silently keeps using the old cached version. A
+brand-new set of sentences is mostly safe (different text gives
+different cache names), but "safe mostly" is not something to debug at
+epoch 3000: give each distinct audio state its own cache folder (e.g.
+`cache-marathon` vs the original `cache`, or a dated name).
+`--data.config_path` and everything else can stay put. Commands for
+checking and rotating the cache are in
+[VOICE_DATA_WSL_GUIDE.md](VOICE_DATA_WSL_GUIDE.md) §9.
+
+Also worth knowing (read from the same source): training reads
+`metadata.csv` with Python's `csv.reader` (`|` delimiter), loads and
+resamples any audio you give it itself, and **trims leading/trailing
+silence with a voice-activity detector, keeping 0.25 s on each side** —
+so hand-trimming silence at clip edges is unnecessary.
+
+For inspecting, checking, and backing up your recordings and datasets
+from the terminal (with sample output), see
+[VOICE_DATA_WSL_GUIDE.md](VOICE_DATA_WSL_GUIDE.md).
 
 ### How long to train, and how to stop
 

@@ -198,7 +198,7 @@ def main() -> None:
     if not args.dry_run and metadata_rows:
         metadata_path = output_dir / "metadata.csv"
         with open(metadata_path, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f, delimiter="|")
+            writer = csv.writer(f, delimiter="|", lineterminator="\n")
             for filename, text in metadata_rows:
                 writer.writerow([filename, text])
         _LOGGER.info("\nWrote %d utterances to %s", len(metadata_rows), metadata_path)
