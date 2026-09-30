@@ -1,5 +1,7 @@
-quart==0.21.0
+# Chosen so this installs on Python 3.10 (Ubuntu 22.04's default python3).
+# Quart 0.21+ and numpy 2.3+ require Python 3.11, so do not bump them without checking.
+quart==0.20.0
 hypercorn==0.14.3
-Werkzeug==3.1.8
+Werkzeug>=3.0,<4
 numpy>=1.24
 faster-whisper>=1.1

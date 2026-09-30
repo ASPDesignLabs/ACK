@@ -19,7 +19,8 @@ python3 -m venv ~/freeform-studio-venv
 source ~/freeform-studio-venv/bin/activate
 pip install -r freeform_studio/requirements.txt
 ```
-Needs `ffmpeg` on the PATH (you already have it). Python 3.10 or newer.
+Needs `ffmpeg` on the PATH (you already have it) and Python 3.10 or newer (Ubuntu 22.04's default `python3` is fine;
+check with `python3 --version`). Already cloned it earlier? Update with `git -C ~/ack-tools pull`.
 
 ## Try the speech recognition on your machine (do this first)
 
