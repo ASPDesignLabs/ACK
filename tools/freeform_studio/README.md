@@ -47,12 +47,43 @@ Don't run it on the GPU while training is running: 8 GB is not enough for both.
 ## Run the server
 
 ```bash
-python -m freeform_studio --output ~/piper-recording-studio/output --host 0.0.0.0 \
-  --certfile ~/piper-recording-studio/certs/<your-ip>+2.pem --keyfile ~/piper-recording-studio/certs/<your-ip>+2-key.pem
+cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
+python -m freeform_studio --host 0.0.0.0 --certs-dir ~/piper-recording-studio/certs
 ```
-It prints a link containing a private token; open that link once on the phone and the phone remembers it. The token
-is stored in `output/_freeform/token` (readable only by you). Use `--asr-engine fake` to run without any speech model
-(placeholder words, for testing). Everything here reuses the mkcert certificates you already made for the recorder.
+`--certs-dir` finds your newest mkcert certificate and key in that folder by itself, so there are no file names to
+type. (`--certfile` and `--keyfile` still work if you prefer them.) It refuses to start, in plain words, if the
+certificate is missing, unreadable, or the port is taken, instead of printing a link that leads nowhere.
+
+It prints two links: one for your phone and one for this PC, each with a private token. Open the phone link once and the
+phone remembers it. The token is stored in `output/_freeform/token` (readable only by you). Use `--asr-engine fake` to
+run without any speech model (placeholder words, for testing).
+
+## If the page won't load
+
+Run the checker in a **second terminal** while the server is running. It tests each link between your phone and this
+program, changes nothing, and lists every problem with its fix, in order:
+
+```bash
+cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
+python -m freeform_studio.doctor --certs-dir ~/piper-recording-studio/certs --port 8001
+```
+
+The usual causes, roughly most to least common:
+
+- **The server isn't actually running.** Look at the first lines in its terminal; a startup problem is now stated plainly.
+- **Wrong address.** It must start with `https://` (not `http://`) and include the whole link with `?token=...`. Without
+  the token you get a short "unauthorized" message rather than the page.
+- **Works on the phone but this PC's browser shows a warning.** Windows doesn't trust mkcert's authority (only WSL and
+  your phone do). Click **Advanced**, then **Proceed**; that is safe on your own network.
+- **Works on this PC but the phone can't connect.** Windows Firewall is blocking port 8001. You made a rule for port 8000
+  earlier; this port needs its own. In an **administrator PowerShell**:
+  ```powershell
+  New-NetFirewallRule -DisplayName "Freeform Studio 8001" -Direction Inbound -Protocol TCP -LocalPort 8001 -Action Allow -Profile Private
+  ```
+  If Windows lists your Wi-Fi as a *Public* network, use `-Profile Any`. The doctor also prints a second command for
+  WSL's own firewall if that is still not enough.
+- **The certificate doesn't cover the address your phone uses.** The doctor says so and prints the `mkcert` command to
+  make a new one.
 
 ## Using it on your phone
 

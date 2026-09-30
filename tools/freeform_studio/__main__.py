@@ -13,20 +13,13 @@ from typing import Optional
 
 from . import __version__
 from .config import Config
+from .netcheck import LOOPBACK, find_cert_pair, lan_ip, pick_advertised_host, port_state, san_info
 
-LOOPBACK = ("127.0.0.1", "localhost", "::1")
 
-
-def lan_ip() -> str:
-    """Best-effort address other devices can reach. Opens no connection; UDP connect only picks a route."""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(("192.0.2.1", 9))
-        return s.getsockname()[0]
-    except OSError:
-        return socket.gethostname()
-    finally:
-        s.close()
+def die(message: str) -> None:
+    """A startup problem, in plain words: no usage dump, no traceback."""
+    print(f"\nCan't start: {message}\n", file=sys.stderr)
+    sys.exit(2)
 
 
 def resolve_token(arg: str, output: Path, code: str) -> Optional[str]:
@@ -53,6 +46,8 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--code", default="en-US", help="language code folder to export into (default: %(default)s)")
     p.add_argument("--host", default="127.0.0.1", help="use 0.0.0.0 to reach it from your phone")
     p.add_argument("--port", type=int, default=8001)
+    p.add_argument("--certs-dir", help="folder holding your mkcert certificate + key; the newest pair is used "
+                                       "(easier than --certfile/--keyfile, nothing to mistype)")
     p.add_argument("--certfile", help="TLS certificate (needed for the phone microphone)")
     p.add_argument("--keyfile", help="TLS private key")
     p.add_argument("--token", default="auto", help="'auto' (remembered), 'none', or a value")
@@ -69,10 +64,33 @@ def main(argv: Optional[list] = None) -> int:
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     if bool(args.certfile) != bool(args.keyfile):
         p.error("--certfile and --keyfile go together")
+    if args.certs_dir:
+        if args.certfile:
+            p.error("use either --certs-dir or --certfile/--keyfile, not both")
+        pair = find_cert_pair(Path(args.certs_dir))
+        if pair is None:
+            die(f"no certificate pair found in {args.certs_dir}\n  It should contain files like 192.168.1.2+2.pem and "
+                f"192.168.1.2+2-key.pem (made by mkcert). List the folder with:  ls {args.certs_dir}")
+        args.certfile, args.keyfile = str(pair[0]), str(pair[1])
+        print(f"using certificate {pair[0].name}")
 
     output = Path(args.output).expanduser()
     if not output.is_dir():
-        p.error(f"output folder not found: {output}")
+        die(f"output folder not found: {output}")
+    cert_ips = []
+    if args.certfile:
+        for what, path in (("certificate", args.certfile), ("key", args.keyfile)):
+            if not Path(path).expanduser().is_file():
+                die(f"the {what} file was not found: {path}\n  Check the path (a placeholder like <your-ip> left in the "
+                        f"command will do this). List your certificates with:  ls ~/piper-recording-studio/certs")
+        args.certfile, args.keyfile = str(Path(args.certfile).expanduser()), str(Path(args.keyfile).expanduser())
+        info = san_info(Path(args.certfile))
+        if info["error"]:
+            die(f"the certificate could not be read: {info['error']}")
+        cert_ips = info["ips"]
+    if port_state(args.host, args.port) == "in_use":
+        die(f"port {args.port} is already in use (is Freeform Studio already running in another terminal?). "
+                f"Stop it, or choose another port with --port.")
     token = resolve_token(args.token, output, args.code)
     cfg = Config(output_dir=output, code=args.code, token=token, asr_engine=args.asr_engine, asr_model=args.asr_model,
                  asr_device=args.asr_device, asr_compute_type=args.asr_compute_type,
@@ -92,11 +110,21 @@ def main(argv: Optional[list] = None) -> int:
         hyper.alpn_protocols = ["http/1.1"]
 
     scheme = "https" if args.certfile else "http"
-    host = lan_ip() if args.host in ("0.0.0.0", "::") else args.host
-    url = f"{scheme}://{host}:{args.port}/" + (f"?token={token}" if token else "")
+    warn = None
+    if args.host in ("0.0.0.0", "::"):
+        host, warn = pick_advertised_host(lan_ip(), cert_ips)
+    else:
+        host = args.host
+    q = f"?token={token}" if token else ""
+    url = f"{scheme}://{host}:{args.port}/{q}"
     print(f"\nFreeform Studio {__version__}  (ASR: {cfg.asr_engine}/{cfg.asr_model} on {cfg.asr_device})")
     print(f"  recordings and edits: {cfg.root}")
     print(f"  open on your phone:   {url}")
+    print(f"  open on this PC:      {scheme}://localhost:{args.port}/{q}")
+    if warn:
+        print(f"  NOTE: {warn}")
+    print("  can't connect? run this in a second terminal:  python -m freeform_studio.doctor --port "
+          f"{args.port}" + (f" --certs-dir {args.certs_dir}" if args.certs_dir else " --certfile <same cert> --keyfile <same key>" if args.certfile else ""))
     if not token and args.host not in LOOPBACK:
         print("\n  WARNING: no access token and reachable from your network. Anyone on it can read and change your recordings.")
     if not args.certfile:
