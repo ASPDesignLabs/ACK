@@ -13,7 +13,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from .asr import AsrOptions, FakeEngine, FasterWhisperEngine
+from .asr import AsrOptions, EngineError, FakeEngine, FasterWhisperEngine
 from .audio import decode_to_wav, wav_info
 from .segmenter import SegOptions, build_segments
 
@@ -45,9 +45,13 @@ def main(argv=None) -> int:
             engine = FasterWhisperEngine(args.model, device=args.device, compute_type=ct)
             print("loading model (first run downloads it)...")
         t0 = time.monotonic()
-        result = engine.transcribe(wav, AsrOptions(language=args.language, initial_prompt=args.prompt,
-                                                   reference_text=args.reference),
-                                   progress=lambda f: print(f"\r  transcribing {f * 100:3.0f}%", end="", flush=True))
+        try:
+            result = engine.transcribe(wav, AsrOptions(language=args.language, initial_prompt=args.prompt,
+                                                       reference_text=args.reference),
+                                       progress=lambda f: print(f"\r  transcribing {f * 100:3.0f}%", end="", flush=True))
+        except EngineError as e:
+            print(f"\n{e}", file=sys.stderr)
+            return 1
         print()
         took = time.monotonic() - t0
 

@@ -39,3 +39,20 @@ def out_dir(tmp_path):
     d = tmp_path / "output"
     d.mkdir()
     return d
+
+
+def fake_whisper_model(calls=None):
+    """Stands in for faster_whisper.WhisperModel: same call shape, canned words."""
+    from types import SimpleNamespace
+
+    class M:
+        def transcribe(self, path, **kw):
+            if calls is not None:
+                calls.append((path, kw))
+            words = [SimpleNamespace(word=" Hello", start=0.1234, end=0.5, probability=0.98765),
+                     SimpleNamespace(word="  ", start=0.5, end=0.6, probability=0.5),
+                     SimpleNamespace(word=" world.", start=0.6, end=1.0, probability=0.41)]
+            seg = SimpleNamespace(start=0.1, end=1.0, text=" Hello world.", avg_logprob=-0.31, no_speech_prob=0.02,
+                                  compression_ratio=1.3, words=words)
+            return iter([seg]), SimpleNamespace(duration=2.0, language="en")
+    return M()

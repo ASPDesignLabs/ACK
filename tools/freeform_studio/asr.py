@@ -20,6 +20,25 @@ from .storage import now_iso
 
 Progress = Optional[Callable[[float], None]]
 
+
+class EngineError(Exception):
+    """A speech-model failure whose message is written for a person, not a stack trace."""
+
+
+def explain_load_error(model: str, device: str, err: Exception) -> str:
+    first = (str(err).strip().splitlines() or [""])[0][:200]
+    low = str(err).lower()
+    if device != "cpu" and any(k in low for k in ("libcudnn", "libcublas", "cudnn", "cublas", "cuda")):
+        hint = ("The GPU libraries look missing or mismatched. Try --device cpu, or follow "
+                "'GPU (optional)' in the README.")
+    elif any(k in low for k in ("proxy", "connection", "resolve", "network", "offline", "forbidden", "403",
+                                "timed out", "timeout", "ssl", "huggingface", "hf.co", "no space")):
+        hint = ("The first run downloads the model from Hugging Face (about 500 MB for small.en), so it needs "
+                "internet access and free disk space. Check your connection and try again; a partial download resumes.")
+    else:
+        hint = ""
+    return f"Could not load the speech model '{model}' on {device}. {hint} [{type(err).__name__}: {first}]".replace("  ", " ")
+
 _TERMINAL = re.compile(r"[.!?][\"'”’)]*$")
 FAKE_WORDS = ["so", "there", "was", "this", "idea", "about", "how", "language", "really", "works",
               "when", "you", "stop", "thinking", "about", "it", "and", "just", "let", "it", "flow"]
@@ -138,7 +157,10 @@ class FasterWhisperEngine(AsrEngine):
                         raise RuntimeError("faster-whisper is not installed in this environment "
                                            "(pip install faster-whisper)") from e
                     factory = WhisperModel
-                self._model = factory(self.model, device=self.device, compute_type=self.compute_type)
+                try:
+                    self._model = factory(self.model, device=self.device, compute_type=self.compute_type)
+                except Exception as e:
+                    raise EngineError(explain_load_error(self.model, self.device, e)) from e
             return self._model
 
     def unload(self) -> None:

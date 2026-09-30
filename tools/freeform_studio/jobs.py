@@ -7,7 +7,7 @@ import threading
 import time
 from typing import Any, Callable, Dict, Optional
 
-from .asr import AsrEngine, AsrOptions, make_engine
+from .asr import AsrEngine, AsrOptions, EngineError, make_engine
 from .audio import FfmpegError, compute_peaks, decode_to_wav, wav_info
 from .config import Config
 from .edit import new_edit_doc
@@ -147,7 +147,7 @@ class JobRunner:
                 self._transcribe(take_id, opts)
             else:
                 raise JobError(f"unknown job {kind!r}")
-        except JobError as e:
+        except (JobError, EngineError) as e:
             self.store.update(take_id, status="error", error=str(e), error_stage=kind)
         except FfmpegError as e:
             self.store.update(take_id, status="error", error=f"audio decode failed: {e}", error_stage=kind)

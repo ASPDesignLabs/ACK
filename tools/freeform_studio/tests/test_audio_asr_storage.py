@@ -1,11 +1,9 @@
-from types import SimpleNamespace
-
 import numpy as np
 import pytest
 
-from conftest import make_live_webm, make_wav, needs_ffmpeg
+from conftest import fake_whisper_model, make_live_webm, make_wav, needs_ffmpeg
 from freeform_studio import audio
-from freeform_studio.asr import AsrOptions, FakeEngine, FasterWhisperEngine
+from freeform_studio.asr import AsrOptions, EngineError, FakeEngine, FasterWhisperEngine
 from freeform_studio.storage import ChunkGap, InvalidTakeId, NoChunks, TakeStore
 
 
@@ -69,23 +67,10 @@ def test_fake_engine_is_deterministic_and_uses_reference_text(tmp_path):
 
 
 # ------------------------------------------------------------------ faster-whisper adapter (no model needed)
-def _fake_model(calls):
-    class M:
-        def transcribe(self, path, **kw):
-            calls.append((path, kw))
-            words = [SimpleNamespace(word=" Hello", start=0.1234, end=0.5, probability=0.98765),
-                     SimpleNamespace(word="  ", start=0.5, end=0.6, probability=0.5),
-                     SimpleNamespace(word=" world.", start=0.6, end=1.0, probability=0.41)]
-            seg = SimpleNamespace(start=0.1, end=1.0, text=" Hello world.", avg_logprob=-0.31, no_speech_prob=0.02,
-                                  compression_ratio=1.3, words=words)
-            return iter([seg]), SimpleNamespace(duration=2.0, language="en")
-    return M()
-
-
 def test_faster_whisper_adapter_converts_and_passes_options(tmp_path):
     calls, built = [], []
     engine = FasterWhisperEngine("small.en", "cpu", "int8",
-                                 model_factory=lambda name, **kw: (built.append((name, kw)), _fake_model(calls))[1])
+                                 model_factory=lambda name, **kw: (built.append((name, kw)), fake_whisper_model(calls))[1])
     assert not engine.loaded and built == []  # lazy
     progress = []
     res = engine.transcribe(tmp_path / "x.wav", AsrOptions(initial_prompt="Um, so.", hotwords="Kojima"), progress.append)
@@ -104,7 +89,7 @@ def test_faster_whisper_adapter_converts_and_passes_options(tmp_path):
 
 def test_faster_whisper_blank_hints_become_none(tmp_path):
     calls = []
-    engine = FasterWhisperEngine("m", model_factory=lambda name, **kw: _fake_model(calls))
+    engine = FasterWhisperEngine("m", model_factory=lambda name, **kw: fake_whisper_model(calls))
     engine.transcribe(tmp_path / "x.wav", AsrOptions())
     assert calls[0][1]["initial_prompt"] is None and calls[0][1]["hotwords"] is None
 
@@ -158,3 +143,29 @@ def test_archive_and_prune(tmp_path):
         store.archive(tid, "edit.json", "edit_history", f"rev{i:05d}")
     store.prune(tid, "edit_history", 3)
     assert len(list(store.path(tid, "edit_history").iterdir())) == 3
+
+
+# ------------------------------------------------------------------ friendly model errors
+def _failing(msg, exc=RuntimeError):
+    def factory(name, **kw):
+        raise exc(msg)
+    return factory
+
+
+def test_model_load_failures_become_short_readable_messages(tmp_path):
+    net = FasterWhisperEngine("small.en", "cpu", "int8", model_factory=_failing("HTTP 403 Forbidden from proxy", ConnectionError))
+    with pytest.raises(EngineError) as e:
+        net.transcribe(tmp_path / "x.wav", AsrOptions())
+    msg = str(e.value)
+    assert "'small.en'" in msg and "downloads the model" in msg and "ConnectionError" in msg and len(msg) < 450
+    assert not net.loaded
+
+    gpu = FasterWhisperEngine("m", "cuda", "float16", model_factory=_failing("Library libcudnn_ops.so.9 is not found"))
+    with pytest.raises(EngineError) as e:
+        gpu.transcribe(tmp_path / "x.wav", AsrOptions())
+    assert "--device cpu" in str(e.value) and "downloads" not in str(e.value)
+
+    odd = FasterWhisperEngine("m", "cpu", model_factory=_failing("something unexpected\nwith a second line"))
+    with pytest.raises(EngineError) as e:
+        odd.transcribe(tmp_path / "x.wav", AsrOptions())
+    assert "[RuntimeError: something unexpected]" in str(e.value) and "second line" not in str(e.value)

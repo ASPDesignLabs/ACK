@@ -17,6 +17,7 @@ git clone --depth 1 --branch claude/quirky-carson-ia01h1 https://github.com/ASPD
 cd ~/ack-tools/tools
 python3 -m venv ~/freeform-studio-venv
 source ~/freeform-studio-venv/bin/activate
+pip install --upgrade pip
 pip install -r freeform_studio/requirements.txt
 ```
 Needs `ffmpeg` on the PATH (you already have it) and Python 3.10 or newer (Ubuntu 22.04's default `python3` is fine;

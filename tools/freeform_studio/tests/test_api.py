@@ -4,8 +4,9 @@ import random
 
 import pytest
 
-from conftest import make_live_webm, make_wav, needs_ffmpeg
+from conftest import fake_whisper_model, make_live_webm, make_wav, needs_ffmpeg
 from freeform_studio.app import create_app
+from freeform_studio.asr import FasterWhisperEngine
 from freeform_studio.config import Config
 
 pytestmark = needs_ffmpeg
@@ -273,3 +274,34 @@ def test_restart_resumes_interrupted_transcription(tmp_path, out_dir):
             assert (await (await app.test_client().get(f"/api/takes/{holder['tid']}/edit")).get_json())["segments"]
 
     run(second())
+
+
+def test_model_failure_is_readable_on_the_take_and_a_retry_succeeds(tmp_path, out_dir):
+    chunks, _ = webm_chunks(tmp_path)
+    attempts = []
+
+    def flaky(name, **kw):  # first load fails like a dropped download, second works
+        attempts.append(name)
+        if len(attempts) == 1:
+            raise ConnectionError("network unreachable")
+        return fake_whisper_model()
+
+    async def main():
+        app = create_app(make_cfg(out_dir, asr_engine="faster-whisper"),
+                         engine_factory=lambda cfg, model: FasterWhisperEngine(model, model_factory=flaky))
+        async with app.test_app():
+            c = app.test_client()
+            tid = await upload(c, chunks)
+            await c.post(f"/api/takes/{tid}/finish")
+            take = await wait_for(c, tid, {"error", "ready"})
+            assert take["status"] == "error" and take["error_stage"] == "transcribe"
+            assert "Could not load the speech model" in take["error"] and "Traceback" not in take["error"]
+            assert (out_dir / "_freeform" / "en-US" / "takes" / tid / "audio.wav").exists()  # nothing recorded was lost
+
+            assert (await c.post(f"/api/takes/{tid}/transcribe", json={})).status_code == 202
+            take = await wait_for(c, tid, {"ready", "error"})
+            assert take["status"] == "ready" and take["asr"]["words"] == 2
+            assert (await (await c.get(f"/api/takes/{tid}/edit")).get_json())["segments"]
+            assert len(attempts) == 2
+
+    run(main())
