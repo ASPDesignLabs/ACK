@@ -56,6 +56,58 @@
             <textarea id="p-text" rows="4" maxlength="2000" spellcheck="true" autocapitalize="sentences"></textarea>
             <p class="hint" id="p-hint" aria-live="polite"></p>
             <p class="hint" id="p-time">0:00 of 0:00</p>
+            <details class="timing" id="timing">
+              <summary>Cut points, split and join</summary>
+              <div class="wave" id="wave">
+                <canvas id="wave-canvas" aria-hidden="true" height="112"></canvas>
+                <div class="hdl hdl-start" id="h-start" role="slider" tabindex="0" aria-label="Start of this piece"></div>
+                <div class="hdl hdl-end" id="h-end" role="slider" tabindex="0" aria-label="End of this piece"></div>
+                <div class="hdl hdl-marker" id="h-marker" role="slider" tabindex="0" aria-label="Split marker" hidden></div>
+              </div>
+              <p class="hint" id="wave-read"></p>
+              <p class="hint" id="wave-hint" role="status" aria-live="polite"></p>
+              <p class="hint">Drag the two cut handles, or focus one and use the arrow keys. Tap the picture to place a split marker.</p>
+
+              <div class="group" role="group" aria-labelledby="g-cut">
+                <h4 id="g-cut">Move a cut point</h4>
+                <div class="row wrap"><label for="step">Step</label>
+                  <select id="step"><option value="0.01">10 ms (fine)</option><option value="0.05" selected>50 ms</option><option value="0.25">250 ms (coarse)</option></select></div>
+                <div class="grid2">
+                  <button type="button" class="btn small" data-nudge="start" data-dir="-1">Start earlier</button>
+                  <button type="button" class="btn small" data-nudge="start" data-dir="1">Start later</button>
+                  <button type="button" class="btn small" data-nudge="end" data-dir="-1">End earlier</button>
+                  <button type="button" class="btn small" data-nudge="end" data-dir="1">End later</button>
+                </div>
+                <div class="grid2">
+                  <button type="button" class="btn small" id="hear-start">Hear the start</button>
+                  <button type="button" class="btn small" id="hear-end">Hear the end</button>
+                </div>
+                <label class="check"><input type="checkbox" id="audition"> Play a short clip after each change</label>
+                <div class="grid2">
+                  <button type="button" class="btn small" id="wider">Wider view</button>
+                  <button type="button" class="btn small" id="closer">Closer view</button>
+                </div>
+                <div class="stack"><button type="button" class="btn small" id="trim">Trim silence</button></div>
+              </div>
+
+              <div class="group" role="group" aria-labelledby="g-split">
+                <h4 id="g-split">Split into two pieces</h4>
+                <div class="stack">
+                  <button type="button" class="btn small" id="split-word" disabled>Split before a word</button>
+                  <button type="button" class="btn small" id="split-marker" disabled>Split at the marker</button>
+                  <button type="button" class="btn small" id="hear-marker" disabled>Hear around the marker</button>
+                </div>
+                <p class="hint">To split before a word, tap that word above first. Both halves come back as "to review".</p>
+              </div>
+
+              <div class="group" role="group" aria-labelledby="g-join">
+                <h4 id="g-join">Join pieces</h4>
+                <div class="stack">
+                  <button type="button" class="btn small" id="join-prev">Join with the previous piece</button>
+                  <button type="button" class="btn small" id="join-next">Join with the next piece</button>
+                </div>
+              </div>
+            </details>
             <div class="chips" id="p-tags" role="group" aria-label="Tags for this piece"></div>
             <p class="hint">Pieces tagged laugh, cough, noise or unclear are left out when you build the training set.</p>
             <div class="row wrap">

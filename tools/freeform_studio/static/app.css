@@ -14,6 +14,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { font-size: 112.5%; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
@@ -155,3 +156,23 @@ dialog .row { justify-content: flex-end; }
   body.review .bar { padding-left: .5rem; padding-right: .5rem; gap: .4rem; }
   body.review .bar .btn { padding: .4rem .5rem; min-width: 3rem; font-size: .95rem; }
 }
+
+/* ------------------------------------------------------------------ waveform and cut points */
+.timing { margin: .75rem 0; border: 1px solid var(--line); border-radius: .6rem; padding: 0 .6rem .75rem; }
+.timing > summary { font-weight: 600; }
+.wave { position: relative; height: 112px; margin: .5rem 0; background: var(--bg); border: 1px solid var(--line); border-radius: .5rem; overflow: hidden; touch-action: pan-y; }
+.wave canvas { display: block; height: 112px; }
+.hdl { position: absolute; top: 0; bottom: 0; width: 44px; margin-left: -22px; touch-action: none; cursor: ew-resize; display: flex; justify-content: center; }
+.hdl::before { content: ""; width: 4px; height: 100%; background: var(--text); border-radius: 2px; }
+.hdl.drag::before { width: 6px; }
+.hdl-start::after, .hdl-end::after { content: ""; position: absolute; top: 5px; border-top: 9px solid transparent; border-bottom: 9px solid transparent; }
+.hdl-start::after { left: calc(50% + 2px); border-left: 14px solid var(--text); }
+.hdl-end::after { right: calc(50% + 2px); border-right: 14px solid var(--text); }
+.hdl-marker { cursor: col-resize; }
+.hdl-marker::before { width: 3px; background: repeating-linear-gradient(to bottom, var(--text) 0 6px, transparent 6px 10px); }
+.group { margin: 1rem 0 0; }
+.group h4 { margin: 0 0 .25rem; font-size: 1rem; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin: .5rem 0; }
+.grid2 .btn { width: 100%; padding-left: .4rem; padding-right: .4rem; }
+.stack { display: grid; gap: .5rem; margin: .5rem 0; }
+.stack .btn { width: 100%; }

@@ -6,7 +6,7 @@ import pytest
 
 from conftest import needs_ffmpeg
 from freeform_studio import build_dataset as bd
-from freeform_studio.edit import clean_words, normalize_edit, validate_edit
+from freeform_studio.edit import clean_flags, clean_words, normalize_edit, validate_edit
 from freeform_studio.storage import TakeStore
 from test_api import make_cfg, run, upload, wait_for, webm_chunks
 from freeform_studio.app import create_app
@@ -23,6 +23,14 @@ def test_words_keep_only_known_keys_and_valid_entries():
     assert out[2]["p"] == 1.0 and len(out) == 3  # malformed ones are dropped; out-of-range confidence is clamped
     assert clean_words("nope") == [] and len(clean_words([{"w": "a", "s": 0, "e": 1}] * 999)) == 400
     assert clean_words([{"w": "q" * 500, "s": 0, "e": 1}])[0]["w"] == "q" * 80
+
+
+def test_flags_keep_only_short_lowercase_names():
+    assert clean_flags(["cuts_word", "low_confidence", "cuts_word", "<b>x</b>", 5, "X" * 40, "UPPER", None]) == ["cuts_word", "low_confidence"]
+    assert clean_flags("nope") == [] and len(clean_flags(["a"] * 3 + [f"f{'_' * i}" for i in range(1, 30)])) <= 16
+    seg = {"id": "s001", "start": 0, "end": 1, "text": "a", "words": [], "status": "pending", "tags": [], "note": "",
+           "flags": ["cuts_word", "<script>"]}
+    assert normalize_edit({"rev": 1, "segments": [seg]})["segments"][0]["flags"] == ["cuts_word"]
 
 
 def test_normalize_applies_word_cleaning_per_segment():
@@ -136,3 +144,12 @@ def test_pieces_tagged_laugh_or_noise_are_left_out_even_when_approved():
     assert bd.why_excluded({**base, "status": "pending", "tags": ["noise", "cough"]}, p) == "tagged: cough, noise"
     assert bd.why_excluded({**base, "status": "approved", "tags": ["breath"]}, p) is None  # breath is allowed
     assert bd.why_excluded({**base, "status": "approved", "tags": ["laugh"]}, bd.Policy(exclude_tags=set())) is None
+
+
+def test_a_piece_cut_through_a_word_is_left_out_even_when_approved_unless_allowed():
+    seg = {"start": 0.0, "end": 3.0, "text": "Fine words.", "flags": ["cuts_word"], "tags": [], "status": "approved"}
+    reason = bd.why_excluded(seg, bd.Policy())
+    assert reason and "inside a word" in reason
+    assert bd.why_excluded({**seg, "status": "pending"}, bd.Policy()) is not None
+    assert bd.why_excluded(seg, bd.Policy(allow={"cuts_word"})) is None
+    assert bd.why_excluded({**seg, "flags": []}, bd.Policy()) is None

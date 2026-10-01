@@ -4,10 +4,10 @@ Capture free speech from your phone, have your PC transcribe it with word timing
 training clips for Piper. It runs next to `piper-recording-studio` (its own port, its own venv) and shares its
 `output/` folder.
 
-**Status: Phase 3 of 7 (review screens), plus dataset export.** You can record from your phone, everything is saved
-to your PC as you speak, the PC transcribes it, and you can now correct the words and approve or drop each piece on your
-phone (or PC). Still to come: drawing the waveform and dragging cut points, splitting and merging pieces, matching text you
-read against what was heard, and exporting approved clips straight into the recorder's folders.
+**Status: Phase 4 of 7 (waveform, cut points, split and join), plus dataset export.** You can record from your phone,
+everything is saved to your PC as you speak, the PC transcribes it, and you can correct the words, move the cut points,
+split and join pieces, and approve or drop each one on your phone (or PC). Still to come: matching text you read against
+what was heard, and exporting approved clips straight into the recorder's folders.
 
 ## Install (once)
 
@@ -77,6 +77,28 @@ You work on **one piece at a time**, a sentence or two of speech cut at the paus
 - **Approve all clean pieces** approves every pending piece with no warnings, after you confirm. It's there for the
   ones the recognizer got completely right; listen to a few first.
 
+**Cut points, splitting and joining** (open *Cut points, split and join* under the text box)
+
+- The **waveform** shows the piece with room around it. The shaded part is what will be kept; the pieces on either side are
+  greyed. Small ticks along the bottom are where each recognized word begins. **Wider view / Closer view** change the room.
+- **Move a cut point** by dragging its handle (the flag pointing right is the start, the one pointing left is the end), by
+  focusing a handle and using the arrow keys (one step; **Shift** five steps; **Page Up/Down** half a second), or with the
+  **Start/End earlier/later** buttons. Choose the step: 10 ms, 50 ms or 250 ms. A cut point stops at the neighbouring piece,
+  at the edge of the recording, and 0.1 s before the other cut point, and says so.
+- A run of nudges within a couple of seconds, or one drag, is **one undo step**.
+- **Hear the start / Hear the end** play about 0.8 s at that edge (exactly what training will hear). *Play a short clip after
+  each change* does it for you after every move; it is **off** unless you turn it on.
+- **Trim silence** tightens a piece to the speech inside it, leaving a little room. It only ever shrinks a piece, and never
+  cuts closer than 0.05 s to a word the recognizer found. It tells you how much it took, and Undo puts it back.
+- **If a cut point falls inside a word** (less than 70% of the word is left in the piece) the piece gets a *cuts a word*
+  warning, because the audio and the text no longer agree. Move the cut point or change the text and it clears itself.
+  Pieces with this warning are left out of the training set even if approved, unless you pass `--allow cuts_word`.
+- **Split**: tap a word (it also plays from there), then *Split before "word"*. Or tap the waveform to place a dashed
+  **marker** (move it with its arrow keys, check it with *Hear around the marker*) and press *Split at the marker*. Splitting
+  in the pause between two words is best. Both halves come back as "to review", and Undo makes them one piece again.
+- **Join** a piece with the one before or after it. The pause between them becomes part of the clip. The result is "to
+  review", and Undo splits it again. Anything that would be too long to train on gets the usual *long* warning.
+
 **Your work is protected in layers**
 
 - Every change is **saved to your PC about half a second later**; the line under the title says so in words.
@@ -119,7 +141,7 @@ prints the training command to run, including a fresh cache folder.
 | `--include clean` (default) | pieces you approved, plus pieces the recognizer was confident about |
 | `--include approved` | only pieces you approved in review (recommended once you have reviewed enough) |
 | `--include all` | everything not dropped; flags ignored |
-| `--allow low_confidence,has_digits` | accept pieces carrying these flags anyway (`has_digits` is allowed by default) |
+| `--allow low_confidence,has_digits` | accept pieces carrying these flags anyway (`has_digits` is allowed by default; `cuts_word` is never accepted unless you name it) |
 | `--also ~/piper/my-dataset-split` | mix in an existing dataset (repeatable) |
 | `--exclude-tags laugh,cough` | leave out pieces carrying these tags (default `laugh,cough,noise,unclear`; `none` turns it off) |
 | `--min-seconds` / `--max-seconds` | length limits, default 1.0 and 11.5 |
@@ -214,7 +236,7 @@ Approved clips will be exported into `output/<code>/freeform/` in the same layou
 cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
 pip install pytest && python -m pytest freeform_studio/tests -q
 ```
-The screens' pure logic (re-timing words after an edit, merging two devices' edits) is also tested with Node, if it is
+The screens' pure logic (re-timing words after an edit, merging two devices' edits, splitting, joining, trimming, waveform geometry) is also tested with Node, if it is
 installed (`node --test` via `test_js_logic.py`; skipped otherwise). Set `FS_SHOTS=/some/dir` to save screenshots from the
 browser tests.
 The browser tests (`test_capture_ui.py`, `test_review_ui.py`) also need `pip install playwright` and a Chromium; they skip themselves

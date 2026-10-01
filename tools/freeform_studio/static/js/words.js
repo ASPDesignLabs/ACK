@@ -140,8 +140,21 @@ export function merge3(base, mine, theirs) {
 }
 
 // ---------------------------------------------------------------- flags that follow from the text and words
-const FLAG_ORDER = ["empty", "too_short", "too_long", "low_confidence", "possible_hallucination", "repetitive",
+const FLAG_ORDER = ["empty", "too_short", "too_long", "cuts_word", "low_confidence", "possible_hallucination", "repetitive",
                     "has_digits", "bracket_tag", "has_symbols"];
+
+/**
+ * True when a cut point falls inside a word, so the audio no longer holds all of what the text says (or the reverse).
+ * A word counts as cut when less than 70% of it lies inside the piece. Recognizer timings are loose by a few
+ * hundredths of a second, which that margin absorbs.
+ */
+export function cutsWord(seg) {
+  return (seg.words || []).some((w) => {
+    const len = Math.max(w.e - w.s, 0.02);
+    const inside = Math.min(w.e, seg.end) - Math.max(w.s, seg.start);
+    return inside < 0.7 * len - 1e-9 && !(w.e === w.s && w.s >= seg.start && w.s <= seg.end);
+  });
+}
 
 /** Warning flags for a piece after the reviewer has changed it (mirrors the server's own rules). */
 export function recomputeFlags(seg, min = 1.0, max = 11.5) {
@@ -155,6 +168,9 @@ export function recomputeFlags(seg, min = 1.0, max = 11.5) {
   set("has_digits", /\d/.test(text));
   set("bracket_tag", /\[[^\]]*\]|\([^)]*\)/.test(text));
   set("has_symbols", /[&@#%*_=+<>{}\\/|]/.test(text));
-  if ((seg.words || []).length) set("low_confidence", seg.words.some((w) => w.p < 0.5));
+  if ((seg.words || []).length) {
+    set("low_confidence", seg.words.some((w) => w.p < 0.5));
+    set("cuts_word", cutsWord(seg));
+  }
   return [...flags].sort((a, b) => FLAG_ORDER.indexOf(a) - FLAG_ORDER.indexOf(b));
 }

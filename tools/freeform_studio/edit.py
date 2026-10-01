@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Optional
 STATUSES = ("pending", "approved", "dropped")
 SEG_ID_RE = re.compile(r"^s\d{3,6}$")
 TAG_RE = re.compile(r"^[a-z0-9_-]{1,24}$")
+FLAG_RE = re.compile(r"^[a-z_]{1,32}$")
+MAX_FLAGS = 16
 MAX_SEGMENTS = 5000
 MAX_WORDS = 400
 MAX_WORD_LEN = 80
@@ -46,6 +48,16 @@ def clean_words(words: Any) -> List[Dict[str, Any]]:
     return out
 
 
+def clean_flags(flags: Any) -> List[str]:
+    """Warning labels are free-form on purpose (the screens add their own), but only short lowercase names are kept."""
+    out: List[str] = []
+    if isinstance(flags, list):
+        for f in flags:
+            if isinstance(f, str) and FLAG_RE.match(f) and f not in out:
+                out.append(f)
+    return out[:MAX_FLAGS]
+
+
 def normalize_edit(doc: Any) -> Dict[str, Any]:
     """Copy only the known fields, so stray keys from a client never reach disk."""
     if not isinstance(doc, dict):
@@ -63,7 +75,7 @@ def normalize_edit(doc: Any) -> Dict[str, Any]:
                 "words": clean_words(s.get("words")),
                 "status": s.get("status", "pending"),
                 "tags": s.get("tags", []), "note": s.get("note", ""),
-                "flags": s.get("flags", []) if isinstance(s.get("flags"), list) else [],
+                "flags": clean_flags(s.get("flags")),
                 "auto": s.get("auto") if isinstance(s.get("auto"), dict) else None,
             })
     return {"schema": 1, "rev": doc.get("rev"), "segments": out_segs}

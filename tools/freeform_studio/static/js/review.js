@@ -2,6 +2,9 @@ import { api, el, fmtClock } from "./api.js";
 import { FLAG_HELP } from "./flags.js";
 import { statusInfo } from "./takes.js";
 import { alignEdit, recomputeFlags } from "./words.js";
+import { boundaryBefore, mergePieces, nextId, splitPiece, trimToSpeech } from "./pieces.js";
+import { boundsFor, clampEdge, nudged } from "./wavegeo.js";
+import { WaveView } from "./wave.js";
 import { Player } from "./player.js";
 import { Saver, sameSeg } from "./saver.js";
 import { watchConnection } from "./conn.js";
@@ -129,10 +132,10 @@ async function openEditor(takeId) {
     return fail(`Couldn't load the pieces for this recording: ${err.message}`);
   }
   $("work").hidden = false;
-  startEditor(takeId, doc);
+  startEditor(takeId, doc, take);
 }
 
-function startEditor(takeId, doc) {
+function startEditor(takeId, doc, take) {
   let pieces = doc.segments;
   const undoStack = [];
   const redoStack = [];
@@ -146,6 +149,10 @@ function startEditor(takeId, doc) {
   let renderedId = null;
   let prevSave = "saved";
   let keysOn = pref("fs.keys", "1") === "1";
+  const duration = take.duration || 0;
+  let marker = null;           // where a split would happen, in seconds
+  let lastWord = -1;           // the word most recently tapped, for "split before this word"
+  let widen = 0;               // how much room the waveform shows around the piece
   const posKey = `fs.pos.${takeId}`;
 
   const FILTERS = [
@@ -168,7 +175,7 @@ function startEditor(takeId, doc) {
   const player = new Player($("audio"));
   player.load(`/api/takes/${takeId}/audio`);
   player.addEventListener("fail", () => hint("The audio couldn't be loaded from your PC."));
-  player.addEventListener("stopped", () => { setNow(-1); $("play").textContent = "Play"; renderTime(); });
+  player.addEventListener("stopped", () => { setNow(-1); $("play").textContent = "Play"; renderTime(); wave.setPlayhead(null); });
   player.addEventListener("time", (e) => {
     const s = cur();
     if (!s) return;
@@ -176,13 +183,14 @@ function startEditor(takeId, doc) {
     s.words.forEach((w, i) => { if (w.s <= e.detail + 0.02) idx = i; });
     setNow(idx);
     renderTime(e.detail);
+    if ($("timing").open) wave.setPlayhead(e.detail);
   });
 
-  async function playPiece(from) {
+  async function playPiece(from, to) {
     const s = cur();
     if (!s) return;
     try {
-      await player.playRange(from === undefined ? s.start : from, s.end);
+      await player.playRange(from === undefined ? s.start : from, to === undefined ? s.end : to);
       $("play").textContent = "Stop";
     } catch (err) {
       $("play").textContent = "Play";
@@ -285,20 +293,27 @@ function startEditor(takeId, doc) {
   function guard() {
     if (!draftPending) return false;
     hint("Choose Restore or Discard on the banner at the top first.");
+    waveHint("Choose Restore or Discard on the banner at the top first.");
     return true;
   }
 
   function setLast(message) { $("lastchange").textContent = message; renderUndo(); }
 
-  function change(label, ids, mutate) {
+  // `coalesce` names a kind of adjustment; repeats of it within two seconds become one undo step.
+  function change(label, ids, mutate, { coalesce = null } = {}) {
     if (guard()) return false;
     commitSession();
     const before = snap(ids);
     mutate();
     const after = snap(ids);
     if (!differs(before, after)) return false;
-    undoStack.push({ label, before, after, ids });
-    if (undoStack.length > 200) undoStack.shift();
+    const last = undoStack[undoStack.length - 1];
+    if (coalesce && last && last.key === coalesce && Date.now() - last.at < 2000 && redoStack.length === 0) {
+      last.after = after; last.label = label; last.at = Date.now();
+    } else {
+      undoStack.push({ label, before, after, ids, key: coalesce, at: Date.now() });
+      if (undoStack.length > 200) undoStack.shift();
+    }
     redoStack.length = 0;
     saver.touch();
     setLast(label);
@@ -315,7 +330,8 @@ function startEditor(takeId, doc) {
     applySnap(entry[side]);
     to.push(entry);
     saver.touch();
-    if (entry.ids.length === 1 && byId(entry.ids[0])) reveal(entry.ids[0]); else settle(curId, null);
+    const target = entry.ids.find((id) => byId(id));
+    if (target) reveal(target); else settle(curId, null);
     setLast(`${verb}: ${entry.label}`);
   }
 
@@ -380,6 +396,8 @@ function startEditor(takeId, doc) {
     if (li) li.textContent = s.text || "(no words)";
     lastTime = "";
     renderTime();
+    lastWord = -1;
+    renderTiming();
   }
 
   // ------------------------------------------------------------------ actions
@@ -477,7 +495,10 @@ function startEditor(takeId, doc) {
     if (id) setPref(posKey, id);
     nowIdx = -1;
     rove = 0;
+    marker = null;
+    lastWord = -1;
     hint("");
+    waveHint("");
     renderAll();
     if (!id) { announce("Nothing left in this view."); return; }
     if (focus) { $("piece-title").focus(); $("piece").scrollIntoView({ block: "start" }); }
@@ -608,6 +629,7 @@ function startEditor(takeId, doc) {
     renderedId = s.id;
     lastTime = "";
     renderTime();
+    renderTiming();
   }
 
   function renderList() {
@@ -637,6 +659,155 @@ function startEditor(takeId, doc) {
     renderUndo();
   }
 
+  // ------------------------------------------------------------------ cut points, split and join
+  const timing = $("timing");
+  const waveHint = (message) => { $("wave-hint").textContent = message; };
+  const fmtP = (t) => { const m = Math.floor(t / 60); return `${m}:${(t - m * 60).toFixed(2).padStart(5, "0")}`; };
+  const wave = new WaveView({ box: $("wave"), canvas: $("wave-canvas"), start: $("h-start"), end: $("h-end"), marker: $("h-marker"),
+    getStep: () => Number($("step").value) });
+  wave.load(takeId);
+  timing.open = pref("fs.timing", "0") === "1";
+  $("step").value = pref("fs.step", "0.05");
+  $("audition").checked = pref("fs.audition", "0") === "1";
+  timing.addEventListener("toggle", () => { setPref("fs.timing", timing.open ? "1" : "0"); renderTiming(); });
+  $("step").addEventListener("change", () => setPref("fs.step", $("step").value));
+  $("audition").addEventListener("change", () => setPref("fs.audition", $("audition").checked ? "1" : "0"));
+
+  function renderTiming() {
+    const s = cur();
+    if (!s) return;
+    if (marker !== null && (marker < s.start + 0.1 || marker > s.end - 0.1)) marker = null;
+    const at0 = pieces.indexOf(s);
+    $("join-prev").disabled = at0 <= 0;
+    $("join-next").disabled = at0 < 0 || at0 >= pieces.length - 1;
+    $("split-marker").disabled = marker === null;
+    $("hear-marker").disabled = marker === null;
+    $("split-marker").textContent = marker === null ? "Split at the marker" : `Split at ${fmtP(marker)}`;
+    const w = lastWord >= 0 ? s.words[lastWord] : null;
+    $("split-word").disabled = !w;
+    $("split-word").textContent = w ? `Split before “${w.w}”` : "Split before a word";
+    $("wave-read").textContent = `Starts at ${fmtP(s.start)}, ends at ${fmtP(s.end)}, ${(s.end - s.start).toFixed(2)} seconds long.`;
+    if (timing.open) wave.show({ seg: s, bounds: boundsFor(pieces, s, duration), duration, marker, widen });
+  }
+
+  const EDGE_LIMIT = {
+    previous: "That's as far as it goes: the previous piece ends there. Trim or join that piece first.",
+    next: "That's as far as it goes: the next piece starts there.",
+    edge: "That's the edge of the recording.",
+  };
+
+  function setEdge(which, t) {
+    const s = cur();
+    if (!s) return;
+    if (guard()) { renderTiming(); return; }
+    const { t: to, limited } = clampEdge(which, t, s, boundsFor(pieces, s, duration));
+    const note = limited === "other" ? (which === "start" ? "The start can't pass the end." : "The end can't go before the start.") : limited ? EDGE_LIMIT[limited] : "";
+    waveHint(note);
+    if (to === s[which]) { renderTiming(); return; }
+    const changed = change(`Moved the ${which} of ${at(s)} to ${fmtP(to)}`, [s.id], () => {
+      const live = byId(s.id);
+      live[which] = to;
+      live.flags = recomputeFlags(live);
+    }, { coalesce: `${which}:${s.id}` });
+    if (!changed) return;
+    renderAll();
+    if (byId(s.id).flags.includes("cuts_word")) {
+      waveHint(`${note} A cut point falls inside a word, so the audio may not match the text. Move it, or change the text.`.trim());
+    }
+    if ($("audition").checked) hear(which);
+  }
+
+  function hear(which) {
+    const s = cur();
+    if (!s) return;
+    if (which === "start") playPiece(s.start, Math.min(s.end, s.start + 0.8));
+    else playPiece(Math.max(s.start, s.end - 0.8), s.end);
+  }
+
+  async function trimSilence() {
+    const s = cur();
+    if (!s || guard()) return;
+    const peaks = await wave.finest();
+    if (!peaks) { waveHint("The waveform isn't available for this recording, so silence can't be measured."); return; }
+    const r = trimToSpeech(cur(), peaks);
+    if (!r) { waveHint("Nothing to trim: this piece is already close to the speech."); return; }
+    const lead = r.start - s.start, tail = s.end - r.end;
+    if (change(`Trimmed the silence around ${at(s)}`, [s.id], () => {
+      const live = byId(s.id);
+      live.start = r.start; live.end = r.end;
+      live.flags = recomputeFlags(live);
+    })) {
+      renderAll();
+      waveHint(`Trimmed ${lead.toFixed(2)} s from the start and ${tail.toFixed(2)} s from the end, leaving room around the speech. Undo puts it back.`);
+    }
+  }
+
+  function doSplit(t) {
+    const s = cur();
+    if (!s || guard()) return;
+    commitSession();
+    const id = nextId(pieces);
+    const r = splitPiece(s, t, id);
+    if (r.error) { waveHint(r.error); return; }
+    player.stop();
+    const label = `Split ${at(s)} at ${fmtP(t)}`;
+    if (!change(label, [s.id, id], () => {
+      pieces[pieces.findIndex((p) => p.id === s.id)] = r.first;
+      pieces.push(r.second);
+      sortPieces();
+    })) return;
+    reveal(s.id);
+    waveHint(`Split in two. The second piece starts at ${fmtP(t)}. Both are back to "to review". Undo puts it back as one.`);
+    announce(`Split in two. You are on the first piece: ${r.first.text || "no words"}.`);
+  }
+
+  function joinWith(direction) {
+    const s = cur();
+    if (!s || guard()) return;
+    commitSession();
+    const i = pieces.findIndex((p) => p.id === s.id);
+    const other = pieces[i + direction];
+    if (!other) { waveHint("There is no piece there to join with."); return; }
+    const [a, b] = direction < 0 ? [other, s] : [s, other];
+    const r = mergePieces(a, b);
+    if (r.error) { waveHint(r.error); return; }
+    player.stop();
+    if (!change(`Joined ${at(a)} with the piece after it`, [a.id, b.id], () => {
+      pieces[pieces.findIndex((p) => p.id === a.id)] = r.merged;
+      pieces.splice(pieces.findIndex((p) => p.id === b.id), 1);
+    })) return;
+    reveal(a.id);
+    waveHint(`Joined. ${r.gap >= 1 ? `The ${r.gap.toFixed(1)} second pause between them is now part of the piece. ` : ""}It is back to "to review". Undo splits it again.`);
+    announce("Joined the two pieces.");
+  }
+
+  wave.addEventListener("commit", (e) => setEdge(e.detail.which, e.detail.t));
+  wave.addEventListener("marker", (e) => {
+    marker = e.detail.t;
+    renderTiming();
+    waveHint(`Marker at ${fmtP(marker)}. Use "Split at the marker" to cut here, or "Hear around the marker" to check it.`);
+  });
+  wave.addEventListener("outside", () => waveHint("Tap inside the shaded part to place a marker."));
+  wave.addEventListener("preview", () => {
+    $("wave-read").textContent = `Starts at ${fmtP(wave.value("start"))}, ends at ${fmtP(wave.value("end"))}, ${(wave.value("end") - wave.value("start")).toFixed(2)} seconds long.`;
+  });
+  for (const b of document.querySelectorAll("[data-nudge]")) {
+    b.addEventListener("click", () => { const s = cur(); if (s) setEdge(b.dataset.nudge, nudged(s[b.dataset.nudge], Number(b.dataset.dir), Number($("step").value))); });
+  }
+  $("hear-start").addEventListener("click", () => hear("start"));
+  $("hear-end").addEventListener("click", () => hear("end"));
+  $("hear-marker").addEventListener("click", () => {
+    const s = cur();
+    if (s && marker !== null) playPiece(Math.max(s.start, marker - 0.6), Math.min(s.end, marker + 0.6));
+  });
+  $("trim").addEventListener("click", trimSilence);
+  $("wider").addEventListener("click", () => { widen = Math.min(3, widen + 1); renderTiming(); });
+  $("closer").addEventListener("click", () => { widen = Math.max(-2, widen - 1); renderTiming(); });
+  $("split-marker").addEventListener("click", () => { if (marker !== null) doSplit(marker); });
+  $("split-word").addEventListener("click", () => { const s = cur(); if (s && lastWord >= 0) doSplit(boundaryBefore(s.words, lastWord)); });
+  $("join-prev").addEventListener("click", () => joinWith(-1));
+  $("join-next").addEventListener("click", () => joinWith(1));
+
   // ------------------------------------------------------------------ word strip: tap to hear from a word
   const strip = $("p-words");
   strip.addEventListener("click", (e) => {
@@ -644,6 +815,8 @@ function startEditor(takeId, doc) {
     const s = cur();
     if (!b || !s) return;
     const w = s.words[Number(b.dataset.i)];
+    lastWord = Number(b.dataset.i);
+    renderTiming();
     playPiece(Math.max(s.start, w.s - 0.12));
   });
   strip.addEventListener("keydown", (e) => {
@@ -777,6 +950,7 @@ function startEditor(takeId, doc) {
       return;
     }
     if (mod || e.altKey || typing || !keysOn) return;
+    if (t.getAttribute && t.getAttribute("role") === "slider") return;   // arrow keys belong to the cut points
     const onControl = t instanceof HTMLButtonElement || t instanceof HTMLAnchorElement || t.tagName === "SUMMARY";
     const inWords = !!t.closest && !!t.closest("#p-words");
     switch (e.key) {

@@ -2,7 +2,7 @@
 export const FLAG_TEXT = {
   low_confidence: "shaky word", has_digits: "has numbers", too_short: "very short", too_long: "long",
   possible_hallucination: "may be wrong", bracket_tag: "has a [tag]", repetitive: "repetitive", empty: "empty",
-  has_symbols: "has symbols",
+  has_symbols: "has symbols", cuts_word: "cuts a word",
 };
 
 export const FLAG_HELP = {
@@ -15,4 +15,5 @@ export const FLAG_HELP = {
   repetitive: "Looks repetitive. The recognizer may have got stuck, so check it against the audio.",
   bracket_tag: "Contains a [tag] or (note). Remove it unless you actually said it.",
   empty: "No words in this piece. Type what was said, or drop it.",
+  cuts_word: "A cut point falls inside a word, so the audio and the text may not match. Move the cut point, or change the text.",
 };

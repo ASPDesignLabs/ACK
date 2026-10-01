@@ -64,7 +64,7 @@ def take(server, tmp_path):
     return t["id"]
 
 
-def new_page(browser, server, path, **ctx_args):
+def new_page(browser, server, path, before=None, **ctx_args):
     ctx = browser.new_context(**{"viewport": {"width": 412, "height": 915}, "device_scale_factor": 2, "is_mobile": True,
                                  "has_touch": True, **ctx_args})
     page = ctx.new_page()
@@ -72,6 +72,8 @@ def new_page(browser, server, path, **ctx_args):
     page.on("console", lambda m: problems.append(m.text) if m.type in ("error", "warning") else None)
     page.on("pageerror", lambda e: problems.append(str(e)))
     page.on("dialog", lambda d: d.accept())  # the browser's own "leave this page?" prompt
+    if before:
+        before(page)  # e.g. to intercept requests the page makes while loading
     page.goto(server["base"] + path)
     return page, ctx, problems
 

@@ -91,6 +91,9 @@ def why_excluded(seg: Dict[str, Any], p: Policy) -> Optional[str]:
     tagged = set(seg.get("tags", [])) & p.exclude_tags
     if tagged:  # an explicit judgement by a person, so it applies even to approved pieces
         return "tagged: " + ", ".join(sorted(tagged))
+    if "cuts_word" in (seg.get("flags") or []) and "cuts_word" not in p.allow:
+        # approval doesn't override this one: the audio and the text disagree, which is what hurts training most
+        return "a cut point falls inside a word (move it in Review, or pass --allow cuts_word)"
     if status == "approved":
         return None  # a person looked at it: flags no longer matter
     if p.include == "approved":

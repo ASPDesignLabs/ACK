@@ -271,7 +271,9 @@ audio). Useful options: `--also ~/piper/my-dataset-split` mixes in your earlier 
 `--allow low_confidence` brings back pieces the recognizer was unsure about (read `excluded.txt` in the dataset folder
 first); `--include approved` uses only pieces you approved in the Review page (the strictest and best choice once you have
 reviewed enough); pieces you tagged `laugh`, `cough`, `noise` or `unclear` are always left out unless you pass
-`--exclude-tags none`; `--no-normalize` keeps original loudness. It never changes your takes and never overwrites an existing dataset folder.
+`--exclude-tags none`; pieces whose cut point lands inside a word (flagged "cuts a word" in Review) are left out too, even if
+approved, because the text and audio disagree (`--allow cuts_word` overrides); `--no-normalize` keeps original loudness.
+It never changes your takes and never overwrites an existing dataset folder.
 
 What it does to each piece: cuts it from the take, brings it to a consistent level (peak about -3 dB), adds a
 few-millisecond fade so cuts never click, and converts to 22050 Hz mono 16-bit. It leaves out pieces shorter than
