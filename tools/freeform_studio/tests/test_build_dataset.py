@@ -91,6 +91,10 @@ def test_built_dataset_is_what_the_trainer_expects(out_dir, tmp_path, capsys):
     assert run(out_dir, dest) == 0
     out = capsys.readouterr().out
     assert "INCLUDED: 2 pieces" in out and "--data.cache_dir" in out and "cache-ds" in out and "--ckpt_path" in out
+    # the settings that made training fast on an 8 GB card (a small dataset has tiny epochs, so validation must not run after each one)
+    for option in ("--data.batch_size 12", "--data.num_workers 4", "--trainer.check_val_every_n_epoch 10", "--trainer.log_every_n_steps 1"):
+        assert option in out, option
+    assert "CONTINUE a voice you already trained" in out and "last.ckpt" in out
     raw = (dest / "metadata.csv").read_bytes()
     assert b"\r" not in raw and raw.endswith(b"\n")  # plain LF line endings
     r = rows(dest)

@@ -411,10 +411,20 @@ def print_training_command(out: Path) -> None:
     --data.espeak_voice "en-us" \\
     --data.cache_dir ~/piper/my-training/cache-{name} \\
     --data.config_path ~/piper/my-training/config.json \\
-    --data.batch_size 32 \\
+    --data.batch_size 12 \\
+    --data.num_workers 4 \\
+    --trainer.check_val_every_n_epoch 10 \\
+    --trainer.log_every_n_steps 1 \\
     --ckpt_path ~/piper/checkpoints/base.ckpt
 """)
-    print("If it stops with an out-of-memory error, lower --data.batch_size to 16 and start again.\n")
+    print("Notes on that command:")
+    print("  - To CONTINUE a voice you already trained, point --ckpt_path at your own newest")
+    print("    lightning_logs/version_N/checkpoints/last.ckpt instead of base.ckpt (base.ckpt starts over).")
+    print("  - Batch size 12 suits an 8 GB card. If it still runs out of memory, try 8. On a bigger card you can try 16 or")
+    print("    more; if training turns very slow (tens of seconds per step), the batch is probably too big for your memory.")
+    print("  - This dataset is small, so an epoch is only a few steps. Checking quality every 10 epochs (instead of every")
+    print("    one) keeps most of the time on training, and --trainer.log_every_n_steps 1 keeps the loss curves readable.")
+    print("    If your trainer says it doesn't know one of these options, leave that line out.\n")
 
 
 def main(argv: Optional[list] = None) -> int:

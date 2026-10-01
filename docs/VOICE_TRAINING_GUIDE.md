@@ -358,7 +358,10 @@ python3 -m piper.train fit \
   --data.espeak_voice "en-us" \
   --data.cache_dir ~/piper/my-training/cache \
   --data.config_path ~/piper/my-training/config.json \
-  --data.batch_size 32 \
+  --data.batch_size 12 \
+  --data.num_workers 4 \
+  --trainer.check_val_every_n_epoch 10 \
+  --trainer.log_every_n_steps 1 \
   --ckpt_path ~/piper/checkpoints/base.ckpt
 ```
 
@@ -370,20 +373,39 @@ Notes:
 - Checkpoints land in `~/piper1-gpl/lightning_logs/version_N/checkpoints/`
   (`N` auto-increments every time you run `fit`) — **not** wherever
   `--data.cache_dir` points.
+- **Batch size 12 and checking every 10 epochs are for a small dataset on an 8 GB card.** One real run on an RTX 4060 (8 GB)
+  with batch 32 crawled at about 0.02-0.04 steps per second (tens of seconds per step); after dropping to batch 12 and
+  validating every 10 epochs, an epoch of a few steps took 4-5 seconds. Both were changed together, so which mattered more
+  isn't known; the likely cause of the batch-32 slowness is the model not fitting in 8 GB and spilling into system memory. On a
+  bigger card try 16 or more, and if steps suddenly take tens of seconds, go back down. If it runs out of memory, try 8.
+- **Why `--trainer.check_val_every_n_epoch 10`:** with a small dataset an epoch is only a few steps, and the trainer's default
+  is to validate after *every* epoch. Each validation synthesizes five test sentences, scores them with the MOS predictor
+  (which runs on the CPU), writes five audio clips to TensorBoard and saves checkpoints (each about a gigabyte, by estimate), so
+  most of the time went there. Checkpoints, `val_mos` and the audio samples now arrive every 10 epochs, and Ctrl+C can lose up
+  to the epochs since the last one. `--trainer.log_every_n_steps 1` is because epochs have fewer than the default 50 steps,
+  which otherwise leaves the training-loss curves nearly empty. `--data.num_workers 4` replaces the default of 1. If your
+  trainer rejects any of these options, check with `python3 -m piper.train fit --help` and leave that one out.
+- **Disk space:** each run keeps up to about eleven checkpoints and `lightning_logs/version_N` folders pile up. Check with
+  `df -h .` and `du -sh lightning_logs/*`, and decide for yourself what to remove.
 - If you used the GPU for Freeform Studio's speech recognition, free it before you train (8 GB is not enough for both): on the
   Review page, **Status and safety → Free memory now**, or just wait; the model frees itself after 5 minutes idle. Confirm with
   `nvidia-smi` that the memory really went back (this was not measurable where the feature was built); if it didn't, stop the
   server, and restart it without `--asr-device cuda` (the default is the CPU) while training runs.
 
-### One-time source patch this repo's training script needs
+### One-time source patch older checkouts of this training script needed
 
-`piper1-gpl`'s default trainer callbacks include one that monitors
+Older versions of `piper1-gpl`'s default trainer callbacks include one that monitors
 `val_mos` (a perceptual-quality score from an auto-downloaded MOS
 predictor). If that predictor fails to load (common — it needs
 `torchaudio`, which lags several versions behind current `torch`
 releases and may simply not install cleanly), training crashes at
-checkpoint-save time with a `MisconfigurationException`. Fix once, by
-editing `~/piper1-gpl/src/piper/train/__main__.py` and deleting the
+checkpoint-save time with a `MisconfigurationException`.
+
+**You may not need this at all.** The current upstream source (checked at commit `efffbfb`, 2026-10-01) says a `val_mos` that
+can't be logged is skipped with a one-time warning and doesn't affect the other checkpoints. If your training starts and logs
+`val_mos` (it shows in the progress bar) there is nothing to do. If you do hit the error, your checkout is older: either update
+it (back up any file you've edited first, since an update can clash with it) or apply the old fix, once, by editing
+`~/piper1-gpl/src/piper/train/__main__.py` and deleting the
 *second* `ModelCheckpoint(...)` entry (the one with `monitor="val_mos"`)
 from `_DEFAULT_CALLBACKS`, leaving only the `val_mel`-monitoring one.
 Back up the file first (`cp __main__.py __main__.py.bak`) — it's a
@@ -533,7 +555,7 @@ reinstall.
 | `ModuleNotFoundError: No module named 'skbuild'` | `setup.py`'s own build-time deps aren't auto-installed when running it directly | `pip install scikit-build cmake ninja` |
 | CMake error referencing a `/tmp/pip-build-env-.../ninja` path that no longer exists | Stale build cache from an earlier pip-isolated build | `rm -rf _skbuild build`, retry |
 | `ModuleNotFoundError: No module named 'pkg_resources'` | `setuptools` 82+ removed it; `torchmetrics` still imports it | `pip install "setuptools<82"` |
-| `MisconfigurationException: ModelCheckpoint(monitor='val_mos')` | MOS predictor needs `torchaudio`, which lags current `torch` | Delete the `val_mos` `ModelCheckpoint` entry in `train/__main__.py` (see §4) |
+| `MisconfigurationException: ModelCheckpoint(monitor='val_mos')` | MOS predictor needs `torchaudio`, which lags current `torch` | Older checkouts only: delete the `val_mos` `ModelCheckpoint` entry in `train/__main__.py`, or update (see §4) |
 | `ValueError: num_samples should be a positive integer... num_samples=0` | `--data.audio_dir` doesn't match where the `.wav` files actually are | Fix the path so it points at the exact folder `metadata.csv`'s filenames resolve against |
 | `_pickle.UnpicklingError: Weights only load failed` / mentions `pathlib.PosixPath was not an allowed global` when starting `fit` with `--ckpt_path` | PyTorch 2.6 changed `torch.load`'s default to `weights_only=True`; Lightning's own checkpoint-path parsing calls `torch.load` on your base/resume checkpoint before training starts, and the checkpoint's saved hyperparameters include a `pathlib.PosixPath` that isn't on the new default allowlist | In `~/piper1-gpl/src/piper/train/__main__.py`, directly above the `_cli = VitsLightningCLI(` line, add: `import torch`, `import pathlib`, `torch.serialization.add_safe_globals([pathlib.PosixPath])` (back this file up first, to a name that doesn't clobber your existing `val_mos` patch backup) |
 | `ModuleNotFoundError: piper.train.vits.monotonic_align.monotonic_align.core` | `build_monotonic_align.sh` never completed (often from the `sudo` issue above), so the nested `monotonic_align/monotonic_align/core.so` was never created | Re-run `./build_monotonic_align.sh` (no sudo); if a stray `.so` exists un-nested, `mkdir monotonic_align && mv core*.so monotonic_align/` inside `src/piper/train/vits/monotonic_align/` |
@@ -557,7 +579,10 @@ python3 -m piper.train fit \
   --data.espeak_voice "en-us" \
   --data.cache_dir ~/piper/my-training/cache \
   --data.config_path ~/piper/my-training/config.json \
-  --data.batch_size 32 \
+  --data.batch_size 12 \
+  --data.num_workers 4 \
+  --trainer.check_val_every_n_epoch 10 \
+  --trainer.log_every_n_steps 1 \
   --ckpt_path ~/piper1-gpl/lightning_logs/version_N/checkpoints/last.ckpt
 
 # ...let it run a while, then Ctrl+C once...
