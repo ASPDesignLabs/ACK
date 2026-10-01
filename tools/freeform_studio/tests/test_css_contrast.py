@@ -31,7 +31,8 @@ def themes():
 # (foreground, background, minimum ratio): 4.5 for normal text, 3 for focus rings / large UI
 PAIRS = [("text", "bg", 4.5), ("text", "surface", 4.5), ("muted", "surface", 4.5), ("muted", "bg", 4.5),
          ("accent-text", "accent", 4.5), ("danger-text", "danger", 4.5), ("ok", "surface", 4.5),
-         ("danger", "surface", 4.5), ("text", "warn-bg", 4.5), ("focus", "bg", 3.0), ("focus", "surface", 3.0)]
+         ("danger", "surface", 4.5), ("text", "warn-bg", 4.5), ("focus", "bg", 3.0), ("focus", "surface", 3.0),
+         ("hl-text", "hl-bg", 4.5), ("accent", "surface", 4.5), ("accent", "bg", 3.0), ("text", "surface", 7.0)]
 
 
 def test_every_text_pair_meets_wcag_aa_in_both_themes():
@@ -41,7 +42,8 @@ def test_every_text_pair_meets_wcag_aa_in_both_themes():
             assert got >= need, f"{name}: {fg} on {bg} is {got:.2f}:1, needs {need}:1"
 
 
-def test_no_inline_styles_or_scripts_are_needed_by_the_page():
-    html = (Path(__file__).resolve().parents[1] / "static" / "index.html").read_text()
-    assert "<style" not in html and " style=" not in html
-    assert not re.search(r"<script(?![^>]*\bsrc=)", html) and " onclick=" not in html
+def test_no_inline_styles_or_scripts_are_needed_by_the_pages():
+    for name in ("index.html", "review.html"):
+        html = (Path(__file__).resolve().parents[1] / "static" / name).read_text()
+        assert "<style" not in html and " style=" not in html, name
+        assert not re.search(r"<script(?![^>]*\bsrc=)", html) and " onclick=" not in html, name

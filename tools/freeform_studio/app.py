@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import hmac
+import json
 import re
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Optional
@@ -19,6 +22,7 @@ from .storage import InvalidTakeId, TakeStore, read_json
 MODEL_RE = re.compile(r"^[A-Za-z0-9._/-]{1,80}$")
 LANG_RE = re.compile(r"^[a-z]{2,3}$")
 COOKIE = "fs_token"
+HISTORY_NAME_RE = re.compile(r"^edit-[A-Za-z0-9._-]{1,80}\.json$")
 STATIC_DIR = Path(__file__).parent / "static"
 # The pages load only their own files: no inline scripts or styles, nothing from other sites.
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; "
@@ -104,6 +108,11 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
     @app.route("/")
     async def index():
         return await send_from_directory(STATIC_DIR, "index.html", cache_timeout=0)
+
+    @app.route("/review")
+    @app.route("/review/<take_id>")
+    async def review_page(take_id: str = ""):
+        return await send_from_directory(STATIC_DIR, "review.html", cache_timeout=0)
 
     @app.route("/static/<path:filename>")
     async def static_files(filename: str):
@@ -236,10 +245,55 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
             if errors:
                 raise ApiError(400, "invalid edit", details=errors[:20])
             store.archive(take_id, "edit.json", "edit_history", f"rev{current['rev']:05d}")
-            store.prune(take_id, "edit_history", 30)
+            store.prune_thinned(take_id, "edit_history")
             new = new_edit_doc(norm["segments"], current["rev"] + 1)
             store.write(take_id, "edit.json", new)
         return jsonify(rev=new["rev"])
+
+    @app.route("/api/takes/<take_id>/edit/history")
+    async def edit_history(take_id: str):
+        take_or_404(take_id)
+        d = store.path(take_id, "edit_history")
+        items = []
+        if d.is_dir():
+            for p in sorted(d.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)[:100]:
+                try:
+                    doc = json.loads(p.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    continue
+                segs = doc.get("segments") or []
+                items.append({"name": p.name, "time": datetime.fromtimestamp(p.stat().st_mtime, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                              "rev": doc.get("rev"), "counts": {
+                                  "segments": len(segs), "approved": sum(1 for x in segs if x.get("status") == "approved"),
+                                  "dropped": sum(1 for x in segs if x.get("status") == "dropped")}})
+        return jsonify(history=items)
+
+    @app.route("/api/takes/<take_id>/edit/restore", methods=["POST"])
+    async def edit_restore(take_id: str):
+        take = take_or_404(take_id)
+        body = await request.get_json(silent=True) or {}
+        name, rev = body.get("name"), body.get("rev")
+        if not isinstance(name, str) or not HISTORY_NAME_RE.match(name):
+            raise ApiError(400, "bad version name")
+        if isinstance(rev, bool) or not isinstance(rev, int):
+            raise ApiError(400, "rev must be the integer you last received")
+        with store.lock:
+            current = store.read(take_id, "edit.json")
+            if current is None:
+                raise ApiError(404, "no edit document yet")
+            if rev != current["rev"]:
+                raise ApiError(409, "someone else changed this take; reload first", current=current)
+            snap = store.read(take_id, f"edit_history/{name}")
+            if snap is None:
+                raise ApiError(404, "that version no longer exists")
+            norm = normalize_edit(snap)
+            errors = validate_edit(norm, float(take.get("duration") or 0.0))
+            if errors:
+                raise ApiError(400, "that version can't be restored", details=errors[:10])
+            store.archive(take_id, "edit.json", "edit_history", f"before-restore-{time.strftime('%Y%m%d-%H%M%S')}")
+            new = new_edit_doc(norm["segments"], current["rev"] + 1)
+            store.write(take_id, "edit.json", new)
+        return jsonify(new)
 
     @app.route("/api/takes/<take_id>/transcribe", methods=["POST"])
     async def transcribe(take_id: str):

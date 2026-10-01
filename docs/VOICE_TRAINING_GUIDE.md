@@ -248,7 +248,8 @@ options if a lot of takes end up there on the first pass.
 
 ### Training on free-speech recordings (Freeform Studio)
 
-Recordings made with Freeform Studio (`tools/freeform_studio/`) live under
+Recordings made with Freeform Studio (`tools/freeform_studio/`) can be corrected and approved on your phone first (open
+the **Review** page; see the Freeform Studio README). They live under
 `~/piper-recording-studio/output/_freeform/en-US/takes/`, not in the folders the recorder and the splitter use, so they
 need their own step to become a dataset. **Back up first** (the raw recordings are the one thing you can't regenerate):
 
@@ -268,8 +269,9 @@ It prints the exact `piper.train fit` command to run, with a **new `--data.cache
 under its row number plus the start of its text, so reusing a cache after the audio changes silently trains on stale
 audio). Useful options: `--also ~/piper/my-dataset-split` mixes in your earlier prompted recordings;
 `--allow low_confidence` brings back pieces the recognizer was unsure about (read `excluded.txt` in the dataset folder
-first); `--include approved` uses only pieces you approved in review (once the review screens exist); `--no-normalize`
-keeps original loudness. It never changes your takes and never overwrites an existing dataset folder.
+first); `--include approved` uses only pieces you approved in the Review page (the strictest and best choice once you have
+reviewed enough); pieces you tagged `laugh`, `cough`, `noise` or `unclear` are always left out unless you pass
+`--exclude-tags none`; `--no-normalize` keeps original loudness. It never changes your takes and never overwrites an existing dataset folder.
 
 What it does to each piece: cuts it from the take, brings it to a consistent level (peak about -3 dB), adds a
 few-millisecond fade so cuts never click, and converts to 22050 Hz mono 16-bit. It leaves out pieces shorter than

@@ -1,6 +1,11 @@
+import glob
+import os
 import shutil
+import socket
 import subprocess
 import sys
+import time
+import urllib.request
 import wave
 from pathlib import Path
 
@@ -56,3 +61,61 @@ def fake_whisper_model(calls=None):
                                   compression_ratio=1.3, words=words)
             return iter([seg]), SimpleNamespace(duration=2.0, language="en")
     return M()
+
+
+# ------------------------------------------------------------------ real server + headless Chromium, shared by the UI tests
+TOOLS = Path(__file__).resolve().parents[2]
+
+
+def chromium_path():
+    for pattern in ("/opt/pw-browsers/chromium-*/chrome-linux/chrome",
+                    os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux/chrome")):
+        found = sorted(glob.glob(pattern))
+        if found:
+            return found[-1]
+    return None
+
+
+@pytest.fixture(scope="module")
+def server(tmp_path_factory):
+    out = tmp_path_factory.mktemp("srv") / "output"
+    out.mkdir()
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    proc = subprocess.Popen([sys.executable, "-m", "freeform_studio", "--output", str(out), "--port", str(port),
+                             "--token", "none", "--asr-engine", "fake", "--asr-idle-unload", "0"],
+                            cwd=TOOLS, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    base = f"http://127.0.0.1:{port}"
+    for _ in range(100):
+        try:
+            urllib.request.urlopen(base + "/healthz", timeout=0.5)
+            break
+        except OSError:
+            time.sleep(0.1)
+    else:
+        proc.kill()
+        pytest.fail("server did not start")
+    yield {"base": base, "out": out}
+    proc.terminate()
+    proc.wait(timeout=10)
+
+
+@pytest.fixture(scope="module")
+def browser():
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+    exe = chromium_path()
+    if not exe:
+        pytest.skip("no Chromium available")
+    with sync_playwright() as pw:
+        b = pw.chromium.launch(executable_path=exe, args=["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
+                                                          "--autoplay-policy=no-user-gesture-required", "--no-sandbox"])
+        yield b
+        b.close()
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    setattr(item, "rep_" + call.when, outcome.get_result())  # lets fixtures see whether the test failed

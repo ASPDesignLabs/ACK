@@ -9,6 +9,8 @@ STATUSES = ("pending", "approved", "dropped")
 SEG_ID_RE = re.compile(r"^s\d{3,6}$")
 TAG_RE = re.compile(r"^[a-z0-9_-]{1,24}$")
 MAX_SEGMENTS = 5000
+MAX_WORDS = 400
+MAX_WORD_LEN = 80
 MAX_TEXT = 2000
 _CONTROL = re.compile(r"[\x00-\x08\x0a-\x1f\x7f]")  # tab (\x09) allowed; newlines are not
 
@@ -23,6 +25,27 @@ def _num(x: Any) -> Optional[float]:
     return float(x) if math.isfinite(x) else None
 
 
+def clean_words(words: Any) -> List[Dict[str, Any]]:
+    """Keep only well-formed word entries and known keys. Words are timing aids; `text` stays the authority."""
+    out: List[Dict[str, Any]] = []
+    if not isinstance(words, list):
+        return out
+    for w in words[:MAX_WORDS]:
+        if not isinstance(w, dict) or not isinstance(w.get("w"), str):
+            continue
+        s, e = _num(w.get("s")), _num(w.get("e"))
+        if s is None or e is None:
+            continue
+        p = _num(w.get("p"))
+        item: Dict[str, Any] = {"w": w["w"][:MAX_WORD_LEN], "s": round(s, 3), "e": round(max(s, e), 3),
+                                "p": round(min(1.0, max(0.0, p)), 3) if p is not None else 1.0}
+        for flag in ("j", "m", "ed"):
+            if w.get(flag) is True:
+                item[flag] = True
+        out.append(item)
+    return out
+
+
 def normalize_edit(doc: Any) -> Dict[str, Any]:
     """Copy only the known fields, so stray keys from a client never reach disk."""
     if not isinstance(doc, dict):
@@ -35,10 +58,9 @@ def normalize_edit(doc: Any) -> Dict[str, Any]:
             if not isinstance(s, dict):
                 out_segs.append(None)
                 continue
-            words = s.get("words")
             out_segs.append({
                 "id": s.get("id"), "start": s.get("start"), "end": s.get("end"), "text": s.get("text"),
-                "words": words if isinstance(words, list) else [],
+                "words": clean_words(s.get("words")),
                 "status": s.get("status", "pending"),
                 "tags": s.get("tags", []), "note": s.get("note", ""),
                 "flags": s.get("flags", []) if isinstance(s.get("flags"), list) else [],

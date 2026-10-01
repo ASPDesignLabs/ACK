@@ -44,6 +44,7 @@ _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 class Policy:
     include: str = "clean"
     allow: Set[str] = field(default_factory=lambda: {"has_digits"})
+    exclude_tags: Set[str] = field(default_factory=lambda: {"laugh", "cough", "noise", "unclear"})
     min_s: float = 1.0
     max_s: float = 11.5
     normalize: bool = True
@@ -87,6 +88,9 @@ def why_excluded(seg: Dict[str, Any], p: Policy) -> Optional[str]:
         return f"too short ({dur:.1f}s)"
     if dur > p.max_s:
         return f"too long ({dur:.1f}s)"
+    tagged = set(seg.get("tags", [])) & p.exclude_tags
+    if tagged:  # an explicit judgement by a person, so it applies even to approved pieces
+        return "tagged: " + ", ".join(sorted(tagged))
     if status == "approved":
         return None  # a person looked at it: flags no longer matter
     if p.include == "approved":
@@ -210,6 +214,7 @@ def read_dataset(folder: Path) -> Tuple[List[Tuple[Path, str]], List[str]]:
 # ---------------------------------------------------------------------------- the whole job
 def build(args: argparse.Namespace) -> int:
     policy = Policy(include=args.include, allow={a for a in (args.allow or "has_digits").split(",") if a},
+                    exclude_tags=set() if args.exclude_tags == "none" else {t for t in args.exclude_tags.split(",") if t},
                     min_s=args.min_seconds, max_s=args.max_seconds, normalize=not args.no_normalize)
     takes_dir = Path(args.output).expanduser() / "_freeform" / args.code / "takes"
     out = Path(args.out).expanduser() if args.out else Path("~/piper").expanduser() / f"freeform-dataset-{datetime.now():%Y%m%d-%H%M%S}"
@@ -385,6 +390,8 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--out", help="where to write the dataset (default: ~/piper/freeform-dataset-<date-time>)")
     ap.add_argument("--include", choices=["clean", "approved", "all"], default="clean")
     ap.add_argument("--allow", default="has_digits", help="comma-separated flags to accept anyway, e.g. low_confidence,has_digits")
+    ap.add_argument("--exclude-tags", default="laugh,cough,noise,unclear",
+                    help="pieces you tagged with any of these are left out, even if approved; 'none' to disable")
     ap.add_argument("--min-seconds", type=float, default=1.0)
     ap.add_argument("--max-seconds", type=float, default=11.5, help="longer pieces risk running out of GPU memory")
     ap.add_argument("--also", action="append", metavar="DATASET", help="also include an existing dataset folder "

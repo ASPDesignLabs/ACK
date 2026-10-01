@@ -163,6 +163,26 @@ class TakeStore:
         for p in files[:-keep] if keep > 0 else files:
             p.unlink(missing_ok=True)
 
+    def prune_thinned(self, take_id: str, subdir: str, recent: int = 30, bucket_s: int = 1800, cap: int = 100) -> None:
+        """Keep the newest `recent` snapshots, then one per `bucket_s` of age beyond that (up to `cap` in all), so a long
+        editing session still leaves restore points from hours ago. Snapshots taken before a risky operation are
+        never pruned."""
+        d = self.path(take_id, subdir)
+        if not d.is_dir():
+            return
+        files = sorted(d.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+        keep = {p for p in files if any(tag in p.name for tag in ("pre-regen", "before-restore"))}
+        keep.update(files[:recent])
+        buckets = {int(p.stat().st_mtime // bucket_s) for p in keep}
+        for p in files[recent:]:
+            b = int(p.stat().st_mtime // bucket_s)
+            if b not in buckets and len(keep) < cap:
+                keep.add(p)
+                buckets.add(b)
+        for p in files:
+            if p not in keep:
+                p.unlink(missing_ok=True)
+
     # -- chunk upload --------------------------------------------------------
     def write_chunk(self, take_id: str, n: int, data: bytes) -> None:
         # One file per index: retries and duplicates just overwrite, order never matters.

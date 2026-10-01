@@ -4,9 +4,10 @@ Capture free speech from your phone, have your PC transcribe it with word timing
 training clips for Piper. It runs next to `piper-recording-studio` (its own port, its own venv) and shares its
 `output/` folder.
 
-**Status: Phase 2 of 7 (phone capture works), plus dataset export.** You can record from your phone, everything is saved
-to your PC as you speak, the PC transcribes it, and you can read what was heard. You can already turn your takes into a
-training dataset (see below). The review screens, where you correct words and approve pieces, come in the next phases.
+**Status: Phase 3 of 7 (review screens), plus dataset export.** You can record from your phone, everything is saved
+to your PC as you speak, the PC transcribes it, and you can now correct the words and approve or drop each piece on your
+phone (or PC). Still to come: drawing the waveform and dragging cut points, splitting and merging pieces, matching text you
+read against what was heard, and exporting approved clips straight into the recorder's folders.
 
 ## Install (once)
 
@@ -58,6 +59,48 @@ It prints two links: one for your phone and one for this PC, each with a private
 phone remembers it. The token is stored in `output/_freeform/token` (readable only by you). Use `--asr-engine fake` to
 run without any speech model (placeholder words, for testing).
 
+## Reviewing what was heard (phone or PC)
+
+Open **Review** (the link at the top of every page, or `/review`). It lists your recordings; tap **Review** on one.
+
+You work on **one piece at a time**, a sentence or two of speech cut at the pauses:
+
+- **Play** plays exactly that piece (the same audio that would go into training) and stops by itself at its end. The word
+  being spoken is highlighted. **Tap any word** to hear from there.
+- **Fix the words** in the box. Words you leave alone keep their timing; words you change take over the old words' time.
+  Words the recognizer was unsure about are underlined with dots, with a plain-language warning above them.
+- **Approve and next** (big button, bottom right) or **Drop** (bottom left). Nothing moves on its own: no timers, no
+  auto-advance unless you switch on *Play each piece when I move to it*.
+- **Tags** `laugh`, `cough`, `noise`, `unclear`: pieces with these are left out of training even if approved.
+- The **Show** menu narrows the list to *To review*, *Needs a look* (pending pieces with warnings), *Approved*, *Dropped*
+  or *All*. **Next to check** jumps to the next piece still waiting. Where you stopped is remembered.
+- **Approve all clean pieces** approves every pending piece with no warnings, after you confirm. It's there for the
+  ones the recognizer got completely right; listen to a few first.
+
+**Your work is protected in layers**
+
+- Every change is **saved to your PC about half a second later**; the line under the title says so in words.
+- **Undo and Redo** cover every action (approve, drop, tag, a whole stretch of typing, bulk approve). The line next to them
+  always says what the last change was. Reversible actions don't ask "are you sure?"; they can be undone instead.
+  Actions that can't simply be undone (bulk approve, going back to an old version, reloading) ask first.
+- **Earlier versions** keeps a snapshot every time you save (recent ones all, older ones thinned out). Restoring one keeps
+  the version you leave, so a restore can itself be reversed.
+- **Offline or the PC asleep?** Keep working. Changes are kept on the phone and sent when the PC is back. If the page was
+  closed before they were sent, the next visit offers to restore them (and locks editing until you choose, so the
+  saved copy can't be overwritten by accident).
+- **Two devices at once?** If another device saved first, the changes are merged piece by piece. If both changed the same
+  piece, yours is kept and the other is in *Earlier versions*.
+- Your raw recording and the recognizer's original output are never modified.
+
+**On a PC**: Space plays or stops, **A** approves and moves on, **D** drops, **J/K** or the arrow keys move, **N** is next
+to check, **E** edits the text, **Ctrl+Enter** approves even while typing, **Ctrl+Z / Ctrl+Shift+Z** undo and redo.
+Single-key shortcuts can be turned off (under *Keyboard shortcuts*) if speech input or a switch might press keys by
+accident.
+
+The page is built for one hand on a phone (big targets, controls at the bottom), keeps working for screen readers (labelled
+controls, status messages announced politely, no information carried by color alone), and meets WCAG AA contrast in light
+and dark mode.
+
 ## Turn your takes into a training dataset
 
 ```bash
@@ -74,10 +117,11 @@ prints the training command to run, including a fresh cache folder.
 | Option | What it does |
 |---|---|
 | `--include clean` (default) | pieces you approved, plus pieces the recognizer was confident about |
-| `--include approved` | only pieces you approved in review |
+| `--include approved` | only pieces you approved in review (recommended once you have reviewed enough) |
 | `--include all` | everything not dropped; flags ignored |
 | `--allow low_confidence,has_digits` | accept pieces carrying these flags anyway (`has_digits` is allowed by default) |
 | `--also ~/piper/my-dataset-split` | mix in an existing dataset (repeatable) |
+| `--exclude-tags laugh,cough` | leave out pieces carrying these tags (default `laugh,cough,noise,unclear`; `none` turns it off) |
 | `--min-seconds` / `--max-seconds` | length limits, default 1.0 and 11.5 |
 | `--no-normalize` | keep each clip's original loudness |
 | `--out DIR` | where to write it (default `~/piper/freeform-dataset-<date-time>`) |
@@ -159,6 +203,8 @@ Approved clips will be exported into `output/<code>/freeform/` in the same layou
 | `GET /api/takes/<id>/audio` | the audio, with Range support so phones can seek |
 | `GET /api/takes/<id>/peaks`, `.../peaks/<n>` | waveform data |
 | `GET/PUT /api/takes/<id>/edit` | the edit document; a save with a stale `rev` gets `409` instead of overwriting |
+| `GET /api/takes/<id>/edit/history` | saved versions of the edit document, newest first |
+| `POST /api/takes/<id>/edit/restore` | bring one back (`name`, `rev`); the current version is kept first |
 | `POST /api/takes/<id>/transcribe` | run again (`model`, `initial_prompt`, `hotwords`, `regenerate`+`force`) |
 | `POST /api/asr/release` | free the speech model's memory |
 
@@ -168,5 +214,8 @@ Approved clips will be exported into `output/<code>/freeform/` in the same layou
 cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
 pip install pytest && python -m pytest freeform_studio/tests -q
 ```
-The browser tests (`test_capture_ui.py`) also need `pip install playwright` and a Chromium; they skip themselves
+The screens' pure logic (re-timing words after an edit, merging two devices' edits) is also tested with Node, if it is
+installed (`node --test` via `test_js_logic.py`; skipped otherwise). Set `FS_SHOTS=/some/dir` to save screenshots from the
+browser tests.
+The browser tests (`test_capture_ui.py`, `test_review_ui.py`) also need `pip install playwright` and a Chromium; they skip themselves
 if either is missing.

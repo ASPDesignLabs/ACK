@@ -1,12 +1,7 @@
 import { api, el, fmtClock } from "./api.js";
+import { FLAG_TEXT } from "./flags.js";
 
-const FLAG_TEXT = {
-  low_confidence: "shaky word", has_digits: "has numbers", too_short: "very short", too_long: "long",
-  possible_hallucination: "may be wrong", bracket_tag: "has a [tag]", repetitive: "repetitive", empty: "empty",
-  has_symbols: "has symbols",
-};
-
-function statusInfo(t) {
+export function statusInfo(t) {
   switch (t.status) {
     case "recording": return ["Unfinished", ""];
     case "finishing": return ["Processing audio", ""];
@@ -58,7 +53,8 @@ export function initTakes() {
       meta.length ? el("div", { class: "take-meta" }, meta.join(" · ")) : "",
       t.status === "error" ? el("p", { class: "errtext" }, t.error || "Something went wrong.") : "",
       t.status === "error" ? el("button", { type: "button", class: "btn small", onclick: () => retry(t) }, "Try again") : "",
-      t.status === "ready" ? details : "");
+      t.status === "ready" ? details : "",
+      t.status === "ready" ? el("p", {}, el("a", { class: "btn small", href: `/review/${t.id}` }, "Review and approve")) : "");
   }
 
   async function refresh() {

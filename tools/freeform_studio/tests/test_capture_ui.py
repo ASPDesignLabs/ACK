@@ -1,71 +1,18 @@
 """Drives the real server with headless Chromium at phone size and a fake microphone."""
-import glob
 import json
 import os
-import re
-import socket
-import subprocess
-import sys
-import time
 import urllib.request
 from pathlib import Path
 
 import pytest
 
 pytest.importorskip("playwright")
-from playwright.sync_api import expect, sync_playwright  # noqa: E402
+from playwright.sync_api import expect  # noqa: E402
 
 from conftest import needs_ffmpeg  # noqa: E402
 
 pytestmark = needs_ffmpeg
-TOOLS = Path(__file__).resolve().parents[2]
 SHOTS = os.environ.get("FS_SHOTS")
-
-
-def chromium_path():
-    for pattern in ("/opt/pw-browsers/chromium-*/chrome-linux/chrome",
-                    os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux/chrome")):
-        found = sorted(glob.glob(pattern))
-        if found:
-            return found[-1]
-    return None
-
-
-@pytest.fixture(scope="module")
-def server(tmp_path_factory):
-    out = tmp_path_factory.mktemp("srv") / "output"
-    out.mkdir()
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        port = s.getsockname()[1]
-    proc = subprocess.Popen([sys.executable, "-m", "freeform_studio", "--output", str(out), "--port", str(port),
-                             "--token", "none", "--asr-engine", "fake", "--asr-idle-unload", "0"],
-                            cwd=TOOLS, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    base = f"http://127.0.0.1:{port}"
-    for _ in range(100):
-        try:
-            urllib.request.urlopen(base + "/healthz", timeout=0.5)
-            break
-        except OSError:
-            time.sleep(0.1)
-    else:
-        proc.kill()
-        pytest.fail("server did not start")
-    yield {"base": base, "out": out}
-    proc.terminate()
-    proc.wait(timeout=10)
-
-
-@pytest.fixture(scope="module")
-def browser():
-    exe = chromium_path()
-    if not exe:
-        pytest.skip("no Chromium available")
-    with sync_playwright() as pw:
-        b = pw.chromium.launch(executable_path=exe, args=["--use-fake-device-for-media-stream",
-                                                          "--use-fake-ui-for-media-stream", "--no-sandbox"])
-        yield b
-        b.close()
 
 
 @pytest.fixture

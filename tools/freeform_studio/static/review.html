@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Review - Freeform Studio</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/app.css">
+  <script type="module" src="/static/js/review.js"></script>
+</head>
+<body class="review">
+  <header class="top">
+    <h1>Freeform Studio</h1>
+    <nav class="nav" aria-label="Main"><a href="/">Record</a><a href="/review" aria-current="page">Review</a></nav>
+    <p class="sub" id="conn">Connecting to your PC...</p>
+  </header>
+
+  <main>
+    <div id="notice" class="banner warn" role="status" hidden></div>
+    <div id="draft" class="banner" hidden>
+      <p id="draft-text"></p>
+      <div class="row wrap"><button type="button" class="btn small" id="draft-restore">Restore them</button>
+        <button type="button" class="btn small" id="draft-discard">Discard them</button></div>
+    </div>
+
+    <section id="inbox" hidden aria-labelledby="inbox-h">
+      <div class="card">
+        <h2 id="inbox-h">Recordings</h2>
+        <p id="inbox-empty" class="hint">Loading...</p>
+        <ul id="inbox-list" class="takes"></ul>
+      </div>
+    </section>
+
+    <section id="editor" hidden>
+      <h2 id="take-title"></h2>
+
+      <div id="work" hidden>
+        <p id="summary" class="summary"></p>
+        <div id="savestate" class="savestate"></div>
+        <div class="filterrow"><label for="filter">Show</label><select id="filter"></select></div>
+
+        <article class="card piece" id="piece" aria-labelledby="piece-title">
+          <div id="piece-empty" hidden>
+            <h3>Nothing to show in this view</h3>
+            <p class="hint" id="piece-empty-text">Choose another view above, such as All.</p>
+          </div>
+          <div id="piece-body">
+            <div class="piece-head">
+              <h3 id="piece-title" tabindex="-1">Piece</h3>
+              <span class="chip" id="p-status">To review</span>
+            </div>
+            <ul id="p-flags" class="flags" aria-label="Warnings for this piece"></ul>
+            <div class="words" id="p-words" role="group" aria-label="Words. Tap a word to hear from there."></div>
+            <label for="p-text" class="lbl">What was said (edit it to match the audio)</label>
+            <textarea id="p-text" rows="4" maxlength="2000" spellcheck="true" autocapitalize="sentences"></textarea>
+            <p class="hint" id="p-hint" aria-live="polite"></p>
+            <p class="hint" id="p-time">0:00 of 0:00</p>
+            <div class="chips" id="p-tags" role="group" aria-label="Tags for this piece"></div>
+            <p class="hint">Pieces tagged laugh, cough, noise or unclear are left out when you build the training set.</p>
+            <div class="row wrap">
+              <button type="button" class="btn small" id="prev">Previous</button>
+              <button type="button" class="btn small" id="next-check">Next to check</button>
+              <button type="button" class="btn small" id="next">Next</button>
+            </div>
+            <div class="row wrap">
+              <button type="button" class="btn small" id="reset" hidden>Take back my approval</button>
+            </div>
+          </div>
+          <div class="row wrap undo">
+            <button type="button" class="btn small" id="undo" disabled>Undo</button>
+            <button type="button" class="btn small" id="redo" disabled>Redo</button>
+            <span id="lastchange" class="hint" role="status" aria-live="polite"></span>
+          </div>
+        </article>
+
+        <section class="card" aria-labelledby="tools-h">
+          <h3 id="tools-h">Tools</h3>
+          <button type="button" class="btn" id="bulk">Approve all clean pieces</button>
+          <p class="hint">Clean means no warnings at all. It does not mean you checked it, so listen to a few first. You'll be asked to confirm, and you can undo it.</p>
+          <label class="check"><input type="checkbox" id="autoplay"> Play each piece when I move to it</label>
+        </section>
+
+        <section class="card" aria-labelledby="list-h">
+          <h3 id="list-h">Pieces in this view</h3>
+          <ol id="list" class="plist"></ol>
+        </section>
+
+        <details class="card" id="history">
+          <summary>Earlier versions (get back anything, even after closing)</summary>
+          <p class="hint">Every save is kept. Restoring one keeps your current version in this list too.</p>
+          <ul id="history-list" class="takes"></ul>
+        </details>
+
+        <details class="card">
+          <summary>Keyboard shortcuts</summary>
+          <label class="check"><input type="checkbox" id="keys-on" checked> Use single-key shortcuts</label>
+          <dl class="keys">
+            <div><dt>Space</dt><dd>Play or stop</dd></div>
+            <div><dt>A</dt><dd>Approve and go to the next piece</dd></div>
+            <div><dt>D</dt><dd>Drop this piece</dd></div>
+            <div><dt>J or Right arrow</dt><dd>Next piece</dd></div>
+            <div><dt>K or Left arrow</dt><dd>Previous piece</dd></div>
+            <div><dt>N</dt><dd>Next piece that needs checking</dd></div>
+            <div><dt>E</dt><dd>Edit the text</dd></div>
+            <div><dt>Ctrl+Enter</dt><dd>Approve and next, even while typing</dd></div>
+            <div><dt>Ctrl+Z, Ctrl+Shift+Z</dt><dd>Undo, redo (when not typing)</dd></div>
+          </dl>
+          <p class="hint">Turn single-key shortcuts off if speech input or a switch device might press keys by accident.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <div class="bar" id="bar" hidden>
+    <button type="button" id="drop" class="btn">Drop</button>
+    <button type="button" id="play" class="btn">Play</button>
+    <button type="button" id="approve" class="btn primary">Approve and next</button>
+  </div>
+
+  <p id="announce" class="sr" role="status" aria-live="polite"></p>
+  <dialog id="confirm" aria-labelledby="confirm-title" aria-describedby="confirm-body">
+    <form method="dialog">
+      <h3 id="confirm-title"></h3>
+      <p id="confirm-body"></p>
+      <div class="row wrap"><button type="submit" class="btn" value="cancel" id="confirm-cancel">Cancel</button>
+        <button type="submit" class="btn primary" value="ok" id="confirm-ok">OK</button></div>
+    </form>
+  </dialog>
+  <audio id="audio" preload="metadata"></audio>
+</body>
+</html>

@@ -1,0 +1,805 @@
+import { api, el, fmtClock } from "./api.js";
+import { FLAG_HELP } from "./flags.js";
+import { statusInfo } from "./takes.js";
+import { alignEdit, recomputeFlags } from "./words.js";
+import { Player } from "./player.js";
+import { Saver, sameSeg } from "./saver.js";
+import { watchConnection } from "./conn.js";
+
+const $ = (id) => document.getElementById(id);
+const clone = (x) => JSON.parse(JSON.stringify(x));
+const TAGS = ["laugh", "cough", "noise", "unclear"];
+const LEFT_OUT = new Set(TAGS);            // build_dataset skips these by default
+const STATUS_TEXT = { pending: "To review", approved: "Approved", dropped: "Dropped" };
+const STATUS_TONE = { pending: "", approved: "ok", dropped: "bad" };
+const when = (iso) => new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+const fmtT = (t) => { const m = Math.floor(t / 60); return `${m}:${(t - m * 60).toFixed(1).padStart(4, "0")}`; };
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+function pref(key, fallback) { try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch (_) { return fallback; } }
+function setPref(key, value) { try { localStorage.setItem(key, value); } catch (_) { /* a remembered setting is a convenience only */ } }
+
+const announceNode = $("announce");
+function announce(message) {
+  announceNode.textContent = "";
+  setTimeout(() => { announceNode.textContent = message; }, 40);
+}
+
+function showNotice(message, { retry = null, sticky = false } = {}) {
+  const n = $("notice");
+  n.replaceChildren(el("p", {}, message));
+  const row = el("div", { class: "row wrap" });
+  if (retry) row.append(el("button", { type: "button", class: "btn small", onclick: retry }, "Try again"));
+  if (!sticky) row.append(el("button", { type: "button", class: "btn small", onclick: () => { n.hidden = true; } }, "Dismiss"));
+  if (row.children.length) n.append(row);
+  n.hidden = false;
+}
+
+// Rebuilds a container's children but keeps keyboard focus on the same control, found by its data-key.
+function rebuild(container, children) {
+  const active = document.activeElement;
+  const key = active && container.contains(active) ? active.dataset.key : null;
+  container.replaceChildren(...children);
+  if (key) {
+    const again = [...container.querySelectorAll("[data-key]")].find((n) => n.dataset.key === key);
+    if (again) again.focus();
+  }
+}
+
+function confirmDialog({ title, body, ok }) {
+  const d = $("confirm");
+  if (typeof d.showModal !== "function") return Promise.resolve(window.confirm(`${title}\n\n${body}`));
+  $("confirm-title").textContent = title;
+  $("confirm-body").textContent = body;
+  $("confirm-ok").textContent = ok;
+  d.returnValue = "";
+  return new Promise((resolve) => {
+    d.addEventListener("close", () => resolve(d.returnValue === "ok"), { once: true });
+    d.showModal();
+  });
+}
+
+watchConnection($("conn"), "Can't reach your PC. Anything you change is kept on this device and sent when it's back.", { brief: true });
+const route = location.pathname.match(/^\/review\/([^/]+)\/?$/);
+if (route) openEditor(route[1]); else openInbox();
+
+// ============================================================================================ inbox
+function openInbox() {
+  $("inbox").hidden = false;
+  const list = $("inbox-list"), empty = $("inbox-empty");
+  let timer = null;
+
+  function card(t) {
+    const [label, tone] = statusInfo(t);
+    const c = t.counts || { segments: 0, approved: 0, dropped: 0 };
+    const meta = [];
+    if (t.duration) meta.push(fmtClock(t.duration));
+    if (t.status === "ready") {
+      meta.push(plural(c.segments, "piece", "pieces"), `${c.approved} approved`, `${c.dropped} dropped`,
+                `${c.segments - c.approved - c.dropped} to review`);
+    }
+    return el("li", { class: "take" },
+      el("div", { class: "take-head" }, el("span", { class: "take-when" }, when(t.created)), el("span", { class: `chip ${tone}` }, label)),
+      meta.length ? el("div", { class: "take-meta" }, meta.join(" · ")) : "",
+      t.status === "error" ? el("p", { class: "errtext" }, t.error || "Something went wrong. Open Record to try again.") : "",
+      t.status === "ready"
+        ? el("p", {}, el("a", { class: "btn small primary", href: `/review/${t.id}`, "aria-label": `Review the recording from ${when(t.created)}` }, "Review"))
+        : "");
+  }
+
+  async function refresh() {
+    clearTimeout(timer);
+    let takes = null;
+    try {
+      takes = (await api("/api/takes")).takes;
+    } catch (_) {
+      if (!list.children.length) empty.textContent = "Can't reach your PC yet. This list fills in when it's back.";
+    }
+    if (takes) {
+      list.replaceChildren(...takes.map(card));
+      empty.hidden = takes.length > 0;
+      empty.textContent = "Nothing recorded yet. Use Record to make one.";
+    }
+    const busy = takes && takes.some((t) => ["finishing", "queued", "transcribing"].includes(t.status));
+    timer = setTimeout(refresh, document.hidden ? 20000 : busy ? 2500 : 15000);
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+  refresh();
+}
+
+// ============================================================================================ editor
+async function openEditor(takeId) {
+  $("editor").hidden = false;
+  const fail = (message) => showNotice(message, { retry: () => location.reload(), sticky: true });
+  let take;
+  try {
+    take = await api(`/api/takes/${takeId}`);
+  } catch (err) {
+    return fail(err.status === 404 ? "That recording wasn't found on your PC." : `Couldn't load this recording: ${err.message}`);
+  }
+  $("take-title").textContent = `Recording from ${when(take.created)}${take.duration ? ` (${fmtClock(take.duration)})` : ""}`;
+  document.title = `Review ${when(take.created)} - Freeform Studio`;
+  if (take.status !== "ready") {
+    return showNotice(`This recording isn't ready to review yet (${statusInfo(take)[0].toLowerCase()}). Open Record to follow its progress.`, { sticky: true });
+  }
+  let doc;
+  try {
+    doc = await api(`/api/takes/${takeId}/edit`);
+  } catch (err) {
+    return fail(`Couldn't load the pieces for this recording: ${err.message}`);
+  }
+  $("work").hidden = false;
+  startEditor(takeId, doc);
+}
+
+function startEditor(takeId, doc) {
+  let pieces = doc.segments;
+  const undoStack = [];
+  const redoStack = [];
+  let session = null;          // text being typed right now: { id, base, dirty }
+  let curId = null;
+  let filter = pieces.some((s) => s.status === "pending") ? "todo" : "all";
+  let listLimit = 50;
+  let draftPending = false;
+  let nowIdx = -1;
+  let rove = 0;                // which word button is reachable by Tab
+  let renderedId = null;
+  let prevSave = "saved";
+  let keysOn = pref("fs.keys", "1") === "1";
+  const posKey = `fs.pos.${takeId}`;
+
+  const FILTERS = [
+    ["todo", "To review", (s) => s.status === "pending"],
+    ["warn", "Needs a look", (s) => s.status === "pending" && s.flags.length > 0],
+    ["approved", "Approved", (s) => s.status === "approved"],
+    ["dropped", "Dropped", (s) => s.status === "dropped"],
+    ["all", "All", () => true],
+  ];
+  const filterFn = (key) => FILTERS.find((f) => f[0] === key)[2];
+  const filtered = () => pieces.filter(filterFn(filter));
+  const byId = (id) => pieces.find((s) => s.id === id) || null;
+  const cur = () => byId(curId);
+  const at = (s) => `the piece at ${fmtClock(s.start)}`;
+  const isClean = (s) => s.status === "pending" && !s.flags.length && s.text.trim() && !s.tags.some((t) => LEFT_OUT.has(t));
+  const cleanIds = () => pieces.filter(isClean).map((s) => s.id);
+  const sortPieces = () => pieces.sort((a, b) => a.start - b.start || a.end - b.end);
+
+  // ------------------------------------------------------------------ audio
+  const player = new Player($("audio"));
+  player.load(`/api/takes/${takeId}/audio`);
+  player.addEventListener("fail", () => hint("The audio couldn't be loaded from your PC."));
+  player.addEventListener("stopped", () => { setNow(-1); $("play").textContent = "Play"; renderTime(); });
+  player.addEventListener("time", (e) => {
+    const s = cur();
+    if (!s) return;
+    let idx = -1;
+    s.words.forEach((w, i) => { if (w.s <= e.detail + 0.02) idx = i; });
+    setNow(idx);
+    renderTime(e.detail);
+  });
+
+  async function playPiece(from) {
+    const s = cur();
+    if (!s) return;
+    try {
+      await player.playRange(from === undefined ? s.start : from, s.end);
+      $("play").textContent = "Stop";
+    } catch (err) {
+      $("play").textContent = "Play";
+      if (err && err.name === "AbortError") return;   // moved to another piece before this one started
+      hint(err && err.name === "NotAllowedError" ? "The browser wouldn't start the audio. Tap Play again." : "The audio couldn't be played.");
+    }
+  }
+  const togglePlay = () => { if (player.playing) player.stop(); else playPiece(); };
+
+  function setNow(idx) {
+    if (idx === nowIdx) return;
+    const words = $("p-words").children;
+    if (words[nowIdx]) { words[nowIdx].classList.remove("now"); words[nowIdx].removeAttribute("aria-current"); }
+    nowIdx = idx;
+    if (words[idx]) { words[idx].classList.add("now"); words[idx].setAttribute("aria-current", "true"); }
+  }
+
+  let lastTime = "";
+  function renderTime(t) {
+    const s = cur();
+    if (!s) return;
+    const text = t !== undefined && player.playing
+      ? `Playing ${fmtT(Math.max(0, t - s.start))} of ${fmtT(s.end - s.start)}`
+      : `${fmtT(s.start)} to ${fmtT(s.end)}, ${(s.end - s.start).toFixed(1)} seconds long`;
+    if (text !== lastTime) { lastTime = text; $("p-time").textContent = text; }
+  }
+
+  // ------------------------------------------------------------------ small messages next to the controls
+  function hint(message) { $("p-hint").textContent = message; }
+
+  // ------------------------------------------------------------------ saving
+  const saver = new Saver(takeId, doc, { get: () => pieces, onMerged });
+  saver.addEventListener("state", renderSave);
+
+  function renderSave() {
+    const st = saver.state;
+    const kids = [];
+    if (st === "saved") kids.push(el("span", {}, "All changes are saved on your PC."));
+    else if (st === "pending" || st === "saving") kids.push(el("span", {}, "Saving..."));
+    else if (st === "offline") kids.push(el("span", {}, "Can't reach your PC. Your changes are kept on this device and will be sent when it's back."));
+    else {
+      const err = saver.error;
+      const why = err && err.data && Array.isArray(err.data.details) ? err.data.details.slice(0, 3).join("; ") : (err && err.message) || "";
+      kids.push(el("span", {}, `Your PC refused the last save${why ? `: ${why}` : ""}. Your changes are still on screen and on this device.`),
+        el("button", { type: "button", class: "btn small", onclick: () => saver.retry() }, "Try saving again"),
+        el("button", { type: "button", class: "btn small", onclick: reloadFromPc }, "Reload from my PC"));
+    }
+    $("savestate").replaceChildren(...kids);
+    if (st !== prevSave) {
+      if (st === "offline" || st === "error") announce(st === "offline" ? "Can't reach your PC. Changes are kept on this device." : "Your PC refused the last save.");
+      else if (st === "saved" && (prevSave === "offline" || prevSave === "error")) announce("Your changes reached your PC. All saved.");
+      prevSave = st;
+    }
+  }
+
+  async function reloadFromPc() {
+    const ok = await confirmDialog({
+      title: "Reload from your PC?",
+      body: "This drops the changes that couldn't be saved and shows what your PC has. Your PC's copy is not touched.", ok: "Reload",
+    });
+    if (!ok) return;
+    try {
+      const fresh = await api(`/api/takes/${takeId}/edit`);
+      pieces = fresh.segments;
+      saver.rebase(fresh);
+      undoStack.length = 0; redoStack.length = 0;
+      session = null;
+      setLast("Reloaded what your PC has.");
+      settle(curId, null);
+    } catch (err) {
+      showNotice(`Couldn't reach your PC to reload: ${err.message}`);
+    }
+  }
+
+  // Changes made on another device or tab were folded in; my own edits were kept where they clashed.
+  function onMerged(list, conflicts) {
+    pieces = list;
+    session = null;
+    settle(curId, null, { force: true });
+    if (conflicts.length) {
+      showNotice(`Changes made somewhere else clashed with yours on ${plural(conflicts.length, "piece", "pieces")}. Yours were kept. The other versions are in "Earlier versions" below.`);
+    }
+  }
+
+  window.addEventListener("beforeunload", (e) => {
+    if (saver.state !== "saved") { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  // ------------------------------------------------------------------ the one way anything is changed (so it can be undone)
+  const snap = (ids) => new Map(ids.map((id) => [id, byId(id) ? clone(byId(id)) : null]));
+  function applySnap(map) {
+    for (const [id, seg] of map) {
+      const i = pieces.findIndex((s) => s.id === id);
+      if (seg === null) { if (i >= 0) pieces.splice(i, 1); } else if (i >= 0) pieces[i] = clone(seg); else pieces.push(clone(seg));
+    }
+    sortPieces();
+  }
+  const differs = (a, b) => [...a.keys()].some((id) => !sameSeg(a.get(id), b.get(id)));
+
+  function guard() {
+    if (!draftPending) return false;
+    hint("Choose Restore or Discard on the banner at the top first.");
+    return true;
+  }
+
+  function setLast(message) { $("lastchange").textContent = message; renderUndo(); }
+
+  function change(label, ids, mutate) {
+    if (guard()) return false;
+    commitSession();
+    const before = snap(ids);
+    mutate();
+    const after = snap(ids);
+    if (!differs(before, after)) return false;
+    undoStack.push({ label, before, after, ids });
+    if (undoStack.length > 200) undoStack.shift();
+    redoStack.length = 0;
+    saver.touch();
+    setLast(label);
+    return true;
+  }
+
+  function undo() { stepHistory(undoStack, redoStack, "before", "Undid"); }
+  function redo() { stepHistory(redoStack, undoStack, "after", "Redid"); }
+  function stepHistory(from, to, side, verb) {
+    if (guard()) return;
+    commitSession();
+    const entry = from.pop();
+    if (!entry) return;
+    applySnap(entry[side]);
+    to.push(entry);
+    saver.touch();
+    if (entry.ids.length === 1 && byId(entry.ids[0])) reveal(entry.ids[0]); else settle(curId, null);
+    setLast(`${verb}: ${entry.label}`);
+  }
+
+  function renderUndo() {
+    const u = undoStack[undoStack.length - 1], r = redoStack[redoStack.length - 1];
+    $("undo").disabled = !u;
+    $("redo").disabled = !r;
+    $("undo").setAttribute("aria-label", u ? `Undo: ${u.label}` : "Undo");
+    $("redo").setAttribute("aria-label", r ? `Redo: ${r.label}` : "Redo");
+  }
+
+  // ------------------------------------------------------------------ typing
+  const ta = $("p-text");
+  function sanitize(value) {
+    return value.replace(/[\r\n\t|]+/g, " ").replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "");
+  }
+
+  ta.addEventListener("input", () => {
+    const s = cur();
+    if (!s || guard()) return;
+    const raw = ta.value;
+    const clean = sanitize(raw);
+    if (clean !== raw) {
+      const pos = Math.min(ta.selectionStart, clean.length);
+      ta.value = clean;
+      ta.setSelectionRange(pos, pos);
+      if (raw.includes("|")) hint("The | symbol can't be used (it separates the columns of the training file), so it was replaced with a space.");
+    }
+    if (!session || session.id !== s.id) session = { id: s.id, base: clone(s), dirty: false };
+    const text = clean.trim().replace(/\s+/g, " ");
+    s.text = text;
+    s.words = alignEdit(session.base.words, text, { start: s.start, end: s.end });
+    s.flags = recomputeFlags(s);
+    session.dirty = true;
+    saver.touch();
+    renderAfterText(s);
+  });
+  ta.addEventListener("blur", () => commitSession());
+
+  // Ends a stretch of typing: it becomes one undo step, and the box shows the tidied text.
+  function commitSession() {
+    if (!session) return;
+    const done = session;
+    session = null;
+    const now = byId(done.id);
+    if (done.dirty && now && !sameSeg(now, done.base)) {
+      const label = `Edited the text of ${at(now)}`;
+      undoStack.push({ label, before: new Map([[done.id, done.base]]), after: new Map([[done.id, clone(now)]]), ids: [done.id] });
+      redoStack.length = 0;
+      setLast(label);
+    }
+    if (now && ta.value !== now.text) ta.value = now.text;
+  }
+
+  function renderAfterText(s) {
+    renderFlags(s);
+    renderWords(s);
+    renderBar();
+    renderSummary();
+    updateFilters();
+    const li = $("list").querySelector(`[data-key="${s.id}"] .ptext`);
+    if (li) li.textContent = s.text || "(no words)";
+    lastTime = "";
+    renderTime();
+  }
+
+  // ------------------------------------------------------------------ actions
+  function approve() {
+    const s = cur();
+    if (!s || guard()) return;
+    commitSession();
+    if (s.status === "approved") return goNext();
+    if (!s.text.trim()) { hint("This piece has no words, so it can't be approved. Type what was said, or drop it."); return; }
+    const next = neighbour(s.id, 1);
+    if (change(`Approved ${at(s)}`, [s.id], () => { byId(s.id).status = "approved"; })) leave(s.id, next && next.id);
+  }
+
+  function drop() {
+    const s = cur();
+    if (!s || guard()) return;
+    commitSession();
+    if (s.status === "dropped") {
+      if (change(`Restored ${at(s)} to "to review"`, [s.id], () => { byId(s.id).status = "pending"; })) leave(s.id, null);
+      return;
+    }
+    const next = neighbour(s.id, 1);
+    if (change(`Dropped ${at(s)}`, [s.id], () => { byId(s.id).status = "dropped"; })) leave(s.id, next && next.id);
+  }
+
+  function takeBackApproval() {
+    const s = cur();
+    if (!s) return;
+    if (change(`Took back approval for ${at(s)}`, [s.id], () => { byId(s.id).status = "pending"; })) leave(s.id, null);
+  }
+
+  function toggleTag(tag) {
+    const s = cur();
+    if (!s) return;
+    const on = !s.tags.includes(tag);
+    if (change(`${on ? "Tagged" : "Removed the tag from"} ${at(s)}${on ? ` as ${tag}` : ` (${tag})`}`, [s.id], () => {
+      const live = byId(s.id);
+      live.tags = on ? [...live.tags, tag].sort() : live.tags.filter((t) => t !== tag);
+    })) renderAll();
+  }
+
+  async function bulkApprove() {
+    if (guard()) return;
+    commitSession();
+    const ids = cleanIds();
+    if (!ids.length) { hint("No piece is clean right now."); return; }
+    const ok = await confirmDialog({
+      title: `Approve ${plural(ids.length, "piece", "pieces")}?`,
+      body: "These have no warnings. That doesn't mean you checked them, so only go ahead if you're happy to trust the recognizer on them. Pieces with warnings and pieces you dropped are left alone. You can undo this.",
+      ok: `Approve ${ids.length}`,
+    });
+    if (!ok) return;
+    if (change(`Approved ${plural(ids.length, "clean piece", "clean pieces")}`, ids, () => { ids.forEach((id) => { byId(id).status = "approved"; }); })) {
+      settle(curId, null);
+      announce(`Approved ${plural(ids.length, "piece", "pieces")}.`);
+    }
+  }
+
+  // ------------------------------------------------------------------ moving around
+  function neighbour(id, step) {
+    const list = filtered();
+    const i = list.findIndex((s) => s.id === id);
+    return i < 0 ? null : (list[i + step] || null);
+  }
+
+  function nearest(list, id) {
+    const s = byId(id);
+    if (!list.length) return null;
+    if (!s) return list[0];
+    return list.find((x) => x.start >= s.start) || list[list.length - 1];
+  }
+
+  // After a change that may have taken the piece out of the current view, land on `prefer` (the one that follows it).
+  function leave(leavingId, preferId) {
+    const list = filtered();
+    let target = preferId && list.some((s) => s.id === preferId) ? preferId : null;
+    if (!target && list.some((s) => s.id === leavingId)) target = leavingId;
+    if (!target) { const n = nearest(list, leavingId); target = n && n.id; }
+    select(target);
+  }
+
+  // Keep the current piece if it is still in view, otherwise the nearest one, then redraw everything.
+  function settle(id, prefer, { force = false } = {}) {
+    const list = filtered();
+    let target = id && list.some((s) => s.id === id) ? id : null;
+    if (!target) { const n = nearest(list, id); target = n && n.id; }
+    if (target === curId) { renderAll({ force }); return; }
+    select(target);
+  }
+
+  function select(id, { focus = false, quiet = false } = {}) {
+    commitSession();
+    player.stop();
+    curId = id;
+    if (id) setPref(posKey, id);
+    nowIdx = -1;
+    rove = 0;
+    hint("");
+    renderAll();
+    if (!id) { announce("Nothing left in this view."); return; }
+    if (focus) { $("piece-title").focus(); $("piece").scrollIntoView({ block: "start" }); }
+    if (!quiet) {
+      const list = filtered();
+      announce(`Piece ${list.findIndex((s) => s.id === id) + 1} of ${list.length}. ${byId(id).text || "No words."}`);
+    }
+    if ($("autoplay").checked) playPiece();
+  }
+
+  function goNext() {
+    const n = neighbour(curId, 1);
+    if (n) select(n.id); else hint("That was the last piece in this view.");
+  }
+  function goPrev() {
+    const n = neighbour(curId, -1);
+    if (n) select(n.id); else hint("This is the first piece in this view.");
+  }
+
+  // Shows a piece even if the current view would hide it.
+  function reveal(id) {
+    if (!filtered().some((s) => s.id === id)) filter = "all";
+    select(id);
+  }
+
+  function nextToCheck() {
+    const i = pieces.findIndex((s) => s.id === curId);
+    const pending = (s) => s.status === "pending" && s.id !== curId;
+    const later = pieces.slice(i + 1).find(pending);
+    const target = later || pieces.find(pending);
+    if (!target) { hint("Nothing left to check. Every piece is approved or dropped."); return; }
+    reveal(target.id);
+    if (!later) hint("Nothing later needs checking, so this went back to the start.");
+  }
+
+  function setFilter(key) {
+    commitSession();
+    filter = key;
+    listLimit = 50;
+    settle(curId, null);
+    const n = filtered().length;
+    announce(`Showing ${FILTERS.find((f) => f[0] === key)[1]}: ${plural(n, "piece", "pieces")}.`);
+  }
+
+  // ------------------------------------------------------------------ drawing
+  const filterBox = $("filter");
+  filterBox.replaceChildren(...FILTERS.map(([key, label]) => el("option", { value: key }, label)));
+  filterBox.addEventListener("change", () => setFilter(filterBox.value));
+
+  function updateFilters() {
+    FILTERS.forEach(([key, label, fn], i) => { filterBox.options[i].textContent = `${label} (${pieces.filter(fn).length})`; });
+    filterBox.value = filter;
+  }
+
+  function renderSummary() {
+    const c = { approved: 0, dropped: 0, todo: 0 };
+    pieces.forEach((s) => { c[s.status === "approved" ? "approved" : s.status === "dropped" ? "dropped" : "todo"] += 1; });
+    $("summary").textContent = pieces.length
+      ? `${plural(pieces.length, "piece", "pieces")}: ${c.approved} approved, ${c.dropped} dropped, ${c.todo} to review.${c.todo === 0 ? " Nothing left to review." : ""}`
+      : "No speech was found in this recording.";
+    const clean = cleanIds().length;
+    $("bulk").textContent = `Approve all clean pieces (${clean})`;
+    $("bulk").disabled = clean === 0;
+  }
+
+  function renderFlags(s) {
+    const items = s.flags.filter((f) => FLAG_HELP[f]).map((f) => el("li", {}, FLAG_HELP[f]));
+    $("p-flags").replaceChildren(...items);
+    $("p-flags").hidden = items.length === 0;
+  }
+
+  function renderWords(s) {
+    const words = s.words || [];
+    rove = Math.min(rove, Math.max(0, words.length - 1));
+    $("p-words").replaceChildren(...words.map((w, i) => {
+      const low = w.p < 0.5 && !w.ed;
+      const attrs = { type: "button", class: `w${low ? " low" : ""}`, tabindex: i === rove ? "0" : "-1", "data-i": String(i) };
+      if (low) attrs["aria-label"] = `${w.w} (unsure)`;
+      return el("button", attrs, w.w);
+    }));
+    $("p-words").hidden = words.length === 0;
+    nowIdx = -1;
+  }
+
+  function renderTags(s) {
+    const names = [...TAGS, ...s.tags.filter((t) => !TAGS.includes(t))];
+    rebuild($("p-tags"), [el("span", { class: "lead" }, "Tag:"),
+      ...names.map((t) => el("button", { type: "button", class: "fchip", "data-key": t, "aria-pressed": String(s.tags.includes(t)), onclick: () => toggleTag(t) }, t))]);
+  }
+
+  function renderBar() {
+    const s = cur();
+    $("bar").hidden = !s;
+    if (!s) return;
+    $("drop").textContent = s.status === "dropped" ? "Restore" : "Drop";
+    $("approve").textContent = s.status === "approved" ? "Next piece" : "Approve and next";
+    $("approve").disabled = s.status !== "approved" && !s.text.trim();
+    $("play").textContent = player.playing ? "Stop" : "Play";
+    $("reset").hidden = s.status !== "approved";
+    const list = filtered();
+    const i = list.findIndex((x) => x.id === s.id);
+    $("prev").disabled = i <= 0;
+    $("next").disabled = i < 0 || i >= list.length - 1;
+  }
+
+  function renderPiece({ force = false } = {}) {
+    const s = cur();
+    $("piece-empty").hidden = !!s;
+    $("piece-body").hidden = !s;
+    if (!s) {
+      $("piece-empty-text").textContent = pieces.length
+        ? (filter === "todo" ? "Every piece has been approved or dropped. Choose All to look back over them."
+          : filter === "all" ? "There is nothing in this view." : "Nothing in this view. Choose another one above, such as All.")
+        : "No speech was found in this recording.";
+      renderedId = null;
+      return;
+    }
+    const list = filtered();
+    $("piece-title").textContent = `Piece ${list.findIndex((x) => x.id === s.id) + 1} of ${list.length}`;
+    const chip = $("p-status");
+    chip.textContent = STATUS_TEXT[s.status];
+    chip.className = `chip ${STATUS_TONE[s.status]}`;
+    renderFlags(s);
+    renderWords(s);
+    renderTags(s);
+    if (renderedId !== s.id || force || document.activeElement !== ta) ta.value = s.text;
+    ta.readOnly = draftPending;
+    renderedId = s.id;
+    lastTime = "";
+    renderTime();
+  }
+
+  function renderList() {
+    const list = filtered();
+    const idx = list.findIndex((s) => s.id === curId);
+    if (idx >= listLimit) listLimit = idx + 25;
+    const rows = list.slice(0, listLimit).map((s, k) => el("li", {},
+      el("button", { type: "button", class: "pitem", "data-key": s.id, "aria-current": s.id === curId ? "true" : false, onclick: () => select(s.id, { focus: true }) },
+        el("span", { class: "pnum" }, `${k + 1}.`), el("span", { class: "ptime" }, fmtClock(s.start)),
+        el("span", { class: `chip ${STATUS_TONE[s.status]}` }, STATUS_TEXT[s.status]),
+        s.tags.length ? el("span", { class: "tag" }, s.tags.join(", ")) : "",
+        el("span", { class: "ptext" }, s.text || "(no words)"))));
+    if (list.length > listLimit) {
+      rows.push(el("li", {}, el("button", { type: "button", class: "btn small", "data-key": "more", onclick: () => { listLimit += 50; renderList(); } },
+        `Show ${Math.min(50, list.length - listLimit)} more`)));
+    }
+    if (!list.length) rows.push(el("li", { class: "hint" }, "Nothing here."));
+    rebuild($("list"), rows);
+  }
+
+  function renderAll({ force = false } = {}) {
+    renderSummary();
+    updateFilters();
+    renderPiece({ force });
+    renderList();
+    renderBar();
+    renderUndo();
+  }
+
+  // ------------------------------------------------------------------ word strip: tap to hear from a word
+  const strip = $("p-words");
+  strip.addEventListener("click", (e) => {
+    const b = e.target.closest("button.w");
+    const s = cur();
+    if (!b || !s) return;
+    const w = s.words[Number(b.dataset.i)];
+    playPiece(Math.max(s.start, w.s - 0.12));
+  });
+  strip.addEventListener("keydown", (e) => {
+    const buttons = [...strip.querySelectorAll("button.w")];
+    const i = buttons.indexOf(document.activeElement);
+    if (i < 0) return;
+    const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: buttons.length - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    const n = Math.max(0, Math.min(buttons.length - 1, to));
+    buttons.forEach((b, k) => b.setAttribute("tabindex", k === n ? "0" : "-1"));
+    rove = n;
+    buttons[n].focus();
+  });
+
+  // ------------------------------------------------------------------ version history
+  async function loadHistory() {
+    const ul = $("history-list");
+    ul.replaceChildren(el("li", { class: "hint" }, "Loading..."));
+    try {
+      const { history } = await api(`/api/takes/${takeId}/edit/history`);
+      if (!history.length) { ul.replaceChildren(el("li", { class: "hint" }, "No earlier versions yet. One is kept each time your changes save.")); return; }
+      ul.replaceChildren(...history.map((h) => el("li", { class: "take" },
+        el("div", { class: "take-head" }, el("span", { class: "take-when" }, when(h.time)), el("span", { class: "chip" }, h.name.startsWith("edit-before-restore") ? "kept before a restore" : `version ${h.rev}`)),
+        el("div", { class: "take-meta" }, `${plural(h.counts.segments, "piece", "pieces")} · ${h.counts.approved} approved · ${h.counts.dropped} dropped`),
+        el("p", {}, el("button", { type: "button", class: "btn small", "aria-label": `Restore this version from ${when(h.time)}`, onclick: () => restoreVersion(h) }, "Restore this version")))));
+    } catch (err) {
+      ul.replaceChildren(el("li", { class: "errtext" }, `Couldn't load the earlier versions: ${err.message}`));
+    }
+  }
+  $("history").addEventListener("toggle", () => { if ($("history").open) loadHistory(); });
+
+  async function waitSaved(ms = 8000) {
+    saver.flush();
+    for (let waited = 0; waited < ms && saver.state !== "saved"; waited += 100) {
+      if (saver.state === "error") break;
+      await new Promise((r) => setTimeout(r, 100));
+      if (!saver.inflight && saver.dirty) saver.flush();
+    }
+    return saver.state === "saved";
+  }
+
+  async function restoreVersion(h) {
+    if (guard()) return;
+    commitSession();
+    const ok = await confirmDialog({
+      title: "Go back to this version?",
+      body: `This replaces what you see now with the version from ${when(h.time)} (${h.counts.approved} approved, ${h.counts.dropped} dropped). What you have now is kept in the list, so you can come back to it.`,
+      ok: "Go back to it",
+    });
+    if (!ok) return;
+    if (!(await waitSaved())) {
+      showNotice("Your latest changes haven't reached your PC yet, so nothing was restored. Try again when it says all changes are saved.");
+      return;
+    }
+    try {
+      const fresh = await api(`/api/takes/${takeId}/edit/restore`, { method: "POST", body: { name: h.name, rev: saver.rev } });
+      pieces = fresh.segments;
+      saver.rebase(fresh);
+      undoStack.length = 0; redoStack.length = 0;
+      session = null;
+      settle(curId, null);
+      setLast(`Went back to the version from ${when(h.time)}.`);
+      announce(`Went back to the version from ${when(h.time)}.`);
+      loadHistory();
+    } catch (err) {
+      showNotice(err.status === 409
+        ? "Something changed on your PC while you were restoring, so nothing was restored. Try again."
+        : `Couldn't restore that version: ${err.message}`);
+    }
+  }
+
+  // ------------------------------------------------------------------ changes that were never saved last time
+  const draft = Saver.readDraft(takeId);
+  if (draft) {
+    const real = draft.items.filter((it) => (it.mine ? !sameSeg(it.mine, byId(it.id)) : !!byId(it.id)));
+    if (!real.length) {
+      Saver.discardDraft(takeId);
+    } else {
+      draftPending = true;
+      $("draft-text").textContent = `${plural(real.length, "change", "changes")} from earlier never reached your PC, because the page was closed first. ${real.length === 1 ? "It is" : "They are"} still kept on this device.`;
+      $("draft").hidden = false;
+      $("draft-restore").addEventListener("click", () => {
+        draftPending = false;
+        const usable = real.filter((it) => !it.mine || (typeof it.mine.id === "string" && typeof it.mine.text === "string" && Number.isFinite(it.mine.start) && Number.isFinite(it.mine.end)));
+        change(`Restored ${plural(usable.length, "unsaved change", "unsaved changes")}`, usable.map((it) => it.id), () => {
+          for (const it of usable) {
+            const i = pieces.findIndex((s) => s.id === it.id);
+            if (!it.mine) { if (i >= 0) pieces.splice(i, 1); } else if (i >= 0) pieces[i] = it.mine; else pieces.push(it.mine);
+          }
+          sortPieces();
+        });
+        $("draft").hidden = true;
+        settle(curId, null, { force: true });
+      });
+      $("draft-discard").addEventListener("click", () => {
+        draftPending = false;
+        Saver.discardDraft(takeId);
+        $("draft").hidden = true;
+        ta.readOnly = false;
+      });
+    }
+  }
+
+  // ------------------------------------------------------------------ wiring
+  $("approve").addEventListener("click", approve);
+  $("drop").addEventListener("click", drop);
+  $("play").addEventListener("click", togglePlay);
+  $("reset").addEventListener("click", takeBackApproval);
+  $("prev").addEventListener("click", goPrev);
+  $("next").addEventListener("click", goNext);
+  $("next-check").addEventListener("click", nextToCheck);
+  $("undo").addEventListener("click", undo);
+  $("redo").addEventListener("click", redo);
+  $("bulk").addEventListener("click", bulkApprove);
+  $("autoplay").checked = pref("fs.autoplay", "0") === "1";
+  $("autoplay").addEventListener("change", () => setPref("fs.autoplay", $("autoplay").checked ? "1" : "0"));
+  $("keys-on").checked = keysOn;
+  $("keys-on").addEventListener("change", () => { keysOn = $("keys-on").checked; setPref("fs.keys", keysOn ? "1" : "0"); });
+
+  document.addEventListener("keydown", (e) => {
+    if ($("confirm").open || e.repeat) return;
+    const t = e.target;
+    const typing = t instanceof HTMLTextAreaElement || t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t.isContentEditable;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && !e.altKey && e.key === "Enter") { e.preventDefault(); approve(); return; }
+    if (mod && !e.altKey && !typing) {
+      const k = e.key.toLowerCase();
+      if (k === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      else if (k === "y") { e.preventDefault(); redo(); }
+      return;
+    }
+    if (mod || e.altKey || typing || !keysOn) return;
+    const onControl = t instanceof HTMLButtonElement || t instanceof HTMLAnchorElement || t.tagName === "SUMMARY";
+    const inWords = !!t.closest && !!t.closest("#p-words");
+    switch (e.key) {
+      case " ": if (onControl) return; e.preventDefault(); togglePlay(); break;
+      case "a": case "A": approve(); break;
+      case "d": case "D": drop(); break;
+      case "j": case "J": goNext(); break;
+      case "k": case "K": goPrev(); break;
+      case "n": case "N": nextToCheck(); break;
+      case "e": case "E": e.preventDefault(); ta.focus(); break;
+      case "ArrowRight": if (!inWords && !onControl) goNext(); break;
+      case "ArrowLeft": if (!inWords && !onControl) goPrev(); break;
+      default: break;
+    }
+  });
+
+  curId = (() => {
+    const list = filtered();
+    if (!list.length) return null;
+    const left = byId(pref(posKey, ""));
+    const hit = left ? list.find((s) => s.start >= left.start) : null;
+    return (hit || list[0]).id;
+  })();
+  renderSave();
+  select(curId, { quiet: true });
+}
