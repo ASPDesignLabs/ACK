@@ -1,0 +1,41 @@
+ACK -- a gesture-driven AAC communication tool
+Copyright (C) 2026 Snakesan
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program (the file LICENSE).  If not, see <https://www.gnu.org/licenses/>.
+
+SPDX-License-Identifier: GPL-3.0-or-later
+
+-------------------------------------------------------------------------------
+
+Which files this covers
+
+  * Every source file (Kotlin, Python, JavaScript, shell, HTML, CSS and build
+    scripts) carries the line "SPDX-License-Identifier: GPL-3.0-or-later" near
+    its top. A test (tools/freeform_studio/tests/test_license_headers.py) fails
+    if a new one is added without it.
+  * Documentation, images, and Android resource files are covered by the same
+    license as the rest of the project.
+  * One file also follows an Apache-2.0 original and says so in its own header:
+    tools/patch_voice_for_sherpa_onnx.py. The Apache-2.0 text is in
+    LICENSES/Apache-2.0.txt.
+
+Other people's software
+
+  ACK uses, but does not modify or (except where THIRD_PARTY_NOTICES.md says
+  so) redistribute, software and models written by others under their own
+  licenses. THIRD_PARTY_NOTICES.md lists each one, where it comes from, its
+  license, and how that was checked.
+
+  The LICENSE file is the unmodified text of the GNU GPL version 3. The
+  copyright line above lives here, not in that file, so the license text stays
+  exactly as published.

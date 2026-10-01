@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.data
 
 import kotlinx.serialization.Serializable
@@ -11,5 +12,6 @@ data class VoiceProfile(
     val modFreq: Float,     // 0 - 100 Hz
     val modDepth: Float,    // 0.0 - 1.0
     val crush: Float,       // 0.0 - 1.0
-    val systemVoiceName: String = "" // NEW: Binds to Android TTS Engine
+    val systemVoiceName: String = "", // NEW: Binds to Android TTS Engine
+    val useCustomVoice: Boolean = false // Binds to the imported Piper-trained voice instead of system TTS
 )

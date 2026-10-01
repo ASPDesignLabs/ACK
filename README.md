@@ -43,7 +43,7 @@ If you want to build this you'll need Android Studio. No region map ships with t
 
 ##### License
 
-Licensed under the GNU General Public License v3.0 (GPLv3) — see [`LICENSE`](LICENSE). In short: you're free to use, study, modify, and share this, but anyone who distributes a modified version has to share their source under the same license too.
+Licensed under the GNU General Public License, version 3 or (at your option) any later version (**GPL-3.0-or-later**) — see [`LICENSE`](LICENSE) for the license and [`NOTICE`](NOTICE) for the copyright line. In short: you're free to use, study, modify, and share this, but anyone who distributes a modified version has to share their source under the same license too. Every source file carries an `SPDX-License-Identifier: GPL-3.0-or-later` line. The software, fonts and models made by others that ACK uses, with their licenses and how each was checked, are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 
 

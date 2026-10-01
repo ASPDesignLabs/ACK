@@ -64,3 +64,14 @@ google-services.json
 
 # Map Components
 *.map
+
+# Python bytecode cache (from tools/*.py scripts)
+__pycache__/
+*.pyc
+
+# Vendored sherpa-onnx native library and its shared phonemization data --
+# both are external binaries fetched manually (see app/libs/README.md and
+# app/src/main/assets/espeak-ng-data/README.md), not committed to the repo.
+app/libs/*.aar
+app/src/main/assets/espeak-ng-data/*
+!app/src/main/assets/espeak-ng-data/README.md

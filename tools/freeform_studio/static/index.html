@@ -1,0 +1,77 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Freeform Studio</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/app.css">
+  <script type="module" src="/static/js/main.js"></script>
+</head>
+<body>
+  <header class="top">
+    <h1>Freeform Studio</h1>
+    <nav class="nav" aria-label="Main"><a href="/" aria-current="page">Record</a><a href="/review">Review</a></nav>
+    <p class="sub" id="conn">Connecting to your PC...</p>
+  </header>
+
+  <main>
+    <div id="notice" class="banner warn" role="status" hidden></div>
+    <div id="diskwarn" class="banner warn" role="status" hidden></div>
+
+    <div id="resume" class="banner" hidden>
+      <p id="resume-text"></p>
+      <button type="button" class="btn" id="resume-go">Send it now</button>
+    </div>
+
+    <section class="card" aria-labelledby="rec-h">
+      <h2 id="rec-h">Record</h2>
+      <p class="state" id="state" role="status" aria-live="polite">Ready. Tap Start recording when you want to begin.</p>
+
+      <div class="timer" id="timer" aria-hidden="true">00:00</div>
+
+      <div class="level" aria-hidden="true">
+        <div class="meter"><div id="meterbar"></div></div>
+        <p id="levelhint" class="hint">&nbsp;</p>
+      </div>
+
+      <dl class="facts">
+        <div><dt>Saved on your PC</dt><dd id="sent">nothing yet</dd></div>
+        <div><dt>Waiting to send</dt><dd id="waiting">0</dd></div>
+        <div><dt>Microphone</dt><dd id="micinfo">not started</dd></div>
+      </dl>
+
+      <details class="ref">
+        <summary>Text I'm about to read (optional)</summary>
+        <label for="ref" class="sr">Text to be read</label>
+        <textarea id="ref" rows="6" maxlength="20000" placeholder="Paste the passage here before you start."></textarea>
+        <p class="hint">Saved with the recording. Later it helps correct what the PC hears.</p>
+      </details>
+
+      <div class="row">
+        <label for="autostop">Stop automatically after</label>
+        <select id="autostop">
+          <option value="0">never</option>
+          <option value="10">10 minutes</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="takes-h">
+      <h2 id="takes-h">Recent recordings</h2>
+      <p id="takes-empty" class="hint">Nothing recorded yet.</p>
+      <ul id="takes" class="takes"></ul>
+    </section>
+  </main>
+
+  <div class="bar" id="bar">
+    <button type="button" id="start" class="btn primary">Start recording</button>
+    <button type="button" id="pause" class="btn" hidden>Pause</button>
+    <button type="button" id="stop" class="btn danger" hidden>Stop and save</button>
+  </div>
+</body>
+</html>

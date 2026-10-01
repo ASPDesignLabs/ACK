@@ -48,6 +48,10 @@ needs a real decision, it's called out explicitly rather than assumed.
    recommends a short header notice at the top of each source file — that's
    a large, separate, whole-codebase edit and shouldn't be bundled into the
    landing page work.
+   **Done since:** the license is "GPL-3.0-or-later", `LICENSE` is the
+   unmodified GPLv3 text, the copyright line is in `NOTICE`, every source
+   file carries `SPDX-License-Identifier: GPL-3.0-or-later` (a test keeps it
+   that way), and `THIRD_PARTY_NOTICES.md` lists the outside sources.
 3. **Screenshots / media: placeholders for v1.** No real screenshots or
    recordings exist yet — only the two Play Store app icons
    (`app/src/main/ic_launcher-playstore.png`,

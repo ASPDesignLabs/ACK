@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -47,6 +48,12 @@ android {
             pickFirsts.add("lib/x86_64/libvtm-jni.so")
             pickFirsts.add("lib/armeabi-v7a/libvtm-jni.so")
             pickFirsts.add("lib/arm64-v8a/libvtm-jni.so")
+            // sherpa-onnx's own native library (see libs/README.md) --
+            // same defensive pickFirsts pattern as libvtm-jni.so above, in
+            // case another dependency ever ships a same-named .so.
+            pickFirsts.add("lib/x86_64/libsherpa-onnx-jni.so")
+            pickFirsts.add("lib/armeabi-v7a/libsherpa-onnx-jni.so")
+            pickFirsts.add("lib/arm64-v8a/libsherpa-onnx-jni.so")
         }
     }
 
@@ -83,6 +90,11 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.compose.foundation)
+    // sherpa-onnx (on-device Piper/VITS TTS engine): not published to Maven
+    // Central, vendored locally instead -- see app/libs/README.md for the
+    // exact download step. A raw file() dependency, not a new repository,
+    // so it doesn't run into settings.gradle.kts's FAIL_ON_PROJECT_REPOS.
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
 // Mapsforge: 100% Java Offline Vector Maps (Zero C++ / Zero ELF errors)
     implementation("org.mapsforge:mapsforge-map-android:0.20.0")
     implementation("org.mapsforge:mapsforge-themes:0.20.0")

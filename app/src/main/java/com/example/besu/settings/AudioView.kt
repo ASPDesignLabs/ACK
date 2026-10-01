@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.settings
 
 import com.example.besu.*
@@ -10,7 +11,11 @@ import com.example.besu.ui.*
 import com.example.besu.ui.theme.*
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.speech.tts.Voice
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,6 +43,7 @@ import com.example.besu.ui.theme.ErrorRed
 import com.example.besu.ui.theme.Graphite
 import com.example.besu.ui.theme.NeonPalette
 import com.example.besu.ui.theme.VoidBlack
+import kotlinx.coroutines.delay
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.UUID
@@ -173,6 +179,66 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         context.startService(playIntent)
     }
 
+    // --- CUSTOM TRAINED VOICE ---
+    // hasCustomVoice is judged straight from disk (CustomVoiceRepository has
+    // no separate flag to fall out of sync with) rather than cached forever,
+    // so re-entering this screen after an import always reflects reality.
+    var hasCustomVoice by remember { mutableStateOf(CustomVoiceRepository.hasCustomVoice(context)) }
+    var pendingCustomVoiceRestart by remember { mutableStateOf(false) }
+
+    // A new/replaced voice changes what OutputService's PiperVoiceEngine
+    // singleton has loaded -- the app-restart pattern (see MainActivity.kt's
+    // restartApp, already used by GIF deck import/FULL RESTORE) is the
+    // simplest way to guarantee a clean reload rather than trying to patch
+    // live service state from here.
+    LaunchedEffect(pendingCustomVoiceRestart) {
+        if (pendingCustomVoiceRestart) {
+            delay(1500)
+            restartApp(context)
+        }
+    }
+
+    val importVoiceLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            if (CustomVoiceRepository.importVoice(context, uris)) {
+                hasCustomVoice = true
+                Toast.makeText(context, "VOICE IMPORTED -- RESTARTING", Toast.LENGTH_LONG).show()
+                pendingCustomVoiceRestart = true
+            } else {
+                Toast.makeText(context, "IMPORT FAILED -- SELECT BOTH .ONNX AND .ONNX.JSON", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val exportVoiceBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val success = CustomVoiceBackupManager.exportVoice(context, uri)
+            Toast.makeText(
+                context,
+                if (success) "VOICE BACKUP EXPORTED" else "EXPORT FAILED",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    val importVoiceBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            if (CustomVoiceBackupManager.importBackup(context, uri)) {
+                hasCustomVoice = true
+                Toast.makeText(context, "VOICE BACKUP RESTORED -- RESTARTING", Toast.LENGTH_LONG).show()
+                pendingCustomVoiceRestart = true
+            } else {
+                Toast.makeText(context, "RESTORE FAILED -- INTEGRITY CHECK", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("AUDIO ARCHITECT", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(10.dp))
@@ -219,6 +285,15 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     syncDsp()
                 }
             }
+            // Only appears once a voice is actually imported -- same "hide
+            // rather than show disabled" convention as the "+ NEW" chip
+            // below, which only appears while under the profile cap.
+            if (hasCustomVoice) {
+                AudioProfileChip("MY VOICE", userProfile == "MY_VOICE", primaryColor) {
+                    userProfile = "MY_VOICE"
+                    syncDsp()
+                }
+            }
             for (i in customVoices.indices) {
                 val profile = customVoices[i]
                 AudioProfileChip(
@@ -254,6 +329,40 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        // --- CUSTOM TRAINED VOICE ---
+        Text("CUSTOM VOICE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            if (hasCustomVoice) "STATUS: INSTALLED" else "STATUS: NOT IMPORTED",
+            color = if (hasCustomVoice) primaryColor else Color.Gray,
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        NeonButton(
+            if (hasCustomVoice) "RE-IMPORT CUSTOM VOICE" else "IMPORT CUSTOM VOICE",
+            Modifier.fillMaxWidth(),
+            mainColor = primaryColor
+        ) {
+            // No reliable MIME type for .onnx/.onnx.json -- CustomVoiceRepository
+            // identifies which is which by filename suffix, same tolerance
+            // GifRepository.importGif already applies to a null/unknown MIME.
+            importVoiceLauncher.launch(arrayOf("*/*"))
+        }
+        if (hasCustomVoice) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NeonButton("EXPORT VOICE BACKUP", Modifier.weight(1f), mainColor = primaryColor) {
+                    exportVoiceBackupLauncher.launch("my_voice_backup.zip")
+                }
+                NeonButton("IMPORT VOICE BACKUP", Modifier.weight(1f), mainColor = primaryColor) {
+                    importVoiceBackupLauncher.launch(arrayOf("application/zip"))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
         // --- DSP CHAIN (opens as its own popup -- see AudioDialogFrame below) ---
         if (editingProfile != null) {
             val p = editingProfile!!
@@ -268,7 +377,17 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             }
         } else {
             Box(modifier = Modifier.fillMaxWidth().border(1.dp, Color.Gray, CutCornerShape(12.dp)).padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("FACTORY PRESET LOCKED\nSELECT OR CREATE A CUSTOM SLOT TO EDIT", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, textAlign = TextAlign.Center)
+                Text(
+                    if (userProfile == "MY_VOICE") {
+                        "MY VOICE ACTIVE\nTHIS ENGINE HAS NO DSP CONTROLS OF ITS OWN"
+                    } else {
+                        "FACTORY PRESET LOCKED\nSELECT OR CREATE A CUSTOM SLOT TO EDIT"
+                    },
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
@@ -309,12 +428,43 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             Spacer(modifier = Modifier.height(10.dp))
 
             Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                NeonButton(
-                    "BASE VOICE: $voiceName",
-                    Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_VOICE_PICKER, primaryColor),
-                    mainColor = primaryColor
+                if (!p.useCustomVoice) {
+                    NeonButton(
+                        "BASE VOICE: $voiceName",
+                        Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_VOICE_PICKER, primaryColor),
+                        mainColor = primaryColor
+                    ) {
+                        showVoicePicker = true
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    showVoicePicker = true
+                    Column {
+                        Text("USE MY VOICE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                        if (!hasCustomVoice) {
+                            Text(
+                                "NO VOICE IMPORTED",
+                                color = Color.DarkGray,
+                                fontSize = 9.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+                    NeonButton(
+                        if (p.useCustomVoice) "ON" else "OFF",
+                        Modifier.width(60.dp),
+                        isActive = p.useCustomVoice,
+                        mainColor = if (hasCustomVoice) primaryColor else Color.DarkGray
+                    ) {
+                        if (hasCustomVoice) {
+                            editingProfile = p.copy(useCustomVoice = !p.useCustomVoice)
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -348,40 +498,46 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                // A cloned voice ignores the robotic/bitcrush character
+                // effects entirely (see OutputService's custom-voice branch,
+                // which always zeroes them) -- hidden here rather than shown
+                // uselessly.
+                if (!p.useCustomVoice) {
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_ROBOTIC_OVERLAY, primaryColor)
-                ) {
-                    Text("ROBOTIC OVERLAY", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-                    NeonButton(if (isRobotic) "ON" else "OFF", Modifier.width(60.dp), isActive = isRobotic, mainColor = primaryColor) {
-                        editingProfile = if (isRobotic) {
-                            p.copy(modDepth = 0f)
-                        } else {
-                            p.copy(modDepth = 0.5f, modFreq = 50f)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_ROBOTIC_OVERLAY, primaryColor)
+                    ) {
+                        Text("ROBOTIC OVERLAY", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                        NeonButton(if (isRobotic) "ON" else "OFF", Modifier.width(60.dp), isActive = isRobotic, mainColor = primaryColor) {
+                            editingProfile = if (isRobotic) {
+                                p.copy(modDepth = 0f)
+                            } else {
+                                p.copy(modDepth = 0.5f, modFreq = 50f)
+                            }
                         }
                     }
-                }
-                if (isRobotic) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    DspSlider("ROBOTIC FREQ (HZ)", p.modFreq, 0f..100f, primaryColor) {
-                        editingProfile = p.copy(modFreq = it)
-                        reportHelpInteraction(AckTags.AUDIO_ROBOTIC_OVERLAY)
+                    if (isRobotic) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        DspSlider("ROBOTIC FREQ (HZ)", p.modFreq, 0f..100f, primaryColor) {
+                            editingProfile = p.copy(modFreq = it)
+                            reportHelpInteraction(AckTags.AUDIO_ROBOTIC_OVERLAY)
+                        }
+                        DspSlider("ROBOTIC DEPTH (%)", p.modDepth, 0f..1f, primaryColor) {
+                            editingProfile = p.copy(modDepth = it)
+                            reportHelpInteraction(AckTags.AUDIO_ROBOTIC_OVERLAY)
+                        }
                     }
-                    DspSlider("ROBOTIC DEPTH (%)", p.modDepth, 0f..1f, primaryColor) {
-                        editingProfile = p.copy(modDepth = it)
-                        reportHelpInteraction(AckTags.AUDIO_ROBOTIC_OVERLAY)
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                Box(modifier = Modifier.helpTarget(AckTags.AUDIO_BITCRUSH, primaryColor)) {
-                    DspSlider("BITCRUSH (%)", p.crush, 0f..1f, primaryColor) {
-                        editingProfile = p.copy(crush = it)
-                        reportHelpInteraction(AckTags.AUDIO_BITCRUSH)
+                    Box(modifier = Modifier.helpTarget(AckTags.AUDIO_BITCRUSH, primaryColor)) {
+                        DspSlider("BITCRUSH (%)", p.crush, 0f..1f, primaryColor) {
+                            editingProfile = p.copy(crush = it)
+                            reportHelpInteraction(AckTags.AUDIO_BITCRUSH)
+                        }
                     }
                 }
             }

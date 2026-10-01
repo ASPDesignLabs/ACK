@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.output
 
 import com.example.besu.data.*
@@ -87,9 +88,15 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     private var customVoices: List<VoiceProfile> = emptyList()
 
     private val FACTORY_PRESETS = mapOf(
-        "CYBER" to VoiceProfile("CYBER", "CYBER", 1.2f, 1.2f, 50f, 0.6f, 0.3f), 
-        "MECH" to VoiceProfile("MECH", "MECH", 0.7f, 0.85f, 30f, 0.85f, 0.4f), 
-        "ORGANIC" to VoiceProfile("ORGANIC", "ORGANIC", 1.0f, 1.0f, 0f, 0f, 0f) 
+        "CYBER" to VoiceProfile("CYBER", "CYBER", 1.2f, 1.2f, 50f, 0.6f, 0.3f),
+        "MECH" to VoiceProfile("MECH", "MECH", 0.7f, 0.85f, 30f, 0.85f, 0.4f),
+        "ORGANIC" to VoiceProfile("ORGANIC", "ORGANIC", 1.0f, 1.0f, 0f, 0f, 0f),
+        // A fourth fixed, non-editable preset (same "select, don't edit"
+        // treatment as the other three) rather than something the user has
+        // to build themselves via a custom slot's DSP editor toggle -- the
+        // whole point is that importing a voice should make it immediately
+        // selectable as output, not just theoretically assignable.
+        "MY_VOICE" to VoiceProfile("MY_VOICE", "MY VOICE", 1.0f, 1.0f, 0f, 0f, 0f, useCustomVoice = true)
     )
 
     private data class EmergencyOptions(
@@ -272,6 +279,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 // Phone-shake kill switch: stop anything mid-synthesis,
                 // drop anything queued, and stop audio already playing.
                 tts?.stop()
+                PiperVoiceEngine.requestStop()
                 speechQueue.clear()
                 renderRequests.clear()
                 synchronized(activeTrackLock) {
@@ -529,6 +537,64 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             rawText
         }
 
+        if (profile.useCustomVoice) {
+            // sherpa-onnx generation is synchronous/blocking and can take
+            // real time on phone CPU -- must never run on this (the main)
+            // thread. Mirrors playRecording's own Thread{} pattern below.
+            Thread {
+                val generated = PiperVoiceEngine.generate(applicationContext, finalText)
+                if (generated != null) {
+                    val (customPcm, customSampleRate) = generated
+                    // Gain-only, same as a real recording (see playRecording) --
+                    // a cloned voice shouldn't get the robotic/crush character
+                    // effects meant for synthesized system-TTS speech.
+                    applyAudioEffects(
+                        audioData = customPcm,
+                        modFreq = 0f,
+                        modDepth = 0f,
+                        crush = 0f,
+                        gain = getEffectiveGain(emergency),
+                        sampleRate = customSampleRate
+                    )
+
+                    if (emergency.enabled && emergency.tone != EmergencyTone.OFF) {
+                        playEmergencyTone(
+                            tone = emergency.tone,
+                            forceSpeaker = emergency.forceSpeaker || forceSpeaker
+                        )
+                    }
+
+                    playPcm(
+                        audioData = customPcm,
+                        sampleRate = customSampleRate,
+                        forceSpeakerForRequest = emergency.forceSpeaker || forceSpeaker,
+                        allowVolumeEnforcement = true
+                    )
+                } else {
+                    // An AAC app must never go silent because a neural
+                    // model hiccuped -- fall back to the system voice for
+                    // this one utterance rather than drop it.
+                    broadcastLog("CUSTOM VOICE SYNTHESIS FAILED -- FALLING BACK", "ERR")
+                    speakWithSystemTts(profile, targetId, finalText, emergency)
+                }
+            }.start()
+            return
+        }
+
+        speakWithSystemTts(profile, targetId, finalText, emergency)
+    }
+
+    // The original (and still default) synthesis path: Android's system
+    // TextToSpeech, writing to a file that UtteranceProgressListener.onDone
+    // picks up asynchronously (see processAndPlayAudio). Split out of
+    // processSpeech so the custom-voice branch above can fall back into it
+    // on a synthesis failure.
+    private fun speakWithSystemTts(
+        profile: VoiceProfile,
+        targetId: String,
+        finalText: String,
+        emergency: EmergencyOptions
+    ) {
         tts?.setPitch(profile.pitch)
         tts?.setSpeechRate(profile.speed)
 
@@ -1166,5 +1232,5 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off).setOngoing(true).build()
     }
 
-    override fun onDestroy() { tts?.stop(); tts?.shutdown(); super.onDestroy() }
+    override fun onDestroy() { tts?.stop(); tts?.shutdown(); PiperVoiceEngine.release(); super.onDestroy() }
 }
