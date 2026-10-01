@@ -1,0 +1,11 @@
+# Chosen so this installs on Python 3.10 (Ubuntu 22.04's default python3), even with that
+# system's old bundled pip 22.0.2. Verified by installing from scratch on real Python 3.10.
+#   - Quart 0.21+ and numpy 2.3+ require Python 3.11.
+#   - huggingface_hub 2.x moved to a new HTTP stack (httpx2/httpcore2) that sends pip 22's resolver
+#     into an internal AssertionError; the cap keeps it on the 1.x line faster-whisper was built against.
+quart==0.20.0
+hypercorn==0.14.3
+Werkzeug>=3.0,<4
+numpy>=1.24
+huggingface_hub>=0.23,<2
+faster-whisper>=1.1

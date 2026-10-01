@@ -550,3 +550,269 @@ already been tried and rejected once.
 | `MainActivity.kt` | Top-level `restartApp(context)`, shared by every import/restore flow that can create a new deck |
 | `settings/SettingsView.kt` | FULL RESTORE FROM JSON + IMPORT MATRIX AS NEW DECK UI, both using the toast → delayed-flag → `restartApp` pattern |
 | `decks/GifDeck.kt` | Per-deck BACKUP dropdown (EXPORT/IMPORT DECK (.ZIP)) UI, same restart pattern |
+
+## The CUSTOM TRAINED VOICE system — deep analysis
+
+Lets a user speak arbitrary typed text in their own cloned voice, trained
+*outside* the app (a Piper/VITS voice, fine-tuned on a PC from the user's
+own recordings) and then run entirely on-device inside ACK — no network
+dependency, matching the app's own "must always be able to communicate"
+requirement. Only one such voice can be installed at a time.
+
+### Engine: sherpa-onnx, not a bespoke ONNX/espeak-ng integration
+
+The actual neural inference + phonemization runs through
+[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (k2-fsa), which
+bundles ONNX Runtime and espeak-ng together with a Kotlin API
+(`com.k2fsa.sherpa.onnx.OfflineTts`) and native Piper/VITS support. This
+was chosen specifically because hand-rolling an espeak-ng Android JNI
+build plus onnxruntime-android wiring would have been a much larger,
+riskier undertaking — sherpa-onnx already solves exactly that. It is
+**not published to Maven Central**: the `.aar` is downloaded manually and
+vendored in `app/libs/` (see that folder's `README.md`), and is
+deliberately **excluded from git** (`.gitignore`) since it's a large
+third-party binary, not source the team wrote. Same treatment for the
+shared `espeak-ng-data` phonemization asset (`app/src/main/assets/
+espeak-ng-data/`, own `README.md`, also gitignored) — it's identical
+across every Piper voice regardless of who trained it, so it ships once
+as a bundled asset rather than being re-imported per voice.
+
+**Critical, easy-to-miss fact #1**: sherpa-onnx's VITS/Piper loader
+(`OfflineTtsVitsModelConfig`) wants a plain-text `tokens.txt` (`<symbol>
+<id>` per line), **not** Piper's own `.onnx.json` training config
+directly. `PiperVoiceEngine.generateTokensFile` derives `tokens.txt` from
+the installed config's `phoneme_id_map` every time the engine (re)loads,
+so it's always regenerated fresh from whatever voice is currently
+installed rather than being a one-time conversion step. Two entries get
+filtered out while generating it, both required, neither optional:
+- The literal `"\n"` symbol key — writing it would embed a real newline
+  inside a `tokens.txt` line, corrupting the line-based file format.
+  Matches sherpa-onnx's own official conversion script's one quirk
+  (`scripts/piper/add_meta_data.py`).
+- **Any symbol that isn't exactly one Unicode codepoint**
+  (`key.codePointCount(0, key.length) != 1`). sherpa-onnx's tokenizer
+  (`sherpa-onnx/csrc/piper-phonemize-lexicon.cc:ReadTokens`) maps a
+  single codepoint to an id — it has **no representation at all** for a
+  multi-character symbol; this isn't a formatting quirk to work around,
+  it's a hard structural limit of its lookup table. piper1-gpl can
+  optionally merge diphthongs (e.g. `"eɪ"`, `"aɪ"`) into single compound
+  vocabulary entries via `--data.vowel_clusters` (default `None`/off).
+  This app's training command never passes that flag, so any such
+  entries in a voice's `phoneme_id_map` reflect the *base checkpoint's*
+  fixed vocabulary size, not something this voice's own fine-tuning
+  actually learned to rely on — skipping them is correct, not a lossy
+  compromise, **for a voice trained the way this app's docs instruct**.
+  **If a future voice is ever trained with `vowel_clusters` actually
+  set, this stops being safe** — skipping would silently mispronounce
+  every word containing one of those diphthongs, and would need real
+  on-device merge logic instead of a skip.
+
+**Critical, easy-to-miss fact #2 — the .onnx file itself needs patching,
+and this cannot be done on-device**: sherpa-onnx's VITS loader
+(`sherpa-onnx/csrc/offline-tts-vits-model.cc`) reads several fields —
+`sample_rate`, `n_speakers`, `language`, `comment` — as **required ONNX
+model metadata (`metadata_props`), with no fallback default**. `comment`
+must contain the substring `"piper"` for the model to even be treated as
+a Piper-style model at inference time. piper1-gpl's own `export_onnx.py`
+does not embed any of this — a voice exported straight from the training
+pipeline in this repo's earlier session and imported as-is **crashes the
+app** on first synthesis attempt, logging `'sample_rate' does not exist
+in the metadata` right before the process dies. This has nothing to do
+with ACK's own code; it's a real gap between what piper1-gpl exports and
+what sherpa-onnx's loader requires, and there's no way to patch an
+already-exported `.onnx`'s embedded metadata from inside the Android app
+— it has to happen before import, on the machine that trained the voice.
+Fix: `tools/patch_voice_for_sherpa_onnx.py` (mirrors sherpa-onnx's own
+official `scripts/piper/add_meta_data.py`) — run it once against the raw
+trained `.onnx`, then (re-)import the patched file into ACK. **Any future
+change to piper1-gpl's export script, or a switch to a different Piper
+training toolkit, should be re-checked against this same requirement**
+rather than assumed fixed.
+
+**The patcher is user-facing, so it must be forgiving and must never damage the model** (`tools/patch_voice_for_sherpa_onnx.py`,
+tested by `tools/freeform_studio/tests/test_patch_voice.py`). A real failure: the user ran it with the `.onnx` given as *both*
+arguments and got a raw `UnicodeDecodeError` from `json.load`. Root cause was the guide: the `<model>.onnx.json` copy of
+`config.json` lived only in the *optional* "test locally" step, but the required patch and import steps need it (shell Tab
+completion then offers only the `.onnx`). Now: the copy is part of the export step in `docs/VOICE_TRAINING_GUIDE.md` §5; the
+script validates its arguments (model given twice, arguments swapped, missing config, non-Piper config, not-an-ONNX file, missing
+`onnx` package) with plain messages that print the exact `cp`/run commands, exits 2 with nothing changed; the second argument
+is optional (`<model>.json`); it keeps the original as `<model>.onnx.before-patch` (a newer export gets a timestamped backup),
+writes to a scratch file and swaps it in with `os.replace`, and is a no-op on an already-patched model. Keep it that way:
+the user's standing preference is backups encouraged, edits safe. The script does `import onnx` lazily so argument checks work
+(and are tested) without it.
+
+### Storage — `output/CustomVoiceRepository.kt`
+
+Two fixed files, `context.filesDir/custom_voice/model.onnx` and
+`.../model.onnx.json` (plus a generated `tokens.txt` sitting alongside,
+owned by `PiperVoiceEngine`, not this repository). Deliberately **no
+separate "installed" flag** — `hasCustomVoice()` just checks both files
+exist on disk, so metadata and files can never disagree, unlike a
+prefs-flag-plus-files design. No id/list at all, since only one voice is
+ever supported — this is simpler than `VoiceRecordingRepository`'s
+multi-entry JSON-list pattern on purpose.
+
+Validates on import: exactly 2 files selected, identified by filename
+suffix (`.onnx` / `.onnx.json` — Android's SAF gives these no reliable
+MIME type, so this mirrors `GifRepository.importGif`'s tolerance for a
+null MIME), size ceilings as a corruption/hostile-file firewall (not a
+practical constraint — 300MB comfortably covers even a "high" quality
+Piper model), and a light content check on the config
+(`looksLikePiperConfig` — must parse as JSON and contain both
+`phoneme_id_map` and `audio` keys, which every real Piper config has).
+`installFromValidatedFiles` is the shared, independently-re-validating
+landing point for **both** the direct-file-picker import path and
+`CustomVoiceBackupManager`'s zip-restore path — same defense-in-depth
+reasoning as `GifRepository.restoreEntry`.
+
+### Synthesis engine — `output/PiperVoiceEngine.kt`
+
+A singleton wrapping one lazily-loaded `OfflineTts` instance (native model
+load is expensive — tens of MB, not instant — so it happens once per
+process, not per utterance). `generate(context, text)` is **synchronous
+and blocking**, returning `Pair<ShortArray, Int>?` (PCM + sample rate) or
+`null` on any failure — deliberately simple compared to system TTS's
+async callback dance, since there's no `UtteranceProgressListener`
+machinery to hook into for a different engine. `release()` frees the
+native session (called from `OutputService.onDestroy()`); a later
+`generate()` call rebuilds it lazily. `requestStop()` is a stop-flag
+checked right after native generation completes, so `OutputService`'s
+phone-shake `KILL_OUTPUT` handler can abort an in-flight custom-voice
+utterance the same way it already clears queued/active system-TTS work.
+
+### Integration seam — `OutputService.kt`
+
+The DSP chain (`applyAudioEffects`) and playback (`playPcm`, with its
+kill-switch/audio-focus/routing logic) already operate on raw
+`ShortArray` PCM + sample rate, completely decoupled from *how* that PCM
+was produced — this is what made the whole feature a relatively clean
+addition rather than a parallel pipeline. `processSpeech()` branches on
+`VoiceProfile.useCustomVoice` right after computing `finalText`: true
+spins a `Thread { ... }` (matching the existing `playRecording`/
+`previewRecording` off-main-thread pattern — this class has no coroutine
+scope) that calls `PiperVoiceEngine.generate()`, then feeds the result
+through `applyAudioEffects()` with `modFreq=modDepth=crush=0` (gain-only,
+**treated like a recording, not like robotic-overlay-eligible system
+TTS** — a cloned voice shouldn't get the robotic/crush character effects)
+and the same `playPcm()` everyone else uses. **On synthesis failure, it
+falls back to system TTS for that one utterance** rather than going
+silent (`speakWithSystemTts`, the extracted original synthesis body) —
+non-negotiable for an AAC app. `false` (the default, so old saved
+`VoiceProfile`s behave exactly as before) is untouched, unchanged
+`speakWithSystemTts` path.
+
+### Backup — `output/CustomVoiceBackupManager.kt`
+
+A standalone `.zip` export/import (`model.onnx` + `model.onnx.json`, no
+manifest needed since there's only ever one voice) — same reasoning as
+`GifBackupManager`: a trained voice model is a real binary, tens of MB,
+which has no business inside `TransferManager`'s JSON blob. Deliberately
+separate from EXPORT .JSON / FULL RESTORE FROM JSON, exactly as GIF
+backups are separate from it today.
+
+### UI — `settings/AudioView.kt`
+
+"CUSTOM VOICE" section (status line + IMPORT/RE-IMPORT button, plus
+EXPORT/IMPORT VOICE BACKUP once one exists) sits between MANAGE PROFILES
+and the DSP chain editor button. Import uses
+`ActivityResultContracts.OpenMultipleDocuments()` (both files picked in
+one go) and reuses the established toast → `pending*Restart` flag →
+`LaunchedEffect { delay(1500); restartApp(context) }` pattern from GIF
+deck import, since a newly-imported voice is exactly the kind of state
+`OutputService`'s `PiperVoiceEngine` singleton needs a clean process
+restart to pick up.
+
+**Two ways to actually put the voice on output, not one:**
+1. **A fourth fixed preset, `"MY VOICE"`** — a real entry in
+   `OutputService`'s `FACTORY_PRESETS` map (id `"MY_VOICE"`,
+   `useCustomVoice = true`), given the exact same "select, don't edit"
+   treatment as CYBER/MECH/ORGANIC in the main VOICE PROFILE chip row.
+   This is the primary, obvious path: import a voice, tap the chip, done
+   — no detour through a custom slot's DSP editor. The chip only renders
+   when `hasCustomVoice(context)` is true (same "hide rather than show
+   disabled" convention the "+ NEW" chip already uses), and the DSP chain
+   editor's locked-placeholder box shows a voice-specific message
+   ("THIS ENGINE HAS NO DSP CONTROLS OF ITS OWN") when `userProfile ==
+   "MY_VOICE"` rather than the generic factory-preset one.
+2. **A "USE MY VOICE" toggle inside any custom slot's DSP chain editor**,
+   next to "BASE VOICE" (disabled with a "NO VOICE IMPORTED" hint until
+   one exists) — for a user who wants a distinctly *named/labeled* slot
+   using the trained voice rather than the fixed "MY VOICE" preset.
+   Turning it on hides the ROBOTIC OVERLAY and BITCRUSH sections
+   entirely, since this engine ignores them by design (PITCH/SPEED are
+   left visible but are also inert for this engine — harmless to leave
+   alone rather than worth the complexity of hiding them too).
+
+Both paths set the same `VoiceProfile.useCustomVoice = true` flag
+`OutputService.processSpeech()` branches on — there is no separate "which
+mechanism did you use" state to keep in sync.
+
+### File map
+
+| File | Owns |
+|---|---|
+| `output/CustomVoiceRepository.kt` | File storage + validation for the one installed voice |
+| `output/PiperVoiceEngine.kt` | sherpa-onnx `OfflineTts` wrapper, `tokens.txt` generation, `generate()`/`release()`/`requestStop()` |
+| `output/CustomVoiceBackupManager.kt` | Standalone `.zip` export/import, mirrors `GifBackupManager.kt` |
+| `output/OutputService.kt` | `processSpeech()`'s `useCustomVoice` branch, `speakWithSystemTts` (extracted fallback path), kill-switch hook, `onDestroy` cleanup |
+| `settings/AudioView.kt` | Import/backup UI, "USE MY VOICE" DSP chain editor toggle |
+| `data/VoiceProfile.kt` | `useCustomVoice: Boolean = false` |
+| `app/libs/README.md`, `app/src/main/assets/espeak-ng-data/README.md` | Manual one-time download steps for the vendored, gitignored sherpa-onnx `.aar` and shared phonemization data |
+
+## DATA SOVEREIGNTY and LICENSING — rules that must stay true
+
+The user's standing requirement (stated while making Freeform Studio usable by casual users and SLPs): **voice recordings,
+transcripts, edits, exports, backups, training data and the trained voice stay on devices the person controls, 100%.** And
+the project is **GPL-3.0-or-later**. Both are enforced by tests so a later change can't quietly undo them; read these before
+adding a dependency, a permission, a network call, a file type, or a new source file.
+
+### Freeform Studio (`tools/freeform_studio/`)
+- **The server never goes online.** `FasterWhisperEngine` loads with `local_files_only=True` (`Config.asr_allow_download`
+  / `--allow-model-download` is the opt-out) and `privacy.apply_offline_defaults()` sets `HF_HUB_OFFLINE=1`,
+  `HF_HUB_DISABLE_TELEMETRY=1`, `DO_NOT_TRACK=1` before the Hugging Face libraries import. Measured: without this every model
+  load contacted huggingface.co even when cached (and *failed* behind a 403 proxy). **`models.py` (`python -m
+  freeform_studio.models fetch NAME`) is the one place allowed to use the internet, and it asks first.** `asr_smoke` follows
+  the same rule. A missing model produces a plain `EngineError` naming the exact fetch command (`explain_load_error`).
+- **Owner-only files.** `privacy.private_umask()` wraps `main()` of the server and every file-writing command (backup, export,
+  build_dataset, repair, models); the token file is created with `O_EXCL` + mode 0600. `doctor` only *reports* loose
+  permissions on older data (and the `chmod -R go-rwx` command) — it never changes a user's files by itself.
+- **Browser caching.** Everything under `/api/` is `Cache-Control: private, no-store` (audio, transcripts, waveforms). Opening
+  the printed `?token=` link 303-redirects to the same page without the token (`address_without_token`, never `//host`), the
+  cookie carries the login; `/api/*?token=` still works for scripts. Tests: `tests/test_privacy.py`.
+- **Synced folders.** `privacy.sync_risk()` / `sync_warning()` flag paths inside OneDrive/Dropbox/Google Drive/iCloud/etc. and
+  Windows `Documents`/`Desktop`/`Pictures` (OneDrive Known Folder Backup); used by the server banner, `doctor` and the backup
+  command. It only ever says "may" (folder names, can't see whether sync is on). Never recommend a `Documents` backup path.
+- **No-network regression test.** `tests/test_no_network.py` + `tests/egress_workflow.py` run the whole workflow in a
+  loopback-only namespace (`unshare -rn`) with a Python socket-logging hook and `strace`, and fail on any destination that
+  isn't this computer; the only allowed oddity is `netcheck.lan_ip()`'s UDP `connect()` to `192.0.2.1:9` (a route probe;
+  sending to it fails the test). Another test fails if a web address appears in any shipped file. If you add a feature that
+  genuinely needs the network, it must be an explicit, user-confirmed command like `models fetch`, not a background call, and
+  needs the user's approval first.
+- Not measured in the build sandbox (Hugging Face is blocked there): a real speech-model run end to end, a real training
+  run, a real phone. `docs/DATA_SOVEREIGNTY.md` says so and gives the user commands to check themselves.
+
+### ACK Android app
+- **No network permission, no network code, no cloud backup.** The manifest must not request `INTERNET` or other network
+  permissions; app Kotlin must not use `java.net`/`HttpURLConnection`/`OkHttp`/`WebView`/`android.net` (except `Uri`); both
+  `res/xml/data_extraction_rules.xml` (`<cloud-backup>` excludes all nine domains; `<device-transfer>` includes all, so a
+  phone-to-phone setup transfer keeps working) and `backup_rules.xml` exclude everything. Enforced by
+  `tests/test_sovereignty_policy.py`. Consequence the user was told: restoring from a Google backup no longer brings ACK data;
+  ACK's own EXPORT .JSON and the voice/GIF `.zip` backups are the way (consistent with "backups should be encouraged").
+  Known open items: the two Google Play Services libraries are proprietary (and `play-services-location` involves Google's
+  location services); a built APK's merged manifest was not inspected (no Android SDK in the sandbox).
+
+### Licensing
+- **GPL-3.0-or-later.** `LICENSE` is the **byte-identical** FSF text (SHA-256 pinned in `test_license_headers.py`; an earlier
+  copy differed from the FSF text in two words). The copyright line lives in `NOTICE`, not in `LICENSE`. **Every source file**
+  (`.kt .kts .py .js .mjs .html .css .sh .pro`) carries `SPDX-License-Identifier: GPL-3.0-or-later` in its first lines (after a
+  shebang / `<!doctype>`); the test fails for a new file without one. XML resources, docs and images are covered by `NOTICE`.
+- `tools/patch_voice_for_sherpa_onnx.py` follows sherpa-onnx's Apache-2.0 `add_meta_data.py` (Xiaomi Corp.): its header is
+  `GPL-3.0-or-later AND Apache-2.0` with the attribution and a statement of changes; `LICENSES/Apache-2.0.txt` is the verbatim text.
+- **`THIRD_PARTY_NOTICES.md`** lists every outside source with license **and how it was checked** ("not verified" is stated, never
+  guessed). A test fails if a binary asset (`.so .otf .ttf .jar .aar`) is committed, or a Freeform Studio requirement is added,
+  without being listed. When adding a dependency, read its real license (installed metadata / repo / POM) and add it.
+- **Open decisions recorded there (do not "fix" silently):** `app/src/main/res/font/atkinson_hyperlegible_next_regular.otf`
+  embeds a *no-derivatives* license while upstream publishes the same version number under SIL OFL as a *different build* (375
+  vs 392 glyphs, different outlines in 197) — swapping changes rendering, so it is the user's call; the Play Services
+  libraries; the license of whichever Piper base checkpoint a voice is trained from (per-voice `MODEL_CARD`); image provenance.
+- Authorship: Freeform Studio was written with an AI assistant; that is stated in `THIRD_PARTY_NOTICES.md`. Keep saying it.
