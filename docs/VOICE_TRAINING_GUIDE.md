@@ -498,7 +498,17 @@ python3 -m piper.train.export_onnx \
   --output-file ~/piper/my-training/my_voice.onnx
 ```
 
-If this fails with a `torch.export`/`GuardOnDataDependentSymNode` error
+**Then make the voice's config file, now.** Training wrote it to whatever `--data.config_path` pointed at (`config.json` in the
+commands above). It has to sit next to the model with exactly this name, and **steps 6 (testing), 7 (patching) and 8
+(importing) all need it**:
+
+```bash
+cp ~/piper/my-training/config.json ~/piper/my-training/my_voice.onnx.json   # <model>.onnx.json, exact naming matters
+ls -l ~/piper/my-training/my_voice.onnx*     # you should see both my_voice.onnx and my_voice.onnx.json
+```
+(If you named your voice something else, say `Snakesan2.onnx`, the config is `Snakesan2.onnx.json`.)
+
+If the export fails with a `torch.export`/`GuardOnDataDependentSymNode` error
 (recent `torch` versions default `torch.onnx.export` to a new exporter
 that's stricter than this code expects): edit
 `~/piper1-gpl/src/piper/train/export_onnx.py`, and add `dynamo=False,` as
@@ -511,7 +521,7 @@ an argument to the `torch.onnx.export(...)` call. You'll also need
 
 ```bash
 pip install piper-tts
-cp ~/piper/my-training/config.json ~/piper/my-training/my_voice.onnx.json  # exact naming matters: <model>.onnx.json
+# uses my_voice.onnx.json, the config you copied next to the model in step 5
 python3 -m piper -m ~/piper/my-training/my_voice.onnx -f test.wav -- 'A sentence you never recorded.'
 ```
 Copy `test.wav` to your Windows filesystem (e.g. `/mnt/c/Users/<you>/Desktop/`)
@@ -533,15 +543,24 @@ python3 /path/to/ACK/tools/patch_voice_for_sherpa_onnx.py \
   ~/piper/my-training/my_voice.onnx.json
 ```
 
-Patches the `.onnx` in place. Only needs to run once per exported
-checkpoint (re-run it again if you export a newer checkpoint later).
+The **first** file is the model (`.onnx`) and the **second** is its config (`.onnx.json`, from step 5): two different files.
+(If you leave the second one out, `<model>.onnx.json` next to it is assumed.)
+
+Patches the `.onnx` in place, **after keeping a copy of the original** beside it as `my_voice.onnx.before-patch` (you don't
+import that one). The new file is written next to the model and swapped in only at the end, so if anything goes wrong your
+model is left exactly as it was. Running it again on a patched model changes nothing. Only needs to run once per exported
+checkpoint (re-run it if you export a newer checkpoint later; that gets its own backup).
+
+If the script says something is wrong with the files, it explains what and prints the exact command to fix it; nothing has
+been changed when it does. Use the copy of the script in your ACK checkout (`git pull` first), not an old copy you made
+earlier: older copies show a Python error instead of that explanation.
 
 ---
 
 ## 8. Importing into ACK
 
 Settings → Audio Architect → **IMPORT CUSTOM VOICE** (or **RE-IMPORT**
-if replacing an existing one) → pick both `my_voice.onnx` and
+if replacing an existing one) → pick both `my_voice.onnx` (the patched one) and
 `my_voice.onnx.json` together in one file-picker selection. The app
 restarts automatically after a successful import.
 
@@ -559,6 +578,7 @@ reinstall.
 
 | Symptom | Cause | Fix |
 |---|---|---|
+| Patching fails with `UnicodeDecodeError: 'utf-8' codec can't decode byte ... invalid start byte` (or a `JSONDecodeError`) coming from `json.load` | The second argument was the model (`my_voice.onnx`) instead of its config (`my_voice.onnx.json`), usually because that file didn't exist yet (the shell's Tab completion only offers what exists) | Make the config: `cp ~/piper/my-training/config.json ~/piper/my-training/my_voice.onnx.json`, then run the patch again. The current script explains this itself; nothing was changed, the failure happens before the model is touched |
 | `cythonize: command not found` (even after installing Cython) | Ran the build script with `sudo` — resets `PATH`, drops your venv | Drop `sudo`, just run `bash build_monotonic_align.sh` |
 | `ModuleNotFoundError: No module named 'piper_train'` | Following an old rhasspy/piper tutorial — `piper1-gpl`'s module is `piper.train`, not `piper_train`, and has no separate preprocess step | Use `python3 -m piper.train fit ...` directly |
 | `ModuleNotFoundError: No module named 'skbuild'` | `setup.py`'s own build-time deps aren't auto-installed when running it directly | `pip install scikit-build cmake ninja` |
@@ -600,6 +620,7 @@ python3 -m piper.train fit \
 python3 -m piper.train.export_onnx \
   --checkpoint ~/piper1-gpl/lightning_logs/version_N+1/checkpoints/last.ckpt \
   --output-file ~/piper/my-training/my_voice.onnx
+cp ~/piper/my-training/config.json ~/piper/my-training/my_voice.onnx.json    # the config, next to the model
 python3 /path/to/ACK/tools/patch_voice_for_sherpa_onnx.py \
   ~/piper/my-training/my_voice.onnx ~/piper/my-training/my_voice.onnx.json
 

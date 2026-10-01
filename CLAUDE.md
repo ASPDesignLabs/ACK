@@ -629,6 +629,18 @@ change to piper1-gpl's export script, or a switch to a different Piper
 training toolkit, should be re-checked against this same requirement**
 rather than assumed fixed.
 
+**The patcher is user-facing, so it must be forgiving and must never damage the model** (`tools/patch_voice_for_sherpa_onnx.py`,
+tested by `tools/freeform_studio/tests/test_patch_voice.py`). A real failure: the user ran it with the `.onnx` given as *both*
+arguments and got a raw `UnicodeDecodeError` from `json.load`. Root cause was the guide: the `<model>.onnx.json` copy of
+`config.json` lived only in the *optional* "test locally" step, but the required patch and import steps need it (shell Tab
+completion then offers only the `.onnx`). Now: the copy is part of the export step in `docs/VOICE_TRAINING_GUIDE.md` §5; the
+script validates its arguments (model given twice, arguments swapped, missing config, non-Piper config, not-an-ONNX file, missing
+`onnx` package) with plain messages that print the exact `cp`/run commands, exits 2 with nothing changed; the second argument
+is optional (`<model>.json`); it keeps the original as `<model>.onnx.before-patch` (a newer export gets a timestamped backup),
+writes to a scratch file and swaps it in with `os.replace`, and is a no-op on an already-patched model. Keep it that way:
+the user's standing preference is backups encouraged, edits safe. The script does `import onnx` lazily so argument checks work
+(and are tested) without it.
+
 ### Storage — `output/CustomVoiceRepository.kt`
 
 Two fixed files, `context.filesDir/custom_voice/model.onnx` and
