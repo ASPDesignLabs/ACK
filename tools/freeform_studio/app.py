@@ -1,6 +1,7 @@
 """The HTTP API. Phase 1 is API-only; the capture and review pages arrive in later phases."""
 from __future__ import annotations
 
+import asyncio
 import hmac
 import json
 import re
@@ -13,6 +14,7 @@ from typing import Any, Callable, Dict, Optional
 from quart import Quart, Response, g, jsonify, request, send_file, send_from_directory
 
 from . import __version__
+from . import export as export_mod
 from .asr import AsrEngine
 from .config import Config
 from .edit import new_edit_doc, normalize_edit, validate_edit
@@ -319,6 +321,27 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
                 store.prune(take_id, "reference_history", 20)
             doc = store.update(take_id, reference_text=text)
         return jsonify(reference_text=doc["reference_text"])
+
+    # ------------------------------------------------------------------ training clips
+    async def run_export(take_ids: Optional[list], apply_it: bool):
+        """Preview or perform an export, off the event loop (it reads audio and runs ffmpeg)."""
+        try:
+            work = export_mod.apply if apply_it else export_mod.make_plan
+            plan = await asyncio.to_thread(work, cfg.output_dir, cfg.code, take_ids)
+        except export_mod.ExportBusy as err:
+            raise ApiError(409, str(err))
+        except export_mod.ExportError as err:
+            raise ApiError(400, str(err))
+        return jsonify(plan.report())
+
+    @app.route("/api/export", methods=["GET", "POST"])
+    async def export_all():
+        return await run_export(None, request.method == "POST")
+
+    @app.route("/api/takes/<take_id>/export", methods=["GET", "POST"])
+    async def export_take(take_id: str):
+        take_or_404(take_id)
+        return await run_export([take_id], request.method == "POST")
 
     @app.route("/api/takes/<take_id>/transcribe", methods=["POST"])
     async def transcribe(take_id: str):

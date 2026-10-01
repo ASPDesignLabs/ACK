@@ -89,6 +89,12 @@ Example output (mock data):
 ```
 
 
+If you use Freeform Studio's export, `~/piper-recording-studio/output/en-US/freeform/` also appears here: `<take>_<piece>.wav`
+with a matching `.txt`, a `manifest.json` and a hidden `.presplit` marker. It shows up as one more line (`freeform`) under
+*Takes per prompt file*, its clips count toward *Total recorded time*, and none of the checks below flags it. Clips it stops
+exporting are moved to `output/_freeform/en-US/retired/`, outside this folder.
+
+
 ## 3. How much have I recorded?
 
 

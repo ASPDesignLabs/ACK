@@ -193,3 +193,6 @@ dialog .row { justify-content: flex-end; }
 .subcard { margin: 1rem 0 0; border-top: 1px solid var(--line); padding-top: .25rem; }
 .subcard > summary { font-weight: 600; }
 input[type="text"] { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: .5rem; padding: .6rem; min-height: 2.75rem; }
+
+.reasons { margin: .25rem 0 .5rem; padding-left: 1.25rem; font-size: .95rem; overflow-wrap: anywhere; }
+.reasons li { margin: .25rem 0; }

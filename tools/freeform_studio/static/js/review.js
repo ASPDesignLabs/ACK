@@ -7,6 +7,7 @@ import { boundsFor, clampEdge, nudged } from "./wavegeo.js";
 import { WaveView } from "./wave.js";
 import { alignAllAsync, buildPrompt, extractHotwords } from "./refalign.js";
 import { replaceToken, spokenTokens } from "./spoken.js";
+import { initExportCard } from "./exportcard.js";
 import { Player } from "./player.js";
 import { Saver, sameSeg } from "./saver.js";
 import { watchConnection } from "./conn.js";
@@ -71,6 +72,7 @@ if (route) openEditor(route[1]); else openInbox();
 // ============================================================================================ inbox
 function openInbox() {
   $("inbox").hidden = false;
+  initExportCard({ takeId: null, ensureSaved: async () => true, confirmDialog, announce });
   const list = $("inbox-list"), empty = $("inbox-empty");
   let timer = null;
 
@@ -1024,6 +1026,10 @@ function startEditor(takeId, doc, take) {
       showNotice(`Couldn't start it: ${err.message}`);
     }
   });
+
+  // ------------------------------------------------------------------ export of approved pieces as training clips
+  $("export-slot").append($("exportcard"));
+  initExportCard({ takeId, ensureSaved: async () => { commitSession(); return waitSaved(); }, confirmDialog, announce });
 
   // ------------------------------------------------------------------ word strip: tap to hear from a word
   const strip = $("p-words");

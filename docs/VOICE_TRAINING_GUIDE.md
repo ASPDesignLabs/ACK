@@ -261,7 +261,24 @@ mkdir -p ~/backups
 tar czf ~/backups/freeform-takes-$(date +%Y%m%d-%H%M%S).tar.gz -C ~/piper-recording-studio/output _freeform
 ```
 
-Then, from `~/ack-tools/tools` with the Freeform Studio venv active:
+**Easiest route once you've reviewed:** export the approved pieces into the recorder's own folder layout, then run the same
+split step you always do (the clips pass straight through it, alongside your prompted recordings):
+
+```bash
+cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
+python -m freeform_studio.export --dry-run     # what would be written, and which approved pieces are left out and why
+python -m freeform_studio.export               # shows the same, then asks before writing
+cp ~/ack-tools/tools/split_long_takes.py ~/tools/    # optional: the updated splitter understands the export's .presplit marker
+python3 ~/tools/split_long_takes.py --input-dir ~/piper-recording-studio/output/en-US --output-dir ~/piper/my-dataset-split-2
+```
+
+(The Review page has the same export under *Training clips*.) Use a **new** `--output-dir` for the split, since re-running into
+an old one leaves stale `.wav` files. Nothing the export replaces or stops exporting is deleted: it is moved to
+`~/piper-recording-studio/output/_freeform/en-US/retired/`. Then train as usual, with a new `--data.cache_dir`.
+
+**Or build straight from the recordings**, which can also include confident pieces you haven't reviewed:
+
+From `~/ack-tools/tools`, with the Freeform Studio venv active:
 
 ```bash
 python -m freeform_studio.build_dataset --dry-run      # preview: what goes in, what is left out and why. Writes nothing.

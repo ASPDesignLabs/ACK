@@ -4,11 +4,10 @@ Capture free speech from your phone, have your PC transcribe it with word timing
 training clips for Piper. It runs next to `piper-recording-studio` (its own port, its own venv) and shares its
 `output/` folder.
 
-**Status: Phase 5 of 7 (the text you read, and spoken forms), plus dataset export.** You can record from your phone,
-everything is saved to your PC as you speak, the PC transcribes it, and you can correct the words, move the cut points,
-split and join pieces, fix numbers and symbols, bring in the wording of the text you were reading, and approve or drop each
-piece on your phone (or PC). Still to come: exporting approved clips straight into the recorder's folders, and the final
-hardening pass.
+**Status: Phase 6 of 7 (export into your recorder's folders), plus dataset export.** You can record from your phone,
+everything is saved to your PC as you speak, the PC transcribes it, you correct and approve pieces on your phone (or PC), and
+the approved ones can now be written straight into the recorder's own folder layout, ready for your usual training steps.
+Still to come: a final hardening pass (install script, automatic backups, freeing the GPU from the page).
 
 ## Install (once)
 
@@ -155,6 +154,50 @@ The page is built for one hand on a phone (big targets, controls at the bottom),
 controls, status messages announced politely, no information carried by color alone), and meets WCAG AA contrast in light
 and dark mode.
 
+## Training clips: export approved pieces into your recorder's folders
+
+Open **Training clips (export)** on the Review page (this recording) or on the recordings list (all recordings), or use the
+terminal. It writes each **approved** piece as `<take>_<piece>.wav` plus a matching `.txt` into
+`~/piper-recording-studio/output/en-US/freeform/`, exactly like a prompted recording (`<group>/<id>.wav` + `<id>.txt`), so
+your checks, your backups of `output/` and `split_long_takes.py` all work on it without special handling.
+
+```bash
+cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
+python -m freeform_studio.export --dry-run     # what would change, and which approved pieces are left out and why
+python -m freeform_studio.export               # shows the same, then asks before writing
+```
+
+- **It only exports what qualifies:** approved, not tagged `laugh`/`cough`/`noise`/`unclear`, no cut point inside a word,
+  1 to 11.5 seconds, not too quiet, not clipping. Approved pieces that don't qualify are listed with the reason, so you
+  can fix them in Review.
+- **Each clip is cut from your recording** (never from a copy), brought to a consistent level (peak about -3 dB, like
+  `build_dataset`; `--no-normalize` keeps the original loudness), given a few milliseconds of fade so cuts never click, and
+  converted to 22050 Hz mono 16-bit.
+- **Nothing is ever deleted.** If you un-approve, drop, tag or re-cut a piece, its clip stops qualifying: the next export
+  moves it (and the old version of any clip it replaces) to `output/_freeform/en-US/retired/<date-time>/`, outside the folder
+  the splitter reads, with an `index.json` saying why. Run it as often as you like: unchanged clips are left alone, so
+  re-exports are quick and the folder stays in step with your review.
+- `manifest.json` in the folder says where every clip came from (recording, piece, cut points, text). `.presplit` tells
+  `split_long_takes.py` these clips are finished (see below). Files you put in the folder yourself are never touched, but
+  everything in it is treated as a finished clip, and it **refuses to use a folder that already holds recordings it didn't
+  write** (a prompt group named `freeform`, say) rather than change how they're split.
+- Edit in Review, not in the folder: the next export replaces a clip whose piece has changed (keeping the old one).
+- Pieces from a recording that is being transcribed again are skipped, not removed.
+
+**Two ways to a training set.** After exporting, the simplest is the step you already know:
+
+```bash
+python3 ~/tools/split_long_takes.py --input-dir ~/piper-recording-studio/output/en-US --output-dir ~/piper/my-dataset-split-2
+```
+
+which now includes the `freeform` clips beside your prompted recordings (a new `--output-dir`: re-running into an old one
+leaves stale `.wav` files behind). Copy the updated `tools/split_long_takes.py` over your copy so it honours the `.presplit`
+marker; with its default `--min-duration 12` an older copy already passes these clips (all under 11.5 s) straight through, but
+a lower value would try to re-split them. The other way is `build_dataset` below, which reads your recordings directly and can
+also include confident pieces you haven't reviewed. If you merge a dataset made from the export into a `build_dataset` run with
+`--also`, pieces that are already in it are skipped (and listed in `excluded.txt`) so nothing is counted twice; re-export and
+rebuild that dataset to refresh it.
+
 ## Turn your takes into a training dataset
 
 ```bash
@@ -243,8 +286,9 @@ output/_freeform/<code>/takes/<take id>/
   take.json       status and details (including the reference text)
   reference_history/   earlier versions of the reference text, if you replaced it
 ```
+Approved clips are exported to `output/<code>/freeform/` (see *Training clips* above); anything it replaces or stops
+exporting is kept in `output/_freeform/<code>/retired/`.
 This folder is deliberately outside `output/<code>/`, so `split_long_takes.py` can never pick up half-reviewed audio.
-Approved clips will be exported into `output/<code>/freeform/` in the same layout as your prompted recordings.
 
 ## API
 
@@ -259,6 +303,7 @@ Approved clips will be exported into `output/<code>/freeform/` in the same layou
 | `GET /api/takes/<id>/peaks`, `.../peaks/<n>` | waveform data |
 | `GET/PUT /api/takes/<id>/edit` | the edit document; a save with a stale `rev` gets `409` instead of overwriting |
 | `PUT /api/takes/<id>/reference` | save or replace the text that was read (`text`); the old text is kept in `reference_history/` |
+| `GET/POST /api/takes/<id>/export`, `GET/POST /api/export` | preview (GET) or write (POST) the training clips for one recording, or all of them |
 | `GET /api/takes/<id>/edit/history` | saved versions of the edit document, newest first |
 | `POST /api/takes/<id>/edit/restore` | bring one back (`name`, `rev`); the current version is kept first |
 | `POST /api/takes/<id>/transcribe` | run again (`model`, `initial_prompt`, `hotwords`, `regenerate`+`force`) |
@@ -270,8 +315,8 @@ Approved clips will be exported into `output/<code>/freeform/` in the same layou
 cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
 pip install pytest && python -m pytest freeform_studio/tests -q
 ```
-The screens' pure logic (re-timing words after an edit, merging two devices' edits, splitting, joining, trimming, waveform geometry, spoken forms, matching against the reference) is also tested with Node, if it is
+The screens' pure logic (re-timing words after an edit, merging two devices' edits, splitting, joining, trimming, waveform geometry, spoken forms, matching against the reference, exporting) is also tested with Node, if it is
 installed (`node --test` via `test_js_logic.py`; skipped otherwise). Set `FS_SHOTS=/some/dir` to save screenshots from the
 browser tests.
-The browser tests (`test_capture_ui.py`, `test_review_ui.py`) also need `pip install playwright` and a Chromium; they skip themselves
+The tests that run the real `split_long_takes.py` need `pip install pydub` and skip themselves without it. The browser tests (`test_capture_ui.py`, `test_review_ui.py` and friends) also need `pip install playwright` and a Chromium; they skip themselves
 if either is missing.

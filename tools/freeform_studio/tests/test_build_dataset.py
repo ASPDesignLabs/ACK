@@ -263,3 +263,20 @@ def test_allow_none_holds_back_pieces_with_numbers_and_is_otherwise_parsed_plain
     assert bd.why_excluded(base, bd.Policy(allow=bd.parse_allow(None))) is None
     assert "has_digits" in bd.why_excluded(base, bd.Policy(allow=bd.parse_allow("none")))
     assert bd.why_excluded({**base, "status": "approved"}, bd.Policy(allow=bd.parse_allow("none"))) is None   # you approved it
+
+
+def test_pieces_already_in_a_merged_dataset_made_from_the_export_are_not_counted_twice(out_dir, tmp_path, capsys):
+    take = "t20260930-000001-aaaa"
+    write_take(out_dir, take, [seg(1, 0, 3, text="Already exported."), seg(2, 3, 6, text="Not exported yet.")])
+    old = tmp_path / "split"
+    (old / "wav").mkdir(parents=True)
+    make_wav(old / "wav" / f"freeform_{take}_s001.wav", 2.0, [(0, 2.0)], rate=22050)     # what split_long_takes.py makes from the export
+    make_wav(old / "wav" / "01_prompt_3.wav", 2.0, [(0, 2.0)], rate=22050)               # an ordinary prompted recording
+    (old / "metadata.csv").write_text(f"freeform_{take}_s001.wav|Already exported.\n01_prompt_3.wav|Prompted.\n")
+    dest = tmp_path / "ds"
+    assert run(out_dir, dest, "--also", str(old)) == 0
+    r = rows(dest)
+    assert [row[1] for row in r] == ["Not exported yet.", "Already exported.", "Prompted."]    # the exported piece appears once
+    assert (dest / "excluded.txt").read_text().count("already in split") == 1
+    assert "already in split" in capsys.readouterr().out
+    assert bd.validate(dest) == []

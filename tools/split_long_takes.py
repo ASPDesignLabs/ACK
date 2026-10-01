@@ -36,6 +36,10 @@ Usage:
 Recordings shorter than --min-duration are assumed to already be
 single-sentence takes -- copied straight through (resampled to Piper's
 expected 22050 Hz mono 16-bit) with their existing text, untouched.
+So is everything in a folder that contains a file named .presplit,
+regardless of length: Freeform Studio's export (<lang-code>/freeform/)
+writes one, because those clips were already cut to single utterances in
+review and must not be re-split by silence detection.
 Anything where the number of detected speech segments doesn't match
 the number of sentences in that take's prompt text is left out of
 metadata.csv and copied instead into <output-dir>/needs_review/, so a
@@ -156,8 +160,10 @@ def main() -> None:
 
         duration_s = len(audio) / 1000.0
 
-        if duration_s < args.min_duration:
-            _LOGGER.info("PASSTHROUGH  %-45s  %.1fs (single sentence)", audio_path.name, duration_s)
+        presplit = (audio_path.parent / ".presplit").exists()
+        if duration_s < args.min_duration or presplit:
+            _LOGGER.info("PASSTHROUGH  %-45s  %.1fs (%s)", audio_path.name, duration_s,
+                         "already a finished clip" if presplit else "single sentence")
             if not args.dry_run:
                 out_name = f"{base_name}.wav"
                 normalize_audio(audio).export(wav_dir / out_name, format="wav")

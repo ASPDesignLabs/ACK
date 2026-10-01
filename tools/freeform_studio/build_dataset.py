@@ -38,6 +38,8 @@ TARGET_SR = 22050
 CLIP_SAMPLES = 5
 LENGTH_FLAGS = {"too_short", "too_long"}  # measured directly instead, against --min-seconds/--max-seconds
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+# split_long_takes.py names a clip from the export folder "freeform_<recording>_<piece>.wav" (group name + file name)
+EXPORTED_RE = re.compile(r"^freeform_(t\d{8}-\d{6}-[0-9a-f]{4}_s\d{3,6})\.wav$")
 
 
 @dataclass
@@ -63,10 +65,11 @@ class Candidate:
     end: float
     text: str
     status: str
+    prefix: str = "ff_"
 
     @property
     def name(self) -> str:
-        return f"ff_{self.take_id}_{self.seg_id}"
+        return f"{self.prefix}{self.take_id}_{self.seg_id}"
 
 
 def clean_text(text: str) -> str:
@@ -113,29 +116,33 @@ def why_excluded(seg: Dict[str, Any], p: Policy) -> Optional[str]:
     return None
 
 
-def scan(takes_dir: Path, p: Policy) -> Tuple[List[Candidate], List[Dict[str, Any]], Dict[str, Any]]:
+def scan(takes_dir: Path, p: Policy, only: Optional[Set[str]] = None, prefix: str = "ff_") -> Tuple[List[Candidate], List[Dict[str, Any]], Dict[str, Any]]:
+    """Which pieces qualify under policy `p`. `only` limits it to those takes; `scanned` lists the finished takes that were read."""
     included: List[Candidate] = []
     excluded: List[Dict[str, Any]] = []
-    stats: Dict[str, Any] = {"takes": 0, "skipped_takes": [], "segments": 0}
+    stats: Dict[str, Any] = {"takes": 0, "skipped_takes": [], "segments": 0, "scanned": []}
     if not takes_dir.is_dir():
         return included, excluded, stats
     for take_dir in sorted(d for d in takes_dir.iterdir() if d.is_dir()):
+        if only is not None and take_dir.name not in only:
+            continue
         stats["takes"] += 1
         take = read_json(take_dir / "take.json")
         edit = read_json(take_dir / "edit.json")
         if not take or take.get("status") != "ready" or not edit or not (take_dir / "audio.wav").exists():
             stats["skipped_takes"].append((take_dir.name, (take or {}).get("status", "unreadable")))
             continue
+        stats["scanned"].append(take_dir.name)
         for i, seg in enumerate(edit.get("segments", [])):
             stats["segments"] += 1
             reason = why_excluded(seg, p)
             text = clean_text(seg.get("text", ""))
             if reason:
                 excluded.append({"take": take_dir.name, "seg": seg.get("id"), "seconds": round(float(seg["end"]) - float(seg["start"]), 2),
-                                 "reason": reason, "text": text})
+                                 "reason": reason, "text": text, "status": seg.get("status", "pending")})
             else:
                 included.append(Candidate(take_dir.name, seg["id"], i, float(seg["start"]), float(seg["end"]), text,
-                                          seg.get("status", "pending")))
+                                          seg.get("status", "pending"), prefix))
     return included, excluded, stats
 
 
@@ -155,7 +162,8 @@ def render_take(take_dir: Path, clips: List[Candidate], wav_dir: Path, p: Policy
 
     def one(c: Candidate) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
         x = audio[int(c.start * rate):int(c.end * rate)].astype(np.float32) / 32768.0
-        bad = lambda why: (None, {"take": c.take_id, "seg": c.seg_id, "seconds": round(c.end - c.start, 2), "reason": why, "text": c.text})
+        bad = lambda why: (None, {"take": c.take_id, "seg": c.seg_id, "seconds": round(c.end - c.start, 2), "reason": why, "text": c.text,
+                                  "status": c.status})
         if len(x) < rate * 0.2:
             return bad("audio is empty")
         peak = float(np.abs(x).max())
@@ -241,10 +249,25 @@ def build(args: argparse.Namespace) -> int:
 
     also_rows: List[Tuple[Path, str]] = []
     warnings: List[str] = []
+    already: Dict[str, str] = {}      # pieces that an --also dataset already holds (made from an export), by recording_piece
     for folder in args.also or []:
         rows, w = read_dataset(Path(folder).expanduser())
         also_rows.extend(rows)
         warnings.extend(w)
+        for path, _text in rows:
+            m = EXPORTED_RE.search(path.name)
+            if m:
+                already.setdefault(m.group(1), Path(folder).expanduser().name)
+    if already:
+        keep = []
+        for c in chosen:
+            where = already.get(f"{c.take_id}_{c.seg_id}")
+            if where is None:
+                keep.append(c)
+            else:
+                excluded.append({"take": c.take_id, "seg": c.seg_id, "seconds": round(c.end - c.start, 2), "status": c.status, "text": c.text,
+                                 "reason": f"already in {where} (from an earlier export; re-export and rebuild that dataset to refresh it)"})
+        chosen = keep
 
     rendered: List[Dict[str, Any]] = []
     wav_dir = out / "wav"

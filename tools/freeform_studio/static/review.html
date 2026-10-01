@@ -30,6 +30,17 @@
         <p id="inbox-empty" class="hint">Loading...</p>
         <ul id="inbox-list" class="takes"></ul>
       </div>
+      <details class="card" id="exportcard">
+        <summary>Training clips (export)</summary>
+        <p class="hint">Writes each approved piece as a .wav with its text, in the same folder layout as your prompted recordings, so your usual training steps pick them up. Nothing is ever deleted, and your recordings are never changed.</p>
+        <p id="export-summary" class="summary2" role="status" aria-live="polite"></p>
+        <div id="export-details"></div>
+        <div class="stack">
+          <button type="button" class="btn" id="export-go" disabled>Export</button>
+          <button type="button" class="btn small" id="export-check">Check again</button>
+        </div>
+        <p id="export-result" class="summary2" role="status" aria-live="polite"></p>
+      </details>
     </section>
 
     <section id="editor" hidden>
@@ -147,6 +158,8 @@
           <p class="hint">Clean means no warnings at all. It does not mean you checked it, so listen to a few first. You'll be asked to confirm, and you can undo it.</p>
           <label class="check"><input type="checkbox" id="autoplay"> Play each piece when I move to it</label>
         </section>
+
+        <div id="export-slot"></div>
 
         <details class="card" id="refcard">
           <summary>Text you read (reference)</summary>
