@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.composer
 
 import com.example.besu.*
