@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Loads the page's ES modules for testing. They import each other by relative path, so they are copied to a temporary
 // folder with a package.json that says "module", which works on any Node version (no package.json ships with the app).
 import { copyFileSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";

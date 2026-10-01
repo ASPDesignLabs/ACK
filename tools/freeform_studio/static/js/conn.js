@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { api } from "./api.js";
 
 // Keeps a status line up to date: whether this page can reach the PC, in plain words.

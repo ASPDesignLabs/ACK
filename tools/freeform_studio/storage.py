@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """On-disk take storage. Every write is atomic; raw audio is never modified once assembled."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Plays exactly the part of the take that a piece covers (the same audio that will end up in the training clip),
 // and reports the playhead so the current word can be highlighted.
 export class Player extends EventTarget {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.help
 
 import androidx.compose.foundation.background

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Plain-language wording for the warnings the recognizer and the checks can attach to a piece.
 export const FLAG_TEXT = {
   low_confidence: "shaky word", has_digits: "has numbers", too_short: "very short", too_long: "long",

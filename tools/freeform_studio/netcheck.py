@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Small, dependency-free network and certificate helpers used by the server's startup checks and by `doctor`."""
 from __future__ import annotations
 

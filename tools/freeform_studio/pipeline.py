@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """recognizer output + audio -> proposed segments. Shared by the server and the smoke-test script."""
 from __future__ import annotations
 

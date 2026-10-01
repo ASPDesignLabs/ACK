@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The text that was read: proposals from it, spoken-form choices, the reference card, and listening again with hints."""
 import json
 import time

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { api, el } from "./api.js";
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;

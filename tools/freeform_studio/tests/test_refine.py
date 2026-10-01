@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 import numpy as np
 
 from freeform_studio.refine import refine_word_times, speech_threshold

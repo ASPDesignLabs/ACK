@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Turns a flat list of timed words into review-sized segments (roughly one sentence each).
 
 Rules, in order:

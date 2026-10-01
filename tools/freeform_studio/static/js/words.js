@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Pure logic with no page code, so it can be tested on its own.
 //  - alignEdit: after the reviewer retypes part of a piece, keep the timing of the words they didn't touch
 //  - merge3:    combine two people's (or two devices') edits of the same take without losing either

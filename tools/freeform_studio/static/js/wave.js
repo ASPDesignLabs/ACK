@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { clampEdge, columns, pickLevel, timeToX, viewWindow, xToTime, MIN_LEN } from "./wavegeo.js";
 
 const fmt = (t) => { const m = Math.floor(t / 60); return `${m}:${(t - m * 60).toFixed(2).padStart(5, "0")}`; };

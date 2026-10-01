@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Thin fetch wrapper. Network failures throw a TypeError with no .status (callers treat that as "retry later").
 export async function api(path, { method = "GET", body, headers = {} } = {}) {
   const opts = { method, headers: { ...headers }, credentials: "same-origin" };

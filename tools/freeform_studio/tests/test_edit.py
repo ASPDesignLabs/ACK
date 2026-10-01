@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 from freeform_studio.edit import normalize_edit, validate_edit
 
 

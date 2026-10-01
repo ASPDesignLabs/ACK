@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Phone-side safety net: each audio chunk is written here BEFORE it is sent, and removed only after the PC confirms
 // it. If IndexedDB is unavailable (some private modes) everything still works, just without crash recovery.
 const DB_NAME = "freeform-studio";

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """How much room is left on the PC, and what to say about it."""
 from __future__ import annotations
 

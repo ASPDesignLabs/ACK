@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """What the phone page says when the PC is short of space, and that nothing is lost."""
 import json
 

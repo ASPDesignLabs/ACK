@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Drives the review screens in headless Chromium at phone size, against the real server and a real (generated) recording."""
 import json
 import os

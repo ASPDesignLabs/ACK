@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Offers spoken-form wordings for the things a voice can't be trained on as written: digits, symbols, abbreviations.
 // It never decides: a number can be said several ways ("2026" is "twenty twenty-six" or "two thousand twenty-six"), so
 // it lists the likely readings and the person picks the one they actually said. Pure, so it can be tested on its own.

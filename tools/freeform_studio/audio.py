@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """ffmpeg decode, waveform peaks, and a simple energy envelope. Pure stdlib + numpy."""
 from __future__ import annotations
 

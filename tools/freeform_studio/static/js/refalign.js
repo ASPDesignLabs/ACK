@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Matches what was heard against the text the person was reading, and proposes the reference's wording where the two
 // agree closely. It only ever proposes; the person decides. Three promises are built into how a proposal is made:
 //   - every word that was spoken stays (a proposal has exactly one word per spoken word, so nothing is dropped);

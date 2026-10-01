@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Geometry for the waveform view: which stretch of the recording is shown, how times map to pixels, how far a cut
 // point may move, and which stored peak level to draw. Pure, so it can be tested on its own.
 const r3 = (x) => Math.round(x * 1000) / 1000;

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Runs the plain-JavaScript logic tests (word re-alignment, edit merging) with Node, if it is installed."""
 import shutil
 import subprocess

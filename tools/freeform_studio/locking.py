@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """A lock file that only one process (or request) can hold at a time."""
 from __future__ import annotations
 

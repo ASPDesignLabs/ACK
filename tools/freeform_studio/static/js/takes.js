@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { api, el, fmtClock } from "./api.js";
 import { FLAG_TEXT } from "./flags.js";
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Pure logic for reshaping pieces: split one in two, join two into one, and find where speech really starts and ends.
 // No page code here, so it can be tested on its own.
 import { alignEdit, joinWords, recomputeFlags, tokenize } from "./words.js";

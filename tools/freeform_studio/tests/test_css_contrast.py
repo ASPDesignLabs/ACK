@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Guards the accessibility of the color choices: text/background pairs must meet WCAG AA in light AND dark."""
 import re
 from pathlib import Path

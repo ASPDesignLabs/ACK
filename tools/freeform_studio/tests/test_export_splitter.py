@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The export folder works with the existing training routine (split_long_takes.py) unchanged apart from its marker."""
 import subprocess
 import sys

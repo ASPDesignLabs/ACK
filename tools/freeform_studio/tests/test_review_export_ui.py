@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The Training clips card: preview, confirm, write, and what happens when things change afterwards."""
 import json
 

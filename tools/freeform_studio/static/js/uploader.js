@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { api } from "./api.js";
 import * as store from "./store.js";
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Splits multi-sentence piper-recording-studio takes into per-sentence
 training examples.
 

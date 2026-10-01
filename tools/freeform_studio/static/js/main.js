@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 import { initCapture } from "./capture.js";
 import { initTakes } from "./takes.js";
 import { watchConnection } from "./conn.js";

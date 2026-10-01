@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The Status and safety card: disk space, backups, and the speech model's memory."""
 import json
 from datetime import datetime, timedelta

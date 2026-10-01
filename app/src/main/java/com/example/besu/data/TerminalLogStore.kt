@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.data
 
 import com.example.besu.ui.*

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Corrects word timings against the actual audio.
 
 Whisper's word timestamps are good on average but have a known weakness: a word next to a pause can absorb

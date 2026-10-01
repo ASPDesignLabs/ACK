@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """One background worker runs the heavy jobs (assemble+decode, transcribe) strictly one at a time."""
 from __future__ import annotations
 

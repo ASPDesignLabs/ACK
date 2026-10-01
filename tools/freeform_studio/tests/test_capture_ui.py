@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Drives the real server with headless Chromium at phone size and a fake microphone."""
 import json
 import os

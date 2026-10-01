@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Cut points, waveform, trimming, splitting and joining, driven in headless Chromium at phone size."""
 import json
 

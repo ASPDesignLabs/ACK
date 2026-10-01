@@ -746,3 +746,61 @@ mechanism did you use" state to keep in sync.
 | `settings/AudioView.kt` | Import/backup UI, "USE MY VOICE" DSP chain editor toggle |
 | `data/VoiceProfile.kt` | `useCustomVoice: Boolean = false` |
 | `app/libs/README.md`, `app/src/main/assets/espeak-ng-data/README.md` | Manual one-time download steps for the vendored, gitignored sherpa-onnx `.aar` and shared phonemization data |
+
+## DATA SOVEREIGNTY and LICENSING — rules that must stay true
+
+The user's standing requirement (stated while making Freeform Studio usable by casual users and SLPs): **voice recordings,
+transcripts, edits, exports, backups, training data and the trained voice stay on devices the person controls, 100%.** And
+the project is **GPL-3.0-or-later**. Both are enforced by tests so a later change can't quietly undo them; read these before
+adding a dependency, a permission, a network call, a file type, or a new source file.
+
+### Freeform Studio (`tools/freeform_studio/`)
+- **The server never goes online.** `FasterWhisperEngine` loads with `local_files_only=True` (`Config.asr_allow_download`
+  / `--allow-model-download` is the opt-out) and `privacy.apply_offline_defaults()` sets `HF_HUB_OFFLINE=1`,
+  `HF_HUB_DISABLE_TELEMETRY=1`, `DO_NOT_TRACK=1` before the Hugging Face libraries import. Measured: without this every model
+  load contacted huggingface.co even when cached (and *failed* behind a 403 proxy). **`models.py` (`python -m
+  freeform_studio.models fetch NAME`) is the one place allowed to use the internet, and it asks first.** `asr_smoke` follows
+  the same rule. A missing model produces a plain `EngineError` naming the exact fetch command (`explain_load_error`).
+- **Owner-only files.** `privacy.private_umask()` wraps `main()` of the server and every file-writing command (backup, export,
+  build_dataset, repair, models); the token file is created with `O_EXCL` + mode 0600. `doctor` only *reports* loose
+  permissions on older data (and the `chmod -R go-rwx` command) — it never changes a user's files by itself.
+- **Browser caching.** Everything under `/api/` is `Cache-Control: private, no-store` (audio, transcripts, waveforms). Opening
+  the printed `?token=` link 303-redirects to the same page without the token (`address_without_token`, never `//host`), the
+  cookie carries the login; `/api/*?token=` still works for scripts. Tests: `tests/test_privacy.py`.
+- **Synced folders.** `privacy.sync_risk()` / `sync_warning()` flag paths inside OneDrive/Dropbox/Google Drive/iCloud/etc. and
+  Windows `Documents`/`Desktop`/`Pictures` (OneDrive Known Folder Backup); used by the server banner, `doctor` and the backup
+  command. It only ever says "may" (folder names, can't see whether sync is on). Never recommend a `Documents` backup path.
+- **No-network regression test.** `tests/test_no_network.py` + `tests/egress_workflow.py` run the whole workflow in a
+  loopback-only namespace (`unshare -rn`) with a Python socket-logging hook and `strace`, and fail on any destination that
+  isn't this computer; the only allowed oddity is `netcheck.lan_ip()`'s UDP `connect()` to `192.0.2.1:9` (a route probe;
+  sending to it fails the test). Another test fails if a web address appears in any shipped file. If you add a feature that
+  genuinely needs the network, it must be an explicit, user-confirmed command like `models fetch`, not a background call, and
+  needs the user's approval first.
+- Not measured in the build sandbox (Hugging Face is blocked there): a real speech-model run end to end, a real training
+  run, a real phone. `docs/DATA_SOVEREIGNTY.md` says so and gives the user commands to check themselves.
+
+### ACK Android app
+- **No network permission, no network code, no cloud backup.** The manifest must not request `INTERNET` or other network
+  permissions; app Kotlin must not use `java.net`/`HttpURLConnection`/`OkHttp`/`WebView`/`android.net` (except `Uri`); both
+  `res/xml/data_extraction_rules.xml` (`<cloud-backup>` excludes all nine domains; `<device-transfer>` includes all, so a
+  phone-to-phone setup transfer keeps working) and `backup_rules.xml` exclude everything. Enforced by
+  `tests/test_sovereignty_policy.py`. Consequence the user was told: restoring from a Google backup no longer brings ACK data;
+  ACK's own EXPORT .JSON and the voice/GIF `.zip` backups are the way (consistent with "backups should be encouraged").
+  Known open items: the two Google Play Services libraries are proprietary (and `play-services-location` involves Google's
+  location services); a built APK's merged manifest was not inspected (no Android SDK in the sandbox).
+
+### Licensing
+- **GPL-3.0-or-later.** `LICENSE` is the **byte-identical** FSF text (SHA-256 pinned in `test_license_headers.py`; an earlier
+  copy differed from the FSF text in two words). The copyright line lives in `NOTICE`, not in `LICENSE`. **Every source file**
+  (`.kt .kts .py .js .mjs .html .css .sh .pro`) carries `SPDX-License-Identifier: GPL-3.0-or-later` in its first lines (after a
+  shebang / `<!doctype>`); the test fails for a new file without one. XML resources, docs and images are covered by `NOTICE`.
+- `tools/patch_voice_for_sherpa_onnx.py` follows sherpa-onnx's Apache-2.0 `add_meta_data.py` (Xiaomi Corp.): its header is
+  `GPL-3.0-or-later AND Apache-2.0` with the attribution and a statement of changes; `LICENSES/Apache-2.0.txt` is the verbatim text.
+- **`THIRD_PARTY_NOTICES.md`** lists every outside source with license **and how it was checked** ("not verified" is stated, never
+  guessed). A test fails if a binary asset (`.so .otf .ttf .jar .aar`) is committed, or a Freeform Studio requirement is added,
+  without being listed. When adding a dependency, read its real license (installed metadata / repo / POM) and add it.
+- **Open decisions recorded there (do not "fix" silently):** `app/src/main/res/font/atkinson_hyperlegible_next_regular.otf`
+  embeds a *no-derivatives* license while upstream publishes the same version number under SIL OFL as a *different build* (375
+  vs 392 glyphs, different outlines in 197) — swapping changes rendering, so it is the user's call; the Play Services
+  libraries; the license of whichever Piper base checkpoint a voice is trained from (per-voice `MODEL_CARD`); image provenance.
+- Authorship: Freeform Studio was written with an AI assistant; that is stated in `THIRD_PARTY_NOTICES.md`. Keep saying it.

@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later AND Apache-2.0
+#
+# This script follows scripts/piper/add_meta_data.py from k2-fsa/sherpa-onnx:
+#     Copyright 2025  Xiaomi Corp.  (authors: Fangjun Kuang)
+#     Licensed under the Apache License, Version 2.0 (the full text is in LICENSES/Apache-2.0.txt).
+# Changes made here, as that license asks to be stated: rewritten and shortened to patch one English voice in place,
+# without the original's command-line options for other voices and without its `iso639` dependency. The metadata keys it
+# writes are the ones sherpa-onnx's VITS loader requires. The rest of this file is part of ACK (see NOTICE) and is
+# licensed under the GNU General Public License, version 3 or (at your option) any later version.
 """Patch a Piper-trained .onnx voice with the metadata sherpa-onnx's VITS
 loader requires (sample_rate, n_speakers, language, comment=piper, ...).
 

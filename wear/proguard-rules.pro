@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Keep the Sensor Logic intact (sometimes reflection is used for sensors)
 -keep class com.example.besu.wear.AckSensor { *; }
 

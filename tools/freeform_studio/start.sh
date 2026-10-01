@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Starts Freeform Studio the usual way. Extra options go on the end and win over the defaults, for example:
 #   ./start.sh --asr-device cuda          use the GPU while training isn't running
 #   ./start.sh --port 8002

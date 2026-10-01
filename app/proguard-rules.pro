@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # --- ACK DATA PROTECTION ---
 # Keep the names of variables in these classes so JSON Export/Import works.
 # If R8 renames 'userProfile' to 'a', the JSON won't match.

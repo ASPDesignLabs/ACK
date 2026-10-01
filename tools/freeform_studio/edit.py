@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The edit document: what the reviewer decided. Raw audio is never touched; clips are rendered from this at export."""
 from __future__ import annotations
 
