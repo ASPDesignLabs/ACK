@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """python -m freeform_studio --output ~/piper-recording-studio/output"""
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ from typing import Optional
 from . import __version__
 from .config import Config
 from .netcheck import LOOPBACK, find_cert_pair, lan_ip, pick_advertised_host, port_state, san_info
+from .privacy import apply_offline_defaults, private_umask, sync_warning
 
 
 def die(message: str) -> None:
@@ -32,15 +34,19 @@ def resolve_token(arg: str, output: Path, code: str) -> Optional[str]:
         return path.read_text().strip() or None
     path.parent.mkdir(parents=True, exist_ok=True)
     token = secrets.token_urlsafe(16)
-    path.write_text(token + "\n")
-    try:
-        os.chmod(path, 0o600)
-    except OSError:
-        pass
+    # Created with mode 0600 in the same step, so there is never a moment when another account could read it.
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(token + "\n")
     return token
 
 
 def main(argv: Optional[list] = None) -> int:
+    with private_umask():   # everything this run creates is readable by you alone
+        return _run(argv)
+
+
+def _run(argv: Optional[list] = None) -> int:
     p = argparse.ArgumentParser(prog="freeform_studio", description="Capture, transcribe, and review free-speech recordings for Piper training.")
     p.add_argument("--output", default="~/piper-recording-studio/output", help="piper-recording-studio's output folder (default: %(default)s)")
     p.add_argument("--code", default="en-US", help="language code folder to export into (default: %(default)s)")
@@ -52,7 +58,10 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--keyfile", help="TLS private key")
     p.add_argument("--token", default="auto", help="'auto' (remembered), 'none', or a value")
     p.add_argument("--asr-engine", choices=["faster-whisper", "fake"], default="faster-whisper")
-    p.add_argument("--asr-model", default="small.en", help="e.g. small.en, medium.en, distil-large-v3")
+    p.add_argument("--asr-model", default="small.en", help="e.g. small.en, medium.en, distil-large-v3, or the path of a model folder")
+    p.add_argument("--allow-model-download", action="store_true",
+                   help="let the server fetch a missing speech model itself. Off by default: the server never uses the internet; "
+                        "fetch a model once, on purpose, with: python -m freeform_studio.models fetch small.en")
     p.add_argument("--asr-device", choices=["cpu", "cuda", "auto"], default="cpu",
                    help="use cpu while training is running; cuda when the GPU is free")
     p.add_argument("--asr-compute-type", default="auto")
@@ -67,6 +76,7 @@ def main(argv: Optional[list] = None) -> int:
     args = p.parse_args(argv)
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    apply_offline_defaults(args.allow_model_download)   # before anything imports the Hugging Face libraries
     if bool(args.certfile) != bool(args.keyfile):
         p.error("--certfile and --keyfile go together")
     if args.certs_dir:
@@ -99,6 +109,7 @@ def main(argv: Optional[list] = None) -> int:
     token = resolve_token(args.token, output, args.code)
     cfg = Config(output_dir=output, code=args.code, token=token, asr_engine=args.asr_engine, asr_model=args.asr_model,
                  asr_device=args.asr_device, asr_compute_type=args.asr_compute_type,
+                 asr_allow_download=args.allow_model_download,
                  asr_idle_unload_s=args.asr_idle_unload, auto_transcribe=not args.no_auto_transcribe,
                  backup_dir=Path(args.backup_dir).expanduser(), backup_every_hours=0.0 if args.no_auto_backup else args.backup_every,
                  min_free_mb=args.min_free_mb)
@@ -137,6 +148,13 @@ def main(argv: Optional[list] = None) -> int:
         print("\n  WARNING: no access token and reachable from your network. Anyone on it can read and change your recordings.")
     if not args.certfile:
         print("  note: the phone microphone needs https; add --certfile/--keyfile (see docs/VOICE_TRAINING_GUIDE.md).")
+    if cfg.asr_engine == "faster-whisper":
+        print("  speech model:         " + ("may be downloaded by the server on first use (--allow-model-download)" if args.allow_model_download
+                                            else "loaded from this computer only; the server never uses the internet"))
+    for folder, what in ((cfg.root, "Your recordings folder"), (cfg.backup_dir, "Your backup folder")):
+        warning = sync_warning(folder, what) if folder else None
+        if warning:
+            print(f"\n  WARNING: {warning}")
     print()
     try:
         asyncio.run(serve(app, hyper))

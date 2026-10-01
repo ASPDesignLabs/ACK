@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Checks each link in the chain between your phone and this program, and says which one is broken.
 
     python -m freeform_studio.doctor --port 8001 --certfile <cert.pem> --keyfile <key.pem>
@@ -14,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from . import backup, health, netcheck, repair
+from . import backup, health, models, netcheck, privacy, repair
 
 Line = Tuple[str, str]  # (label, text) where label is OK / PROBLEM / NOTE
 
@@ -87,6 +88,25 @@ def check(args: argparse.Namespace) -> Tuple[List[Line], List[str], bool]:
         if pending:
             add("NOTE", f"{len(pending)} recording(s) are missing their decoded audio (the server rebuilds it at startup, "
                         "or run: python -m freeform_studio.repair)")
+
+    # 1c. where your recordings could end up besides this computer (read from the folders; nothing is changed)
+    if out.is_dir():
+        model_name = getattr(args, "asr_model", "small.en")
+        if _has_module("faster_whisper"):
+            if models.is_available(model_name):
+                add("OK", f"speech model '{model_name}' is on this computer (the server loads it with no network)")
+            else:
+                add("NOTE", f"speech model '{model_name}' isn't on this computer yet, so transcribing will stop with a message until it is. "
+                            f"Fetching it uses the internet once (asks first): python -m freeform_studio.models fetch {model_name}")
+        library, backups_dir = out / "_freeform", Path(getattr(args, "backup_dir", backup.DEFAULT_DIR)).expanduser()
+        for folder, what in ((library, "recordings folder"), (backups_dir, "backup folder")):
+            loose = privacy.loose_permissions(folder) if folder.exists() else []
+            if loose:
+                add("NOTE", f"other accounts on this computer can read your {what} (for example {loose[0]}). On a computer only you use "
+                            f"that is fine; otherwise tighten it with: chmod -R go-rwx {folder}   (new files are already private)")
+            warning = privacy.sync_warning(folder, f"Your {what}")
+            if warning:
+                add("NOTE", warning)
 
     # 2. the certificate (needed for the phone's microphone)
     tls = bool(args.certfile)
@@ -174,6 +194,7 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--output", default="~/piper-recording-studio/output")
     p.add_argument("--code", default="en-US")
     p.add_argument("--backup-dir", default=backup.DEFAULT_DIR, help="where your backups are kept (default: %(default)s)")
+    p.add_argument("--asr-model", default="small.en", help="the speech model the server uses (default: %(default)s)")
     p.add_argument("--min-free-mb", type=int, default=500, help="the free-space floor the server was started with (default: %(default)s)")
     p.add_argument("--port", type=int, default=8001)
     p.add_argument("--certs-dir", help="folder holding your mkcert certificate + key")

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Write the approved pieces of your recordings into the recorder's own folder layout.
 
     python -m freeform_studio.export              # shows what would change, then asks before writing
@@ -31,6 +32,7 @@ from typing import Any, Dict, Iterator, List, Optional, Set
 from .build_dataset import Candidate, Policy, render_take, scan
 from .locking import exclusive
 from .storage import atomic_write_bytes, atomic_write_json, read_json
+from .privacy import private_umask
 
 GROUP = "freeform"
 MARKER = ".presplit"
@@ -299,6 +301,11 @@ def _print_plan(plan: Plan, dry_run: bool) -> None:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    with private_umask():   # files this command creates are readable by you alone
+        return _main(argv)
+
+
+def _main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--output", default="~/piper-recording-studio/output", help="piper-recording-studio's output folder")
     ap.add_argument("--code", default="en-US")

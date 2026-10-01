@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 import asyncio
 import json
 import random
@@ -236,8 +237,10 @@ def test_token_gate(out_dir):
             browser = app.test_client()
             r = await browser.get("/?token=s3cret-token")
             cookie = r.headers["set-cookie"]
-            assert r.status_code == 200 and "fs_token=s3cret-token" in cookie
+            # opening the printed link sets the cookie and moves on to the same page WITHOUT the token in the address
+            assert r.status_code == 303 and r.headers["location"] == "/" and "fs_token=s3cret-token" in cookie
             assert "HttpOnly" in cookie and "SameSite=Strict" in cookie
+            assert (await browser.get("/", headers={"Cookie": "fs_token=s3cret-token"})).status_code == 200
             # the browser then sends the cookie back; no token in the URL needed
             r2 = await app.test_client().get("/api/takes", headers={"Cookie": "fs_token=s3cret-token"})
             assert r2.status_code == 200

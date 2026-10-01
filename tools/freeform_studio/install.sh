@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Installs Freeform Studio into its own virtual environment, so nothing here can disturb the recorder or your training setup.
 #
 #   ./install.sh                  install (or repair) into ~/freeform-studio-venv
@@ -140,7 +141,9 @@ step "Done."
 if [ "$CHECK" -eq 1 ] || [ "$DRY" -eq 1 ]; then
   echo "  Nothing was changed."
 else
-  echo "  Start it:        $HERE/start.sh"
+  echo "  First, fetch the speech model (uses the internet once, asks first; nothing you record is sent):"
+  echo "                   cd $TOOLS && $VPY -m freeform_studio.models fetch small.en"
+  echo "  Then start it:   $HERE/start.sh"
   echo "  If a phone can't connect:  $VPY -m freeform_studio.doctor   (run it in a second terminal, from $TOOLS)"
   echo "  Back up your recordings:   cd $TOOLS && $VPY -m freeform_studio.backup"
 fi

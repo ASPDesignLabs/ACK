@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
 import re
@@ -17,6 +18,7 @@ class Config:
     asr_model: str = "small.en"
     asr_device: str = "cpu"  # "cpu" | "cuda" | "auto"
     asr_compute_type: str = "auto"  # auto: int8 on cpu, float16 on cuda
+    asr_allow_download: bool = False  # False: only ever load a speech model that is already on this computer (see models.py)
     asr_idle_unload_s: int = 300
     auto_transcribe: bool = True
     max_segment_s: float = 11.5

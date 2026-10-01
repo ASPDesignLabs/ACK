@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """install.sh and start.sh, driven with a stand-in Python so every branch runs without the network.
 
 The stand-in logs each call it receives, answers the version and import probes the way a healthy environment would, and can
@@ -154,6 +155,7 @@ def test_install_into_an_existing_environment_upgrades_pip_then_installs_require
     assert "-m freeform_studio --help" in log
     assert "reusing the existing environment" in out.stdout
     assert "start.sh" in out.stdout, "it ends by saying how to start the program"
+    assert "freeform_studio.models fetch small.en" in out.stdout, "and that the speech model is fetched once, on purpose"
     assert not any("nvidia" in c for c in log), "GPU libraries are only installed when asked for"
 
 

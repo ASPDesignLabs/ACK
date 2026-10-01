@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The HTTP API. Phase 1 is API-only; the capture and review pages arrive in later phases."""
 from __future__ import annotations
 
@@ -10,8 +11,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Optional
+from urllib.parse import urlencode
 
-from quart import Quart, Response, g, jsonify, request, send_file, send_from_directory
+from quart import Quart, Response, g, jsonify, redirect, request, send_file, send_from_directory
 
 from . import __version__
 from . import backup as backup_mod
@@ -33,6 +35,13 @@ STATIC_DIR = Path(__file__).parent / "static"
 # The pages load only their own files: no inline scripts or styles, nothing from other sites.
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; "
        "connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+
+
+def address_without_token(path: str, pairs) -> str:
+    """The same page's address with `token` taken out of the query. Always a path on this server, never `//host`, so it can't
+    be turned into a jump to another site."""
+    rest = [(k, v) for k, v in pairs if k != "token"]
+    return "/" + path.lstrip("/") + (("?" + urlencode(rest)) if rest else "")
 
 
 class ApiError(Exception):
@@ -81,8 +90,15 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
             return jsonify(error="unauthorized: open the URL printed when the server started"), 401  # type: ignore[return-value]
         # Remember the login in a cookie only when it arrived as ?token= (a person opening the printed link).
         q = request.args.get("token", "")
-        g.set_cookie = bool(cfg.token and q) and hmac.compare_digest(q.encode(), cfg.token.encode()) \
-            and request.cookies.get(COOKIE) != cfg.token
+        valid_link = bool(cfg.token and q) and hmac.compare_digest(q.encode(), cfg.token.encode())
+        g.set_cookie = valid_link and request.cookies.get(COOKIE) != cfg.token
+        if valid_link and request.method == "GET" and not request.path.startswith(("/api/", "/static/")):
+            # Take the token out of the address bar: a link with the token in it would otherwise stay in the browser's
+            # history, bookmarks and (if sync is on) the browser account's cloud. The cookie, set on this very response,
+            # carries the login from here on.
+            resp = redirect(address_without_token(request.path, request.args.items(multi=True)), 303)
+            resp.headers["Cache-Control"] = "no-store"
+            return resp
         return None
 
     @app.after_request
@@ -93,6 +109,9 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
         resp.headers["Content-Security-Policy"] = CSP
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["Referrer-Policy"] = "no-referrer"
+        if request.path.startswith("/api/"):
+            # Recordings, transcripts and waveforms: the browser (and anything between it and this PC) must not keep a copy.
+            resp.headers["Cache-Control"] = "private, no-store"
         return resp
 
     @app.errorhandler(ApiError)

@@ -1,9 +1,11 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Try the transcriber on one audio file, exactly as the server would.
 
+    python -m freeform_studio.models fetch small.en       # once: downloads the model (asks first)
     python -m freeform_studio.asr_smoke ~/some-recording.webm --model small.en --device cpu
 
-The first run downloads the model (a few hundred MB for small.en), so expect a wait. Nothing is written
-except a temporary decoded copy, which is removed afterwards.
+Like the server, this loads the model from this computer only and never uses the internet; it tells you if the model
+isn't there yet. Nothing is written except a temporary decoded copy, which is removed afterwards.
 """
 from __future__ import annotations
 
@@ -16,6 +18,7 @@ from pathlib import Path
 from .asr import AsrOptions, EngineError, FakeEngine, FasterWhisperEngine
 from .audio import decode_to_wav, wav_info
 from .pipeline import propose_segments
+from .privacy import apply_offline_defaults
 from .segmenter import SegOptions
 
 
@@ -29,7 +32,10 @@ def main(argv=None) -> int:
     p.add_argument("--language", default="en")
     p.add_argument("--prompt", default="", help="hint text: names, jargon, or a style like 'Um, so, uh, yeah.'")
     p.add_argument("--reference", default="", help="(fake engine only) text to spread across detected speech")
+    p.add_argument("--allow-download", action="store_true",
+                   help="let this run download a missing model itself (off by default; see python -m freeform_studio.models fetch)")
     args = p.parse_args(argv)
+    apply_offline_defaults(args.allow_download)   # before anything imports the Hugging Face libraries
 
     if not args.audio.exists():
         p.error(f"not found: {args.audio}")
@@ -43,8 +49,9 @@ def main(argv=None) -> int:
             engine = FakeEngine(args.model)
         else:
             ct = args.compute_type if args.compute_type != "auto" else ("float16" if args.device == "cuda" else "int8")
-            engine = FasterWhisperEngine(args.model, device=args.device, compute_type=ct)
-            print("loading model (first run downloads it)...")
+            engine = FasterWhisperEngine(args.model, device=args.device, compute_type=ct,
+                                         local_files_only=not args.allow_download)
+            print("loading model from this computer...")
         t0 = time.monotonic()
         try:
             result = engine.transcribe(wav, AsrOptions(language=args.language, initial_prompt=args.prompt,

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Back up what you can't get back: your raw recordings and every decision you've made about them.
 
     python -m freeform_studio.backup                  # back up now (does nothing if nothing changed since the last one)
@@ -38,6 +39,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 from . import __version__
 from .locking import exclusive
 from .storage import TAKE_ID_RE, atomic_write_bytes, atomic_write_json
+from .privacy import private_umask, sync_warning
 
 _LOG = logging.getLogger(__name__)
 SCHEMA = 1
@@ -503,6 +505,11 @@ def _mb(n: float) -> str:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    with private_umask():   # files this command creates are readable by you alone
+        return _main(argv)
+
+
+def _main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--output", default="~/piper-recording-studio/output", help="piper-recording-studio's output folder")
     ap.add_argument("--code", default="en-US")
@@ -559,6 +566,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                     print("  until the problem is fixed (or their raw audio is replaced); run python -m freeform_studio.repair to try again.")
             print()
             return 1 if problem else 0
+        warning = sync_warning(backup_dir, "The backup folder")
+        if warning:
+            print(f"\nWARNING: {warning}")
         result = create(output, args.code, backup_dir, force=args.force, keep=args.keep)
     except BackupError as err:
         print(f"\nCan't continue: {err}\n", file=sys.stderr)

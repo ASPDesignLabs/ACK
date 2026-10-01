@@ -1,19 +1,41 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SPDX-License-Identifier: GPL-3.0-or-later
+
+  Android 12 and newer read this file to decide what may leave the phone when the system backs an app up.
+
+  CLOUD BACKUP: NOTHING. ACK holds a person's own phrases, recorded voice clips, a trained voice, saved places and
+  settings. That is private, so none of it is uploaded to Google's cloud backup, whatever the phone's backup switch says.
+  ACK has its own backup that stays under the person's control: Settings, EXPORT .JSON (and the voice and GIF .zip
+  backups). Use those to keep a copy, or to move to a new phone.
+
+  DEVICE TRANSFER: EVERYTHING. A direct phone-to-phone transfer (cable or local wireless during setup) does not go
+  through the cloud, so it keeps working and a communication setup is not lost when a phone is replaced.
+
+  Every storage area is listed on purpose, so that data added to a new area later is still kept out of the cloud.
+  This file is checked by tools/freeform_studio/tests/test_sovereignty_policy.py.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <include domain="root" path="." />
+        <include domain="file" path="." />
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <include domain="external" path="." />
+        <include domain="device_root" path="." />
+        <include domain="device_file" path="." />
+        <include domain="device_database" path="." />
+        <include domain="device_sharedpref" path="." />
     </device-transfer>
-    -->
 </data-extraction-rules>

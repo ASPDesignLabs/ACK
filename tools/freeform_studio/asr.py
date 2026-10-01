@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Speech-to-text engines. Every engine returns the same plain-dict shape so the rest of the app is engine-agnostic.
 
 Result shape:
@@ -28,13 +29,18 @@ class EngineError(Exception):
 def explain_load_error(model: str, device: str, err: Exception) -> str:
     first = (str(err).strip().splitlines() or [""])[0][:200]
     low = str(err).lower()
+    if type(err).__name__ == "LocalEntryNotFoundError" or "outgoing traffic has been disabled" in low:
+        # The server never goes online to look for a model; it uses the copy on this computer, and there isn't one yet.
+        return (f"The speech model '{model}' isn't on this computer yet. Fetching it uses the internet once (nothing you recorded "
+                f"is sent). Run:  python -m freeform_studio.models fetch {model}   then try again. "
+                f"(Or start the server with --allow-model-download.)")
     if device != "cpu" and any(k in low for k in ("libcudnn", "libcublas", "cudnn", "cublas", "cuda")):
         hint = ("The GPU libraries look missing or mismatched. Try --device cpu, or follow "
                 "'GPU (optional)' in the README.")
     elif any(k in low for k in ("proxy", "connection", "resolve", "network", "offline", "forbidden", "403",
                                 "timed out", "timeout", "ssl", "huggingface", "hf.co", "no space")):
-        hint = ("The first run downloads the model from Hugging Face (about 500 MB for small.en), so it needs "
-                "internet access and free disk space. Check your connection and try again; a partial download resumes.")
+        hint = ("Downloading the model from Hugging Face (about 500 MB for small.en) needs internet access and free disk "
+                "space. Check your connection and try again; a partial download resumes.")
     else:
         hint = ""
     return f"Could not load the speech model '{model}' on {device}. {hint} [{type(err).__name__}: {first}]".replace("  ", " ")
@@ -139,11 +145,14 @@ class FasterWhisperEngine(AsrEngine):
     name = "faster-whisper"
 
     def __init__(self, model: str, device: str = "cpu", compute_type: str = "int8",
-                 model_factory: Optional[Callable[..., Any]] = None) -> None:
+                 model_factory: Optional[Callable[..., Any]] = None, local_files_only: bool = True) -> None:
         self.model = model
         self.device = device
         self.compute_type = compute_type
         self._factory = model_factory
+        # True (the default): load only the copy already on this computer and never ask Hugging Face anything, not even
+        # "is there a newer version?". Downloading is a separate, explicit step: python -m freeform_studio.models fetch
+        self.local_files_only = local_files_only
         self._model: Any = None
         self._lock = threading.Lock()
 
@@ -163,7 +172,8 @@ class FasterWhisperEngine(AsrEngine):
                                            "(pip install faster-whisper)") from e
                     factory = WhisperModel
                 try:
-                    self._model = factory(self.model, device=self.device, compute_type=self.compute_type)
+                    self._model = factory(self.model, device=self.device, compute_type=self.compute_type,
+                                          local_files_only=self.local_files_only)
                 except Exception as e:
                     raise EngineError(explain_load_error(self.model, self.device, e)) from e
             return self._model
@@ -225,5 +235,6 @@ def make_engine(cfg: Any, model: Optional[str] = None) -> AsrEngine:
     if cfg.asr_engine == "fake":
         return FakeEngine(model)
     if cfg.asr_engine == "faster-whisper":
-        return FasterWhisperEngine(model, device=cfg.asr_device, compute_type=cfg.compute_type)
+        return FasterWhisperEngine(model, device=cfg.asr_device, compute_type=cfg.compute_type,
+                                   local_files_only=not getattr(cfg, "asr_allow_download", False))
     raise ValueError(f"unknown ASR engine: {cfg.asr_engine!r}")

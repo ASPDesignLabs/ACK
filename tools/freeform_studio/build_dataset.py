@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Turn your takes into a Piper training dataset: a folder with wav/ and metadata.csv.
 
     python -m freeform_studio.build_dataset                  # uses the defaults below
@@ -33,6 +34,7 @@ import numpy as np
 
 from .audio import find_ffmpeg
 from .storage import read_json
+from .privacy import private_umask
 
 TARGET_SR = 22050
 CLIP_SAMPLES = 5
@@ -428,6 +430,11 @@ def print_training_command(out: Path) -> None:
 
 
 def main(argv: Optional[list] = None) -> int:
+    with private_umask():   # files this command creates are readable by you alone
+        return _main(argv)
+
+
+def _main(argv: Optional[list] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--output", default="~/piper-recording-studio/output", help="piper-recording-studio's output folder")
     ap.add_argument("--code", default="en-US")

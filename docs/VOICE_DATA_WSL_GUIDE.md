@@ -476,7 +476,8 @@ files in archive: 49
 **Copy the archive out of WSL too [writes file]**
 
 ```bash
-cp ~/backups/voice-data-*.tar.gz /mnt/c/Users/<you>/Documents/
+mkdir -p /mnt/c/Users/<you>/voice-backups
+cp ~/backups/voice-data-*.tar.gz /mnt/c/Users/<you>/voice-backups/
 ```
 
 *Not run here (needs your machine), so no sample output.*
@@ -484,11 +485,17 @@ cp ~/backups/voice-data-*.tar.gz /mnt/c/Users/<you>/Documents/
 A backup that lives only inside WSL is one `wsl --unregister` or disk problem away from gone. Keep at least one
 copy on the Windows side, and ideally one off the machine.
 
+**Don't put it in a folder that syncs to the cloud.** Windows often takes over `Documents`, `Desktop` and `Pictures` with
+OneDrive, so a copy there can be uploaded without you doing anything, and these are recordings of a voice. A folder directly
+under `C:\Users\<you>` (like `voice-backups` above) is not usually synced, but check that OneDrive, Dropbox or Google Drive
+isn't set to watch it. Freeform Studio's start-up message and `python -m freeform_studio.doctor` warn when a backup or
+recordings folder looks synced. See [DATA_SOVEREIGNTY.md](DATA_SOVEREIGNTY.md).
+
 
 **Freeform Studio makes its own backups.** While its server runs it writes a checked `freeform-backup-en-US-<timestamp>.tar.gz`
 into `~/backups/freeform-studio` every 6 hours, when something has changed (see its README, *Backups and safety*). That folder is
 inside WSL too, so the same warning applies: start it with `FREEFORM_BACKUPS=/mnt/c/Users/<you>/freeform-backups` (or
-`--backup-dir`), or copy the newest file out now and then.
+`--backup-dir`; a folder that is not cloud-synced), or copy the newest file out now and then.
 
 The `voice-data` archive above includes `output/_freeform`, whose decoded copies take about 350 MB per hour of recording (usually
 several times the size of the raw audio). If it gets big, leave `_freeform` out of it and rely on Freeform Studio's own (smaller, checksummed) backup

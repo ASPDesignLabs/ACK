@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Rebuild what can be rebuilt from a recording's raw audio: the decoded 48 kHz copy and the waveform data.
 
     python -m freeform_studio.repair              # every finished recording that is missing them
@@ -17,6 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .audio import FfmpegError, compute_peaks, decode_to_wav, find_ffmpeg, wav_info
 from .storage import TAKE_ID_RE, atomic_write_bytes, atomic_write_json, read_json
+from .privacy import private_umask
 
 RAW_RE = re.compile(r"^raw\.(webm|ogg|m4a|wav)$")
 REPAIRABLE = ("ready", "decoded")      # recordings that aren't mid-way through some other job
@@ -94,6 +96,11 @@ def rebuild_missing(output_dir: Path, code: str, take_ids: Optional[List[str]] =
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    with private_umask():   # files this command creates are readable by you alone
+        return _main(argv)
+
+
+def _main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--output", default="~/piper-recording-studio/output", help="piper-recording-studio's output folder")
     ap.add_argument("--code", default="en-US")

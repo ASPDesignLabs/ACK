@@ -27,6 +27,15 @@ folder (plus pip's usual download cache in your home folder); it never edits she
   environment folder or Python.
 - Already cloned it earlier? Update with `git -C ~/ack-tools pull`, then run the installer again.
 
+**Then fetch the speech model, once.** The server never goes online to find a model, so it needs a copy on this computer:
+```bash
+cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
+python -m freeform_studio.models fetch small.en
+```
+It says what it will download (about 480 MB from huggingface.co), that nothing you recorded is sent, and **asks before doing
+anything**. After that, everything runs with no internet. `python -m freeform_studio.models list` shows what you have. A model
+folder you already have works too: start the server with `--asr-model /path/to/folder`.
+
 <details><summary>Prefer to do it by hand?</summary>
 
 ```bash
@@ -41,13 +50,14 @@ Check the Python version with `python3 --version`.
 
 ## Try the speech recognition on your machine (do this first)
 
-Record any 20-60 seconds of yourself talking (a phone voice memo works), put it on the PC, then:
+Record any 20-60 seconds of yourself talking (a phone voice memo works), put it on the PC, then (after the one-time
+`models fetch` step above):
 
 ```bash
 cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
 python -m freeform_studio.asr_smoke ~/some-recording.m4a --model small.en --device cpu
 ```
-The first run downloads the model, so expect a wait. It prints what was heard, how fast, which words the model was
+Like the server, it loads the model from this computer only and tells you if it isn't there yet. It prints what was heard, how fast, which words the model was
 unsure about, and how the review screen would cut the recording. Add `--prompt "names or jargon you say"` to bias it
 toward your vocabulary, or `--prompt "Um, so, uh, yeah."` to make it keep filler words instead of tidying them away.
 
@@ -250,6 +260,30 @@ prints the training command to run, including a fresh cache folder.
 
 Pieces are also left out when they are too quiet, or clip repeatedly (a single stray full-scale sample is fine).
 
+## Your recordings stay on this computer
+
+A recording of your voice is personal data, so Freeform Studio is built to keep everything here: recordings, what the PC
+heard, your edits, exports, backups and the training dataset. It has no account, no cloud service, no analytics and nothing
+that phones home.
+
+- **The only time it uses the internet** is when *you* run `python -m freeform_studio.models fetch` (it says what it will
+  download and asks first), when you install packages, and, if you train, the first time the trainer fetches its quality
+  scorer. The server itself never goes online: it loads the speech model from disk, and sets Hugging Face's libraries to
+  offline mode so they don't even ask whether a newer version exists.
+- **Files are private by default.** Files and folders it creates are readable by your account only, and the access token is
+  born that way. (Older files keep the permissions they had; `doctor` tells you if other accounts could read them and how
+  to tighten that. It never changes your files on its own.)
+- **A browser keeps nothing it shouldn't.** Audio and everything under `/api` are marked `private, no-store`, and opening the
+  printed link swaps the token out of the address bar, so it doesn't sit in your history.
+- **It warns about synced folders.** If your recordings or backups are in a folder that OneDrive, Dropbox, Google Drive or
+  similar may be uploading (including your Windows Documents and Desktop folders), the start-up message and `doctor` say so.
+- **This is tested, not just intended.** The test suite runs the whole workflow with no network at all (in a network
+  namespace that has only the loopback interface, where the platform allows it), logs every connection any program makes,
+  including `ffmpeg`, and fails on anything that isn't this computer. Another test fails if a web address appears in a shipped file.
+
+How to check it yourself, what to do about phones and shared computers, and a short note for speech-language pathologists on
+consent and client records: [`docs/DATA_SOVEREIGNTY.md`](../../docs/DATA_SOVEREIGNTY.md).
+
 ## Backups and safety
 
 Your raw recordings are the one thing you can't get back, so they are protected in layers. Nothing in this section ever
@@ -261,7 +295,9 @@ something has changed since the last one**, so an idle server writes nothing. Ba
 - `--backup-dir DIR` (or `FREEFORM_BACKUPS=DIR` with `start.sh`) chooses the folder. **In WSL the default folder is inside WSL**,
   which is one `wsl --unregister` or disk problem away from gone, so point it at the Windows side
   (`/mnt/c/Users/<you>/freeform-backups`) or copy the newest file out now and then. A backup that lives only on the machine it
-  protects isn't much of one.
+  protects isn't much of one. **Choose a folder that is not cloud-synced:** a backup inside OneDrive, Dropbox or Google Drive,
+  or in your Windows `Documents` or `Desktop` folder (which OneDrive often takes over), may be uploaded. The server warns
+  when it sees this, and `doctor` does too.
 - `--backup-every HOURS` changes the interval; `--no-auto-backup` turns the timer off (the **Back up now** button and the command
   below still work). The backup folder can't be inside `output/_freeform` (where the recordings live), so a backup can never back itself up.
 
@@ -417,6 +453,9 @@ pip install pytest && python -m pytest freeform_studio/tests -q
 The screens' pure logic (re-timing words after an edit, merging two devices' edits, splitting, joining, trimming, waveform geometry, spoken forms, matching against the reference, exporting) is also tested with Node, if it is
 installed (`node --test` via `test_js_logic.py`; skipped otherwise). Set `FS_SHOTS=/some/dir` to save screenshots from the
 browser tests.
+`test_no_network.py` runs the whole workflow while logging every network call (using `unshare` and `strace` when they exist,
+and a Python-level hook always); `test_privacy.py`, `test_sovereignty_policy.py` and `test_license_headers.py` cover file
+permissions, the Android app's backup and permission rules, and the project's licensing.
 The installer and launcher scripts are tested with a stand-in Python (`test_install_scripts.py`, needs only `bash`), so
 they never touch the network.
 The tests that run the real `split_long_takes.py` need `pip install pydub` and skip themselves without it. The browser tests (`test_capture_ui.py`, `test_review_ui.py` and friends) also need `pip install playwright` and a Chromium; they skip themselves

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 import numpy as np
 import pytest
 
@@ -74,7 +75,7 @@ def test_faster_whisper_adapter_converts_and_passes_options(tmp_path):
     assert not engine.loaded and built == []  # lazy
     progress = []
     res = engine.transcribe(tmp_path / "x.wav", AsrOptions(initial_prompt="Um, so.", hotwords="Kojima"), progress.append)
-    assert engine.loaded and built == [("small.en", {"device": "cpu", "compute_type": "int8"})]
+    assert engine.loaded and built == [("small.en", {"device": "cpu", "compute_type": "int8", "local_files_only": True})]
     kw = calls[0][1]
     assert kw["word_timestamps"] is True and kw["vad_filter"] is True
     assert kw["initial_prompt"] == "Um, so." and kw["hotwords"] == "Kojima"
@@ -157,13 +158,13 @@ def test_model_load_failures_become_short_readable_messages(tmp_path):
     with pytest.raises(EngineError) as e:
         net.transcribe(tmp_path / "x.wav", AsrOptions())
     msg = str(e.value)
-    assert "'small.en'" in msg and "downloads the model" in msg and "ConnectionError" in msg and len(msg) < 450
+    assert "'small.en'" in msg and "Downloading the model" in msg and "ConnectionError" in msg and len(msg) < 450
     assert not net.loaded
 
     gpu = FasterWhisperEngine("m", "cuda", "float16", model_factory=_failing("Library libcudnn_ops.so.9 is not found"))
     with pytest.raises(EngineError) as e:
         gpu.transcribe(tmp_path / "x.wav", AsrOptions())
-    assert "--device cpu" in str(e.value) and "downloads" not in str(e.value)
+    assert "--device cpu" in str(e.value) and "ownload" not in str(e.value)
 
     odd = FasterWhisperEngine("m", "cpu", model_factory=_failing("something unexpected\nwith a second line"))
     with pytest.raises(EngineError) as e:

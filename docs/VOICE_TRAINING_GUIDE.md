@@ -264,8 +264,11 @@ python -m freeform_studio.backup        # says where it went, and reads the arch
 ```
 
 By default it goes to `~/backups/freeform-studio`, which is inside WSL: copy the newest `freeform-backup-*.tar.gz` somewhere
-outside it too (see section 8 of the WSL data guide), or start the server with `FREEFORM_BACKUPS=/mnt/c/Users/<you>/freeform-backups`.
-The Freeform Studio README's *Backups and safety* explains what is kept and how to restore (restoring only ever adds).
+outside it too (see section 8 of the WSL data guide), or start the server with `FREEFORM_BACKUPS=/mnt/c/Users/<you>/freeform-backups`
+(a folder that is **not** synced by OneDrive or similar: these are recordings of a voice).
+The Freeform Studio README's *Backups and safety* explains what is kept and how to restore (restoring only ever adds), and
+*Your recordings stay on this computer* explains what does and doesn't use the internet. The first training run does fetch the
+`val_mos` scorer from GitHub (see [DATA_SOVEREIGNTY.md](DATA_SOVEREIGNTY.md) section 2).
 
 **Easiest route once you've reviewed:** export the approved pieces into the recorder's own folder layout, then run the same
 split step you always do (the clips pass straight through it, alongside your prompted recordings):
@@ -310,6 +313,12 @@ trimmed here.
 ---
 
 ## 3. Get a base checkpoint
+
+**Check the base voice's license first.** A voice you train from a base checkpoint is a derivative of it, and each Piper voice
+comes with its own conditions in its `MODEL_CARD` file; Piper's own documentation warns that "some voices may have restrictive
+licenses". Read it before you share or distribute the result, and note which base you used next to the finished voice. If the
+voice you are training is someone else's, read [DATA_SOVEREIGNTY.md](DATA_SOVEREIGNTY.md) first (consent, keeping the data local,
+and what deleting it involves).
 
 Fine-tune from an existing voice rather than training from scratch — far
 less data and time needed to get a recognizable result. Grab one from
