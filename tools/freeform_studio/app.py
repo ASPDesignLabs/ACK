@@ -17,12 +17,14 @@ from .asr import AsrEngine
 from .config import Config
 from .edit import new_edit_doc, normalize_edit, validate_edit
 from .jobs import EngineManager, JobRunner
-from .storage import InvalidTakeId, TakeStore, read_json
+from .storage import InvalidTakeId, TakeStore, atomic_write_bytes, read_json
 
 MODEL_RE = re.compile(r"^[A-Za-z0-9._/-]{1,80}$")
 LANG_RE = re.compile(r"^[a-z]{2,3}$")
 COOKIE = "fs_token"
 HISTORY_NAME_RE = re.compile(r"^edit-[A-Za-z0-9._-]{1,80}\.json$")
+REFERENCE_MAX = 20000
+_REFERENCE_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 STATIC_DIR = Path(__file__).parent / "static"
 # The pages load only their own files: no inline scripts or styles, nothing from other sites.
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; "
@@ -294,6 +296,29 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
             new = new_edit_doc(norm["segments"], current["rev"] + 1)
             store.write(take_id, "edit.json", new)
         return jsonify(new)
+
+    @app.route("/api/takes/<take_id>/reference", methods=["PUT"])
+    async def put_reference(take_id: str):
+        """Save or replace the text that was being read. The text it replaces is kept in reference_history/."""
+        take_or_404(take_id)
+        body = await request.get_json(silent=True)
+        if not isinstance(body, dict) or not isinstance(body.get("text"), str):
+            raise ApiError(400, "text must be a string")
+        text = _REFERENCE_CONTROL.sub("", body["text"].replace("\r\n", "\n").replace("\r", "\n"))
+        if len(text) > REFERENCE_MAX:
+            raise ApiError(400, f"the text is longer than {REFERENCE_MAX} characters")
+        with store.lock:
+            old = store.get(take_id).get("reference_text") or ""
+            if old.strip() and old != text:
+                stamp = time.strftime("%Y%m%d-%H%M%S")
+                name, n = f"ref-{stamp}.txt", 1
+                while store.path(take_id, "reference_history", name).exists():
+                    n += 1
+                    name = f"ref-{stamp}-{n}.txt"
+                atomic_write_bytes(store.path(take_id, "reference_history", name), old.encode("utf-8"))
+                store.prune(take_id, "reference_history", 20)
+            doc = store.update(take_id, reference_text=text)
+        return jsonify(reference_text=doc["reference_text"])
 
     @app.route("/api/takes/<take_id>/transcribe", methods=["POST"])
     async def transcribe(take_id: str):

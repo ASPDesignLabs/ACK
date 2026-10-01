@@ -176,3 +176,20 @@ dialog .row { justify-content: flex-end; }
 .grid2 .btn { width: 100%; padding-left: .4rem; padding-right: .4rem; }
 .stack { display: grid; gap: .5rem; margin: .5rem 0; }
 .stack .btn { width: 100%; }
+
+/* ------------------------------------------------------------------ suggestions from the reference text and spoken forms */
+.suggest { border-left: 4px solid var(--accent); background: var(--bg); padding: .5rem .75rem; margin: .75rem 0; border-radius: .25rem; }
+.suggest h4 { margin: 0 0 .25rem; font-size: 1rem; }
+.ref-text { margin: .25rem 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+.ref-text mark { background: var(--hl-bg); color: var(--hl-text); border-radius: .2rem; padding: 0 .15rem; text-decoration: underline; text-underline-offset: .2em; }
+.ref-text .kept { font-style: italic; }
+.changes { margin: .25rem 0; padding-left: 1.25rem; }
+.spoken { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .75rem; }
+.spoken li { display: grid; gap: .35rem; }
+.spoken .tok { font-weight: 700; overflow-wrap: anywhere; }
+.spoken .opts { display: flex; flex-wrap: wrap; gap: .5rem; }
+.spoken .note { color: var(--muted); font-size: .85rem; display: block; font-weight: 400; }
+.summary2 { margin: .5rem 0; }
+.subcard { margin: 1rem 0 0; border-top: 1px solid var(--line); padding-top: .25rem; }
+.subcard > summary { font-weight: 600; }
+input[type="text"] { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: .5rem; padding: .6rem; min-height: 2.75rem; }

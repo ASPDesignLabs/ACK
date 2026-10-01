@@ -43,12 +43,11 @@ def make_words(text, start, end, low):
              "p": 0.3 if i in low else 0.95} for i, tok in enumerate(toks)]
 
 
-@pytest.fixture
-def take(server, tmp_path):
+def seed_take(server, tmp_path, pieces=PIECES, reference=""):
     """A finished recording whose pieces are known, so the tests can check exactly what the screens do to them."""
-    wav = make_wav(tmp_path / "in.wav", 9.5, [(p[1], p[2]) for p in PIECES])
+    wav = make_wav(tmp_path / "in.wav", 9.5, [(p[1], p[2]) for p in pieces])
     blob = make_live_webm(wav, tmp_path / "in.webm").read_bytes()
-    t = http(server, "/api/takes", "POST", {"label": "ui test"})
+    t = http(server, "/api/takes", "POST", {"label": "ui test", "reference_text": reference})
     http(server, f"/api/takes/{t['id']}/chunks/0", "PUT", raw=blob)
     http(server, f"/api/takes/{t['id']}/finish", "POST", raw=b"")
     for _ in range(300):
@@ -59,9 +58,14 @@ def take(server, tmp_path):
         pytest.fail("take never became ready")
     doc = http(server, f"/api/takes/{t['id']}/edit")
     segs = [{"id": i, "start": a, "end": b, "text": text, "words": make_words(text, a, b, low), "status": "pending",
-             "tags": [], "note": "", "flags": flags, "auto": None} for i, a, b, text, flags, low in PIECES]
+             "tags": [], "note": "", "flags": flags, "auto": {"start": a, "end": b, "text": text}} for i, a, b, text, flags, low in pieces]
     http(server, f"/api/takes/{t['id']}/edit", "PUT", {"rev": doc["rev"], "segments": segs})
     return t["id"]
+
+
+@pytest.fixture
+def take(server, tmp_path):
+    return seed_take(server, tmp_path)
 
 
 def new_page(browser, server, path, before=None, **ctx_args):

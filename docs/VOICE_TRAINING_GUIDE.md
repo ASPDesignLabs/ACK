@@ -249,7 +249,10 @@ options if a lot of takes end up there on the first pass.
 ### Training on free-speech recordings (Freeform Studio)
 
 Recordings made with Freeform Studio (`tools/freeform_studio/`) can be corrected and approved on your phone first (open
-the **Review** page; see the Freeform Studio README). They live under
+the **Review** page; see the Freeform Studio README). Numbers, symbols and abbreviations should be written the way you said
+them ("twenty dollars", not "$20") because the training text is what the voice learns to pronounce; the Review page's *Say it in
+words* buttons do this one tap at a time. Pieces that still have digits are accepted by default (the phonemizer reads digits
+its own way, which may not be how you said them); pass `--allow none` to hold them back until you've fixed them. They live under
 `~/piper-recording-studio/output/_freeform/en-US/takes/`, not in the folders the recorder and the splitter use, so they
 need their own step to become a dataset. **Back up first** (the raw recordings are the one thing you can't regenerate):
 

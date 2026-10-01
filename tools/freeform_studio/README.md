@@ -4,10 +4,11 @@ Capture free speech from your phone, have your PC transcribe it with word timing
 training clips for Piper. It runs next to `piper-recording-studio` (its own port, its own venv) and shares its
 `output/` folder.
 
-**Status: Phase 4 of 7 (waveform, cut points, split and join), plus dataset export.** You can record from your phone,
+**Status: Phase 5 of 7 (the text you read, and spoken forms), plus dataset export.** You can record from your phone,
 everything is saved to your PC as you speak, the PC transcribes it, and you can correct the words, move the cut points,
-split and join pieces, and approve or drop each one on your phone (or PC). Still to come: matching text you read against
-what was heard, and exporting approved clips straight into the recorder's folders.
+split and join pieces, fix numbers and symbols, bring in the wording of the text you were reading, and approve or drop each
+piece on your phone (or PC). Still to come: exporting approved clips straight into the recorder's folders, and the final
+hardening pass.
 
 ## Install (once)
 
@@ -99,6 +100,37 @@ You work on **one piece at a time**, a sentence or two of speech cut at the paus
 - **Join** a piece with the one before or after it. The pause between them becomes part of the clip. The result is "to
   review", and Undo splits it again. Anything that would be too long to train on gets the usual *long* warning.
 
+**Numbers, symbols and abbreviations** (*Say it in words*, under the text box)
+
+Training text should be spelled the way it was spoken. For each number, symbol or abbreviation in a piece you get buttons for
+the likely ways to say it, labelled with what they mean: "2026" offers *twenty twenty-six*, *two thousand twenty-six* and
+more; "$5.50" offers *five dollars and fifty cents*; "Dr." offers *Doctor* and *Drive*. **It never chooses for you**: a number
+can be said several ways, so listen (tap a word) and pick the one you said. One tap replaces just that word, the warning
+clears itself, and Undo puts it back. Email and web addresses are left alone.
+
+**The text you read (reference)**
+
+If you read from a document, paste it in the box on the Record page before you start, or later under *Text you read
+(reference)* on the Review page. Each piece that lines up with it then shows **The text you read says**, with the words that
+would change marked and listed, and two buttons: **Use this wording** or **Keep what I have** (it isn't offered again).
+
+- It only ever proposes. Using it changes one piece, can be undone, and never approves anything.
+- **Nothing you said is dropped, and nothing you didn't say is added.** Words you said that aren't in the text stay, shown in
+  italics. Words in the text that you skipped don't come over. Digits and symbols in the text ("$20") never replace what
+  you said ("twenty dollars"), whichever way you or the recognizer wrote them.
+- A different word (not just a spelling difference) is flagged "listen before you accept it".
+- Free speech between the readings simply doesn't line up, so it gets no proposal. Pieces are matched in reading order,
+  so a sentence you read twice finds its own place. A piece read out of order is still found.
+- The card summarises how many pieces match exactly, differ only in capitals or punctuation, differ in wording, or don't line
+  up. **Use its wording on N close matches** applies it to every piece still waiting where the reference agrees closely and
+  every difference is a small spelling one; it asks first and one Undo reverses all of them.
+- Replacing the reference asks first and **keeps the old text** on your PC in the recording's `reference_history/` folder.
+- **Ask the recognizer again, with hints** fills in names from your reference and the start of it as context (both editable),
+  then listens to the whole recording again. That cuts it into **new pieces**, so it asks first, makes sure your latest
+  changes are saved, and keeps your current pieces in *Earlier versions* (restorable, but not mixed with the new ones).
+  It takes a few minutes and returns you to the recordings list while it works. If you have the speech model on the GPU, free
+  it from training first.
+
 **Your work is protected in layers**
 
 - Every change is **saved to your PC about half a second later**; the line under the title says so in words.
@@ -141,7 +173,7 @@ prints the training command to run, including a fresh cache folder.
 | `--include clean` (default) | pieces you approved, plus pieces the recognizer was confident about |
 | `--include approved` | only pieces you approved in review (recommended once you have reviewed enough) |
 | `--include all` | everything not dropped; flags ignored |
-| `--allow low_confidence,has_digits` | accept pieces carrying these flags anyway (`has_digits` is allowed by default; `cuts_word` is never accepted unless you name it) |
+| `--allow low_confidence,has_digits` | accept pieces carrying these flags anyway (`has_digits` is allowed by default; `--allow none` accepts no flagged piece at all; `cuts_word` is never accepted unless you name it) |
 | `--also ~/piper/my-dataset-split` | mix in an existing dataset (repeatable) |
 | `--exclude-tags laugh,cough` | leave out pieces carrying these tags (default `laugh,cough,noise,unclear`; `none` turns it off) |
 | `--min-seconds` / `--max-seconds` | length limits, default 1.0 and 11.5 |
@@ -208,7 +240,8 @@ output/_freeform/<code>/takes/<take id>/
   audio.wav       decoded working copy (48 kHz mono)
   asr.json        what the recognizer heard, with word timings and confidence
   edit.json       your decisions (text, cut points, keep/drop); every save is versioned in edit_history/
-  take.json       status and details
+  take.json       status and details (including the reference text)
+  reference_history/   earlier versions of the reference text, if you replaced it
 ```
 This folder is deliberately outside `output/<code>/`, so `split_long_takes.py` can never pick up half-reviewed audio.
 Approved clips will be exported into `output/<code>/freeform/` in the same layout as your prompted recordings.
@@ -225,6 +258,7 @@ Approved clips will be exported into `output/<code>/freeform/` in the same layou
 | `GET /api/takes/<id>/audio` | the audio, with Range support so phones can seek |
 | `GET /api/takes/<id>/peaks`, `.../peaks/<n>` | waveform data |
 | `GET/PUT /api/takes/<id>/edit` | the edit document; a save with a stale `rev` gets `409` instead of overwriting |
+| `PUT /api/takes/<id>/reference` | save or replace the text that was read (`text`); the old text is kept in `reference_history/` |
 | `GET /api/takes/<id>/edit/history` | saved versions of the edit document, newest first |
 | `POST /api/takes/<id>/edit/restore` | bring one back (`name`, `rev`); the current version is kept first |
 | `POST /api/takes/<id>/transcribe` | run again (`model`, `initial_prompt`, `hotwords`, `regenerate`+`force`) |
@@ -236,7 +270,7 @@ Approved clips will be exported into `output/<code>/freeform/` in the same layou
 cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
 pip install pytest && python -m pytest freeform_studio/tests -q
 ```
-The screens' pure logic (re-timing words after an edit, merging two devices' edits, splitting, joining, trimming, waveform geometry) is also tested with Node, if it is
+The screens' pure logic (re-timing words after an edit, merging two devices' edits, splitting, joining, trimming, waveform geometry, spoken forms, matching against the reference) is also tested with Node, if it is
 installed (`node --test` via `test_js_logic.py`; skipped otherwise). Set `FS_SHOTS=/some/dir` to save screenshots from the
 browser tests.
 The browser tests (`test_capture_ui.py`, `test_review_ui.py`) also need `pip install playwright` and a Chromium; they skip themselves

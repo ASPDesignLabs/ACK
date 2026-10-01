@@ -253,3 +253,13 @@ def test_a_build_that_qualifies_nothing_leaves_no_empty_folders(out_dir, tmp_pat
     dest = tmp_path / "ds"
     assert run(out_dir, dest) == 1
     assert not dest.exists()  # so the same name can be used again after fixing the cause
+
+
+def test_allow_none_holds_back_pieces_with_numbers_and_is_otherwise_parsed_plainly():
+    assert bd.parse_allow(None) == {"has_digits"} and bd.parse_allow("") == {"has_digits"}     # the default
+    assert bd.parse_allow("none") == set() and bd.parse_allow(" None ") == set()
+    assert bd.parse_allow("low_confidence, has_digits,,") == {"low_confidence", "has_digits"}
+    base = {"start": 0.0, "end": 3.0, "text": "She paid 20 dollars.", "flags": ["has_digits"], "tags": [], "status": "pending"}
+    assert bd.why_excluded(base, bd.Policy(allow=bd.parse_allow(None))) is None
+    assert "has_digits" in bd.why_excluded(base, bd.Policy(allow=bd.parse_allow("none")))
+    assert bd.why_excluded({**base, "status": "approved"}, bd.Policy(allow=bd.parse_allow("none"))) is None   # you approved it

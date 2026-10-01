@@ -73,6 +73,14 @@ def clean_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").replace(" ", " ")).strip()
 
 
+def parse_allow(text: Optional[str]) -> Set[str]:
+    """`--allow` as a set of flag names. "none" means accept no flagged piece at all (not even the default, has_digits)."""
+    text = (text or "has_digits").strip()
+    if text.lower() == "none":
+        return set()
+    return {a.strip() for a in text.split(",") if a.strip()}
+
+
 def why_excluded(seg: Dict[str, Any], p: Policy) -> Optional[str]:
     """A plain-language reason this piece is left out, or None if it qualifies (audio checks come later)."""
     status = seg.get("status", "pending")
@@ -216,7 +224,7 @@ def read_dataset(folder: Path) -> Tuple[List[Tuple[Path, str]], List[str]]:
 
 # ---------------------------------------------------------------------------- the whole job
 def build(args: argparse.Namespace) -> int:
-    policy = Policy(include=args.include, allow={a for a in (args.allow or "has_digits").split(",") if a},
+    policy = Policy(include=args.include, allow=parse_allow(args.allow),
                     exclude_tags=set() if args.exclude_tags == "none" else {t for t in args.exclude_tags.split(",") if t},
                     min_s=args.min_seconds, max_s=args.max_seconds, normalize=not args.no_normalize)
     takes_dir = Path(args.output).expanduser() / "_freeform" / args.code / "takes"
@@ -392,7 +400,7 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--code", default="en-US")
     ap.add_argument("--out", help="where to write the dataset (default: ~/piper/freeform-dataset-<date-time>)")
     ap.add_argument("--include", choices=["clean", "approved", "all"], default="clean")
-    ap.add_argument("--allow", default="has_digits", help="comma-separated flags to accept anyway, e.g. low_confidence,has_digits")
+    ap.add_argument("--allow", default="has_digits", help="comma-separated flags to accept anyway, e.g. low_confidence,has_digits; 'none' accepts no flagged piece, not even has_digits")
     ap.add_argument("--exclude-tags", default="laugh,cough,noise,unclear",
                     help="pieces you tagged with any of these are left out, even if approved; 'none' to disable")
     ap.add_argument("--min-seconds", type=float, default=1.0)

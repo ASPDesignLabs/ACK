@@ -55,6 +55,21 @@
             <label for="p-text" class="lbl">What was said (edit it to match the audio)</label>
             <textarea id="p-text" rows="4" maxlength="2000" spellcheck="true" autocapitalize="sentences"></textarea>
             <p class="hint" id="p-hint" aria-live="polite"></p>
+            <div id="p-ref" class="suggest" hidden role="group" aria-labelledby="ref-h">
+              <h4 id="ref-h">The text you read says</h4>
+              <p id="p-ref-text" class="ref-text"></p>
+              <ul id="p-ref-changes" class="changes"></ul>
+              <p class="hint" id="p-ref-note"></p>
+              <div class="grid2">
+                <button type="button" class="btn small" id="ref-use">Use this wording</button>
+                <button type="button" class="btn small" id="ref-skip">Keep what I have</button>
+              </div>
+            </div>
+            <div id="p-spoken" class="suggest" hidden role="group" aria-labelledby="spoken-h">
+              <h4 id="spoken-h">Say it in words</h4>
+              <p class="hint">Training text should spell numbers and symbols the way they were spoken. Listen, then choose how you said each one.</p>
+              <ul id="p-spoken-list" class="spoken"></ul>
+            </div>
             <p class="hint" id="p-time">0:00 of 0:00</p>
             <details class="timing" id="timing">
               <summary>Cut points, split and join</summary>
@@ -132,6 +147,26 @@
           <p class="hint">Clean means no warnings at all. It does not mean you checked it, so listen to a few first. You'll be asked to confirm, and you can undo it.</p>
           <label class="check"><input type="checkbox" id="autoplay"> Play each piece when I move to it</label>
         </section>
+
+        <details class="card" id="refcard">
+          <summary>Text you read (reference)</summary>
+          <p id="ref-summary" class="summary2"></p>
+          <label for="ref-edit" class="lbl">The text you were reading from</label>
+          <textarea id="ref-edit" rows="6" maxlength="20000" spellcheck="false" placeholder="Paste it here if you read from a document. Pieces that match it will be offered its wording."></textarea>
+          <div class="stack"><button type="button" class="btn small" id="ref-save" disabled>Save this text</button></div>
+          <p class="hint" id="ref-save-hint" role="status" aria-live="polite">It is stored with the recording on your PC. If you replace text that is already there, the old text is kept.</p>
+          <div class="stack"><button type="button" class="btn" id="ref-bulk" disabled>Use its wording on close matches</button></div>
+          <p class="hint">Only pieces still waiting for review are included, and only where every difference is a small spelling one. You'll be asked first, and Undo puts them back.</p>
+          <details class="subcard" id="hints">
+            <summary>Ask the recognizer again, with hints</summary>
+            <p class="hint">This listens to the whole recording again with these hints, then cuts it into new pieces. It can fix names the recognizer keeps getting wrong. Your current pieces are kept in Earlier versions, but the new pieces start from scratch.</p>
+            <label for="hint-words" class="lbl">Names and unusual words</label>
+            <input type="text" id="hint-words" maxlength="500" autocomplete="off" spellcheck="false">
+            <label for="hint-prompt" class="lbl">Context (the start of what you read)</label>
+            <textarea id="hint-prompt" rows="4" maxlength="1000" spellcheck="false"></textarea>
+            <div class="stack"><button type="button" class="btn small" id="retranscribe">Listen again with these hints</button></div>
+          </details>
+        </details>
 
         <section class="card" aria-labelledby="list-h">
           <h3 id="list-h">Pieces in this view</h3>

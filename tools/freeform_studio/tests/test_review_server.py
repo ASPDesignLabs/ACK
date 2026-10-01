@@ -153,3 +153,48 @@ def test_a_piece_cut_through_a_word_is_left_out_even_when_approved_unless_allowe
     assert bd.why_excluded({**seg, "status": "pending"}, bd.Policy()) is not None
     assert bd.why_excluded(seg, bd.Policy(allow={"cuts_word"})) is None
     assert bd.why_excluded({**seg, "flags": []}, bd.Policy()) is None
+
+
+# ------------------------------------------------------------------ the text that was being read
+def test_reference_text_can_be_saved_and_replacing_it_keeps_the_old_one(out_dir):
+    async def main():
+        app = create_app(make_cfg(out_dir))
+        async with app.test_app():
+            c = app.test_client()
+            take = await (await c.post("/api/takes", json={"reference_text": "First version."})).get_json()
+            tid = take["id"]
+            r = await c.put(f"/api/takes/{tid}/reference", json={"text": "Second version.\r\nWith a new line."})
+            assert r.status_code == 200 and (await r.get_json())["reference_text"] == "Second version.\nWith a new line."
+            assert (await (await c.get(f"/api/takes/{tid}")).get_json())["reference_text"].startswith("Second")
+            kept = sorted((out_dir / "_freeform").rglob("reference_history/*.txt"))
+            assert len(kept) == 1 and kept[0].read_text() == "First version."
+            # saving the same text again, or into an empty reference, keeps nothing extra
+            await c.put(f"/api/takes/{tid}/reference", json={"text": "Second version.\nWith a new line."})
+            assert len(list((out_dir / "_freeform").rglob("reference_history/*.txt"))) == 1
+            empty = await (await c.post("/api/takes", json={})).get_json()
+            await c.put(f"/api/takes/{empty['id']}/reference", json={"text": "Hello."})
+            assert not list((out_dir / "_freeform").rglob(f"{empty['id']}/reference_history/*.txt"))
+            # clearing it is allowed, and the cleared text is kept too
+            r = await c.put(f"/api/takes/{tid}/reference", json={"text": ""})
+            assert r.status_code == 200 and (await r.get_json())["reference_text"] == ""
+            assert len(list((out_dir / "_freeform").rglob(f"{tid}/reference_history/*.txt"))) == 2
+
+    run(main())
+
+
+def test_reference_text_is_validated(out_dir):
+    async def main():
+        app = create_app(make_cfg(out_dir))
+        async with app.test_app():
+            c = app.test_client()
+            tid = (await (await c.post("/api/takes", json={})).get_json())["id"]
+            for bad in ({}, {"text": 5}, {"text": None}, {"txt": "x"}, [], "x"):
+                assert (await c.put(f"/api/takes/{tid}/reference", json=bad)).status_code == 400, bad
+            assert (await c.put(f"/api/takes/{tid}/reference", json={"text": "x" * 20001})).status_code == 400
+            assert (await c.put(f"/api/takes/{tid}/reference", json={"text": "x" * 20000})).status_code == 200
+            r = await c.put(f"/api/takes/{tid}/reference", json={"text": "a\x00b\x07c\x1bd"})
+            assert (await r.get_json())["reference_text"] == "abcd"
+            assert (await c.put("/api/takes/t20260101-000000-abcd/reference", json={"text": "x"})).status_code == 404
+            assert (await c.put("/api/takes/not-an-id/reference", json={"text": "x"})).status_code in (400, 404)
+
+    run(main())

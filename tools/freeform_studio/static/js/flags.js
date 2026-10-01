@@ -7,7 +7,7 @@ export const FLAG_TEXT = {
 
 export const FLAG_HELP = {
   low_confidence: "Some words were hard to hear (dotted underline). Listen, and fix any that are wrong.",
-  has_digits: "Contains numbers. Spell them the way you said them, for example \"twenty twenty-six\".",
+  has_digits: "Contains numbers. Spell them the way you said them, for example \"twenty twenty-six\". Suggestions are under the text box.",
   has_symbols: "Contains symbols such as & or %. Write them out as spoken words.",
   too_short: "Very short. Clips under a second are usually left out of training.",
   too_long: "Long. Clips over about 11 seconds are left out of training.",

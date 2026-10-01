@@ -5,6 +5,8 @@ import { alignEdit, recomputeFlags } from "./words.js";
 import { boundaryBefore, mergePieces, nextId, splitPiece, trimToSpeech } from "./pieces.js";
 import { boundsFor, clampEdge, nudged } from "./wavegeo.js";
 import { WaveView } from "./wave.js";
+import { alignAllAsync, buildPrompt, extractHotwords } from "./refalign.js";
+import { replaceToken, spokenTokens } from "./spoken.js";
 import { Player } from "./player.js";
 import { Saver, sameSeg } from "./saver.js";
 import { watchConnection } from "./conn.js";
@@ -153,6 +155,12 @@ function startEditor(takeId, doc, take) {
   let marker = null;           // where a split would happen, in seconds
   let lastWord = -1;           // the word most recently tapped, for "split before this word"
   let widen = 0;               // how much room the waveform shows around the piece
+  let reference = take.reference_text || "";   // the text that was being read, if any
+  let align = null;            // { key, result } from comparing the pieces with the reference
+  let alignTimer = null;
+  let alignRun = 0;
+  let skipped = new Set();     // proposals the person declined, so they aren't offered again
+  try { skipped = new Set(JSON.parse(pref(`fs.refskip.${takeId}`, "[]"))); } catch (_) { /* start fresh */ }
   const posKey = `fs.pos.${takeId}`;
 
   const FILTERS = [
@@ -384,6 +392,8 @@ function startEditor(takeId, doc, take) {
       setLast(label);
     }
     if (now && ta.value !== now.text) ta.value = now.text;
+    renderSuggestions();
+    scheduleAlign();
   }
 
   function renderAfterText(s) {
@@ -630,6 +640,7 @@ function startEditor(takeId, doc, take) {
     lastTime = "";
     renderTime();
     renderTiming();
+    renderSuggestions();
   }
 
   function renderList() {
@@ -657,6 +668,8 @@ function startEditor(takeId, doc, take) {
     renderList();
     renderBar();
     renderUndo();
+    scheduleAlign();
+    renderReferenceCard();
   }
 
   // ------------------------------------------------------------------ cut points, split and join
@@ -807,6 +820,210 @@ function startEditor(takeId, doc, take) {
   $("split-word").addEventListener("click", () => { const s = cur(); if (s && lastWord >= 0) doSplit(boundaryBefore(s.words, lastWord)); });
   $("join-prev").addEventListener("click", () => joinWith(-1));
   $("join-next").addEventListener("click", () => joinWith(1));
+
+  // ------------------------------------------------------------------ the text that was read, and spoken forms
+  const skipKeyOf = (s) => `${s.id}:${s.text}`;
+  const refKey = () => `${reference.length}|${pieces.map((p) => (p.status === "dropped" ? `~${p.id}` : `${p.id}:${p.text}`)).join("\n")}`;
+
+  // Compares the pieces with the reference a moment after things settle, in small slices so the page stays responsive.
+  function scheduleAlign() {
+    clearTimeout(alignTimer);
+    if (!reference.trim()) { align = null; return; }
+    if (align && align.key === refKey()) return;
+    alignRun++;
+    const run = alignRun;
+    alignTimer = setTimeout(async () => {
+      const key = refKey();
+      const snapshot = pieces.map((p) => ({ id: p.id, text: p.text, status: p.status }));
+      const result = await alignAllAsync(snapshot, reference, () => run !== alignRun);
+      if (!result || run !== alignRun) return;
+      align = { key, result };
+      renderSuggestions();
+      renderReferenceCard();
+    }, 400);
+  }
+
+  // A proposal is only shown for the exact text it was made for, so it can never overwrite what was typed since.
+  function suggestionFor(s) {
+    const a = align && align.result.byId.get(s.id);
+    return a && a.basis === s.text ? a : null;
+  }
+
+  function applyText(id, text, label) {
+    if (guard()) return false;
+    commitSession();
+    const ok = change(label, [id], () => {
+      const live = byId(id);
+      live.text = text;
+      live.words = alignEdit(live.words, text, { start: live.start, end: live.end });
+      live.flags = recomputeFlags(live);
+    });
+    if (ok) renderAll({ force: true });
+    return ok;
+  }
+
+  function useSpoken(id, index, token, replacement) {
+    const s = byId(id);
+    if (!s || guard()) return;
+    commitSession();
+    if (s.text.split(/\s+/).filter(Boolean)[index] !== token) { renderSuggestions(); return; }   // the text changed since it was offered
+    applyText(id, replaceToken(s.text, index, replacement), `Wrote “${token}” as “${replacement}” in ${at(s)}`);
+  }
+
+  function renderSuggestions() {
+    const s = cur();
+    if (!s) { $("p-ref").hidden = true; $("p-spoken").hidden = true; return; }
+    const a = suggestionFor(s);
+    if (a && a.kind !== "same" && !skipped.has(skipKeyOf(s))) {
+      const nodes = [];
+      a.tokens.forEach((tok, i) => {
+        if (i) nodes.push(" ");
+        nodes.push(a.marks[i] === "changed" ? el("mark", {}, tok) : a.marks[i] === "kept" ? el("span", { class: "kept" }, tok) : tok);
+      });
+      $("p-ref-text").replaceChildren(...nodes);
+      const lines = a.changes.map((c) => el("li", {}, `“${c.from}” would become “${c.to}”${c.similar ? "" : ". That is a different word, so listen before you accept it."}`));
+      if (a.style) lines.push(el("li", {}, `${plural(a.style, "word gets", "words get")} the reference's capital letters or punctuation.`));
+      $("p-ref-changes").replaceChildren(...lines);
+      $("p-ref-note").textContent = a.kept ? `${plural(a.kept, "word you said isn't", "words you said aren't")} in the text, so ${a.kept === 1 ? "it was" : "they were"} kept (shown in italics).` : "";
+      $("p-ref").hidden = false;
+    } else {
+      $("p-ref").hidden = true;
+    }
+    const found = spokenTokens(s.text);
+    $("p-spoken").hidden = found.length === 0;
+    rebuild($("p-spoken-list"), found.map(({ index, token, options }) => el("li", { role: "group", "aria-label": `Ways to say ${token}` },
+      el("span", { class: "tok" }, token),
+      el("span", { class: "opts" }, ...options.map((o, n) => el("button", { type: "button", class: "btn small", "data-key": `${index}:${n}`, onclick: () => useSpoken(s.id, index, token, o.text) },
+        o.text, el("span", { class: "note" }, o.note)))))));
+  }
+
+  // Pieces that can safely take the reference's wording in one go: still waiting, a close match, and only small spelling differences.
+  const closeMatches = () => pieces.filter((p) => {
+    const a = p.status === "pending" && suggestionFor(p);
+    return a && a.kind !== "same" && a.similarity >= 0.85 && a.changes.every((c) => c.similar) && !skipped.has(skipKeyOf(p));
+  });
+
+  function renderReferenceCard() {
+    const bulk = $("ref-bulk");
+    if (!reference.trim()) {
+      $("ref-summary").textContent = "No reference text is saved with this recording. If you read from a document, paste it below and the pieces that match it will be offered its wording.";
+      bulk.disabled = true;
+      bulk.textContent = "Use its wording on close matches";
+      return;
+    }
+    if (!align) { $("ref-summary").textContent = "Comparing the pieces with the text you read..."; bulk.disabled = true; return; }
+    const st = align.result.stats;
+    $("ref-summary").textContent = `${st.same} ${st.same === 1 ? "piece matches" : "pieces match"} it exactly, ${st.style} differ only in capital letters or punctuation, ${st.words} differ in wording, and ${st.none} don't line up with it (free speech, or too short to tell).`;
+    const n = closeMatches().length;
+    bulk.textContent = `Use its wording on ${n} close ${n === 1 ? "match" : "matches"}`;
+    bulk.disabled = n === 0;
+  }
+
+  async function bulkReference() {
+    if (guard()) return;
+    commitSession();
+    const ids = closeMatches().map((p) => p.id);
+    if (!ids.length) return;
+    const ok = await confirmDialog({
+      title: `Use the reference wording on ${plural(ids.length, "piece", "pieces")}?`,
+      body: "Each of these lines up closely with the text you read, and any word that changes is only a small spelling difference. Words you said that aren't in the text are kept, and nothing is added that you didn't say. Undo puts them all back in one step.",
+      ok: `Use it on ${ids.length}`,
+    });
+    if (!ok) return;
+    const texts = new Map(ids.map((id) => [id, suggestionFor(byId(id))]).filter(([, a]) => a).map(([id, a]) => [id, a.text]));
+    if (change(`Used the reference wording on ${plural(texts.size, "piece", "pieces")}`, [...texts.keys()], () => {
+      for (const [id, text] of texts) {
+        const live = byId(id);
+        live.text = text;
+        live.words = alignEdit(live.words, text, { start: live.start, end: live.end });
+        live.flags = recomputeFlags(live);
+      }
+    })) {
+      renderAll({ force: true });
+      announce(`Used the reference wording on ${plural(texts.size, "piece", "pieces")}.`);
+    }
+  }
+
+  $("ref-use").addEventListener("click", () => {
+    const s = cur();
+    const a = s && suggestionFor(s);
+    if (a) applyText(s.id, a.text, `Used the reference wording for ${at(s)}`);
+  });
+  $("ref-skip").addEventListener("click", () => {
+    const s = cur();
+    if (!s) return;
+    skipped.add(skipKeyOf(s));
+    setPref(`fs.refskip.${takeId}`, JSON.stringify([...skipped].slice(-500)));
+    renderSuggestions();
+    renderReferenceCard();
+    announce("Kept what you have.");
+  });
+  $("ref-bulk").addEventListener("click", bulkReference);
+
+  const refEdit = $("ref-edit");
+  refEdit.value = reference;
+  refEdit.addEventListener("input", () => { $("ref-save").disabled = refEdit.value === reference; });
+  $("ref-save").addEventListener("click", async () => {
+    const text = refEdit.value;
+    if (text === reference) return;
+    if (reference.trim()) {
+      const ok = await confirmDialog({
+        title: text.trim() ? "Replace the reference text?" : "Clear the reference text?",
+        body: "The text that is saved now is kept on your PC, in this recording's reference_history folder, in case you need it back.", ok: text.trim() ? "Replace it" : "Clear it",
+      });
+      if (!ok) return;
+    }
+    try {
+      const res = await api(`/api/takes/${takeId}/reference`, { method: "PUT", body: { text } });
+      reference = res.reference_text;
+      refEdit.value = reference;
+      $("ref-save").disabled = true;
+      $("ref-save-hint").textContent = "Saved. The text it replaced, if any, is kept on your PC.";
+      align = null;
+      hintDefaults();
+      renderSuggestions();
+      renderReferenceCard();
+      scheduleAlign();
+      announce("Reference text saved.");
+    } catch (err) {
+      $("ref-save-hint").textContent = `Couldn't save it: ${err.message}. What you typed is still here.`;
+    }
+  });
+
+  // Hints for listening again: names from the reference, and the start of it as context.
+  let hintsTouched = false;
+  function hintDefaults() {
+    if (hintsTouched) return;
+    $("hint-words").value = extractHotwords(reference);
+    $("hint-prompt").value = buildPrompt(reference);
+  }
+  $("hint-words").addEventListener("input", () => { hintsTouched = true; });
+  $("hint-prompt").addEventListener("input", () => { hintsTouched = true; });
+  hintDefaults();
+
+  $("retranscribe").addEventListener("click", async () => {
+    if (guard()) return;
+    commitSession();
+    const count = (f) => pieces.filter(f).length;
+    const approved = count((p) => p.status === "approved"), dropped = count((p) => p.status === "dropped");
+    const edited = count((p) => p.auto && p.auto.text !== p.text);
+    const ok = await confirmDialog({
+      title: "Listen to the whole recording again?",
+      body: `This takes a few minutes and cuts the recording into new pieces. Your current pieces (${approved} approved, ${dropped} dropped, ${edited} with text you changed) are kept in Earlier versions and can be brought back, but they won't be mixed with the new ones. This page goes back to the list of recordings while it works.`,
+      ok: "Listen again",
+    });
+    if (!ok) return;
+    if (!(await waitSaved())) {
+      showNotice("Your latest changes haven't reached your PC yet, so nothing was started. Try again when it says all changes are saved.");
+      return;
+    }
+    try {
+      await api(`/api/takes/${takeId}/transcribe`, { method: "POST", body: { initial_prompt: $("hint-prompt").value, hotwords: $("hint-words").value, regenerate: true, force: true } });
+      location.href = "/review";
+    } catch (err) {
+      showNotice(`Couldn't start it: ${err.message}`);
+    }
+  });
 
   // ------------------------------------------------------------------ word strip: tap to hear from a word
   const strip = $("p-words");
@@ -976,4 +1193,6 @@ function startEditor(takeId, doc, take) {
   })();
   renderSave();
   select(curId, { quiet: true });
+  renderReferenceCard();
+  scheduleAlign();
 }
