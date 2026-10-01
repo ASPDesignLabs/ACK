@@ -58,6 +58,11 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--asr-compute-type", default="auto")
     p.add_argument("--asr-idle-unload", type=int, default=300, help="seconds idle before freeing the model (0 = never)")
     p.add_argument("--no-auto-transcribe", action="store_true")
+    p.add_argument("--backup-dir", default="~/backups/freeform-studio", help="where backups are kept (default: %(default)s)")
+    p.add_argument("--backup-every", type=float, default=6.0, metavar="HOURS",
+                   help="back up automatically this often, but only when something has changed (default: %(default)s)")
+    p.add_argument("--no-auto-backup", action="store_true", help="don't back up on a timer (the Back up now button still works)")
+    p.add_argument("--min-free-mb", type=int, default=500, help="refuse new audio when the disk has less than this free (default: %(default)s)")
     p.add_argument("--debug", action="store_true")
     args = p.parse_args(argv)
 
@@ -94,7 +99,9 @@ def main(argv: Optional[list] = None) -> int:
     token = resolve_token(args.token, output, args.code)
     cfg = Config(output_dir=output, code=args.code, token=token, asr_engine=args.asr_engine, asr_model=args.asr_model,
                  asr_device=args.asr_device, asr_compute_type=args.asr_compute_type,
-                 asr_idle_unload_s=args.asr_idle_unload, auto_transcribe=not args.no_auto_transcribe)
+                 asr_idle_unload_s=args.asr_idle_unload, auto_transcribe=not args.no_auto_transcribe,
+                 backup_dir=Path(args.backup_dir).expanduser(), backup_every_hours=0.0 if args.no_auto_backup else args.backup_every,
+                 min_free_mb=args.min_free_mb)
 
     from hypercorn.asyncio import serve
     from hypercorn.config import Config as HyperConfig
@@ -119,6 +126,7 @@ def main(argv: Optional[list] = None) -> int:
     url = f"{scheme}://{host}:{args.port}/{q}"
     print(f"\nFreeform Studio {__version__}  (ASR: {cfg.asr_engine}/{cfg.asr_model} on {cfg.asr_device})")
     print(f"  recordings and edits: {cfg.root}")
+    print(f"  backups:              {cfg.backup_dir}" + (f" (every {cfg.backup_every_hours:g} h when something has changed)" if cfg.backup_every_hours > 0 else " (automatic backups off)"))
     print(f"  open on your phone:   {url}")
     print(f"  open on this PC:      {scheme}://localhost:{args.port}/{q}")
     if warn:

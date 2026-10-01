@@ -254,12 +254,18 @@ them ("twenty dollars", not "$20") because the training text is what the voice l
 words* buttons do this one tap at a time. Pieces that still have digits are accepted by default (the phonemizer reads digits
 its own way, which may not be how you said them); pass `--allow none` to hold them back until you've fixed them. They live under
 `~/piper-recording-studio/output/_freeform/en-US/takes/`, not in the folders the recorder and the splitter use, so they
-need their own step to become a dataset. **Back up first** (the raw recordings are the one thing you can't regenerate):
+need their own step to become a dataset. **Back up first** (the raw recordings are the one thing you can't regenerate). The
+server already backs up by itself while it runs (every 6 hours, when something has changed), but make sure you have a fresh,
+checked one right now:
 
 ```bash
-mkdir -p ~/backups
-tar czf ~/backups/freeform-takes-$(date +%Y%m%d-%H%M%S).tar.gz -C ~/piper-recording-studio/output _freeform
+cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
+python -m freeform_studio.backup        # says where it went, and reads the archive back to check it
 ```
+
+By default it goes to `~/backups/freeform-studio`, which is inside WSL: copy the newest `freeform-backup-*.tar.gz` somewhere
+outside it too (see section 8 of the WSL data guide), or start the server with `FREEFORM_BACKUPS=/mnt/c/Users/<you>/freeform-backups`.
+The Freeform Studio README's *Backups and safety* explains what is kept and how to restore (restoring only ever adds).
 
 **Easiest route once you've reviewed:** export the approved pieces into the recorder's own folder layout, then run the same
 split step you always do (the clips pass straight through it, alongside your prompted recordings):
@@ -364,6 +370,10 @@ Notes:
 - Checkpoints land in `~/piper1-gpl/lightning_logs/version_N/checkpoints/`
   (`N` auto-increments every time you run `fit`) — **not** wherever
   `--data.cache_dir` points.
+- If you used the GPU for Freeform Studio's speech recognition, free it before you train (8 GB is not enough for both): on the
+  Review page, **Status and safety → Free memory now**, or just wait; the model frees itself after 5 minutes idle. Confirm with
+  `nvidia-smi` that the memory really went back (this was not measurable where the feature was built); if it didn't, stop the
+  server, and restart it without `--asr-device cuda` (the default is the CPU) while training runs.
 
 ### One-time source patch this repo's training script needs
 

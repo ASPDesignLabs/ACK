@@ -84,7 +84,8 @@ def server(tmp_path_factory):
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
     proc = subprocess.Popen([sys.executable, "-m", "freeform_studio", "--output", str(out), "--port", str(port),
-                             "--token", "none", "--asr-engine", "fake", "--asr-idle-unload", "0"],
+                             "--token", "none", "--asr-engine", "fake", "--asr-idle-unload", "0",
+                             "--backup-dir", str(out.parent / "backups"), "--no-auto-backup"],
                             cwd=TOOLS, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     base = f"http://127.0.0.1:{port}"
     for _ in range(100):
@@ -96,7 +97,7 @@ def server(tmp_path_factory):
     else:
         proc.kill()
         pytest.fail("server did not start")
-    yield {"base": base, "out": out}
+    yield {"base": base, "out": out, "backups": out.parent / "backups"}
     proc.terminate()
     proc.wait(timeout=10)
 

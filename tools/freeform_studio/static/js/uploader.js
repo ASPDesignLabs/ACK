@@ -14,6 +14,7 @@ export class Uploader extends EventTarget {
     this.bytes = 0;
     this.attempt = 0;
     this.fatal = null;
+    this.lastStatus = 0;       // the PC's last refusal while retrying (0: it couldn't be reached at all)
     this._running = false;
     this._waiters = [];
   }
@@ -61,6 +62,7 @@ export class Uploader extends EventTarget {
             break;
           }
           this.attempt += 1;
+          this.lastStatus = err.status || 0;
           this._emit();
           await new Promise((resolve) => {
             const t = setTimeout(done, Math.min(15000, 1000 * 2 ** Math.min(this.attempt, 4)));

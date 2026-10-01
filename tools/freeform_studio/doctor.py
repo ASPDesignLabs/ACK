@@ -10,10 +10,11 @@ import argparse
 import importlib
 import shutil
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from . import netcheck
+from . import backup, health, netcheck, repair
 
 Line = Tuple[str, str]  # (label, text) where label is OK / PROBLEM / NOTE
 
@@ -55,6 +56,37 @@ def check(args: argparse.Namespace) -> Tuple[List[Line], List[str], bool]:
     out = Path(args.output).expanduser()
     add("OK" if out.is_dir() else "PROBLEM", f"recordings folder {out}" + ("" if out.is_dir() else " does not exist"),
         f"The folder {out} doesn't exist. Point --output at piper-recording-studio's output folder.")
+
+    # 1b. room, backups, and anything waiting to be rebuilt (read straight from the folders: no server needed)
+    if out.is_dir():
+        floor = getattr(args, "min_free_mb", 500)
+        d = health.disk_status(out, floor, 3000)   # the server's own warning level
+        if not d["known"]:
+            add("NOTE", "free disk space could not be measured")
+        elif d["critical"]:
+            add("PROBLEM", f"only {d['free_mb']} MB of disk space is free, so new audio is refused",
+                f"Free some disk space. The server refuses new audio below {floor} MB free (what you record stays on the phone until then).")
+        elif d["low"]:
+            add("NOTE", f"{d['free_mb'] / 1024:.1f} GB of disk space is free (about {d['hours_left']} hours of recording); free some soon")
+        else:
+            add("OK", f"{d['free_mb'] / 1024:.0f} GB of disk space is free")
+        code = getattr(args, "code", "en-US")
+        have = bool(backup.collect(out, code))
+        found = backup.list_backups(Path(getattr(args, "backup_dir", backup.DEFAULT_DIR)).expanduser(), code)
+        if not have:
+            add("NOTE", "no recordings yet, so nothing to back up")
+        elif not found:
+            add("NOTE", "you have recordings but no backup yet. Run: python -m freeform_studio.backup")
+        else:
+            last = found[0]
+            age_days = (datetime.now() - datetime.fromisoformat(last["created"])).days
+            add("OK" if age_days <= 7 else "NOTE", f"last backup {last['created'][:16].replace('T', ' ')} ({len(found)} kept)"
+                + ("" if age_days <= 7 else f", {age_days} days ago: consider python -m freeform_studio.backup"))
+        pending = [d_.name for d_ in (out / "_freeform" / code / "takes").glob("t*") if d_.is_dir() and repair.needs_repair(d_)] \
+            if (out / "_freeform" / code / "takes").is_dir() else []
+        if pending:
+            add("NOTE", f"{len(pending)} recording(s) are missing their decoded audio (the server rebuilds it at startup, "
+                        "or run: python -m freeform_studio.repair)")
 
     # 2. the certificate (needed for the phone's microphone)
     tls = bool(args.certfile)
@@ -140,6 +172,9 @@ def check(args: argparse.Namespace) -> Tuple[List[Line], List[str], bool]:
 def main(argv: Optional[list] = None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--output", default="~/piper-recording-studio/output")
+    p.add_argument("--code", default="en-US")
+    p.add_argument("--backup-dir", default=backup.DEFAULT_DIR, help="where your backups are kept (default: %(default)s)")
+    p.add_argument("--min-free-mb", type=int, default=500, help="the free-space floor the server was started with (default: %(default)s)")
     p.add_argument("--port", type=int, default=8001)
     p.add_argument("--certs-dir", help="folder holding your mkcert certificate + key")
     p.add_argument("--certfile")

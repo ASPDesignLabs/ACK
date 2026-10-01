@@ -12,6 +12,7 @@ from .audio import FfmpegError, compute_peaks, decode_to_wav, wav_info
 from .config import Config
 from .edit import new_edit_doc
 from .pipeline import propose_segments
+from .repair import needs_repair, raw_file, write_derived
 from .segmenter import SegOptions
 from .storage import ChunkGap, NoChunks, TakeStore, atomic_write_bytes, ext_for_mime, now_iso
 
@@ -115,6 +116,8 @@ class JobRunner:
                 self.enqueue("finish", take_id, {})
             elif status in ("queued", "transcribing"):
                 self.enqueue("transcribe", take_id, {})
+            elif needs_repair(self.store.path(take_id)):
+                self.enqueue("repair", take_id, {})     # e.g. restored from a backup, or the decoded copy was deleted
 
     async def _worker(self) -> None:
         while True:
@@ -146,6 +149,8 @@ class JobRunner:
                 self._finish(take_id, opts)
             elif kind == "transcribe":
                 self._transcribe(take_id, opts)
+            elif kind == "repair":
+                self._repair(take_id)
             else:
                 raise JobError(f"unknown job {kind!r}")
         except (JobError, EngineError) as e:
@@ -182,6 +187,20 @@ class JobRunner:
         self.store.remove_parts(take_id)  # raw file is assembled and decoded; the loose parts are scratch
         if self.cfg.auto_transcribe:
             self.enqueue("transcribe", take_id, {})
+
+    def _repair(self, take_id: str) -> None:
+        """Rebuild the decoded copy and waveform from the raw audio. A failure is noted, not made fatal: the raw audio is untouched."""
+        take_dir = self.store.path(take_id)
+        raw = raw_file(take_dir)
+        if raw is None or not needs_repair(take_dir):
+            return
+        try:
+            write_derived(take_dir, raw)
+            if (self.store.get(take_id) or {}).get("repair_error"):
+                self.store.update(take_id, repair_error=None)
+        except FfmpegError as err:
+            _LOG.warning("could not rebuild the audio for %s: %s", take_id, err)
+            self.store.update(take_id, repair_error=f"could not rebuild the decoded audio: {err}"[:400])
 
     def _transcribe(self, take_id: str, opts: Dict[str, Any]) -> None:
         take = self.store.get(take_id) or {}

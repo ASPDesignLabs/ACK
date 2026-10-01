@@ -170,7 +170,10 @@ export function initCapture({ onChange }) {
     const u = s.uploader;
     ui.sent.textContent = u.sent ? `${u.sent} parts (${fmtBytes(u.bytes)})` : "nothing yet";
     if (u.fatal) ui.waiting.textContent = `${u.pending} (stopped: ${u.fatal.message})`;
-    else if (u.attempt > 0) ui.waiting.textContent = `${u.pending} (can't reach your PC, retrying)`;
+    else if (u.attempt > 0) {
+      ui.waiting.textContent = u.lastStatus === 507 ? `${u.pending} (your PC is out of disk space; sending carries on once there is room)`
+        : u.lastStatus ? `${u.pending} (your PC reported a problem, retrying)` : `${u.pending} (can't reach your PC, retrying)`;
+    }
     else ui.waiting.textContent = String(u.pending);
   }
 

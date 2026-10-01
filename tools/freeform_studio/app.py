@@ -14,7 +14,9 @@ from typing import Any, Callable, Dict, Optional
 from quart import Quart, Response, g, jsonify, request, send_file, send_from_directory
 
 from . import __version__
+from . import backup as backup_mod
 from . import export as export_mod
+from . import health
 from .asr import AsrEngine
 from .config import Config
 from .edit import new_edit_doc, normalize_edit, validate_edit
@@ -47,15 +49,18 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
     store = TakeStore(cfg.takes_dir)
     engines = EngineManager(cfg, engine_factory)
     runner = JobRunner(cfg, store, engines)
-    app.freeform = SimpleNamespace(cfg=cfg, store=store, engines=engines, runner=runner)  # type: ignore[attr-defined]
+    backups = backup_mod.BackupScheduler(cfg, lambda: bool(store.ids()))
+    app.freeform = SimpleNamespace(cfg=cfg, store=store, engines=engines, runner=runner, backups=backups)  # type: ignore[attr-defined]
 
     # ------------------------------------------------------------------ lifecycle
     @app.before_serving
     async def _start() -> None:
         await runner.start()
+        await backups.start()
 
     @app.after_serving
     async def _stop() -> None:
+        await backups.stop()
         await runner.stop()
 
     # ------------------------------------------------------------------ auth + errors
@@ -126,7 +131,8 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
     @app.route("/api/status")
     async def status():
         return jsonify(version=__version__, code=cfg.code, output=str(cfg.output_dir), asr=engines.status(),
-                       queue=runner.pending, busy=runner.busy)
+                       queue=runner.pending, busy=runner.busy,
+                       disk=health.disk_status(cfg.output_dir, cfg.min_free_mb, cfg.warn_free_mb))
 
     # ------------------------------------------------------------------ takes
     @app.route("/api/takes", methods=["POST"])
@@ -169,6 +175,10 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
             raise ApiError(409, f"take is {take['status']}; it no longer accepts audio")
         if n < 0 or n >= cfg.max_chunks:
             raise ApiError(400, "chunk index out of range")
+        free = health.free_mb(cfg.output_dir)
+        if free < cfg.min_free_mb and not store.path(take_id, "parts", f"{n:06d}.bin").exists():   # a repeat of a stored part is harmless
+            raise ApiError(507, f"Your PC is almost out of disk space ({free:.0f} MB free). Free some up and sending carries on by "
+                                "itself; what you have recorded is safe on this phone until then.")
         data = await request.get_data()
         if not data:
             raise ApiError(400, "empty chunk")
@@ -321,6 +331,24 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
                 store.prune(take_id, "reference_history", 20)
             doc = store.update(take_id, reference_text=text)
         return jsonify(reference_text=doc["reference_text"])
+
+    # ------------------------------------------------------------------ backups
+    @app.route("/api/backup", methods=["GET"])
+    async def backup_status():
+        return jsonify(backups.status())
+
+    @app.route("/api/backup", methods=["POST"])
+    async def backup_now():
+        body = await request.get_json(silent=True)
+        force = isinstance(body, dict) and body.get("force") is True
+        try:
+            result = await backups.run_now(force)
+        except backup_mod.BackupBusy as err:
+            raise ApiError(409, str(err))
+        except backup_mod.BackupError as err:
+            raise ApiError(400, str(err))
+        return jsonify(skipped=result.skipped, reason=result.reason, name=result.path.name if result.path else None, takes=result.takes,
+                       files=result.files, archive_bytes=result.archive_bytes, pruned=result.pruned, status=backups.status())
 
     # ------------------------------------------------------------------ training clips
     async def run_export(take_ids: Optional[list], apply_it: bool):

@@ -85,12 +85,17 @@ class FakeEngine(AsrEngine):
 
     def __init__(self, model: str = "fake") -> None:
         self.model = model
+        self._loaded = False
 
     @property
     def loaded(self) -> bool:
-        return True
+        return self._loaded
+
+    def unload(self) -> None:
+        self._loaded = False
 
     def transcribe(self, audio_path: Path, opts: AsrOptions, progress: Progress = None) -> Dict[str, Any]:
+        self._loaded = True            # like the real model: it is read into memory the first time it is used
         t0 = time.monotonic()
         frames, rate = wav_info(audio_path)
         duration = frames / rate

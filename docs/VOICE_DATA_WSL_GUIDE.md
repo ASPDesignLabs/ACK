@@ -485,6 +485,22 @@ A backup that lives only inside WSL is one `wsl --unregister` or disk problem aw
 copy on the Windows side, and ideally one off the machine.
 
 
+**Freeform Studio makes its own backups.** While its server runs it writes a checked `freeform-backup-en-US-<timestamp>.tar.gz`
+into `~/backups/freeform-studio` every 6 hours, when something has changed (see its README, *Backups and safety*). That folder is
+inside WSL too, so the same warning applies: start it with `FREEFORM_BACKUPS=/mnt/c/Users/<you>/freeform-backups` (or
+`--backup-dir`), or copy the newest file out now and then.
+
+The `voice-data` archive above includes `output/_freeform`, whose decoded copies take about 350 MB per hour of recording (usually
+several times the size of the raw audio). If it gets big, leave `_freeform` out of it and rely on Freeform Studio's own (smaller, checksummed) backup
+for those recordings:
+
+```bash
+tar czf ~/backups/voice-data-$STAMP.tar.gz --exclude='piper-recording-studio/output/_freeform' -C ~ piper-recording-studio/output piper/my-dataset-split
+```
+
+*Not run here against your folders (needs your machine); the `--exclude` form was checked on a small stand-in tree.*
+
+
 **Prove the backup restores (into a scratch folder) [writes files]**
 
 ```bash

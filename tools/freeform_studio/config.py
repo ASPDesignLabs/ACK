@@ -23,6 +23,12 @@ class Config:
     min_segment_s: float = 1.0
     pad_lead_s: float = 0.12
     pad_tail_s: float = 0.20
+    backup_dir: Optional[Path] = None   # where backups go; None means the page and server don't offer them
+    backup_every_hours: float = 6.0     # automatic backups, only when something has changed; 0 turns them off
+    backup_keep: int = 30
+    backup_first_delay_s: float = 120.0
+    min_free_mb: int = 500        # below this, new audio is refused (it stays safe on the phone) instead of risking a half-written file
+    warn_free_mb: int = 3000      # below this, the pages warn
     max_chunk_bytes: int = 16 * 1024 * 1024
     max_chunks: int = 100_000
 
@@ -30,6 +36,8 @@ class Config:
         if not CODE_RE.match(self.code):
             raise ValueError(f"invalid language code: {self.code!r}")
         self.output_dir = Path(self.output_dir).expanduser()
+        if self.backup_dir is not None:
+            self.backup_dir = Path(self.backup_dir).expanduser()
 
     @property
     def root(self) -> Path:

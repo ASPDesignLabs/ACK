@@ -30,6 +30,27 @@
         <p id="inbox-empty" class="hint">Loading...</p>
         <ul id="inbox-list" class="takes"></ul>
       </div>
+      <section class="card" id="statuscard" aria-labelledby="status-h">
+        <h2 id="status-h">Status and safety</h2>
+        <div class="srow">
+          <h3>Disk space</h3>
+          <p id="st-disk">Checking...</p>
+        </div>
+        <div class="srow">
+          <h3>Backups</h3>
+          <p id="st-backup">Checking...</p>
+          <p class="hint" id="st-backup-where"></p>
+          <div class="stack"><button type="button" class="btn" id="st-backup-go" disabled>Back up now</button></div>
+          <p id="st-backup-result" class="summary2" role="status" aria-live="polite"></p>
+        </div>
+        <div class="srow">
+          <h3>Speech recognition memory</h3>
+          <p id="st-model">Checking...</p>
+          <p class="hint">Free it before training on the GPU. It loads again by itself the next time a recording needs it.</p>
+          <div class="stack"><button type="button" class="btn small" id="st-model-free" disabled>Free memory now</button></div>
+          <p id="st-model-result" class="summary2" role="status" aria-live="polite"></p>
+        </div>
+      </section>
       <details class="card" id="exportcard">
         <summary>Training clips (export)</summary>
         <p class="hint">Writes each approved piece as a .wav with its text, in the same folder layout as your prompted recordings, so your usual training steps pick them up. Nothing is ever deleted, and your recordings are never changed.</p>

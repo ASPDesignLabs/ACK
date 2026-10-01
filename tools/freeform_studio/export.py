@@ -22,7 +22,6 @@ import re
 import shutil
 import sys
 import tempfile
-import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -30,6 +29,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set
 
 from .build_dataset import Candidate, Policy, render_take, scan
+from .locking import exclusive
 from .storage import atomic_write_bytes, atomic_write_json, read_json
 
 GROUP = "freeform"
@@ -212,20 +212,8 @@ def _load_json(path: Path) -> Any:
 
 @contextmanager
 def _locked(folder: Path) -> Iterator[None]:
-    folder.mkdir(parents=True, exist_ok=True)
-    path = folder / LOCK
-    try:
-        if path.exists() and time.time() - path.stat().st_mtime > STALE_LOCK_S:
-            path.unlink()  # left behind by a crash long ago
-        fd = os.open(str(path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-    except FileExistsError:
-        raise ExportBusy(f"Another export is running. If it crashed, delete {path} and try again.") from None
-    try:
-        os.write(fd, str(os.getpid()).encode())
-        os.close(fd)
+    with exclusive(folder / LOCK, STALE_LOCK_S, lambda path: ExportBusy(f"Another export is running. If it crashed, delete {path} and try again.")):
         yield
-    finally:
-        path.unlink(missing_ok=True)
 
 
 def apply(output_dir: Path, code: str, take_ids: Optional[List[str]] = None, policy: Optional[Policy] = None) -> Plan:

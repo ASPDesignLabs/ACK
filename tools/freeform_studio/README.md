@@ -4,25 +4,40 @@ Capture free speech from your phone, have your PC transcribe it with word timing
 training clips for Piper. It runs next to `piper-recording-studio` (its own port, its own venv) and shares its
 `output/` folder.
 
-**Status: Phase 6 of 7 (export into your recorder's folders), plus dataset export.** You can record from your phone,
-everything is saved to your PC as you speak, the PC transcribes it, you correct and approve pieces on your phone (or PC), and
-the approved ones can now be written straight into the recorder's own folder layout, ready for your usual training steps.
-Still to come: a final hardening pass (install script, automatic backups, freeing the GPU from the page).
+**Status: all seven phases are in (Phase 7 of 7: backups and safety), plus dataset export.** You can record from your phone,
+everything is saved to your PC as you speak, the PC transcribes it, you correct and approve pieces on your phone (or PC), the
+approved ones are written straight into the recorder's own folder layout for your usual training steps, and your recordings
+are backed up automatically. *Backups and safety* below says what is protected and how to restore; its last part says what has
+only been tested without a real phone.
 
 ## Install (once)
 
-A separate venv, so nothing here can disturb the recorder or your training environment:
-
 ```bash
 git clone --depth 1 --branch claude/quirky-carson-ia01h1 https://github.com/ASPDesignLabs/ACK.git ~/ack-tools
+~/ack-tools/tools/freeform_studio/install.sh
+```
+The installer makes its own virtual environment (`~/freeform-studio-venv`), so nothing here can disturb the recorder or your
+training environment, installs the requirements, and then checks that every package loads and that the program starts. It needs
+`ffmpeg` and Python 3.10 or newer (Ubuntu 22.04's defaults are fine); if either is missing it says so, with the exact `apt`
+command, before changing anything. It is safe to run again: it reuses the environment and only adds what is missing. It writes only to that
+folder (plus pip's usual download cache in your home folder); it never edits shell settings or installs system packages.
+
+- `./install.sh --check` only looks and reports what is missing. `--dry-run` prints every command it would run.
+- `--gpu` also installs the NVIDIA libraries for GPU speech recognition (see below). `--venv DIR` and `--python CMD` choose another
+  environment folder or Python.
+- Already cloned it earlier? Update with `git -C ~/ack-tools pull`, then run the installer again.
+
+<details><summary>Prefer to do it by hand?</summary>
+
+```bash
 cd ~/ack-tools/tools
 python3 -m venv ~/freeform-studio-venv
 source ~/freeform-studio-venv/bin/activate
 pip install --upgrade pip
 pip install -r freeform_studio/requirements.txt
 ```
-Needs `ffmpeg` on the PATH (you already have it) and Python 3.10 or newer (Ubuntu 22.04's default `python3` is fine;
-check with `python3 --version`). Already cloned it earlier? Update with `git -C ~/ack-tools pull`.
+Check the Python version with `python3 --version`.
+</details>
 
 ## Try the speech recognition on your machine (do this first)
 
@@ -36,7 +51,8 @@ The first run downloads the model, so expect a wait. It prints what was heard, h
 unsure about, and how the review screen would cut the recording. Add `--prompt "names or jargon you say"` to bias it
 toward your vocabulary, or `--prompt "Um, so, uh, yeah."` to make it keep filler words instead of tidying them away.
 
-**GPU (optional).** CPU needs nothing extra and is what to use while training runs. To use the GPU when it is free:
+**GPU (optional).** CPU needs nothing extra and is what to use while training runs. To use the GPU when it is free,
+`./install.sh --gpu` installs the libraries and prints the `LD_LIBRARY_PATH` line to use; by hand it is:
 ```bash
 pip install nvidia-cublas-cu12 "nvidia-cudnn-cu12==9.*"
 export LD_LIBRARY_PATH=$(python3 -c 'import os, nvidia.cublas.lib, nvidia.cudnn.lib; print(os.path.dirname(nvidia.cublas.lib.__file__) + ":" + os.path.dirname(nvidia.cudnn.lib.__file__))')
@@ -47,6 +63,15 @@ Don't run it on the GPU while training is running: 8 GB is not enough for both.
 
 ## Run the server
 
+```bash
+~/ack-tools/tools/freeform_studio/start.sh
+```
+This starts the server on your network with your mkcert certificate from `~/piper-recording-studio/certs` (if that folder
+exists; otherwise it tells you the phone microphone won't work without https). Anything you add goes straight to the program and
+wins over the defaults: `start.sh --asr-device cuda`, `start.sh --port 8002`. Settings can also come from the environment:
+`FREEFORM_VENV`, `FREEFORM_CERTS`, `FREEFORM_OUTPUT` and `FREEFORM_BACKUPS` (see *Backups and safety*).
+
+By hand, that is:
 ```bash
 cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
 python -m freeform_studio --host 0.0.0.0 --certs-dir ~/piper-recording-studio/certs
@@ -225,10 +250,81 @@ prints the training command to run, including a fresh cache folder.
 
 Pieces are also left out when they are too quiet, or clip repeatedly (a single stray full-scale sample is fine).
 
+## Backups and safety
+
+Your raw recordings are the one thing you can't get back, so they are protected in layers. Nothing in this section ever
+deletes a recording or overwrites your edits.
+
+**Automatic backups.** While the server runs it makes a backup two minutes after starting and then every 6 hours, **but only if
+something has changed since the last one**, so an idle server writes nothing. Backups go to `~/backups/freeform-studio`.
+
+- `--backup-dir DIR` (or `FREEFORM_BACKUPS=DIR` with `start.sh`) chooses the folder. **In WSL the default folder is inside WSL**,
+  which is one `wsl --unregister` or disk problem away from gone, so point it at the Windows side
+  (`/mnt/c/Users/<you>/freeform-backups`) or copy the newest file out now and then. A backup that lives only on the machine it
+  protects isn't much of one.
+- `--backup-every HOURS` changes the interval; `--no-auto-backup` turns the timer off (the **Back up now** button and the command
+  below still work). The backup folder can't be inside `output/_freeform` (where the recordings live), so a backup can never back itself up.
+
+**What a backup holds.** One `.tar.gz` with, for every recording: the raw audio exactly as received, `take.json`, your decisions
+(`edit.json`), what the recognizer heard (`asr.json`), and the saved earlier versions of your edits, transcripts and reference
+text. Left out on purpose: the decoded copy and waveforms (rebuilt from the raw audio) and the exported training clips (export
+again). Every file is checksummed as it is written, and the finished archive is **read back and checked** before it counts; one
+that doesn't read back correctly is thrown away and reported, never kept as if it were good.
+
+**Keeping old backups.** The newest 30 are kept, plus the newest of each week for twelve weeks beyond those. That is the only
+thing that ever deletes a backup, and it only touches files this tool named. Automatic backups always use these numbers; on the
+command, `--keep N` changes the first one and `--keep 0` never deletes anything.
+
+**By hand** (nothing here needs the server):
+```bash
+cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
+python -m freeform_studio.backup                      # back up now (does nothing if nothing has changed; --force to back up anyway)
+python -m freeform_studio.backup --list               # your backups, newest first
+python -m freeform_studio.backup --verify FILE        # re-read one and check every file against its checksum
+python -m freeform_studio.backup --restore FILE --dry-run    # show what a restore would do, and write nothing
+python -m freeform_studio.backup --restore FILE
+```
+**Restoring only ever adds.** Recordings you don't have come back; files that are identical are skipped; a file that is
+*different* from the backup's is left alone and the backup's copy is put in `output/_freeform/<code>/restored-conflicts/`, so
+nothing is lost either way. Afterwards it rebuilds the decoded audio, so restored recordings can be reviewed again. If one
+recording's raw audio can't be decoded it says which, with the restore itself still complete and the others rebuilt.
+It exits with `1` in that case so a script notices, even though every file is back. To remove something, delete it yourself; a
+restore is never a way to do that.
+
+**Status and safety card.** On the Review page's list of recordings, under the recordings and above *Training clips*, in plain words: how much disk is free (and about how many hours of
+recording that is), when the last backup was and where backups go, with **Back up now**, and whether the speech model is holding
+memory, with **Free memory now**. That last button is for when training needs the GPU: the model also frees itself after 5
+minutes idle (`--asr-idle-unload`), and it reloads by itself the next time a recording needs it. It refuses, saying why, while a
+recording is being processed.
+
+**If the disk fills up.** Below `--min-free-mb` (500 by default) the server refuses *new* audio. The phone keeps every part it
+couldn't send, says "your PC is out of disk space; sending carries on once there is room", and keeps retrying, so nothing you
+said is lost; parts it has already sent are still accepted if re-sent. The phone and the Status card warn you well before that
+(under 3 GB). The doctor (below) reports it too.
+
+**Rebuilding the derived audio.** If a decoded copy or waveform goes missing (a restore, or you deleted it to save space), the
+server rebuilds it from the raw audio when it starts. To do it yourself, or to see which recordings can't be rebuilt:
+```bash
+python -m freeform_studio.repair              # every finished recording that needs it (--take ID for one)
+```
+It never touches the raw audio or your edits. A recording that can't be rebuilt is named and left as it was; the others carry on.
+
+**What has and hasn't been tested.** Everything above is covered by automated tests that use real ffmpeg, a real browser at phone
+size and real archives, plus a real run of the installer into a fresh environment. What those can't show: a real phone's microphone,
+battery and screen-off behaviour; real Whisper accuracy on your voice; Windows Firewall and WSL networking; backups written to
+`/mnt/c/...` from WSL (file locking and speed on that file system); what a genuinely full disk does on your machine (the
+test replaces the free-space reading rather than filling a disk); and whether **Free memory now** really hands the GPU back (the
+button is tested with the stand-in engine; the real one drops its model and runs garbage collection, but the sandbox these were built
+in can't download a model to measure it). Check that one yourself: run `nvidia-smi` in another terminal, tap **Free memory now**,
+and watch the memory used by the Python process fall. If it doesn't, restart the server before training, which always works.
+Also try a restore into a scratch folder with `--dry-run` once, so you know it works for you before you ever need it.
+
 ## If the page won't load
 
 Run the checker in a **second terminal** while the server is running. It tests each link between your phone and this
-program, changes nothing, and lists every problem with its fix, in order:
+program, changes nothing, and lists every problem with its fix, in order. It also reports free disk space (add
+`--min-free-mb N` if you started the server with a different limit), whether you have a recent backup (`--backup-dir DIR` if
+yours isn't the default), and any recordings waiting to have their decoded audio rebuilt:
 
 ```bash
 cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
@@ -287,7 +383,8 @@ output/_freeform/<code>/takes/<take id>/
   reference_history/   earlier versions of the reference text, if you replaced it
 ```
 Approved clips are exported to `output/<code>/freeform/` (see *Training clips* above); anything it replaces or stops
-exporting is kept in `output/_freeform/<code>/retired/`.
+exporting is kept in `output/_freeform/<code>/retired/`. Backups are in `~/backups/freeform-studio` (see *Backups and safety*),
+and a restore's different-from-backup copies are in `output/_freeform/<code>/restored-conflicts/`.
 This folder is deliberately outside `output/<code>/`, so `split_long_takes.py` can never pick up half-reviewed audio.
 
 ## API
@@ -307,7 +404,9 @@ This folder is deliberately outside `output/<code>/`, so `split_long_takes.py` c
 | `GET /api/takes/<id>/edit/history` | saved versions of the edit document, newest first |
 | `POST /api/takes/<id>/edit/restore` | bring one back (`name`, `rev`); the current version is kept first |
 | `POST /api/takes/<id>/transcribe` | run again (`model`, `initial_prompt`, `hotwords`, `regenerate`+`force`) |
-| `POST /api/asr/release` | free the speech model's memory |
+| `POST /api/asr/release` | free the speech model's memory (`409` while a recording is being processed) |
+| `GET /api/status` | speech engine and whether it is loaded, queue, and `disk` (free MB, `low`, `critical`, hours left) |
+| `GET /api/backup`, `POST /api/backup` | backup status; make one now (`{"force": true}` to back up even if nothing changed). `409` if one is already running |
 
 ## Tests
 
@@ -318,5 +417,7 @@ pip install pytest && python -m pytest freeform_studio/tests -q
 The screens' pure logic (re-timing words after an edit, merging two devices' edits, splitting, joining, trimming, waveform geometry, spoken forms, matching against the reference, exporting) is also tested with Node, if it is
 installed (`node --test` via `test_js_logic.py`; skipped otherwise). Set `FS_SHOTS=/some/dir` to save screenshots from the
 browser tests.
+The installer and launcher scripts are tested with a stand-in Python (`test_install_scripts.py`, needs only `bash`), so
+they never touch the network.
 The tests that run the real `split_long_takes.py` need `pip install pydub` and skip themselves without it. The browser tests (`test_capture_ui.py`, `test_review_ui.py` and friends) also need `pip install playwright` and a Chromium; they skip themselves
 if either is missing.

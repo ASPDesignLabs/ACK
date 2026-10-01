@@ -8,6 +8,7 @@ import { WaveView } from "./wave.js";
 import { alignAllAsync, buildPrompt, extractHotwords } from "./refalign.js";
 import { replaceToken, spokenTokens } from "./spoken.js";
 import { initExportCard } from "./exportcard.js";
+import { initStatusCard } from "./statuscard.js";
 import { Player } from "./player.js";
 import { Saver, sameSeg } from "./saver.js";
 import { watchConnection } from "./conn.js";
@@ -73,6 +74,7 @@ if (route) openEditor(route[1]); else openInbox();
 function openInbox() {
   $("inbox").hidden = false;
   initExportCard({ takeId: null, ensureSaved: async () => true, confirmDialog, announce });
+  initStatusCard({ announce });
   const list = $("inbox-list"), empty = $("inbox-empty");
   let timer = null;
 
