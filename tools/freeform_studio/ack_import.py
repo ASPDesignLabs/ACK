@@ -39,6 +39,10 @@ class ImportProblem(Exception):
     """Something that stops the import, in words a person can act on."""
 
 
+class NotEnoughRoom(ImportProblem):
+    """The disk is too full to take the recordings. Nothing was written."""
+
+
 @dataclass
 class SessionPlan:
     id: str
@@ -281,7 +285,7 @@ def apply_import(plan: Plan, progress: Optional[Callable[[str], None]] = None) -
     say = progress or (lambda _msg: None)
     pkg = plan.package
     if not plan.enough_room:
-        raise ImportProblem(f"There is not enough free space: this needs about {plan.need_mb:.0f} MB and keeping {plan.min_free_mb:.0f} MB spare, "
+        raise NotEnoughRoom(f"There is not enough free space: this needs about {plan.need_mb:.0f} MB and keeping {plan.min_free_mb:.0f} MB spare, "
                             f"but only {plan.free_mb:.0f} MB is free. Free some up and run the import again; nothing was written.")
     store = TakeStore(plan.takes_dir)
     done: List[Created] = []
