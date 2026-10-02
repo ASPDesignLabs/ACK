@@ -35,6 +35,8 @@ Allowed entries, and nothing else:
 | `sessions/<session_id>/session.wav` | A free-mode recording. |
 | `README.txt` | Optional, human only. Readers ignore its content. |
 
+Folder entries for `sessions/`, `sessions/<session_id>/` and `sessions/<session_id>/clips/` MAY be present (some zip tools add them) and are ignored.
+
 * `session_id` matches `^s\d{8}-\d{6}-[0-9a-f]{4}$` (for example `s20261002-180411-a3f9`).
 * A reader MUST refuse the whole package, before writing anything, if it contains any other entry name, an absolute path, a `..` component, a backslash, a duplicate name, or a name that does not match the patterns above.
 * Entries MAY be stored or deflated. A writer SHOULD deflate at level 1 (audio barely compresses and the phone should stay fast). A reader MUST accept both.
