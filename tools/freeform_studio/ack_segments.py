@@ -16,6 +16,7 @@ import bisect
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from .ack_checks import check_free, check_script
 from .audio import rms_envelope
 from .refine import refine_word_times
 from .segmenter import SegOptions, build_segments, ingest_words, make_segment, split_long
@@ -56,11 +57,14 @@ def _assign(words: List[Dict[str, Any]], clips: List[Dict[str, Any]]) -> List[Li
     return buckets
 
 
-def script_segments(refined_asr: Dict[str, Any], duration: float, notes: Dict[str, Any], o: SegOptions) -> List[Dict[str, Any]]:
+def script_segments_with_clips(refined_asr: Dict[str, Any], duration: float, notes: Dict[str, Any],
+                               o: SegOptions) -> Tuple[List[Dict[str, Any]], List[int]]:
+    """The pieces, and for each piece the position of the clip it came from in notes["clips"]."""
     clips = notes["clips"]
     buckets = _assign(ingest_words(refined_asr), clips)
     out: List[Dict[str, Any]] = []
-    for clip, words in zip(clips, buckets):
+    clip_of: List[int] = []
+    for position, (clip, words) in enumerate(zip(clips, buckets)):
         lo, hi = max(0.0, float(clip["start_s"])), min(duration, float(clip["end_s"]))
         spans: List[Tuple[List[Dict[str, Any]], float, float]] = []
         if words:
@@ -82,7 +86,12 @@ def script_segments(refined_asr: Dict[str, Any], duration: float, notes: Dict[st
         for g, a, b in spans:
             if b - a >= MIN_PIECE_S:
                 out.append(make_segment(len(out), g, a, b, o))
-    return out
+                clip_of.append(position)
+    return out, clip_of
+
+
+def script_segments(refined_asr: Dict[str, Any], duration: float, notes: Dict[str, Any], o: SegOptions) -> List[Dict[str, Any]]:
+    return script_segments_with_clips(refined_asr, duration, notes, o)[0]
 
 
 def free_segments(refined_asr: Dict[str, Any], duration: float, notes: Dict[str, Any], o: SegOptions) -> List[Dict[str, Any]]:
@@ -103,5 +112,9 @@ def propose_segments_ack(asr: Dict[str, Any], wav_path: Path, duration: float, n
     db, hop = rms_envelope(wav_path)
     refined, stats = refine_word_times(asr, db, hop)
     if notes.get("mode") == "script":
-        return script_segments(refined, duration, notes, o), stats
-    return free_segments(refined, duration, notes, o), stats
+        segs, clip_of = script_segments_with_clips(refined, duration, notes, o)
+        stats["ack_checks"] = check_script(segs, clip_of, notes, db, hop, wav_path)
+    else:
+        segs = free_segments(refined, duration, notes, o)
+        stats["ack_checks"] = check_free(segs, notes, db, hop, wav_path)
+    return segs, stats

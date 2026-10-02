@@ -238,8 +238,11 @@ class JobRunner:
                         max_s=self.cfg.max_segment_s, min_s=self.cfg.min_segment_s,
                         pad_lead_s=self.cfg.pad_lead_s, pad_tail_s=self.cfg.pad_tail_s),
                     self.store.read(take_id, "ack_clips.json"))
+                ack_report = refine_stats.pop("ack_checks", None)      # measurements for a recording that came from ACK
                 result["refine"] = refine_stats
                 self.store.write(take_id, "asr.json", result)
+                if ack_report is not None:
+                    self.store.write(take_id, "ack_checks.json", ack_report)
                 if edit is not None:
                     self.store.archive(take_id, "edit.json", "edit_history", f"pre-regen-{tag}")
                 self.store.write(take_id, "edit.json", new_edit_doc(segs, rev=(edit or {}).get("rev", 0) + 1))
