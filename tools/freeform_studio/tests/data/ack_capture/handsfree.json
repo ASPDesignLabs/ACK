@@ -1,0 +1,306 @@
+[
+ {
+  "name": "two_cards_with_silence_between",
+  "input": {
+   "runs": [
+    [
+     1.0,
+     -70.0
+    ],
+    [
+     3.0,
+     -20.0
+    ],
+    [
+     2.0,
+     -70.0
+    ],
+    [
+     4.0,
+     -20.0
+    ],
+    [
+     2.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0,
+   "end_silence_hops": 120
+  },
+  "expected": [
+   {
+    "event": "clip",
+    "start_s": 0.5,
+    "end_s": 4.4,
+    "speech_start_s": 1.0,
+    "speech_end_s": 4.0,
+    "reason": "silence"
+   },
+   {
+    "event": "clip",
+    "start_s": 5.5,
+    "end_s": 10.4,
+    "speech_start_s": 6.0,
+    "speech_end_s": 10.0,
+    "reason": "silence"
+   }
+  ]
+ },
+ {
+  "name": "a_click_shorter_than_the_start_run_is_ignored",
+  "input": {
+   "runs": [
+    [
+     1.0,
+     -70.0
+    ],
+    [
+     0.05,
+     -20.0
+    ],
+    [
+     1.0,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     2.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0,
+   "end_silence_hops": 120
+  },
+  "expected": [
+   {
+    "event": "clip",
+    "start_s": 1.55,
+    "end_s": 4.45,
+    "speech_start_s": 2.05,
+    "speech_end_s": 4.05,
+    "reason": "silence"
+   }
+  ]
+ },
+ {
+  "name": "a_short_pause_inside_a_card_does_not_end_it",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     0.8,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     2.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0,
+   "end_silence_hops": 120
+  },
+  "expected": [
+   {
+    "event": "clip",
+    "start_s": 0.0,
+    "end_s": 5.7,
+    "speech_start_s": 0.5,
+    "speech_end_s": 5.3,
+    "reason": "silence"
+   }
+  ]
+ },
+ {
+  "name": "a_long_pause_ends_the_clip_and_the_rest_is_the_next_card",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     1.5,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     2.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0,
+   "end_silence_hops": 120
+  },
+  "expected": [
+   {
+    "event": "clip",
+    "start_s": 0.0,
+    "end_s": 2.9,
+    "speech_start_s": 0.5,
+    "speech_end_s": 2.5,
+    "reason": "silence"
+   },
+   {
+    "event": "clip",
+    "start_s": 3.5,
+    "end_s": 6.4,
+    "speech_start_s": 4.0,
+    "speech_end_s": 6.0,
+    "reason": "silence"
+   }
+  ]
+ },
+ {
+  "name": "a_longer_end_wait_keeps_a_slow_reader_together",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     1.5,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     3.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0,
+   "end_silence_hops": 200
+  },
+  "expected": [
+   {
+    "event": "clip",
+    "start_s": 0.0,
+    "end_s": 6.4,
+    "speech_start_s": 0.5,
+    "speech_end_s": 6.0,
+    "reason": "silence"
+   }
+  ]
+ },
+ {
+  "name": "speech_right_after_a_clip_closes_is_not_lost",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     1.0,
+     -20.0
+    ],
+    [
+     1.25,
+     -70.0
+    ],
+    [
+     1.5,
+     -20.0
+    ],
+    [
+     2.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0,
+   "end_silence_hops": 120
+  },
+  "expected": [
+   {
+    "event": "clip",
+    "start_s": 0.0,
+    "end_s": 1.9,
+    "speech_start_s": 0.5,
+    "speech_end_s": 1.5,
+    "reason": "silence"
+   },
+   {
+    "event": "clip",
+    "start_s": 2.25,
+    "end_s": 4.65,
+    "speech_start_s": 2.75,
+    "speech_end_s": 4.25,
+    "reason": "silence"
+   }
+  ]
+ },
+ {
+  "name": "no_speech_for_twenty_seconds_pauses_the_session",
+  "input": {
+   "runs": [
+    [
+     25.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0,
+   "end_silence_hops": 120
+  },
+  "expected": [
+   {
+    "event": "idle_timeout",
+    "at_s": 20.0
+   }
+  ]
+ },
+ {
+  "name": "speech_that_never_stops_is_closed_at_the_hard_limit",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     35.0,
+     -20.0
+    ]
+   ],
+   "threshold_dbfs": -45.0,
+   "end_silence_hops": 120
+  },
+  "expected": [
+   {
+    "event": "clip",
+    "start_s": 0.0,
+    "end_s": 30.0,
+    "speech_start_s": 0.5,
+    "speech_end_s": 30.0,
+    "reason": "max"
+   }
+  ]
+ }
+]

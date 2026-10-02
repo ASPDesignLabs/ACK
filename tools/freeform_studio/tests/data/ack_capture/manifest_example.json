@@ -1,0 +1,130 @@
+{
+ "schema": "ack-training-capture/1",
+ "created": "2026-10-02T19:30:00Z",
+ "app": {
+  "name": "ACK",
+  "version": "1.0-beta.9"
+ },
+ "sessions": [
+  {
+   "id": "s20261002-180411-a3f9",
+   "mode": "script",
+   "label": "closet, phone on stand, 30 cm",
+   "started": "2026-10-02T18:04:11Z",
+   "ended": "2026-10-02T18:20:00Z",
+   "language": "en-US",
+   "audio": {
+    "sample_rate": 48000,
+    "source": "UNPROCESSED",
+    "source_requested": "UNPROCESSED"
+   },
+   "noise_floor_dbfs": -62.3,
+   "threshold_dbfs": -52.3,
+   "device": {
+    "model": "Pixel 8",
+    "sdk": 35
+   },
+   "script": {
+    "id": "sample-script",
+    "title": "Sample script",
+    "cards_total": 120
+   },
+   "clips": [
+    {
+     "index": 1,
+     "card": 1,
+     "attempt": 1,
+     "file": "sessions/s20261002-180411-a3f9/clips/0001.wav",
+     "text": "The tide came in.",
+     "recorded": "2026-10-02T18:01:00Z",
+     "duration_s": 3.2,
+     "speech": {
+      "start_s": 0.41,
+      "end_s": 2.7
+     },
+     "metrics": {
+      "peak_dbfs": -4.2,
+      "rms_dbfs": -23.1,
+      "clipped_samples": 0
+     },
+     "flags": []
+    },
+    {
+     "index": 2,
+     "card": 2,
+     "attempt": 1,
+     "file": "sessions/s20261002-180411-a3f9/clips/0002.wav",
+     "text": "We walked along the shore.",
+     "recorded": "2026-10-02T18:02:00Z",
+     "duration_s": 3.9,
+     "speech": {
+      "start_s": 0.41,
+      "end_s": 3.4
+     },
+     "metrics": {
+      "peak_dbfs": -4.2,
+      "rms_dbfs": -23.1,
+      "clipped_samples": 0
+     },
+     "flags": [
+      "stumble"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s20261002-190000-0b1c",
+   "mode": "free",
+   "label": "kitchen",
+   "started": "2026-10-02T19:00:00Z",
+   "ended": "2026-10-02T19:01:00Z",
+   "language": "en-US",
+   "audio": {
+    "sample_rate": 48000,
+    "source": "VOICE_RECOGNITION",
+    "source_requested": "UNPROCESSED"
+   },
+   "noise_floor_dbfs": null,
+   "threshold_dbfs": -45.0,
+   "topic": "my morning routine",
+   "recording": {
+    "file": "sessions/s20261002-190000-0b1c/session.wav",
+    "duration_s": 60.0,
+    "metrics": {
+     "peak_dbfs": -6.0,
+     "rms_dbfs": -24.5,
+     "clipped_samples": 0
+    },
+    "proposed_segments": [
+     {
+      "start_s": 0.26,
+      "end_s": 9.91,
+      "end_kind": "pause",
+      "metrics": {
+       "peak_dbfs": -6.0,
+       "rms_dbfs": -24.0,
+       "clipped_samples": 0
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "files": [
+  {
+   "path": "sessions/s20261002-180411-a3f9/clips/0001.wav",
+   "bytes": 1000000,
+   "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "sessions/s20261002-180411-a3f9/clips/0002.wav",
+   "bytes": 2000000,
+   "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "sessions/s20261002-190000-0b1c/session.wav",
+   "bytes": 5760000,
+   "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  }
+ ]
+}

@@ -1,0 +1,346 @@
+{
+ "split": [
+  {
+   "name": "short_sentences_pack_together",
+   "input": {
+    "text": "The tide came in. We walked along the shore. Gulls circled overhead. Nobody said a word. Then the rain began to fall, and we ran for the car.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "The tide came in. We walked along the shore. Gulls circled overhead. Nobody said a word.",
+     "words": 16,
+     "est_s": 6.2,
+     "warnings": []
+    },
+    {
+     "text": "Then the rain began to fall, and we ran for the car.",
+     "words": 12,
+     "est_s": 4.6,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_is_not_a_sentence_end",
+   "input": {
+    "text": "I asked Dr. Smith about it. He said it was fine.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "I asked Dr. Smith about it. He said it was fine.",
+     "words": 11,
+     "est_s": 4.2,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "long_sentence_splits_at_strong_break_then_comma",
+   "input": {
+    "text": "When the old lighthouse keeper finally retired after forty years of faithful service to the harbour, the whole town gathered on the quay to thank him; he stood quietly at the back, smiling, and said very little, because he had never enjoyed being the centre of attention.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "When the old lighthouse keeper finally retired after forty years of faithful service to the harbour, the whole town gathered on the quay to thank him;",
+     "words": 26,
+     "est_s": 10.0,
+     "warnings": []
+    },
+    {
+     "text": "he stood quietly at the back, smiling, and said very little, because he had never enjoyed being the centre of attention.",
+     "words": 21,
+     "est_s": 8.1,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "paragraphs_end_cards",
+   "input": {
+    "text": "First paragraph is short.\n\nSecond paragraph is also short and sweet.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "First paragraph is short.",
+     "words": 4,
+     "est_s": 1.5,
+     "warnings": []
+    },
+    {
+     "text": "Second paragraph is also short and sweet.",
+     "words": 7,
+     "est_s": 2.7,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "single_line_breaks_are_spaces_when_joining",
+   "input": {
+    "text": "A sentence that was\nwrapped by a narrow\nscreen before it was pasted here.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "A sentence that was wrapped by a narrow screen before it was pasted here.",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "keep_mode_makes_each_line_a_card",
+   "input": {
+    "text": "Roses are red,\nViolets are blue,\nSugar is sweet,\nAnd so are you.",
+    "pace_wps": 2.6,
+    "lines": "keep"
+   },
+   "expected": [
+    {
+     "text": "Roses are red,",
+     "words": 3,
+     "est_s": 1.2,
+     "warnings": []
+    },
+    {
+     "text": "Violets are blue,",
+     "words": 3,
+     "est_s": 1.2,
+     "warnings": []
+    },
+    {
+     "text": "Sugar is sweet,",
+     "words": 3,
+     "est_s": 1.2,
+     "warnings": []
+    },
+    {
+     "text": "And so are you.",
+     "words": 4,
+     "est_s": 1.5,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "runt_is_joined_to_the_previous_card",
+   "input": {
+    "text": "We reached the summit just before noon and stopped to eat our sandwiches in the thin cold air while the wind howled around us. Wow.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "We reached the summit just before noon and stopped to eat our sandwiches in the thin cold air while the wind howled around us. Wow.",
+     "words": 25,
+     "est_s": 9.6,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "runt_stays_alone_when_joining_would_pass_the_limit",
+   "input": {
+    "text": "We reached the summit just before noon and stopped to eat our sandwiches in the thin cold air while the wind howled around us all through the afternoon. Wow.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "We reached the summit just before noon and stopped to eat our sandwiches in the thin cold air while the wind howled around us all through the afternoon.",
+     "words": 28,
+     "est_s": 10.8,
+     "warnings": []
+    },
+    {
+     "text": "Wow.",
+     "words": 1,
+     "est_s": 0.4,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "runt_at_the_start_is_joined_to_the_next_card",
+   "input": {
+    "text": "Wow. We reached the summit just before noon and stopped to eat our sandwiches in the thin cold air while the wind howled around us.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "Wow. We reached the summit just before noon and stopped to eat our sandwiches in the thin cold air while the wind howled around us.",
+     "words": 25,
+     "est_s": 9.6,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "digits_and_symbols_are_warned_about",
+   "input": {
+    "text": "It cost $20 for 3 tickets & a map.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "It cost $20 for 3 tickets & a map.",
+     "words": 8,
+     "est_s": 3.1,
+     "warnings": [
+      "digits",
+      "symbols"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "slow_pace_makes_smaller_cards",
+   "input": {
+    "text": "She picked up the heavy book, opened it carefully near the middle, and began to read aloud to the sleepy children gathered around her feet.",
+    "pace_wps": 1.5,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "She picked up the heavy book, opened it carefully near the middle,",
+     "words": 12,
+     "est_s": 8.0,
+     "warnings": []
+    },
+    {
+     "text": "and began to read aloud to the sleepy children gathered around her feet.",
+     "words": 13,
+     "est_s": 8.7,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "very_long_words_are_cut_at_the_character_limit",
+   "input": {
+    "text": "supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious",
+     "words": 17,
+     "est_s": 6.5,
+     "warnings": []
+    },
+    {
+     "text": "supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious supercalifragilisticexpialidocious.",
+     "words": 5,
+     "est_s": 1.9,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "control_characters_and_tabs",
+   "input": {
+    "text": "Tabs\tbecome spaces.\u0007 Bells are dropped.\r\nAnd CRLF is a line break.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "Tabs become spaces. Bells are dropped. And CRLF is a line break.",
+     "words": 12,
+     "est_s": 4.6,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "punctuation_only_paragraph_is_skipped",
+   "input": {
+    "text": "Real words here for you today.\n\n* * *\n\nMore real words follow after the break.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "Real words here for you today.",
+     "words": 6,
+     "est_s": 2.3,
+     "warnings": []
+    },
+    {
+     "text": "More real words follow after the break.",
+     "words": 7,
+     "est_s": 2.7,
+     "warnings": []
+    }
+   ]
+  }
+ ],
+ "describe": [
+  {
+   "name": "the_same_card_is_long_for_a_slower_reader",
+   "input": {
+    "text": "She picked up the heavy book opened it carefully near the middle and began to read aloud to the sleepy children gathered around her feet",
+    "pace_wps": 1.5
+   },
+   "expected": {
+    "words": 25,
+    "est_s": 16.7,
+    "warnings": [
+     "long"
+    ]
+   }
+  },
+  {
+   "name": "and_fine_for_a_faster_one",
+   "input": {
+    "text": "She picked up the heavy book opened it carefully near the middle and began to read aloud to the sleepy children gathered around her feet",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 25,
+    "est_s": 9.6,
+    "warnings": []
+   }
+  },
+  {
+   "name": "pace_is_limited_to_the_allowed_range",
+   "input": {
+    "text": "Four words only here.",
+    "pace_wps": 9.0
+   },
+   "expected": {
+    "words": 4,
+    "est_s": 1.0,
+    "warnings": []
+   }
+  },
+  {
+   "name": "digits_and_symbols",
+   "input": {
+    "text": "Call 555 now & save 10%.",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 5,
+    "est_s": 1.9,
+    "warnings": [
+     "digits",
+     "symbols"
+    ]
+   }
+  }
+ ]
+}
