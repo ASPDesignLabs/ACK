@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Exposes only the GIF library subdirectory of internal storage, for
+         sharing an individual GIF's content out via the native Android
+         share sheet (see GifRepository.getGifShareUri). Nothing else under
+         filesDir is exposed. -->
+    <files-path name="gif_library" path="gif_library/" />
+</paths>

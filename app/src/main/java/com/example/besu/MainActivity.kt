@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu
 
+import com.example.besu.composer.*
 import com.example.besu.computer.*
 import com.example.besu.data.*
 import com.example.besu.decks.*
@@ -259,6 +260,22 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     val manualOverrideFocusRequester = remember { FocusRequester() }
     val manualOverrideKeyboardController = LocalSoftwareKeyboardController.current
 
+    // Legacy Manual Override no longer lives on the TYPE tab (that's the
+    // statement composer now) -- it's reachable as an overlay via Terminal's
+    // /m command instead, so it's never without a home while the composer
+    // takes its place. See TerminalView's onShowManualOverride callback.
+    var showLegacyManualOverride by remember { mutableStateOf(false) }
+
+    // The composer's own "give me the whole screen" toggle -- hides
+    // MainActivity's header and bottom nav while on TYPE, so the content
+    // Box's existing weight(1f) claims that reclaimed space automatically.
+    // Reset whenever the user leaves TYPE, so switching tabs never leaves
+    // another screen stuck without its header/nav.
+    var composerFullscreen by remember { mutableStateOf(false) }
+    LaunchedEffect(viewMode) {
+        if (viewMode != "TYPE") composerFullscreen = false
+    }
+
     fun insertIntoManualOverride(insertText: String) {
         val selection = manualOverrideText.selection
         val newText = manualOverrideText.text.replaceRange(selection.start, selection.end, insertText)
@@ -269,12 +286,16 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     }
 
     // The header takes over to show Target Computer quick-insert only while
-    // the software keyboard is actually visible on the TYPE screen -- not on
-    // mere field focus. That way a hardware keyboard or switch-access user
-    // who focuses the field without ever raising a soft keyboard keeps full
-    // normal header access (DECK/PROFILE/HELP, etc. stay reachable).
+    // the software keyboard is actually visible AND legacy Manual Override's
+    // /m overlay is the thing showing it -- not on mere field focus. That
+    // way a hardware keyboard or switch-access user who focuses the field
+    // without ever raising a soft keyboard keeps full normal header access
+    // (DECK/PROFILE/HELP, etc. stay reachable). Gated on the overlay's own
+    // boolean rather than viewMode == "TYPE", since that viewMode now shows
+    // the statement composer, which owns its own local text field state and
+    // never touches manualOverrideText.
     val isKeyboardVisible = WindowInsets.isImeVisible
-    val showComputerHeaderTakeover = viewMode == "TYPE" && isKeyboardVisible
+    val showComputerHeaderTakeover = showLegacyManualOverride && isKeyboardVisible
 
     LaunchedEffect(showComputerHeaderTakeover) {
         if (showComputerHeaderTakeover) {
@@ -630,6 +651,11 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         ) { paddingValues ->
             Box(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(12.dp)) {
+                    // Hidden in composerFullscreen -- the content Box below
+                    // already has weight(1f), so removing this from
+                    // composition (not just visually hiding it) lets it
+                    // claim the reclaimed space with no extra layout work.
+                    if (!composerFullscreen) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -648,7 +674,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             ManualOverrideHeaderTakeover(
                                 context = context,
                                 primaryColor = primaryColor,
-                                onInsert = { insertIntoManualOverride(it) }
+                                onInsert = { _, label -> insertIntoManualOverride(label) }
                             )
                         } else {
                         Row(
@@ -1243,8 +1269,11 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             }
                         }
                     }
+                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    if (!composerFullscreen) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
 
                     Box(
                         modifier = Modifier
@@ -1260,8 +1289,58 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)
                             )
                     ) {
+                        // Legacy Manual Override, reached via Terminal's /m
+                        // command -- rendered in place of whatever viewMode
+                        // currently points at (viewMode itself is left
+                        // untouched, so closing this returns to exactly
+                        // where Terminal was), rather than in a separate
+                        // Dialog window. A Dialog would sit in its own
+                        // Android window on top of this whole screen,
+                        // which would make showComputerHeaderTakeover's
+                        // swap of MainActivity's own header invisible --
+                        // it has to stay in the same window as the header
+                        // for the keyboard-hugging takeover above to work.
+                        if (showLegacyManualOverride) {
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    Text(
+                                        text = "[CLOSE]",
+                                        color = Color.Gray,
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier
+                                            .heightIn(min = 44.dp)
+                                            .clickable { showLegacyManualOverride = false }
+                                            .padding(8.dp)
+                                    )
+                                }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    TypeView(
+                                        context = context,
+                                        recentPhrases = recentPhrases,
+                                        textFieldValue = manualOverrideText,
+                                        onTextFieldValueChange = { manualOverrideText = it },
+                                        textFieldFocusRequester = manualOverrideFocusRequester,
+                                        onInsertAtCursor = { _, label -> insertIntoManualOverride(label) }
+                                    )
+                                }
+                            }
+                        } else {
                         when (viewMode) {
-                            "TERMINAL" -> TerminalView(logs, context)
+                            "TERMINAL" -> TerminalView(
+                                logs = logs,
+                                context = context,
+                                onShowManualOverride = {
+                                    showLegacyManualOverride = true
+                                    helpManager.onEvent(
+                                        HelpEvent.WatchInput("MANUAL_OVERRIDE_OPENED")
+                                    )
+                                }
+                            )
                             "MATRIX" -> {
                                 when (currentDeckType()) {
                                     DeckType.MATRIX -> {
@@ -1330,13 +1409,11 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 }
                             )
 
-                            "TYPE" -> TypeView(
+                            "TYPE" -> StatementComposerView(
                                 context = context,
-                                recentPhrases = recentPhrases,
-                                textFieldValue = manualOverrideText,
-                                onTextFieldValueChange = { manualOverrideText = it },
-                                textFieldFocusRequester = manualOverrideFocusRequester,
-                                onInsertAtCursor = { insertIntoManualOverride(it) }
+                                primaryColor = primaryColor,
+                                isFullscreen = composerFullscreen,
+                                onToggleFullscreen = { composerFullscreen = !composerFullscreen }
                             )
                             "AUDIO" -> AudioArchitectView(context, primaryColor, systemVoices)
                             "TARGETS" -> key(computerRevision) { TargetView(context, primaryColor) }
@@ -1345,13 +1422,14 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 primaryColor = primaryColor
                             )
                         }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
 
 
-                    if (viewMode != "SETTINGS") {
+                    if (viewMode != "SETTINGS" && !composerFullscreen) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
