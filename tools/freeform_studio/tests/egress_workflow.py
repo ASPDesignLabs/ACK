@@ -177,6 +177,28 @@ def main() -> int:
                 break
             time.sleep(0.1)
         step("transcribed and ready to review", doc and doc["status"] == "ready", str(doc and doc.get("status")))
+        # a package saved by the ACK app: brought in through the browser's own routes, looked inside, added, and processed
+        from ack_package_builder import ClipSpec, PackageBuilder
+        builder = PackageBuilder()
+        builder.script_session([ClipSpec("The tide came in slowly.", speech=2.5), ClipSpec("We walked along the shore.", speech=3.0)])
+        builder.free_session([(0.4, 3.0), (0.5, 7.0)])
+        package = builder.write(work / "ack-training.zip")
+        pkg_bytes = package.read_bytes()
+        half = len(pkg_bytes) // 2
+        step("bring an ACK package onto the PC", call("PUT", "/api/ack/incoming/ack-training.zip?offset=0", raw=pkg_bytes[:half])[0] == 200
+             and call("PUT", f"/api/ack/incoming/ack-training.zip?offset={half}", raw=pkg_bytes[half:])[0] == 200
+             and jcall("POST", "/api/ack/incoming/ack-training.zip/done", {"size": len(pkg_bytes)})[0] == 200)
+        st, plan = jcall("POST", "/api/ack/check", {"name": "ack-training.zip"})
+        step("look inside it", st == 200 and plan and plan["to_import"] == 2, str(st))
+        st, added = jcall("POST", "/api/ack/import", {"name": "ack-training.zip"})
+        step("add its recordings", st == 200 and added and len(added["created"]) == 2, str(st))
+        for item in (added or {}).get("created", []):
+            for _ in range(300):
+                st, adoc = jcall("GET", f"/api/takes/{item['take_id']}")
+                if adoc and adoc["status"] in ("ready", "error"):
+                    break
+                time.sleep(0.1)
+            step("transcribed and ready to review (from ACK)", adoc and adoc["status"] == "ready", str(adoc and adoc.get("status")))
         st, edit = jcall("GET", f"/api/takes/{tid}/edit")
         segs = edit["segments"]
         segs[0]["status"] = "approved"
@@ -189,6 +211,7 @@ def main() -> int:
         call("GET", f"/api/takes?token={TOKEN}", auth=False)
         for name, args in [("build_dataset", ["-m", "freeform_studio.build_dataset", "--output", str(out), "--out", str(ds), "--include", "approved",
                                               "--allow", "none", "--min-seconds", "0.5"]),
+                           ("ack_import_dry_run", ["-m", "freeform_studio.ack_import", str(package), "--output", str(out), "--dry-run"]),
                            ("export_cli", ["-m", "freeform_studio.export", "--output", str(out), "--dry-run"]),
                            ("backup_cli", ["-m", "freeform_studio.backup", "--output", str(out), "--backup-dir", str(bk), "--force"]),
                            ("repair_cli", ["-m", "freeform_studio.repair", "--output", str(out)]),

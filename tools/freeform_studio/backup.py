@@ -53,7 +53,9 @@ NAME_RE = re.compile(r"^freeform-backup-(?P<code>[A-Za-z0-9_-]+)-(?P<stamp>\d{8}
 RAW_RE = re.compile(r"^raw\.(webm|ogg|m4a|wav)$")
 PART_RE = re.compile(r"^\d{6}\.bin$")
 HIST_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,120}$")
-TOP_FILES = {"take.json", "edit.json", "asr.json"}
+# ack_clips.json is the phone's own notes (the words on each card, where each clip sits in the recording); without it a restored recording
+# would lose its card texts and the clip boundaries the pieces are cut at. ack_checks.json is what this computer measured from them.
+TOP_FILES = {"take.json", "edit.json", "asr.json", "ack_clips.json", "ack_checks.json"}
 HISTORY_DIRS = {"edit_history", "asr_history", "reference_history"}
 DEFAULT_DIR = "~/backups/freeform-studio"
 
