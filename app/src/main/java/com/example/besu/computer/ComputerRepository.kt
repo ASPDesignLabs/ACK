@@ -2,6 +2,7 @@
 package com.example.besu.computer
 
 import com.example.besu.backup.*
+import com.example.besu.data.*
 import com.example.besu.output.*
 import com.example.besu.watch.*
 import android.content.Context
@@ -218,10 +219,25 @@ object ComputerRepository {
                 category
             }
         }
+
+        // Re-push the active deck's synced categories (now carrying the new
+        // activeNodeId) to the watch, regardless of which of this function's
+        // three call sites (phone UI, or the watch's own /sys/req_computer_pick
+        // handler) triggered the change -- see WatchSync.sendComputerCategoriesForDeck.
+        WatchSync.sendComputerCategoriesForDeck(context, CommandRepository.getActiveDeckId(context))
+        // Also keep the unscoped ALL TARGETS snapshot (OVERSEER) no staler
+        // than this pick -- see WatchSync.sendAllComputerCategories.
+        WatchSync.sendAllComputerCategories(context)
     }
 
     fun clearActiveEntry(context: Context, categoryId: String) {
         updateCategory(context, categoryId) { it.copy(activeNodeId = null) }
+
+        // Same reasoning as setActiveEntry's resync -- a clear is just as much
+        // a change to activeNodeId as a pick is, including when this runs via
+        // consumeIfSingleUse below.
+        WatchSync.sendComputerCategoriesForDeck(context, CommandRepository.getActiveDeckId(context))
+        WatchSync.sendAllComputerCategories(context)
     }
 
     fun getActiveEntry(context: Context, categoryId: String): ComputerNode? {
