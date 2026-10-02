@@ -161,7 +161,7 @@ Optional, short, lower case. A reader MUST ignore a flag it does not know.
 Both sides compute levels the same way, so the PC can check the phone's notes and the phone's notes mean the same as the PC's.
 
 * **Rounding.** Wherever a number is rounded, it is rounded half away from zero (2.5 becomes 3, −2.5 becomes −3), never to the nearest even number. Negative zero is written as `0.0`.
-* **Hop.** `HOP_S` = 0.010 s, which is `round(sample_rate * 0.01)` samples (480 at 48000 Hz). The last, partial hop is kept and measured over the samples it has.
+* **Hop.** `HOP_S` = 0.010 s, which is `sample_rate` divided by 100, rounded down, in samples (480 at 48000 Hz, 441 at 44100 Hz). The last, partial hop is kept and measured over the samples it has.
 * **Level of a hop**, in dB relative to full scale: `20 * log10(max(rms, 1e-9) / 32768)`, where `rms` is the root-mean-square of the hop's 16-bit samples. This is the formula Freeform's `audio.rms_envelope` uses.
 
 ### 5.1 Clip metrics
@@ -187,7 +187,7 @@ The phone sizes the cards so that no audio ever needs cutting in script mode: on
 
 Inputs: the script text, `pace_wps` (words per second; `DEFAULT_PACE_WPS` until the phone has measured the person's own pace from kept clips, then that measured pace limited to `PACE_MIN_WPS`..`PACE_MAX_WPS`), and `lines` (`"join"`, the default: a single line break is just a space and a blank line ends a paragraph; or `"keep"`: every non-empty line is its own paragraph).
 
-1. Treat a tab as a space, then remove control characters other than line breaks. A **word** is a space-separated token that contains at least one letter or digit.
+1. Treat a tab as a space, then remove control characters other than line breaks. A **word** is a space-separated token (split on any Unicode white space) that contains at least one letter or number (a character whose Unicode general category starts with L or N).
 2. `budget_words` = `floor(pace_wps * TARGET_S)` and `max_words` = `floor(pace_wps * MAX_EST_S)`.
 3. Split each paragraph into sentences. A token ends a sentence when it ends in `.`, `!`, `?` or `…` (optionally followed by closing quotes or brackets), is not one of `mr. mrs. ms. dr. st. vs. etc. e.g. i.e. no. jr. sr. prof. gen. col.`, and the next token starts with a capital letter `A`–`Z` or a digit (optionally after an opening quote or bracket), or there is no next token.
 4. A sentence of more than `max_words` words is split. Candidate cuts are after any token that leaves at least `MIN_SPLIT_WORDS` words on both sides. Prefer, in order: a token ending in `;` `:` `—` or `–`; then one ending in `,`; then any. Among equals, the cut closest to the middle; among those, the earlier. Split both halves again if they are still longer than `max_words`.
@@ -195,6 +195,8 @@ Inputs: the script text, `pace_wps` (words per second; `DEFAULT_PACE_WPS` until 
 6. A card of fewer than `MIN_CARD_WORDS` words is joined to the previous card in the same paragraph, or else the next, when the joined card stays within `max_words`.
 7. A card longer than `MAX_CARD_CHARS` characters is cut at the last space at or before that length, repeatedly.
 8. Each card has `text` (tokens joined by single spaces), `words`, `est_s` = `words / pace_wps` to 1 decimal (with the pace limited as in the inputs above), and warnings: `digits` if it contains a digit, `symbols` if it contains any of `& @ # % * _ = + < > { } \ / |`, `long` if `est_s` is more than `MAX_EST_S`. Cards are built within that limit for the pace they were made at, so `long` appears when the person's pace is later measured to be slower than it was assumed to be: the phone works out a card's numbers again with the same rule (`describe` in the test cases) whenever the pace changes. A person should write digits and symbols the way they will say them, because the recording's text becomes what a voice learns to pronounce.
+
+**Measuring the person's pace.** Once at least `PACE_MIN_CLIPS` kept clips have a `speech` span, the phone's pace is the total number of words on those cards divided by the total seconds of speech in them (`end_s - start_s`), limited to `PACE_MIN_WPS`..`PACE_MAX_WPS`. Until then the default pace is used. (Phone-only; nothing on the PC depends on it.)
 
 ## 7. Hands-free capture **[reference]**
 
@@ -259,6 +261,7 @@ These are the values both sides use. A test compares this block with the referen
   "DEFAULT_PACE_WPS": 2.6,
   "PACE_MIN_WPS": 1.5,
   "PACE_MAX_WPS": 4.0,
+  "PACE_MIN_CLIPS": 5,
   "TARGET_S": 9.5,
   "MAX_EST_S": 11.0,
   "MIN_CARD_WORDS": 3,
@@ -297,5 +300,6 @@ These are the values both sides use. A test compares this block with the referen
 | `segments.json` | a level stream to proposed segments (section 8) |
 | `metrics.json` | synthetic samples to metrics and speech span (section 5) |
 | `manifest_example.json` | a complete, valid manifest (checksums are placeholders) |
+| `fuzz.json` | about 190 generated cases (fixed seed): tricky text to cards, random level streams to clips and to proposed segments. Hand-written cases show the rules; these catch the places two implementations quietly disagree (Unicode, rounding, ties) |
 
 Level streams are written as runs, `[seconds, level_dbfs]`, so a case is readable at a glance. Regenerate the expected values from the reference code with `python tools/freeform_studio/tests/ack_capture_reference.py --write`; the test suite fails if the files and the reference code disagree, so a change to a rule can never go unnoticed.

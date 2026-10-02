@@ -286,6 +286,642 @@
      "warnings": []
     }
    ]
+  },
+  {
+   "name": "a_card_of_exactly_the_character_limit_is_not_cut",
+   "input": {
+    "text": "abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw.",
+     "words": 25,
+     "est_s": 9.6,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "a_card_one_character_over_the_limit_is_cut",
+   "input": {
+    "text": "abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvwx.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw abcdefghijklmnopqrstuvw",
+     "words": 24,
+     "est_s": 9.2,
+     "warnings": []
+    },
+    {
+     "text": "abcdefghijklmnopqrstuvwx.",
+     "words": 1,
+     "est_s": 0.4,
+     "warnings": []
+    }
+   ]
+  },
+  {
+   "name": "strong_break_semicolon_beats_a_comma_at_the_middle",
+   "input": {
+    "text": "w1 w2 w3 w4 w5 w6 w7 w8; w9 w10 w11 w12 w13 w14 w15, w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "w1 w2 w3 w4 w5 w6 w7 w8;",
+     "words": 8,
+     "est_s": 3.1,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "w9 w10 w11 w12 w13 w14 w15, w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+     "words": 22,
+     "est_s": 8.5,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "strong_break_colon_beats_a_comma_at_the_middle",
+   "input": {
+    "text": "w1 w2 w3 w4 w5 w6 w7 w8: w9 w10 w11 w12 w13 w14 w15, w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "w1 w2 w3 w4 w5 w6 w7 w8:",
+     "words": 8,
+     "est_s": 3.1,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "w9 w10 w11 w12 w13 w14 w15, w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+     "words": 22,
+     "est_s": 8.5,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "strong_break_em_dash_beats_a_comma_at_the_middle",
+   "input": {
+    "text": "w1 w2 w3 w4 w5 w6 w7 w8— w9 w10 w11 w12 w13 w14 w15, w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "w1 w2 w3 w4 w5 w6 w7 w8—",
+     "words": 8,
+     "est_s": 3.1,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "w9 w10 w11 w12 w13 w14 w15, w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+     "words": 22,
+     "est_s": 8.5,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "strong_break_en_dash_beats_a_comma_at_the_middle",
+   "input": {
+    "text": "w1 w2 w3 w4 w5 w6 w7 w8– w9 w10 w11 w12 w13 w14 w15, w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "w1 w2 w3 w4 w5 w6 w7 w8–",
+     "words": 8,
+     "est_s": 3.1,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "w9 w10 w11 w12 w13 w14 w15, w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+     "words": 22,
+     "est_s": 8.5,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a_cut_leaving_exactly_the_minimum_on_the_left_is_allowed",
+   "input": {
+    "text": "w1 w2 w3 w4; w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "w1 w2 w3 w4;",
+     "words": 4,
+     "est_s": 1.5,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+     "words": 26,
+     "est_s": 10.0,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a_cut_leaving_one_word_less_on_the_left_is_not",
+   "input": {
+    "text": "w1 w2 w3; w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "w1 w2 w3; w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a_cut_leaving_exactly_the_minimum_on_the_right_is_allowed",
+   "input": {
+    "text": "w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26; w27 w28 w29 w30.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26;",
+     "words": 26,
+     "est_s": 10.0,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "w27 w28 w29 w30.",
+     "words": 4,
+     "est_s": 1.5,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a_cut_leaving_one_word_less_on_the_right_is_not",
+   "input": {
+    "text": "w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27; w28 w29 w30.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27; w28 w29 w30.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_col_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 Col. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 Col. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_dr_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 Dr. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 Dr. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_eg_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 e.g. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 e.g. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_etc_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 etc. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 etc. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_gen_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 Gen. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 Gen. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_ie_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 i.e. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 i.e. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_jr_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 Jr. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 Jr. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_mr_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 Mr. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 Mr. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_mrs_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 Mrs. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 Mrs. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_ms_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 Ms. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 Ms. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_no_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 No. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 No. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_prof_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 Prof. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 Prof. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_sr_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 Sr. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 Sr. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_st_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 St. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 St. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "abbreviation_vs_is_not_a_sentence_end",
+   "input": {
+    "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 Vs. Then we went home after the long day.",
+    "pace_wps": 2.6,
+    "lines": "join"
+   },
+   "expected": [
+    {
+     "text": "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14",
+     "words": 14,
+     "est_s": 5.4,
+     "warnings": [
+      "digits"
+     ]
+    },
+    {
+     "text": "word15 word16 word17 word18 word19 word20 Vs. Then we went home after the long day.",
+     "words": 15,
+     "est_s": 5.8,
+     "warnings": [
+      "digits"
+     ]
+    }
+   ]
   }
  ],
  "describe": [
@@ -338,6 +974,216 @@
     "est_s": 1.9,
     "warnings": [
      "digits",
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u0026_is_a_symbol_warning",
+   "input": {
+    "text": "press & now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u0040_is_a_symbol_warning",
+   "input": {
+    "text": "press @ now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u0023_is_a_symbol_warning",
+   "input": {
+    "text": "press # now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u0025_is_a_symbol_warning",
+   "input": {
+    "text": "press % now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u002a_is_a_symbol_warning",
+   "input": {
+    "text": "press * now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u005f_is_a_symbol_warning",
+   "input": {
+    "text": "press _ now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u003d_is_a_symbol_warning",
+   "input": {
+    "text": "press = now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u002b_is_a_symbol_warning",
+   "input": {
+    "text": "press + now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u003c_is_a_symbol_warning",
+   "input": {
+    "text": "press < now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u003e_is_a_symbol_warning",
+   "input": {
+    "text": "press > now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u007b_is_a_symbol_warning",
+   "input": {
+    "text": "press { now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u007d_is_a_symbol_warning",
+   "input": {
+    "text": "press } now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u005c_is_a_symbol_warning",
+   "input": {
+    "text": "press \\ now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u002f_is_a_symbol_warning",
+   "input": {
+    "text": "press / now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
+     "symbols"
+    ]
+   }
+  },
+  {
+   "name": "symbol_u007c_is_a_symbol_warning",
+   "input": {
+    "text": "press | now",
+    "pace_wps": 2.6
+   },
+   "expected": {
+    "words": 2,
+    "est_s": 0.8,
+    "warnings": [
      "symbols"
     ]
    }

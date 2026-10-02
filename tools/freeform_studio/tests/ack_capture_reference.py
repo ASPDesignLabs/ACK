@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import json
 import math
+import random
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -38,6 +40,7 @@ CONSTANTS: Dict[str, Any] = {
     "DEFAULT_PACE_WPS": 2.6,
     "PACE_MIN_WPS": 1.5,
     "PACE_MAX_WPS": 4.0,
+    "PACE_MIN_CLIPS": 5,
     "TARGET_S": 9.5,
     "MAX_EST_S": 11.0,
     "MIN_CARD_WORDS": 3,
@@ -103,7 +106,7 @@ def clamp_floor(db: float) -> float:
 
 
 def hop_levels(samples: np.ndarray, rate: int) -> List[float]:
-    hop = int(round(rate * HOP))
+    hop = rate // 100                      # whole samples per 10 ms, rounded down: 480 at 48000 Hz, 441 at 44100 Hz
     out = []
     for i in range(0, len(samples), hop):
         chunk = samples[i:i + hop].astype(np.float64)
@@ -165,7 +168,7 @@ _SYMBOL = re.compile(r"[&@#%*_=+<>{}\\/|]")
 
 
 def _is_word(tok: str) -> bool:
-    return any(ch.isalnum() for ch in tok)
+    return any(unicodedata.category(ch)[0] in "LN" for ch in tok)     # a letter or a number of any script
 
 
 def _wc(tokens: Sequence[str]) -> int:
@@ -478,6 +481,47 @@ CARD_CASES: List[Dict[str, Any]] = [
      "text": "Real words here for you today.\n\n* * *\n\nMore real words follow after the break."},
 ]
 
+
+def _char_limit_case(extra: int) -> Dict[str, Any]:
+    # one sentence of 25 words (so it is not split for length): 24 words of 23 letters and a last one of 24 characters, plus spaces
+    word = "abcdefghijklmnopqrstuvw"
+    text = " ".join([word] * 24 + [word + "x" * extra + "."])
+    assert len(text) == C["MAX_CARD_CHARS"] + extra
+    name = "a_card_of_exactly_the_character_limit_is_not_cut" if extra == 0 else "a_card_one_character_over_the_limit_is_cut"
+    return {"name": name, "text": text, "pace_wps": 2.6, "lines": "join"}
+
+
+def _break_case(name: str, ch: str, after_word: int, comma_after: Optional[int] = None) -> Dict[str, Any]:
+    words = [f"w{i}" for i in range(1, 31)]
+    words[after_word - 1] += ch
+    if comma_after is not None:
+        words[comma_after - 1] += ","
+    words[-1] += "."
+    return {"name": name, "text": " ".join(words), "pace_wps": 2.6, "lines": "join"}
+
+
+CARD_CASES += [_char_limit_case(0), _char_limit_case(1)]
+# a long sentence (30 words) is cut at the strongest break; each strong character must be tested on its own, far from the middle,
+# with a comma at the middle that would win if the character were not recognised
+CARD_CASES += [_break_case(f"strong_break_{n}_beats_a_comma_at_the_middle", ch, 8, 15)
+               for n, ch in (("semicolon", ";"), ("colon", ":"), ("em_dash", "—"), ("en_dash", "–"))]
+# a cut must leave at least MIN_SPLIT_WORDS (4) words on each side
+CARD_CASES += [_break_case("a_cut_leaving_exactly_the_minimum_on_the_left_is_allowed", ";", 4),
+               _break_case("a_cut_leaving_one_word_less_on_the_left_is_not", ";", 3),
+               _break_case("a_cut_leaving_exactly_the_minimum_on_the_right_is_allowed", ";", 26),
+               _break_case("a_cut_leaving_one_word_less_on_the_right_is_not", ";", 27)]
+
+
+def _abbreviation_case(ab: str) -> Dict[str, Any]:
+    token = ab if ab in ("etc.", "e.g.", "i.e.") else ab.title()
+    words = " ".join(f"word{i}" for i in range(1, 21))
+    return {"name": f"abbreviation_{ab.replace('.', '')}_is_not_a_sentence_end", "pace_wps": 2.6, "lines": "join",
+            "text": f"{words} {token} Then we went home after the long day."}
+
+
+# every abbreviation the splitter knows must be tested on its own: dropping one from a list is otherwise silent
+CARD_CASES += [_abbreviation_case(a) for a in sorted(_ABBREV)]
+
 DESCRIBE_CASES: List[Dict[str, Any]] = [
     {"name": "the_same_card_is_long_for_a_slower_reader", "pace_wps": 1.5,
      "text": "She picked up the heavy book opened it carefully near the middle and began to read aloud to the sleepy children "
@@ -488,6 +532,9 @@ DESCRIBE_CASES: List[Dict[str, Any]] = [
     {"name": "pace_is_limited_to_the_allowed_range", "pace_wps": 9.0, "text": "Four words only here."},
     {"name": "digits_and_symbols", "pace_wps": 2.6, "text": "Call 555 now & save 10%."},
 ]
+
+# every symbol that triggers the "symbols" warning is tested on its own
+DESCRIBE_CASES += [{"name": f"symbol_u{ord(ch):04x}_is_a_symbol_warning", "text": f"press {ch} now", "pace_wps": 2.6} for ch in "&@#%*_=+<>{}\\/|"]
 
 HANDSFREE_CASES: List[Dict[str, Any]] = [
     {"name": "two_cards_with_silence_between", "threshold_dbfs": -45.0, "end_silence_hops": 120,
@@ -508,6 +555,19 @@ HANDSFREE_CASES: List[Dict[str, Any]] = [
      "runs": [[0.5, QUIET], [35.0, LOUD]]},
 ]
 
+HANDSFREE_CASES += [
+    {"name": "a_pause_exactly_as_long_as_the_end_wait_closes_the_clip", "threshold_dbfs": -45.0, "end_silence_hops": 120,
+     "runs": [[0.5, QUIET], [2.0, LOUD], [1.2, QUIET], [1.0, LOUD], [2.0, QUIET]]},
+    {"name": "a_pause_one_hop_shorter_than_the_end_wait_does_not", "threshold_dbfs": -45.0, "end_silence_hops": 120,
+     "runs": [[0.5, QUIET], [2.0, LOUD], [1.19, QUIET], [1.0, LOUD], [2.0, QUIET]]},
+    {"name": "a_run_exactly_the_start_length_starts_a_clip", "threshold_dbfs": -45.0, "end_silence_hops": 120,
+     "runs": [[0.5, QUIET], [0.1, LOUD], [2.0, QUIET]]},
+    {"name": "a_run_one_hop_short_of_the_start_length_is_ignored", "threshold_dbfs": -45.0, "end_silence_hops": 120,
+     "runs": [[0.5, QUIET], [0.09, LOUD], [2.0, QUIET]]},
+    {"name": "a_level_exactly_at_the_threshold_is_not_speech", "threshold_dbfs": -45.0, "end_silence_hops": 120,
+     "runs": [[0.5, QUIET], [3.0, -45.0], [2.0, QUIET]]},
+]
+
 SEGMENT_CASES: List[Dict[str, Any]] = [
     {"name": "two_regions_reach_the_cut_length_at_a_pause", "threshold_dbfs": -45.0,
      "runs": [[0.5, QUIET], [3.0, LOUD], [0.5, QUIET], [6.0, LOUD], [0.6, QUIET], [2.0, LOUD], [0.5, QUIET]]},
@@ -524,6 +584,29 @@ SEGMENT_CASES: List[Dict[str, Any]] = [
      "runs": [[1.0, QUIET], [0.05, LOUD], [1.0, QUIET], [3.0, LOUD], [1.0, QUIET]]},
     {"name": "region_starting_after_the_force_window_cuts_at_the_previous_pause", "threshold_dbfs": -45.0,
      "runs": [[0.2, QUIET], [0.6, LOUD], [11.0, QUIET], [4.0, LOUD], [0.2, QUIET]]},
+]
+
+SEGMENT_CASES += [
+    {"name": "a_region_exactly_the_cut_length_is_cut_at_the_next_pause", "threshold_dbfs": -45.0,
+     "runs": [[0.5, QUIET], [8.0, LOUD], [0.5, QUIET], [1.0, LOUD], [0.5, QUIET]]},
+    {"name": "a_region_one_hop_short_of_the_cut_length_keeps_going", "threshold_dbfs": -45.0,
+     "runs": [[0.5, QUIET], [7.99, LOUD], [0.5, QUIET], [1.0, LOUD], [0.5, QUIET]]},
+    {"name": "a_region_exactly_the_force_length_is_not_forced", "threshold_dbfs": -45.0,
+     "runs": [[0.5, QUIET], [11.0, LOUD], [0.5, QUIET]]},
+    {"name": "a_region_one_hop_over_the_force_length_is_forced", "threshold_dbfs": -45.0,
+     "runs": [[0.5, QUIET], [11.01, LOUD], [0.5, QUIET]]},
+    {"name": "an_early_pause_exactly_the_minimum_piece_is_used", "threshold_dbfs": -45.0,
+     "runs": [[0.5, QUIET], [1.0, LOUD], [0.5, QUIET], [12.0, LOUD], [0.5, QUIET]]},
+    {"name": "an_early_pause_one_hop_under_the_minimum_piece_is_not", "threshold_dbfs": -45.0,
+     "runs": [[0.5, QUIET], [0.99, LOUD], [0.5, QUIET], [12.0, LOUD], [0.5, QUIET]]},
+    {"name": "a_level_exactly_at_the_threshold_is_not_speech", "threshold_dbfs": -45.0,
+     "runs": [[1.0, -45.0], [3.0, LOUD], [1.0, -45.0]]},
+    {"name": "a_gap_exactly_the_pause_length_separates_two_regions", "threshold_dbfs": -45.0,
+     "runs": [[0.5, QUIET], [8.0, LOUD], [0.3, QUIET], [2.0, LOUD], [0.5, QUIET]]},
+    {"name": "a_gap_one_hop_shorter_than_a_pause_is_closed_up", "threshold_dbfs": -45.0,
+     "runs": [[0.5, QUIET], [8.0, LOUD], [0.29, QUIET], [2.0, LOUD], [0.5, QUIET]]},
+    {"name": "a_burst_exactly_the_minimum_region_length_is_kept", "threshold_dbfs": -45.0,
+     "runs": [[1.0, QUIET], [0.1, LOUD], [1.0, QUIET]]},
 ]
 
 METRICS_CASES: List[Dict[str, Any]] = [
@@ -573,6 +656,78 @@ def _manifest_example() -> Dict[str, Any]:
     }
 
 
+# ---------------------------------------------------------------- generated cases (a differential check for other implementations)
+# A fixed seed makes these reproducible: --write always produces the same file, and another implementation must give the same answers.
+FUZZ_SEED = 20261002
+
+_FUZZ_WORDS = ["the", "tide", "came", "in", "and", "we", "walked", "along", "shore", "Gulls", "circled", "overhead", "Nobody", "said",
+               "a", "word", "naïve", "café", "日本語", "Привет", "über", "42", "3.5", "1,000", "R&D", "100%", "e-mail", "don't", "O'Brien",
+               "x" * 55, "—", "&", "...", "(", "ok", "I", "to", "of", "reading", "slowly", "carefully", "because", "however"]
+_FUZZ_ENDS = ["", "", "", "", ",", ",", ".", ".", "!", "?", ";", ":", "…", "—", ".\"", ".)", "?”", ",\""]
+_FUZZ_ABBREV = ["Dr.", "Mr.", "Mrs.", "etc.", "e.g.", "St.", "vs.", "No."]
+_FUZZ_OPEN = ["", "", "", "", "\"", "“", "(", "['"]
+_FUZZ_SEPS = [" ", " ", " ", " ", " ", "\t", " ", "　", "  ", " \n", "\n"]
+
+
+def _pick(r: random.Random, seq: Sequence[Any]) -> Any:
+    return seq[int(r.random() * len(seq))]
+
+
+def _fuzz_text(r: random.Random) -> str:
+    paragraphs = []
+    for _ in range(1 + int(r.random() * 4)):
+        tokens = []
+        for _ in range(3 + int(r.random() * 45)):
+            if r.random() < 0.08:
+                tokens.append(_pick(r, _FUZZ_ABBREV))
+            else:
+                tokens.append(_pick(r, _FUZZ_OPEN) + _pick(r, _FUZZ_WORDS) + _pick(r, _FUZZ_ENDS))
+        text = ""
+        for i, t in enumerate(tokens):
+            text += t if i == 0 else _pick(r, _FUZZ_SEPS) + t
+        if r.random() < 0.05:
+            text += "\x07"                                   # a control character, which must be dropped
+        paragraphs.append(text)
+    return _pick(r, ["\n\n", "\n \n", "\r\n\r\n", "\n\n\n", "\n"]).join(paragraphs)
+
+
+def _fuzz_runs(r: random.Random, shape: str) -> List[List[float]]:
+    runs: List[List[float]] = []
+    if shape == "cards":                                # bursts of speech between silences, now and then a very long silence or burst
+        for _ in range(2 + int(r.random() * 8)):
+            quiet = _pick(r, [0.05, 0.2, 0.6, 1.0, 1.5, 2.5, 2.5, 25.0 if r.random() < 0.12 else 0.4])
+            burst = _pick(r, [0.03, 0.3, 1.0, 2.0, 3.0, 6.0, 9.0, 32.0 if r.random() < 0.1 else 4.0])
+            runs.append([quiet, QUIET])
+            runs.append([burst, LOUD])
+            if r.random() < 0.3:                          # a dip inside speech, around the end-of-card wait
+                runs.append([_pick(r, [0.1, 0.5, 0.9, 1.1, 1.3]), QUIET])
+                runs.append([_pick(r, [0.5, 1.0, 2.0]), LOUD])
+        runs.append([_pick(r, [0.3, 1.5, 3.0]), QUIET])
+        return runs
+    levels = [QUIET, QUIET, LOUD, LOUD, LOUD, -44.0, -46.0, -30.0, -60.0]       # a recording of someone talking
+    for _ in range(3 + int(r.random() * 40)):
+        runs.append([round(0.02 + (r.random() ** 2) * 9.0, 2), _pick(r, levels)])
+    return runs
+
+
+def build_fuzz() -> Dict[str, Any]:
+    r = random.Random(FUZZ_SEED)
+    cards = []
+    for _ in range(70):
+        text, pace, lines = _fuzz_text(r), _pick(r, [1.5, 2.0, 2.6, 2.6, 3.2, 4.0]), _pick(r, ["join", "join", "keep"])
+        cards.append({"input": {"text": text, "pace_wps": pace, "lines": lines}, "expected": split_cards(text, pace, lines)})
+    handsfree = []
+    for _ in range(60):
+        runs, thr, wait = _fuzz_runs(r, "cards"), _pick(r, [-45.0, -40.0, -50.0]), _pick(r, [120, 120, 80, 200])
+        handsfree.append({"input": {"runs": runs, "threshold_dbfs": thr, "end_silence_hops": wait},
+                          "expected": run_detector(levels_from_runs(runs), thr, wait)})
+    segments = []
+    for _ in range(60):
+        runs, thr = _fuzz_runs(r, "talk"), _pick(r, [-45.0, -45.0, -40.0, -50.0])
+        segments.append({"input": {"runs": runs, "threshold_dbfs": thr}, "expected": propose_segments(levels_from_runs(runs), thr)})
+    return {"seed": FUZZ_SEED, "cards": cards, "handsfree": handsfree, "segments": segments}
+
+
 # ---------------------------------------------------------------- vector files
 def build_vectors() -> Dict[str, Any]:
     cards = {"split": [{"name": c["name"], "input": {"text": c["text"], "pace_wps": c["pace_wps"], "lines": c["lines"]},
@@ -592,7 +747,7 @@ def build_vectors() -> Dict[str, Any]:
         metrics.append({"name": c["name"], "input": {"rate": c["rate"], "parts": c["parts"], "noise_floor_dbfs": c["noise_floor_dbfs"]},
                         "expected": {"threshold_dbfs": rnd(thr, 1), **clip_metrics(samples, c["rate"], thr)}})
     return {"cards.json": cards, "handsfree.json": handsfree, "segments.json": segments, "metrics.json": metrics,
-            "manifest_example.json": _manifest_example()}
+            "manifest_example.json": _manifest_example(), "fuzz.json": build_fuzz()}
 
 
 def dump(obj: Any) -> str:
