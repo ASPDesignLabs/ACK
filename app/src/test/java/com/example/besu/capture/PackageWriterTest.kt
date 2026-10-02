@@ -287,6 +287,29 @@ class PackageWriterTest {
         refused(listOf(s.copy(clips = listOf(s.clips[0].copy(metrics = s.clips[0].metrics.copy(peakDbfs = Double.POSITIVE_INFINITY))) + s.clips.drop(1))), "peak level")
     }
 
+    @Test
+    fun aFileThatGrowsWhileItIsBeingPackagedStopsTheExportInsteadOfWritingAPackageThatLies() {
+        val s = scriptSession()
+        var grown = false
+        try {
+            PackageWriter.write(listOf(s), ByteArrayOutputStream(), created, "1.0-beta.9") { _, _ ->
+                if (!grown) { grown = true; s.clips[0].wav.appendBytes(ByteArray(10)) }
+            }
+            fail("expected the export to stop")
+        } catch (e: PackageWriteException) {
+            assertTrue(e.message, "changed while it was being packaged" in e.message!!)
+        }
+        assertTrue(grown)
+    }
+
+    @Test
+    fun levelsInTheManifestAreRoundedToOneDecimal() {
+        val s = scriptSession().copy(noiseFloorDbfs = -62.34, thresholdDbfs = -52.349)
+        val session = manifestOf(write(s).first)["sessions"]!!.jsonArray.single().jsonObject
+        assertEquals(-62.3, session["noise_floor_dbfs"]!!.jsonPrimitive.double, 0.0)
+        assertEquals(-52.3, session["threshold_dbfs"]!!.jsonPrimitive.double, 0.0)
+    }
+
     // -- text the person typed is cleaned, not refused ----------------------------------------------------------------------
     @Test
     fun typedTextIsCleanedAndCutToLength() {
@@ -316,6 +339,20 @@ class PackageWriterTest {
         val v = PackageVerifier.verify(ByteArrayInputStream(damaged))
         assertFalse(v.ok)
         assertTrue(v.problems.toString(), v.problems.any { "0002.wav" in it && "checksum" in it })
+    }
+
+    @Test
+    fun theVerifierNoticesASizeThatDoesNotMatchEvenWhenTheChecksumDoes() {
+        val (bytes, _) = write(scriptSession())
+        val edited = rezip(bytes) { n, d ->
+            if (n != "manifest.json") return@rezip n to d
+            val text = String(d, Charsets.UTF_8)
+            val m = Regex("\"bytes\": (\\d+)").find(text)!!                    // the first listed file's size, one byte too many
+            n to text.replaceRange(m.range, "\"bytes\": ${m.groupValues[1].toLong() + 1}").toByteArray(Charsets.UTF_8)
+        }
+        val v = PackageVerifier.verify(ByteArrayInputStream(edited))
+        assertTrue(v.problems.toString(), v.problems.any { "saved size differs" in it })
+        assertFalse(v.problems.any { "checksum" in it })
     }
 
     @Test

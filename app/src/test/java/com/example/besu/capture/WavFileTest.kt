@@ -132,6 +132,13 @@ class WavFileTest {
     }
 
     @Test
+    fun aHeaderWhoseOverallLengthIsWrongIsRefusedEvenWhenTheAudioLengthIsRight() {
+        val h = WavFile.header(48_000, 2000)
+        h[4] = (h[4] + 100).toByte()                                 // the RIFF length no longer matches the file
+        rejected(wavWith("riff.wav", h, ByteArray(2000)), "whole file's length")
+    }
+
+    @Test
     fun aHeaderThatPromisesMoreThanTheFileHoldsIsRefused() {
         rejected(wavWith("lie.wav", WavFile.header(48_000, 5000), ByteArray(2000)), "header says the audio is 5000 bytes")
     }

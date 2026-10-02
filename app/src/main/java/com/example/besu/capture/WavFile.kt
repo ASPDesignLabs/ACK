@@ -86,8 +86,12 @@ object WavFile {
         if (rate < MIN_RATE || rate > MAX_RATE) throw WavException("$name: its sample rate ($rate Hz) is outside $MIN_RATE to $MAX_RATE.")
         val dataEndOk = dataAt + dataSize == total || dataAt + dataSize + (dataSize and 1) == total
         val riffOk = riffSize + 8 == total || riffSize + 9 == total
-        if (!(dataEndOk && riffOk)) {
+        if (!dataEndOk) {
             throw WavException("$name: its header says the audio is $dataSize bytes, but the file holds ${total - dataAt}. " +
+                "A recording that was interrupted looks like this; it needs repairing before it can be packaged.")
+        }
+        if (!riffOk) {
+            throw WavException("$name: its header gives the whole file's length as ${riffSize + 8} bytes, but the file is $total bytes. " +
                 "A recording that was interrupted looks like this; it needs repairing before it can be packaged.")
         }
         if (dataSize % 2L != 0L) throw WavException("$name: the audio length is not a whole number of samples.")
