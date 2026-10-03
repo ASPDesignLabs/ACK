@@ -56,7 +56,7 @@ object SettingsManagementHelp {
                         "to help judge exposure time. " +
                         "Use the scan control to begin or stop monitoring. This can " +
                         "help you judge whether speech output may need a different " +
-                        "volume, cadence, route, or communication strategy.",
+                        "volume, route, or communication strategy.",
                 action = HelpAction.Interact(AckTags.SETTINGS_ENV_SENSOR),
                 targetTag = AckTags.SETTINGS_ENV_SENSOR
             ),

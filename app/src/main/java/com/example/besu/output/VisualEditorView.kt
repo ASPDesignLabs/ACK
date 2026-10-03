@@ -104,22 +104,29 @@ fun VisualEditorView(context: Context, primaryColor: Color) {
                 }
             }
 
-            // Truncation Bypass
+            // Show full message. The stored field is still bypassTruncation, so backups and presets
+            // saved by older versions are unaffected; only the wording here changed.
             item {
-                Row(modifier = Modifier.fillMaxWidth().border(1.dp, primaryColor, CutCornerShape(8.dp)).background(Graphite).padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("FORCE RENDER FULL TEXT", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                        Text("Bypasses 5-word truncation limit. May cause overflow if text size is too large.", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Column(modifier = Modifier.fillMaxWidth().border(1.dp, primaryColor, CutCornerShape(8.dp)).background(Graphite).padding(12.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("SHOW FULL MESSAGE", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                            Text("On: every message is shown in full, and the text shrinks to fit. Off: messages over 5 words are cut to ALERT: plus 3 words.", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                        }
+                        NeonButton(if (currentDraft.bypassTruncation) "ON" else "OFF", isActive = currentDraft.bypassTruncation, mainColor = primaryColor) {
+                            currentDraft = currentDraft.copy(bypassTruncation = !currentDraft.bypassTruncation)
+                        }
                     }
-                    NeonButton(if (currentDraft.bypassTruncation) "ON" else "OFF", isActive = currentDraft.bypassTruncation, mainColor = primaryColor) {
-                        currentDraft = currentDraft.copy(bypassTruncation = !currentDraft.bypassTruncation)
+                    if (!currentDraft.bypassTruncation) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("THE SCREEN MAY SHOW LESS THAN WAS SPOKEN.", color = ErrorRed, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
             // Sliders & Toggles 
             item {
-                Text("SIZE: ${currentDraft.fontSizeSp.toInt()}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text("LARGEST SIZE: ${currentDraft.fontSizeSp.toInt()} (LONG MESSAGES SHRINK TO FIT)", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = currentDraft.fontSizeSp, onValueChange = { currentDraft = currentDraft.copy(fontSizeSp = it) }, valueRange = 40f..250f, colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor))
 
                 Text("OUTLINE THICKNESS: ${currentDraft.outlineWidth.toInt()}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)

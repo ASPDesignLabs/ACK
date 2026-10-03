@@ -21,18 +21,16 @@ object PersonalizationHelp {
                 id = "global_output",
                 title = "GLOBAL OUTPUT",
                 body = "Global Output settings affect ACK's overall speech " +
-                    "behavior. Master Gain controls output level. Global Cadence " +
-                    "adjusts pacing. Force Speaker, Guide Vox, and Silent Mode " +
-                    "now live in PROTOCOL, alongside the rest of ACK's system-wide " +
-                    "configuration."
+                    "behavior. Master Gain controls output level. Force Speaker, " +
+                    "Guide Vox, and Silent Mode now live in PROTOCOL, alongside " +
+                    "the rest of ACK's system-wide configuration."
             ),
             HelpStep(
                 id = "master_gain",
-                title = "MASTER GAIN AND CADENCE",
-                body = "Adjust Master Gain to set overall speech volume. Adjust " +
-                    "Global Cadence to change the timing and spacing of ACK's " +
-                    "voice output. Choose values that remain comfortable and " +
-                    "understandable in your common environments.",
+                title = "MASTER GAIN",
+                body = "Adjust Master Gain to set overall speech volume. Choose " +
+                    "a value that remains comfortable and understandable in " +
+                    "your common environments.",
                 action = HelpAction.Interact(AckTags.AUDIO_MASTER_GAIN),
                 targetTag = AckTags.AUDIO_MASTER_GAIN
             ),

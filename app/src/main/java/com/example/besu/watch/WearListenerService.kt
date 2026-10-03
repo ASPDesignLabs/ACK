@@ -5,6 +5,7 @@ import com.example.besu.computer.*
 import com.example.besu.data.*
 import com.example.besu.output.*
 import android.content.Intent
+import com.example.besu.core.WatchRelayProtocol
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 
@@ -147,6 +148,18 @@ class WearListenerService : WearableListenerService() {
                 // triggerVoice("Target locked: $targetName")
                 
             } catch (e: Exception) { e.printStackTrace() }
+        }
+
+        // 5. WATCH PLAYBACK CONFIRMATION -- the watch is playing a relayed message (see
+        // WatchAudioRelay). Payload is the transfer id, exactly 4 bytes. Releases the
+        // phone's wait so it knows not to play the message itself. Anything that is not
+        // exactly 4 bytes is not ours and is ignored; an id nobody is waiting for is
+        // ignored by the tracker.
+        else if (path == WatchRelayProtocol.ACK_PATH) {
+            val transferId = WatchRelayProtocol.decodeTransferId(messageEvent.data)
+            if (transferId != null) {
+                WatchAudioRelay.ackTracker.onAck(transferId)
+            }
         }
     }
 

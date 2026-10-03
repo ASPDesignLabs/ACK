@@ -16,10 +16,17 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.SystemClock
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import com.example.besu.core.NoticeRateLimiter
+import com.example.besu.core.RelayMissStreak
+import com.example.besu.core.RelayResult
 import com.example.besu.watch.WatchAudioRelay
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.Wearable
@@ -32,7 +39,6 @@ import java.util.Queue
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.sin
-import kotlin.random.Random
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.PI
 import kotlin.math.pow
@@ -46,7 +52,19 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         // so processSpeech can echo it back shell-style ("$ phrase")
         // instead of the usual "SOURCE > \"phrase\"" log format.
         const val SOURCE_TERMINAL_PROMPT = "TERM/PROMPT"
+
+        // "Display over other apps" notices are shown at most once per this long each, so a burst of
+        // messages does not flood the log or pile up toasts.
+        private const val NOTICE_INTERVAL_MS = 60_000L
+        private const val NOTICE_DISPLAY_MISSING = "display_missing"
+        private const val NOTICE_SILENT_DEAD_END = "silent_dead_end"
     }
+
+    private val noticeLimiter = NoticeRateLimiter(NOTICE_INTERVAL_MS)
+
+    // Messages in a row the watch did not confirm (OUTPUT DEVICE = ACK WATCH); see playPcm.
+    private val watchMissStreak = RelayMissStreak()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private var tts: TextToSpeech? = null
     private var isTtsReady = false
@@ -60,7 +78,6 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     // Global Config
     private var activeProfileId = "CYBER"
     private var tutorialProfileId = "MECH"
-    private var cadenceFactor = 0f
     private var forceSpeaker = false
     // When on, regular output still shows its visual prompt as normal but
     // never synthesizes or plays audio -- for contexts where sound itself
@@ -195,7 +212,6 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         val prefs = getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
         activeProfileId = prefs.getString("USER_VOX_PROFILE", "CYBER") ?: "CYBER"
         tutorialProfileId = prefs.getString("TUT_VOX_PROFILE", "MECH") ?: "MECH"
-        cadenceFactor = prefs.getFloat("VOX_CADENCE", 0.0f)
         forceSpeaker = prefs.getBoolean("FORCE_SPEAKER", false)
         silentOutput = prefs.getBoolean("SILENT_OUTPUT", false)
         guideVoxEnabled = prefs.getBoolean("TUTORIAL_VOX", true)
@@ -219,7 +235,6 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 activeProfileId = intent.getStringExtra("user_profile") ?: activeProfileId
                 tutorialProfileId = intent.getStringExtra("tutorial_profile")
                 ?: tutorialProfileId
-                cadenceFactor = intent.getFloatExtra("cadence", cadenceFactor)
                 forceSpeaker = intent.getBooleanExtra("speaker", forceSpeaker)
                 silentOutput = intent.getBooleanExtra("silent_output", silentOutput)
                 guideVoxEnabled = intent.getBooleanExtra("guide_vox", guideVoxEnabled)
@@ -398,10 +413,25 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         }
     }
 
+    // An emergency message always speaks with no voice effects, whatever profile is active (a decision recorded with the
+    // developer): pitch and speed at normal, and no robotic overlay or bitcrush. The profile's base system voice is kept, and
+    // Master Gain and the emergency volume boost still apply (they are gain, not an effect on the voice). The custom voice
+    // and recording playback already skip these effects. Anything that is not an emergency is unchanged.
+    private fun withoutVoiceEffectsIfEmergency(profile: VoiceProfile, emergency: EmergencyOptions): VoiceProfile =
+        if (emergency.enabled) {
+            profile.copy(pitch = 1.0f, speed = 1.0f, modFreq = 0f, modDepth = 0f, crush = 0f)
+        } else {
+            profile
+        }
+
     private fun getProfile(id: String): VoiceProfile {
         customVoices.find { it.id == id }?.let { return it }
         FACTORY_PRESETS[id]?.let { return it }
-        return FACTORY_PRESETS["CYBER"]!!
+        // An unknown or broken voice id must never become the robot voice. This is deliberately
+        // different from the read-site fallbacks for "no voice ever chosen" (they stay CYBER so an
+        // install made before the unprocessed default keeps sounding as it did); this one only runs
+        // when the chosen voice cannot be found.
+        return FACTORY_PRESETS["ORGANIC"]!!
     }
 
     private fun parseEmergencyTone(rawTone: String?): EmergencyTone {
@@ -417,9 +447,14 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         emergency: EmergencyOptions,
         // /sticky forces the same hold-to-clear behavior an emergency
         // message gets, independent of emergency mode itself.
-        sticky: Boolean = false
+        sticky: Boolean = false,
+        // Whether this message will also be spoken. Used only to word the notice below.
+        willSpeak: Boolean = true
     ) {
         if (!android.provider.Settings.canDrawOverlays(this)) {
+            // Audio still plays but nothing can be shown, and nothing else tells the person.
+            // (When speech is silenced too, noteSilentDeadEnd says so instead.)
+            if (willSpeak) noteDisplayMissing()
             return
         }
 
@@ -450,6 +485,29 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         }
 
         startService(overlayIntent)
+    }
+
+    // Silent mode (persisted or a one-off /quiet) skips speech for regular output only, never an emergency message.
+    private fun speechIsSilenced(quiet: Boolean, emergency: EmergencyOptions): Boolean =
+        (silentOutput || quiet) && !emergency.enabled
+
+    // With "Display over other apps" off a visual prompt cannot be shown, though its audio still plays. Say so, at most
+    // once a minute.
+    private fun noteDisplayMissing() {
+        if (noticeLimiter.shouldNotify(NOTICE_DISPLAY_MISSING, SystemClock.elapsedRealtime())) {
+            broadcastLog("MESSAGE SPOKEN BUT NOT SHOWN: DISPLAY PERMISSION IS OFF", "ERR")
+        }
+    }
+
+    // Silent mode skipped the audio, and with the permission off nothing was shown either: the message produced nothing at
+    // all. Say so in the log and in a toast, at most once a minute. This never overrides the person's Silent Mode choice.
+    private fun noteSilentDeadEnd() {
+        if (android.provider.Settings.canDrawOverlays(this)) return
+        if (!noticeLimiter.shouldNotify(NOTICE_SILENT_DEAD_END, SystemClock.elapsedRealtime())) return
+
+        val message = "NOTHING WAS SHOWN OR SPOKEN: SILENT MODE IS ON AND DISPLAY PERMISSION IS OFF"
+        broadcastLog(message, "ERR")
+        mainHandler.post { Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show() }
     }
 
     private fun processSpeech(
@@ -505,7 +563,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             showVisualPrompt(
                 rawText = rawText,
                 emergency = emergency,
-                sticky = sticky
+                sticky = sticky,
+                willSpeak = !speechIsSilenced(quiet, emergency)
                         )
             }
 
@@ -522,27 +581,19 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         // attention, and never for tutorial narration, which has its own
         // separate toggle.
         if (!isTutorialOverride && (silentOutput || quiet) && !emergency.enabled) {
+            noteSilentDeadEnd()
             return
         }
 
-        val effectiveCadence = if (isTutorialOverride) {
-            0.0f
-        } else {
-            cadenceFactor
-        }
-
-        val finalText = if (effectiveCadence > 0.1f) {
-            applyCadenceWarp(rawText, effectiveCadence)
-        } else {
-            rawText
-        }
-
+        // Speech is always the plain text. (The old Global Cadence setting used to wrap words in
+        // per-word speech markup at random; it was retired because the same message sounded
+        // different each time, and the markup broke on & and <.)
         if (profile.useCustomVoice) {
             // sherpa-onnx generation is synchronous/blocking and can take
             // real time on phone CPU -- must never run on this (the main)
             // thread. Mirrors playRecording's own Thread{} pattern below.
             Thread {
-                val generated = PiperVoiceEngine.generate(applicationContext, finalText)
+                val generated = PiperVoiceEngine.generate(applicationContext, rawText)
                 if (generated != null) {
                     val (customPcm, customSampleRate) = generated
                     // Gain-only, same as a real recording (see playRecording) --
@@ -568,20 +619,21 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                         audioData = customPcm,
                         sampleRate = customSampleRate,
                         forceSpeakerForRequest = emergency.forceSpeaker || forceSpeaker,
-                        allowVolumeEnforcement = true
+                        allowVolumeEnforcement = true,
+                        isEmergency = emergency.enabled
                     )
                 } else {
                     // An AAC app must never go silent because a neural
                     // model hiccuped -- fall back to the system voice for
                     // this one utterance rather than drop it.
                     broadcastLog("CUSTOM VOICE SYNTHESIS FAILED -- FALLING BACK", "ERR")
-                    speakWithSystemTts(profile, targetId, finalText, emergency)
+                    speakWithSystemTts(profile, targetId, rawText, emergency)
                 }
             }.start()
             return
         }
 
-        speakWithSystemTts(profile, targetId, finalText, emergency)
+        speakWithSystemTts(profile, targetId, rawText, emergency)
     }
 
     // The original (and still default) synthesis path: Android's system
@@ -595,8 +647,9 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         finalText: String,
         emergency: EmergencyOptions
     ) {
-        tts?.setPitch(profile.pitch)
-        tts?.setSpeechRate(profile.speed)
+        val spoken = withoutVoiceEffectsIfEmergency(profile, emergency)
+        tts?.setPitch(spoken.pitch)
+        tts?.setSpeechRate(spoken.speed)
 
         if (profile.systemVoiceName.isNotEmpty()) {
             try {
@@ -647,7 +700,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         }
 
         try {
-            val profile = getProfile(profileId)
+            val profile = withoutVoiceEffectsIfEmergency(getProfile(profileId), emergency)
             val rawBytes = file.readBytes()
             val headerSize = 44
 
@@ -701,7 +754,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 // Always enforced -- see the note on ensureStreamVolume's
                 // call site in playRecording below for why this used to be
                 // conditional and no longer is.
-                allowVolumeEnforcement = true
+                allowVolumeEnforcement = true,
+                isEmergency = emergency.enabled
             )
         } catch (error: Exception) {
             error.printStackTrace()
@@ -747,12 +801,18 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             broadcastLog("$source > \"$rawText\"", logType, replayText = rawText)
         }
 
-        showVisualPrompt(rawText = rawText, emergency = emergency, sticky = sticky)
+        showVisualPrompt(
+            rawText = rawText,
+            emergency = emergency,
+            sticky = sticky,
+            willSpeak = !speechIsSilenced(quiet, emergency)
+        )
 
         // Silent mode (persisted or a one-off /quiet) skips playback for
         // regular output only -- never for an emergency message. Same rule
         // processSpeech applies to synthesized speech.
         if ((silentOutput || quiet) && !emergency.enabled) {
+            noteSilentDeadEnd()
             return true
         }
 
@@ -798,7 +858,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 audioData = playablePcm,
                 sampleRate = sampleRate,
                 forceSpeakerForRequest = emergency.forceSpeaker || forceSpeaker,
-                allowVolumeEnforcement = true
+                allowVolumeEnforcement = true,
+                isEmergency = emergency.enabled
             )
         }.start()
 
@@ -911,16 +972,31 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         audioData: ShortArray,
         sampleRate: Int,
         forceSpeakerForRequest: Boolean,
-        allowVolumeEnforcement: Boolean
+        allowVolumeEnforcement: Boolean,
+        // An emergency message (or its alert tone) always plays on the phone, whatever OUTPUT DEVICE is
+        // set to: a bystander has to hear it, and waiting for the watch to confirm would add delay.
+        isEmergency: Boolean = false
     ) {
-        // WATCH routing pre-empts local playback entirely rather than
-        // running alongside it -- if the watch is reachable, this is the
-        // only place the prompt plays. FORCE SPEAKER still wins over WATCH,
-        // same as it wins over a selected Bluetooth device.
-        if (!forceSpeakerForRequest && outputRouteMode == "WATCH" &&
-            relayToWatchIfReachable(audioData, sampleRate)
-        ) {
-            return
+        // WATCH routing pre-empts local playback ONLY once the watch has confirmed it is playing --
+        // if it is reachable and says so, that is the only place the prompt plays. If no watch is
+        // reachable, or it does not confirm in time, the phone plays it itself (so a message is never
+        // lost to a dropped chunk or a watch app that is not running), and the cause is logged.
+        // FORCE SPEAKER still wins over WATCH, same as it wins over a selected Bluetooth device.
+        if (!forceSpeakerForRequest && !isEmergency && outputRouteMode == "WATCH") {
+            when (relayToWatchIfReachable(audioData, sampleRate)) {
+                RelayResult.DELIVERED -> {
+                    watchMissStreak.onDelivered()
+                    return
+                }
+                RelayResult.NOT_CONFIRMED -> {
+                    broadcastLog("WATCH DID NOT CONFIRM: PLAYING ON PHONE", "ERR")
+                    if (watchMissStreak.onMiss()) {
+                        broadcastLog("NO CONFIRMATION FROM WATCH (IS THE WATCH APP UPDATED?)", "ERR")
+                    }
+                }
+                // No watch in reach: nothing was sent, so play on the phone exactly as AUTO would.
+                RelayResult.NO_WATCH -> Unit
+            }
         }
 
         val attributes = AudioAttributes.Builder()
@@ -1042,15 +1118,16 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     }
 
     // Checks for a currently-connected watch node and, if there is one,
-    // hands the already fully-processed PCM off to WatchAudioRelay instead
-    // of playing it locally -- returns false (never having sent anything)
-    // if no watch is reachable right now, so the caller falls through to
-    // local playback exactly as AUTO would. This runs on the same
-    // background thread every playPcm call already runs on (the TTS
+    // hands the already fully-processed PCM to WatchAudioRelay and waits for
+    // the watch to confirm it is playing. NO_WATCH (nothing was sent) if no
+    // watch is reachable right now; DELIVERED if the watch confirmed;
+    // NOT_CONFIRMED if one was reachable but did not confirm in time. The
+    // caller plays on the phone for anything but DELIVERED. This runs on the
+    // same background thread every playPcm call already runs on (the TTS
     // utterance callback thread, or a dedicated Thread{} in playRecording/
-    // previewRecording), so a short blocking wait here is safe -- it never
-    // touches the main thread.
-    private fun relayToWatchIfReachable(audioData: ShortArray, sampleRate: Int): Boolean {
+    // previewRecording), so a blocking wait here is safe -- it never touches
+    // the main thread.
+    private fun relayToWatchIfReachable(audioData: ShortArray, sampleRate: Int): RelayResult {
         val nodes = try {
             Tasks.await(Wearable.getNodeClient(this).connectedNodes, 2, TimeUnit.SECONDS)
         } catch (_: Exception) {
@@ -1058,11 +1135,15 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         }
 
         if (nodes.isEmpty()) {
-            return false
+            return RelayResult.NO_WATCH
         }
 
-        WatchAudioRelay.send(this, nodes, audioData, sampleRate)
-        return true
+        val startedAt = SystemClock.elapsedRealtime()
+        val result = WatchAudioRelay.sendAndAwait(this, nodes, audioData, sampleRate)
+        if (result == RelayResult.DELIVERED) {
+            broadcastLog("WATCH CONFIRMED PLAYING IN ${SystemClock.elapsedRealtime() - startedAt} MS", "SYS")
+        }
+        return result
     }
 
     private fun playEmergencyTone(
@@ -1118,7 +1199,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             audioData = pcm,
             sampleRate = sampleRate,
             forceSpeakerForRequest = forceSpeaker,
-            allowVolumeEnforcement = false
+            allowVolumeEnforcement = false,
+            isEmergency = true      // this tone only ever precedes an emergency message
         )
     }
 
@@ -1203,15 +1285,6 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         } catch (e: Exception) {
             // Permission might be denied on some devices, ignore safe failure
         }
-    }
-
-    private fun applyCadenceWarp(text: String, intensity: Float): String {
-        val sb = StringBuilder("<speak>")
-        text.split(" ").forEach { word ->
-            if (Random.nextFloat() < intensity) sb.append("<prosody rate=\"${if (Random.nextBoolean()) "x-fast" else "slow"}\">$word</prosody> ") else sb.append("$word ")
-        }
-        sb.append("</speak>")
-        return sb.toString()
     }
 
     private fun broadcastLog(msg: String, type: String, replayText: String? = null) {

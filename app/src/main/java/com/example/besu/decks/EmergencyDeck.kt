@@ -79,7 +79,19 @@ data class EmergencyDeckConfig(
     val requireHoldToClear: Boolean = false,
     val forceSpeaker: Boolean = false,
     val boostVolume: Boolean = false,
-    val tone: EmergencyTone = EmergencyTone.OFF
+    val tone: EmergencyTone = EmergencyTone.OFF,
+    // When on, tapping an emergency tile first shows what it will say and asks to confirm, so an
+    // accidental touch cannot speak an emergency message at full priority. Off by default for
+    // everyone (a decision recorded with the developer); a config or backup saved before this
+    // field existed decodes as off.
+    val confirmBeforeSend: Boolean = false
+)
+
+// A tapped tile's label and its phrase, already resolved, while the confirmation dialog is up.
+// SEND speaks exactly this text, so what was checked is what is said.
+private data class PendingEmergencySend(
+    val slotLabel: String,
+    val phrase: String
 )
 
 @Serializable
@@ -144,6 +156,11 @@ fun EmergencyDeck(
         mutableStateOf(CommandRepository.getEmergencyInfoCard(context))
     }
 
+    // Set while the CONFIRM BEFORE SENDING dialog is up for a tapped tile.
+    var pendingConfirm by remember {
+        mutableStateOf<PendingEmergencySend?>(null)
+    }
+
     val helpManager = LocalHelpManager.current
 
     fun reportHelpInteraction(tag: String) {
@@ -158,6 +175,41 @@ fun EmergencyDeck(
         config = CommandRepository.getEmergencyConfig(
             context = context,
             deckId = deckId
+        )
+    }
+
+    // Speaks an already-resolved emergency phrase with this deck's overrides. This is the send
+    // a tile tap has always done, unchanged; it is only pulled out so a confirmation can come
+    // before it.
+    fun sendEmergency(phrase: String) {
+        context.startService(
+            Intent(context, OutputService::class.java).apply {
+                putExtra("phrase", phrase)
+                putExtra("robotic", false)
+                putExtra("source", "EMERGENCY")
+
+                putExtra("emergency_mode", true)
+                putExtra(
+                    "emergency_force_speaker",
+                    config.forceSpeaker
+                )
+                putExtra(
+                    "emergency_boost_volume",
+                    config.boostVolume
+                )
+                putExtra(
+                    "emergency_tone",
+                    config.tone.name
+                )
+                putExtra(
+                    "emergency_prevent_timed_clear",
+                    config.preventTimedClear
+                )
+                putExtra(
+                    "emergency_require_hold_to_clear",
+                    config.requireHoldToClear
+                )
+            }
         )
     }
 
@@ -214,35 +266,16 @@ fun EmergencyDeck(
                                 return@EmergencyPromptButton
                             }
 
-                            context.startService(
-                                Intent(context, OutputService::class.java).apply {
-                                    putExtra("phrase", phrase)
-                                    putExtra("robotic", false)
-                                    putExtra("source", "EMERGENCY")
-
-                                    putExtra("emergency_mode", true)
-                                    putExtra(
-                                        "emergency_force_speaker",
-                                        config.forceSpeaker
-                                    )
-                                    putExtra(
-                                        "emergency_boost_volume",
-                                        config.boostVolume
-                                    )
-                                    putExtra(
-                                        "emergency_tone",
-                                        config.tone.name
-                                    )
-                                    putExtra(
-                                        "emergency_prevent_timed_clear",
-                                        config.preventTimedClear
-                                    )
-                                    putExtra(
-                                        "emergency_require_hold_to_clear",
-                                        config.requireHoldToClear
-                                    )
-                                }
-                            )
+                            if (config.confirmBeforeSend) {
+                                // Resolving a phrase has no side effects, so it is safe to
+                                // resolve it once here to show it.
+                                pendingConfirm = PendingEmergencySend(
+                                    slotLabel = slot.label,
+                                    phrase = phrase
+                                )
+                            } else {
+                                sendEmergency(phrase)
+                            }
                         },
                         onEdit = {
                             editingSlot = slot
@@ -331,6 +364,22 @@ fun EmergencyDeck(
         )
     }
 
+    pendingConfirm?.let { pending ->
+        EmergencyConfirmDialog(
+            slotLabel = pending.slotLabel,
+            phrase = pending.phrase,
+            primaryColor = primaryColor,
+            onSend = {
+                pendingConfirm = null
+                sendEmergency(pending.phrase)
+            },
+            // Cancel, tapping outside and Back all land here: nothing is spoken or shown.
+            onCancel = {
+                pendingConfirm = null
+            }
+        )
+    }
+
     if (showInfoCard) {
         EmergencyInfoDialog(
             card = infoCard,
@@ -357,6 +406,7 @@ private fun EmergencyStatusStrip(
         if (config.forceSpeaker) add("SPEAKER")
         if (config.boostVolume) add("BOOST")
         if (config.tone != EmergencyTone.OFF) add(config.tone.name)
+        if (config.confirmBeforeSend) add("CONFIRM")
     }
 
     Text(
@@ -587,6 +637,10 @@ private fun EmergencyOverridesDialog(
         mutableStateOf(config.tone)
     }
 
+    var confirmBeforeSend by remember {
+        mutableStateOf(config.confirmBeforeSend)
+    }
+
     AckDialogShell(
         title = "EMERGENCY OVERRIDES",
         primaryColor = primaryColor,
@@ -678,6 +732,26 @@ private fun EmergencyOverridesDialog(
             }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "TAP PROTECTION",
+            color = primaryColor,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AckToggleRow(
+            label = "CONFIRM BEFORE SENDING",
+            enabled = confirmBeforeSend,
+            primaryColor = primaryColor
+        ) {
+            confirmBeforeSend = !confirmBeforeSend
+        }
+
         Spacer(modifier = Modifier.height(18.dp))
 
         AckOutlineButton(
@@ -691,10 +765,110 @@ private fun EmergencyOverridesDialog(
                     requireHoldToClear = requireHoldToClear,
                     forceSpeaker = forceSpeaker,
                     boostVolume = boostVolume,
-                    tone = tone
+                    tone = tone,
+                    confirmBeforeSend = confirmBeforeSend
                 )
             )
         }
+    }
+}
+
+// Shown instead of sending straight away when CONFIRM BEFORE SENDING is on. The person, or a helper
+// looking over their shoulder, can read exactly what will be said before it is. Tapping outside the
+// dialog, or Back, is the same as CANCEL.
+@Composable
+private fun EmergencyConfirmDialog(
+    slotLabel: String,
+    phrase: String,
+    primaryColor: Color,
+    onSend: () -> Unit,
+    onCancel: () -> Unit
+) {
+    AckDialogShell(
+        title = "CONFIRM EMERGENCY",
+        primaryColor = primaryColor,
+        onDismiss = onCancel
+    ) {
+        Text(
+            text = slotLabel,
+            color = primaryColor,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+            text = phrase,
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            AckConfirmButton(
+                text = "CANCEL",
+                color = Color.White,
+                modifier = Modifier.weight(1f),
+                onClick = onCancel
+            )
+
+            AckConfirmButton(
+                text = "SEND",
+                color = primaryColor,
+                modifier = Modifier.weight(1f),
+                onClick = onSend
+            )
+        }
+    }
+}
+
+// A large button for the confirmation dialog: at least 64 dp tall (56 dp is the floor) with a big
+// label, so a tap is deliberate and easy to land.
+@Composable
+private fun AckConfirmButton(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .heightIn(min = 64.dp)
+            .border(
+                width = 2.dp,
+                color = color,
+                shape = CutCornerShape(4.dp)
+            )
+            .background(
+                color = color.copy(alpha = 0.14f),
+                shape = CutCornerShape(4.dp)
+            )
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        onClick()
+                    }
+                )
+            }
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = color,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Black,
+            fontFamily = FontFamily.Monospace,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

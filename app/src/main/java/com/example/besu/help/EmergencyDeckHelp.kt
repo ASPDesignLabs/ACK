@@ -34,7 +34,10 @@ object EmergencyDeckHelp {
                 id = "overrides",
                 title = "EMERGENCY OVERRIDES",
                 body = "Overrides can force device speaker output, boost audio, " +
-                    "change clearing behavior, and add an alert tone.",
+                    "change clearing behavior, and add an alert tone. You can " +
+                    "also switch on CONFIRM BEFORE SENDING: a tap on an emergency " +
+                    "tile then shows what it will say and asks you to confirm " +
+                    "first, so an accidental touch cannot send it.",
                 action = HelpAction.Interact(AckTags.EMERGENCY_OVERRIDES),
                 targetTag = AckTags.EMERGENCY_OVERRIDES
             ),

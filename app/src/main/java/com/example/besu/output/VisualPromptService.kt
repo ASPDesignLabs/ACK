@@ -18,12 +18,16 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.provider.Settings
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.widget.TextViewCompat
 import java.io.File
 import kotlin.math.max
 import kotlin.math.min
@@ -236,11 +240,32 @@ class VisualPromptService : Service() {
             )
         }
 
+        /*
+         * The preset's size is the LARGEST the text may be, not a fixed size.
+         * The view takes whatever height is left after the optional hint
+         * (weight 1, height 0), and Android shrinks the text, a step at a time,
+         * until the whole message fits inside that space. A message that
+         * already fits at the preset size looks exactly as it did before.
+         * Nothing here changes what is said or shown, only the size it is
+         * drawn at, so the screen never shows less than was spoken.
+         */
+        val maxSp = preset.fontSizeSp.toInt().coerceAtLeast(FIT_MIN_SP)
+        if (maxSp > FIT_MIN_SP) {
+            TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                textView,
+                FIT_MIN_SP,
+                maxSp,
+                FIT_STEP_SP,
+                TypedValue.COMPLEX_UNIT_SP
+            )
+        }
+
         content.addView(
             textView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                0,
+                1f
             )
         )
 
@@ -252,14 +277,126 @@ class VisualPromptService : Service() {
             )
         }
 
+        scrollIfStillOverflowing(content, textView, requireHoldToClear)
+
         showOverlay(
             content = content,
             requireHoldToClear = requireHoldToClear,
-            landscapeLayout = true
+            landscapeLayout = true,
+            fitText = true
         )
 
         if (!preventTimedClear) {
             scheduleClear(DEFAULT_PROMPT_TIMEOUT_MS)
+        }
+    }
+
+    /*
+     * Last resort for a message too long to fit even at FIT_MIN_SP. Once the
+     * text has been laid out at its final size, if it is still taller than the
+     * space it was given, it is moved into a ScrollView with a SCROLL FOR MORE
+     * hint, so nothing is ever cut off without the person being told.
+     *
+     * Autosize works by choosing a size and then asking for another layout
+     * pass (which throws the old text layout away), so the first callback
+     * usually has no layout yet. The listener waits for the first one that
+     * does, checks it once, and removes itself.
+     */
+    private fun scrollIfStillOverflowing(
+        content: LinearLayout,
+        textView: TextView,
+        requireHoldToClear: Boolean
+    ) {
+        textView.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
+            override fun onLayoutChange(
+                v: View,
+                left: Int,
+                top: Int,
+                right: Int,
+                bottom: Int,
+                oldLeft: Int,
+                oldTop: Int,
+                oldRight: Int,
+                oldBottom: Int
+            ) {
+                val textLayout = textView.layout ?: return
+
+                if (textView.height <= 0) {
+                    return
+                }
+
+                textView.removeOnLayoutChangeListener(this)
+
+                val availableHeight = textView.height -
+                        textView.compoundPaddingTop -
+                        textView.compoundPaddingBottom
+
+                if (textLayout.height > availableHeight) {
+                    // Not inside this layout pass: changing the view tree
+                    // while it is being laid out is not safe.
+                    handler.post {
+                        swapTextIntoScrollView(content, textView, requireHoldToClear)
+                    }
+                }
+            }
+        })
+    }
+
+    private fun swapTextIntoScrollView(
+        content: LinearLayout,
+        textView: TextView,
+        requireHoldToClear: Boolean
+    ) {
+        // The prompt may have been cleared or replaced before this ran.
+        if (overlayView == null || textView.parent !== content) {
+            return
+        }
+
+        val index = content.indexOfChild(textView)
+
+        TextViewCompat.setAutoSizeTextTypeWithDefaults(
+            textView,
+            TextViewCompat.AUTO_SIZE_TEXT_TYPE_NONE
+        )
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, FIT_MIN_SP.toFloat())
+
+        content.removeViewAt(index)
+
+        val scroll = ScrollView(this)
+        scroll.addView(
+            textView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        content.addView(
+            scroll,
+            index,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        )
+        content.addView(createHintText(text = "SCROLL FOR MORE"), index + 1)
+
+        /*
+         * A ScrollView swallows touches, so the tap that clears the prompt
+         * would never reach the overlay's own listener. Put the same handlers
+         * on the text view itself: a tap clears it, or, when hold-to-clear is
+         * on (Emergency), only a long press does. Same behavior as before.
+         */
+        if (requireHoldToClear) {
+            textView.setOnLongClickListener {
+                clearOverlay(offerReplay = true)
+                true
+            }
+        } else {
+            textView.setOnClickListener {
+                clearOverlay(offerReplay = true)
+            }
         }
     }
 
@@ -464,10 +601,15 @@ class VisualPromptService : Service() {
         }
     }
 
+    // fitText: the content holds auto-sizing text, which needs a height it can
+    // be measured against. In forced-rotation mode the content is otherwise
+    // WRAP_CONTENT tall, which cannot bound a child that shrinks to fit. Only
+    // text prompts pass true; emoji and GIF prompts keep their current layout.
     private fun showOverlay(
         content: View,
         requireHoldToClear: Boolean,
-        landscapeLayout: Boolean
+        landscapeLayout: Boolean,
+        fitText: Boolean = false
     ) {
         clearOverlay(stopService = false)
 
@@ -515,7 +657,11 @@ class VisualPromptService : Service() {
             } else {
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    if (fitText) {
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    } else {
+                        FrameLayout.LayoutParams.WRAP_CONTENT
+                    },
                     Gravity.CENTER
                 )
             }
@@ -747,6 +893,12 @@ class VisualPromptService : Service() {
         private const val EMOJI_LABEL_TEXT_SIZE_SP = 28f
         private const val GIF_TITLE_TEXT_SIZE_SP = 22f
         private const val HOLD_HINT_TEXT_SIZE_SP = 11f
+
+        // Text prompts shrink from the preset's size (the largest allowed) down
+        // to this, a step at a time, until the whole message fits. If it still
+        // does not fit at FIT_MIN_SP it scrolls instead (SCROLL FOR MORE).
+        private const val FIT_MIN_SP = 24
+        private const val FIT_STEP_SP = 2
 
         // Rotates the in-place "fill the screen" content to read left-to-right,
         // matching the direction SCREEN_ORIENTATION_LANDSCAPE used to produce.

@@ -17,7 +17,7 @@ Created primarily to assist myself with *situational mutism* concerns. This cove
 
 ###### Construction of one-off statements, routine replies, and composable statements
 
-###### Mild adjustments to existing TTS models - simple tone, speed, and cadence tweaks to make it a little more "you"
+###### Mild adjustments to existing TTS models - simple tone and speed tweaks to make it a little more "you"
 
 ###### A simple yet growing list of tutorials to help you acclimate
 
