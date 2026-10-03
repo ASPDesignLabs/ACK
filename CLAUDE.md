@@ -1313,3 +1313,40 @@ exist. The profile-change warning is described in the last subsection. The devic
   leaves the device's own choice alone) and is on `BackupFingerprint.IGNORED_FIELDS`. New person-chosen switches for Section 4 belong in this file.
 - **The dialog is quiet and defaults to STAY**: no sound, no animation, nothing starts HELP; back and a tap outside are STAY; its checkbox
   writes the same setting as SETTINGS. A voice recording bound to a slot is not part of the comparison (a known limit).
+
+### Word suggestions (L5) — rules that must stay true
+- **Off until the person turns it on, on every install.** `AssistSettings.WORD_SUGGESTIONS_FALLBACK = false`; unlike the profile warning it is **never
+  seeded** (`SEED_KEYS` does not hold it) and **never in `AckBackup`** (a restore must not turn a learning feature on). The one-time offer
+  (`shouldOfferWordSuggestions`) shows in the Statement Composer; choosing either way in SETTINGS, TURN ON or NOT NOW retires it. Keys live in
+  `ack_assist_prefs` with the other switches (`data/AssistPrefs.kt`).
+- **The switch is checked inside `LearnedWordsRepository.learn` and `.predict`**, so no screen can forget it. Listing, forgetting and the backup are
+  deliberately **not** gated: the words are the person's data whether or not the feature is on.
+- **Learning happens in exactly one place: the composer's SAVE, COPY and SPEAK of the text typed there** (`learnFromCommittedText`: background thread,
+  the same text counts once, a changed text counts again). Not MY STATEMENTS' own COPY/SPEAK, not the Terminal, Manual Override, the Emergency deck or
+  any editor. `WordSuggestionsUiWiringTest.onlyTheComposerEverLearns...` fails if another file calls `LearnedWordsRepository.learn(`.
+- **Names from elsewhere are read live and never copied** (`composer/WordSources.kt` → `core/ExtraWords.kt`): only Target Computer ENTRY names (not
+  category headings, not contact cards: no phone numbers, addresses or emails) and Shared Root Variable slots that are on and filled in. Renaming or
+  deleting a contact changes what is offered with nothing left behind.
+- **Nothing typed is ever logged**, not in an error either. Every `Log.` line in `LearnedWordsRepository` must be `Log.x(TAG, "a fixed sentence")` (a test
+  checks the shape); `LearnedWordsStore` has no logging; `WordModelData.validate()` reasons hold counts and lengths only, and `TransferManager` logs that
+  reason to `ACK_IMPORT` before `return false`.
+- **Storage is `filesDir/learned_words/model.json`, in the DELETE DATA > MESSAGES AND DECKS area** (not a thirteenth area: the words are derived from typed
+  statements, like the typing history it already holds). `core/LearnedWordsStore.kt` is plain Kotlin and tested on a JVM: atomic save (temp file, fsync,
+  `ATOMIC_MOVE`); a file that is not JSON, fails `validate()` or is over 8 MB is **set aside** as `model.json.damaged-<time>`, never overwritten or deleted;
+  the file's size and time are compared on every use, so a wipe or restore behind its back is noticed and a wipe is never saved back over; reading never
+  creates the folder; text with no word in it writes nothing; `forgetAll` removes every `model.json*` and nothing else.
+- **The model** (`WordTokens`, `WordModel`, `WordPrediction`): words are letters of any script with an apostrophe or hyphen inside; anything with a digit,
+  an emoji and a tag are never words; a full stop, `?`, `!`, an ellipsis, a line break, a tag or a digit ends a sentence, and words are only linked within one
+  sentence. 5,000 words and 20,000 pairs, least used evicted (count, then last used, then key). A word that only ever started a sentence is stored lower
+  case; a name in the middle keeps its capital. **Quiet is the rule:** nothing is offered mid-word, inside a tag, after punctuation or a line break, at the
+  start, with a digit, or while text is selected.
+- **The strip is `AutocompleteChipRow`** (the history chips' row: 14 sp, 48 dp, no animation, no vibration, reserved height while the feature is on), never
+  `NeonButton`/`TightPanelButton` (they vibrate). A tapped word goes through `TextInsertion.insert(..., replace = prediction.replace)`. Nothing is inserted,
+  corrected or completed without a tap.
+- **Backup:** `AckBackup.learnedWords: WordModelData?` is null when nothing was learned; restore **merges** (never lowers a count, never removes a word, drops
+  anything broken). It has its own line in `ExportContents` ("WORDS LEARNED FROM WHAT YOU SAVED, SPOKE OR COPIED", chosen by the developer so the export warning
+  names it) and is on `BackupFingerprint.IGNORED_FIELDS` (it grows with ordinary use; counting it would make the backup reminder fire after a day).
+- **FORGET WORDS** (`settings/WordSuggestionsSection.kt`): REMOVE on one word asks once more; FORGET ALL WORDS asks twice with CANCEL prominent and BACK UP
+  FIRST named, the second confirmation being the only place `forgetAll` is called. 12 sp text, `NeonButton`, `ConfirmBodyText`.
+- **Test-writing lesson:** a brace-matching `bodyOf(...)` on an *expression-bodied* function (`fun x() = y`) silently reads the NEXT function's body. Use
+  `RepoFiles.declarationOf` for those. (`ProfileWarningWiringTest.theSwitchLivesInItsOwnFile...` passed by accident before this was noticed.)
