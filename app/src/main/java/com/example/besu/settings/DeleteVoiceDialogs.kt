@@ -4,14 +4,10 @@ package com.example.besu.settings
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.besu.core.CustomVoiceRemoval
 import com.example.besu.ui.NeonButton
 import com.example.besu.ui.RadicalRed
@@ -41,29 +37,29 @@ fun DeleteVoiceFirstDialog(
         title = "DELETE CUSTOM VOICE",
         dismissLabel = "CANCEL"
     ) {
-        BodyText("THIS REMOVES YOUR TRAINED VOICE FROM THIS PHONE: THE VOICE MODEL, ITS SETTINGS FILE, AND THE TEMPORARY FILE MADE FROM IT.")
+        ConfirmBodyText("THIS REMOVES YOUR TRAINED VOICE FROM THIS PHONE: THE VOICE MODEL, ITS SETTINGS FILE, AND THE TEMPORARY FILE MADE FROM IT.")
         Spacer(modifier = Modifier.height(10.dp))
-        BodyText("THE ONLY COPY MAY BE ON THIS PHONE. IF YOU MIGHT WANT IT AGAIN, SAVE A VOICE BACKUP FIRST.", bold = true)
+        ConfirmBodyText("THE ONLY COPY MAY BE ON THIS PHONE. IF YOU MIGHT WANT IT AGAIN, SAVE A VOICE BACKUP FIRST.", bold = true)
 
         if (impact.anyAffected) {
             Spacer(modifier = Modifier.height(10.dp))
-            BodyText("THESE VOICES USE IT AND WILL SWITCH TO A NORMAL VOICE:")
+            ConfirmBodyText("THESE VOICES USE IT AND WILL SWITCH TO A NORMAL VOICE:")
             impact.affectedLabels.forEach { label ->
                 Spacer(modifier = Modifier.height(3.dp))
-                BodyText("- $label")
+                ConfirmBodyText("- $label")
             }
             if (impact.activeProfileChanges) {
                 Spacer(modifier = Modifier.height(6.dp))
-                BodyText("YOUR ACTIVE VOICE WILL BECOME ${CustomVoiceRemoval.FALLBACK_PROFILE_ID}.")
+                ConfirmBodyText("YOUR ACTIVE VOICE WILL BECOME ${CustomVoiceRemoval.FALLBACK_PROFILE_ID}.")
             }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
-        BodyText("THIS DOES NOT DELETE A BACKUP YOU SAVED ELSEWHERE.", color = Color.Gray)
+        ConfirmBodyText("THIS DOES NOT DELETE A BACKUP YOU SAVED ELSEWHERE.", color = Color.Gray)
 
         if (backupStatus != null) {
             Spacer(modifier = Modifier.height(10.dp))
-            BodyText(backupStatus, bold = true, color = primaryColor)
+            ConfirmBodyText(backupStatus, bold = true, color = primaryColor)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -88,21 +84,10 @@ fun DeleteVoiceSecondDialog(
         title = "DELETE CUSTOM VOICE",
         dismissLabel = "CANCEL"
     ) {
-        BodyText("THIS CANNOT BE UNDONE.", bold = true, color = RadicalRed)
+        ConfirmBodyText("THIS CANNOT BE UNDONE.", bold = true, color = RadicalRed)
         Spacer(modifier = Modifier.height(16.dp))
         NeonButton("CANCEL", Modifier.fillMaxWidth(), mainColor = primaryColor) { onCancel() }
         Spacer(modifier = Modifier.height(8.dp))
         NeonButton("DELETE VOICE", Modifier.fillMaxWidth(), mainColor = RadicalRed) { onDelete() }
     }
-}
-
-@Composable
-private fun BodyText(text: String, bold: Boolean = false, color: Color = Color.White) {
-    Text(
-        text,
-        color = color,
-        fontSize = 12.sp,
-        fontFamily = FontFamily.Monospace,
-        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal
-    )
 }

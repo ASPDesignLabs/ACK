@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.besu.backup.BackupExporter
+import com.example.besu.backup.ExportResult
 import com.example.besu.core.ExportContents
 import com.example.besu.ui.NeonButton
 import com.example.besu.ui.TightDialogSurface
@@ -93,10 +94,20 @@ fun BackupWarningDialog(
  * /backup confirm is the other entry point: it prints the same facts from ExportContents.terminalText() instead.)
  */
 @Composable
-fun rememberBackupExportFlow(context: Context, primaryColor: Color): () -> Unit {
+fun rememberBackupExportFlow(
+    context: Context,
+    primaryColor: Color,
+    // Called after an export was tried (and reported), so a screen can refresh what depends on it, such as whether a safety
+    // copy has a newer export. Not called if the person cancels the picker.
+    onResult: (ExportResult) -> Unit = {}
+): () -> Unit {
     var showWarning by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        uri?.let { BackupExporter.report(context, BackupExporter.writeBackup(context, it)) }
+        uri?.let {
+            val result = BackupExporter.writeBackup(context, it)
+            BackupExporter.report(context, result)
+            onResult(result)
+        }
     }
 
     if (showWarning) {

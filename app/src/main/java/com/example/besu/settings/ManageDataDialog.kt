@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,10 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.besu.core.StorageCatalogue
 import com.example.besu.data.DataWipe
 import com.example.besu.data.LogEntry
@@ -115,25 +111,25 @@ fun ManageDataDialog(
         title = "DELETE DATA",
         dismissLabel = "CLOSE"
     ) {
-        Body("EACH DELETE ASKS TWICE, AND NOTHING CHANGES UNTIL YOU CONFIRM THE SECOND TIME. WHERE A BACKUP EXISTS, SAVE IT FIRST. DELETING CANNOT BE UNDONE.", color = Color.Gray)
+        ConfirmBodyText("EACH DELETE ASKS TWICE, AND NOTHING CHANGES UNTIL YOU CONFIRM THE SECOND TIME. WHERE A BACKUP EXISTS, SAVE IT FIRST. DELETING CANNOT BE UNDONE.", color = Color.Gray)
         if (busy) {
             Spacer(modifier = Modifier.height(8.dp))
-            Body("DELETING...", bold = true, color = primaryColor)
+            ConfirmBodyText("DELETING...", bold = true, color = primaryColor)
         }
         status?.let {
             Spacer(modifier = Modifier.height(8.dp))
-            Body(it, bold = true, color = primaryColor)
+            ConfirmBodyText(it, bold = true, color = primaryColor)
         }
 
         StorageCatalogue.areas.forEach { area ->
             Spacer(modifier = Modifier.height(14.dp))
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
             Spacer(modifier = Modifier.height(10.dp))
-            Body(area.label, bold = true)
+            ConfirmBodyText(area.label, bold = true)
             Spacer(modifier = Modifier.height(2.dp))
-            Body(area.holds, color = Color.Gray)
+            ConfirmBodyText(area.holds, color = Color.Gray)
             Spacer(modifier = Modifier.height(2.dp))
-            Body(amountTextFor(area.id), color = primaryColor)
+            ConfirmBodyText(amountTextFor(area.id), color = primaryColor)
             Spacer(modifier = Modifier.height(8.dp))
             NeonButton("DELETE", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
                 if (!busy) firstFor = area.id
@@ -143,11 +139,11 @@ fun ManageDataDialog(
         Spacer(modifier = Modifier.height(14.dp))
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
         Spacer(modifier = Modifier.height(10.dp))
-        Body(StorageCatalogue.EVERYTHING_LABEL, bold = true)
+        ConfirmBodyText(StorageCatalogue.EVERYTHING_LABEL, bold = true)
         Spacer(modifier = Modifier.height(2.dp))
-        Body("ALL OF THE ABOVE, AND ACK'S NOTE OF WHETHER THIS PHONE IS A NEW INSTALL.", color = Color.Gray)
+        ConfirmBodyText("ALL OF THE ABOVE, AND ACK'S NOTE OF WHETHER THIS PHONE IS A NEW INSTALL.", color = Color.Gray)
         Spacer(modifier = Modifier.height(2.dp))
-        Body(amountTextFor(StorageCatalogue.EVERYTHING_ID), color = primaryColor)
+        ConfirmBodyText(amountTextFor(StorageCatalogue.EVERYTHING_ID), color = primaryColor)
         Spacer(modifier = Modifier.height(8.dp))
         NeonButton("DELETE EVERYTHING", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
             if (!busy) firstFor = StorageCatalogue.EVERYTHING_ID
@@ -172,7 +168,7 @@ fun ManageDataDialog(
             paragraphs.forEachIndexed { index, text ->
                 if (index > 0) Spacer(modifier = Modifier.height(10.dp))
                 // The third paragraph is always the backup note: how to save it first, or that it is not backed up.
-                Body(text, bold = index == 2)
+                ConfirmBodyText(text, bold = index == 2)
             }
             Spacer(modifier = Modifier.height(16.dp))
             // Only an area EXPORT .JSON covers offers BACK UP FIRST; the others name the backup that does (in the note above).
@@ -201,10 +197,10 @@ fun ManageDataDialog(
             title = "DELETE ${labelFor(second)}",
             dismissLabel = "CANCEL"
         ) {
-            Body(StorageCatalogue.CANNOT_UNDO, bold = true, color = RadicalRed)
+            ConfirmBodyText(StorageCatalogue.CANNOT_UNDO, bold = true, color = RadicalRed)
             if (busy) {
                 Spacer(modifier = Modifier.height(10.dp))
-                Body("DELETING...", bold = true, color = primaryColor)
+                ConfirmBodyText("DELETING...", bold = true, color = primaryColor)
             }
             Spacer(modifier = Modifier.height(16.dp))
             NeonButton("CANCEL", Modifier.fillMaxWidth(), mainColor = primaryColor) { cancelBoth() }
@@ -214,15 +210,4 @@ fun ManageDataDialog(
             }
         }
     }
-}
-
-@Composable
-private fun Body(text: String, bold: Boolean = false, color: Color = Color.White) {
-    Text(
-        text,
-        color = color,
-        fontSize = 12.sp,
-        fontFamily = FontFamily.Monospace,
-        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal
-    )
 }

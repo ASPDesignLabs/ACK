@@ -227,10 +227,11 @@ object StorageCatalogue {
     fun describeAmount(bytes: Long, items: Int): String {
         if (items <= 0 && bytes <= 0L) return "NOTHING STORED"
         val noun = if (items == 1) "ITEM" else "ITEMS"
-        return "$items $noun, ${describeBytes(bytes)}"
+        return "$items $noun, ${describeSize(bytes)}"
     }
 
-    private fun describeBytes(bytes: Long): String = when {
+    /** "UNDER 1 KB", "12 KB" or "1.4 MB": one size in the words DELETE DATA and the safety-copy list share. */
+    fun describeSize(bytes: Long): String = when {
         bytes < 1024L -> "UNDER 1 KB"
         bytes < 1024L * 1024L -> "${bytes / 1024L} KB"
         else -> String.format(Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0))
