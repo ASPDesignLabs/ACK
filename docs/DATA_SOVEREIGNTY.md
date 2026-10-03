@@ -98,6 +98,9 @@ What was verified, and what was not, when this was written (2026-10-01):
   profile with sync off, or a browser without an account, for this page. If the phone is shared, clear the site's data in the
   browser's settings when you finish. The phone's keyboard, voice typing and any screen-recording or backup apps are outside
   this project's control.
+* **Speech on the phone (the ACK app).** ACK speaks through Android's own text-to-speech engine, a separate app. ACK itself has no network permission, and
+  its voice list shows only voices the engine reports as installed and not needing the internet. What the engine does with the text is outside this
+  project's control; see `docs/PERMISSIONS.md`.
 * **The start-up message prints the access link.** Don't share a screenshot of the terminal. The token only works on your own
   network, but it opens your recordings.
 * **Your network.** `--host 0.0.0.0` lets other devices on your network reach the server. Keep the access token on (the

@@ -2,8 +2,9 @@
 
 This covers the parts of Section 4 that are built so far: the **neutral starter phrases** (L1), **typing, inserting and the history
 chips** (the work behind them, B1 to B4), the **profile-change warning** (L7, the warning half), and **word suggestions** (L5, in the
-Statement Composer). **Not built yet, so not here:** plain-language mode (L2), non-English voices and text (L3), the profile lock (decided
-against for now), and the pictures and core-vocabulary decisions (L4, L6). Their steps will be added when they are built.
+Statement Composer), and the **voice list and SPEECH LANGUAGE** (L3, part 1). **Not built yet, so not here:** plain-language mode (L2, the
+wording is proposed in `docs/PLAIN_LANGUAGE.md`), translated interface text (L3, part 2), the profile lock (decided against for now), and the
+pictures and core-vocabulary decisions (L4, L6). Their steps will be added when they are built.
 
 The rules are covered by automated tests (480 in `tools/kotlin_check`, run with `./run_unit_tests.sh`), and the repository policy tests
 pass. **What was never run anywhere is the Android part:** the build itself, every screen, the layout, the keyboard and the file
@@ -189,6 +190,29 @@ Off until you turn it on. It learns only from statements you SAVE, SPEAK or COPY
 - [ ] HELP: run STATEMENT COMPOSER. → A step called WORD SUGGESTIONS (OPTIONAL) says where to turn it on; it simply asks you to continue.
 - [ ] With airplane mode off and a network monitor running (or just the permission list), confirm nothing was sent anywhere and ACK still declares **no**
   network permission.
+
+## I. The voice list and SPEECH LANGUAGE
+
+Take a backup first. This needs a phone with at least one non-English voice **installed** in its speech engine (Settings, System, Languages, Text-to-speech).
+
+- [ ] AUDIO ARCHITECT → open a custom profile → BASE VOICE. → The list now shows voices in **more than English**, sorted by language, with the language
+  written out under each voice ("German (Germany)"). A note under the list says voices needing the internet or not installed are not shown.
+- [ ] Compare with the engine's own voice list in the phone's settings. → Every installed voice is there. A voice the engine only offers to **download** is not.
+  A voice marked as needing the internet is not.
+- [ ] Choose a non-English voice and tap the preview/test. → It speaks, through ACK's normal output (so the DSP chain and master gain apply).
+- [ ] Put an **English profile** (a voice chosen, or none) on the same phone and speak. → It sounds as before.
+- [ ] A profile chose an English voice earlier; now speak with a profile that has **no** voice. → It uses the language setting, not the earlier profile's voice
+  (this used to inherit it).
+- [ ] SPEECH LANGUAGE reads **THIS PHONE'S LANGUAGE** on a fresh install and **ENGLISH (US)** on an install that already existed. On the existing one, set the phone to a
+  non-English language and speak with a profile with no voice chosen. → It still speaks English, as before.
+- [ ] Tap SPEECH LANGUAGE to switch it and speak a message at once. → The next message uses the new language (no restart).
+- [ ] With the setting on THIS PHONE'S LANGUAGE and the phone language set to one the speech engine does not have, speak. → It still speaks (the engine's own
+  default), never silence, and the Terminal log says SPEECH LANGUAGE NOT AVAILABLE once.
+- [ ] MY VOICE (the cloned voice), if imported. → Unchanged.
+- [ ] EXPORT .JSON, change SPEECH LANGUAGE, FULL RESTORE that file. → The setting returns to what the file held. Restore a file from an **older build**. → The setting is unchanged.
+- [ ] DATA PORT → DELETE DATA → SETTINGS. → The first box says speech will be in this phone's own language afterwards; after it, SPEECH LANGUAGE reads THIS PHONE'S LANGUAGE.
+- [ ] Screen reader and a large font on the voice list. → Each row is readable and every line is at least as large as the body text.
+- [ ] Confirm ACK still declares no network permission.
 
 ## What to send back
 
