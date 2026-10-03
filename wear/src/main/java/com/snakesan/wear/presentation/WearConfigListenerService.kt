@@ -8,6 +8,8 @@ import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import androidx.compose.ui.graphics.toArgb
 import android.util.Log
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class WearConfigListenerService : WearableListenerService() {
 
@@ -149,7 +151,18 @@ class WearConfigListenerService : WearableListenerService() {
             // WATCH). One chunk per message -- AudioRelay buffers by
             // transfer id and plays once every chunk has arrived.
             "/audio/relay_chunk" -> {
-                AudioRelay.onChunkReceived(messageEvent.data)
+                AudioRelay.onChunkReceived(this, messageEvent.sourceNodeId, messageEvent.data)
+            }
+
+            // 5b. The phone gave up waiting for a relayed message's confirmation and is playing it itself.
+            // Payload: the transfer id, exactly 4 little-endian bytes (anything else is not ours and is ignored).
+            // Drops the transfer if it is still being reassembled, so it is not played here as well.
+            "/audio/relay_cancel" -> {
+                if (messageEvent.data.size == 4) {
+                    AudioRelay.cancel(
+                        ByteBuffer.wrap(messageEvent.data).order(ByteOrder.LITTLE_ENDIAN).int
+                    )
+                }
             }
         }
     }

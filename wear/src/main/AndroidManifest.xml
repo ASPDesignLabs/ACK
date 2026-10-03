@@ -47,6 +47,7 @@
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/computer_categories" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sys/computer_categories_all" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/audio/relay_chunk" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/audio/relay_cancel" />
                 <!-- Keep existing ones -->
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/besu/config_push" />
             </intent-filter>

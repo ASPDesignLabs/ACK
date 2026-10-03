@@ -25,6 +25,8 @@ import android.speech.tts.UtteranceProgressListener
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.example.besu.core.NoticeRateLimiter
+import com.example.besu.core.RelayMissStreak
+import com.example.besu.core.RelayResult
 import com.example.besu.watch.WatchAudioRelay
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.Wearable
@@ -59,6 +61,9 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     }
 
     private val noticeLimiter = NoticeRateLimiter(NOTICE_INTERVAL_MS)
+
+    // Messages in a row the watch did not confirm (OUTPUT DEVICE = ACK WATCH); see playPcm.
+    private val watchMissStreak = RelayMissStreak()
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var tts: TextToSpeech? = null
@@ -603,7 +608,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                         audioData = customPcm,
                         sampleRate = customSampleRate,
                         forceSpeakerForRequest = emergency.forceSpeaker || forceSpeaker,
-                        allowVolumeEnforcement = true
+                        allowVolumeEnforcement = true,
+                        isEmergency = emergency.enabled
                     )
                 } else {
                     // An AAC app must never go silent because a neural
@@ -736,7 +742,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 // Always enforced -- see the note on ensureStreamVolume's
                 // call site in playRecording below for why this used to be
                 // conditional and no longer is.
-                allowVolumeEnforcement = true
+                allowVolumeEnforcement = true,
+                isEmergency = emergency.enabled
             )
         } catch (error: Exception) {
             error.printStackTrace()
@@ -839,7 +846,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 audioData = playablePcm,
                 sampleRate = sampleRate,
                 forceSpeakerForRequest = emergency.forceSpeaker || forceSpeaker,
-                allowVolumeEnforcement = true
+                allowVolumeEnforcement = true,
+                isEmergency = emergency.enabled
             )
         }.start()
 
@@ -952,16 +960,31 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         audioData: ShortArray,
         sampleRate: Int,
         forceSpeakerForRequest: Boolean,
-        allowVolumeEnforcement: Boolean
+        allowVolumeEnforcement: Boolean,
+        // An emergency message (or its alert tone) always plays on the phone, whatever OUTPUT DEVICE is
+        // set to: a bystander has to hear it, and waiting for the watch to confirm would add delay.
+        isEmergency: Boolean = false
     ) {
-        // WATCH routing pre-empts local playback entirely rather than
-        // running alongside it -- if the watch is reachable, this is the
-        // only place the prompt plays. FORCE SPEAKER still wins over WATCH,
-        // same as it wins over a selected Bluetooth device.
-        if (!forceSpeakerForRequest && outputRouteMode == "WATCH" &&
-            relayToWatchIfReachable(audioData, sampleRate)
-        ) {
-            return
+        // WATCH routing pre-empts local playback ONLY once the watch has confirmed it is playing --
+        // if it is reachable and says so, that is the only place the prompt plays. If no watch is
+        // reachable, or it does not confirm in time, the phone plays it itself (so a message is never
+        // lost to a dropped chunk or a watch app that is not running), and the cause is logged.
+        // FORCE SPEAKER still wins over WATCH, same as it wins over a selected Bluetooth device.
+        if (!forceSpeakerForRequest && !isEmergency && outputRouteMode == "WATCH") {
+            when (relayToWatchIfReachable(audioData, sampleRate)) {
+                RelayResult.DELIVERED -> {
+                    watchMissStreak.onDelivered()
+                    return
+                }
+                RelayResult.NOT_CONFIRMED -> {
+                    broadcastLog("WATCH DID NOT CONFIRM: PLAYING ON PHONE", "ERR")
+                    if (watchMissStreak.onMiss()) {
+                        broadcastLog("NO CONFIRMATION FROM WATCH (IS THE WATCH APP UPDATED?)", "ERR")
+                    }
+                }
+                // No watch in reach: nothing was sent, so play on the phone exactly as AUTO would.
+                RelayResult.NO_WATCH -> Unit
+            }
         }
 
         val attributes = AudioAttributes.Builder()
@@ -1083,15 +1106,16 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     }
 
     // Checks for a currently-connected watch node and, if there is one,
-    // hands the already fully-processed PCM off to WatchAudioRelay instead
-    // of playing it locally -- returns false (never having sent anything)
-    // if no watch is reachable right now, so the caller falls through to
-    // local playback exactly as AUTO would. This runs on the same
-    // background thread every playPcm call already runs on (the TTS
+    // hands the already fully-processed PCM to WatchAudioRelay and waits for
+    // the watch to confirm it is playing. NO_WATCH (nothing was sent) if no
+    // watch is reachable right now; DELIVERED if the watch confirmed;
+    // NOT_CONFIRMED if one was reachable but did not confirm in time. The
+    // caller plays on the phone for anything but DELIVERED. This runs on the
+    // same background thread every playPcm call already runs on (the TTS
     // utterance callback thread, or a dedicated Thread{} in playRecording/
-    // previewRecording), so a short blocking wait here is safe -- it never
-    // touches the main thread.
-    private fun relayToWatchIfReachable(audioData: ShortArray, sampleRate: Int): Boolean {
+    // previewRecording), so a blocking wait here is safe -- it never touches
+    // the main thread.
+    private fun relayToWatchIfReachable(audioData: ShortArray, sampleRate: Int): RelayResult {
         val nodes = try {
             Tasks.await(Wearable.getNodeClient(this).connectedNodes, 2, TimeUnit.SECONDS)
         } catch (_: Exception) {
@@ -1099,11 +1123,15 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         }
 
         if (nodes.isEmpty()) {
-            return false
+            return RelayResult.NO_WATCH
         }
 
-        WatchAudioRelay.send(this, nodes, audioData, sampleRate)
-        return true
+        val startedAt = SystemClock.elapsedRealtime()
+        val result = WatchAudioRelay.sendAndAwait(this, nodes, audioData, sampleRate)
+        if (result == RelayResult.DELIVERED) {
+            broadcastLog("WATCH CONFIRMED PLAYING IN ${SystemClock.elapsedRealtime() - startedAt} MS", "SYS")
+        }
+        return result
     }
 
     private fun playEmergencyTone(
@@ -1159,7 +1187,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             audioData = pcm,
             sampleRate = sampleRate,
             forceSpeakerForRequest = forceSpeaker,
-            allowVolumeEnforcement = false
+            allowVolumeEnforcement = false,
+            isEmergency = true      // this tone only ever precedes an emergency message
         )
     }
 
