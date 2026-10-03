@@ -1135,3 +1135,66 @@ HELP walkthrough is `help/RecordTrainingDataHelp.kt`, kept in step with the scre
 | `help/RecordTrainingDataHelp.kt`, `AckTags.kt` (`TRAIN_*`) | The walkthrough and its tags |
 | `backup/AckBackup.kt`, `backup/TransferManager.kt` | `trainingScripts` in the full backup |
 | `tools/kotlin_check/` | The two Gradle projects that test/type-check without the SDK |
+
+## SAFETY DEFAULTS — rules that must stay true
+
+Seven problems were found when ACK was evaluated for use with clients: long messages cut short on screen, a robotic default voice, no check
+for the display permission, a silent failure on the watch route, no way to confirm an Emergency tap, and a speech-markup bug. All of them
+made the app show or say something different from what the person meant. The fixes are listed here with the rules that keep them fixed.
+`docs/SAFETY_DEFAULTS_DEVICE_TEST.md` is the on-device checklist; everything below was built and tested **without an Android SDK**, so the
+screens, the sound and the watch were never run (the harness covers `core/` only).
+
+### Seed, don't flip — new defaults reach fresh installs only
+- `AckApplication.onCreate` calls `data/InstallState.ensureRecorded` **before any screen touches storage** (MainActivity's first run writes
+  `CUSTOM_VOICES` into `ack_prefs`, which would otherwise make every install look existing). It asks `core/InstallClassifier` whether any
+  preference file the app owns holds a key other than the seed keys; if not, the install is **fresh**, and only then are the defaults
+  written: `USER_VOX_PROFILE = "ORGANIC"` (only if absent) and one `FULL TEXT` visual preset (`bypassTruncation = true`, set active). The
+  flags `recorded`/`fresh` go into `ack_install_state` with `commit()`. A seed that was interrupted still reads as fresh next launch, because
+  the seed keys are ignored (a test pins `SEED_KEYS`). Add a new preference file to `InstallState.OWNED_PREFS_FILES`; add a new seed key to
+  `SEED_KEYS` **and** the seed together.
+- **Never change a read-site fallback to make a default "take".** The five `"CYBER"` fallbacks (MainActivity, AudioView, OutputService ×2,
+  TransferManager) and `VisualPreset.bypassTruncation = false` stay, so an install that never chose, an older saved preset, and an older backup
+  all behave as before. The only all-install change is on error paths: `getProfile`'s unknown id and `deleteProfile` now fall back to ORGANIC.
+- An **existing** install is offered the same defaults once (`core/DefaultsOffer`, `settings/DefaultsPrompt.kt`, `defaults_prompt_dismissed`):
+  a banner, then a review where every switch starts **off**, BACK UP FIRST, and APPLY. Applying full messages **adds** a new `FULL TEXT` preset
+  copied from the active one; it never edits the person's own. It never starts HELP or navigates (see the HELP navigation pitfall above).
+
+### `core/` is plain Kotlin, like `capture/`
+No `android.*`, ever; `tools/kotlin_check/run_unit_tests.sh` compiles `capture/` **and** `core/` (195 tests in all when this was written; the "140"
+quoted in the capture section is `capture/` alone). It holds the *decisions*: `InstallClassifier`, `DisplayText`, `DefaultsOffer`,
+`NoticeRateLimiter`, `RelayAckTracker`/`WatchRelayProtocol`/`RelayMissStreak`. The Android code that calls them stays thin. New rules get boundary
+tests; break the code on purpose once and watch a test fail.
+
+### The display-text rule
+`core/DisplayText.resolveDisplayText(rawPhrase, targetName, matrixVisualOverride, fullText)`: override, then target name, then (if `fullText`) the
+whole phrase, otherwise the **legacy** 5-word rule (`ALERT:` + 3 words). `VisualLogicEngine` is a thin wrapper passing `preset.bypassTruncation`
+(the stored name is unchanged so backups and old presets decode; the editor calls it SHOW FULL MESSAGE and warns while it is off). The preset size is
+the **largest** size: `VisualPromptService` auto-sizes 24 sp up to it in 2 sp steps, and a message that still does not fit moves into a `ScrollView`
+with SCROLL FOR MORE. Autosize throws the text layout away and asks for another pass, so the overflow check waits for the first non-null layout;
+the tap/hold handlers go on the text view itself in scroll mode, because a ScrollView swallows touches. `showOverlay(fitText = true)` is for text
+prompts only. `index.html` mirrors the new default (whole message, capitals).
+
+### Display permission and Silent Mode
+`ui/OverlayPermissionBanner.kt` shows a non-dismissible red banner while `Settings.canDrawOverlays` is false and re-reads it on resume through the
+hosting `ComponentActivity`'s lifecycle (the same way `CaptureSessionScreen` does, known to build; do not swap in `LocalLifecycleOwner` without a
+compile). `OutputService` logs MESSAGE SPOKEN BUT NOT SHOWN, and for Silent Mode with no permission NOTHING WAS SHOWN OR SPOKEN plus a toast, each
+at most once a minute (`NoticeRateLimiter`). **Silent Mode is never overridden.** The old `SetupActivity` was dead code and is gone.
+
+### The watch audio relay: chunk, confirmation, cancel
+`core/WatchRelayProtocol` pins the bytes. `/audio/relay_chunk` phone→watch (12-byte header + PCM). `/sys/audio_relay_ack` watch→phone (transfer id, 4
+little-endian bytes), sent by `AudioRelay.play` only after `track.play()` returns. `/audio/relay_cancel` phone→watch (same id) after a timeout.
+`WatchAudioRelay.sendAndAwait` calls `RelayAckTracker.expect` **before the first chunk is sent** (the ack can beat the wait), waits
+`relayTimeoutMs(chunks)`, and `playPcm` returns early **only for DELIVERED**; NO_WATCH and NOT_CONFIRMED play on the phone, with the cause logged. The
+watch is a separate module (`com.example.besu.wear`) with its own copy of the bytes: change both together, update the watch manifest path filters, and
+release both apps together. Known limits: a late ack can play on both; an un-updated watch never confirms, so each message waits out the timeout.
+
+### Emergency rules
+Emergency messages **and their alert tone always play on the phone** (`playPcm(isEmergency)`), speak **with no voice effects** whatever profile is
+active (`withoutVoiceEffectsIfEmergency`; base system voice, Master Gain and the boost are kept), and can optionally ask for confirmation before
+sending (`EmergencyDeckConfig.confirmBeforeSend`, default **false**, a recorded decision; SEND speaks the phrase that was shown, not a fresh resolve).
+Terminal `/e` is typed on purpose and never asks.
+
+### Cadence is retired
+`applyCadenceWarp` made each word's speed random and inserted words into SSML unescaped, and the result also reached the Piper voice, which does not
+parse SSML. The slider and the speech path are gone; the stored `VOX_CADENCE` value is kept (never deleted) and still travels in EXPORT .JSON
+(`dsp.cadence`) so old and new backups restore. **Do not send markup to the custom voice.**
