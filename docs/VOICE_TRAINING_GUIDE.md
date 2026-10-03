@@ -246,6 +246,30 @@ training. Anything the silence detector couldn't confidently split
 script's `--dry-run` flag and `--silence-thresh`/`--min-silence-len`
 options if a lot of takes end up there on the first pass.
 
+### Recording with the ACK app, away from your computer
+
+If you would rather gather recordings wherever you are, ACK can do the recording on the phone and hand the result to Freeform
+Studio later. In ACK open **Audio Architect → CUSTOM VOICE → RECORD TRAINING DATA** (the in-app HELP has a walkthrough under
+BASICS // PERSONALIZATION).
+
+1. **Write a script**, or paste one: any text you want to read. Write numbers and symbols the way you will say them. ACK splits the
+   text into cards sized to read in one go (about ten seconds), and shows you how many cards it made.
+2. **Set up the phone**: put it where it will stay, keep your mouth the same distance from it for the whole session, and run the
+   two-second quiet check. It tells you if the room is loud or the microphone is covered.
+3. **Read**. One card is shown at a time, large. Read it when ready; ACK hears when you finish, keeps the clip, and shows the next
+   card, so you never touch the phone. It makes no sound or vibration while listening. *REDO LAST* sets a bad clip aside and shows
+   that card again; *PAUSE* stops listening. A long script can be read over several sessions: each one starts at the first card
+   not yet recorded.
+4. **Or talk freely** with *RECORD FREE SPEECH* (up to 90 minutes in one go). The audio is kept whole and the phone only suggests cuts.
+5. **Save to a file**: *SAVE ALL TO A FILE* writes a package (a `.zip`) where you choose, then reads it back and checks every
+   recording in it. Move the file to your computer by cable or USB drive.
+6. **Add it in Freeform Studio**: *Add recordings from ACK* on the Review page, or
+   `python -m freeform_studio.ack_import <the file>.zip` (see the Freeform Studio README, *Recordings made with the ACK app*).
+   Then review, approve and export as usual (below).
+
+Keep the package on the computer until you have checked it, and only then delete the session on the phone: the phone never
+deletes a session because you saved it. Recordings stay on your devices throughout; see `docs/DATA_SOVEREIGNTY.md`.
+
 ### Training on free-speech recordings (Freeform Studio)
 
 Recordings made with Freeform Studio (`tools/freeform_studio/`) can be corrected and approved on your phone first (open

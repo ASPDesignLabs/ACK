@@ -1051,3 +1051,87 @@ whatever it makes scrollable.
 | `MainActivity.kt` | `showLegacyManualOverride` state, the in-place (non-`Dialog`) overlay render, `showComputerHeaderTakeover` gating, `composerFullscreen` state and the header/nav `if (!composerFullscreen)` guards, the `"TYPE" -> StatementComposerView(...)` dispatch |
 | `help/HelpRegistry.kt` | Both HELP modules registered under `HelpCategory.BASICS_MANUAL_OVERRIDE`; the legacy module's destination fixed to `TERMINAL` |
 | `backup/AckBackup.kt`, `backup/TransferManager.kt` | `savedStatementTree: StatementNode?` — nullable field, validated recursively (`isStatementNodeValid`/`countStatementNodes`/`collectStatementNodeIds`: node count cap, `SAFE_KEY_PATTERN` id, `MAX_PHRASE_LENGTH` template, `variableContext` checked against `POSE_CATEGORIES`/custom-context-name pattern, tree-wide duplicate-id check), restored node-by-node pre-order (`restoreStatementNode`) so an unmentioned node is never touched |
+
+## The TRAINING DATA CAPTURE system — deep analysis
+
+Lets the person gather voice-model training data **on the phone, away from the computer**: read scripts (or just talk) into ACK, have the
+phone cut and note each clip, save a package to a file, move it to the PC yourself, and import it into Freeform Studio. Entered from
+AUDIO ARCHITECT → CUSTOM VOICE → RECORD TRAINING DATA. The PC half (`ack_package.py`, `ack_import.py`, `ack_segments.py`, `ack_checks.py`,
+`ack_web.py`, and the "Add recordings from ACK" card) is described in `tools/freeform_studio/README.md`; this section is the phone half and
+the contract between them.
+
+### The format is an executable specification
+
+`docs/ACK_TRAINING_CAPTURE_FORMAT.md` is the contract (package layout, manifest, measurements, card splitting, hands-free detector, cut
+proposer, constants). Its rules are **also running code**: `tools/freeform_studio/tests/ack_capture_reference.py` (Python) and
+`app/.../capture/` (Kotlin), both held to the same JSON cases in `tools/freeform_studio/tests/data/ack_capture/` (`cards`, `handsfree`,
+`segments`, `metrics`, `manifest_example`, and `fuzz.json`: ~190 seeded random cases for the places two implementations quietly differ).
+To change a rule: edit the reference and the document's constants block together, `python tools/freeform_studio/tests/ack_capture_reference.py
+--write`, and make the Kotlin pass. A test fails if the document, the reference and the cases disagree, and the Kotlin tests fail if the port
+drifts. **Every new rule needs exact-boundary cases** (exactly the limit, one hop under, exactly at the threshold): breaking the Kotlin on
+purpose (`>=` for `>`, a dropped abbreviation, one symbol removed) first showed ~10 such comparisons nothing was testing. Two details that
+bit: a hop is `sample_rate // 100` samples (441 at 44.1 kHz, not 480), and a word is a letter or number of *any* script split on *any* Unicode white
+space (Kotlin's `isWhitespace` includes no-break spaces, Python's `split()` too; U+0085 needs adding by hand).
+
+### Two layers, and the line between them
+
+- **`capture/` is plain Kotlin: no `android.*`, ever.** Models, `LevelMath`, `CardSplitter`, `HandsFreeDetector`, `CutProposer`, `NoiseCheck`,
+  `WavFile`/`WavStreamWriter`, `AudioScan` (streams a recording from disk so a 90-minute file never sits in memory), `TrainingStore` (files),
+  `ScriptCaptureEngine`, `FreeCaptureEngine`, `PackageWriter`/`PackageVerifier`/`PackagePlanner`. Tested on a JVM: `tools/kotlin_check/run_unit_tests.sh`
+  (140 tests; also what `./gradlew :app:testDebugUnitTest` runs). The harness compiles that folder recursively, so one Android import there breaks it.
+- **`voicecapture/` is the Android edge** and is kept thin: `TrainingCapture` (paths, prefs, one shared `TrainingStore` so its locks cover every
+  screen), `TrainingMicrophone` (AudioRecord, 48 kHz else 44.1 kHz, UNPROCESSED else VOICE_RECOGNITION, a second of headroom), the runners (polled
+  `@Volatile` state; a screen reads it ten times a second, never a hundred), and the Compose screens. `tools/kotlin_check/run_typecheck.sh`
+  type-checks it against Compose Multiplatform (same `androidx.compose.*` API, on Maven Central) plus stubs of the Android classes: finds Kotlin/Compose
+  mistakes, **cannot** find a wrong Android signature or anything about the microphone or layout. Add stubs when you use a new Android API.
+
+### How audio is kept safe (the engines)
+
+- A card is in the notes as `OPEN` **before** its first sample, and every sample goes straight to that card's file. When the detector decides the card
+  is finished, the file is cut to the clip (lead-in, speech, tail) and the audio heard after the clip's end is **carried into the next card's file**, so a card
+  started promptly loses no words, and a clip never reaches back into the one before. Decided one 10 ms hop at a time, so the clips are identical
+  whatever chunk size the microphone delivers (a test feeds 1 to 48000 samples).
+- Notes are written to a temp file, fsynced, and moved into place (`ATOMIC_MOVE`): a crash leaves the old notes or the new, never half. After a crash
+  `TrainingStore.recoverOpenSessions` repairs the header of any unfinished clip or recording and marks it `RECOVERED`: **held back from packages until the
+  person listens and keeps it**. It also looks at *ended* sessions with unfinished audio (a final scan that failed). **Nothing is deleted except a file with
+  no audio in it**; a file that isn't ours is left byte-for-byte. A kept clip is never deleted on its own; deleting a session is the caller's job and the UI
+  asks twice. Redo sets the old attempt aside (`REDONE`), it stays on disk.
+- **Taps.** The app's buttons (`NeonButton`, `TightPanelButton`) give haptic feedback; with the microphone open a buzz or thump lands in the next card. The
+  capture screen uses its own haptic-free buttons, makes no sound or vibration, and the engine ignores 0.3 s of audio after a touch-driven (re)start
+  (`SETTLE_HOPS`; not written, not listened to, not counted). Don't add sound, vibration or a standard button to that screen.
+- **Rotation.** `MainActivity` declares no `configChanges`, so rotating rebuilds the composition (and would end a recording). The capture screen locks
+  orientation (`SCREEN_ORIENTATION_LOCKED`) and keeps the screen on while it is up, and pauses on `ON_STOP` (a backgrounded app loses the microphone).
+  Anything that tears the screen down ends the session cleanly (kept clips stay kept).
+- Disk: needs 300 MB free to start; the engines pause (script) or stop and keep (free) before the last 100 MB. Free speech stops itself at 90 minutes.
+
+### Packages, saving, and the rules that must stay true
+
+`PackageWriter` checks everything the PC's reader checks **before writing a byte** (ids, times, texts, audio headers against file length, sample rate and
+length noted), cleans text the person typed rather than refusing it (a line break becomes one space; cut to length without splitting a surrogate pair),
+streams each file into the zip while hashing it, writes the manifest last, and produces identical bytes for identical input. A file that changes while
+being packed stops the export. `PackageVerifier` reads a saved package back and compares every file's size and checksum; the export screen runs it and
+**deletes the half-made file on any failure** (`DocumentsContract.deleteDocument`) and says nothing was lost from the phone. Saving is **only** through
+`CreateDocument` (the system file picker): **no share sheet, no network, no Intent that can hand the audio to another app.** Packages are not deleted
+because they were saved. Scripts (text only) are in the full JSON backup (`AckBackup.trainingScripts`, validated with specific `ACK_IMPORT` logging, restored
+by id, never removing anything); recordings are not (they travel as packages). `tools/freeform_studio/tests/test_kotlin_package_contract.py` opens
+Kotlin-written packages with the real Python reader and importer (skipped unless `ACK_KOTLIN_PACKAGES` points at a folder).
+
+### Not verified, and where the risks are
+
+Built and tested without an Android SDK, so **never run on a phone**: the Android build, `AudioRecord` behaviour on real devices (some phones lack an
+unprocessed source or refuse 48 kHz), the Compose layout (five mark buttons across a narrow screen, the card text size), the file picker flow, and
+`OutputService` previews of clips. `tools/kotlin_check` covers the logic and the Kotlin of the screens, not these. `docs/` has the user-facing steps; the
+HELP walkthrough is `help/RecordTrainingDataHelp.kt`, kept in step with the screens by `test_training_capture_wiring.py`.
+
+### File map
+
+| File | Owns |
+|---|---|
+| `docs/ACK_TRAINING_CAPTURE_FORMAT.md` | The contract: package, manifest, measurements, card splitting, hands-free, cut proposals, constants |
+| `tools/freeform_studio/tests/ack_capture_reference.py`, `.../data/ack_capture/*.json` | The executable reference and the shared cases both sides must reproduce |
+| `app/.../capture/` | All the portable logic (see above), no `android.*` |
+| `app/src/test/.../capture/` | 140 JVM tests; `Vectors.kt` finds the shared cases and the document from any working directory |
+| `app/.../voicecapture/` | `TrainingCapture` + `TrainingMicrophone`, `CaptureRunners`, `TrainingCaptureHome` (library, sessions, saving), `ScriptEditor`, `CaptureSessionScreen`, `SessionDetailDialog` |
+| `help/RecordTrainingDataHelp.kt`, `AckTags.kt` (`TRAIN_*`) | The walkthrough and its tags |
+| `backup/AckBackup.kt`, `backup/TransferManager.kt` | `trainingScripts` in the full backup |
+| `tools/kotlin_check/` | The two Gradle projects that test/type-check without the SDK |

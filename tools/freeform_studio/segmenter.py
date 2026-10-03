@@ -141,8 +141,8 @@ def _flags(text: str, words: List[Dict[str, Any]], dur: float, stats: Dict[str, 
     return f
 
 
-def build_segments(asr: Dict[str, Any], duration: float, opts: Optional[SegOptions] = None) -> List[Dict[str, Any]]:
-    o = opts or SegOptions()
+def ingest_words(asr: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """The recognizer's words as one time-ordered list, each carrying its recognizer segment's confidence figures (`_st`)."""
     words: List[Dict[str, Any]] = []
     for seg in asr.get("segments", []):
         stats = {"no_speech_prob": seg.get("no_speech_prob"), "avg_logprob": seg.get("avg_logprob"),
@@ -158,6 +158,42 @@ def build_segments(asr: Dict[str, Any], duration: float, opts: Optional[SegOptio
                 item["m"] = True
             words.append(item)
     words.sort(key=lambda w: (w["s"], w["e"]))
+    return words
+
+
+def split_long(words: List[Dict[str, Any]], opts: SegOptions) -> List[List[Dict[str, Any]]]:
+    """Cut a run of words that is too long for one piece at its best internal gaps."""
+    return _split_long(words, opts)
+
+
+def make_segment(idx: int, g: List[Dict[str, Any]], start: float, end: float, o: SegOptions) -> Dict[str, Any]:
+    """One proposed piece: the words `g` (possibly none), spanning start..end seconds, with its warning flags."""
+    text = join_words(g)
+    stats = {
+        "no_speech_prob": max((w["_st"]["no_speech_prob"] for w in g if w["_st"]["no_speech_prob"] is not None), default=None),
+        "avg_logprob": min((w["_st"]["avg_logprob"] for w in g if w["_st"]["avg_logprob"] is not None), default=None),
+        "compression_ratio": max((w["_st"]["compression_ratio"] for w in g if w["_st"]["compression_ratio"] is not None), default=None),
+    }
+    clean_words = []
+    for w in g:
+        cw = {"w": w["w"], "s": round(w["s"], 3), "e": round(w["e"], 3), "p": round(w["p"], 3)}
+        for k in ("j", "m"):
+            if w.get(k):
+                cw[k] = True
+        clean_words.append(cw)
+    return {
+        "id": f"s{idx + 1:03d}",
+        "start": round(start, 3), "end": round(end, 3),
+        "text": text, "words": clean_words,
+        "status": "pending", "tags": [], "note": "",
+        "flags": _flags(text, clean_words, end - start, stats, o),
+        "auto": {"start": round(start, 3), "end": round(end, 3), "text": text},
+    }
+
+
+def build_segments(asr: Dict[str, Any], duration: float, opts: Optional[SegOptions] = None) -> List[Dict[str, Any]]:
+    o = opts or SegOptions()
+    words = ingest_words(asr)
     if not words:
         return []
 
@@ -177,25 +213,5 @@ def build_segments(asr: Dict[str, Any], duration: float, opts: Optional[SegOptio
         if next_start is not None:
             end = min(end, (g[-1]["e"] + next_start) / 2)
         start, end = max(0.0, start), min(duration, end)
-        text = join_words(g)
-        stats = {
-            "no_speech_prob": max((w["_st"]["no_speech_prob"] for w in g if w["_st"]["no_speech_prob"] is not None), default=None),
-            "avg_logprob": min((w["_st"]["avg_logprob"] for w in g if w["_st"]["avg_logprob"] is not None), default=None),
-            "compression_ratio": max((w["_st"]["compression_ratio"] for w in g if w["_st"]["compression_ratio"] is not None), default=None),
-        }
-        clean_words = []
-        for w in g:
-            cw = {"w": w["w"], "s": round(w["s"], 3), "e": round(w["e"], 3), "p": round(w["p"], 3)}
-            for k in ("j", "m"):
-                if w.get(k):
-                    cw[k] = True
-            clean_words.append(cw)
-        out.append({
-            "id": f"s{idx + 1:03d}",
-            "start": round(start, 3), "end": round(end, 3),
-            "text": text, "words": clean_words,
-            "status": "pending", "tags": [], "note": "",
-            "flags": _flags(text, clean_words, end - start, stats, o),
-            "auto": {"start": round(start, 3), "end": round(end, 3), "text": text},
-        })
+        out.append(make_segment(idx, g, start, end, o))
     return out

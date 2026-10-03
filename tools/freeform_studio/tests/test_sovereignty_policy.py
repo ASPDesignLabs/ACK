@@ -70,3 +70,30 @@ def test_the_apps_own_code_opens_no_connection():
             if forbidden.search(line):
                 found.append(f"{p.relative_to(APP)}:{n}: {line.strip()[:80]}")
     assert not found, "network code in the app:\n" + "\n".join(found)
+
+
+def test_recording_training_data_can_only_be_saved_where_the_person_chooses():
+    """RECORD TRAINING DATA saves a package through the system file picker (CreateDocument) and nowhere else: no share sheet, no
+    intent that hands the audio to another app, no file provider that would let another app read it, no way to start a transfer."""
+    forbidden = re.compile(r"ACTION_SEND|ACTION_SEND_MULTIPLE|createChooser|ShareCompat|FileProvider|ACTION_VIEW|startActivity\(|"
+                           r"ACTION_INSTALL|BroadcastReceiver|sendBroadcast|ContentResolver\.insert|MediaStore|ClipboardManager|setPrimaryClip")
+    found = []
+    for folder in ("voicecapture", "capture"):
+        for p in (APP / "java" / "com" / "example" / "besu" / folder).rglob("*.kt"):
+            for n, line in enumerate(p.read_text(errors="replace").splitlines(), 1):
+                code = line.split("//", 1)[0]
+                if forbidden.search(code):
+                    found.append(f"{p.relative_to(APP)}:{n}: {line.strip()[:80]}")
+    assert not found, "a way for training recordings to leave the phone other than the file picker:\n" + "\n".join(found)
+    home = (APP / "java" / "com" / "example" / "besu" / "voicecapture" / "TrainingCaptureHome.kt").read_text(encoding="utf-8")
+    assert "ActivityResultContracts.CreateDocument" in home, "saving no longer goes through the file picker"
+
+
+def test_the_portable_capture_code_has_no_android_classes():
+    """capture/ is compiled and tested without an Android SDK (tools/kotlin_check); one android.* import there breaks that."""
+    found = []
+    for p in (APP / "java" / "com" / "example" / "besu" / "capture").rglob("*.kt"):
+        for n, line in enumerate(p.read_text(errors="replace").splitlines(), 1):
+            if re.match(r"\s*import\s+(android|androidx)\.", line):
+                found.append(f"{p.name}:{n}: {line.strip()}")
+    assert not found, "Android imports in the portable package:\n" + "\n".join(found)

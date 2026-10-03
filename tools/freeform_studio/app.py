@@ -16,6 +16,7 @@ from urllib.parse import urlencode
 from quart import Quart, Response, g, jsonify, redirect, request, send_file, send_from_directory
 
 from . import __version__
+from . import ack_web
 from . import backup as backup_mod
 from . import export as export_mod
 from . import health
@@ -428,4 +429,5 @@ def create_app(cfg: Config, engine_factory: Optional[Callable[[Config, Optional[
         engines.unload()
         return jsonify(engines.status())
 
+    ack_web.register(app, cfg, store, runner, ApiError)
     return app
