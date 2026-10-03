@@ -23,6 +23,11 @@ This is not legal advice. It records what the software does, how that was checke
 | On your phone, while recording in the browser | the browser keeps each audio part until the PC confirms it, then deletes it; unsent edits are kept as a draft |
 | On your phone, while recording with the ACK app | inside ACK's own private storage, until you save a package; ACK has no network permission and its cloud backup is switched off |
 | Packages saved by the ACK app | wherever you put the `.zip` file, then `~/piper-recording-studio/output/_freeform/<code>/incoming/` once you add it in Freeform Studio. Copies of what is on your phone; **not** included in backups; never deleted by the program |
+| A backup you export from ACK (EXPORT .JSON) | wherever you choose to save it. It can hold the Emergency info card, Target Computer entries with phone numbers and addresses, saved locations, every voice recording (the audio itself), your messages, statements and settings. **It is not encrypted and has no password: anyone who opens it can read all of it.** ACK says this before it opens the file picker |
+| The private safety copy ACK makes before a data upgrade | `files/auto_backups` in ACK's private storage: a full backup (recordings and Emergency card included), **not encrypted**, made once before an old Target Computer list is upgraded. PROTOCOL → DATA PORT lists it (SAFETY COPIES) and lets you delete it |
+| The Terminal log | ACK's private storage. Kept for 7 days by default (you can choose 1 to 30). **Not** in any backup |
+| What you copy with COPY (a composed statement, or a contact card's name, number, address or email) | the phone's clipboard, as plain text. ACK does not mark it as sensitive (you can see what was copied in the clipboard preview) and never clears it, so a keyboard's clipboard history, or any app allowed to read the clipboard, may keep it |
+| The paired watch's copy of Target Computer names | inside the ACK Wear app on the watch (names only, not numbers or addresses). Deleting PEOPLE AND PLACES on the phone sends the watch an empty list, but a watch that is out of reach keeps the old names until it next connects. See section 8 |
 
 ## 2. When anything uses the internet
 
@@ -32,6 +37,7 @@ This is not legal advice. It records what the software does, how that was checke
 | `python -m freeform_studio.models fetch` | huggingface.co | the model name, your address, library versions. **Asks first. No audio, no text.** | skip it by copying a model folder and using `--asr-model /path` |
 | The server, review pages, export, backup, dataset building, `doctor` | **nobody** | nothing | (nothing to avoid) |
 | Bringing a package from the ACK app into Freeform Studio (`ack_import` or the Review page's *Add recordings from ACK*) | **nobody** | nothing | (nothing to avoid). The package moves by cable or USB drive; ACK has no way to send it anywhere |
+| Using the ACK Wear watch app | Google, through Google Play services (not through ACK), **only when Bluetooth between the phone and the watch is unavailable** | deck and Target Computer names, settings, and, if the watch audio relay is on, the speech audio. Google says it is end-to-end encrypted while it travels. **Not yet tested on a real phone and watch** | don't use the watch app. See section 8 |
 | The first training run | github.com, to fetch the `val_mos` quality scorer's code and weights, **and run that code** (`torch.hub`, `trust_repo=True`). Nothing of yours is sent. | the request itself | run it once online, then it works from its cache; or turn the scorer off (`--model.mos_metric none`, read in the trainer's source, not tried here) |
 | Downloading a base voice checkpoint (training guide, step 3) | huggingface.co | the request | it is a step you take yourself |
 | **Pasting recordings, transcripts or datasets into a hosted AI assistant or any website** | whoever runs it | **everything you paste** | don't. This is the easiest way to lose control of this data, and nothing here can stop it. |
@@ -126,6 +132,14 @@ apply. Ask your organization's privacy officer. Some things to settle with the p
    * the checkpoints (`~/piper/checkpoints/`, `lightning_logs/`) and the exported `.onnx`/`.onnx.json`. **A checkpoint contains
      what the model learned about the voice, and it cannot be "un-trained", so delete them if consent is withdrawn.**
    * copies on phones, USB drives and other computers, and the voice imported into the ACK app
+   * **on the phone, in ACK:** PROTOCOL → DATA PORT → **DELETE DATA** (twelve areas: messages and decks, the Emergency info card, people and
+     places, saved locations, the Terminal log, message recordings, training data, the trained voice, the GIF library, safety copies,
+     temporary files, and settings, plus DELETE EVERYTHING). Each asks twice and says how to save the data first. Also **DELETE CUSTOM VOICE**
+     (AUDIO ARCHITECT), **MANAGE RECORDINGS** for single voice recordings, and deleting a **training session** (it asks twice).
+     Android's own **Clear storage** (Settings, Apps, ACK, Storage; the wording varies by phone) is the complete route and returns ACK to a new install
+   * **the watch** may keep Target Computer names until it next connects (section 8)
+   * nothing in ACK removes a file you saved elsewhere (an export, a package, a backup, a GIF or voice `.zip`) or anything you copied to
+     another app. Delete those yourself
 5. **Handing over.** Give the person their recordings and voice, then delete your copies of everything above.
 6. **The base voice's license.** A voice trained from a base checkpoint is a derivative of it, and base voices come with their
    own conditions. Read the base voice's `MODEL_CARD` (Piper's documentation says some voices have restrictive licenses) and
@@ -137,16 +151,27 @@ apply. Ask your organization's privacy officer. Some things to settle with the p
 * Copies you make yourself (a USB stick, an email, a cloud drive, a chat window).
 * Hosted AI tools and websites you paste data into.
 * The phone's own operating system and apps.
+* **ACK's own storage is not encrypted and ACK has no app lock.** The phone's lock screen is the only barrier: anyone who can unlock the
+  phone, or read its storage with the right tool, can read what ACK holds.
+* An **EXPORT .JSON** file, a **safety copy**, a voice or GIF `.zip`, or a **training package** can be read by anyone who gets the file.
+  None of them has a password.
+* Anything you **copy** out of ACK sits in plain text on the phone's clipboard, where a keyboard's clipboard history or an app allowed to
+  read the clipboard may keep it.
+* The watch link: see section 8.
 * A synced folder this software can't recognise: the sync check looks at folder names, and only ever says "may".
 
 ## 7. How these rules are kept
 
 They are checked by tests, so a change that breaks one fails before it ships: `test_no_network.py` (no connections, no web
-addresses in shipped files), `test_privacy.py` (offline model loading, owner-only files, browser caching, the clean link,
-synced folders), `test_sovereignty_policy.py` (the Android app: no network permission, no cloud backup, no network code) and
-`test_license_headers.py` (licensing). The Android app's cloud backup is off for everything it stores; to keep a copy, or to
-move to a new phone without a cable, use ACK's own export (Settings, EXPORT .JSON, and the voice and GIF `.zip` backups),
-which stay under your control. The rules still allow a direct phone-to-phone transfer during setup (which does not go through the cloud), but that has not been tried on a real phone.
+addresses in shipped files), `test_privacy.py` (offline model loading, owner-only files, browser caching, the clean link, synced
+folders), `test_sovereignty_policy.py` (the Android app: no network permission, no cloud backup, no network code) and
+`test_license_headers.py` (licensing). Inside the Android app's own tests, two guards keep the warnings honest: every field of
+EXPORT .JSON must be described by the warning that says what the file contains (`ExportContentsTest`), and every preference file
+or folder the app writes must be covered by DELETE DATA (`StorageCatalogueTest`), so a new place that stores data cannot be added
+without deciding how it is described and deleted. The Android app's cloud backup is off for everything it stores; to keep a copy,
+or to move to a new phone without a cable, use ACK's own export (Settings, EXPORT .JSON, and the voice and GIF `.zip` backups),
+which stay under your control. The rules still allow a direct phone-to-phone transfer during setup (which does not go through the
+cloud), but that has not been tried on a real phone.
 
 ## 8. Can the watch link leave your devices? (ACK Wear)
 

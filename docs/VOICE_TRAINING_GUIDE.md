@@ -179,17 +179,35 @@ instead. The steps below are the one actually in use.)
    Produces `192.168.1.2+2.pem` (certificate) and
    `192.168.1.2+2-key.pem` (private key) in that folder.
 3. **Trust mkcert's root CA on the phone, once.** `mkcert -CAROOT`
-   prints the folder containing `rootCA.pem` — get just that file onto
-   the phone (email it to yourself, a cloud-synced folder, whatever's
-   easiest for one small file — no need for any network setup for
-   this single transfer). Open it on the phone; Android prompts to
-   install it: Settings → Security (wording varies by device) →
+   prints the folder containing `rootCA.pem`. Move **only `rootCA.pem`**
+   to the phone: it is the public half and is safe to carry. **Never
+   copy `rootCA-key.pem`**, which sits in the same folder: it must stay on
+   the PC and must never be emailed, synced or shared, because whoever
+   holds it can make certificates that your phone will trust for any
+   website. Move the file with a **USB cable** (copy it into the phone's
+   Downloads folder), not by email or a cloud folder, which would upload
+   it. Open it on the phone; Android prompts to install it:
+   Settings → Security (wording varies by device) →
    **Install a certificate → CA certificate**.
 
+   **What this means, in one sentence:** once installed, the mkcert on
+   that PC can vouch for secure websites *on that phone*, so if that PC
+   were ever compromised, whoever controlled it could intercept that
+   phone's secure browsing. Only do this on a phone and a PC you control.
+   If you are recording someone else's voice, skip all of it and use
+   **RECORD TRAINING DATA in ACK** (see "Recording with the ACK app"
+   below), which needs no certificate and no network setup.
+
+   **To undo it:** on the PC, `mkcert -uninstall` removes the PC's trust
+   (it keeps the files; delete the folder `mkcert -CAROOT` prints to
+   destroy the authority itself). On the phone, remove the certificate in
+   its security settings (usually Settings → Security → Encryption &
+   credentials → User credentials; the wording varies), where it is
+   listed under the name mkcert gave it.
+
    Once installed, Android shows a persistent "Network may be
-   monitored" notification — expected and benign here, it's just
-   Android's standard warning for any manually-trusted CA regardless of
-   who issued it.
+   monitored" notification. That is expected: it is Android's standard
+   warning for any manually-trusted CA, whoever issued it.
 4. **Patch `piper-recording-studio` to actually serve HTTPS** — it
    doesn't expose this by default. Back up
    `~/piper-recording-studio/piper_recording_studio/__main__.py` first,
@@ -261,6 +279,8 @@ BASICS // PERSONALIZATION).
    that card again; *PAUSE* stops listening. A long script can be read over several sessions: each one starts at the first card
    not yet recorded.
 4. **Or talk freely** with *RECORD FREE SPEECH* (up to 90 minutes in one go). The audio is kept whole and the phone only suggests cuts.
+   **It records everything the microphone hears, including anyone nearby**, so tell them first, or record somewhere else. ACK says this
+   on the screen before you can start.
 5. **Save to a file**: *SAVE ALL TO A FILE* writes a package (a `.zip`) where you choose, then reads it back and checks every
    recording in it. Move the file to your computer by cable or USB drive.
 6. **Add it in Freeform Studio**: *Add recordings from ACK* on the Review page, or
