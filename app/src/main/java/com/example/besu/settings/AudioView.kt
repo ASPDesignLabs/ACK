@@ -41,12 +41,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.besu.core.CustomVoiceRemoval
 import com.example.besu.ui.theme.ErrorRed
 import com.example.besu.ui.theme.Graphite
 import com.example.besu.ui.theme.NeonPalette
 import com.example.besu.ui.theme.VoidBlack
 import com.example.besu.voicecapture.TrainingCaptureHome
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.UUID
@@ -216,6 +220,11 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     // so re-entering this screen after an import always reflects reality.
     var hasCustomVoice by remember { mutableStateOf(CustomVoiceRepository.hasCustomVoice(context)) }
     var pendingCustomVoiceRestart by remember { mutableStateOf(false) }
+    // DELETE CUSTOM VOICE: two confirmations, and the result of a voice backup tried from the first one.
+    var showDeleteVoiceFirst by remember { mutableStateOf(false) }
+    var showDeleteVoiceSecond by remember { mutableStateOf(false) }
+    var voiceBackupStatus by remember { mutableStateOf<String?>(null) }
+    val uiScope = rememberCoroutineScope()
     // RECORD TRAINING DATA is its own set of screens (voicecapture/); while it is open it takes the whole area in place of this one.
     var showTrainingCapture by remember { mutableStateOf(false) }
 
@@ -250,6 +259,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     ) { uri: Uri? ->
         if (uri != null) {
             val success = CustomVoiceBackupManager.exportVoice(context, uri)
+            voiceBackupStatus = if (success) "VOICE BACKUP SAVED." else "VOICE BACKUP FAILED. NOTHING WAS DELETED."
             Toast.makeText(
                 context,
                 if (success) "VOICE BACKUP EXPORTED" else "EXPORT FAILED",
@@ -270,6 +280,70 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                 Toast.makeText(context, "RESTORE FAILED -- INTEGRITY CHECK", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    // What deleting the voice does to the profiles (core/CustomVoiceRemoval.kt). The first confirmation lists it and
+    // deleteCustomVoice() applies the very same result, so what the person is told is what happens.
+    fun removalImpact() = CustomVoiceRemoval.impact(
+        userProfile,
+        customVoices.map { CustomVoiceRemoval.Profile(it.id, it.label, it.useCustomVoice) }
+    )
+
+    // Runs the delete off the main thread (releasing the native session can wait for a model that is still loading),
+    // then moves any profile that used the voice onto a normal one. Profiles are only changed once the voice can no longer
+    // be used; if the delete failed and the voice still works, nothing else is touched. No restart is needed: the engine
+    // is released and the MY VOICE chip is simply no longer shown.
+    fun deleteCustomVoice() {
+        uiScope.launch {
+            val allGone = withContext(Dispatchers.IO) { CustomVoiceRepository.deleteVoice(context) }
+            val stillUsable = CustomVoiceRepository.hasCustomVoice(context)
+            hasCustomVoice = stillUsable
+            if (!stillUsable) {
+                val impact = removalImpact()
+                for (id in impact.profileIdsToClear) {
+                    val idx = customVoices.indexOfFirst { it.id == id }
+                    if (idx != -1) customVoices[idx] = customVoices[idx].copy(useCustomVoice = false)
+                }
+                editingProfile = editingProfile?.let {
+                    if (it.id in impact.profileIdsToClear) it.copy(useCustomVoice = false) else it
+                }
+                userProfile = impact.newActiveProfileId
+                syncDsp()
+            }
+            Toast.makeText(
+                context,
+                when {
+                    allGone -> "CUSTOM VOICE DELETED"
+                    !stillUsable -> "VOICE REMOVED, BUT SOME FILES COULD NOT BE DELETED"
+                    else -> "COULD NOT DELETE THE VOICE"
+                },
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    if (showDeleteVoiceFirst) {
+        DeleteVoiceFirstDialog(
+            primaryColor = primaryColor,
+            impact = removalImpact(),
+            backupStatus = voiceBackupStatus,
+            onExportBackupFirst = { exportVoiceBackupLauncher.launch("my_voice_backup.zip") },
+            onContinue = {
+                showDeleteVoiceFirst = false
+                showDeleteVoiceSecond = true
+            },
+            onCancel = { showDeleteVoiceFirst = false }
+        )
+    }
+    if (showDeleteVoiceSecond) {
+        DeleteVoiceSecondDialog(
+            primaryColor = primaryColor,
+            onDelete = {
+                showDeleteVoiceSecond = false
+                deleteCustomVoice()
+            },
+            onCancel = { showDeleteVoiceSecond = false }
+        )
     }
 
     if (showTrainingCapture) {
@@ -407,6 +481,21 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                 NeonButton("IMPORT VOICE BACKUP", Modifier.weight(1f), mainColor = primaryColor) {
                     importVoiceBackupLauncher.launch(arrayOf("application/zip"))
                 }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            // The trained voice is made from the person's own recordings: the backup file is as private as a recording
+            // would be, and is not encrypted.
+            Text(
+                "THE VOICE BACKUP IS AS PRIVATE AS A RECORDING OF YOU, AND IS NOT ENCRYPTED. SAVE IT WHERE YOU CONTROL WHO CAN SEE IT.",
+                color = Color.Gray,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            // Opens two confirmations; nothing is removed by this tap.
+            NeonButton("DELETE CUSTOM VOICE", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+                voiceBackupStatus = null
+                showDeleteVoiceFirst = true
             }
         }
 

@@ -32,6 +32,7 @@ import com.example.besu.capture.CaptureSession
 import com.example.besu.capture.CaptureTime
 import com.example.besu.capture.CardSplitter
 import com.example.besu.capture.ClipState
+import com.example.besu.capture.FreeSpeechNotice
 import com.example.besu.capture.PackagePlanner
 import com.example.besu.capture.PackageVerifier
 import com.example.besu.capture.PackageWriteException
@@ -296,6 +297,11 @@ fun TrainingCaptureHome(context: Context, primaryColor: Color, onClose: () -> Un
         Text(
             "TALK ABOUT ANYTHING FOR AS LONG AS YOU LIKE (UP TO 90 MINUTES). THE AUDIO IS KEPT WHOLE; THE PHONE ONLY SUGGESTS WHERE IT COULD BE CUT, AND THE COMPUTER DECIDES.",
             color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace,
+        )
+        // Anyone nearby is recorded too (wording: capture/FreeSpeechNotice.kt). Text only, 12 sp.
+        Text(
+            FreeSpeechNotice.HOME,
+            color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
         )
         TightPanelButton(
             "RECORD FREE SPEECH",

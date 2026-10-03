@@ -115,9 +115,24 @@ object CustomVoiceRepository {
         }
     }
 
-    fun deleteVoice(context: Context) {
-        modelFile(context).delete()
-        configFile(context).delete()
+    // Removes everything the installed voice left on disk: the model, its config, and the tokens.txt PiperVoiceEngine
+    // generated from it. The native session that has the model open is released first, so nothing is deleted from under
+    // it. Does NOT touch filesDir/espeak-ng-data: that is a bundled asset shared by every voice, not personal data.
+    //
+    // Returns true only when none of the three files is left (the folder is then removed too, if nothing else is in
+    // it). Blocking: call it off the main thread (release() can wait for a model that is still loading).
+    // Whoever calls this also has to move any voice profile off the custom voice -- see core/CustomVoiceRemoval.
+    fun deleteVoice(context: Context): Boolean {
+        PiperVoiceEngine.release()
+        val files = listOf(modelFile(context), configFile(context), PiperVoiceEngine.tokensFile(context))
+        files.forEach { file ->
+            if (file.exists() && !file.delete()) Log.e(LOG_TAG, "Delete failed: could not remove ${file.name}")
+        }
+        val dir = voiceDir(context)
+        if (dir.list().isNullOrEmpty()) dir.delete()
+        val allGone = files.none { it.exists() }
+        Log.i(LOG_TAG, "Custom voice deleted: allFilesGone=$allGone")
+        return allGone
     }
 
     // Every real Piper voice config carries these two keys -- cheap,

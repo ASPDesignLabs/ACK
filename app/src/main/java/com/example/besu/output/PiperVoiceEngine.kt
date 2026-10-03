@@ -44,7 +44,9 @@ object PiperVoiceEngine {
         stopRequested = true
     }
 
-    private fun tokensFile(context: Context): File =
+    // Public so CustomVoiceRepository.deleteVoice can remove it: it is generated from the installed voice's config, so it
+    // goes when the voice does.
+    fun tokensFile(context: Context): File =
         File(CustomVoiceRepository.modelFile(context).parentFile, "tokens.txt")
 
     // Copies the bundled espeak-ng-data asset folder to internal storage

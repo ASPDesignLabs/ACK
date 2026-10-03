@@ -4,6 +4,7 @@ package com.example.besu.ui
 import com.example.besu.*
 import com.example.besu.backup.*
 import com.example.besu.computer.*
+import com.example.besu.core.ExportContents
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -385,6 +386,23 @@ private val TERMINAL_HELP_LINES = listOf(
 // headers do the separating instead. Update this list (and CHANGELOG.md
 // at the repo root, which carries the same notes) with each beta.
 private val PATCH_NOTES = listOf(
+    "=== NEXT RELEASE (NOT YET NUMBERED) ===",
+    "-- PRIVACY AND DATA --",
+    "- NEW: EXPORT .JSON NOW SAYS WHAT THE FILE CAN CONTAIN AND THAT IT IS",
+    "  NOT ENCRYPTED, BEFORE THE FILE PICKER OPENS. /backup SAYS IT TOO",
+    "- A FAILED EXPORT NOW SAYS SO AND LEAVES NO HALF-MADE FILE",
+    "- NEW: DELETE DATA IN DATA PORT. TWELVE AREAS, EACH WITH WHAT IT HOLDS",
+    "  AND HOW MUCH. EVERY DELETE ASKS TWICE AND NAMES A BACKUP FIRST",
+    "- NEW: DELETE CUSTOM VOICE IN AUDIO ARCHITECT. VOICES THAT USED IT",
+    "  SWITCH TO A NORMAL ONE",
+    "- NEW: SAFETY COPIES. THE PRIVATE COPY ACK MAKES BEFORE A DATA UPGRADE",
+    "  IS LISTED IN DATA PORT AND CAN BE DELETED",
+    "- NEW: A BACKUP REMINDER AFTER 7 DAYS IF SETTINGS OR DECKS CHANGED.",
+    "  A BANNER ON TERMINAL AND SETTINGS, AND A SAVE ICON LEFT OF HELP.",
+    "  NOT NOW HIDES IT FOR A DAY. A SWITCH IN DATA PORT. IT NEVER MAKES",
+    "  A FILE FOR YOU",
+    "- NEW: RECORD FREE SPEECH NOW SAYS IT RECORDS ANYONE NEARBY",
+    "- NO NEW PERMISSIONS. SEE DOCS/PERMISSIONS.MD",
     "=== ACK v1.0-BETA.8 PATCH NOTES ===",
     "-- CUSTOM VOICE --",
     "- NEW: SPEAK IN A VOICE TRAINED FROM YOUR OWN RECORDINGS, ENTIRELY",
@@ -574,10 +592,8 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
         if (rest == "confirm") {
             return TerminalPromptResult.RunBackup
         }
-        logTerminalLocal(
-            context,
-            "EXPORT ACK BACKUP?\nTYPE /backup CONFIRM TO PROCEED."
-        )
+        // The same facts the settings dialog shows (core/ExportContents.kt), then the confirm line.
+        logTerminalLocal(context, ExportContents.terminalText())
         return TerminalPromptResult.Error
     }
 
@@ -781,21 +797,13 @@ fun TerminalView(
     }
 
     // /backup confirm reuses PROTOCOL's own export flow exactly --
-    // TransferManager.generateBackupJson written to wherever the system
-    // document picker points.
+    // BackupExporter.writeBackup writes to wherever the system document
+    // picker points, and report() shows the result (Toast + Terminal line).
     val backupExportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         if (uri != null) {
-            try {
-                val jsonStr = TransferManager.generateBackupJson(context)
-                context.contentResolver.openOutputStream(uri)?.use { os ->
-                    os.write(jsonStr.toByteArray())
-                }
-                logTerminalLocal(context, "BACKUP EXPORTED")
-            } catch (e: Exception) {
-                logTerminalLocal(context, "BACKUP EXPORT FAILED: ${e.message}", "CMD_ERR")
-            }
+            BackupExporter.report(context, BackupExporter.writeBackup(context, uri))
         } else {
             logTerminalLocal(context, "BACKUP CANCELLED", "CMD_WARN")
         }

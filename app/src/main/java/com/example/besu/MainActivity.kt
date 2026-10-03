@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu
 
+import com.example.besu.backup.BackupReminder
 import com.example.besu.composer.*
 import com.example.besu.computer.*
 import com.example.besu.data.*
@@ -275,6 +276,13 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     LaunchedEffect(viewMode) {
         if (viewMode != "TYPE") composerFullscreen = false
     }
+
+    // BACKUP REMINDER (backup/BackupReminder.kt). Checked once, when ACK starts, off the main thread, and cheap unless a
+    // reminder could actually be due -- never on a timer. The banner (Terminal and Settings only), the save icon left of HELP
+    // and the dialog it opens all read BackupReminder.due. BACK UP NOW starts the same flow as EXPORT .JSON (its warning first).
+    var showBackupReminderDialog by remember { mutableStateOf(false) }
+    val startBackupExport = rememberBackupExportFlow(context, primaryColor)
+    LaunchedEffect(Unit) { BackupReminder.refresh(context) }
 
     fun insertIntoManualOverride(insertText: String) {
         val selection = manualOverrideText.selection
@@ -658,6 +666,16 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                     // Only while "Display over other apps" is off: a message is then spoken
                     // but never shown. Not dismissible; clears itself when the permission is on.
                     OverlayPermissionBanner(modifier = Modifier.padding(bottom = 8.dp))
+                    // Terminal and Settings only: never on a deck, Emergency or Type screen, where it could move a button that is
+                    // about to be tapped. Elsewhere the save icon in the header (below) is the quiet signal. Empty unless due.
+                    if (viewMode == "TERMINAL" || viewMode == "SETTINGS") {
+                        BackupReminderBanner(
+                            primaryColor = primaryColor,
+                            onBackUpNow = { startBackupExport() },
+                            onNotNow = { BackupReminder.snooze(context) },
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -982,27 +1000,38 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                Box(
-                                    modifier = Modifier
-                                        .testTag(AckTags.HELP_BUTTON)
-                                        .helpTarget(AckTags.HELP_BUTTON, primaryColor)
-                                        .border(
-                                            width = 1.dp,
-                                            color = primaryColor,
-                                            shape = CutCornerShape(4.dp)
-                                        )
-                                        .clickable {
-                                            helpMenuCategory = null
-                                            showHelpMenu = true
-                                        }
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        text = "HELP",
-                                        color = primaryColor,
-                                        fontSize = 10.sp,
-                                        fontFamily = FontFamily.Monospace
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // Left of HELP, under PROTOCOL: a save icon, only while a backup is due. Its slot is always
+                                    // laid out at the same size and only the icon inside comes and goes, so nothing in the header
+                                    // ever moves when it appears. A tap opens the reminder; it changes nothing by itself.
+                                    BackupSaveIndicator(
+                                        primaryColor = primaryColor,
+                                        onClick = { showBackupReminderDialog = true }
                                     )
+                                    Spacer(modifier = Modifier.width(4.dp))
+
+                                    Box(
+                                        modifier = Modifier
+                                            .testTag(AckTags.HELP_BUTTON)
+                                            .helpTarget(AckTags.HELP_BUTTON, primaryColor)
+                                            .border(
+                                                width = 1.dp,
+                                                color = primaryColor,
+                                                shape = CutCornerShape(4.dp)
+                                            )
+                                            .clickable {
+                                                helpMenuCategory = null
+                                                showHelpMenu = true
+                                            }
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "HELP",
+                                            color = primaryColor,
+                                            fontSize = 10.sp,
+                                            fontFamily = FontFamily.Monospace
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1515,6 +1544,21 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 )
                             }
                         }
+                    }
+
+                    if (showBackupReminderDialog) {
+                        BackupReminderDialog(
+                            primaryColor = primaryColor,
+                            onBackUpNow = {
+                                showBackupReminderDialog = false
+                                startBackupExport()
+                            },
+                            onNotNow = {
+                                BackupReminder.snooze(context)
+                                showBackupReminderDialog = false
+                            },
+                            onClose = { showBackupReminderDialog = false }
+                        )
                     }
 
                     if (showHelpMenu) {

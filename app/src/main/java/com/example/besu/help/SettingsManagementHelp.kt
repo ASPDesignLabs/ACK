@@ -73,7 +73,7 @@ object SettingsManagementHelp {
                 id = "data_port",
                 title = "DATA PORT",
                 body = "The Data Port manages configuration transfer and backup. " +
-                        "Export creates a JSON backup, Import Matrix As New Deck " +
+                        "Export creates a JSON backup and warns what the file contains, Import Matrix As New Deck " +
                         "brings in a backup's matrix phrases as a new deck, and " +
                         "Full Restore applies everything else a backup carries -- " +
                         "overwriting or adding to your current setup, never " +

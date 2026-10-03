@@ -3,12 +3,16 @@ package com.example.besu.settings
 
 import com.example.besu.*
 import com.example.besu.backup.*
+import com.example.besu.core.BackupReminderText
+import com.example.besu.core.SafetyCopyPolicy
+import com.example.besu.core.StorageCatalogue
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.output.*
 import com.example.besu.ui.*
 import com.example.besu.ui.theme.*
 import com.example.besu.watch.*
+import java.time.ZoneId
 import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -350,6 +354,15 @@ fun SettingsView(
     var showManageAutocomplete by remember { mutableStateOf(false) }
     var showManageRecordings by remember { mutableStateOf(false) }
     var showFullRestoreConfirm by remember { mutableStateOf(false) }
+    var showManageData by remember { mutableStateOf(false) }
+    var backupRemindersOn by remember { mutableStateOf(BackupState.remindersEnabled(context)) }
+    // SAFETY COPIES (data/SafetyCopies.kt): the list, the copy being confirmed (first, then second), and a tick that moves when an
+    // export has just been tried, so the first confirmation re-reads whether a newer export exists.
+    var safetyCopiesRefresh by remember { mutableIntStateOf(0) }
+    var exportTick by remember { mutableIntStateOf(0) }
+    val safetyCopies = remember(safetyCopiesRefresh) { SafetyCopies.list(context) }
+    var safetyCopyFirst by remember { mutableStateOf<SafetyCopies.Copy?>(null) }
+    var safetyCopySecond by remember { mutableStateOf<SafetyCopies.Copy?>(null) }
     var pendingFullRestoreJson by remember { mutableStateOf<String?>(null) }
     var recordingGainPercent by remember {
         mutableFloatStateOf(VoiceRecordingRepository.getPlaybackGainPercent(context).toFloat())
@@ -368,14 +381,8 @@ fun SettingsView(
         }
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        uri?.let {
-            try {
-                val jsonStr = TransferManager.generateBackupJson(context)
-                context.contentResolver.openOutputStream(it)?.use { os -> os.write(jsonStr.toByteArray()) }
-            } catch (e: Exception) { }
-        }
-    }
+    // EXPORT .JSON: the warning (what the file holds, that it is not protected) first, then the picker.
+    val startBackupExport = rememberBackupExportFlow(context, primaryColor) { exportTick++ }
 
     // Whole-protocol restore -- unlike importLauncher above (which only ever
     // imports matrix phrases into a new deck), this overwrites the entire
@@ -1079,9 +1086,7 @@ fun SettingsView(
                             .helpTarget(AckTags.SETTINGS_DATA_PORT, primaryColor),
                         mainColor = primaryColor
                     ) {
-                        exportLauncher.launch(
-                            "ack_backup_${System.currentTimeMillis()}.json"
-                        )
+                        startBackupExport()
 
                         reportHelpInteraction(AckTags.SETTINGS_DATA_PORT)
                     }
@@ -1105,6 +1110,54 @@ fun SettingsView(
                 ) {
                     fullRestoreLauncher.launch(arrayOf("application/json"))
                     reportHelpInteraction(AckTags.SETTINGS_FULL_RESTORE_BTN)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                // BACKUP REMINDER: on or off, said in words (not only colour) and without animation. It reminds; it never makes a
+                // file. Checked when ACK starts, so turning it on shows nothing until then. Turning it off hides a showing one.
+                NeonButton(
+                    BackupReminderText.switchLabel(backupRemindersOn),
+                    Modifier.fillMaxWidth(),
+                    mainColor = if (backupRemindersOn) primaryColor else Color.White
+                ) {
+                    backupRemindersOn = !backupRemindersOn
+                    BackupState.setRemindersEnabled(context, backupRemindersOn)
+                    if (!backupRemindersOn) BackupReminder.clear()
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    BackupReminderText.SWITCH_EXPLANATION,
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                // Opens a list of what can be deleted; nothing is deleted by this tap, and every delete asks twice.
+                NeonButton("DELETE DATA", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+                    showManageData = true
+                }
+
+                // Only when ACK has made one (before a data upgrade): they hold the same data as an export and are not encrypted.
+                if (safetyCopies.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text("SAFETY COPIES", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                    safetyCopies.forEach { copy ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            SafetyCopyPolicy.rowText(
+                                SafetyCopyPolicy.dateText(copy.createdAtMs, ZoneId.systemDefault()),
+                                StorageCatalogue.describeSize(copy.sizeBytes)
+                            ),
+                            color = Color.Gray,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        // Opens two confirmations; nothing is deleted by this tap.
+                        NeonButton("DELETE", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+                            safetyCopyFirst = copy
+                        }
+                    }
                 }
             }
 
@@ -1226,6 +1279,68 @@ fun SettingsView(
             context = context,
             primaryColor = primaryColor,
             onDismiss = { showManageAutocomplete = false }
+        )
+    }
+
+    // --- delete one safety copy: first confirmation (is there a newer export? offer one), then the final one ---
+    val firstCopy = safetyCopyFirst
+    if (firstCopy != null && safetyCopySecond == null) {
+        val hasNewerExport = remember(firstCopy, exportTick) {
+            SafetyCopyPolicy.hasNewerExport(BackupState.lastBackupAt(context), firstCopy.createdAtMs)
+        }
+        SafetyCopyFirstDialog(
+            primaryColor = primaryColor,
+            paragraphs = SafetyCopyPolicy.firstConfirmation(
+                SafetyCopyPolicy.dateText(firstCopy.createdAtMs, ZoneId.systemDefault()),
+                StorageCatalogue.describeSize(firstCopy.sizeBytes),
+                hasNewerExport
+            ),
+            offersExportFirst = SafetyCopyPolicy.offersExportFirst(hasNewerExport),
+            proceedLabel = SafetyCopyPolicy.proceedLabel(hasNewerExport),
+            onExportFirst = { startBackupExport() },
+            onProceed = { safetyCopySecond = firstCopy },
+            onCancel = { safetyCopyFirst = null }
+        )
+    }
+    val secondCopy = safetyCopySecond
+    if (secondCopy != null) {
+        SafetyCopySecondDialog(
+            primaryColor = primaryColor,
+            onDelete = {
+                val gone = SafetyCopies.delete(context, secondCopy)
+                Toast.makeText(
+                    context,
+                    if (gone) "SAFETY COPY DELETED" else "COULD NOT DELETE THE SAFETY COPY",
+                    Toast.LENGTH_LONG
+                ).show()
+                safetyCopySecond = null
+                safetyCopyFirst = null
+                safetyCopiesRefresh++
+            },
+            // Cancelling here abandons the delete altogether (it does not fall back into the first confirmation).
+            onCancel = {
+                safetyCopySecond = null
+                safetyCopyFirst = null
+            }
+        )
+    }
+
+    if (showManageData) {
+        ManageDataDialog(
+            context = context,
+            primaryColor = primaryColor,
+            logs = logs,
+            onBackUpFirst = { startBackupExport() },
+            onWiped = { needsRestart ->
+                showManageData = false
+                if (needsRestart) {
+                    // Memory caches (the deck list and so on) make a restart the reliable way to show a clean state. Same
+                    // toast -> flag -> delayed restart as FULL RESTORE; the 1.5 s delay is load-bearing (see CLAUDE.md).
+                    Toast.makeText(context, "DATA DELETED -- RESTARTING", Toast.LENGTH_LONG).show()
+                    pendingRestart = true
+                }
+            },
+            onDismiss = { showManageData = false }
         )
     }
 

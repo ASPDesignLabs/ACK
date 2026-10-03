@@ -374,6 +374,16 @@ object VoiceRecordingRepository {
         }
     }
 
+    // The same entries exportForBackup would produce, without reading or encoding any audio (sampleRate 0, audioBase64 ""),
+    // for the backup fingerprint (see TransferManager.backupFingerprint). A recording whose audio file is missing is left out
+    // exactly as exportForBackup leaves it out, so the two agree about what a backup would hold. Only the file's existence is
+    // checked: a file that exists but cannot be read is the one case where they could differ.
+    fun metadataForBackup(context: Context): List<VoiceRecordingBackupEntry> {
+        return getAll(context)
+            .filter { audioFile(context, it.id).exists() }
+            .map { VoiceRecordingBackupEntry(recording = it, sampleRate = 0, audioBase64 = "") }
+    }
+
     // Restore-only: upserts by recording id -- a backup entry replaces
     // (metadata and audio file alike) any local recording sharing its id,
     // and is added if there's no local match. A local recording whose id

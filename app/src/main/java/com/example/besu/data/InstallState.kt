@@ -82,6 +82,13 @@ object InstallState {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_DEFAULTS_PROMPT_DISMISSED, true).commit()
     }
 
+    /**
+     * DELETE DATA > SETTINGS (and EVERYTHING) puts the new-install seeds back, the same ones a fresh install gets, so a wiped
+     * phone speaks in the safe default voice and shows whole messages instead of falling back to the robotic voice and the
+     * old cut-off. Writes nothing that is already there, so it is safe to call after any wipe.
+     */
+    fun seedDefaultsAfterWipe(context: Context) = seedFreshInstallDefaults(context)
+
     // Each seed is its own try so one failing cannot stop the other. The seeds write nothing that is already there.
     private fun seedFreshInstallDefaults(context: Context) {
         try {
