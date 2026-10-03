@@ -4,7 +4,12 @@ package com.example.besu.ui
 import com.example.besu.*
 import com.example.besu.backup.*
 import com.example.besu.computer.*
+import com.example.besu.core.CharSpan
 import com.example.besu.core.ExportContents
+import com.example.besu.core.InsertMode
+import com.example.besu.core.SlotFamily
+import com.example.besu.core.TextInsertion
+import com.example.besu.core.TokenSlots
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -972,15 +977,14 @@ fun TerminalView(
 
     val statusboxTextColor = NeonPalette.getColor(TerminalLogStore.getStatusboxColorIndex(context))
 
-    // Shared by /v and /t: replaces whichever trigger range is still live
-    // with the resolved value plus a trailing space, so the cursor lands
-    // ready for the next word instead of jammed against it.
+    // Shared by /v and /t: replaces whichever trigger range is still live with the resolved value, using the shared insertion rule
+    // (core/TextInsertion.kt, with the trigger as the replace range): a space only where one is needed, and the cursor lands ready
+    // for the next word instead of jammed against it.
     fun insertAtTrigger(trigger: IntRange?, value: String) {
         trigger ?: return
-        val insertion = "$value "
-        val newText = promptValue.text.replaceRange(trigger, insertion)
-        val newCursor = trigger.first + insertion.length
-        promptValue = TextFieldValue(newText, TextRange(newCursor))
+        val span = CharSpan(trigger.first, trigger.last + 1)
+        val result = TextInsertion.insert(promptValue.text, span.start, span.end, value, InsertMode.WORD, span)
+        promptValue = TextFieldValue(result.text, TextRange(result.cursor))
         promptFocusRequester.requestFocus()
     }
 
@@ -1959,6 +1963,13 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             mutableStateOf(rawPhrase)
         }
 
+        // The template field's text AND its cursor, so the insert buttons below can insert AT THE CURSOR with the shared rule
+        // (core/TextInsertion.kt). tempText stays the one place the text is saved from. The cursor starts at the END, so on a freshly
+        // opened editor the first insertion still lands last, as it always did.
+        var templateValue by remember(node.path) {
+            mutableStateOf(TextFieldValue(rawPhrase, TextRange(rawPhrase.length)))
+        }
+
         val tempVars = remember(node.path) {
             mutableStateListOf<String>().apply {
                 val initialCount = TemplateEngine.countVariables(rawPhrase)
@@ -2084,6 +2095,9 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
         fun updateTemplate(newTemplate: String) {
             tempText = newTemplate
+            if (templateValue.text != newTemplate) {
+                templateValue = TextFieldValue(newTemplate, TextRange(newTemplate.length))
+            }
 
             val newVariableCount = TemplateEngine.countVariables(newTemplate)
             val newComputerTagCount = TemplateEngine.countComputerTags(newTemplate)
@@ -2119,6 +2133,23 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                 matrixRecording = currentRecording.copy(enabled = false)
                 showStaleWarning = true
             }
+        }
+
+        // Inserts [token] at the cursor with the shared rule. The {VAR} values and [COMPUTER] fallbacks are stored BY POSITION, so they
+        // are shifted to match first (core/TokenSlots.kt); otherwise a token put in the middle would take over the value of the
+        // token that used to be there.
+        fun insertTokenAtCursor(token: String) {
+            val selection = templateValue.selection
+            val result = TextInsertion.insert(tempText, selection.start, selection.end, token)
+            val shiftedVars = TokenSlots.realign(tempVars.toList(), tempText, result.replaced, token, SlotFamily.VARIABLE)
+            val shiftedFallbacks =
+                TokenSlots.realign(tempComputerFallbacks.toList(), tempText, result.replaced, token, SlotFamily.COMPUTER)
+            tempVars.clear()
+            tempVars.addAll(shiftedVars)
+            tempComputerFallbacks.clear()
+            tempComputerFallbacks.addAll(shiftedFallbacks)
+            updateTemplate(result.text)
+            templateValue = TextFieldValue(result.text, TextRange(result.cursor))
         }
 
         fun commitEditor() {
@@ -2184,9 +2215,13 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     Spacer(modifier = Modifier.height(6.dp))
 
                     OutlinedTextField(
-                        value = tempText,
-                        onValueChange = { newText ->
-                            updateTemplate(newText)
+                        value = templateValue,
+                        onValueChange = { newValue ->
+                            // Only a change of TEXT is a template edit; moving the cursor just moves the cursor.
+                            if (newValue.text != tempText) {
+                                updateTemplate(newValue.text)
+                            }
+                            templateValue = newValue
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2240,7 +2275,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 modifier = Modifier.weight(1f),
                                 mainColor = primaryColor
                             ) {
-                                updateTemplate("$tempText {VAR}")
+                                insertTokenAtCursor("{VAR}")
                             }
 
                             TightPanelButton(
@@ -2248,7 +2283,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 modifier = Modifier.weight(1f),
                                 mainColor = primaryColor
                             ) {
-                                updateTemplate("$tempText {VAR:A}")
+                                insertTokenAtCursor("{VAR:A}")
                             }
 
                             TightPanelButton(
@@ -2256,7 +2291,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 modifier = Modifier.weight(1f),
                                 mainColor = primaryColor
                             ) {
-                                updateTemplate("$tempText {VAR:B}")
+                                insertTokenAtCursor("{VAR:B}")
                             }
 
                             TightPanelButton(
@@ -2264,7 +2299,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 modifier = Modifier.weight(1f),
                                 mainColor = primaryColor
                             ) {
-                                updateTemplate("$tempText {VAR:C}")
+                                insertTokenAtCursor("{VAR:C}")
                             }
                         }
 
@@ -2288,7 +2323,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                         text = "+ ${computerCategory.label}",
                                         mainColor = primaryColor
                                     ) {
-                                        updateTemplate("$tempText [COMPUTER:${computerCategory.id}]")
+                                        insertTokenAtCursor("[COMPUTER:${computerCategory.id}]")
                                         helpManager?.onEvent(
                                             HelpEvent.Interacted(AckTags.MATRIX_INSERT_COMPUTER_TAG)
                                         )
@@ -2796,6 +2831,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 // Prompt-only intentionally preserves the
                                 // variable bank for a future replacement prompt.
                                 tempText = ""
+                                templateValue = TextFieldValue("")
 
                                 CommandRepository.setPhrase(
                                     context = context,
@@ -2806,6 +2842,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
                             "ALL" -> {
                                 tempText = ""
+                                templateValue = TextFieldValue("")
                                 tempVars.clear()
 
                                 CommandRepository.setPhrase(

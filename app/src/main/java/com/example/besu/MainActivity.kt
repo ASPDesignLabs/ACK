@@ -2,6 +2,7 @@
 package com.example.besu
 
 import com.example.besu.backup.BackupReminder
+import com.example.besu.core.TextInsertion
 import com.example.besu.composer.*
 import com.example.besu.computer.*
 import com.example.besu.data.*
@@ -285,10 +286,11 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     LaunchedEffect(Unit) { BackupReminder.refresh(context) }
 
     fun insertIntoManualOverride(insertText: String) {
+        // The shared insertion rule (core/TextInsertion.kt). Manual Override used to add no space around an inserted word; it now
+        // adds one only where one is needed, like the composer and the Terminal (a PATCH_NOTES item).
         val selection = manualOverrideText.selection
-        val newText = manualOverrideText.text.replaceRange(selection.start, selection.end, insertText)
-        val newCursor = selection.start + insertText.length
-        manualOverrideText = TextFieldValue(newText, TextRange(newCursor))
+        val result = TextInsertion.insert(manualOverrideText.text, selection.start, selection.end, insertText)
+        manualOverrideText = TextFieldValue(result.text, TextRange(result.cursor))
         manualOverrideFocusRequester.requestFocus()
         manualOverrideKeyboardController?.show()
     }

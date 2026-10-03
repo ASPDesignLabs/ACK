@@ -3,6 +3,7 @@ package com.example.besu.composer
 
 import com.example.besu.*
 import com.example.besu.computer.*
+import com.example.besu.core.TextInsertion
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -117,12 +118,12 @@ fun StatementComposerView(
         helpManager?.onEvent(HelpEvent.Interacted(tag))
     }
 
+    // The one shared insertion rule (core/TextInsertion.kt): replaces the selection, never splits a token, and adds a space only
+    // where one is needed, so the same button behaves the same way on every screen.
     fun insertTextAtCursor(text: String) {
         val selection = textFieldValue.selection
-        val spliced = "$text "
-        val newText = textFieldValue.text.replaceRange(selection.start, selection.end, spliced)
-        val newCursor = selection.start + spliced.length
-        textFieldValue = TextFieldValue(newText, TextRange(newCursor))
+        val result = TextInsertion.insert(textFieldValue.text, selection.start, selection.end, text)
+        textFieldValue = TextFieldValue(result.text, TextRange(result.cursor))
         focusRequester.requestFocus()
     }
 

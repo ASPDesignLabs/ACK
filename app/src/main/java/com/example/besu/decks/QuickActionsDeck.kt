@@ -3,6 +3,9 @@ package com.example.besu.decks
 
 import com.example.besu.*
 import com.example.besu.computer.*
+import com.example.besu.core.SlotFamily
+import com.example.besu.core.TextInsertion
+import com.example.besu.core.TokenSlots
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.output.*
@@ -42,7 +45,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.besu.ui.theme.VoidBlack
@@ -424,6 +429,13 @@ private fun QuickActionEditorDialog(
         mutableStateOf(slot.template)
     }
 
+    // The template field's text AND its cursor, so INSERT TARGET TAG can insert AT THE CURSOR with the shared rule
+    // (core/TextInsertion.kt). `template` stays the one place the text is saved from. The cursor starts at the END, so on a freshly
+    // opened editor the first insertion still lands last, as it always did.
+    var templateValue by remember(slot.slotIndex) {
+        mutableStateOf(TextFieldValue(slot.template, TextRange(slot.template.length)))
+    }
+
     // Every category with at least one entry to browse for -- shown as the
     // insert-tag row below whenever there's at least one.
     val computerCategories = remember(slot.slotIndex) {
@@ -445,6 +457,9 @@ private fun QuickActionEditorDialog(
 
     fun updateTemplate(newTemplate: String) {
         template = newTemplate
+        if (templateValue.text != newTemplate) {
+            templateValue = TextFieldValue(newTemplate, TextRange(newTemplate.length))
+        }
 
         val newComputerTagCount = TemplateEngine.countComputerTags(newTemplate)
         while (computerFallbacks.size > newComputerTagCount) {
@@ -453,6 +468,19 @@ private fun QuickActionEditorDialog(
         while (computerFallbacks.size < newComputerTagCount) {
             computerFallbacks.add("")
         }
+    }
+
+    // Inserts a [COMPUTER:..] tag at the cursor with the shared rule. The fallbacks are stored BY POSITION, so they are shifted to
+    // match first (core/TokenSlots.kt); otherwise a tag put in the middle would take over the fallback of the tag that used to be there.
+    fun insertComputerTagAtCursor(categoryId: String) {
+        val token = "[COMPUTER:$categoryId]"
+        val selection = templateValue.selection
+        val result = TextInsertion.insert(template, selection.start, selection.end, token)
+        val shifted = TokenSlots.realign(computerFallbacks.toList(), template, result.replaced, token, SlotFamily.COMPUTER)
+        computerFallbacks.clear()
+        computerFallbacks.addAll(shifted)
+        updateTemplate(result.text)
+        templateValue = TextFieldValue(result.text, TextRange(result.cursor))
     }
 
     val tags = remember(template) {
@@ -490,9 +518,13 @@ private fun QuickActionEditorDialog(
 
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
-                    value = template,
+                    value = templateValue,
                     onValueChange = { newValue ->
-                        updateTemplate(newValue)
+                        // Only a change of TEXT is a template edit; moving the cursor just moves the cursor.
+                        if (newValue.text != template) {
+                            updateTemplate(newValue.text)
+                        }
+                        templateValue = newValue
                     },
                     label = {
                         Text("PHRASE TEMPLATE")
@@ -522,7 +554,7 @@ private fun QuickActionEditorDialog(
                                 text = "+ ${computerCategory.label}",
                                 mainColor = primaryColor
                             ) {
-                                updateTemplate("$template [COMPUTER:${computerCategory.id}]")
+                                insertComputerTagAtCursor(computerCategory.id)
                             }
                         }
                     }
