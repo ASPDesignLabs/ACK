@@ -28,6 +28,7 @@
     <!-- DB Meter Permission Access -->
 
     <application
+        android:name=".AckApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"

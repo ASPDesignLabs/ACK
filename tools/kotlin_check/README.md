@@ -8,9 +8,12 @@ Multiplatform; nothing else, and nothing from Google's Maven).
 
 ## `./run_unit_tests.sh`: the portable logic, tested
 
-Compiles `app/src/main/java/com/example/besu/capture/` (plain Kotlin: no `android.*` anywhere in it, on purpose) with Kotlin 2.0.21
-and runs `app/src/test/java/com/example/besu/capture/` with JUnit. These are the same tests Android Studio's unit-test run
-uses (`./gradlew :app:testDebugUnitTest`).
+Compiles `app/src/main/java/com/example/besu/capture/` and `app/src/main/java/com/example/besu/core/` (both plain Kotlin: no
+`android.*` anywhere in them, on purpose) with Kotlin 2.0.21 and runs the matching folders under `app/src/test/java/com/example/besu/`
+with JUnit. These are the same tests Android Studio's unit-test run uses (`./gradlew :app:testDebugUnitTest`).
+
+`core/` holds small decisions that are not about recording, kept in plain Kotlin so they can be tested here (for example, whether an
+install is new). The Android code that uses them stays thin.
 
 They hold the Kotlin to the shared test cases in `tools/freeform_studio/tests/data/ack_capture/`, the very files the Python side
 is held to, so the phone and the computer cannot quietly disagree about a rule.
@@ -19,8 +22,9 @@ is held to, so the phone and the computer cannot quietly disagree about a rule.
 `ACK_KOTLIN_PACKAGES=/tmp/ack-packages python -m pytest tools/freeform_studio/tests/test_kotlin_package_contract.py` then opens
 them with Freeform Studio's real reader and importer.
 
-**Keep `capture/` free of Android classes.** The harness compiles that folder and everything under it; one `import android.*` there
-and it stops compiling here. Anything that needs the phone goes in `voicecapture/`.
+**Keep `capture/` and `core/` free of Android classes.** The harness compiles those folders and everything under them; one
+`import android.*` there and it stops compiling here. Anything that needs the phone goes in `voicecapture/` (for capture) or next to
+the code that uses it (for `core/`).
 
 ## `./run_typecheck.sh`: the Android screens, type-checked
 
