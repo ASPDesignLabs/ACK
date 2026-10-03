@@ -655,6 +655,9 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                     // composition (not just visually hiding it) lets it
                     // claim the reclaimed space with no extra layout work.
                     if (!composerFullscreen) {
+                    // Only while "Display over other apps" is off: a message is then spoken
+                    // but never shown. Not dismissible; clears itself when the permission is on.
+                    OverlayPermissionBanner(modifier = Modifier.padding(bottom = 8.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()

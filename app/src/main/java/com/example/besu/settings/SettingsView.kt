@@ -589,6 +589,20 @@ fun SettingsView(
                     syncPhoneAudio()
                     reportHelpInteraction(AckTags.SETTINGS_AUDIO_ROUTING)
                 }
+
+                // Silent Mode never speaks, and with "Display over other apps" off nothing is shown either, so a
+                // message would produce nothing at all. Say so here; the person's Silent Mode choice is not overridden.
+                val canDrawOverlays by rememberCanDrawOverlays()
+                if (silentOutput && !canDrawOverlays) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "SILENT MODE IS ON AND DISPLAY PERMISSION IS OFF: A MESSAGE WOULD BE NEITHER SPOKEN NOR SHOWN.",
+                        color = ErrorRed,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 

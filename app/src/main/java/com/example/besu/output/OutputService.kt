@@ -16,10 +16,15 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.SystemClock
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import com.example.besu.core.NoticeRateLimiter
 import com.example.besu.watch.WatchAudioRelay
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.Wearable
@@ -45,7 +50,16 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         // so processSpeech can echo it back shell-style ("$ phrase")
         // instead of the usual "SOURCE > \"phrase\"" log format.
         const val SOURCE_TERMINAL_PROMPT = "TERM/PROMPT"
+
+        // "Display over other apps" notices are shown at most once per this long each, so a burst of
+        // messages does not flood the log or pile up toasts.
+        private const val NOTICE_INTERVAL_MS = 60_000L
+        private const val NOTICE_DISPLAY_MISSING = "display_missing"
+        private const val NOTICE_SILENT_DEAD_END = "silent_dead_end"
     }
+
+    private val noticeLimiter = NoticeRateLimiter(NOTICE_INTERVAL_MS)
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private var tts: TextToSpeech? = null
     private var isTtsReady = false
@@ -417,9 +431,14 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         emergency: EmergencyOptions,
         // /sticky forces the same hold-to-clear behavior an emergency
         // message gets, independent of emergency mode itself.
-        sticky: Boolean = false
+        sticky: Boolean = false,
+        // Whether this message will also be spoken. Used only to word the notice below.
+        willSpeak: Boolean = true
     ) {
         if (!android.provider.Settings.canDrawOverlays(this)) {
+            // Audio still plays but nothing can be shown, and nothing else tells the person.
+            // (When speech is silenced too, noteSilentDeadEnd says so instead.)
+            if (willSpeak) noteDisplayMissing()
             return
         }
 
@@ -450,6 +469,29 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         }
 
         startService(overlayIntent)
+    }
+
+    // Silent mode (persisted or a one-off /quiet) skips speech for regular output only, never an emergency message.
+    private fun speechIsSilenced(quiet: Boolean, emergency: EmergencyOptions): Boolean =
+        (silentOutput || quiet) && !emergency.enabled
+
+    // With "Display over other apps" off a visual prompt cannot be shown, though its audio still plays. Say so, at most
+    // once a minute.
+    private fun noteDisplayMissing() {
+        if (noticeLimiter.shouldNotify(NOTICE_DISPLAY_MISSING, SystemClock.elapsedRealtime())) {
+            broadcastLog("MESSAGE SPOKEN BUT NOT SHOWN: DISPLAY PERMISSION IS OFF", "ERR")
+        }
+    }
+
+    // Silent mode skipped the audio, and with the permission off nothing was shown either: the message produced nothing at
+    // all. Say so in the log and in a toast, at most once a minute. This never overrides the person's Silent Mode choice.
+    private fun noteSilentDeadEnd() {
+        if (android.provider.Settings.canDrawOverlays(this)) return
+        if (!noticeLimiter.shouldNotify(NOTICE_SILENT_DEAD_END, SystemClock.elapsedRealtime())) return
+
+        val message = "NOTHING WAS SHOWN OR SPOKEN: SILENT MODE IS ON AND DISPLAY PERMISSION IS OFF"
+        broadcastLog(message, "ERR")
+        mainHandler.post { Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show() }
     }
 
     private fun processSpeech(
@@ -505,7 +547,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             showVisualPrompt(
                 rawText = rawText,
                 emergency = emergency,
-                sticky = sticky
+                sticky = sticky,
+                willSpeak = !speechIsSilenced(quiet, emergency)
                         )
             }
 
@@ -522,6 +565,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         // attention, and never for tutorial narration, which has its own
         // separate toggle.
         if (!isTutorialOverride && (silentOutput || quiet) && !emergency.enabled) {
+            noteSilentDeadEnd()
             return
         }
 
@@ -738,12 +782,18 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             broadcastLog("$source > \"$rawText\"", logType, replayText = rawText)
         }
 
-        showVisualPrompt(rawText = rawText, emergency = emergency, sticky = sticky)
+        showVisualPrompt(
+            rawText = rawText,
+            emergency = emergency,
+            sticky = sticky,
+            willSpeak = !speechIsSilenced(quiet, emergency)
+        )
 
         // Silent mode (persisted or a one-off /quiet) skips playback for
         // regular output only -- never for an emergency message. Same rule
         // processSpeech applies to synthesized speech.
         if ((silentOutput || quiet) && !emergency.enabled) {
+            noteSilentDeadEnd()
             return true
         }
 
