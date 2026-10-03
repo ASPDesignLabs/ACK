@@ -1198,3 +1198,31 @@ Terminal `/e` is typed on purpose and never asks.
 `applyCadenceWarp` made each word's speed random and inserted words into SSML unescaped, and the result also reached the Piper voice, which does not
 parse SSML. The slider and the speech path are gone; the stored `VOX_CADENCE` value is kept (never deleted) and still travels in EXPORT .JSON
 (`dsp.cadence`) so old and new backups restore. **Do not send markup to the custom voice.**
+
+## PRIVACY & DATA PROTECTION — rules that must stay true
+
+Written for the privacy work that followed the client-use review (export warning, DELETE DATA, DELETE CUSTOM VOICE, SAFETY COPIES, the backup reminder,
+the free-speech notice). On-device checks are in `docs/PRIVACY_DEVICE_TEST.md`; what each permission is for is in `docs/PERMISSIONS.md`.
+
+- **Export warning.** `core/ExportContents.kt` is the one source for what EXPORT .JSON says it holds and that it is **not encrypted** (the settings
+  dialog and the Terminal `/backup`). A test reads `backup/AckBackup.kt` and fails if a field is not in a category, so **map every new backed-up
+  field** there. There is no catch-all category on purpose.
+- **Per-device state never goes in `AckBackup`.** The last-backup time, a snooze and the reminder on/off (`backup/BackupState.kt`, prefs
+  `ack_backup_state`) describe *this phone*; a restored phone has its own history. Restore never marks a backup as made (it merges, so the result is
+  not necessarily what any file holds).
+- **Storage catalogue.** `core/StorageCatalogue.kt` lists every area DELETE DATA offers and the words its confirmations use; `data/DataWipe.kt` walks
+  it. A test scans the app source for every preference file and folder and **fails if one is in no area** (or in `NOT_PERSONAL`, with a reason), so a
+  new place that stores data cannot be added without deciding how it is deleted and backed up. `ack_matrix_config` and `ack_prefs` are shared and
+  split by key (the Emergency card key; the Terminal log key), with a test that the split has no gap and no overlap.
+- **The wipe's side effects.** SAVED LOCATIONS removes Google's geofences and **waits** for it (`GeoEngineController.stopAllAndAwaitGeofenceRemoval`):
+  `removeGeofences` is asynchronous and nothing re-runs the teardown at launch, so a restart straight after could leave them registered; if Google mode
+  is on and removal is not confirmed, the zones are left alone. PEOPLE AND PLACES re-sends the paired watch empty lists (best effort). SETTINGS and
+  EVERYTHING re-seed the new-install defaults (`InstallState.seedDefaultsAfterWipe`). A wipe that needs it ends with the usual toast, a 1.5 s delay and
+  `restartApp`; one that fails lists areas by name only and does not restart.
+- **Every delete asks twice, CANCEL prominent, a backup named first.** New dialogs use `NeonButton` (12 sp) and `ConfirmBodyText`, **not**
+  `TightPanelButton` (10 sp): the 12 sp floor for anything new is a tracked problem.
+- **The backup reminder is a reminder only: it never writes a file.** The banner shows on the Terminal and Settings screens only, never on a deck or
+  Emergency screen where it could move a button about to be tapped; the header save icon's slot (left of HELP) is always laid out so nothing shifts when
+  it appears. The fingerprint is `core/BackupFingerprint.kt` over the no-audio backup (`TransferManager.backupFingerprint`); audio is never read for it.
+- **Copied text is plain on the clipboard, on purpose.** The developer wants to see it in the clipboard preview. Do not add the sensitive flag or a
+  clearing timer without asking.
