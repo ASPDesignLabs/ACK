@@ -181,6 +181,12 @@ object AckTags {
     const val COMPOSER_COPY_BTN = "COMPOSER_COPY_BTN"
     const val COMPOSER_SPEAK_BTN = "COMPOSER_SPEAK_BTN"
 
+    // WORD SUGGESTIONS (composer/StatementComposerView.kt strip and one-time offer; settings/WordSuggestionsSection.kt).
+    const val COMPOSER_WORD_STRIP = "COMPOSER_WORD_STRIP"
+    const val COMPOSER_WORD_OFFER = "COMPOSER_WORD_OFFER"
+    const val WORD_SUGGESTIONS_SWITCH = "WORD_SUGGESTIONS_SWITCH"
+    const val WORD_SUGGESTIONS_FORGET_BTN = "WORD_SUGGESTIONS_FORGET_BTN"
+
     // RECORD TRAINING DATA (voicecapture/*, entered from AUDIO ARCHITECT's
     // CUSTOM VOICE section).
     const val TRAIN_ENTRY_BTN = "TRAIN_ENTRY_BTN"

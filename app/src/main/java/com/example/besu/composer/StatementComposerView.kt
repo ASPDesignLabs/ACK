@@ -3,7 +3,10 @@ package com.example.besu.composer
 
 import com.example.besu.*
 import com.example.besu.computer.*
+import com.example.besu.core.AssistSettings
+import com.example.besu.core.Prediction
 import com.example.besu.core.TextInsertion
+import com.example.besu.core.WordSuggestionText
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -27,11 +30,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +52,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // The statement composer: builds multi-sentence statements from Target
 // Computer entries and Shared Root Variables, saves them, and lets them be
@@ -127,6 +135,58 @@ fun StatementComposerView(
         focusRequester.requestFocus()
     }
 
+    // WORD SUGGESTIONS (L5). Off until the person turns it on, in SETTINGS or from the one-time offer below. LearnedWordsRepository checks
+    // the switch itself, so nothing here can learn or suggest with it off. Suggestions are only buttons: nothing is inserted without a tap.
+    var wordSuggestionsOn by remember { mutableStateOf(AssistPrefs.isWordSuggestionsOn(context)) }
+    var wordOfferShown by remember {
+        mutableStateOf(
+            AssistSettings.shouldOfferWordSuggestions(
+                switchOn = AssistPrefs.isWordSuggestionsOn(context),
+                offerDismissed = AssistPrefs.isWordSuggestionsOfferDismissed(context)
+            )
+        )
+    }
+    val learnScope = rememberCoroutineScope()
+    // The last text that was learned from, so COPY then SAVE then SPEAK of the same text counts once; a changed text counts again.
+    var lastLearnedText by remember { mutableStateOf("") }
+
+    // The first read parses the saved words, so it is done off the main thread before the first keystroke needs it.
+    LaunchedEffect(wordSuggestionsOn) {
+        if (wordSuggestionsOn) withContext(Dispatchers.IO) { LearnedWordsRepository.wordCount(context) }
+    }
+
+    // Names kept elsewhere, read live (never copied into the learned words); re-read when a chip retargets a category.
+    val extraWords = remember(wordSuggestionsOn, targetRefreshKey) {
+        if (wordSuggestionsOn) WordSources.collect(context) else emptyList()
+    }
+
+    // Quiet while text is selected (there is no single cursor to complete or continue from).
+    val prediction = remember(wordSuggestionsOn, extraWords, textFieldValue.text, textFieldValue.selection) {
+        if (!wordSuggestionsOn || !textFieldValue.selection.collapsed) {
+            Prediction.NONE
+        } else {
+            LearnedWordsRepository.predict(context, extraWords, textFieldValue.text, textFieldValue.selection.start)
+        }
+    }
+
+    // A tapped suggestion goes through the same insertion rule as every other insert button; a COMPLETE one replaces the half-typed word.
+    fun insertWordSuggestion(word: String) {
+        val selection = textFieldValue.selection
+        val result = TextInsertion.insert(
+            textFieldValue.text, selection.start, selection.end, word, replace = prediction.replace
+        )
+        textFieldValue = TextFieldValue(result.text, TextRange(result.cursor))
+        focusRequester.requestFocus()
+    }
+
+    // Learning happens only at SAVE, COPY and SPEAK of what was typed here (never from MY STATEMENTS' own buttons, the Terminal, Manual Override
+    // or the Emergency deck), in the background so a tap is never held up by a file write.
+    fun learnFromCommittedText(text: String) {
+        if (!wordSuggestionsOn || text == lastLearnedText) return
+        lastLearnedText = text
+        learnScope.launch(Dispatchers.IO) { LearnedWordsRepository.learn(context, text) }
+    }
+
     val resolvedPreview = remember(textFieldValue.text, variableContext, targetRefreshKey) {
         resolveStatementTemplate(context, textFieldValue.text, variableContext)
     }
@@ -197,6 +257,26 @@ fun StatementComposerView(
                 .verticalScroll(rememberScrollState())
         ) {
 
+        // The one-time offer. It says what it does, learns nothing unless TURN ON is tapped, and never opens HELP or another screen.
+        if (wordOfferShown) {
+            WordSuggestionsOffer(
+                primaryColor = primaryColor,
+                modifier = Modifier
+                    .testTag(AckTags.COMPOSER_WORD_OFFER)
+                    .helpTarget(AckTags.COMPOSER_WORD_OFFER, primaryColor),
+                onTurnOn = {
+                    AssistPrefs.setWordSuggestions(context, true)
+                    wordSuggestionsOn = true
+                    wordOfferShown = false
+                },
+                onNotNow = {
+                    AssistPrefs.dismissWordSuggestionsOffer(context)
+                    wordOfferShown = false
+                }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
         TightSectionLabel("VARIABLE CONTEXT")
         Spacer(modifier = Modifier.height(6.dp))
         VariableContextRow(
@@ -238,6 +318,20 @@ fun StatementComposerView(
             minLines = 5,
             maxLines = 12
         )
+
+        // The strip keeps its height whether or not there is anything to offer, so a suggestion appearing never moves a button. It uses the
+        // history chips' row: 14 sp text, 48 dp chips, no animation, no sound, no vibration.
+        if (wordSuggestionsOn) {
+            Spacer(modifier = Modifier.height(6.dp))
+            AutocompleteChipRow(
+                suggestions = prediction.suggestions,
+                primaryColor = primaryColor,
+                modifier = Modifier
+                    .testTag(AckTags.COMPOSER_WORD_STRIP)
+                    .helpTarget(AckTags.COMPOSER_WORD_STRIP, primaryColor),
+                onSelect = { word -> insertWordSuggestion(word) }
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -395,6 +489,7 @@ fun StatementComposerView(
                 mainColor = primaryColor
             ) {
                 copyResolvedText(textFieldValue.text, resolvedPreview)
+                if (resolvedPreview.isNotBlank()) learnFromCommittedText(textFieldValue.text)
                 reportHelpInteraction(AckTags.COMPOSER_COPY_BTN)
             }
 
@@ -407,6 +502,7 @@ fun StatementComposerView(
                 mainColor = primaryColor
             ) {
                 speakResolvedText(textFieldValue.text, resolvedPreview, "COMPOSER/SPEAK")
+                if (resolvedPreview.isNotBlank()) learnFromCommittedText(textFieldValue.text)
                 reportHelpInteraction(AckTags.COMPOSER_SPEAK_BTN)
             }
         }
@@ -479,6 +575,7 @@ fun StatementComposerView(
                             updatedAt = System.currentTimeMillis()
                         )
                         StatementRepository.upsertNode(context, node, saveDestinationFolderId)
+                        learnFromCommittedText(node.template)
                         editingStatementId = node.id
                         refreshKey++
                         showSaveDialog = false
@@ -1139,5 +1236,37 @@ private fun resolveStatementTemplate(
 private fun consumeSingleUseComputerTags(context: Context, template: String) {
     TemplateEngine.getComputerTags(template).distinct().forEach { categoryId ->
         ComputerRepository.consumeIfSingleUse(context, categoryId)
+    }
+}
+
+// The one-time offer for WORD SUGGESTIONS (core/WordSuggestionText.kt holds the words, tested). Same shape as the PROFILES offer in SETTINGS: it says
+// what it is, that it is off, and that nothing is learned unless TURN ON is tapped. 12 sp text, 12 sp buttons, no animation.
+@Composable
+private fun WordSuggestionsOffer(
+    primaryColor: Color,
+    modifier: Modifier = Modifier,
+    onTurnOn: () -> Unit,
+    onNotNow: () -> Unit
+) {
+    val offerShape = CutCornerShape(8.dp)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, primaryColor.copy(alpha = 0.6f), offerShape)
+            .background(primaryColor.copy(alpha = 0.08f), offerShape)
+            .padding(12.dp)
+    ) {
+        Text(
+            WordSuggestionText.OFFER_TEXT,
+            color = Color.LightGray,
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
+            fontFamily = FontFamily.Monospace
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NeonButton(WordSuggestionText.OFFER_TURN_ON, Modifier.weight(1f), mainColor = primaryColor) { onTurnOn() }
+            NeonButton(WordSuggestionText.OFFER_NOT_NOW, Modifier.weight(1f), mainColor = Color.White) { onNotNow() }
+        }
     }
 }

@@ -1284,6 +1284,17 @@ fun SettingsView(
 
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
+            // WORD SUGGESTIONS (settings/WordSuggestionsSection.kt): the switch (off until turned on), what it learns, FORGET WORDS.
+            item {
+                WordSuggestionsSection(
+                    context = context,
+                    primaryColor = primaryColor,
+                    onBackUpFirst = { startBackupExport() }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
             item {
                 Text("AUTOCOMPLETE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(6.dp))

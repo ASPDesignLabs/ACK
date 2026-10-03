@@ -48,6 +48,18 @@ object StatementComposerHelp {
                 targetTag = AckTags.COMPOSER_FIELD
             ),
             HelpStep(
+                id = "word_suggestions",
+                title = "WORD SUGGESTIONS (OPTIONAL)",
+                body = "Under the text box ACK can offer words as you type: the rest " +
+                    "of the word you are typing, or the word that usually comes " +
+                    "next. It is off until you turn it on in SETTINGS > WORD " +
+                    "SUGGESTIONS, and nothing is added until you tap a word. It " +
+                    "learns only from statements you save, speak or copy here. " +
+                    "FORGET WORDS, in the same place in SETTINGS, removes what it " +
+                    "learned.",
+                targetTag = AckTags.COMPOSER_WORD_STRIP
+            ),
+            HelpStep(
                 id = "insert_target_chip",
                 title = "INSERT A LIVE REFERENCE",
                 body = "Tap a Target Computer chip to insert a live reference -- " +
