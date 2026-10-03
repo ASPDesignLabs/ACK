@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.backup
 
+import com.example.besu.capture.TrainingScript
 import com.example.besu.computer.*
 import com.example.besu.data.*
 import com.example.besu.decks.*
@@ -122,7 +123,15 @@ data class AckBackup(
     // before the tree replaced the original flat list -- applyBackupToStorage
     // restores it node-by-node (never wholesale), so nothing on the device
     // the backup doesn't mention is ever removed.
-    val savedStatementTree: StatementNode? = null
+    val savedStatementTree: StatementNode? = null,
+
+    // The texts the person reads when recording training data (voicecapture/).
+    // Only the text and its settings: recordings are far too large for this
+    // JSON and travel as training-capture packages instead. Empty on backups
+    // made before this feature existed -- applyBackupToStorage restores each
+    // script by id (overwriting a script with the same id, leaving every
+    // other script on the device alone), so an empty list changes nothing.
+    val trainingScripts: List<TrainingScript> = emptyList()
 )
 
 @Serializable

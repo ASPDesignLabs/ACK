@@ -41,6 +41,11 @@ class FreeCaptureEngine(
     var isStopped = false
         private set
 
+    /** What the recording was found to hold once it stopped (by the person or by itself); null if nothing was recorded or it is still going. */
+    @Volatile
+    var result: StoredRecording? = null
+        private set
+
     /** Seconds recorded so far. */
     val seconds: Double @Synchronized get() = hops * CaptureConstants.HOP_S
 
@@ -104,10 +109,11 @@ class FreeCaptureEngine(
 
     /**
      * Ends the recording: closes the file, scans it for the pieces the phone suggests, and closes the session's notes. Returns what
-     * was found, or null if nothing was recorded (the empty session is left in the notes as closed, with no recording).
+     * was found, or null if nothing was recorded (the empty session is left in the notes as closed, with no recording). Calling it
+     * again, or after the recording stopped by itself, returns the same result.
      */
     @Synchronized
-    fun stop(): StoredRecording? = stopInternal()
+    fun stop(): StoredRecording? = if (isStopped) result else stopInternal()
 
     private fun stopInternal(): StoredRecording? {
         if (isStopped) return null
@@ -123,6 +129,7 @@ class FreeCaptureEngine(
         if (result != null) store.finishFreeRecording(sessionId, result)
         else if (hops == 0L) w.file.delete()
         store.closeSession(sessionId, nowUtc())
+        this.result = result
         return result
     }
 }

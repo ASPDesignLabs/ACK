@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.backup
 
+import com.example.besu.capture.TrainingScript
+import com.example.besu.capture.TrainingStore
 import com.example.besu.computer.*
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.geo.*
 import com.example.besu.output.*
 import com.example.besu.ui.theme.NeonPalette
+import com.example.besu.voicecapture.TrainingCapture
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -79,6 +82,11 @@ object TransferManager {
     // separate from MAX_NODES_PER_CATEGORY -- reuses MAX_TREE_DEPTH as-is,
     // no reason for the two trees to have different depth limits.
     private const val MAX_STATEMENT_NODES = 1000
+
+    // Scripts for recording training data. A script holds up to
+    // TrainingStore.MAX_SCRIPT_CHARS of text, so this is a count ceiling,
+    // not a size guess -- the overall MAX_DECOMPRESSED_SIZE still applies.
+    private const val MAX_TRAINING_SCRIPTS = 500
     private val CATEGORY_ID_PATTERN = Regex("^[A-Z0-9_]{1,$MAX_KEY_LENGTH}$")
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; encodeDefaults = true }
@@ -298,6 +306,9 @@ object TransferManager {
 // 9j. Gather the statement composer's saved-statement tree.
         val savedStatementTree = StatementRepository.getRoot(context)
 
+// 9k. Gather the scripts for recording training data (text only).
+        val trainingScripts = TrainingCapture.store(context).listScripts().items
+
 // 10. Wrap and encode.
         val backup = AckBackup(
             dsp = dspConfig,
@@ -337,6 +348,7 @@ object TransferManager {
             shakeThreshold = shakeThreshold,
             rootOverrideCollapsed = rootOverrideCollapsed,
             savedStatementTree = savedStatementTree,
+            trainingScripts = trainingScripts,
         )
 
         return json.encodeToString(backup)
@@ -945,6 +957,40 @@ object TransferManager {
             }
         }
 
+// 20. Validate the training-capture scripts. The ceilings match what the
+// script editor itself allows (TrainingStore.MAX_TITLE_CHARS /
+// MAX_SCRIPT_CHARS), so a script the app made can always be restored.
+        if (backup.trainingScripts.size > MAX_TRAINING_SCRIPTS) {
+            Log.e("ACK_IMPORT", "trainingScripts count exceeds $MAX_TRAINING_SCRIPTS: ${backup.trainingScripts.size}")
+            return false
+        }
+        if (backup.trainingScripts.map { it.id }.distinct().size != backup.trainingScripts.size) {
+            Log.e("ACK_IMPORT", "trainingScripts has duplicate ids")
+            return false
+        }
+        for (script in backup.trainingScripts) {
+            if (!TrainingStore.SCRIPT_ID.matches(script.id)) {
+                Log.e("ACK_IMPORT", "trainingScripts id fails the script id pattern: \"${script.id.take(60)}\"")
+                return false
+            }
+            if (script.title.length > TrainingStore.MAX_TITLE_CHARS) {
+                Log.e("ACK_IMPORT", "trainingScripts \"${script.id}\" title exceeds ${TrainingStore.MAX_TITLE_CHARS} chars: ${script.title.length}")
+                return false
+            }
+            if (script.text.length > TrainingStore.MAX_SCRIPT_CHARS) {
+                Log.e("ACK_IMPORT", "trainingScripts \"${script.id}\" text exceeds ${TrainingStore.MAX_SCRIPT_CHARS} chars: ${script.text.length}")
+                return false
+            }
+            if (script.lines != "join" && script.lines != "keep") {
+                Log.e("ACK_IMPORT", "trainingScripts \"${script.id}\" lines is neither join nor keep: \"${script.lines.take(20)}\"")
+                return false
+            }
+            if (!Regex("^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,8})?$").matches(script.language)) {
+                Log.e("ACK_IMPORT", "trainingScripts \"${script.id}\" language is not a language code: \"${script.language.take(20)}\"")
+                return false
+            }
+        }
+
         return true
     }
 
@@ -1278,6 +1324,19 @@ object TransferManager {
         // said at backup time.
         backup.savedStatementTree?.let { tree ->
             restoreStatementNode(context, tree, StatementRepository.ROOT_ID)
+        }
+
+        // Training-capture scripts: restored one by one by id (a script with
+        // the same id is overwritten in place; any other script on the device
+        // is left alone). The backup's own timestamps are kept, so restoring
+        // does not reshuffle the list.
+        val scriptStore = TrainingCapture.store(context)
+        backup.trainingScripts.forEach { script ->
+            try {
+                scriptStore.saveScript(script, script.updatedAt.takeIf { it > 0L } ?: System.currentTimeMillis())
+            } catch (e: Exception) {
+                Log.e("ACK_IMPORT", "trainingScripts \"${script.id}\" could not be restored: ${e.message}")
+            }
         }
 
         // Restoring adopts the backup's active deck/profile/category

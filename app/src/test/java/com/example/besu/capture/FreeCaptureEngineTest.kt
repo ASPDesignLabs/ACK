@@ -126,7 +126,8 @@ class FreeCaptureEngineTest {
         assertTrue(notes.closed)
         assertEquals(5.0, notes.recording!!.durationS, 0.0)
         assertEquals(ClipState.DONE, notes.recording!!.state)
-        assertNull("stopping again returns nothing and changes nothing", e.stop())
+        assertEquals("a recording that stopped by itself still hands over what it found", notes.recording, e.result)
+        assertEquals("stopping again returns the same result and changes nothing", notes.recording, e.stop())
     }
 
     @Test
