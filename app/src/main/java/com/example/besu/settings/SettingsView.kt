@@ -3,6 +3,7 @@ package com.example.besu.settings
 
 import com.example.besu.*
 import com.example.besu.backup.*
+import com.example.besu.core.BackupReminderText
 import com.example.besu.core.SafetyCopyPolicy
 import com.example.besu.core.StorageCatalogue
 import com.example.besu.data.*
@@ -354,6 +355,7 @@ fun SettingsView(
     var showManageRecordings by remember { mutableStateOf(false) }
     var showFullRestoreConfirm by remember { mutableStateOf(false) }
     var showManageData by remember { mutableStateOf(false) }
+    var backupRemindersOn by remember { mutableStateOf(BackupState.remindersEnabled(context)) }
     // SAFETY COPIES (data/SafetyCopies.kt): the list, the copy being confirmed (first, then second), and a tick that moves when an
     // export has just been tried, so the first confirmation re-reads whether a newer export exists.
     var safetyCopiesRefresh by remember { mutableIntStateOf(0) }
@@ -1109,7 +1111,27 @@ fun SettingsView(
                     fullRestoreLauncher.launch(arrayOf("application/json"))
                     reportHelpInteraction(AckTags.SETTINGS_FULL_RESTORE_BTN)
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                // BACKUP REMINDER: on or off, said in words (not only colour) and without animation. It reminds; it never makes a
+                // file. Checked when ACK starts, so turning it on shows nothing until then. Turning it off hides a showing one.
+                NeonButton(
+                    BackupReminderText.switchLabel(backupRemindersOn),
+                    Modifier.fillMaxWidth(),
+                    mainColor = if (backupRemindersOn) primaryColor else Color.White
+                ) {
+                    backupRemindersOn = !backupRemindersOn
+                    BackupState.setRemindersEnabled(context, backupRemindersOn)
+                    if (!backupRemindersOn) BackupReminder.clear()
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    BackupReminderText.SWITCH_EXPLANATION,
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
                 // Opens a list of what can be deleted; nothing is deleted by this tap, and every delete asks twice.
                 NeonButton("DELETE DATA", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
                     showManageData = true
