@@ -3224,14 +3224,16 @@
     return resolveTemplate(template, localValues, rootConfig);
   }
 
-  // Mirrors VisualLogicEngine.resolveDisplayPrompt, hardcoded to the app's
-  // own default preset (no per-node visual override, target ping, or
-  // preset editor in this simulator -- see the note above).
+  // Mirrors VisualLogicEngine.resolveDisplayPrompt (the rules are in the app's
+  // core/DisplayText.kt) with the setting a NEW install starts with: SHOW FULL
+  // MESSAGE on, so the whole message is shown, in capitals. An install made
+  // before that still cuts a message of more than 5 words to "ALERT:" plus its
+  // first 3 words until its owner turns SHOW FULL MESSAGE on; this demo shows
+  // the current default, not that older behaviour. There is no per-node visual
+  // override, target ping, or preset editor in this simulator -- see the note
+  // above.
   function resolveDisplayPrompt(rawPhrase){
-    var words = rawPhrase.trim().split(/\s+/).filter(function(w){ return w.length > 0; });
-    if(words.length === 0) return '';
-    if(words.length <= 5) return rawPhrase.toUpperCase();
-    return "ALERT:\n" + words.slice(0,3).join(' ').toUpperCase() + "...";
+    return rawPhrase.toUpperCase();
   }
 
   // ---------- small DOM helper ----------
