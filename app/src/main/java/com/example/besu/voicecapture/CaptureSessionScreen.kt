@@ -42,6 +42,7 @@ import com.example.besu.capture.Card
 import com.example.besu.capture.CardSplitter
 import com.example.besu.capture.ClipFlags
 import com.example.besu.capture.DiskGuard
+import com.example.besu.capture.FreeSpeechNotice
 import com.example.besu.capture.NoiseCheck
 import com.example.besu.capture.NoiseVerdict
 import com.example.besu.capture.StoreException
@@ -431,6 +432,15 @@ private fun SetupView(
                 "IF YOU LEAVE THE APP, RECORDING PAUSES.",
             color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace,
         )
+        if (free) {
+            // Free speech keeps everything the microphone hears, so anyone nearby is recorded too (wording: capture/FreeSpeechNotice.kt).
+            // Text only, in this screen's own palette and at 12 sp: this screen makes no sound or vibration, so no dialog, toast or
+            // standard button here. Script recording does not show it.
+            Text(
+                FreeSpeechNotice.SETUP,
+                color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
+            )
+        }
 
         when (phase) {
             Phase.SETUP -> TightPanelButton(

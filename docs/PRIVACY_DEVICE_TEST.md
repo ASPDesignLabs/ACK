@@ -140,6 +140,29 @@ diff before.txt after.txt
 - [ ] **DELETE EVERYTHING** through both confirmations. → ACK restarts and opens cleanly with its default decks; every area in the list is
   empty (open DELETE DATA again to see). ORGANIC and FULL TEXT are in place.
 
+## G. Free speech says it records anyone nearby
+
+Text only: these screens make no sound and no vibration while the microphone is open, so nothing here is a dialog, toast or standard button.
+
+- [ ] PROTOCOL → AUDIO ARCHITECT → CUSTOM VOICE → **RECORD TRAINING DATA**. → Under the FREE SPEECH description there is one more line,
+  **IT ALSO RECORDS ANYONE NEARBY.**, larger and brighter than the text above it (12 sp, white, bold; not red).
+- [ ] Tap **RECORD FREE SPEECH**. → The setup screen's BEFORE YOU START block ends with **FREE SPEECH RECORDS EVERYTHING THE MICROPHONE HEARS,
+  INCLUDING ANYONE NEARBY, FOR UP TO 90 MINUTES. TELL THEM FIRST, OR RECORD SOMEWHERE ELSE.**, and it is **above** START QUIET CHECK.
+- [ ] Go back and open a **script** instead (RECORD on a script). → Its setup screen does **not** show that paragraph; everything else on it is
+  unchanged.
+- [ ] Nothing on either screen vibrates or makes a sound, including when you tap START QUIET CHECK.
+- [ ] HELP → RECORD TRAINING DATA → the FREE SPEECH step. → Its text now ends **It also records anyone nearby.**
+
+## H. Copying text (no change was made; this is the behaviour you chose)
+
+ACK does not mark anything it copies as sensitive: you wanted to see what was copied in the clipboard preview. So:
+
+- [ ] In the statement composer, build a statement and tap **COPY**. → The toast says COPIED and the system clipboard preview **shows the text**.
+  Paste it into another app. → It pastes normally.
+- [ ] On a contact card, copy a phone number or address. → Same: shown in the preview, pastes normally.
+- [ ] Note for yourself: a keyboard's clipboard history (for example Gboard's) may keep what you copied, and so can any app you allow to read
+  the clipboard. ACK does not clear it afterwards.
+
 ## What to send back
 
 For any line that did not match: the line, what you saw, and (for a failed build) the first red error. For D and F also the `before.txt`

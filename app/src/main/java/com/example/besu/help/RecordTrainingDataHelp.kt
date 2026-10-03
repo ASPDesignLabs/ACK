@@ -2,6 +2,7 @@
 package com.example.besu.help
 
 import com.example.besu.*
+import com.example.besu.capture.FreeSpeechNotice
 
 // Walks through RECORD TRAINING DATA (voicecapture/*), entered from AUDIO ARCHITECT's CUSTOM VOICE section. Most steps are
 // "read" steps that point at a control: the screens change as the person works (script list, editor, setup, the recording
@@ -112,7 +113,7 @@ object RecordTrainingDataHelp {
                 id = "free",
                 title = "FREE SPEECH",
                 body = "To talk about anything with no script, use RECORD FREE SPEECH. The audio is kept whole, for as long as 90 minutes. The phone " +
-                    "only suggests where it could be cut; the computer decides.",
+                    "only suggests where it could be cut; the computer decides. " + FreeSpeechNotice.HELP,
                 targetTag = AckTags.TRAIN_FREE_BTN,
                 coachPlacement = HelpCoachPlacement.TOP
             ),
