@@ -19,6 +19,10 @@ object InstallClassifier {
     val SEED_KEYS: Map<String, Set<String>> = mapOf(
         "ack_prefs" to setOf("USER_VOX_PROFILE"),
         "ack_visual_presets" to setOf("saved_presets", "active_preset_id"),
+        // The starter phrases (data/StarterSeed.kt): twelve phrases for the DEFAULT deck, the deck list, the STARTERS deck, and
+        // the seed's own record of what it wrote.
+        StarterSets.MATRIX_FILE to StarterSets.matrixSeedKeys,
+        StarterSets.RECORD_FILE to StarterSets.recordKeys,
     )
 
     /**

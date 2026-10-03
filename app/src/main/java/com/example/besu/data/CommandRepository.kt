@@ -3,6 +3,7 @@ package com.example.besu.data
 
 import com.example.besu.backup.*
 import com.example.besu.computer.*
+import com.example.besu.core.PhraseKeys
 import com.example.besu.decks.*
 import com.example.besu.ui.theme.*
 import com.example.besu.watch.*
@@ -934,6 +935,12 @@ object CommandRepository {
             )
             .apply()
 
+        // On a phone that began with the neutral starter phrases, a new Matrix deck begins with them too (and not with the old
+        // built-in wording). Does nothing on a phone that already had ACK before the starters existed.
+        if (type == DeckType.MATRIX) {
+            StarterSeed.seedNewMatrixDeck(context, newDeck.id)
+        }
+
         return newDeck
     }
 
@@ -1282,11 +1289,9 @@ object CommandRepository {
     }
 
     // --- UNIVERSAL KEY GENERATOR ---
-    private fun generateStorageKey(deckId: String, profile: String, path: String): String {
-        val deckPrefix = if (deckId == "DEFAULT") "" else "${deckId}_"
-        val profilePrefix = if (profile == "DEFAULT") "" else "${profile}_"
-        return "$deckPrefix$profilePrefix$path"
-    }
+    // The recipe lives in core/PhraseKeys.kt so the starter seed writes to exactly the keys this reads.
+    private fun generateStorageKey(deckId: String, profile: String, path: String): String =
+        PhraseKeys.storageKey(deckId, profile, path)
 
     fun getPhrase(
         context: Context,

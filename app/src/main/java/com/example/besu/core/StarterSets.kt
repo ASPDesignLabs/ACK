@@ -122,6 +122,33 @@ object StarterSets {
      */
     fun recordKey(path: String): String = "seeded:$path"
 
+    // --- the storage the seed uses -------------------------------------------------------------------------------------
+    // Copies of names that live in Android-only files; StarterSeedWiringTest reads those files and fails if a copy drifts.
+
+    /** CommandRepository's preference file for decks and phrases. */
+    const val MATRIX_FILE = "ack_matrix_config"
+
+    /** The seed's own small preference file: for each phrase it wrote, the text it wrote (see [recordKey]). */
+    const val RECORD_FILE = "ack_starter_seed"
+
+    /** The key under which CommandRepository keeps the list of decks. */
+    const val DECKS_KEY = "custom_decks_meta"
+
+    /** The key under which a Quick Actions deck's layout is kept. */
+    fun quickActionsConfigKey(deckId: String = QUICK_ACTIONS_DECK_ID): String = "quick_actions_${deckId}_config"
+
+    /**
+     * Every key the seed writes into [MATRIX_FILE] for a brand-new install: the twelve bare phrase paths (the DEFAULT deck and
+     * profile), the deck list, and the STARTERS deck's layout. InstallClassifier ignores exactly these, so an interrupted seed
+     * still reads as a fresh install and simply finishes.
+     */
+    val matrixSeedKeys: Set<String> =
+        matrixPhrases.map { PhraseKeys.storageKey("DEFAULT", "DEFAULT", it.path) }.toSet() +
+            setOf(DECKS_KEY, quickActionsConfigKey())
+
+    /** Every key the seed writes into [RECORD_FILE]. */
+    val recordKeys: Set<String> = matrixPhrases.map { recordKey(it.path) }.toSet()
+
     /**
      * The two tables docs/STARTER_PHRASES.md shows, as Markdown. StarterPhrasesDocTest compares the document with this text,
      * so what a reviewer reads is exactly what the app seeds.

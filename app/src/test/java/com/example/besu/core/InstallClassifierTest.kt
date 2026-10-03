@@ -69,10 +69,22 @@ class InstallClassifierTest {
     @Test
     fun theSeedKeysAreExactlyWhatTheSeedWrites() {
         // If the seed gains a key, this list and InstallState must change together; fail loudly rather than drift.
+        // Written out in full on purpose, independent of StarterSets, so the two cannot drift together unnoticed.
         assertEquals(
             mapOf(
                 "ack_prefs" to setOf("USER_VOX_PROFILE"),
                 "ack_visual_presets" to setOf("saved_presets", "active_preset_id"),
+                "ack_matrix_config" to setOf(
+                    "/std/id/0", "/std/id/1", "/std/id/2", "/std/id/3",
+                    "/std/def/0", "/std/def/1", "/std/def/2", "/std/def/3",
+                    "/std/con/0", "/std/con/1", "/std/con/2", "/std/con/3",
+                    "custom_decks_meta", "quick_actions_DECK_STARTERS_config",
+                ),
+                "ack_starter_seed" to setOf(
+                    "seeded:/std/id/0", "seeded:/std/id/1", "seeded:/std/id/2", "seeded:/std/id/3",
+                    "seeded:/std/def/0", "seeded:/std/def/1", "seeded:/std/def/2", "seeded:/std/def/3",
+                    "seeded:/std/con/0", "seeded:/std/con/1", "seeded:/std/con/2", "seeded:/std/con/3",
+                ),
             ),
             InstallClassifier.SEED_KEYS,
         )

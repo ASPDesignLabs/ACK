@@ -11,8 +11,9 @@ import com.example.besu.output.VisualPresetRepository
  * Records, once, whether this install was fresh when this version first ran, and on a fresh install writes the new
  * safe defaults ("seed, don't flip"):
  *
- *  - the unprocessed ORGANIC voice, and
- *  - one visual preset, FULL TEXT, set active, so a whole message is shown on screen.
+ *  - the unprocessed ORGANIC voice,
+ *  - one visual preset, FULL TEXT, set active, so a whole message is shown on screen, and
+ *  - the neutral starter phrases and a small STARTERS Quick Actions deck (StarterSeed), instead of the old built-in wording.
  *
  * Every place that READS these settings keeps its old fallback (CYBER, bypassTruncation = false), so an install that
  * already existed behaves exactly as before. Only an install with nothing stored gets the new defaults, and only once.
@@ -37,7 +38,7 @@ object InstallState {
     private val OWNED_PREFS_FILES = listOf(
         "ack_prefs", "app_prefs", "ack_matrix_config", "ack_visual_presets", "ack_voice_recordings", "ack_targets",
         "ack_statements", "ack_geo_secure", "ack_gif_library", "ack_autocomplete_history",
-        "ack_training_capture", "ack_training_game", "ack_deck_trainer", "gestures",
+        "ack_training_capture", "ack_training_game", "ack_deck_trainer", "gestures", "ack_starter_seed",
     )
 
     private const val DEFAULT_VOICE = "ORGANIC"
@@ -57,7 +58,12 @@ object InstallState {
                 context.getSharedPreferences(name, Context.MODE_PRIVATE).all.keys.toSet()
             }
             val fresh = InstallClassifier.isFreshInstall(keysByFile)
-            if (fresh) seedFreshInstallDefaults(context)
+            if (fresh) {
+                seedFreshInstallDefaults(context)
+                // The neutral starter phrases (data/StarterSeed.kt). Deliberately NOT part of seedFreshInstallDefaults, which also runs
+                // after a SETTINGS wipe: seeding phrases there would change what an existing person's untouched buttons say.
+                StarterSeed.seedFreshInstall(context)
+            }
 
             state.edit().putBoolean(KEY_FRESH, fresh).putBoolean(KEY_RECORDED, true).commit()
             Log.i(TAG, "install recorded: fresh=$fresh")

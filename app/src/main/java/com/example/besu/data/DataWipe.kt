@@ -103,6 +103,11 @@ object DataWipe {
         if (StorageCatalogue.ID_SETTINGS in deletedIds) {
             InstallState.seedDefaultsAfterWipe(context)
         }
+        // A wiped MESSAGES AND DECKS area would leave every Matrix slot on the old built-in wording (the developer's own). The neutral
+        // starter phrases are saved again, the same ones a new install gets. DELETE EVERYTHING is covered: this is one of its areas.
+        if (StorageCatalogue.ID_MESSAGES_AND_DECKS in deletedIds) {
+            StarterSeed.seedAfterWipe(context)
+        }
         // The paired watch keeps its own copy of the Target Computer names. Best effort: out of reach, it keeps them until
         // it next connects (the confirmation says so).
         if (StorageCatalogue.ID_PEOPLE_AND_PLACES in deletedIds) {

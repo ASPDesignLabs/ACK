@@ -70,15 +70,22 @@ object StorageCatalogue {
     private const val DEFAULTS_AFTER =
         "AFTERWARDS ACK STARTS WITH ITS DEFAULT SETTINGS: THE ORGANIC VOICE AND THE FULL TEXT DISPLAY PRESET."
 
+    // The Matrix deck is given ACK's neutral starter phrases again after this area is deleted (data/StarterSeed.kt), so a wiped
+    // phone does not fall back to the developer's own built-in wording.
+    private const val STARTERS_AFTER =
+        "AFTERWARDS THE MATRIX DECK SHOWS ACK'S NEUTRAL STARTER PHRASES, NOT ITS OLD BUILT-IN WORDING."
+
     val areas: List<Area> = listOf(
         Area(
             id = ID_MESSAGES_AND_DECKS,
             label = "MESSAGES AND DECKS",
             holds = "YOUR DECKS, MESSAGES, STATEMENTS, SHARED VARIABLES AND TYPING HISTORY. NOT THE EMERGENCY INFO CARD.",
-            prefsFilesCleared = setOf("ack_statements", "ack_autocomplete_history"),
+            // ack_starter_seed is the starter seed's own note of which phrases it wrote (per phone, never backed up).
+            prefsFilesCleared = setOf("ack_statements", "ack_autocomplete_history", StarterSets.RECORD_FILE),
             prefsFilesClearedExcept = mapOf(FILE_MATRIX_CONFIG to setOf(KEY_EMERGENCY_INFO_CARD)),
             coverage = Coverage.EXPORT_JSON,
             backupNote = "IT IS IN EXPORT .JSON.",
+            afterNote = STARTERS_AFTER,
             restartAfter = true,
         ),
         Area(
@@ -265,6 +272,7 @@ object StorageCatalogue {
         add("STORED NOW: $amountText.")
         add("EXPORT .JSON DOES NOT COVER: ${everythingNotInExportJson().joinToString(", ")}. SAVE THOSE FIRST IF YOU NEED THEM.")
         add(DEFAULTS_AFTER)
+        add(STARTERS_AFTER)
         add(WATCH_NOTE)
         add(RESTART_NOTE)
         add(NOT_ELSEWHERE)
