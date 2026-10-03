@@ -277,7 +277,7 @@ Details and the reason for splitting are in [VOICE_TRAINING_GUIDE.md](VOICE_TRAI
 
 ```bash
 mkdir -p ~/tools
-curl -o "$SPLIT" https://raw.githubusercontent.com/aspdesignlabs/ack/claude/quirky-carson-ia01h1/tools/split_long_takes.py
+curl -o "$SPLIT" https://raw.githubusercontent.com/aspdesignlabs/ack/main/tools/split_long_takes.py
 ```
 
 *Not run here (needs your machine), so no sample output.*
