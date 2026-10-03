@@ -163,6 +163,27 @@ ACK does not mark anything it copies as sensitive: you wanted to see what was co
 - [ ] Note for yourself: a keyboard's clipboard history (for example Gboard's) may keep what you copied, and so can any app you allow to read
   the clipboard. ACK does not clear it afterwards.
 
+## I. Does the watch link use the internet? (needs a paired watch; dummy data only)
+
+Google's documentation says Data Layer messages may travel through Google's servers when Bluetooth between phone and watch is
+unavailable (see `docs/DATA_SOVEREIGNTY.md`, section 8). Nobody has seen it happen on these devices. To see it, add this **temporary**
+line, build a debug build, and **remove it afterwards** (`git checkout` the two files). It logs only true or false, never a name or id.
+
+In `watch/WatchSync.kt`, inside `sendMessage`'s `connectedNodes.addOnSuccessListener { nodes -> ... }`, and in `output/OutputService.kt`
+right after the `connectedNodes` list is read in `relayToWatchIfReachable`:
+
+```kotlin
+nodes.forEach { android.util.Log.i("ACK_NODE_TEST", "node nearby=${it.isNearby}") }
+```
+
+- [ ] With the phone's Bluetooth **on** and the watch next to it, switch deck on the phone, and run `adb logcat -s ACK_NODE_TEST`. → One line,
+  `nearby=true`, and the watch updates.
+- [ ] Turn the phone's Bluetooth **off**, keeping the phone on Wi-Fi and the watch on its own Wi-Fi or LTE (both with internet). Switch deck
+  again. → Write down what you see: is there a node line, is it `nearby=false`, and does the watch still update? Any of these is a useful answer.
+- [ ] Turn Bluetooth back on and remove the temporary line. → `git diff` shows no change to `WatchSync.kt` or `OutputService.kt`.
+
+Send back the log lines (they contain no names) and whether the watch updated with Bluetooth off.
+
 ## What to send back
 
 For any line that did not match: the line, what you saw, and (for a failed build) the first red error. For D and F also the `before.txt`

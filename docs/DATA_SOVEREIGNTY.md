@@ -147,3 +147,49 @@ synced folders), `test_sovereignty_policy.py` (the Android app: no network permi
 `test_license_headers.py` (licensing). The Android app's cloud backup is off for everything it stores; to keep a copy, or to
 move to a new phone without a cable, use ACK's own export (Settings, EXPORT .JSON, and the voice and GIF `.zip` backups),
 which stay under your control. The rules still allow a direct phone-to-phone transfer during setup (which does not go through the cloud), but that has not been tried on a real phone.
+
+## 8. Can the watch link leave your devices? (ACK Wear)
+
+**Short answer: yes, it can, and ACK does not control it.** ACK itself has no network permission and no network code. But ACK talks to
+the ACK Wear watch app through Google Play services (the Wearable Data Layer), a separate program with its own network access. Google's
+own documentation says that when Bluetooth between the phone and the watch is not available, Data Layer messages can travel over
+the internet, through Google's servers, and that Google encrypts them end to end while they do. Google Play services decides which route a
+message takes, not ACK.
+
+**What ACK sends over that link:** deck names and lists, Target Computer category and entry **names** (the labels only: not phone numbers,
+addresses, emails or contact cards), the target list names, settings values (volume, sensitivity, timings), status, and, when the watch
+audio relay is on, **the speech audio of what the phone says**, sent in pieces to play on the watch.
+
+**What Google says, word for word** (the Wearable Data Layer overview, "Options for communication" and "Cloud"):
+
+> Data is transferred in one of the following ways: Directly, when there is an established Bluetooth connection between the Wear OS device
+> and another device. Over an available network, such as LTE or Wi-Fi, using a network node on Google's servers as an intermediary. All
+> Data Layer clients may exchange data either using Bluetooth or using the cloud, depending on connections available to the devices.
+> Assume that data transmitted using Data Layer may at some point use Google-owned servers.
+>
+> Data is automatically routed through Google Cloud when Bluetooth is unavailable. All data transferred through Google Cloud is end-to-end
+> encrypted.
+
+* **Source:** `https://developer.android.com/training/wearables/data/overview`, which said "Last updated 2026-09-28 UTC". It was read
+  (the page itself, not a summary) on **2026-10-03**.
+* The page does not say which route is used when both are available, and it makes no promise that the direct one is always preferred.
+* It also says the Data Layer only shares data between the same app, with the same package name and signature, on the two devices, and that no
+  other app can read it. That is about other apps on your devices; it is not a promise that Google's servers never carry it.
+
+**What was not checked.**
+
+* **Nothing was tested on a real phone or watch.** Whether, on your devices, a message really takes the internet route when Bluetooth is off
+  has not been seen. The steps to see it yourself are in `docs/PRIVACY_DEVICE_TEST.md`, section I.
+* The reference pages for `Node.isNearby()` and `MessageClient` (on `developers.google.com`) could not be opened from the session that wrote
+  this, so **what `isNearby()` means exactly is not confirmed here.** A search result described `NodeClient.getConnectedNodes()` as nodes "to
+  which this device is currently connected, either directly or indirectly via a directly connected node". ACK's own code asks for exactly that
+  list before it sends (`watch/WatchSync.kt`, `output/OutputService.kt`), and does not look at `isNearby`.
+
+**What you can do today.** If this data must never reach Google's servers, do not use ACK Wear (unpair the watch, or do not install the
+watch app). If you do use it, the direct Bluetooth route is the one that stays between your two devices, so keep the phone's Bluetooth on and
+the watch near it; Google's page does not guarantee that is the only route used.
+
+**Open decision, not built (do not change this silently):** make ACK send to the watch only when `Node.isNearby` is true, at the two places it
+sends (`WatchSync.sendMessage` and `OutputService.relayToWatchIfReachable`). That would keep ACK's own messages off the internet route. The
+cost: a watch that is reachable only over the internet (for example, you left the phone at home) would stop working with ACK. It also depends
+on `isNearby()` meaning what its name suggests, which still has to be confirmed (see above). The developer decides.
