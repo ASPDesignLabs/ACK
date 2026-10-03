@@ -350,6 +350,7 @@ fun SettingsView(
     var showManageAutocomplete by remember { mutableStateOf(false) }
     var showManageRecordings by remember { mutableStateOf(false) }
     var showFullRestoreConfirm by remember { mutableStateOf(false) }
+    var showManageData by remember { mutableStateOf(false) }
     var pendingFullRestoreJson by remember { mutableStateOf<String?>(null) }
     var recordingGainPercent by remember {
         mutableFloatStateOf(VoiceRecordingRepository.getPlaybackGainPercent(context).toFloat())
@@ -1098,6 +1099,11 @@ fun SettingsView(
                     fullRestoreLauncher.launch(arrayOf("application/json"))
                     reportHelpInteraction(AckTags.SETTINGS_FULL_RESTORE_BTN)
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                // Opens a list of what can be deleted; nothing is deleted by this tap, and every delete asks twice.
+                NeonButton("DELETE DATA", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+                    showManageData = true
+                }
             }
 
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
@@ -1218,6 +1224,25 @@ fun SettingsView(
             context = context,
             primaryColor = primaryColor,
             onDismiss = { showManageAutocomplete = false }
+        )
+    }
+
+    if (showManageData) {
+        ManageDataDialog(
+            context = context,
+            primaryColor = primaryColor,
+            logs = logs,
+            onBackUpFirst = { startBackupExport() },
+            onWiped = { needsRestart ->
+                showManageData = false
+                if (needsRestart) {
+                    // Memory caches (the deck list and so on) make a restart the reliable way to show a clean state. Same
+                    // toast -> flag -> delayed restart as FULL RESTORE; the 1.5 s delay is load-bearing (see CLAUDE.md).
+                    Toast.makeText(context, "DATA DELETED -- RESTARTING", Toast.LENGTH_LONG).show()
+                    pendingRestart = true
+                }
+            },
+            onDismiss = { showManageData = false }
         )
     }
 

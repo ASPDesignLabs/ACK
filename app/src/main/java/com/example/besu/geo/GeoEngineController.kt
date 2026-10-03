@@ -14,6 +14,8 @@ import android.util.Log
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.tasks.Tasks
+import java.util.concurrent.TimeUnit
 import kotlin.math.*
 
 object GeoEngineController {
@@ -40,6 +42,32 @@ object GeoEngineController {
         } else {
             startOptimizedEngine(context, zones)
         }
+    }
+
+    // Stops both engines like syncEngineState does with the master toggle off, but BLOCKS (up to timeoutMs) until Google's
+    // geofencing service has accepted the removal. DELETE DATA > SAVED LOCATIONS needs that: it clears the zones and then
+    // restarts the app, and removeGeofences is otherwise asynchronous -- nothing re-runs this teardown at launch, so a lost
+    // request would leave the geofences registered with Google Play services. Call off the main thread. Returns true only
+    // if the removal was confirmed.
+    fun stopAllAndAwaitGeofenceRemoval(context: Context, timeoutMs: Long): Boolean {
+        stopSovereignEngine(context)
+        val confirmed = try {
+            Tasks.await(
+                LocationServices.getGeofencingClient(context).removeGeofences(getGeofencePendingIntent(context)),
+                timeoutMs,
+                TimeUnit.MILLISECONDS
+            )
+            true
+        } catch (e: Exception) {
+            Log.e("ACK_GEO", "Geofence removal was not confirmed", e)
+            false
+        }
+        broadcastLog(
+            context,
+            if (confirmed) "OPTIMIZED ENGINE: OFFLINE" else "OPTIMIZED ENGINE: REMOVAL NOT CONFIRMED",
+            "GEO"
+        )
+        return confirmed
     }
 
     // ==========================================
