@@ -408,6 +408,15 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     importVoiceBackupLauncher.launch(arrayOf("application/zip"))
                 }
             }
+            Spacer(modifier = Modifier.height(6.dp))
+            // The trained voice is made from the person's own recordings: the backup file is as private as a recording
+            // would be, and is not encrypted.
+            Text(
+                "THE VOICE BACKUP IS AS PRIVATE AS A RECORDING OF YOU, AND IS NOT ENCRYPTED. SAVE IT WHERE YOU CONTROL WHO CAN SEE IT.",
+                color = Color.Gray,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace
+            )
         }
 
         Spacer(modifier = Modifier.height(10.dp))
