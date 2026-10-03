@@ -44,14 +44,23 @@ object BackupExporter {
         }
 
         return try {
-            val bytes = TransferManager.generateBackupJson(context).toByteArray(Charsets.UTF_8)
+            val generated = TransferManager.generateBackup(context)
+            val bytes = generated.json.toByteArray(Charsets.UTF_8)
             val out = resolver.openOutputStream(uri, "w")
                 ?: return failed("THE FILE COULD NOT BE OPENED")
             out.use {
                 it.write(bytes)
                 it.flush()
             }
-            Log.i(TAG, "export written: ${bytes.size} bytes")
+            // Only after a good write: record when, and what the file held (the fingerprint of the very data just written),
+            // for the backup reminder. A short prefix is logged, never content.
+            // Its own try: a problem with this note must never be reported as a failed export, and must never delete a good file.
+            try {
+                BackupReminder.markBackedUp(context, generated.fingerprint)
+            } catch (e: Exception) {
+                Log.e(TAG, "the export was written but its time could not be recorded", e)
+            }
+            Log.i(TAG, "export written: ${bytes.size} bytes, data fingerprint ${generated.fingerprint?.take(8)}")
             ExportResult.Success(bytes.size.toLong())
         } catch (e: SecurityException) {
             failed("THIS LOCATION DID NOT ALLOW ACK TO SAVE THERE", e)

@@ -4,6 +4,7 @@ package com.example.besu.backup
 import com.example.besu.capture.TrainingScript
 import com.example.besu.capture.TrainingStore
 import com.example.besu.computer.*
+import com.example.besu.core.BackupFingerprint
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.geo.*
@@ -92,7 +93,41 @@ object TransferManager {
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; encodeDefaults = true }
 
     // --- EXPORT (GENERATOR) ---
-    fun generateBackupJson(context: Context): String {
+
+    /** A backup as JSON, plus the fingerprint of the very data in it (null if it could not be made). */
+    class GeneratedBackup(val json: String, val fingerprint: String?)
+
+    fun generateBackupJson(context: Context): String =
+        json.encodeToString(buildBackup(context, includeAudio = true))
+
+    /**
+     * The backup and the fingerprint of the same snapshot, built once: BackupExporter records that fingerprint as "what was
+     * exported", so it can never describe different data from the file that was written.
+     */
+    fun generateBackup(context: Context): GeneratedBackup {
+        val backup = buildBackup(context, includeAudio = true)
+        return GeneratedBackup(json.encodeToString(backup), fingerprintOf(backup))
+    }
+
+    /**
+     * What the backup reminder compares: the fingerprint of what a backup would hold right now. Never reads or encodes audio.
+     * Null if it could not be worked out (the reminder then stays quiet).
+     */
+    fun backupFingerprint(context: Context): String? = fingerprintOf(buildBackup(context, includeAudio = false))
+
+    // Audio is blanked first, so a fingerprint taken from an export (which carries audio) equals one taken without reading any.
+    private fun fingerprintOf(backup: AckBackup): String? = try {
+        val withoutAudio = backup.copy(
+            voiceRecordings = backup.voiceRecordings.map { it.copy(sampleRate = 0, audioBase64 = "") }
+        )
+        BackupFingerprint.fingerprint(json.encodeToString(withoutAudio))
+    } catch (e: Exception) {
+        Log.e("ACK_BACKUP", "could not fingerprint the backup data", e)
+        null
+    }
+
+    // The one place a backup's data is gathered. includeAudio = false builds the recordings' metadata only.
+    private fun buildBackup(context: Context, includeAudio: Boolean): AckBackup {
         // 1. Gather DSP Settings & Custom Voices
         val dspPrefs = context.getSharedPreferences(PREFS_DSP, Context.MODE_PRIVATE)
         
@@ -251,7 +286,11 @@ object TransferManager {
 
 // 9b. Gather voice recordings bound to Quick Actions slots, audio
 // included (base64) -- see VoiceRecordingRepository.exportForBackup.
-        val voiceRecordings = VoiceRecordingRepository.exportForBackup(context)
+        val voiceRecordings = if (includeAudio) {
+            VoiceRecordingRepository.exportForBackup(context)
+        } else {
+            VoiceRecordingRepository.metadataForBackup(context)
+        }
         val voiceRecordingGainPercent = VoiceRecordingRepository.getPlaybackGainPercent(context)
 
 // 9c. Gather autocomplete suggestion history -- its own dedicated prefs
@@ -309,8 +348,8 @@ object TransferManager {
 // 9k. Gather the scripts for recording training data (text only).
         val trainingScripts = TrainingCapture.store(context).listScripts().items
 
-// 10. Wrap and encode.
-        val backup = AckBackup(
+// 10. Wrap.
+        return AckBackup(
             dsp = dspConfig,
             matrixData = matrixMap,
             decks = decksList,
@@ -350,8 +389,6 @@ object TransferManager {
             savedStatementTree = savedStatementTree,
             trainingScripts = trainingScripts,
         )
-
-        return json.encodeToString(backup)
     }
 
     // Writes a backup snapshot to app-internal storage (not a user-facing
