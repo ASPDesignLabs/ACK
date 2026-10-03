@@ -13,7 +13,7 @@ only been tested without a real phone.
 ## Install (once)
 
 ```bash
-git clone --depth 1 --branch claude/quirky-carson-ia01h1 https://github.com/ASPDesignLabs/ACK.git ~/ack-tools
+git clone --depth 1 https://github.com/ASPDesignLabs/ACK.git ~/ack-tools
 ~/ack-tools/tools/freeform_studio/install.sh
 ```
 The installer makes its own virtual environment (`~/freeform-studio-venv`), so nothing here can disturb the recorder or your
@@ -25,7 +25,10 @@ folder (plus pip's usual download cache in your home folder); it never edits she
 - `./install.sh --check` only looks and reports what is missing. `--dry-run` prints every command it would run.
 - `--gpu` also installs the NVIDIA libraries for GPU speech recognition (see below). `--venv DIR` and `--python CMD` choose another
   environment folder or Python.
-- Already cloned it earlier? Update with `git -C ~/ack-tools pull`, then run the installer again.
+- Already cloned it earlier? Update with `git -C ~/ack-tools pull`, then run the installer again. If you cloned it from a feature
+  branch before this was released, move that folder aside (`mv ~/ack-tools ~/ack-tools.old`) and clone again with the command
+  above. The folder holds only the program: your recordings, access token, backups and `~/freeform-studio-venv` live elsewhere
+  and are not touched.
 
 **Then fetch the speech model, once.** The server never goes online to find a model, so it needs a copy on this computer:
 ```bash
