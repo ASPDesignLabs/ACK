@@ -2,6 +2,7 @@
 package com.example.besu.output
 
 import com.example.besu.*
+import com.example.besu.core.resolveDisplayText
 import android.content.Context
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -20,7 +21,10 @@ data class VisualPreset(
     val isBold: Boolean = true,
     val isItalic: Boolean = false,
     val isUnderline: Boolean = false,
-    val bypassTruncation: Boolean = false // <-- NEW: Allows full phrase rendering
+    // true = show the whole message (the editor calls this SHOW FULL MESSAGE). The default stays false on
+    // purpose: presets saved by older versions lack this field and must keep decoding as false, so an
+    // existing install is not changed. New installs get a FULL TEXT preset with it on (data/InstallState.kt).
+    val bypassTruncation: Boolean = false
 )
 
 // --- REPOSITORY ---
@@ -107,34 +111,19 @@ object OverlayDisplayPrefs {
 
 // --- LOGIC ENGINE ---
 
+// The rules live in core/DisplayText.kt (plain Kotlin, unit-tested). The stored field keeps its
+// old name, bypassTruncation, so backups and presets saved by older versions are unaffected;
+// in the editor it reads as SHOW FULL MESSAGE.
 object VisualLogicEngine {
     fun resolveDisplayPrompt(
         rawPhrase: String,
         targetName: String?,
         matrixVisualOverride: String?,
         preset: VisualPreset
-    ): String {
-        // RULE 1: Specific shorthand visual override (e.g. Work/Custom mapping)
-        if (!matrixVisualOverride.isNullOrBlank()) {
-            return matrixVisualOverride.uppercase()
-        }
-
-        // RULE 2: Target Ping overrides phrase
-        if (!targetName.isNullOrBlank()) {
-            return targetName.uppercase()
-        }
-
-        // RULE 3: Truncation Check
-        if (preset.bypassTruncation) {
-            return rawPhrase.uppercase() // Show it all, let Compose wrap the text
-        }
-
-        // Default Heuristic (Truncate if > 5 words)
-        val words = rawPhrase.trim().split("\\s+".toRegex())
-        return if (words.size <= 5) {
-            rawPhrase.uppercase()
-        } else {
-            "ALERT:\n${words.take(3).joinToString(" ").uppercase()}..."
-        }
-    }
+    ): String = resolveDisplayText(
+        rawPhrase = rawPhrase,
+        targetName = targetName,
+        matrixVisualOverride = matrixVisualOverride,
+        fullText = preset.bypassTruncation
+    )
 }
