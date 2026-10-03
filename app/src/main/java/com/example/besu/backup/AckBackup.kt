@@ -3,6 +3,7 @@ package com.example.besu.backup
 
 import com.example.besu.capture.TrainingScript
 import com.example.besu.computer.*
+import com.example.besu.core.WordModelData
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.geo.GeoZone
@@ -142,7 +143,12 @@ data class AckBackup(
 
     // WARN BEFORE PROFILE CHANGES (data/AssistPrefs.kt): null on a backup made before it existed, or by a phone where nothing was ever
     // stored ("nothing to say about this field": restore leaves the device's own choice alone).
-    val warnBeforeProfileChange: Boolean? = null
+    val warnBeforeProfileChange: Boolean? = null,
+
+    // The words behind WORD SUGGESTIONS (data/LearnedWordsRepository.kt): null on a backup made before it existed, or by a phone that learned
+    // nothing. These are words the person typed, so EXPORT .JSON names them in its warning (core/ExportContents.kt). Restore only ADDS: it never
+    // lowers a count or removes a word. The on/off switch is a choice about each phone and is deliberately not here.
+    val learnedWords: WordModelData? = null
 )
 
 @Serializable

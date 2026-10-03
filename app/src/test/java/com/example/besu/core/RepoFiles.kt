@@ -23,4 +23,16 @@ object RepoFiles {
 
     /** The app's Kotlin source folder. */
     val appSource: File get() = file("app/src/main/java")
+
+    /**
+     * The whole declaration of `fun [name](` in an object whose members are indented four spaces: from the `fun` to the line before the next member.
+     * Unlike a brace-matching helper it also holds for an expression body (`fun x() = y`), which has no braces of its own to match; a brace
+     * matcher run on one silently reads the NEXT function's body, and a test built on it passes or fails by accident.
+     */
+    fun declarationOf(text: String, name: String): String {
+        val at = text.indexOf("fun $name(")
+        check(at >= 0) { "fun $name( not found" }
+        val next = Regex("""\n    (/\*\*|//|fun |private fun |internal fun |@|val |private val |const |private const )""").find(text, at + 1)
+        return text.substring(at, next?.range?.first ?: text.length)
+    }
 }

@@ -390,6 +390,7 @@ object TransferManager {
             trainingScripts = trainingScripts,
             starterPhrasesSeeded = StarterSeed.wasSeeded(context),
             warnBeforeProfileChange = AssistPrefs.profileChangeWarningStored(context),
+            learnedWords = LearnedWordsRepository.exportForBackup(context),
         )
     }
 
@@ -1030,6 +1031,13 @@ object TransferManager {
             }
         }
 
+        // 21. The learned words (core/WordModel.kt checks counts, lengths, duplicates and pairs). The reason it logs holds sizes only,
+        // never a word: what the person typed does not go into a log.
+        backup.learnedWords?.validate()?.let { reason ->
+            Log.e("ACK_IMPORT", reason)
+            return false
+        }
+
         return true
     }
 
@@ -1387,6 +1395,10 @@ object TransferManager {
                 Log.e("ACK_IMPORT", "trainingScripts \"${script.id}\" could not be restored: ${e.message}")
             }
         }
+
+        // The learned words are ADDED to whatever this phone has learned: a count is never lowered and no word is removed. The
+        // WORD SUGGESTIONS switch is not in a backup, so this never turns the feature on.
+        backup.learnedWords?.let { LearnedWordsRepository.mergeFromBackup(context, it) }
 
         // Restoring adopts the backup's active deck/profile/category
         // focus -- unchanged from every prior version of this restore

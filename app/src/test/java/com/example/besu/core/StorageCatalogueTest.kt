@@ -32,6 +32,17 @@ class StorageCatalogueTest {
     }
 
     @Test
+    fun theLearnedWordsAreDeletedWithMessagesAndDecks_andTheConfirmationSaysSo() {
+        // They are derived from what the person typed, like the typing history that area already holds.
+        val area = StorageCatalogue.area(StorageCatalogue.ID_MESSAGES_AND_DECKS)
+        assertTrue(LearnedWordsStore.FOLDER in area.folders)
+        assertTrue(area.holds.contains("LEARNED WORDS"))
+        assertEquals(Coverage.EXPORT_JSON, area.coverage)
+        assertTrue(StorageCatalogue.firstConfirmation(area, "X").any { it.contains("LEARNED WORDS") })
+        assertTrue(area.restartAfter)
+    }
+
+    @Test
     fun everyAreaHasWordsAndNamesItsBackupStatus() {
         for (a in areas) {
             assertTrue("${a.id}: label", a.label.isNotBlank())

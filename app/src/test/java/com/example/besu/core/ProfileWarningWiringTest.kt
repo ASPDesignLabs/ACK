@@ -40,7 +40,7 @@ class ProfileWarningWiringTest {
         assertEquals(AssistSettings.KEY_WARN_OFFER_DISMISSED, Regex("""const val KEY_WARN_OFFER_DISMISSED = "([^"]+)"""").find(prefs)?.groupValues?.get(1))
         assertTrue(
             "reading the switch must fall back to AssistSettings.WARN_FALLBACK (off), so an existing install is unchanged",
-            bodyOf(prefs, "isProfileChangeWarningOn").contains("AssistSettings.WARN_FALLBACK")
+            RepoFiles.declarationOf(prefs, "isProfileChangeWarningOn").contains("AssistSettings.WARN_FALLBACK")
         )
     }
 

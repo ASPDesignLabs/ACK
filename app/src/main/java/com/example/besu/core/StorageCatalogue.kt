@@ -79,10 +79,12 @@ object StorageCatalogue {
         Area(
             id = ID_MESSAGES_AND_DECKS,
             label = "MESSAGES AND DECKS",
-            holds = "YOUR DECKS, MESSAGES, STATEMENTS, SHARED VARIABLES AND TYPING HISTORY. NOT THE EMERGENCY INFO CARD.",
+            holds = "YOUR DECKS, MESSAGES, STATEMENTS, SHARED VARIABLES, TYPING HISTORY AND THE LEARNED WORDS BEHIND WORD SUGGESTIONS. NOT THE EMERGENCY INFO CARD.",
             // ack_starter_seed is the starter seed's own note of which phrases it wrote (per phone, never backed up).
             prefsFilesCleared = setOf("ack_statements", "ack_autocomplete_history", StarterSets.RECORD_FILE),
             prefsFilesClearedExcept = mapOf(FILE_MATRIX_CONFIG to setOf(KEY_EMERGENCY_INFO_CARD)),
+            // The learned words (data/LearnedWordsRepository.kt): derived from typed statements, so they go with them.
+            folders = setOf(LearnedWordsStore.FOLDER),
             coverage = Coverage.EXPORT_JSON,
             backupNote = "IT IS IN EXPORT .JSON.",
             afterNote = STARTERS_AFTER,

@@ -81,10 +81,21 @@ class ExportContentsTest {
                 "SAVED LOCATIONS (MAP COORDINATES)",
                 "YOUR VOICE RECORDINGS (THE AUDIO ITSELF)",
                 "MESSAGES, STATEMENTS AND DECKS",
+                "WORDS LEARNED FROM WHAT YOU SAVED, SPOKE OR COPIED",
                 "SETTINGS AND HISTORY",
             ),
             ExportContents.categories.map { it.label },
         )
+    }
+
+    @Test
+    fun theLearnedWordsHaveTheirOwnLine_soThePersonIsToldWhatTheyTypedIsInTheFile() {
+        // Chosen by the developer: the words are in EXPORT .JSON AND named in this warning. Filing them under "SETTINGS AND HISTORY" would not say so.
+        val category = ExportContents.categories.single { "learnedWords" in it.fields }
+        assertEquals(setOf("learnedWords"), category.fields)
+        assertTrue(category.label.contains("WORDS"))
+        assertTrue(ExportContents.dialogText().contains(category.label))
+        assertTrue(ExportContents.terminalText().contains(category.label))
     }
 
     @Test

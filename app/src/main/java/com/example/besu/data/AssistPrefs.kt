@@ -6,11 +6,12 @@ import android.util.Log
 import com.example.besu.core.AssistSettings
 
 /**
- * The person-chosen switches (core/AssistSettings.kt holds the decisions and names). Today: WARN BEFORE PROFILE CHANGES. The thin Android
+ * The person-chosen switches (core/AssistSettings.kt holds the decisions and names). Today: WARN BEFORE PROFILE CHANGES and WORD SUGGESTIONS. The thin Android
  * edge over one small preference file, in the shape of backup/BackupState.kt.
  *
  * The switch itself travels in EXPORT .JSON (a nullable AckBackup field: a person who restores onto a new phone expects their choice
- * back). The "offer dismissed" note is per phone and never travels. The file is wiped with DELETE DATA > SETTINGS, after which the new-install
+ * back). WORD SUGGESTIONS is a choice about this phone and does not travel: it is never seeded and never in a backup, so a restore never
+ * turns a learning feature on. The "offer dismissed" notes are per phone and never travel. The file is wiped with DELETE DATA > SETTINGS, after which the new-install
  * default is put back (InstallState.seedDefaultsAfterWipe).
  */
 object AssistPrefs {
@@ -21,6 +22,8 @@ object AssistPrefs {
     private const val PREFS = "ack_assist_prefs"
     private const val KEY_WARN_PROFILE_CHANGE = "warn_profile_change"
     private const val KEY_WARN_OFFER_DISMISSED = "warn_profile_change_offer_dismissed"
+    private const val KEY_WORD_SUGGESTIONS = "word_suggestions"
+    private const val KEY_WORD_OFFER_DISMISSED = "word_suggestions_offer_dismissed"
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -59,5 +62,21 @@ object AssistPrefs {
         } catch (e: Exception) {
             Log.e(TAG, "could not seed the profile-change warning", e)
         }
+    }
+
+    /** Whether the Statement Composer learns words and offers them. Off when nothing is stored, on every install: it starts only when the person turns it on. */
+    fun isWordSuggestionsOn(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_WORD_SUGGESTIONS, AssistSettings.WORD_SUGGESTIONS_FALLBACK)
+
+    /** commit(), so the choice is on disk before the person leaves the screen. Choosing either way also answers the one-time offer. */
+    fun setWordSuggestions(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(KEY_WORD_SUGGESTIONS, on).putBoolean(KEY_WORD_OFFER_DISMISSED, true).commit()
+    }
+
+    fun isWordSuggestionsOfferDismissed(context: Context): Boolean = prefs(context).getBoolean(KEY_WORD_OFFER_DISMISSED, false)
+
+    /** NOT NOW: hides the offer for good and changes no setting. */
+    fun dismissWordSuggestionsOffer(context: Context) {
+        prefs(context).edit().putBoolean(KEY_WORD_OFFER_DISMISSED, true).commit()
     }
 }

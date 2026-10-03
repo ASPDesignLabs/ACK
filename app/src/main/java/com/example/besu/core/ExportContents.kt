@@ -43,6 +43,10 @@ object ExportContents {
             ),
         ),
         Category(
+            "WORDS LEARNED FROM WHAT YOU SAVED, SPOKE OR COPIED",
+            setOf("learnedWords"),
+        ),
+        Category(
             "SETTINGS AND HISTORY",
             setOf(
                 "dsp", "voiceRecordingGainPercent", "autocompleteHistory", "geoEngineMode", "geoMasterToggle",

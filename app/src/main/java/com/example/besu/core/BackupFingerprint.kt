@@ -29,10 +29,12 @@ object BackupFingerprint {
      * "starterPhrasesSeeded" describes where the file came from, not anything the person stored. Left in, the new field would make
      * every existing phone's fingerprint change once after the update and the backup reminder would fire for nothing.
      * "warnBeforeProfileChange" is a small on/off switch that is cheap to set again, and the same applies to the new field.
+     * "learnedWords" grows by itself every time a statement is saved, spoken or copied, like the typing history; counting it would make the
+     * backup reminder fire after a day of ordinary use.
      */
     val IGNORED_FIELDS: Set<String> = setOf(
         "timestamp", "activeDeckId", "activeDeckColorIndex", "activeProfile", "activeCategoryFocus",
-        "autocompleteHistory", "rootOverrideCollapsed", "starterPhrasesSeeded", "warnBeforeProfileChange",
+        "autocompleteHistory", "rootOverrideCollapsed", "starterPhrasesSeeded", "warnBeforeProfileChange", "learnedWords",
     )
 
     /** @throws IllegalArgumentException if [rawJson] is JSON but not an object; a parse error if it is not JSON. */

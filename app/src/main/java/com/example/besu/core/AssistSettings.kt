@@ -16,6 +16,9 @@ object AssistSettings {
     const val KEY_WARN_PROFILE_CHANGE = "warn_profile_change"
     const val KEY_WARN_OFFER_DISMISSED = "warn_profile_change_offer_dismissed"
 
+    const val KEY_WORD_SUGGESTIONS = "word_suggestions"
+    const val KEY_WORD_OFFER_DISMISSED = "word_suggestions_offer_dismissed"
+
     /** What the warning is when nothing is stored: off, so an install that already existed behaves exactly as before. */
     const val WARN_FALLBACK = false
 
@@ -33,4 +36,13 @@ object AssistSettings {
      * it was not dismissed. Anyone with a value stored, whether seeded or chosen, is never offered.
      */
     fun shouldOfferWarning(switchStored: Boolean, offerDismissed: Boolean): Boolean = !switchStored && !offerDismissed
+
+    /**
+     * What WORD SUGGESTIONS is when nothing is stored, and what a new install is given: off. Unlike the profile warning it is **never seeded**:
+     * it learns from what the person types, so it starts only when they turn it on. (A test keeps both keys out of [SEED_KEYS].)
+     */
+    const val WORD_SUGGESTIONS_FALLBACK = false
+
+    /** The one-time offer: while the switch is off and the offer was never answered. Turning the switch on from SETTINGS counts as an answer. */
+    fun shouldOfferWordSuggestions(switchOn: Boolean, offerDismissed: Boolean): Boolean = !switchOn && !offerDismissed
 }
