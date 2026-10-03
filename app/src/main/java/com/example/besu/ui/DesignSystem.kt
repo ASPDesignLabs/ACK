@@ -4,6 +4,7 @@ package com.example.besu.ui
 import com.example.besu.*
 import com.example.besu.backup.*
 import com.example.besu.computer.*
+import com.example.besu.core.ExportContents
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -574,10 +575,8 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
         if (rest == "confirm") {
             return TerminalPromptResult.RunBackup
         }
-        logTerminalLocal(
-            context,
-            "EXPORT ACK BACKUP?\nTYPE /backup CONFIRM TO PROCEED."
-        )
+        // The same facts the settings dialog shows (core/ExportContents.kt), then the confirm line.
+        logTerminalLocal(context, ExportContents.terminalText())
         return TerminalPromptResult.Error
     }
 

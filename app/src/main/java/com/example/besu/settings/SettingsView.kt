@@ -368,9 +368,8 @@ fun SettingsView(
         }
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        uri?.let { BackupExporter.report(context, BackupExporter.writeBackup(context, it)) }
-    }
+    // EXPORT .JSON: the warning (what the file holds, that it is not protected) first, then the picker.
+    val startBackupExport = rememberBackupExportFlow(context, primaryColor)
 
     // Whole-protocol restore -- unlike importLauncher above (which only ever
     // imports matrix phrases into a new deck), this overwrites the entire
@@ -1074,9 +1073,7 @@ fun SettingsView(
                             .helpTarget(AckTags.SETTINGS_DATA_PORT, primaryColor),
                         mainColor = primaryColor
                     ) {
-                        exportLauncher.launch(
-                            "ack_backup_${System.currentTimeMillis()}.json"
-                        )
+                        startBackupExport()
 
                         reportHelpInteraction(AckTags.SETTINGS_DATA_PORT)
                     }
