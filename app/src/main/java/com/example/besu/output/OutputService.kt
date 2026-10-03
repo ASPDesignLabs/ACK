@@ -413,6 +413,17 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         }
     }
 
+    // An emergency message always speaks with no voice effects, whatever profile is active (a decision recorded with the
+    // developer): pitch and speed at normal, and no robotic overlay or bitcrush. The profile's base system voice is kept, and
+    // Master Gain and the emergency volume boost still apply (they are gain, not an effect on the voice). The custom voice
+    // and recording playback already skip these effects. Anything that is not an emergency is unchanged.
+    private fun withoutVoiceEffectsIfEmergency(profile: VoiceProfile, emergency: EmergencyOptions): VoiceProfile =
+        if (emergency.enabled) {
+            profile.copy(pitch = 1.0f, speed = 1.0f, modFreq = 0f, modDepth = 0f, crush = 0f)
+        } else {
+            profile
+        }
+
     private fun getProfile(id: String): VoiceProfile {
         customVoices.find { it.id == id }?.let { return it }
         FACTORY_PRESETS[id]?.let { return it }
@@ -636,8 +647,9 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         finalText: String,
         emergency: EmergencyOptions
     ) {
-        tts?.setPitch(profile.pitch)
-        tts?.setSpeechRate(profile.speed)
+        val spoken = withoutVoiceEffectsIfEmergency(profile, emergency)
+        tts?.setPitch(spoken.pitch)
+        tts?.setSpeechRate(spoken.speed)
 
         if (profile.systemVoiceName.isNotEmpty()) {
             try {
@@ -688,7 +700,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         }
 
         try {
-            val profile = getProfile(profileId)
+            val profile = withoutVoiceEffectsIfEmergency(getProfile(profileId), emergency)
             val rawBytes = file.readBytes()
             val headerSize = 44
 
