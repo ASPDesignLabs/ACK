@@ -1,9 +1,9 @@
 # Language and vocabulary: checking it on a real phone
 
 This covers the parts of Section 4 that are built so far: the **neutral starter phrases** (L1), **typing, inserting and the history
-chips** (the work behind them, B1 to B4), and the **profile-change warning** (L7, the warning half). **Not built yet, so not here:**
-plain-language mode (L2), non-English voices and text (L3), word prediction (L5), the profile lock (decided against for now), and the
-pictures and core-vocabulary decisions (L4, L6). Their steps will be added when they are built.
+chips** (the work behind them, B1 to B4), the **profile-change warning** (L7, the warning half), and **word suggestions** (L5, in the
+Statement Composer). **Not built yet, so not here:** plain-language mode (L2), non-English voices and text (L3), the profile lock (decided
+against for now), and the pictures and core-vocabulary decisions (L4, L6). Their steps will be added when they are built.
 
 The rules are covered by automated tests (480 in `tools/kotlin_check`, run with `./run_unit_tests.sh`), and the repository policy tests
 pass. **What was never run anywhere is the Android part:** the build itself, every screen, the layout, the keyboard and the file
@@ -146,6 +146,49 @@ gesture) so it says something other than the DEFAULT profile's phrase for that s
 - [ ] Set the switch OFF, export a backup, set it ON, then FULL RESTORE that file. → It reads OFF again. Restore a file made by an **older build**.
   → The switch is unchanged.
 - [ ] DATA PORT → DELETE DATA → **SETTINGS**. → Afterwards the switch reads ON (the new-install default) and no offer is shown.
+
+## H. Word suggestions (the Statement Composer)
+
+Off until you turn it on. It learns only from statements you SAVE, SPEAK or COPY in the composer, and offers words only as buttons.
+
+- [ ] On an **updated install**, open the TYPE tab (the Statement Composer). → A box at the top says WORD SUGGESTIONS is OFF and nothing is learned
+  unless you turn it on, with **TURN ON** and **NOT NOW**. The rest of the screen is exactly as before. Type some words. → Nothing is offered.
+- [ ] Tap **NOT NOW**. → The box goes and does not come back (leave the screen and return to check). The switch in SETTINGS → WORD SUGGESTIONS still
+  reads OFF.
+- [ ] On another install (or after clearing the app's data), tap **TURN ON** in the box. → The box goes, a **blank band** appears under the text box
+  and stays the same height whether or not it holds anything, and SETTINGS → WORD SUGGESTIONS reads ON with WORDS LEARNED: NONE YET.
+- [ ] Type *Hello there, I would like some tea please* and tap SPEAK. → It speaks as before and nothing on the screen changes or moves.
+  SETTINGS → WORD SUGGESTIONS now says WORDS LEARNED with a number, and FORGET WORDS lists them with how often each was used.
+- [ ] Back in the composer, type **te**. → The band offers **tea**. Tap it. → *te* becomes *tea*, a space follows, and the cursor is after it.
+  Nothing is inserted until you tap: type **te** again and do nothing. → The text stays *te*.
+- [ ] Type **I would** and a space. → The band offers a word that usually follows ("like"). Type a full stop after some text and then a space. → The band
+  is empty: a sentence end starts again. Learn a name in the middle of a sentence (for example *I called Sarah today*) and type **Sa**. → It is offered with
+  its capital.
+- [ ] Type in the **middle of a word**, inside a tag such as [COMPUTER:…], after a full stop, after a line break, and with text **selected**. → The
+  band is empty each time. Type a number such as 07700. → It is never offered.
+- [ ] Tap SAVE, then COPY, then SPEAK on the **same** text. → The word counts go up **once**, not three times. Change a word and SPEAK. → They go up again.
+- [ ] From MY STATEMENTS tap [SPEAK] on a saved statement. → It speaks and **nothing is learned** (the counts do not change).
+- [ ] Add a Target Computer entry named something unusual (for example *Zuzanna*) and a Shared Root Variable value, then type **Zu** in the composer. → The
+  band offers *Zuzanna*, and FORGET WORDS does **not** list it. Rename or delete the entry. → It stops being offered.
+- [ ] Use an **Emergency** deck, the **Terminal** (including `/v`, `/t` and `/m`) and a Matrix or Quick Actions editor. → Nothing is learned from any of them
+  (the count in FORGET WORDS does not change).
+- [ ] SETTINGS → WORD SUGGESTIONS → **OFF**. → The band disappears from the composer; SPEAK learns nothing; the words already learned are still listed
+  in FORGET WORDS. Turn it ON again. → They are offered again.
+- [ ] FORGET WORDS → **REMOVE** on one word. → Nothing is removed yet; a question says it can be learned again, with **KEEP** and **REMOVE**. Tap KEEP. → It
+  stays. Tap REMOVE and REMOVE again. → It goes, and the count drops by one.
+- [ ] FORGET ALL WORDS → the first box names how many, says they are in EXPORT .JSON, offers **BACK UP FIRST**, and says nothing from Target Computer or
+  Shared Variables is affected. **CONTINUE** → the second box says THIS CANNOT BE UNDONE with **CANCEL** first. Tap CANCEL. → Nothing is removed. Do it
+  again and confirm. → The list is empty and the composer offers nothing.
+- [ ] EXPORT .JSON. → The warning lists WORDS LEARNED FROM WHAT YOU SAVED, SPOKE OR COPIED. Export, then FORGET ALL WORDS, then FULL RESTORE that file. → The
+  words are back. The WORD SUGGESTIONS switch is **unchanged** by the restore (it is not in the file). Restore a file made by an **older build**. → Nothing
+  is lost and no error appears.
+- [ ] After learning some words, check the **backup reminder** (it only appears after seven days with changes). → Learning words alone never makes it appear.
+- [ ] DATA PORT → DELETE DATA → MESSAGES AND DECKS. → Its first box mentions the learned words; after it, WORDS LEARNED reads NONE YET.
+- [ ] Turn on a **large font** and a screen reader. → The chips stay tappable at least 48 dp tall, none of the new text is smaller than the text around it,
+  and each chip is read as its word.
+- [ ] HELP: run STATEMENT COMPOSER. → A step called WORD SUGGESTIONS (OPTIONAL) says where to turn it on; it simply asks you to continue.
+- [ ] With airplane mode off and a network monitor running (or just the permission list), confirm nothing was sent anywhere and ACK still declares **no**
+  network permission.
 
 ## What to send back
 

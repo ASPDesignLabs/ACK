@@ -132,7 +132,7 @@ apply. Ask your organization's privacy officer. Some things to settle with the p
    * the checkpoints (`~/piper/checkpoints/`, `lightning_logs/`) and the exported `.onnx`/`.onnx.json`. **A checkpoint contains
      what the model learned about the voice, and it cannot be "un-trained", so delete them if consent is withdrawn.**
    * copies on phones, USB drives and other computers, and the voice imported into the ACK app
-   * **on the phone, in ACK:** PROTOCOL → DATA PORT → **DELETE DATA** (twelve areas: messages and decks, the Emergency info card, people and
+   * **on the phone, in ACK:** PROTOCOL → DATA PORT → **DELETE DATA** (twelve areas: messages and decks (with the words learned for word suggestions), the Emergency info card, people and
      places, saved locations, the Terminal log, message recordings, training data, the trained voice, the GIF library, safety copies,
      temporary files, and settings, plus DELETE EVERYTHING). Each asks twice and says how to save the data first. Also **DELETE CUSTOM VOICE**
      (AUDIO ARCHITECT), **MANAGE RECORDINGS** for single voice recordings, and deleting a **training session** (it asks twice).
