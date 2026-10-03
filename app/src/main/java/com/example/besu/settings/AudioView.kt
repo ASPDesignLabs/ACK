@@ -3,6 +3,7 @@ package com.example.besu.settings
 
 import com.example.besu.*
 import com.example.besu.backup.*
+import com.example.besu.core.defaultsOffer
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -13,6 +14,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.speech.tts.Voice
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -92,6 +94,36 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     var showManageProfiles by remember { mutableStateOf(false) }
     var showDspChainEditor by remember { mutableStateOf(false) }
     var deleteTargetId by remember { mutableStateOf<String?>(null) }
+
+    // One-time offer of the newer defaults, for an install that already existed (core/DefaultsOffer.kt decides what to
+    // offer, data/InstallState.kt remembers it was dismissed). Nothing is changed until the person confirms in the review.
+    var defaultsPromptRefresh by remember { mutableIntStateOf(0) }
+    var showDefaultsReview by remember { mutableStateOf(false) }
+    var defaultsBackupStatus by remember { mutableStateOf<String?>(null) }
+    val defaultsOfferNow = remember(userProfile, defaultsPromptRefresh) {
+        defaultsOffer(
+            isExistingInstall = !InstallState.isFreshInstall(context),
+            dismissed = InstallState.isDefaultsPromptDismissed(context),
+            voiceIsCyber = userProfile == "CYBER",
+            presetTruncates = !VisualPresetRepository.getActivePreset(context).bypassTruncation
+        )
+    }
+
+    // BACK UP FIRST: the same file as EXPORT .JSON in SETTINGS. Unlike that button, this one says whether it worked,
+    // because the whole point of backing up before a change is knowing there is a copy.
+    val defaultsBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            try {
+                val json = TransferManager.generateBackupJson(context)
+                val out = context.contentResolver.openOutputStream(uri) ?: throw java.io.IOException("could not open the file")
+                out.use { it.write(json.toByteArray()) }
+                defaultsBackupStatus = "BACKUP SAVED. NOTHING HAS BEEN CHANGED YET."
+            } catch (e: Exception) {
+                Log.e("ACK_BACKUP", "backup before applying the newer defaults failed", e)
+                defaultsBackupStatus = "BACKUP FAILED. NOTHING WAS CHANGED."
+            }
+        }
+    }
 
     val activeIdx = customVoices.indexOfFirst { it.id == userProfile }
     var editingProfile by remember(userProfile) {
@@ -245,6 +277,23 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     } else Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text("AUDIO ARCHITECT", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(10.dp))
+
+        if (defaultsOfferNow.any) {
+            DefaultsPromptBanner(
+                offer = defaultsOfferNow,
+                primaryColor = primaryColor,
+                onReview = {
+                    defaultsBackupStatus = null
+                    showDefaultsReview = true
+                },
+                // Only hides it for good. Changes no setting.
+                onNotNow = {
+                    InstallState.dismissDefaultsPrompt(context)
+                    defaultsPromptRefresh++
+                }
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+        }
 
         // --- GLOBAL OUTPUT ---
         Text("MASTER GAIN: ${(masterGain * 100).toInt()}%", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
@@ -675,13 +724,38 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             }
         }
     }
+
+    if (showDefaultsReview) {
+        DefaultsReviewDialog(
+            offer = defaultsOfferNow,
+            primaryColor = primaryColor,
+            backupStatus = defaultsBackupStatus,
+            onBackUpFirst = { defaultsBackupLauncher.launch("ack_backup_${System.currentTimeMillis()}.json") },
+            onApply = { useUnprocessedVoice, useFullMessage ->
+                // Only what was switched on. The voice goes through the same path as tapping the ORGANIC chip.
+                if (useUnprocessedVoice) {
+                    userProfile = "ORGANIC"
+                    syncDsp()
+                }
+                if (useFullMessage) {
+                    addFullTextPreset(context)
+                }
+                // Seen and decided: do not offer again, even for a part that was left off.
+                InstallState.dismissDefaultsPrompt(context)
+                showDefaultsReview = false
+                defaultsPromptRefresh++
+                Toast.makeText(context, "SETTINGS UPDATED", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { showDefaultsReview = false }
+        )
+    }
 }
 
 // The app's own modal chrome (cut-corner border/background, matching
 // CreateDeckDialog.kt) instead of Material3 AlertDialog's fixed rounded
 // shape, which clashes with the cut-corner look used everywhere else.
 @Composable
-private fun AudioDialogFrame(
+internal fun AudioDialogFrame(
     onDismissRequest: () -> Unit,
     primaryColor: Color,
     title: String,

@@ -27,6 +27,7 @@ object InstallState {
     private const val PREFS = "ack_install_state"
     private const val KEY_RECORDED = "recorded"
     private const val KEY_FRESH = "fresh"
+    private const val KEY_DEFAULTS_PROMPT_DISMISSED = "defaults_prompt_dismissed"
 
     /**
      * Every preference file the app owns. The classifier looks at all of them so that a person who only ever used one
@@ -68,6 +69,18 @@ object InstallState {
     /** True only if this install was fresh when it was recorded. False before it is recorded, and for any existing install. */
     fun isFreshInstall(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_FRESH, false)
+
+    /**
+     * Whether the one-time offer of the newer defaults (AUDIO ARCHITECT's banner, for an install that already existed) has been
+     * dismissed or acted on. It is only this device's note that the person has seen it: it is not part of EXPORT .JSON.
+     */
+    fun isDefaultsPromptDismissed(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_DEFAULTS_PROMPT_DISMISSED, false)
+
+    /** Hides the offer for good. Changes no setting. commit(), so it is on disk before the person can leave the screen. */
+    fun dismissDefaultsPrompt(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_DEFAULTS_PROMPT_DISMISSED, true).commit()
+    }
 
     // Each seed is its own try so one failing cannot stop the other. The seeds write nothing that is already there.
     private fun seedFreshInstallDefaults(context: Context) {
