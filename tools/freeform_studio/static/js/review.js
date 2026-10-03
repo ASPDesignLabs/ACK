@@ -10,6 +10,7 @@ import { alignAllAsync, buildPrompt, extractHotwords } from "./refalign.js";
 import { replaceToken, spokenTokens } from "./spoken.js";
 import { initExportCard } from "./exportcard.js";
 import { initStatusCard } from "./statuscard.js";
+import { initAckCard } from "./ackcard.js";
 import { Player } from "./player.js";
 import { Saver, sameSeg } from "./saver.js";
 import { watchConnection } from "./conn.js";
@@ -76,6 +77,7 @@ function openInbox() {
   $("inbox").hidden = false;
   initExportCard({ takeId: null, ensureSaved: async () => true, confirmDialog, announce });
   initStatusCard({ announce });
+  initAckCard({ confirmDialog, announce, onImported: () => refresh() });
   const list = $("inbox-list"), empty = $("inbox-empty");
   let timer = null;
 
@@ -875,7 +877,53 @@ function startEditor(takeId, doc, take) {
     applyText(id, replaceToken(s.text, index, replacement), `Wrote “${token}” as “${replacement}” in ${at(s)}`);
   }
 
+  // ------------------------------------------------------------------ what the phone noted (recordings that came from ACK)
+  let ackInfo = null;
+  const plainWords = (text) => text.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").split(/\s+/).filter(Boolean).join(" ");
+
+  // The clip ACK recorded this piece from, and how many pieces that clip became (more than one when it ran long).
+  function ackClipFor(s) {
+    if (!ackInfo || !ackInfo.notes || ackInfo.notes.mode !== "script") return null;
+    const mid = (s.start + s.end) / 2;
+    const inside = (p, c) => { const m = (p.start + p.end) / 2; return m >= c.start_s && m <= c.end_s; };
+    const clip = ackInfo.notes.clips.find((c) => mid >= c.start_s && mid <= c.end_s);
+    return clip ? { clip, pieces: pieces.filter((p) => inside(p, clip)).length } : null;
+  }
+
+  function renderAck() {
+    const s = cur();
+    const hit = s && ackClipFor(s);
+    $("p-ack").hidden = !hit;
+    if (!hit) return;
+    const { clip, pieces: n } = hit;
+    $("p-ack-text").textContent = clip.text;
+    const facts = [`Card ${clip.card}${clip.attempt > 1 ? `, attempt ${clip.attempt}` : ""}`];
+    if (clip.metrics) {
+      facts.push(`loudest point ${clip.metrics.peak_dbfs} dB`);
+      if (clip.metrics.clipped_samples) facts.push(`${plural(clip.metrics.clipped_samples, "sample", "samples")} at the maximum level`);
+    }
+    const checked = ackInfo.checks && ackInfo.checks.pieces
+      ? Object.values(ackInfo.checks.pieces).find((c) => c.clip === clip.index && Math.abs(c.start - s.start) < 0.5) : null;
+    if (checked && typeof checked.snr_db === "number") facts.push(`voice ${Math.round(checked.snr_db)} dB above the room`);
+    if (clip.flags && clip.flags.length) facts.push(`you marked it: ${clip.flags.join(", ")}`);
+    if (n > 1) facts.push(`this card became ${n} pieces, so compare it with all of them`);
+    $("p-ack-facts").textContent = facts.join(" · ");
+    $("ack-use").hidden = n > 1 || plainWords(clip.text) === plainWords(s.text);
+  }
+
+  $("ack-use").addEventListener("click", () => {
+    const s = cur();
+    const hit = s && ackClipFor(s);
+    if (!hit || hit.pieces > 1) return;
+    applyText(s.id, hit.clip.text, `Used the words from the card for ${at(s)}`);
+  });
+
+  if (take.client && take.client.source === "ack") {
+    api(`/api/takes/${takeId}/ack`).then((info) => { ackInfo = info; renderAck(); }).catch(() => { /* no phone notes: the piece view works without them */ });
+  }
+
   function renderSuggestions() {
+    renderAck();
     const s = cur();
     if (!s) { $("p-ref").hidden = true; $("p-spoken").hidden = true; return; }
     const a = suggestionFor(s);

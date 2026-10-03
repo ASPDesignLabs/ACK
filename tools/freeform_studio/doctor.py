@@ -107,6 +107,13 @@ def check(args: argparse.Namespace) -> Tuple[List[Line], List[str], bool]:
             warning = privacy.sync_warning(folder, f"Your {what}")
             if warning:
                 add("NOTE", warning)
+        incoming = library / getattr(args, "code", "en-US") / "incoming"
+        waiting = sorted(p for p in incoming.glob("*.zip") if p.is_file() and not p.is_symlink()) if incoming.is_dir() else []
+        if waiting:
+            size = sum(p.stat().st_size for p in waiting) / (1024 * 1024)
+            add("NOTE", f"{len(waiting)} package(s) saved by ACK are in {incoming} ({size:.0f} MB). They are copies of what is on your phone and "
+                        "are kept until you delete them; they are not part of the backups. Once the recordings imported from them are "
+                        "backed up (python -m freeform_studio.backup) and you no longer need the originals, you can delete the files yourself.")
 
     # 2. the certificate (needed for the phone's microphone)
     tls = bool(args.certfile)

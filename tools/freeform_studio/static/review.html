@@ -63,6 +63,29 @@
         </div>
         <p id="export-result" class="summary2" role="status" aria-live="polite"></p>
       </details>
+      <details class="card" id="ackcard">
+        <summary>Add recordings from ACK</summary>
+        <p class="hint">In the ACK app on your phone, record and save a package (a .zip file). Bring that file here by cable or USB drive; nothing is sent over the internet. Choose it below, look inside, and add its recordings. Your package file is never changed or deleted.</p>
+        <div class="stack">
+          <label for="ack-file">Package file from your phone (.zip)</label>
+          <input type="file" id="ack-file" accept=".zip,application/zip">
+        </div>
+        <p id="ack-upload" class="summary2" role="status" aria-live="polite"></p>
+        <h3 id="ack-list-h">Packages on this PC</h3>
+        <p id="ack-empty" class="hint">None yet.</p>
+        <ul id="ack-list" class="takes" aria-labelledby="ack-list-h"></ul>
+        <p id="ack-where" class="hint"></p>
+        <div class="stack"><button type="button" class="btn small" id="ack-refresh">Refresh</button></div>
+        <div id="ack-plan" class="suggest" hidden role="group" aria-labelledby="ack-plan-title">
+          <h4 id="ack-plan-title"></h4>
+          <p id="ack-plan-summary"></p>
+          <ul id="ack-plan-sessions" class="reasons"></ul>
+          <ul id="ack-plan-warnings" class="reasons" hidden></ul>
+          <p id="ack-plan-room" class="hint"></p>
+          <div class="stack"><button type="button" class="btn primary" id="ack-go" disabled>Add recordings</button></div>
+        </div>
+        <p id="ack-result" class="summary2" role="status" aria-live="polite"></p>
+      </details>
     </section>
 
     <section id="editor" hidden>
@@ -96,6 +119,14 @@
               <div class="grid2">
                 <button type="button" class="btn small" id="ref-use">Use this wording</button>
                 <button type="button" class="btn small" id="ref-skip">Keep what I have</button>
+              </div>
+            </div>
+            <div id="p-ack" class="suggest" hidden role="group" aria-labelledby="ack-h">
+              <h4 id="ack-h">From ACK</h4>
+              <p class="ref-text" id="p-ack-text"></p>
+              <p class="hint" id="p-ack-facts"></p>
+              <div class="row wrap">
+                <button type="button" class="btn small" id="ack-use">Use the card's words</button>
               </div>
             </div>
             <div id="p-spoken" class="suggest" hidden role="group" aria-labelledby="spoken-h">

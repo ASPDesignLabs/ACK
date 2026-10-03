@@ -20,7 +20,9 @@ This is not legal advice. It records what the software does, how that was checke
 | Training dataset | `~/piper/freeform-dataset-<date>/` |
 | Training cache, checkpoints, logs | `~/piper/my-training/`, `~/piper/checkpoints/`, `~/piper1-gpl/lightning_logs/` |
 | The trained voice | the `.onnx` and `.onnx.json` files you exported, then inside the ACK app's private storage |
-| On your phone, while recording | the browser keeps each audio part until the PC confirms it, then deletes it; unsent edits are kept as a draft |
+| On your phone, while recording in the browser | the browser keeps each audio part until the PC confirms it, then deletes it; unsent edits are kept as a draft |
+| On your phone, while recording with the ACK app | inside ACK's own private storage, until you save a package; ACK has no network permission and its cloud backup is switched off |
+| Packages saved by the ACK app | wherever you put the `.zip` file, then `~/piper-recording-studio/output/_freeform/<code>/incoming/` once you add it in Freeform Studio. Copies of what is on your phone; **not** included in backups; never deleted by the program |
 
 ## 2. When anything uses the internet
 
@@ -29,6 +31,7 @@ This is not legal advice. It records what the software does, how that was checke
 | Installing (`install.sh`, `pip`) | PyPI | package names, your address | install once, then work offline |
 | `python -m freeform_studio.models fetch` | huggingface.co | the model name, your address, library versions. **Asks first. No audio, no text.** | skip it by copying a model folder and using `--asr-model /path` |
 | The server, review pages, export, backup, dataset building, `doctor` | **nobody** | nothing | (nothing to avoid) |
+| Bringing a package from the ACK app into Freeform Studio (`ack_import` or the Review page's *Add recordings from ACK*) | **nobody** | nothing | (nothing to avoid). The package moves by cable or USB drive; ACK has no way to send it anywhere |
 | The first training run | github.com, to fetch the `val_mos` quality scorer's code and weights, **and run that code** (`torch.hub`, `trust_repo=True`). Nothing of yours is sent. | the request itself | run it once online, then it works from its cache; or turn the scorer off (`--model.mos_metric none`, read in the trainer's source, not tried here) |
 | Downloading a base voice checkpoint (training guide, step 3) | huggingface.co | the request | it is a step you take yourself |
 | **Pasting recordings, transcripts or datasets into a hosted AI assistant or any website** | whoever runs it | **everything you paste** | don't. This is the easiest way to lose control of this data, and nothing here can stop it. |
@@ -57,7 +60,7 @@ Expect nothing, or only a `connect` to `192.0.2.1:9` and to your own computer's 
 program uses to find which local address to put in the link; nothing is sent to it. The test suite checks that this
 address is never sent anything.
 
-**Run the project's own check.** `python -m pytest freeform_studio/tests/test_no_network.py -v` runs the whole workflow inside a
+**Run the project's own check.** `python -m pytest freeform_studio/tests/test_no_network.py -v` runs the whole workflow (including bringing in a package from the ACK app and processing it) inside a
 network namespace that has *only* the loopback interface (when your system allows it), logs every connection made by any
 program, including `ffmpeg`, and fails on anything that isn't this computer. It first proves that `1.1.1.1` and a web address
 are unreachable, so a pass shows nothing *needs* the network, not only that nothing used it.
@@ -93,6 +96,9 @@ What was verified, and what was not, when this was written (2026-10-01):
   network, but it opens your recordings.
 * **Your network.** `--host 0.0.0.0` lets other devices on your network reach the server. Keep the access token on (the
   default), use `https` (the phone microphone needs it anyway), and don't run it on a public or shared Wi-Fi.
+* **Packages from the ACK app.** A package is a recording of a voice, so treat the `.zip` like the recordings themselves: carry it by cable or
+  USB drive, keep it out of cloud-synced folders, and delete your copies when you no longer need them (the program never does). ACK's *save*
+  button writes the file where you choose and offers it to no other app, on purpose.
 * **Shared computers.** New files are readable by your account only, but older files keep the permissions they had (`doctor`
   tells you). On a computer others use, use your own Windows account or WSL distribution, and turn on disk encryption
   (BitLocker on Windows). Nothing here can protect a recording from someone with your logged-in session.

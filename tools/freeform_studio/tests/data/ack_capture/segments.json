@@ -1,0 +1,659 @@
+[
+ {
+  "name": "two_regions_reach_the_cut_length_at_a_pause",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     3.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     6.0,
+     -20.0
+    ],
+    [
+     0.6,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.35,
+    "end_s": 10.25,
+    "end_kind": "pause"
+   },
+   {
+    "start_s": 10.45,
+    "end_s": 12.85,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "continuous_speech_is_cut_inside_the_quietest_hop",
+  "input": {
+   "runs": [
+    [
+     0.3,
+     -70.0
+    ],
+    [
+     9.5,
+     -20.0
+    ],
+    [
+     0.2,
+     -44.0
+    ],
+    [
+     0.1,
+     -60.0
+    ],
+    [
+     0.2,
+     -44.0
+    ],
+    [
+     5.0,
+     -20.0
+    ],
+    [
+     0.3,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.15,
+    "end_s": 10.0,
+    "end_kind": "forced"
+   },
+   {
+    "start_s": 10.0,
+    "end_s": 15.55,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "an_early_pause_beats_a_forced_cut",
+  "input": {
+   "runs": [
+    [
+     0.3,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     0.4,
+     -70.0
+    ],
+    [
+     12.0,
+     -20.0
+    ],
+    [
+     0.3,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.15,
+    "end_s": 2.5,
+    "end_kind": "pause"
+   },
+   {
+    "start_s": 2.55,
+    "end_s": 11.7,
+    "end_kind": "forced"
+   },
+   {
+    "start_s": 11.7,
+    "end_s": 14.95,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "long_silences_are_not_included_in_segments",
+  "input": {
+   "runs": [
+    [
+     3.0,
+     -70.0
+    ],
+    [
+     8.5,
+     -20.0
+    ],
+    [
+     5.0,
+     -70.0
+    ],
+    [
+     4.0,
+     -20.0
+    ],
+    [
+     4.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 2.85,
+    "end_s": 11.75,
+    "end_kind": "pause"
+   },
+   {
+    "start_s": 16.35,
+    "end_s": 20.75,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "a_gap_barely_over_the_pause_length_splits_the_padding",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     8.2,
+     -20.0
+    ],
+    [
+     0.3,
+     -70.0
+    ],
+    [
+     3.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.35,
+    "end_s": 8.85,
+    "end_kind": "pause"
+   },
+   {
+    "start_s": 8.85,
+    "end_s": 12.25,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "no_speech_proposes_nothing",
+  "input": {
+   "runs": [
+    [
+     5.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": []
+ },
+ {
+  "name": "a_blip_shorter_than_the_minimum_region_is_ignored",
+  "input": {
+   "runs": [
+    [
+     1.0,
+     -70.0
+    ],
+    [
+     0.05,
+     -20.0
+    ],
+    [
+     1.0,
+     -70.0
+    ],
+    [
+     3.0,
+     -20.0
+    ],
+    [
+     1.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 1.9,
+    "end_s": 5.3,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "region_starting_after_the_force_window_cuts_at_the_previous_pause",
+  "input": {
+   "runs": [
+    [
+     0.2,
+     -70.0
+    ],
+    [
+     0.6,
+     -20.0
+    ],
+    [
+     11.0,
+     -70.0
+    ],
+    [
+     4.0,
+     -20.0
+    ],
+    [
+     0.2,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.05,
+    "end_s": 1.05,
+    "end_kind": "pause"
+   },
+   {
+    "start_s": 11.65,
+    "end_s": 16.0,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "a_region_exactly_the_cut_length_is_cut_at_the_next_pause",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     8.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     1.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.35,
+    "end_s": 8.75,
+    "end_kind": "pause"
+   },
+   {
+    "start_s": 8.85,
+    "end_s": 10.25,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "a_region_one_hop_short_of_the_cut_length_keeps_going",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     7.99,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     1.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.35,
+    "end_s": 10.24,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "a_region_exactly_the_force_length_is_not_forced",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     11.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.35,
+    "end_s": 11.75,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "a_region_one_hop_over_the_force_length_is_forced",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     11.01,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.35,
+    "end_s": 9.5,
+    "end_kind": "forced"
+   },
+   {
+    "start_s": 9.5,
+    "end_s": 11.76,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "an_early_pause_exactly_the_minimum_piece_is_used",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     1.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     12.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.35,
+    "end_s": 1.75,
+    "end_kind": "pause"
+   },
+   {
+    "start_s": 1.85,
+    "end_s": 11.0,
+    "end_kind": "forced"
+   },
+   {
+    "start_s": 11.0,
+    "end_s": 14.25,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "an_early_pause_one_hop_under_the_minimum_piece_is_not",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     0.99,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     12.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.35,
+    "end_s": 9.5,
+    "end_kind": "forced"
+   },
+   {
+    "start_s": 9.5,
+    "end_s": 14.24,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "a_level_exactly_at_the_threshold_is_not_speech",
+  "input": {
+   "runs": [
+    [
+     1.0,
+     -45.0
+    ],
+    [
+     3.0,
+     -20.0
+    ],
+    [
+     1.0,
+     -45.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.85,
+    "end_s": 4.25,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "a_gap_exactly_the_pause_length_separates_two_regions",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     8.0,
+     -20.0
+    ],
+    [
+     0.3,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.35,
+    "end_s": 8.65,
+    "end_kind": "pause"
+   },
+   {
+    "start_s": 8.65,
+    "end_s": 11.05,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "a_gap_one_hop_shorter_than_a_pause_is_closed_up",
+  "input": {
+   "runs": [
+    [
+     0.5,
+     -70.0
+    ],
+    [
+     8.0,
+     -20.0
+    ],
+    [
+     0.29,
+     -70.0
+    ],
+    [
+     2.0,
+     -20.0
+    ],
+    [
+     0.5,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.35,
+    "end_s": 11.04,
+    "end_kind": "end"
+   }
+  ]
+ },
+ {
+  "name": "a_burst_exactly_the_minimum_region_length_is_kept",
+  "input": {
+   "runs": [
+    [
+     1.0,
+     -70.0
+    ],
+    [
+     0.1,
+     -20.0
+    ],
+    [
+     1.0,
+     -70.0
+    ]
+   ],
+   "threshold_dbfs": -45.0
+  },
+  "expected": [
+   {
+    "start_s": 0.85,
+    "end_s": 1.35,
+    "end_kind": "end"
+   }
+  ]
+ }
+]

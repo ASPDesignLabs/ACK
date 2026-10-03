@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+package android.content
+import android.content.pm.PackageManager
+import java.io.File
+abstract class Context {
+    abstract val filesDir: File
+    abstract val cacheDir: File
+    abstract val applicationContext: Context
+    abstract val packageManager: PackageManager
+    abstract val packageName: String
+    abstract val contentResolver: ContentResolver
+    abstract fun getSharedPreferences(name: String, mode: Int): SharedPreferences
+    abstract fun startService(intent: Intent): Any?
+    companion object { const val MODE_PRIVATE = 0 }
+}
+open class ContextWrapper(base: Context?) : Context() {
+    open val baseContext: Context? = base
+    override val filesDir: File get() = baseContext!!.filesDir
+    override val cacheDir: File get() = baseContext!!.cacheDir
+    override val applicationContext: Context get() = baseContext!!.applicationContext
+    override val packageManager: PackageManager get() = baseContext!!.packageManager
+    override val packageName: String get() = baseContext!!.packageName
+    override val contentResolver: ContentResolver get() = baseContext!!.contentResolver
+    override fun getSharedPreferences(name: String, mode: Int): SharedPreferences = baseContext!!.getSharedPreferences(name, mode)
+    override fun startService(intent: Intent): Any? = baseContext!!.startService(intent)
+}

@@ -1,0 +1,19 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Type-checks app/.../voicecapture against Compose Multiplatform and the Android stubs in ./stubs. Prints TYPE-CHECK PASSED or the errors.
+set -e
+H="$(cd "$(dirname "$0")" && pwd)"
+A="$H/../../../app/src/main/java/com/example/besu"
+STAGE="$H/build/stage"
+rm -rf "$STAGE"; mkdir -p "$STAGE/com/example/besu/help" "$STAGE/com/example/besu/ui/theme"
+cp -r "$A/capture" "$A/voicecapture" "$STAGE/com/example/besu/"
+cp "$A/AckTags.kt" "$STAGE/com/example/besu/"
+for f in HelpCore HelpManager HelpTarget HelpOfferBanner RecordTrainingDataHelp; do cp "$A/help/$f.kt" "$STAGE/com/example/besu/help/"; done
+cp "$A/ui/OverlayStyle.kt" "$STAGE/com/example/besu/ui/"
+cp "$A/ui/theme/Color.kt" "$STAGE/com/example/besu/ui/theme/"
+cp -r "$H/stubs/." "$STAGE/"
+cd "$H"
+gradle --no-daemon --console=plain -q -Pkotlin.compiler.execution.strategy=in-process compileKotlin > "$H/build/check.log" 2>&1 && status=0 || status=$?
+grep -v "^Picked up JAVA_TOOL_OPTIONS" "$H/build/check.log" || true
+if [ "$status" = 0 ]; then echo "TYPE-CHECK PASSED"; else echo "TYPE-CHECK FAILED (gradle exit $status)"; fi
+exit $status

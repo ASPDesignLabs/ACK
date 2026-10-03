@@ -1,0 +1,143 @@
+[
+ {
+  "name": "tone_between_silences",
+  "input": {
+   "rate": 48000,
+   "parts": [
+    {
+     "seconds": 0.5,
+     "amp": 0
+    },
+    {
+     "seconds": 1.0,
+     "amp": 8000
+    },
+    {
+     "seconds": 0.5,
+     "amp": 0
+    }
+   ],
+   "noise_floor_dbfs": -62.0
+  },
+  "expected": {
+   "threshold_dbfs": -52.0,
+   "peak_dbfs": -12.2,
+   "rms_dbfs": -15.3,
+   "clipped_samples": 0,
+   "speech": {
+    "start_s": 0.5,
+    "end_s": 1.5
+   }
+  }
+ },
+ {
+  "name": "clipping_is_counted",
+  "input": {
+   "rate": 48000,
+   "parts": [
+    {
+     "seconds": 0.3,
+     "amp": 0
+    },
+    {
+     "seconds": 0.5,
+     "amp": 32767
+    },
+    {
+     "seconds": 0.2,
+     "amp": 200
+    }
+   ],
+   "noise_floor_dbfs": null
+  },
+  "expected": {
+   "threshold_dbfs": -45.0,
+   "peak_dbfs": 0.0,
+   "rms_dbfs": -3.0,
+   "clipped_samples": 24000,
+   "speech": {
+    "start_s": 0.3,
+    "end_s": 1.0
+   }
+  }
+ },
+ {
+  "name": "44100_hz_uses_441_sample_hops",
+  "input": {
+   "rate": 44100,
+   "parts": [
+    {
+     "seconds": 0.4,
+     "amp": 0
+    },
+    {
+     "seconds": 0.8,
+     "amp": 3000
+    },
+    {
+     "seconds": 0.3,
+     "amp": 0
+    }
+   ],
+   "noise_floor_dbfs": -50.0
+  },
+  "expected": {
+   "threshold_dbfs": -40.0,
+   "peak_dbfs": -20.8,
+   "rms_dbfs": -23.5,
+   "clipped_samples": 0,
+   "speech": {
+    "start_s": 0.4,
+    "end_s": 1.2
+   }
+  }
+ },
+ {
+  "name": "all_silence_has_no_speech_and_the_floor_level",
+  "input": {
+   "rate": 48000,
+   "parts": [
+    {
+     "seconds": 1.0,
+     "amp": 0
+    }
+   ],
+   "noise_floor_dbfs": null
+  },
+  "expected": {
+   "threshold_dbfs": -45.0,
+   "peak_dbfs": -120.0,
+   "rms_dbfs": -120.0,
+   "clipped_samples": 0,
+   "speech": null
+  }
+ },
+ {
+  "name": "a_short_burst_is_not_speech",
+  "input": {
+   "rate": 48000,
+   "parts": [
+    {
+     "seconds": 0.5,
+     "amp": 0
+    },
+    {
+     "seconds": 0.05,
+     "amp": 9000
+    },
+    {
+     "seconds": 0.5,
+     "amp": 0
+    }
+   ],
+   "noise_floor_dbfs": -60.0
+  },
+  "expected": {
+   "threshold_dbfs": -50.0,
+   "peak_dbfs": -11.2,
+   "rms_dbfs": -24.4,
+   "clipped_samples": 0,
+   "speech": null
+  }
+ }
+]

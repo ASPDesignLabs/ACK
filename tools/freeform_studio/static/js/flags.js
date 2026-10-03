@@ -4,6 +4,8 @@ export const FLAG_TEXT = {
   low_confidence: "shaky word", has_digits: "has numbers", too_short: "very short", too_long: "long",
   possible_hallucination: "may be wrong", bracket_tag: "has a [tag]", repetitive: "repetitive", empty: "empty",
   has_symbols: "has symbols", cuts_word: "cuts a word",
+  no_speech: "no speech", clipped: "distorted", quiet: "very quiet", noisy: "background noise", cut_off: "speech touches the edge",
+  reads_differently: "differs from the card", phone_stumble: "you marked a slip", phone_disagrees: "phone and PC disagree",
 };
 
 export const FLAG_HELP = {
@@ -17,4 +19,12 @@ export const FLAG_HELP = {
   bracket_tag: "Contains a [tag] or (note). Remove it unless you actually said it.",
   empty: "No words in this piece. Type what was said, or drop it.",
   cuts_word: "A cut point falls inside a word, so the audio and the text may not match. Move the cut point, or change the text.",
+  no_speech: "Hardly any of this piece is louder than the room. If you did say something, it was too quiet to count; otherwise drop it.",
+  clipped: "The recording hit the loudest level it can several times, which sounds harsh. Re-record it, or move further from the microphone.",
+  quiet: "Too soft to be brought up to full level when the training clips are made. Re-record it closer to the microphone, or leave it out.",
+  noisy: "Your voice is not much louder than the background noise here. Listen: if the noise is clearly audible, leave it out.",
+  cut_off: "Speech was still going at the very start or end of what ACK recorded, so the first or last word may be missing. Listen to both ends.",
+  reads_differently: "What was heard does not match the words on the card. Listen, then fix the text, or re-record it if you misread.",
+  phone_stumble: "You marked this one on the phone as a slip. Listen before you approve it.",
+  phone_disagrees: "The phone and this computer disagree about whether there is speech in this clip. Listen to it.",
 };

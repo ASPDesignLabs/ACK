@@ -43,6 +43,7 @@ import com.example.besu.ui.theme.ErrorRed
 import com.example.besu.ui.theme.Graphite
 import com.example.besu.ui.theme.NeonPalette
 import com.example.besu.ui.theme.VoidBlack
+import com.example.besu.voicecapture.TrainingCaptureHome
 import kotlinx.coroutines.delay
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -185,6 +186,8 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     // so re-entering this screen after an import always reflects reality.
     var hasCustomVoice by remember { mutableStateOf(CustomVoiceRepository.hasCustomVoice(context)) }
     var pendingCustomVoiceRestart by remember { mutableStateOf(false) }
+    // RECORD TRAINING DATA is its own set of screens (voicecapture/); while it is open it takes the whole area in place of this one.
+    var showTrainingCapture by remember { mutableStateOf(false) }
 
     // A new/replaced voice changes what OutputService's PiperVoiceEngine
     // singleton has loaded -- the app-restart pattern (see MainActivity.kt's
@@ -239,7 +242,9 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    if (showTrainingCapture) {
+        TrainingCaptureHome(context, primaryColor) { showTrainingCapture = false }
+    } else Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text("AUDIO ARCHITECT", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -348,6 +353,15 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             // identifies which is which by filename suffix, same tolerance
             // GifRepository.importGif already applies to a null/unknown MIME.
             importVoiceLauncher.launch(arrayOf("*/*"))
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        NeonButton(
+            "RECORD TRAINING DATA",
+            Modifier.fillMaxWidth().testTag(AckTags.TRAIN_ENTRY_BTN).helpTarget(AckTags.TRAIN_ENTRY_BTN, primaryColor),
+            mainColor = primaryColor
+        ) {
+            showTrainingCapture = true
+            reportHelpInteraction(AckTags.TRAIN_ENTRY_BTN)
         }
         if (hasCustomVoice) {
             Spacer(modifier = Modifier.height(6.dp))
