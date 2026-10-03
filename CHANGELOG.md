@@ -6,6 +6,7 @@ All notable changes to ACK are logged here. These same notes are available in-ap
 
 ### Changed
 - **New installs show every message in full on screen, shrinking the text to fit, and speak in the unprocessed ORGANIC voice. Existing installs keep their current settings.** A new install starts with a FULL TEXT display preset and the ORGANIC voice; nothing already stored on a phone is changed. On an existing install the older behaviour stays until its owner changes it: a message of more than 5 words is cut to ALERT: plus 3 words. That setting is now called SHOW FULL MESSAGE (VISUAL EDITOR), says what ON and OFF do, and shows THE SCREEN MAY SHOW LESS THAN WAS SPOKEN while it is OFF.
+- **If the active custom voice is deleted, or a voice id is unknown, ACK now falls back to ORGANIC instead of CYBER.** A broken or deleted voice no longer turns into the robot voice. CYBER is still there to choose, and an install that never chose a voice still speaks as CYBER.
 - **The text on the full-screen display now shrinks to fit.** The size in the visual editor is now the largest the text may be (LARGEST SIZE); a long message is shrunk, a step at a time, to the smallest readable size so it is not cut off. If it still does not fit at that size it scrolls, with SCROLL FOR MORE shown, and a tap (or, for an Emergency message, a hold) still clears it. A message that already fit looks as it did. This applies to existing installs too.
 
 ## [1.0-beta.8] - 2026-10-03

@@ -159,7 +159,8 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         if (idx == -1) return
         customVoices.removeAt(idx)
         if (userProfile == id) {
-            userProfile = "CYBER"
+            // Deleting the active custom voice falls back to the unprocessed voice, not the robot one.
+            userProfile = "ORGANIC"
         }
         syncDsp()
     }

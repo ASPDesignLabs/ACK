@@ -401,7 +401,11 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     private fun getProfile(id: String): VoiceProfile {
         customVoices.find { it.id == id }?.let { return it }
         FACTORY_PRESETS[id]?.let { return it }
-        return FACTORY_PRESETS["CYBER"]!!
+        // An unknown or broken voice id must never become the robot voice. This is deliberately
+        // different from the read-site fallbacks for "no voice ever chosen" (they stay CYBER so an
+        // install made before the unprocessed default keeps sounding as it did); this one only runs
+        // when the chosen voice cannot be found.
+        return FACTORY_PRESETS["ORGANIC"]!!
     }
 
     private fun parseEmergencyTone(rawTone: String?): EmergencyTone {
