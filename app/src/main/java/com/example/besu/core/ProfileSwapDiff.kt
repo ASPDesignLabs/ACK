@@ -71,6 +71,6 @@ object ProfileWarningText {
     // For an install that already existed: said once, dismissible, and nothing changes unless it is tapped.
     const val OFFER_TEXT =
         "NEW: ACK CAN WARN YOU BEFORE A PROFILE CHANGE MAKES A GESTURE SAY SOMETHING DIFFERENT. IT IS OFF FOR YOU, AND NOTHING CHANGES UNLESS YOU TURN IT ON."
-    const val OFFER_TURN_ON = "[TURN ON]"
-    const val OFFER_NOT_NOW = "[NOT NOW]"
+    const val OFFER_TURN_ON = "TURN ON"
+    const val OFFER_NOT_NOW = "NOT NOW"
 }

@@ -85,6 +85,7 @@ class InstallClassifierTest {
                     "seeded:/std/def/0", "seeded:/std/def/1", "seeded:/std/def/2", "seeded:/std/def/3",
                     "seeded:/std/con/0", "seeded:/std/con/1", "seeded:/std/con/2", "seeded:/std/con/3",
                 ),
+                "ack_assist_prefs" to setOf("warn_profile_change"),
             ),
             InstallClassifier.SEED_KEYS,
         )

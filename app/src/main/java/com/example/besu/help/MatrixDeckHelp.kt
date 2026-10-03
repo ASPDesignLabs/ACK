@@ -46,7 +46,9 @@ object MatrixDeckHelpCopy {
 
     const val DECK_PROFILE_PROFILE =
         "Now select a profile. Profiles let one gesture system adapt to " +
-                "different communication contexts without rebuilding the Matrix."
+                "different communication contexts without rebuilding the Matrix. " +
+                "If ACK asks first because a gesture would say something " +
+                "different, tap CHANGE PROFILE to go ahead."
 
     const val DECK_PROFILE_COMPLETE =
         "Deck and profile selection complete. You can now switch between " +

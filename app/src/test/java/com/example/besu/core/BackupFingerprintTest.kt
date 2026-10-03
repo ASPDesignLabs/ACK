@@ -67,9 +67,9 @@ class BackupFingerprintTest {
 
     @Test
     fun eachIgnoredFieldChangingLeavesTheResultUnchanged() {
-        val base = """{"phrase":"hello","timestamp":1,"activeDeckId":"A","activeDeckColorIndex":1,"activeProfile":"P","activeCategoryFocus":"IDENTITY","autocompleteHistory":{"k":1},"rootOverrideCollapsed":{"IDENTITY":true},"starterPhrasesSeeded":false}"""
+        val base = """{"phrase":"hello","timestamp":1,"activeDeckId":"A","activeDeckColorIndex":1,"activeProfile":"P","activeCategoryFocus":"IDENTITY","autocompleteHistory":{"k":1},"rootOverrideCollapsed":{"IDENTITY":true},"starterPhrasesSeeded":false,"warnBeforeProfileChange":true}"""
         val reference = fp(base)
-        assertEquals(BackupFingerprint.IGNORED_FIELDS.size, 8)
+        assertEquals(BackupFingerprint.IGNORED_FIELDS.size, 9)
         for (field in BackupFingerprint.IGNORED_FIELDS) {
             val changed = changeTopLevelValue(base, field)
             assertNotEquals("the test must really change $field", base, changed)

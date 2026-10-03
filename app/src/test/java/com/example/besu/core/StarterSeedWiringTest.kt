@@ -39,6 +39,7 @@ class StarterSeedWiringTest {
             "ack_visual_presets" to setOf("saved_presets", "active_preset_id"),
             StarterSets.MATRIX_FILE to StarterSets.matrixSeedKeys,
             StarterSets.RECORD_FILE to StarterSets.recordKeys,
+            AssistSettings.FILE to AssistSettings.SEED_KEYS,
         )
 
     @Test

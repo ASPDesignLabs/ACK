@@ -13,7 +13,8 @@ import com.example.besu.output.VisualPresetRepository
  *
  *  - the unprocessed ORGANIC voice,
  *  - one visual preset, FULL TEXT, set active, so a whole message is shown on screen, and
- *  - the neutral starter phrases and a small STARTERS Quick Actions deck (StarterSeed), instead of the old built-in wording.
+ *  - the neutral starter phrases and a small STARTERS Quick Actions deck (StarterSeed), instead of the old built-in wording, and
+ *  - the profile-change warning, switched ON (AssistPrefs).
  *
  * Every place that READS these settings keeps its old fallback (CYBER, bypassTruncation = false), so an install that
  * already existed behaves exactly as before. Only an install with nothing stored gets the new defaults, and only once.
@@ -38,7 +39,7 @@ object InstallState {
     private val OWNED_PREFS_FILES = listOf(
         "ack_prefs", "app_prefs", "ack_matrix_config", "ack_visual_presets", "ack_voice_recordings", "ack_targets",
         "ack_statements", "ack_geo_secure", "ack_gif_library", "ack_autocomplete_history",
-        "ack_training_capture", "ack_training_game", "ack_deck_trainer", "gestures", "ack_starter_seed",
+        "ack_training_capture", "ack_training_game", "ack_deck_trainer", "gestures", "ack_starter_seed", "ack_assist_prefs",
     )
 
     private const val DEFAULT_VOICE = "ORGANIC"
@@ -118,5 +119,8 @@ object InstallState {
         } catch (e: Exception) {
             Log.e(TAG, "could not seed the FULL TEXT preset", e)
         }
+        // The profile-change warning is given ON, so a new learner is told before a profile change moves what a gesture says. Its own
+        // try inside, like the others, and it writes nothing that is already there.
+        AssistPrefs.seedFreshInstallDefaults(context)
     }
 }

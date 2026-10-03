@@ -138,7 +138,11 @@ data class AckBackup(
     // the built-in text, so a restore onto a phone that HAS the starters uses this to take back only the starters the person never
     // edited (core/StarterRestore.kt); with true, the file's own phrases already say what that phone showed. It describes the
     // file, not anything stored: restore never applies it, and the backup fingerprint ignores it.
-    val starterPhrasesSeeded: Boolean? = null
+    val starterPhrasesSeeded: Boolean? = null,
+
+    // WARN BEFORE PROFILE CHANGES (data/AssistPrefs.kt): null on a backup made before it existed, or by a phone where nothing was ever
+    // stored ("nothing to say about this field": restore leaves the device's own choice alone).
+    val warnBeforeProfileChange: Boolean? = null
 )
 
 @Serializable

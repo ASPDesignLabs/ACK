@@ -2,6 +2,8 @@
 package com.example.besu
 
 import com.example.besu.backup.BackupReminder
+import com.example.besu.core.ProfileSwapDiff
+import com.example.besu.core.SlotChange
 import com.example.besu.core.TextInsertion
 import com.example.besu.composer.*
 import com.example.besu.computer.*
@@ -89,6 +91,9 @@ private enum class BottomNavIcon {
 // restart guarantees everything reflects what was just written, the same
 // way a cold launch already does. Shared (rather than duplicated) since
 // both SettingsView and GifDeck need it.
+// A profile change waiting for the person's answer to the warning (see requestProfileChange).
+private data class PendingProfileChange(val profile: String, val changes: List<SlotChange>)
+
 fun restartApp(context: Context) {
     val intent = Intent(context, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -381,6 +386,48 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
             context = context,
             deckId = currentDeckId
         )
+    }
+
+    // WARN BEFORE PROFILE CHANGES (core/ProfileSwapDiff.kt decides; ui/ProfileChangeDialog.kt asks). Only this in-app menu asks: the home-screen
+    // widget and the watch are deliberate remote controls with no screen to ask on, and a backup restore is already a confirmed action.
+    var pendingProfileChange by remember { mutableStateOf<PendingProfileChange?>(null) }
+    var profileWarningOn by remember { mutableStateOf(true) }
+
+    fun applyProfileChange(profile: String) {
+        CommandRepository.setActiveProfile(
+            context,
+            profile
+        )
+
+        currentProfile = profile
+        isProfileMenuOpen = false
+
+        WatchSync.sendProfileConfig(
+            context,
+            profile
+        )
+
+        helpManager.onEvent(
+            HelpEvent.ProfileWasSelected(AckTags.PROFILE_SELECTOR)
+        )
+    }
+
+    // Changes straight away if the warning is off or nothing would change (never interrupts for nothing); otherwise asks first.
+    fun requestProfileChange(profile: String) {
+        if (profile == currentProfile) {
+            applyProfileChange(profile)
+            return
+        }
+        val changes = ProfileSwapDiff.changes(
+            CommandRepository.profileSwapSlots(context, currentDeckId, currentProfile, profile)
+        )
+        if (ProfileSwapDiff.shouldWarn(AssistPrefs.isProfileChangeWarningOn(context), changes)) {
+            profileWarningOn = true
+            pendingProfileChange = PendingProfileChange(profile, changes)
+            isProfileMenuOpen = false
+        } else {
+            applyProfileChange(profile)
+        }
     }
 
     fun exitDeckManageMode() {
@@ -1269,22 +1316,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
-                                                CommandRepository.setActiveProfile(
-                                                    context,
-                                                    profile
-                                                )
-
-                                                currentProfile = profile
-                                                isProfileMenuOpen = false
-
-                                                WatchSync.sendProfileConfig(
-                                                    context,
-                                                    profile
-                                                )
-
-                                                helpManager.onEvent(
-                                                    HelpEvent.ProfileWasSelected(AckTags.PROFILE_SELECTOR)
-                                                )
+                                                requestProfileChange(profile)
                                             }
                                             .padding(vertical = 8.dp)
                                     ) {
@@ -1765,6 +1797,24 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 onDismiss = { showComputerSummary = false }
                             )
                         }
+                    }
+
+                    pendingProfileChange?.let { pending ->
+                        ProfileChangeDialog(
+                            targetProfile = pending.profile,
+                            changes = pending.changes,
+                            dontShowAgain = !profileWarningOn,
+                            onDontShowAgainChanged = { checked ->
+                                AssistPrefs.setProfileChangeWarning(context, !checked)
+                                profileWarningOn = !checked
+                            },
+                            primaryColor = primaryColor,
+                            onStay = { pendingProfileChange = null },
+                            onChange = {
+                                pendingProfileChange = null
+                                applyProfileChange(pending.profile)
+                            }
+                        )
                     }
 
                     if (showCreateDeckDialog) {

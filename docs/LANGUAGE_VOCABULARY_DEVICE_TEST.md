@@ -1,9 +1,9 @@
 # Language and vocabulary: checking it on a real phone
 
-This covers the parts of Section 4 that are built so far: the **neutral starter phrases** (L1) and **typing, inserting and the history
-chips** (the work behind them, B1 to B4). **Not built yet, so not here:** plain-language mode (L2), non-English voices and text (L3),
-word prediction (L5), the profile-change warning (L7), and the pictures and core-vocabulary decisions (L4, L6). Their steps will be added
-when they are built.
+This covers the parts of Section 4 that are built so far: the **neutral starter phrases** (L1), **typing, inserting and the history
+chips** (the work behind them, B1 to B4), and the **profile-change warning** (L7, the warning half). **Not built yet, so not here:**
+plain-language mode (L2), non-English voices and text (L3), word prediction (L5), the profile lock (decided against for now), and the
+pictures and core-vocabulary decisions (L4, L6). Their steps will be added when they are built.
 
 The rules are covered by automated tests (480 in `tools/kotlin_check`, run with `./run_unit_tests.sh`), and the repository policy tests
 pass. **What was never run anywhere is the Android part:** the build itself, every screen, the layout, the keyboard and the file
@@ -113,6 +113,39 @@ move away from the field or tap UPDATE so each is recorded.
 - [ ] TalkBack, if you use it, on a long value. → It reads the **full** value, not the shortened one.
 - [ ] Note how the blank band under every variable field **feels** (you chose a steady layout over hiding an empty row). → Tell me if it is
   too tall; reserving it only for fields that have history is a small change.
+
+## G. The profile-change warning
+
+Use the MATRIX deck (DEFAULT). To make a difference you can see, on the **WORK** profile edit one slot (for example IDENTITY, the wave
+gesture) so it says something other than the DEFAULT profile's phrase for that slot, then switch back to DEFAULT.
+
+- [ ] **Fresh install.** SETTINGS → PROFILES. → The switch reads WARN BEFORE PROFILE CHANGES: ON, with a grey explanation under it, and there is
+  **no** offer banner.
+- [ ] **Existing install, updated in place.** SETTINGS → PROFILES. → A bordered offer says the warning is OFF for you and nothing changes unless
+  you turn it on, with TURN ON and NOT NOW buttons, and the switch reads OFF. Change profile from the PROFILE menu before touching anything. →
+  It changes **straight away** with no dialog.
+- [ ] Tap **NOT NOW**. → The offer disappears. Leave SETTINGS and come back: it does **not** return, and the switch is still OFF.
+- [ ] On another updated install, tap **TURN ON**. → The switch reads ON, the offer disappears and does not return. Nothing else changed.
+- [ ] Warning ON, DEFAULT profile: open PROFILE and pick **WORK**. → A dialog says 1 GESTURE WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO WORK and lists
+  "IDENTITY / TWIST …: old phrase, becomes: new phrase". Nothing was spoken, there was no sound, and the phone did not vibrate when it appeared.
+- [ ] Tap **STAY**. → You are still on DEFAULT. Open it again and press the **back button**, then tap **outside** the dialog. → Both also STAY.
+- [ ] Open it again and tap **CHANGE PROFILE**. → You are on WORK, and the watch (if paired) follows.
+- [ ] From WORK pick **HIGH_STRESS** (nothing edited in it, so it falls back to DEFAULT). → The dialog still appears, because WORK's slot differs from
+  what HIGH_STRESS would say. Then from DEFAULT pick **HIGH_STRESS** (or any profile with nothing of its own). → **No dialog**: nothing would change.
+- [ ] Change that WORK slot by **only a capital letter** or a full stop. → The warning lists it. Change it by **only a space at the end**. → No warning.
+- [ ] Make a custom context slot (MANAGE CONTEXT) differ between two profiles. → It is listed too.
+- [ ] Make **more than four** gestures differ. → The first four are listed, then AND N MORE.
+- [ ] Tick **DO NOT SHOW THIS WARNING AGAIN** and tap CHANGE PROFILE. → SETTINGS → PROFILES now reads OFF, and the next profile change has no dialog.
+  Switch it back ON in SETTINGS. → The dialog appears again.
+- [ ] Change profile with the **home-screen widget**. → It switches **immediately**, with no warning, and says "Profile Engaged." as before.
+- [ ] FULL RESTORE a backup. → No profile warning (a restore is already a confirmed action).
+- [ ] Open a **Quick Actions** deck. → There is no profile menu. Note where its buttons are before and after changing profile on a Matrix deck. →
+  The buttons are in the **same places**.
+- [ ] HELP: run the walkthrough that has you select a profile, with a slot that differs. → The step waits, the dialog appears, and it advances
+  only after CHANGE PROFILE.
+- [ ] Set the switch OFF, export a backup, set it ON, then FULL RESTORE that file. → It reads OFF again. Restore a file made by an **older build**.
+  → The switch is unchanged.
+- [ ] DATA PORT → DELETE DATA → **SETTINGS**. → Afterwards the switch reads ON (the new-install default) and no offer is shown.
 
 ## What to send back
 

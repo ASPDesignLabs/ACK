@@ -389,6 +389,7 @@ object TransferManager {
             savedStatementTree = savedStatementTree,
             trainingScripts = trainingScripts,
             starterPhrasesSeeded = StarterSeed.wasSeeded(context),
+            warnBeforeProfileChange = AssistPrefs.profileChangeWarningStored(context),
         )
     }
 
@@ -1225,6 +1226,11 @@ object TransferManager {
         // person never edited is not their data, and a backup never records a phrase left at the built-in text. Take those back
         // first, so such a slot shows what the file's phone showed. Anything edited, or mentioned by the file, is never touched.
         StarterSeed.takeBackUntouchedStarters(context, backup.matrixData.keys, backup.starterPhrasesSeeded)
+
+        // WARN BEFORE PROFILE CHANGES: a backup that says nothing about it (null) leaves the device's own choice alone.
+        if (backup.warnBeforeProfileChange != null) {
+            AssistPrefs.setProfileChangeWarning(context, backup.warnBeforeProfileChange)
+        }
 
         val editor = matrixPrefs.edit()
 

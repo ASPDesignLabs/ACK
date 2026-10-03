@@ -3,7 +3,9 @@ package com.example.besu.settings
 
 import com.example.besu.*
 import com.example.besu.backup.*
+import com.example.besu.core.AssistSettings
 import com.example.besu.core.BackupReminderText
+import com.example.besu.core.ProfileWarningText
 import com.example.besu.core.SafetyCopyPolicy
 import com.example.besu.core.StorageCatalogue
 import com.example.besu.data.*
@@ -356,6 +358,16 @@ fun SettingsView(
     var showFullRestoreConfirm by remember { mutableStateOf(false) }
     var showManageData by remember { mutableStateOf(false) }
     var backupRemindersOn by remember { mutableStateOf(BackupState.remindersEnabled(context)) }
+    // WARN BEFORE PROFILE CHANGES (data/AssistPrefs.kt): the switch, and the one-time offer, which is only for a phone where nothing was ever stored.
+    var profileWarningOn by remember { mutableStateOf(AssistPrefs.isProfileChangeWarningOn(context)) }
+    var profileWarningOffered by remember {
+        mutableStateOf(
+            AssistSettings.shouldOfferWarning(
+                switchStored = AssistPrefs.profileChangeWarningStored(context) != null,
+                offerDismissed = AssistPrefs.isProfileWarningOfferDismissed(context)
+            )
+        )
+    }
     // SAFETY COPIES (data/SafetyCopies.kt): the list, the copy being confirmed (first, then second), and a tick that moves when an
     // export has just been tried, so the first confirmation re-reads whether a newer export exists.
     var safetyCopiesRefresh by remember { mutableIntStateOf(0) }
@@ -1214,10 +1226,69 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
+                Text("PROFILES", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // The one-time offer, only where nothing was ever stored. It says what it does, starts with the switch OFF, and changes nothing
+                // unless TURN ON is tapped. It never opens HELP or goes to another screen.
+                if (profileWarningOffered) {
+                    val offerShape = CutCornerShape(8.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, primaryColor.copy(alpha = 0.6f), offerShape)
+                            .background(primaryColor.copy(alpha = 0.08f), offerShape)
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            ProfileWarningText.OFFER_TEXT,
+                            color = Color.LightGray,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            NeonButton(ProfileWarningText.OFFER_TURN_ON, Modifier.weight(1f), mainColor = primaryColor) {
+                                AssistPrefs.setProfileChangeWarning(context, true)
+                                profileWarningOn = true
+                                profileWarningOffered = false
+                            }
+                            NeonButton(ProfileWarningText.OFFER_NOT_NOW, Modifier.weight(1f), mainColor = Color.White) {
+                                AssistPrefs.dismissProfileWarningOffer(context)
+                                profileWarningOffered = false
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                // On or off, said in words (not only colour) and without animation. Choosing it by hand answers the offer.
+                NeonButton(
+                    ProfileWarningText.switchLabel(profileWarningOn),
+                    Modifier.fillMaxWidth(),
+                    mainColor = if (profileWarningOn) primaryColor else Color.White
+                ) {
+                    profileWarningOn = !profileWarningOn
+                    AssistPrefs.setProfileChangeWarning(context, profileWarningOn)
+                    profileWarningOffered = false
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    ProfileWarningText.SWITCH_EXPLANATION,
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            item {
                 Text("AUTOCOMPLETE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "ACK remembers what you've typed into Matrix and Quick Actions variable fields and Shared Root Variables, offering your most-used past values back as tappable chips. Local to this device, and included in EXPORT .JSON backups.",
+                    "ACK remembers what you've typed into Matrix and Quick Actions variable fields and Shared Root Variables, offering your most-used past values back as tappable chips that narrow as you type. Local to this device, and included in EXPORT .JSON backups.",
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace

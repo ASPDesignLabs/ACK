@@ -23,6 +23,8 @@ object InstallClassifier {
         // the seed's own record of what it wrote.
         StarterSets.MATRIX_FILE to StarterSets.matrixSeedKeys,
         StarterSets.RECORD_FILE to StarterSets.recordKeys,
+        // The profile-change warning (data/AssistPrefs.kt): a new install is given it ON.
+        AssistSettings.FILE to AssistSettings.SEED_KEYS,
     )
 
     /**

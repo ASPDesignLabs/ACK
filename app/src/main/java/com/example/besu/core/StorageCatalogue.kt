@@ -189,6 +189,7 @@ object StorageCatalogue {
             holds = "ALL OTHER SETTINGS: VOICE PROFILES, OUTPUT DEVICE, THEME, GESTURES, VISUAL PRESETS, PRACTICE SCORES AND BACKUP REMINDER NOTES.",
             prefsFilesCleared = setOf(
                 "app_prefs", "gestures", "ack_visual_presets", "ack_deck_trainer", "ack_training_game", "ack_backup_state",
+                AssistSettings.FILE,
             ),
             prefsFilesClearedExcept = mapOf(FILE_ACK_PREFS to setOf(KEY_TERMINAL_LOG)),
             coverage = Coverage.EXPORT_JSON,
