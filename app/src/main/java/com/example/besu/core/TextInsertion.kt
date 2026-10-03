@@ -4,8 +4,12 @@ package com.example.besu.core
 /** A half-open range of characters in a string: [start, end). Plain Kotlin, so it is not tied to Compose's own TextRange. */
 data class CharSpan(val start: Int, val end: Int)
 
-/** The new text and where the cursor goes. */
-data class InsertionResult(val text: String, val cursor: Int)
+/**
+ * The new text and where the cursor goes. [replaced] is the span of the OLD text that was replaced (after any widening for a
+ * token or an emoji): empty for a bare cursor or an empty insertion. A caller that keeps position-based data alongside the text
+ * (TokenSlots) needs it to know which tokens went.
+ */
+data class InsertionResult(val text: String, val cursor: Int, val replaced: CharSpan = CharSpan(cursor, cursor))
 
 enum class InsertMode {
     /** A word or token: spaces are added or left out so it neither glues onto a neighbour nor leaves a double space. */
@@ -57,18 +61,18 @@ object TextInsertion {
     ): InsertionResult {
         val span = snap(text, replace ?: CharSpan(selectionStart, selectionEnd))
         val piece = if (mode == InsertMode.WORD) insertion.trim { isSpaceLike(it) } else insertion
-        if (piece.isEmpty()) return InsertionResult(text, span.end)
+        if (piece.isEmpty()) return InsertionResult(text, span.end, CharSpan(span.end, span.end))
 
         val before = text.substring(0, span.start)
         val after = text.substring(span.end)
-        if (mode == InsertMode.EXACT) return InsertionResult(before + piece + after, before.length + piece.length)
+        if (mode == InsertMode.EXACT) return InsertionResult(before + piece + after, before.length + piece.length, span)
 
         val leading = needsLeadingSpace(text, span.start)
         val trailing = needsTrailingSpace(text, span.end)
         val inserted = (if (leading) " " else "") + piece + (if (trailing) " " else "")
         var cursor = before.length + inserted.length
         if (!trailing && nextIsExactlyOneOrdinarySpace(text, span.end)) cursor += 1
-        return InsertionResult(before + inserted + after, cursor)
+        return InsertionResult(before + inserted + after, cursor, span)
     }
 
     private fun snap(text: String, raw: CharSpan): CharSpan {
