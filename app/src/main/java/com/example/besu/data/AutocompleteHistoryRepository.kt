@@ -2,6 +2,8 @@
 package com.example.besu.data
 
 import android.content.Context
+import com.example.besu.core.SuggestionCandidate
+import com.example.besu.core.WordSuggestions
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -177,11 +179,13 @@ object AutocompleteHistoryRepository {
 
     // --- READ/WRITE ---
 
-    fun getSuggestions(context: Context, scopeKey: String): List<String> {
-        return loadScope(context, scopeKey)?.entries.orEmpty()
-            .sortedWith(compareByDescending<AutocompleteEntry> { it.count }.thenByDescending { it.lastUsedAt })
-            .take(MAX_SUGGESTIONS)
-            .map { it.value }
+    // [typed] is what is in the field right now. Empty (or blank): the top MAX_SUGGESTIONS, as ever. Otherwise only values that start
+    // with it. The rules (case variants are one word, accents, order) are core/WordSuggestions.kt; this only loads the field's own
+    // values and never writes anything back.
+    fun getSuggestions(context: Context, scopeKey: String, typed: String = ""): List<String> {
+        val candidates = loadScope(context, scopeKey)?.entries.orEmpty()
+            .map { SuggestionCandidate(it.value, it.count, it.lastUsedAt) }
+        return WordSuggestions.suggest(candidates, typed, MAX_SUGGESTIONS)
     }
 
     // Blank values are never recorded -- there's nothing useful to suggest
@@ -197,33 +201,23 @@ object AutocompleteHistoryRepository {
         info: AutocompleteScopeInfo,
         value: String
     ) {
-        val trimmed = value.trim()
-        if (trimmed.isEmpty()) {
+        // The rules (blank is never recorded; "Mum" and "mum" are one word and count together; the cap) are core/WordSuggestions.kt.
+        // Older entries are never rewritten in place: at most the one matching entry is counted up.
+        val existing = loadScope(context, scopeKey)?.entries.orEmpty()
+            .map { SuggestionCandidate(it.value, it.count, it.lastUsedAt) }
+        val updated = WordSuggestions.recordUsage(existing, value, System.currentTimeMillis(), MAX_ENTRIES_PER_SCOPE)
+        if (updated == existing) {
             return
         }
 
-        val entries = loadScope(context, scopeKey)?.entries.orEmpty().toMutableList()
-        val existingIndex = entries.indexOfFirst { it.value == trimmed }
-
-        if (existingIndex != -1) {
-            val existing = entries[existingIndex]
-            entries[existingIndex] = existing.copy(
-                count = existing.count + 1,
-                lastUsedAt = System.currentTimeMillis()
+        saveScope(
+            context,
+            scopeKey,
+            AutocompleteScope(
+                info = info,
+                entries = updated.map { AutocompleteEntry(value = it.value, count = it.count, lastUsedAt = it.lastUsedAt) }
             )
-        } else {
-            entries.add(AutocompleteEntry(value = trimmed))
-        }
-
-        val trimmedToCap = if (entries.size > MAX_ENTRIES_PER_SCOPE) {
-            entries
-                .sortedWith(compareByDescending<AutocompleteEntry> { it.count }.thenByDescending { it.lastUsedAt })
-                .take(MAX_ENTRIES_PER_SCOPE)
-        } else {
-            entries
-        }
-
-        saveScope(context, scopeKey, AutocompleteScope(info = info, entries = trimmedToCap))
+        )
     }
 
     // Every stored scope, key alongside its full record -- backs the

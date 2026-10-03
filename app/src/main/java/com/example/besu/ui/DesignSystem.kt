@@ -2588,8 +2588,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             )
 
                             AutocompleteChipRow(
-                                suggestions = AutocompleteHistoryRepository
-                                    .getSuggestions(context, autocompleteScopeKey),
+                                suggestions = AutocompleteHistoryRepository.getSuggestions(context, autocompleteScopeKey, tempVars[index]),
                                 primaryColor = NeonPalette.SWATCHES[3],
                                 modifier = Modifier.padding(top = 4.dp)
                             ) { suggestion ->
@@ -2996,7 +2995,8 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 CommandRepository.getActiveProfile(context),
                                 request.nodePath,
                                 request.index
-                            )
+                            ),
+                            value
                         ),
                         primaryColor = primaryColor,
                         modifier = Modifier.padding(top = 6.dp)
@@ -4360,7 +4360,8 @@ fun RootOverrideValueDialog(
                 AutocompleteChipRow(
                     suggestions = AutocompleteHistoryRepository.getSuggestions(
                         context,
-                        autocompleteScopeKey
+                        autocompleteScopeKey,
+                        value
                     ),
                     primaryColor = primaryColor,
                     modifier = Modifier.padding(top = 6.dp)

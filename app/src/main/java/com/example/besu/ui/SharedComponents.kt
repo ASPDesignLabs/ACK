@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.ui
 
+import com.example.besu.core.MiddleEllipsis
 import com.example.besu.ui.theme.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -21,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -138,15 +141,21 @@ fun NeonToggle(
     }
 }
 
-// "You've typed this here before" suggestions -- AutocompleteHistoryRepository
-// supplies the ranked values, this just renders them. Renders nothing at
-// all when there's nothing to suggest, rather than an empty row, so a
-// field with no history yet doesn't reserve dead space or look like a
-// broken control. Tapping a chip only calls onSelect with its text; every
-// current call site treats that as "replace this field's whole value,"
-// since all three fields this backs (Matrix/Quick Actions local variables,
-// Shared Root Variables) hold one short value rather than a composed
-// phrase.
+// How tall the chip row always is, with chips or without: a 48 dp touch target plus room around it, so the fields below never move as
+// the typed text narrows the suggestions. ChipRowGuardTest holds this to at least 48.
+private val CHIP_ROW_MIN_HEIGHT = 56.dp
+
+// Past this many characters a value is shortened in the MIDDLE (core/MiddleEllipsis.kt), so two long values that start alike can still
+// be told apart by their ends. About two lines of the widest a chip gets.
+private const val CHIP_MAX_CHARS = 52
+
+// "You've typed this here before" suggestions -- AutocompleteHistoryRepository ranks and narrows the values (as the person types),
+// this just renders them. The row KEEPS ITS HEIGHT whether or not there are chips, so the screen never jumps as they change (the older
+// design hid an empty row to avoid dead space, at the cost of everything below it moving; the developer chose the steady layout).
+// Quiet: no animation and no haptics. Each chip is at least 48 dp tall, 14 sp, up to two lines; a long value scrolls sideways rather
+// than being cut, and the full value is what a screen reader reads. Tapping a chip only calls onSelect with its text; every call site
+// treats that as "replace this field's whole value," since the fields this backs (Matrix and Quick Actions local variables, Shared
+// Root Variables) hold one short value rather than a composed phrase.
 @Composable
 fun AutocompleteChipRow(
     suggestions: List<String>,
@@ -154,33 +163,34 @@ fun AutocompleteChipRow(
     modifier: Modifier = Modifier,
     onSelect: (String) -> Unit
 ) {
-    if (suggestions.isEmpty()) {
-        return
-    }
-
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .heightIn(min = CHIP_ROW_MIN_HEIGHT)
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         suggestions.forEach { suggestion ->
             Box(
                 modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .widthIn(min = 56.dp, max = 260.dp)
                     .border(1.dp, primaryColor.copy(alpha = 0.5f), CutCornerShape(6.dp))
                     .background(primaryColor.copy(alpha = 0.08f), CutCornerShape(6.dp))
                     .clickable { onSelect(suggestion) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .semantics { contentDescription = suggestion }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                contentAlignment = Alignment.CenterStart
             ) {
                 Text(
-                    text = suggestion,
+                    text = MiddleEllipsis.shorten(suggestion, CHIP_MAX_CHARS),
                     color = primaryColor,
-                    fontSize = 9.sp,
+                    fontSize = 14.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 120.dp)
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

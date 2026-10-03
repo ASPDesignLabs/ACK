@@ -591,7 +591,8 @@ private fun QuickActionEditorDialog(
                                 context,
                                 AutocompleteHistoryRepository.quickActionVariableScopeKey(
                                     deckId, groupIndex, slot.slotIndex, index
-                                )
+                                ),
+                                localValues.getOrNull(index).orEmpty()
                             ),
                             primaryColor = primaryColor,
                             modifier = Modifier.padding(top = 4.dp)
@@ -654,7 +655,8 @@ private fun QuickActionEditorDialog(
                         AutocompleteChipRow(
                             suggestions = AutocompleteHistoryRepository.getSuggestions(
                                 context,
-                                autocompleteScopeKey
+                                autocompleteScopeKey,
+                                value
                             ),
                             primaryColor = primaryColor,
                             modifier = Modifier.padding(top = 4.dp)
