@@ -1226,3 +1226,71 @@ the free-speech notice). On-device checks are in `docs/PRIVACY_DEVICE_TEST.md`; 
   it appears. The fingerprint is `core/BackupFingerprint.kt` over the no-audio backup (`TransferManager.backupFingerprint`); audio is never read for it.
 - **Copied text is plain on the clipboard, on purpose.** The developer wants to see it in the clipboard preview. Do not add the sensitive flag or a
   clearing timer without asking.
+
+## STARTER PHRASES, TYPING and SUGGESTIONS (Section 4, so far) — rules that must stay true
+
+Written for the Language and vocabulary work: neutral starter phrases (L1), one shared insertion rule, and the history chips. What is
+**not** built yet (plain-language mode, non-English voices and text, word prediction, the profile-change warning) is not described here;
+add those rules when they exist. The device checklist is `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md`; the starter wording for review is
+`docs/STARTER_PHRASES.md` (a test keeps it identical to the code).
+
+### Starter phrases: seed, never edit the built-in text
+- **`CommandRepository.BASE_TEMPLATE`'s strings are never edited.** A button with no saved value falls back to them (deck+profile value,
+  then the same deck's DEFAULT-profile value, then `BASE_TEMPLATE`), so editing them silently changes what an existing person's untouched
+  buttons say. `StarterSetsTest.theBuiltInText_isLeftExactlyAsItWas` pins the twelve strings. New defaults are **saved values**
+  (`data/StarterSeed.kt`, wording in `core/StarterSets.kt`), written for a **fresh install only** and only where nothing is stored.
+- **That fallback chain is per deck, not global.** Seeding only the DEFAULT deck left every other Matrix deck, and a wiped phone, on the old
+  wording. So a new Matrix deck on a seeded phone is seeded too (`CommandRepository.createDeck`), and DELETE DATA > MESSAGES AND DECKS
+  (so DELETE EVERYTHING) saves the twelve again (`DataWipe.wipe`). The STARTERS Quick Actions deck is only made on a brand-new install.
+- **The starter seed is not part of `seedFreshInstallDefaults`.** That function also runs after a SETTINGS wipe; seeding phrases there
+  would give an existing person's untouched buttons new phrases. `StarterSeed.seedFreshInstall` is called only from the fresh branch of
+  `InstallState.ensureRecorded`. A test guards both.
+- **`InstallClassifier.SEED_KEYS` lists every key the seed writes** (the twelve bare paths, `custom_decks_meta`, the STARTERS layout key, and
+  the note file's keys), so an interrupted seed still reads as fresh and finishes. The pin test spells the keys out independently.
+- **Storage keys come from `core/PhraseKeys.kt`.** `CommandRepository.generateStorageKey` delegates to it, so the repository and the seed
+  cannot disagree. Never hand-write a phrase key.
+- **The seed's note** (`ack_starter_seed`: `seeded:<path>` to the text it wrote, DEFAULT deck only) is per-phone state: owned by
+  `InstallState`, cleared with MESSAGES AND DECKS, never in `AckBackup`. Written before the phrases, so an interruption leaves a note with no
+  phrase (harmless) and never the reverse. `StarterSeed.wasSeeded` (read only) decides whether a new Matrix deck is seeded.
+- **Restore takes back only untouched starters** (`core/StarterRestore.kt`, called from `TransferManager.applyBackupToStorage` BEFORE the
+  file's phrases are written): a starter goes only if the file does not mention it AND it still holds exactly the text the seed wrote. The
+  nullable `AckBackup.starterPhrasesSeeded` says where a file came from: **null (older) and false (phone had none) take starters back;
+  only an explicit true keeps them.** The field is a format field in `ExportContents` and is on `BackupFingerprint.IGNORED_FIELDS`
+  (otherwise every existing phone's fingerprint would change once and the backup reminder would fire). Never restore-delete anything else.
+
+### One insertion rule
+- **Every insert button goes through `core/TextInsertion.kt`**: the Composer, the Terminal's `/v` and `/t` (trigger as the replace range),
+  Manual Override, and the Matrix and Quick Actions editors. It replaces the selection (ordered, clamped, never inside an emoji), never splits
+  a token (`[COMPUTER:..]`, `{VAR}`, `{VAR:A..C}`; the patterns are checked against `TemplateEngine` by a drift test), adds a space only where
+  one is needed, and an empty insertion changes nothing. `InsertionDriftGuardTest` scans the whole app source and fails on `replaceRange` or
+  appending a token by string outside it. **The token-versus-literal rule is unchanged** (see the STATEMENT COMPOSER section): this rule
+  decides where and how much space, never what goes in.
+- **{VAR} values and [COMPUTER] fallbacks are stored by position.** Inserting a token mid-text without shifting those lists attaches every later
+  value to the wrong token. `core/TokenSlots.kt` shifts them (values of replaced tokens go, a blank goes where the new token sits) and the
+  editors call it before saving. Typing a token by hand mid-text still has the old problem (see the report).
+- The editors' template fields are `TextFieldValue` so the cursor is known; they start with the cursor at the END (so a fresh editor's first
+  insertion still lands last), and a cursor-only change is not a template edit.
+
+### Suggestions: nothing changes without a tap
+- `core/WordSuggestions.kt` decides what the history chips show and what is stored: nothing typed gives the old top five; typed text keeps only
+  values that start with it (case-insensitive, NFC, a locale-independent lower-case so a Turkish phone is unaffected); "Mum" and "mum" are one
+  word (the latest form is shown); what is exactly typed is not offered back; order is count, recency, value. **A suggestion is only a button:
+  no auto-correct, no auto-complete on space, nothing inserted without a tap.** Reading never writes; recording touches at most one entry and
+  never rewrites older duplicates.
+- The chip row keeps a 56 dp height with or without chips (the developer chose a steady layout over hiding an empty row), is 14 sp with
+  48 dp chips, shows both ends of a long value (`core/MiddleEllipsis.kt`), and uses no animation or haptics. `ChipRowGuardTest` holds it to this.
+  Never use `NeonButton` or `TightPanelButton` for a chip: they vibrate, and a vibration is audible to a microphone that may be open.
+- The per-scope cap (20) ranks by use count first, so a value typed for the first time is dropped at once when twenty others are used twice
+  or more. Pinned by a test, not endorsed; decide before changing it.
+
+### File map
+
+| File | Owns |
+|---|---|
+| `core/StarterSets.kt`, `core/StarterSeedPlan.kt`, `core/StarterRestore.kt`, `core/PhraseKeys.kt` | Starter wording, what the seed writes, the restore rule, the phrase key recipe |
+| `data/StarterSeed.kt` | The Android edge: seeds, notes, takes back untouched starters, `wasSeeded` |
+| `docs/STARTER_PHRASES.md` | The review page (tables checked against `StarterSets`) |
+| `core/TextInsertion.kt`, `core/TokenSlots.kt` | The insertion rule; shifting by-position values |
+| `core/WordSuggestions.kt`, `core/MiddleEllipsis.kt` | The suggestion rules; shortening a long value in the middle |
+| `data/AutocompleteHistoryRepository.kt`, `ui/SharedComponents.kt` | Load and save history through the engine; the chip row |
+| `InsertionDriftGuardTest`, `ChipRowGuardTest`, `StarterSeedWiringTest`, `StarterRestoreWiringTest` | Source-reading guards for the Android-only files that cannot be compiled without the SDK |
