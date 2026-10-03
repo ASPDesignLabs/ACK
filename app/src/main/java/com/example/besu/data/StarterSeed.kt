@@ -3,6 +3,7 @@ package com.example.besu.data
 
 import android.content.Context
 import android.util.Log
+import com.example.besu.core.StarterRestore
 import com.example.besu.core.StarterSeedPlan
 import com.example.besu.core.StarterSets
 import com.example.besu.decks.QuickActionGroup
@@ -74,6 +75,35 @@ object StarterSeed {
      */
     fun wasSeeded(context: Context): Boolean =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).all.keys.any { it in StarterSets.recordKeys }
+
+    /**
+     * FULL RESTORE of a backup (TransferManager.applyBackupToStorage), BEFORE the file's own phrases are written: takes back the
+     * starters this phone was given that the person never edited and the file does not mention. WHICH ones is the tested rule in
+     * core/StarterRestore.kt. Removes only those keys and forgets only their notes; never clears a file. Does nothing on a phone
+     * that was not seeded.
+     */
+    fun takeBackUntouchedStarters(context: Context, backupMatrixKeys: Set<String>, backupFromSeededPhone: Boolean?) {
+        try {
+            val noteFile = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val seeded = StarterRestore.seededPhrases(noteFile.all)
+            if (seeded.isEmpty()) return
+
+            val matrix = context.getSharedPreferences(MATRIX_PREFS, Context.MODE_PRIVATE)
+            val current = matrix.all.mapNotNull { (key, value) -> (value as? String)?.let { key to it } }.toMap()
+            val taken = StarterRestore.toTakeBack(seeded, current, backupMatrixKeys, backupFromSeededPhone)
+            if (taken.isEmpty()) return
+
+            val edit = matrix.edit()
+            taken.forEach { edit.remove(it.storageKey) }
+            if (!edit.commit()) Log.e(TAG, "the untouched starter phrases could not be taken back")
+            val note = noteFile.edit()
+            taken.forEach { note.remove(it.recordKey) }
+            note.commit()
+            Log.i(TAG, "restore took back ${taken.size} untouched starter phrase(s)")
+        } catch (e: Exception) {
+            Log.e(TAG, "could not take back the untouched starter phrases", e)
+        }
+    }
 
     private fun writePhrases(context: Context, deckId: String, noteThem: Boolean) {
         val matrix = context.getSharedPreferences(MATRIX_PREFS, Context.MODE_PRIVATE)

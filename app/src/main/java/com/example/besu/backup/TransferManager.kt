@@ -388,6 +388,7 @@ object TransferManager {
             rootOverrideCollapsed = rootOverrideCollapsed,
             savedStatementTree = savedStatementTree,
             trainingScripts = trainingScripts,
+            starterPhrasesSeeded = StarterSeed.wasSeeded(context),
         )
     }
 
@@ -1219,6 +1220,11 @@ object TransferManager {
             PREFS_MATRIX,
             Context.MODE_PRIVATE
         )
+
+        // The one narrow exception to "never remove what the file doesn't mention": a starter phrase this phone was given and the
+        // person never edited is not their data, and a backup never records a phrase left at the built-in text. Take those back
+        // first, so such a slot shows what the file's phone showed. Anything edited, or mentioned by the file, is never touched.
+        StarterSeed.takeBackUntouchedStarters(context, backup.matrixData.keys, backup.starterPhrasesSeeded)
 
         val editor = matrixPrefs.edit()
 

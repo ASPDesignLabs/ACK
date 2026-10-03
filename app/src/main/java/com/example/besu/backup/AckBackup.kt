@@ -131,7 +131,14 @@ data class AckBackup(
     // made before this feature existed -- applyBackupToStorage restores each
     // script by id (overwriting a script with the same id, leaving every
     // other script on the device alone), so an empty list changes nothing.
-    val trainingScripts: List<TrainingScript> = emptyList()
+    val trainingScripts: List<TrainingScript> = emptyList(),
+
+    // Whether the phone this backup came from was given ACK's neutral starter phrases (data/StarterSeed.kt): null on a backup made
+    // before that existed, false on a phone that was not given them, true on one that was. A backup never records a phrase left at
+    // the built-in text, so a restore onto a phone that HAS the starters uses this to take back only the starters the person never
+    // edited (core/StarterRestore.kt); with true, the file's own phrases already say what that phone showed. It describes the
+    // file, not anything stored: restore never applies it, and the backup fingerprint ignores it.
+    val starterPhrasesSeeded: Boolean? = null
 )
 
 @Serializable

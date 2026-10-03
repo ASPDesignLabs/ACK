@@ -1361,6 +1361,15 @@ fun SettingsView(
                 fontFamily = FontFamily.Monospace
             )
 
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                "One exception: this phone may have been given ACK's neutral starter phrases. If the file is older, or came from a phone without them, any starter phrase you never edited goes back to the wording that phone showed. A phrase you edited, or that the file mentions, is never touched.",
+                color = Color.White,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -54,8 +54,11 @@ object ExportContents {
         ),
     )
 
-    /** Fields that describe the file itself (its format number and when it was made), not anything the person stored. */
-    val formatFields: Set<String> = setOf("version", "timestamp")
+    /**
+     * Fields that describe the file itself (its format number, when it was made, and whether its phone was given the starter
+     * phrases), not anything the person stored.
+     */
+    val formatFields: Set<String> = setOf("version", "timestamp", "starterPhrasesSeeded")
 
     /** Every field name the warning accounts for. */
     val mappedFields: Set<String> get() = categories.flatMapTo(HashSet(formatFields)) { it.fields }
