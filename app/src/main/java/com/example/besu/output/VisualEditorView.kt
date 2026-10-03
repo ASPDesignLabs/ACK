@@ -109,7 +109,7 @@ fun VisualEditorView(context: Context, primaryColor: Color) {
                 Row(modifier = Modifier.fillMaxWidth().border(1.dp, primaryColor, CutCornerShape(8.dp)).background(Graphite).padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("FORCE RENDER FULL TEXT", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                        Text("Bypasses 5-word truncation limit. May cause overflow if text size is too large.", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                        Text("Bypasses 5-word truncation limit. Long messages shrink to fit the screen.", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                     }
                     NeonButton(if (currentDraft.bypassTruncation) "ON" else "OFF", isActive = currentDraft.bypassTruncation, mainColor = primaryColor) {
                         currentDraft = currentDraft.copy(bypassTruncation = !currentDraft.bypassTruncation)
@@ -119,7 +119,7 @@ fun VisualEditorView(context: Context, primaryColor: Color) {
 
             // Sliders & Toggles 
             item {
-                Text("SIZE: ${currentDraft.fontSizeSp.toInt()}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text("LARGEST SIZE: ${currentDraft.fontSizeSp.toInt()} (LONG MESSAGES SHRINK TO FIT)", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = currentDraft.fontSizeSp, onValueChange = { currentDraft = currentDraft.copy(fontSizeSp = it) }, valueRange = 40f..250f, colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor))
 
                 Text("OUTLINE THICKNESS: ${currentDraft.outlineWidth.toInt()}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
