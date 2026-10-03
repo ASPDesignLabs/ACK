@@ -2,6 +2,7 @@
 package com.example.besu.voicecapture
 
 import android.content.Context
+import android.util.Log
 import com.example.besu.capture.CaptureListener
 import com.example.besu.capture.CaptureTime
 import com.example.besu.capture.Card
@@ -165,11 +166,13 @@ class ScriptSessionRunner(
     override fun onPaused(reason: PauseReason, message: String) {
         state = RunState.PAUSED
         this.message = if (reason == PauseReason.REQUESTED) "" else message
+        Log.i(TrainingCapture.LOG_TAG, "script session $sessionId paused: $reason")
     }
 
     override fun onFinished() {
         state = RunState.FINISHED
         message = ""
+        Log.i(TrainingCapture.LOG_TAG, "script session $sessionId ended: $kept clips kept, $cardsLeft cards left")
     }
 
     override fun onLevel(db: Double, inSpeech: Boolean) {
@@ -249,5 +252,6 @@ class FreeSessionRunner(
         this.message = message
         stoppedByItself = true
         mic.sink = null
+        Log.i(TrainingCapture.LOG_TAG, "free session $sessionId stopped by itself: $reason")
     }
 }

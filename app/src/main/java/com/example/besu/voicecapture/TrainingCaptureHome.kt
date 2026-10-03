@@ -4,6 +4,7 @@ package com.example.besu.voicecapture
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -402,18 +403,23 @@ private fun writePackage(context: Context, uri: Uri, sessions: List<CaptureSessi
     val resolver = context.contentResolver
     fun discard() { try { DocumentsContract.deleteDocument(resolver, uri) } catch (_: Exception) { } }
     return try {
-        val out = resolver.openOutputStream(uri, "w") ?: return "THE FILE COULD NOT BE OPENED FOR WRITING."
+        val out = resolver.openOutputStream(uri, "w") ?: run {
+            Log.e(TrainingCapture.LOG_TAG, "save: the file could not be opened for writing")
+            return "THE FILE COULD NOT BE OPENED FOR WRITING."
+        }
         out.use { PackageWriter.write(sessions, it, CaptureTime.utc(System.currentTimeMillis()), TrainingCapture.appVersion(context), onProgress) }
         val verified = resolver.openInputStream(uri)?.use { PackageVerifier.verify(it) }
         when {
-            verified == null -> { discard(); "THE SAVED FILE COULD NOT BE READ BACK, SO IT WAS REMOVED. NOTHING WAS LOST FROM THE PHONE." }
-            !verified.ok -> { discard(); "THE SAVED FILE FAILED ITS CHECK (${verified.problems.first()}), SO IT WAS REMOVED. NOTHING WAS LOST FROM THE PHONE." }
-            else -> null
+            verified == null -> { Log.e(TrainingCapture.LOG_TAG, "save: the saved file could not be read back"); discard(); "THE SAVED FILE COULD NOT BE READ BACK, SO IT WAS REMOVED. NOTHING WAS LOST FROM THE PHONE." }
+            !verified.ok -> { Log.e(TrainingCapture.LOG_TAG, "save: the saved file failed its check: ${verified.problems.take(5)}"); discard(); "THE SAVED FILE FAILED ITS CHECK (${verified.problems.first()}), SO IT WAS REMOVED. NOTHING WAS LOST FROM THE PHONE." }
+            else -> { Log.i(TrainingCapture.LOG_TAG, "save: wrote and verified ${verified.sessions} sessions, ${verified.audioFiles} recordings, ${verified.bytes} bytes"); null }
         }
     } catch (e: PackageWriteException) {
+        Log.e(TrainingCapture.LOG_TAG, "save: the package could not be made: ${e.problems.take(5)}")
         discard()
         e.problems.firstOrNull() ?: e.message ?: "THE PACKAGE COULD NOT BE MADE."
     } catch (e: Exception) {
+        Log.e(TrainingCapture.LOG_TAG, "save failed", e)
         discard()
         "SAVING FAILED: ${e.message ?: e.javaClass.simpleName}. NOTHING WAS LOST FROM THE PHONE."
     }

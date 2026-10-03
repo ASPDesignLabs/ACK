@@ -209,6 +209,8 @@ The phone stays where it is. It listens, and each card is recorded when the pers
 
 The person can lengthen the end-of-speech wait (0.8 to 2.5 s, which is 80 to 250 hops) if they pause a lot mid-sentence. This changes only the phone's behaviour, not the package.
 
+**Touching the phone.** The phone's buttons (REDO LAST, PAUSE, RESUME) are used while the microphone is open, and a fingertip makes a thump. After the detector is started or restarted because of a touch, the phone ignores the first 0.3 s (30 hops) of audio: it is not written, not listened to and not counted, so the card's file and the detector both begin after it. A card that follows the previous one by itself is not delayed. The phone also makes no sound and no vibration while it is listening. This is phone-only behaviour; nothing in the package or on the PC depends on it.
+
 ## 8. Proposing cuts in free speech **[reference]**
 
 The recording is never cut on the phone. The phone computes `proposed_segments` from the speech regions of the whole recording (section 5.3) so the PC has a starting point.

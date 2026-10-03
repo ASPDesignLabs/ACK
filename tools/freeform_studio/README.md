@@ -189,6 +189,45 @@ The page is built for one hand on a phone (big targets, controls at the bottom),
 controls, status messages announced politely, no information carried by color alone), and meets WCAG AA contrast in light
 and dark mode.
 
+## Recordings made with the ACK app
+
+The ACK phone app can gather recordings for you, away from your computer or your network. In ACK, open **Audio Architect → CUSTOM
+VOICE → RECORD TRAINING DATA**: you read scripts aloud (or just talk) and the phone records them, cuts each card of a script into
+its own clip, notes how each clip went, and keeps everything on the phone. When you want them here, ACK saves a **package** (one
+`.zip` file) wherever you choose, and you move that file to this computer yourself (cable, USB drive). Nothing is sent
+anywhere: ACK has no network permission, and neither does this step.
+
+Bring a package in either way:
+
+- **On the Review page**: the **Add recordings from ACK** card. Choose the `.zip`; it is brought onto this computer, looked
+  inside (every file is checked against its checksum, and you are told how many sessions and minutes it holds, whether there
+  is room, and anything already added), and added after you confirm. Useful when the server runs inside WSL and the file sits in Windows.
+- **From a terminal**: `python -m freeform_studio.ack_import ack-training-....zip --dry-run` looks and writes nothing;
+  without `--dry-run` it shows the same plan, then asks.
+
+What happens:
+
+- A package that fails any check changes nothing, and says what was wrong in plain words. Importing **only adds**; a session
+  that was already added is recognised and skipped, so running it twice is harmless. The audio inside the package is never
+  modified, and packages are kept in `~/piper-recording-studio/output/_freeform/<code>/incoming/` (never deleted by the
+  program, and not part of the automatic backups, since they are copies of what is on your phone).
+- Each **session** becomes **one recording**, processed like any other: decoded, listened to for speech, transcribed with word
+  timings, cut into pieces, ready to review. A script session's clips are joined in order with a short gap, and **where the phone
+  cut between clips is kept as a cut here** (so a card is not split mid-sentence). A free-speech session arrives whole, with the
+  phone's suggested cut points kept as hints.
+- The words on each card travel with the recording as its **reference text**, so the Review page can compare what was
+  heard with what you meant to say. On a piece from a script, a **From ACK** panel shows the card's words, the card number
+  and attempt, the loudest point, how far your voice is above the room, and anything you marked on the phone, with a
+  button to use the card's words (through the same path as any edit, so undo and autosave work).
+- This computer listens again when the recording arrives, and adds short warnings the Review page explains in plain words:
+  *no speech*, *distorted*, *very quiet*, *background noise*, *speech touches the edge*, *differs from the card* (numbers on a card
+  may be spoken as words, so check), *you marked a slip*, and *phone and PC disagree*. Marks you made on the phone as noise,
+  unclear, laugh or cough become tags, which keep a piece out of training until you clear them. Nothing is dropped or edited
+  for you: a flagged piece waits for you.
+
+The package format is written down in `docs/ACK_TRAINING_CAPTURE_FORMAT.md`, and both programs are tested against the same
+shared test cases, so a rule can not quietly differ between the phone and this computer.
+
 ## Training clips: export approved pieces into your recorder's folders
 
 Open **Training clips (export)** on the Review page (this recording) or on the recordings list (all recordings), or use the

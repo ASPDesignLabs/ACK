@@ -8,6 +8,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.example.besu.capture.CardSplitter
 import com.example.besu.capture.ClipState
@@ -20,6 +21,8 @@ import java.util.Locale
 // com.example.besu.capture (plain Kotlin, unit tested on a JVM); this file only reaches the phone: where files go, the microphone,
 // a few remembered settings. Keep it thin.
 object TrainingCapture {
+    /** The logcat tag for everything here. Lines carry counts, rates and reasons only: never audio and never what a script says. */
+    const val LOG_TAG = "ACK_TRAIN"
     private const val PREFS = "ack_training_capture"
     private const val KEY_SEEN_HELP_OFFER = "seen_help_offer"
     private const val KEY_LAST_LABEL = "last_label"
@@ -137,13 +140,19 @@ class TrainingMicrophone {
                 } catch (e: Exception) {
                     null
                 }
-                if (rec == null || rec.state != AudioRecord.STATE_INITIALIZED) { rec?.release(); continue }
+                if (rec == null || rec.state != AudioRecord.STATE_INITIALIZED) {
+                    Log.w(TrainingCapture.LOG_TAG, "microphone: $name at $rate Hz was not available")
+                    rec?.release()
+                    continue
+                }
                 try {
                     rec.startRecording()
                 } catch (e: Exception) {
+                    Log.w(TrainingCapture.LOG_TAG, "microphone: $name at $rate Hz would not start (${e.javaClass.simpleName})")
                     rec.release()
                     continue
                 }
+                Log.i(TrainingCapture.LOG_TAG, "microphone open: $rate Hz, source $name, buffer $bytes bytes")
                 record = rec
                 sampleRate = rate
                 sourceUsed = name
@@ -158,10 +167,12 @@ class TrainingMicrophone {
                                 sink?.invoke(buf, n)
                             } catch (e: Exception) {
                                 failure = "SOMETHING WENT WRONG WHILE RECORDING: ${e.message ?: e.javaClass.simpleName}"
+                                Log.e(TrainingCapture.LOG_TAG, "recording failed in the audio handler", e)
                                 running = false
                             }
                         } else if (n < 0) {
                             failure = "THE MICROPHONE STOPPED (ERROR $n). ANOTHER APP MAY BE USING IT."
+                            Log.e(TrainingCapture.LOG_TAG, "microphone read returned $n")
                             running = false
                         }
                     }
@@ -169,6 +180,7 @@ class TrainingMicrophone {
                 return null
             }
         }
+        Log.e(TrainingCapture.LOG_TAG, "microphone: no combination of rate and source could be opened")
         return "THE MICROPHONE COULD NOT BE OPENED. ANOTHER APP MAY BE USING IT."
     }
 
