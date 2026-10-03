@@ -1230,8 +1230,8 @@ the free-speech notice). On-device checks are in `docs/PRIVACY_DEVICE_TEST.md`; 
 ## STARTER PHRASES, TYPING and SUGGESTIONS (Section 4, so far) — rules that must stay true
 
 Written for the Language and vocabulary work: neutral starter phrases (L1), one shared insertion rule, and the history chips. What is
-**not** built yet (plain-language mode, non-English voices and text, word prediction, the profile-change warning) is not described here;
-add those rules when they exist. The device checklist is `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md`; the starter wording for review is
+**not** built yet (plain-language mode, non-English voices and text, word prediction) is not described here; add those rules when they
+exist. The profile-change warning is described in the last subsection. The device checklist is `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md`; the starter wording for review is
 `docs/STARTER_PHRASES.md` (a test keeps it identical to the code).
 
 ### Starter phrases: seed, never edit the built-in text
@@ -1294,3 +1294,22 @@ add those rules when they exist. The device checklist is `docs/LANGUAGE_VOCABULA
 | `core/WordSuggestions.kt`, `core/MiddleEllipsis.kt` | The suggestion rules; shortening a long value in the middle |
 | `data/AutocompleteHistoryRepository.kt`, `ui/SharedComponents.kt` | Load and save history through the engine; the chip row |
 | `InsertionDriftGuardTest`, `ChipRowGuardTest`, `StarterSeedWiringTest`, `StarterRestoreWiringTest` | Source-reading guards for the Android-only files that cannot be compiled without the SDK |
+
+### Profile-change warning (L7, the warning half) — rules that must stay true
+- **The decision is `core/ProfileSwapDiff.kt`** (tested). It compares each Matrix slot's **resolved** phrase under the current and the target
+  profile (`CommandRepository.profileSwapSlots`, which calls `getResolvedPhrase` twice). Never re-implement the fall-back to the DEFAULT
+  profile, never compare stored keys, and never consume a single-use target. Equality is by `trim()` only, so a different capital letter or
+  full stop counts and a space at either end does not. No differences means no warning at all (never interrupt for nothing).
+- **Only the in-app PROFILE menu asks** (`MainActivity.requestProfileChange`, then `applyProfileChange`, which holds the unchanged
+  `setActiveProfile` / watch / HELP-event steps). The home-screen widget (`OutputService` `CHANGE_PROFILE`) and a backup restore are
+  deliberately NOT wired: the widget and watch are remote controls with no screen to ask on, and a restore is already confirmed. Do not put a
+  dialog there without asking. The profile lock (D2) was decided against; a test fails if either path gains the warning.
+- **Quick Actions, Emoji, GIF and Emergency decks have no profiles**, so their buttons never move. A test fails if `quickActionsKey`,
+  `emojiDeckKey` or `emergencyKey` ever gain a profile parameter.
+- **The switch (WARN BEFORE PROFILE CHANGES, SETTINGS > PROFILES) lives in `ack_assist_prefs`** (`data/AssistPrefs.kt`, decisions in
+  `core/AssistSettings.kt`). Read with nothing stored it is **OFF**, so an existing install is unchanged; a new install and a phone after
+  DELETE DATA > SETTINGS are **seeded ON** (this seed IS in `seedFreshInstallDefaults`, unlike the starter phrases, because it changes no
+  data the person made); an install with nothing stored is offered it once. It travels in EXPORT .JSON as a nullable `AckBackup` field (null
+  leaves the device's own choice alone) and is on `BackupFingerprint.IGNORED_FIELDS`. New person-chosen switches for Section 4 belong in this file.
+- **The dialog is quiet and defaults to STAY**: no sound, no animation, nothing starts HELP; back and a tap outside are STAY; its checkbox
+  writes the same setting as SETTINGS. A voice recording bound to a slot is not part of the comparison (a known limit).
