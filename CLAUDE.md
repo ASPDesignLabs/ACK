@@ -1350,3 +1350,27 @@ exist. The profile-change warning is described in the last subsection. The devic
   FIRST named, the second confirmation being the only place `forgetAll` is called. 12 sp text, `NeonButton`, `ConfirmBodyText`.
 - **Test-writing lesson:** a brace-matching `bodyOf(...)` on an *expression-bodied* function (`fun x() = y`) silently reads the NEXT function's body. Use
   `RepoFiles.declarationOf` for those. (`ProfileWarningWiringTest.theSwitchLivesInItsOwnFile...` passed by accident before this was noticed.)
+
+### Voice list and SPEECH LANGUAGE (L3, part 1) — rules that must stay true
+- **The picker lists every language, never a voice that needs the network or is not installed** (`core/VoiceListing.usable`, tested): sorted by language
+  name (a `Collator` at PRIMARY strength with `Locale.ROOT`, so case and accents are ignored and a Turkish phone is unaffected), then voice name. ACK has no
+  network permission and promises local-only speech, so such a voice is never offered. **`MainActivity.onInit` must not filter by `language == "en"` again**
+  (a test fails if it does). A voice's **name is never changed** (a profile stores it exactly), and a voice a profile already chose stays chosen even when it is
+  no longer listed. `output/VoiceInfoMapping.kt` is the only place an Android `Voice` becomes a `VoiceInfo`.
+- **SPEECH LANGUAGE** (`core/SpeechLanguage.kt`, key `speech_language` in `ack_assist_prefs`, set in AUDIO ARCHITECT): THIS PHONE'S LANGUAGE (`DEVICE`) or ENGLISH (US)
+  (`ENGLISH_US`). It only affects a profile with **no voice of its own**; a profile's chosen voice and the cloned MY VOICE are separate and untouched.
+  **Nothing stored reads as ENGLISH (US)**, so an install that already existed speaks exactly as before (a German phone that always spoke English phrases must not
+  start reading them with a German accent). A **new install is seeded DEVICE** (`SEED_KEYS` holds it, so an interrupted seed still reads as fresh), and so is a phone
+  after DELETE DATA > SETTINGS, whose confirmation says so. Never change the read-site fallback to make a default "take".
+- **A missing language is never silence.** `OutputService.applySpeechLanguage` asks the engine and, whatever it answers, goes on: after `tts?.setLanguage(` nothing
+  may `return` or `throw` (a test checks), the engine keeps its own default, and a log line says so at most once a minute. `isTtsReady` is set whatever the
+  language result was.
+- **The engine keeps the last voice a profile chose**, so `speakWithSystemTts` remembers `voiceSetByProfile` and a profile with no voice re-asks for the language
+  (`SpeechLanguagePolicy.needsApplying`: first time, the setting changed, or a profile's voice is still set). It is asked once, not every utterance.
+- **Backup:** `AckBackup.speechLanguage: String?` (null = nothing to say, restore leaves the device's own choice alone), validated against the two stored names with a
+  specific `ACK_IMPORT` line, mapped in `ExportContents`, an ordinary setting (not on the fingerprint ignore list).
+- **No claim the app cannot keep:** `docs/PERMISSIONS.md` says what the system speech engine is and that what it does with text is outside ACK's control.
+- **Plain words (L2) are only a proposal so far:** `docs/PLAIN_LANGUAGE.md` lists the jargon labels and the Terminal-only features; no code reads it, and nothing is
+  wired in until the developer approves the wording. The developer chose the switch **off for everyone**, with one dismissible offer.
+- **A test that bars a function may not bar a whole object:** `ProfileWarningWiringTest` used to fail if `OutputService` mentioned `AssistPrefs` at all; it now bars only the
+  profile warning's own functions, because the service legitimately reads other switches in that object.
