@@ -260,7 +260,8 @@ class TrainingStore(private val root: File) {
 
     // -- after the app closed unexpectedly --------------------------------------------------------------------------------
     /**
-     * Finds sessions that were never ended, repairs the audio of the clip that was being recorded, and closes them. A repaired clip
+     * Finds sessions that were never ended, or that were ended with audio still unfinished (a recording that could not be scanned
+     * when it stopped), repairs that audio, and closes them. A repaired clip
      * is marked RECOVERED: it is not packaged until the person listens and keeps it. No audio is deleted, except a file with no
      * audio in it at all.
      */
@@ -272,7 +273,7 @@ class TrainingStore(private val root: File) {
         val problems = mutableListOf<String>()
         for (d in sessionsDir.listFiles { x -> x.isDirectory && PackageNames.SESSION_ID.matches(x.name) }.orEmpty()) {
             val s = try { readNotes(d.name) } catch (e: StoreException) { problems.add(e.message ?: d.name); continue } ?: continue
-            if (s.closed) continue
+            if (s.closed && s.clips.none { it.state == ClipState.OPEN } && s.recording?.state != ClipState.OPEN) continue
             val clips = mutableListOf<StoredClip>()
             for (c in s.clips) {
                 if (c.state != ClipState.OPEN) { clips.add(c); continue }
