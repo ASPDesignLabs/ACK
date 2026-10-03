@@ -52,8 +52,10 @@ object StatementComposerHelp {
                 title = "INSERT A LIVE REFERENCE",
                 body = "Tap a Target Computer chip to insert a live reference -- " +
                     "it always resolves to whatever's currently active in that " +
-                    "category. Long-press a chip to retarget which entry is " +
-                    "active, for real, across the whole app.",
+                    "category. It goes where your cursor is, with a space " +
+                    "added only where one is needed. Long-press a chip to " +
+                    "retarget which entry is active, for real, across the " +
+                    "whole app.",
                 action = HelpAction.Interact(AckTags.MANUAL_TARGET_QUICK_ROW),
                 targetTag = AckTags.MANUAL_TARGET_QUICK_ROW
             ),

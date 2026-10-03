@@ -69,7 +69,8 @@ object TargetComputerHelp {
                 id = "computer_tag",
                 title = "USING A TARGET IN A PHRASE",
                 body = "In the Matrix phrase editor, INSERT TARGET TAG " +
-                    "adds a tag like [COMPUTER:PEOPLE] to your template. " +
+                    "adds a tag like [COMPUTER:PEOPLE] to your template, " +
+                    "at your cursor. " +
                     "It resolves to that category's current active pick " +
                     "-- or to an authored fallback if nothing is active.",
                 action = HelpAction.Interact(AckTags.MATRIX_INSERT_COMPUTER_TAG),
