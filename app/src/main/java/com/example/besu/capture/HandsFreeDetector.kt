@@ -37,6 +37,9 @@ class HandsFreeDetector(
     /** The number of levels fed so far. */
     val hopsSeen: Int get() = hop
 
+    /** True from the moment speech has started until the clip is closed, so a screen can show that it is listening to the person. */
+    val isInSpeech: Boolean get() = state == State.SPEECH
+
     fun feed(levelDb: Double): DetectorEvent? {
         val h = hop
         hop += 1
