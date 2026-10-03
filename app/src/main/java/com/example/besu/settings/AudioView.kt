@@ -3,6 +3,9 @@ package com.example.besu.settings
 
 import com.example.besu.*
 import com.example.besu.backup.*
+import com.example.besu.core.SpeechLanguage
+import com.example.besu.core.SpeechLanguageText
+import com.example.besu.core.VoiceListing
 import com.example.besu.core.defaultsOffer
 import com.example.besu.data.*
 import com.example.besu.decks.*
@@ -79,6 +82,8 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     }
 
     var userProfile by remember { mutableStateOf(prefs.getString("USER_VOX_PROFILE", "CYBER") ?: "CYBER") }
+    // SPEECH LANGUAGE (data/AssistPrefs.kt, rules in core/SpeechLanguage.kt): the language a profile with no voice of its own speaks in.
+    var speechLanguage by remember { mutableStateOf(AssistPrefs.speechLanguage(context)) }
     var masterGain by remember { mutableFloatStateOf(prefs.getFloat("MASTER_GAIN", 1.0f)) }
 
     // A SnapshotStateList so mutating an entry in place (rename, DSP edits)
@@ -443,6 +448,27 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        // --- SPEECH LANGUAGE ---
+        // Said in words, changeable at any time, and used from the very next message (OutputService re-reads it). Choosing a voice in a profile,
+        // or MY VOICE, is separate and is not affected.
+        NeonButton(
+            SpeechLanguageText.label(speechLanguage),
+            Modifier.fillMaxWidth(),
+            mainColor = primaryColor
+        ) {
+            speechLanguage = if (speechLanguage == SpeechLanguage.DEVICE) SpeechLanguage.ENGLISH_US else SpeechLanguage.DEVICE
+            AssistPrefs.setSpeechLanguage(context, speechLanguage)
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            SpeechLanguageText.EXPLANATION,
+            color = Color.Gray,
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
         // --- CUSTOM TRAINED VOICE ---
         Text("CUSTOM VOICE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
         Spacer(modifier = Modifier.height(6.dp))
@@ -540,11 +566,17 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                         showVoicePicker = false
                         reportHelpInteraction(AckTags.AUDIO_VOICE_PICKER)
                     }.padding(12.dp)) {
-                        Text(voice.name, color = if (isSelected) primaryColor else Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                        Column {
+                            Text(voice.name, color = if (isSelected) primaryColor else Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                            // The language by name ("German (Germany)"), so a person can find theirs; the list is sorted by it.
+                            Text(VoiceListing.languageLine(voice.toVoiceInfo()), color = Color.Gray, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                        }
                     }
                     Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
                 }
             }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(VoiceListing.LIST_NOTE, color = Color.Gray, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.height(14.dp))
             Text("CANCEL", color = Color.Red, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showVoicePicker = false }.padding(8.dp))
         }

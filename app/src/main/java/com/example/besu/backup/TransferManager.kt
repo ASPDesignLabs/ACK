@@ -5,6 +5,7 @@ import com.example.besu.capture.TrainingScript
 import com.example.besu.capture.TrainingStore
 import com.example.besu.computer.*
 import com.example.besu.core.BackupFingerprint
+import com.example.besu.core.SpeechLanguage
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.geo.*
@@ -391,6 +392,7 @@ object TransferManager {
             starterPhrasesSeeded = StarterSeed.wasSeeded(context),
             warnBeforeProfileChange = AssistPrefs.profileChangeWarningStored(context),
             learnedWords = LearnedWordsRepository.exportForBackup(context),
+            speechLanguage = AssistPrefs.speechLanguageStored(context),
         )
     }
 
@@ -1038,6 +1040,12 @@ object TransferManager {
             return false
         }
 
+        // 22. SPEECH LANGUAGE: one of the two stored names, or null. Anything else is not a setting this build knows.
+        if (backup.speechLanguage != null && SpeechLanguage.fromStored(backup.speechLanguage) == null) {
+            Log.e("ACK_IMPORT", "speechLanguage is not DEVICE or ENGLISH_US: \"${backup.speechLanguage.take(20)}\" (${backup.speechLanguage.length} chars)")
+            return false
+        }
+
         return true
     }
 
@@ -1399,6 +1407,9 @@ object TransferManager {
         // The learned words are ADDED to whatever this phone has learned: a count is never lowered and no word is removed. The
         // WORD SUGGESTIONS switch is not in a backup, so this never turns the feature on.
         backup.learnedWords?.let { LearnedWordsRepository.mergeFromBackup(context, it) }
+
+        // SPEECH LANGUAGE: a backup that says nothing (null) leaves the device's own choice alone.
+        SpeechLanguage.fromStored(backup.speechLanguage)?.let { AssistPrefs.setSpeechLanguage(context, it) }
 
         // Restoring adopts the backup's active deck/profile/category
         // focus -- unchanged from every prior version of this restore

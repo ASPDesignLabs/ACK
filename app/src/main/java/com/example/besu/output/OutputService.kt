@@ -27,6 +27,7 @@ import androidx.core.app.NotificationCompat
 import com.example.besu.core.NoticeRateLimiter
 import com.example.besu.core.RelayMissStreak
 import com.example.besu.core.RelayResult
+import com.example.besu.core.SpeechLanguagePolicy
 import com.example.besu.watch.WatchAudioRelay
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.Wearable
@@ -58,6 +59,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         private const val NOTICE_INTERVAL_MS = 60_000L
         private const val NOTICE_DISPLAY_MISSING = "display_missing"
         private const val NOTICE_SILENT_DEAD_END = "silent_dead_end"
+        private const val NOTICE_SPEECH_LANGUAGE = "speech_language_missing"
     }
 
     private val noticeLimiter = NoticeRateLimiter(NOTICE_INTERVAL_MS)
@@ -68,6 +70,11 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
 
     private var tts: TextToSpeech? = null
     private var isTtsReady = false
+
+    // SPEECH LANGUAGE (core/SpeechLanguage.kt): the language tag last asked of the engine, and whether a profile has set a voice since (the engine
+    // keeps a chosen voice, so a profile with no voice would otherwise inherit it).
+    private var appliedLanguageTag: String? = null
+    private var voiceSetByProfile = false
     
     private val jsonParser = Json { 
         ignoreUnknownKeys = true 
@@ -391,9 +398,31 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            tts?.setLanguage(Locale.US)
+            applySpeechLanguage()
             isTtsReady = true
             drainQueue()
+        }
+    }
+
+    /**
+     * Asks the speech engine for the SPEECH LANGUAGE, only when it needs asking (first time, the setting changed, or a profile's voice is still set
+     * from earlier). If the engine does not have the language it keeps its own default: speaking never stops because a language is missing.
+     */
+    private fun applySpeechLanguage() {
+        val deviceTag = Locale.getDefault().toLanguageTag()
+        val tag = SpeechLanguagePolicy.localeTag(AssistPrefs.speechLanguage(this), deviceTag)
+        if (!SpeechLanguagePolicy.needsApplying(tag, appliedLanguageTag, voiceSetByProfile)) return
+        val result = try {
+            tts?.setLanguage(Locale.forLanguageTag(tag))
+        } catch (_: Exception) {
+            null
+        }
+        appliedLanguageTag = tag
+        voiceSetByProfile = false
+        if (result == null || !SpeechLanguagePolicy.engineAccepted(result)) {
+            if (noticeLimiter.shouldNotify(NOTICE_SPEECH_LANGUAGE, SystemClock.elapsedRealtime())) {
+                broadcastLog("SPEECH LANGUAGE NOT AVAILABLE ON THIS PHONE'S ENGINE -- USING THE ENGINE'S OWN DEFAULT", "SYS")
+            }
         }
     }
 
@@ -660,9 +689,13 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 if (desiredVoice != null && tts?.voice != desiredVoice) {
                     tts?.voice = desiredVoice
                 }
+                if (desiredVoice != null) voiceSetByProfile = true
             } catch (_: Exception) {
                 // Fall back to the current system TTS voice.
             }
+        } else {
+            // A profile with no voice of its own speaks in the SPEECH LANGUAGE (a change in AUDIO ARCHITECT counts from the next message).
+            applySpeechLanguage()
         }
 
         val uniqueId = UUID.randomUUID().toString()

@@ -104,7 +104,10 @@ class ProfileWarningWiringTest {
     fun theWidgetAndARestoreAreNotAskedToWarn_becauseTheyHaveNoScreenOrAreAlreadyConfirmed() {
         val service = source("output/OutputService.kt")
         assertFalse(service.contains("ProfileSwapDiff"))
-        assertFalse(service.contains("AssistPrefs"))
+        // The service reads other switches in AssistPrefs now (SPEECH LANGUAGE), so what must stay out is the profile warning's own switch.
+        assertFalse(service.contains("isProfileChangeWarningOn"))
+        assertFalse(service.contains("profileChangeWarningStored"))
+        assertFalse(service.contains("setProfileChangeWarning"))
         val widget = source("settings/ProfileWidget.kt")
         assertFalse(widget.contains("ProfileSwapDiff"))
         // restore applies the file's active profile directly, as before

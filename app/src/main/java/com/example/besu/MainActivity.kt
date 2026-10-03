@@ -5,6 +5,7 @@ import com.example.besu.backup.BackupReminder
 import com.example.besu.core.ProfileSwapDiff
 import com.example.besu.core.SlotChange
 import com.example.besu.core.TextInsertion
+import com.example.besu.core.VoiceListing
 import com.example.besu.composer.*
 import com.example.besu.computer.*
 import com.example.besu.data.*
@@ -158,10 +159,14 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             try {
-                val voices = ttsSystem?.voices?.filter { it.locale.language == "en" }?.sortedBy { it.name }
-                if (voices != null) {
+                // Every language, without voices that need the network or are not installed (core/VoiceListing.kt decides, tested), sorted
+                // by language and then by name. This used to keep English voices only.
+                val all = ttsSystem?.voices
+                if (all != null) {
+                    val byName = all.associateBy { it.name }
+                    val usable = VoiceListing.usable(all.map { it.toVoiceInfo() })
                     availableSystemVoices.clear()
-                    availableSystemVoices.addAll(voices)
+                    availableSystemVoices.addAll(usable.mapNotNull { byName[it.name] })
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }

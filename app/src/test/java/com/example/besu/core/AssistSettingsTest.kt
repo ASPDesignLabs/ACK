@@ -36,10 +36,15 @@ class AssistSettingsTest {
     }
 
     @Test
-    fun theSeedWritesOnlyTheSwitch_notTheDismissedNote() {
+    fun theSeedWritesTheTwoNewInstallDefaults_notTheDismissedNotes() {
         // The dismissed note is only ever written by a tap, so it is not a key the seed writes.
-        assertEquals(setOf("warn_profile_change"), AssistSettings.SEED_KEYS)
+        assertEquals(setOf("warn_profile_change", "speech_language"), AssistSettings.SEED_KEYS)
         assertFalse(AssistSettings.KEY_WARN_OFFER_DISMISSED in AssistSettings.SEED_KEYS)
+    }
+
+    @Test
+    fun theSpeechLanguageKeyIsStable() {
+        assertEquals("speech_language", AssistSettings.KEY_SPEECH_LANGUAGE)
     }
 
     @Test

@@ -148,7 +148,11 @@ data class AckBackup(
     // The words behind WORD SUGGESTIONS (data/LearnedWordsRepository.kt): null on a backup made before it existed, or by a phone that learned
     // nothing. These are words the person typed, so EXPORT .JSON names them in its warning (core/ExportContents.kt). Restore only ADDS: it never
     // lowers a count or removes a word. The on/off switch is a choice about each phone and is deliberately not here.
-    val learnedWords: WordModelData? = null
+    val learnedWords: WordModelData? = null,
+
+    // SPEECH LANGUAGE (data/AssistPrefs.kt): "DEVICE" or "ENGLISH_US"; null on a backup made before it existed, or by a phone that never stored one
+    // ("nothing to say about this field": restore leaves the device's own choice alone).
+    val speechLanguage: String? = null
 )
 
 @Serializable

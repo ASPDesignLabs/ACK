@@ -68,7 +68,7 @@ object StorageCatalogue {
     const val FILE_INSTALL_STATE = "ack_install_state"
 
     private const val DEFAULTS_AFTER =
-        "AFTERWARDS ACK STARTS WITH ITS DEFAULT SETTINGS: THE ORGANIC VOICE AND THE FULL TEXT DISPLAY PRESET."
+        "AFTERWARDS ACK STARTS WITH ITS DEFAULT SETTINGS: THE ORGANIC VOICE, THE FULL TEXT DISPLAY PRESET, AND SPEECH IN THIS PHONE'S OWN LANGUAGE."
 
     // The Matrix deck is given ACK's neutral starter phrases again after this area is deleted (data/StarterSeed.kt), so a wiped
     // phone does not fall back to the developer's own built-in wording.

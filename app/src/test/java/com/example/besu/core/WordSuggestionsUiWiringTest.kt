@@ -223,7 +223,10 @@ class WordSuggestionsUiWiringTest {
     fun theNewTagsAreNamedLikeTheirValues_andEveryOneIsUsed() {
         val tags = source("AckTags.kt")
         val used = allSources().filter { !it.first.endsWith("/AckTags.kt") }.joinToString("\n") { it.second }
-        for (tag in listOf("COMPOSER_WORD_STRIP", "COMPOSER_WORD_OFFER", "WORD_SUGGESTIONS_SWITCH", "WORD_SUGGESTIONS_FORGET_BTN")) {
+        // Every tag in these two families, found rather than listed, so a new one cannot be added unused.
+        val found = Regex("""const val ((?:COMPOSER_WORD|WORD_SUGGESTIONS)_\w+) =""").findAll(tags).map { it.groupValues[1] }.toList()
+        assertTrue("expected the four word-suggestion tags, found $found", found.size >= 4)
+        for (tag in found) {
             assertTrue("$tag must be declared as const val $tag = \"$tag\"", tags.contains("const val $tag = \"$tag\""))
             assertTrue("$tag is declared but never used", used.contains("AckTags.$tag"))
         }
