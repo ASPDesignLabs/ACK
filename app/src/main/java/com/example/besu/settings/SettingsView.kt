@@ -369,12 +369,7 @@ fun SettingsView(
     }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        uri?.let {
-            try {
-                val jsonStr = TransferManager.generateBackupJson(context)
-                context.contentResolver.openOutputStream(it)?.use { os -> os.write(jsonStr.toByteArray()) }
-            } catch (e: Exception) { }
-        }
+        uri?.let { BackupExporter.report(context, BackupExporter.writeBackup(context, it)) }
     }
 
     // Whole-protocol restore -- unlike importLauncher above (which only ever

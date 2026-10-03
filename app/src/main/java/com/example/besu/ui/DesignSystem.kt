@@ -781,21 +781,13 @@ fun TerminalView(
     }
 
     // /backup confirm reuses PROTOCOL's own export flow exactly --
-    // TransferManager.generateBackupJson written to wherever the system
-    // document picker points.
+    // BackupExporter.writeBackup writes to wherever the system document
+    // picker points, and report() shows the result (Toast + Terminal line).
     val backupExportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         if (uri != null) {
-            try {
-                val jsonStr = TransferManager.generateBackupJson(context)
-                context.contentResolver.openOutputStream(uri)?.use { os ->
-                    os.write(jsonStr.toByteArray())
-                }
-                logTerminalLocal(context, "BACKUP EXPORTED")
-            } catch (e: Exception) {
-                logTerminalLocal(context, "BACKUP EXPORT FAILED: ${e.message}", "CMD_ERR")
-            }
+            BackupExporter.report(context, BackupExporter.writeBackup(context, uri))
         } else {
             logTerminalLocal(context, "BACKUP CANCELLED", "CMD_WARN")
         }
