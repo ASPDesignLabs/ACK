@@ -130,6 +130,18 @@ class SpeechLanguageWiringTest {
         for (m in Regex("""fontSize = (\d+)\.sp""").findAll(pickerBlock)) assertTrue("small text in the picker: ${m.value}", m.groupValues[1].toInt() >= 12)
     }
 
+    @Test
+    fun theSpeechLanguageControlAndItsExplanationUseNoTextUnder12sp() {
+        // Sliced from the raw source: the markers are comments, which code() removes.
+        val raw = source("settings/AudioView.kt")
+        val from = raw.indexOf("// --- SPEECH LANGUAGE ---")
+        val to = raw.indexOf("// --- CUSTOM TRAINED VOICE ---", from)
+        assertTrue("the SPEECH LANGUAGE block was not found", from >= 0 && to > from)
+        val sizes = Regex("""fontSize = (\d+)\.sp""").findAll(raw.substring(from, to)).map { it.groupValues[1].toInt() }.toList()
+        assertTrue("the explanation must have an explicit size", sizes.isNotEmpty())
+        assertTrue("text under 12 sp in the SPEECH LANGUAGE block: $sizes", sizes.all { it >= 12 })
+    }
+
     // ---- backup, checks and the wipe -----------------------------------------------------------------------------------------
 
     @Test
