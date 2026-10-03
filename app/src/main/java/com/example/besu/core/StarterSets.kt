@@ -1,9 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.core
 
-/** What a starter phrase is for. A fresh install should cover every kind in [StarterSets.REQUIRED_FUNCTIONS]. */
-enum class StarterFunction {
-    YES, NO, UNSURE, HELP, REPAIR, TURN_HOLDING, NAME_OR_ID, BREAK, BOUNDARY, SOCIAL
+/**
+ * What a starter phrase is for. A fresh install should cover every kind in [StarterSets.REQUIRED_FUNCTIONS]. [plain] is the
+ * wording the review document uses for it.
+ */
+enum class StarterFunction(val plain: String) {
+    YES("yes"),
+    NO("no"),
+    UNSURE("not sure"),
+    HELP("help"),
+    REPAIR("repair (ask to say it again)"),
+    TURN_HOLDING("turn-holding (I'm typing)"),
+    NAME_OR_ID("name or ID"),
+    BREAK("break"),
+    BOUNDARY("boundary"),
+    SOCIAL("social")
 }
 
 /**
@@ -109,4 +121,24 @@ object StarterSets {
      * restore rule and InstallClassifier.SEED_KEYS cannot disagree about it.
      */
     fun recordKey(path: String): String = "seeded:$path"
+
+    /**
+     * The two tables docs/STARTER_PHRASES.md shows, as Markdown. StarterPhrasesDocTest compares the document with this text,
+     * so what a reviewer reads is exactly what the app seeds.
+     */
+    fun documentTables(): String = buildString {
+        appendLine("**The 12 Matrix gestures** (each gesture stays where it is; only the words are new)")
+        appendLine()
+        appendLine("| Pose | Gesture | Says | Kind |")
+        appendLine("|---|---|---|---|")
+        matrixPhrases.forEach { appendLine("| ${it.pose} | ${it.gesture} | ${it.phrase} | ${it.function.plain} |") }
+        appendLine()
+        appendLine("**The $QUICK_ACTIONS_DECK_NAME Quick Actions deck** (3 groups of 4 buttons)")
+        appendLine()
+        appendLine("| Group | Button | Says | Kind |")
+        appendLine("|---|---|---|---|")
+        quickActionsGroups.forEach { g ->
+            g.slots.forEach { appendLine("| ${g.label} | ${it.label} | ${it.phrase} | ${it.function.plain} |") }
+        }
+    }
 }
