@@ -51,7 +51,10 @@ class ScriptCaptureEngineTest {
                 sourceRequested = "UNPROCESSED", thresholdDbfs = thr, scriptId = "scr-test", scriptTitle = "Test", cardsTotal = n,
             ))
         }
-        return ScriptCaptureEngine(store, sid, cards(n), pending, rate, thr, endWait, { "2026-10-02T18:05:00Z" }, { free.get() }, listener)
+        return ScriptCaptureEngine(
+            store, sid, cards(n), pending, rate, thr, endSilenceHops = endWait, nowUtc = { "2026-10-02T18:05:00Z" },
+            freeBytes = { free.get() }, listener = listener,
+        )
     }
 
     private fun quiet(seconds: Double) = Triple(seconds, 0, 24)
@@ -230,6 +233,31 @@ class ScriptCaptureEngineTest {
     }
 
     @Test
+    fun theThumpOfATapJustAfterRedoOrResumeIsNotHeardAsSpeech() {
+        val e = engine(2)
+        e.start()
+        // card 1 read and kept; the person taps REDO LAST, which thumps the phone for 0.2 s; then they read it again
+        feedAll(e, Vectors.square(listOf(quiet(1.0), speech(2.0), quiet(1.3)), rate), 4800)
+        assertTrue(e.redoLast())
+        val second = Vectors.square(listOf(speech(0.2, 20000), quiet(1.0), speech(2.0), quiet(2.0)), rate)
+        feedAll(e, second, 4800)
+        val clips = store.getSession(sid)!!.clips.filter { it.state == ClipState.DONE }
+        assertEquals("the first try was set aside; the second is the one kept", listOf(1), clips.map { it.card })
+        assertEquals(listOf(2), clips.map { it.attempt })
+        // Hops 0 to 29 of what was heard after the tap are ignored. The speech starts at hop 120, so its lead-in begins at hop 70 and the
+        // tail ends 40 hops after its last voiced hop (319), at 360. The thump is nowhere in the clip.
+        assertArrayEquals(slice(second, 70, 360), clipSamples(clips.last().index))
+        assertTrue(clipSamples(clips.last().index).none { Math.abs(it.toInt()) == 20000 })
+
+        // a tap on RESUME is treated the same way: the thump is not mistaken for a card being read
+        e.pause()
+        e.resume()
+        feedAll(e, Vectors.square(listOf(speech(0.2, 20000), quiet(25.0)), rate), 4800)
+        assertTrue(events.toString(), events.contains("paused IDLE"))
+        assertEquals("the thump did not become a clip", 1, store.getSession(sid)!!.clips.count { it.state == ClipState.DONE })
+    }
+
+    @Test
     fun runningOutOfRoomPausesWithoutLosingWhatWasKept() {
         val e = engine(3)
         e.start()
@@ -238,8 +266,10 @@ class ScriptCaptureEngineTest {
         feedAll(e, Vectors.square(listOf(quiet(1.0), speech(1.0), quiet(3.0)), rate), 4800)
         assertTrue(events.toString(), events.contains("paused DISK_FULL"))
         val clips = store.getSession(sid)!!.clips
-        assertEquals(listOf(ClipState.DONE), clips.map { it.state })
+        assertEquals("the clip that was kept is still kept", ClipState.DONE, clips.first().state)
         assertTrue(store.clipFile(sid, 1).isFile)
+        assertTrue("whatever was being said when the room ran out is kept on disk, set aside", clips.drop(1).all { it.state == ClipState.REDONE && store.clipFile(sid, it.index).isFile })
+        assertTrue(clips.none { it.state == ClipState.OPEN })
     }
 
     @Test

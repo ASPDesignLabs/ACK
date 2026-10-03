@@ -40,10 +40,17 @@ class ScriptCaptureEngine(
     private val sampleRate: Int,
     private val thresholdDb: Double,
     private val endSilenceHops: Int = CaptureConstants.END_SILENCE_HOPS,
+    /** Hops of audio ignored after the person touched the screen (start, resume, redo), so a tap's thump is not recorded as speech. */
+    private val settleHops: Int = SETTLE_HOPS,
     private val nowUtc: () -> String,
     private val freeBytes: () -> Long = { Long.MAX_VALUE },
     private val listener: CaptureListener,
 ) {
+    companion object {
+        /** 0.3 s: long enough for the thump and buzz of a fingertip tap to die away before listening starts. */
+        const val SETTLE_HOPS = 30
+    }
+
     private class OpenCard(val cardIndex: Int, val clip: StoredClip, val file: File, val writer: WavStreamWriter, val originHop: Int)
 
     private val hop = sampleRate / 100
@@ -53,6 +60,7 @@ class ScriptCaptureEngine(
     private val hopBuf = ShortArray(hop)
     private var hopFill = 0
     private var hopsSinceRoomCheck = 0
+    private var settleLeft = 0
     private var lastKept: Pair<StoredClip, Int>? = null
 
     @Volatile
@@ -136,10 +144,11 @@ class ScriptCaptureEngine(
     }
 
     // -- inside -----------------------------------------------------------------------------------------------------------
-    private fun beginListening() {
+    private fun beginListening(afterTouch: Boolean = true) {
         detector.resumeAt(detector.hopsSeen)
         hopFill = 0
         hopsSinceRoomCheck = 0
+        settleLeft = if (afterTouch) settleHops else 0
         isPaused = false
         openCard(detector.hopsSeen, null)
     }
@@ -155,10 +164,15 @@ class ScriptCaptureEngine(
 
     private fun processHop() {
         val o = open ?: return
-        o.writer.write(hopBuf, 0, hop)
         var sum = 0.0
         for (k in 0 until hop) { val v = hopBuf[k].toDouble(); sum += v * v }
         val level = LevelMath.levelDb(Math.sqrt(sum / hop))
+        if (settleLeft > 0) {                                  // not written, not listened to, not counted: the card's audio starts after it
+            settleLeft--
+            listener.onLevel(level, false)                     // but the meter keeps moving, so the screen never looks frozen
+            return
+        }
+        o.writer.write(hopBuf, 0, hop)
         val event = detector.feed(level)
         listener.onLevel(level, detector.isInSpeech)
         if (++hopsSinceRoomCheck >= 200) {
