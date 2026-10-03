@@ -73,7 +73,6 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     }
 
     var userProfile by remember { mutableStateOf(prefs.getString("USER_VOX_PROFILE", "CYBER") ?: "CYBER") }
-    var cadenceAmount by remember { mutableFloatStateOf(prefs.getFloat("VOX_CADENCE", 0.0f)) }
     var masterGain by remember { mutableFloatStateOf(prefs.getFloat("MASTER_GAIN", 1.0f)) }
 
     // A SnapshotStateList so mutating an entry in place (rename, DSP edits)
@@ -102,7 +101,6 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     fun syncDsp() {
         prefs.edit()
             .putString("USER_VOX_PROFILE", userProfile)
-            .putFloat("VOX_CADENCE", cadenceAmount)
             .putFloat("MASTER_GAIN", masterGain)
             .putString("CUSTOM_VOICES", Json.encodeToString(customVoices.toList()))
             .apply()
@@ -110,7 +108,6 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         val intent = Intent(context, OutputService::class.java).apply {
             action = "UPDATE_DSP"
             putExtra("user_profile", userProfile)
-            putExtra("cadence", cadenceAmount)
             putExtra("master_gain", masterGain)
             putExtra("custom_voices_json", Json.encodeToString(customVoices.toList()))
         }
@@ -255,18 +252,6 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             value = masterGain,
             valueRange = 0f..2f,
             onValueChange = { masterGain = it },
-            onValueChangeFinished = {
-                syncDsp()
-                reportHelpInteraction(AckTags.AUDIO_MASTER_GAIN)
-            },
-            modifier = Modifier.helpTarget(AckTags.AUDIO_MASTER_GAIN, primaryColor),
-            colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor, inactiveTrackColor = Color.DarkGray)
-        )
-
-        Text("GLOBAL CADENCE: ${(cadenceAmount * 100).toInt()}%", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-        Slider(
-            value = cadenceAmount,
-            onValueChange = { cadenceAmount = it },
             onValueChangeFinished = {
                 syncDsp()
                 reportHelpInteraction(AckTags.AUDIO_MASTER_GAIN)

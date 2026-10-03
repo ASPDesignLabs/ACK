@@ -32,7 +32,6 @@ import java.util.Queue
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.sin
-import kotlin.random.Random
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.PI
 import kotlin.math.pow
@@ -60,7 +59,6 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
     // Global Config
     private var activeProfileId = "CYBER"
     private var tutorialProfileId = "MECH"
-    private var cadenceFactor = 0f
     private var forceSpeaker = false
     // When on, regular output still shows its visual prompt as normal but
     // never synthesizes or plays audio -- for contexts where sound itself
@@ -195,7 +193,6 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         val prefs = getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
         activeProfileId = prefs.getString("USER_VOX_PROFILE", "CYBER") ?: "CYBER"
         tutorialProfileId = prefs.getString("TUT_VOX_PROFILE", "MECH") ?: "MECH"
-        cadenceFactor = prefs.getFloat("VOX_CADENCE", 0.0f)
         forceSpeaker = prefs.getBoolean("FORCE_SPEAKER", false)
         silentOutput = prefs.getBoolean("SILENT_OUTPUT", false)
         guideVoxEnabled = prefs.getBoolean("TUTORIAL_VOX", true)
@@ -219,7 +216,6 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 activeProfileId = intent.getStringExtra("user_profile") ?: activeProfileId
                 tutorialProfileId = intent.getStringExtra("tutorial_profile")
                 ?: tutorialProfileId
-                cadenceFactor = intent.getFloatExtra("cadence", cadenceFactor)
                 forceSpeaker = intent.getBooleanExtra("speaker", forceSpeaker)
                 silentOutput = intent.getBooleanExtra("silent_output", silentOutput)
                 guideVoxEnabled = intent.getBooleanExtra("guide_vox", guideVoxEnabled)
@@ -529,24 +525,15 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             return
         }
 
-        val effectiveCadence = if (isTutorialOverride) {
-            0.0f
-        } else {
-            cadenceFactor
-        }
-
-        val finalText = if (effectiveCadence > 0.1f) {
-            applyCadenceWarp(rawText, effectiveCadence)
-        } else {
-            rawText
-        }
-
+        // Speech is always the plain text. (The old Global Cadence setting used to wrap words in
+        // per-word speech markup at random; it was retired because the same message sounded
+        // different each time, and the markup broke on & and <.)
         if (profile.useCustomVoice) {
             // sherpa-onnx generation is synchronous/blocking and can take
             // real time on phone CPU -- must never run on this (the main)
             // thread. Mirrors playRecording's own Thread{} pattern below.
             Thread {
-                val generated = PiperVoiceEngine.generate(applicationContext, finalText)
+                val generated = PiperVoiceEngine.generate(applicationContext, rawText)
                 if (generated != null) {
                     val (customPcm, customSampleRate) = generated
                     // Gain-only, same as a real recording (see playRecording) --
@@ -579,13 +566,13 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                     // model hiccuped -- fall back to the system voice for
                     // this one utterance rather than drop it.
                     broadcastLog("CUSTOM VOICE SYNTHESIS FAILED -- FALLING BACK", "ERR")
-                    speakWithSystemTts(profile, targetId, finalText, emergency)
+                    speakWithSystemTts(profile, targetId, rawText, emergency)
                 }
             }.start()
             return
         }
 
-        speakWithSystemTts(profile, targetId, finalText, emergency)
+        speakWithSystemTts(profile, targetId, rawText, emergency)
     }
 
     // The original (and still default) synthesis path: Android's system
@@ -1207,15 +1194,6 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         } catch (e: Exception) {
             // Permission might be denied on some devices, ignore safe failure
         }
-    }
-
-    private fun applyCadenceWarp(text: String, intensity: Float): String {
-        val sb = StringBuilder("<speak>")
-        text.split(" ").forEach { word ->
-            if (Random.nextFloat() < intensity) sb.append("<prosody rate=\"${if (Random.nextBoolean()) "x-fast" else "slow"}\">$word</prosody> ") else sb.append("$word ")
-        }
-        sb.append("</speak>")
-        return sb.toString()
     }
 
     private fun broadcastLog(msg: String, type: String, replayText: String? = null) {

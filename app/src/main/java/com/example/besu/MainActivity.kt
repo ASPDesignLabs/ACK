@@ -403,7 +403,6 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         intent.action = "UPDATE_DSP"
         intent.putExtra("user_profile", prefs.getString("USER_VOX_PROFILE", "CYBER"))
         intent.putExtra("tutorial_profile", prefs.getString("TUT_VOX_PROFILE", "MECH"))
-        intent.putExtra("cadence", prefs.getFloat("VOX_CADENCE", 0f))
         intent.putExtra("speaker", prefs.getBoolean("FORCE_SPEAKER", false))
         intent.putExtra("guide_vox", prefs.getBoolean("TUTORIAL_VOX", true))
         intent.putExtra("master_gain", prefs.getFloat("MASTER_GAIN", 1.0f))
