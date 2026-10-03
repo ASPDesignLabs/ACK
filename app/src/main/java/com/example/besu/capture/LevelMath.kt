@@ -85,6 +85,21 @@ object LevelMath {
         return merged.filter { it[1] - it[0] >= CaptureConstants.REGION_MIN_LEN_HOPS }.toMutableList()
     }
 
+    /**
+     * The loudness notes worked out from running totals: the largest absolute sample, the sum of the squares of every sample, how
+     * many samples there were, and how many reached full scale. One calculation for clips held in memory and for long recordings
+     * read in pieces, so the two can never round differently.
+     */
+    fun metricsFromTotals(peak: Int, sumSquares: Double, count: Long, clipped: Int, speech: SpeechSpan?): ClipMetrics {
+        val rms = if (count <= 0L) 0.0 else sqrt(sumSquares / count)
+        return ClipMetrics(
+            peakDbfs = rnd(floorAtMinus120(levelDb(peak.toDouble())), 1),
+            rmsDbfs = rnd(floorAtMinus120(levelDb(rms)), 1),
+            clippedSamples = clipped,
+            speech = speech,
+        )
+    }
+
     /** Peak, average level, clipped samples and the speech span for one clip's samples. */
     fun clipMetrics(samples: ShortArray, rate: Int, thr: Double): ClipMetrics {
         var peak = 0
@@ -96,14 +111,8 @@ object LevelMath {
             if (a >= 32767) clipped++
             sum += s.toDouble() * s.toDouble()
         }
-        val rms = if (samples.isEmpty()) 0.0 else sqrt(sum / samples.size)
         val regions = regionsHops(hopLevels(samples, rate), thr)
         val span = if (regions.isEmpty()) null else SpeechSpan(sec(regions.first()[0].toDouble()), sec(regions.last()[1].toDouble()))
-        return ClipMetrics(
-            peakDbfs = rnd(floorAtMinus120(levelDb(peak.toDouble())), 1),
-            rmsDbfs = rnd(floorAtMinus120(levelDb(rms)), 1),
-            clippedSamples = clipped,
-            speech = span,
-        )
+        return metricsFromTotals(peak, sum, samples.size.toLong(), clipped, span)
     }
 }
