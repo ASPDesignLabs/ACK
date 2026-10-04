@@ -1491,7 +1491,15 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 context = context,
                                 primaryColor = primaryColor,
                                 isFullscreen = composerFullscreen,
-                                onToggleFullscreen = { composerFullscreen = !composerFullscreen }
+                                onToggleFullscreen = { composerFullscreen = !composerFullscreen },
+                                onShowManualOverride = {
+                                    // Classic Manual Override needs MainActivity's own header for its quick-insert takeover, so leave full screen first.
+                                    composerFullscreen = false
+                                    showLegacyManualOverride = true
+                                    helpManager.onEvent(
+                                        HelpEvent.WatchInput("MANUAL_OVERRIDE_OPENED")
+                                    )
+                                }
                             )
                             "AUDIO" -> AudioArchitectView(context, primaryColor, systemVoices)
                             "TARGETS" -> key(computerRevision) { TargetView(context, primaryColor) }

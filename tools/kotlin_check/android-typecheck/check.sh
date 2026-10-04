@@ -10,6 +10,13 @@ cp -r "$A/capture" "$A/voicecapture" "$STAGE/com/example/besu/"
 cp "$A/AckTags.kt" "$STAGE/com/example/besu/"
 for f in HelpCore HelpManager HelpTarget HelpOfferBanner RecordTrainingDataHelp; do cp "$A/help/$f.kt" "$STAGE/com/example/besu/help/"; done
 cp "$A/ui/OverlayStyle.kt" "$STAGE/com/example/besu/ui/"
+# PLAIN WORDS' Terminal controls: the screen file plus the plain-Kotlin model it uses and the dialog text helper it calls.
+mkdir -p "$STAGE/com/example/besu/core" "$STAGE/com/example/besu/settings"
+cp "$A/core/SendFlags.kt" "$A/core/PlainLabels.kt" "$STAGE/com/example/besu/core/"
+cp "$A/ui/TerminalPlainControls.kt" "$STAGE/com/example/besu/ui/"
+cp "$A/settings/ConfirmDialogParts.kt" "$STAGE/com/example/besu/settings/"
+# R is generated from the real strings file, so a name the screen uses that does not exist fails here.
+{ echo "package com.example.besu"; echo "object R { object string {"; grep -o 'name="[A-Za-z0-9_]*"' "$A/../../../../res/values/strings.xml" | sed 's/name="\(.*\)"/    const val \1 = 0/'; echo "} }"; } > "$STAGE/com/example/besu/R.kt"
 cp "$A/ui/theme/Color.kt" "$STAGE/com/example/besu/ui/theme/"
 cp -r "$H/stubs/." "$STAGE/"
 cd "$H"

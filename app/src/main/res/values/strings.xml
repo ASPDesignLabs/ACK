@@ -184,8 +184,27 @@
     <!-- PLAIN WORDS switch (SETTINGS, top). Worded the same in both modes on purpose, so it can always be found: it never goes through the label table. -->
     <string name="plain_words_switch_on">PLAIN WORDS: ON</string>
     <string name="plain_words_switch_off">PLAIN WORDS: OFF</string>
-    <string name="plain_words_explanation">WHEN ON, ACK SHOWS EVERYDAY NAMES INSTEAD OF ITS OWN WORDS (FOR EXAMPLE PEOPLE AND PLACES INSTEAD OF TARGET COMPUTER), AND SHOWS BUTTONS FOR THINGS THAT OTHERWISE NEED A TYPED COMMAND. NOTHING WORKS DIFFERENTLY: ONLY WHAT THINGS ARE CALLED. IT TAKES EFFECT AT ONCE, AND THE TYPED COMMANDS KEEP WORKING.</string>
+    <string name="plain_words_explanation">WHEN ON, ACK SHOWS EVERYDAY NAMES INSTEAD OF ITS OWN WORDS (FOR EXAMPLE PEOPLE AND PLACES INSTEAD OF TARGET COMPUTER), AND SHOWS BUTTONS FOR THINGS THAT OTHERWISE NEED A TYPED COMMAND, SUCH AS SEND QUIETLY. NOTHING CHANGES HOW A MESSAGE GOES OUT UNLESS YOU TURN ONE OF THOSE ON. IT TAKES EFFECT AT ONCE, AND THE TYPED COMMANDS KEEP WORKING.</string>
     <string name="plain_words_offer">NEW: PLAIN WORDS SHOWS EVERYDAY NAMES FOR ACK\'S OWN WORDS, AND BUTTONS FOR THINGS THAT NEED A TYPED COMMAND. IT IS OFF AND NOTHING CHANGES UNLESS YOU TURN IT ON.</string>
     <string name="plain_words_turn_on">TURN ON</string>
     <string name="plain_words_not_now">NOT NOW</string>
+
+    <!-- Buttons and switches PLAIN WORDS adds for what used to need a typed command (docs/PLAIN_LANGUAGE.md, section B). They exist only in plain
+         mode, so they are single strings, not standard/plain pairs. -->
+    <string name="plain_ctl_send_options">SEND OPTIONS</string>
+    <string name="plain_ctl_send_options_on">SEND OPTIONS ON: %1$s</string>
+    <string name="plain_ctl_send_quietly">SEND QUIETLY</string>
+    <string name="plain_ctl_send_no_history">DO NOT SAVE IN HISTORY</string>
+    <string name="plain_ctl_send_keep">KEEP ON SCREEN UNTIL I CLEAR IT</string>
+    <string name="plain_ctl_send_emergency">EMERGENCY</string>
+    <string name="plain_ctl_on">ON</string>
+    <string name="plain_ctl_off">OFF</string>
+    <string name="plain_ctl_options_hint">THESE STAY ON UNTIL YOU TURN THEM OFF. CLOSING ACK TURNS THEM OFF.</string>
+    <string name="plain_ctl_whats_new">WHAT\'S NEW</string>
+    <string name="plain_ctl_clear_history">CLEAR HISTORY</string>
+    <string name="plain_ctl_clear_history_body">THIS REMOVES EVERY LINE OF THE HISTORY SHOWN ON THIS SCREEN. IT CANNOT BE UNDONE.</string>
+    <string name="plain_ctl_cancel">CANCEL</string>
+    <string name="plain_ctl_fix_problems">FIX PROBLEMS</string>
+    <string name="plain_ctl_fix_problems_hint">RESTARTS THE PARTS OF ACK THAT SPEAK AND LISTEN FOR A SHAKE. NOTHING IS DELETED. A MESSAGE BEING SPOKEN RIGHT NOW WILL STOP.</string>
+    <string name="plain_ctl_fix_problems_done">ACK\'S BACKGROUND PARTS WERE RESTARTED.</string>
 </resources>

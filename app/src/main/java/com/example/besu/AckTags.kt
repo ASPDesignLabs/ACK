@@ -190,6 +190,15 @@ object AckTags {
     // PLAIN WORDS (settings/SettingsView.kt, top of SETTINGS).
     const val PLAIN_WORDS_SWITCH = "PLAIN_WORDS_SWITCH"
 
+    // The Terminal screen's plain-mode controls (ui/TerminalPlainControls.kt): SEND OPTIONS, WHAT'S NEW, CLEAR HISTORY.
+    const val TERMINAL_SEND_OPTIONS = "TERMINAL_SEND_OPTIONS"
+    const val TERMINAL_WHATS_NEW = "TERMINAL_WHATS_NEW"
+    const val TERMINAL_CLEAR_HISTORY = "TERMINAL_CLEAR_HISTORY"
+
+    // The other two plain-mode buttons: the Type tab's way into classic Manual Override, and SETTINGS' FIX PROBLEMS.
+    const val TYPE_CLASSIC_BUTTON = "TYPE_CLASSIC_BUTTON"
+    const val SETTINGS_FIX_PROBLEMS = "SETTINGS_FIX_PROBLEMS"
+
     // RECORD TRAINING DATA (voicecapture/*, entered from AUDIO ARCHITECT's
     // CUSTOM VOICE section).
     const val TRAIN_ENTRY_BTN = "TRAIN_ENTRY_BTN"

@@ -41,6 +41,15 @@ class PlainWordsWiringTest {
         error("unbalanced braces in $name")
     }
 
+    /** The PLAIN WORDS item of SETTINGS: from its first line to the next `item {` (FIX PROBLEMS and the other sections are items of their own). */
+    private fun plainItem(settings: String): String {
+        val start = settings.indexOf("val plainOn = PlainWordsState.on")
+        assertTrue("the PLAIN WORDS item was not found", start >= 0)
+        val end = settings.indexOf("item {", start)
+        assertTrue(end > start)
+        return settings.substring(start, end)
+    }
+
     // ---- the saved choice --------------------------------------------------------------------------------------------------------
 
     @Test
@@ -90,7 +99,7 @@ class PlainWordsWiringTest {
     fun flippingItNeverRestartsTheApp_theRestartPatternIsNotUsed() {
         assertFalse(code(source("ui/PlainWords.kt")).contains("restartApp"))
         val settings = code(source("settings/SettingsView.kt"))
-        val item = settings.substring(settings.indexOf("val plainOn = PlainWordsState.on"), settings.indexOf("Text(\"AUDIO OUTPUT ROUTING\""))
+        val item = plainItem(settings)
         assertFalse(item.contains("restartApp"))
         assertFalse(item.contains("pendingRestart"))
         assertFalse(item.contains("Toast"))
@@ -123,7 +132,7 @@ class PlainWordsWiringTest {
         val switchAt = settings.indexOf("AckTags.PLAIN_WORDS_SWITCH")
         val firstSection = settings.indexOf("Text(\"AUDIO OUTPUT ROUTING\"")
         assertTrue("PLAIN WORDS must come before every other section", switchAt in 0 until firstSection)
-        val item = settings.substring(settings.indexOf("val plainOn = PlainWordsState.on"), firstSection)
+        val item = plainItem(settings)
         assertTrue(item.contains("stringResource(if (plainOn) R.string.plain_words_switch_on else R.string.plain_words_switch_off)"))
         assertFalse("the switch must not go through the label table", item.contains("labelFor(LabelKey"))
         assertTrue(item.contains("PlainWordsState.set(context, !plainOn)"))
@@ -132,7 +141,7 @@ class PlainWordsWiringTest {
     @Test
     fun theOfferIsShownOnlyUnderTheCoreRule_turnsOnOnlyWhenTapped_andNotNowChangesNothing() {
         val settings = code(source("settings/SettingsView.kt"))
-        val item = settings.substring(settings.indexOf("val plainOn = PlainWordsState.on"), settings.indexOf("Text(\"AUDIO OUTPUT ROUTING\""))
+        val item = plainItem(settings)
         assertTrue(item.contains("AssistSettings.shouldOfferPlainWords("))
         val notNow = item.substring(item.indexOf("R.string.plain_words_not_now"))
         assertTrue(notNow.substring(0, 200).contains("AssistPrefs.dismissPlainWordsOffer(context)"))
@@ -142,7 +151,7 @@ class PlainWordsWiringTest {
     @Test
     fun theSwitchAndOfferTextIs12spOrLarger() {
         val settings = code(source("settings/SettingsView.kt"))
-        val item = settings.substring(settings.indexOf("val plainOn = PlainWordsState.on"), settings.indexOf("Text(\"AUDIO OUTPUT ROUTING\""))
+        val item = plainItem(settings)
         val sizes = Regex("""fontSize = (\d+)\.sp""").findAll(item).map { it.groupValues[1].toInt() }.toList()
         assertTrue(sizes.isNotEmpty())
         assertTrue("text under 12 sp: $sizes", sizes.all { it >= 12 })

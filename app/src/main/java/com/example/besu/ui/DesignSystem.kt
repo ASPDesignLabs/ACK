@@ -2,6 +2,8 @@
 package com.example.besu.ui
 
 import com.example.besu.core.LabelKey
+import com.example.besu.core.SendFlags
+import com.example.besu.core.SendSwitchPolicy
 import com.example.besu.*
 import com.example.besu.backup.*
 import com.example.besu.computer.*
@@ -334,15 +336,8 @@ fun RowScope.ThemeOption(
 // ("/q /s help is on the way") and they compose; /help, /cls, /backup, and
 // /repair are local-only actions that never carry a phrase and
 // short-circuit everything else.
-private data class TerminalFlags(
-    val quiet: Boolean = false,
-    val skipLog: Boolean = false,
-    val sticky: Boolean = false,
-    val emergency: Boolean = false
-)
-
 private sealed class TerminalPromptResult {
-    data class Dispatch(val flags: TerminalFlags, val phrase: String) : TerminalPromptResult()
+    data class Dispatch(val flags: SendFlags, val phrase: String) : TerminalPromptResult()
     object HelpShown : TerminalPromptResult()
     object Error : TerminalPromptResult()
     // These three need things only the composable has (the log list, the
@@ -626,7 +621,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
     }
 
     if (!raw.startsWith("/")) {
-        return TerminalPromptResult.Dispatch(TerminalFlags(), raw)
+        return TerminalPromptResult.Dispatch(SendFlags(), raw)
     }
 
     val tokens = raw.split(Regex("\\s+"))
@@ -671,7 +666,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
         return TerminalPromptResult.ShowManualOverride
     }
 
-    var flags = TerminalFlags()
+    var flags = SendFlags()
     var index = 0
     while (index < tokens.size && tokens[index].startsWith("/")) {
         when (tokens[index].lowercase()) {
@@ -702,7 +697,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
 // dispatches -- but only when that active deck is actually an Emergency
 // deck. If it isn't, the phrase still goes out (never silently drop a
 // communication attempt), just without the overrides, and a warning says so.
-private fun dispatchTerminalPhrase(context: Context, phrase: String, flags: TerminalFlags) {
+private fun dispatchTerminalPhrase(context: Context, phrase: String, flags: SendFlags) {
     val intent = Intent(context, OutputService::class.java).apply {
         putExtra("phrase", phrase)
         putExtra("robotic", false)
@@ -745,6 +740,12 @@ private fun restartBackgroundServices(context: Context) {
             context.startService(intent)
         }
     }
+}
+
+// The typed /repair and the FIX PROBLEMS button in SETTINGS (PLAIN WORDS) both come here: restart, then one line in the Terminal's history.
+internal fun repairBackgroundServices(context: Context) {
+    restartBackgroundServices(context)
+    logTerminalLocal(context, "BACKGROUND SERVICES RESTARTED")
 }
 
 // --- TERMINAL VIEW ---
@@ -811,6 +812,11 @@ fun TerminalView(
     var promptValue by remember { mutableStateOf(TextFieldValue("")) }
     val promptFocusRequester = remember { FocusRequester() }
     val promptHaptic = LocalHapticFeedback.current
+
+    // PLAIN WORDS adds visible controls for what used to need a typed command (docs/PLAIN_LANGUAGE.md, section B): the typed commands keep
+    // working, and these call the same code. The send switches count only while this is on (core/SendFlags.kt).
+    val plainWordsOn = LocalPlainWords.current
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
 
     // --- /info (PATCH NOTES) ---
     // Reveals PATCH_NOTES one line every 2s via the same local-log path
@@ -1047,20 +1053,41 @@ fun TerminalView(
         tDrillPath = emptyList()
     }
 
+    // Typing /cls CONFIRM and the CLEAR HISTORY dialog both end here.
+    fun clearHistoryNow() {
+        TerminalLogStore.clearAll(context, logs)
+        logTerminalLocal(context, "LOG CLEARED")
+    }
+
+    // The /v and /t insert buttons: the same trigger text a person would type, put at the cursor by the shared insertion rule. If the trigger is
+    // already there the picker is already open, so nothing is added twice. The STATUSBOX is shown by hand because the keyboard may be closed.
+    fun insertTriggerWord(word: String, alreadyThere: Boolean) {
+        if (!alreadyThere) {
+            val selection = promptValue.selection
+            val result = TextInsertion.insert(promptValue.text, selection.min, selection.max, word, InsertMode.WORD)
+            promptValue = TextFieldValue(result.text, TextRange(result.cursor))
+        }
+        statusBoxManualVisible = true
+        promptFocusRequester.requestFocus()
+    }
+
     fun submitPrompt() {
         val raw = promptValue.text.trim()
         if (raw.isNotEmpty()) {
             when (val result = parseTerminalCommand(context, raw)) {
                 is TerminalPromptResult.Dispatch -> {
-                    dispatchTerminalPhrase(context, result.phrase, result.flags)
+                    dispatchTerminalPhrase(
+                        context,
+                        result.phrase,
+                        SendSwitchPolicy.effective(result.flags, TerminalSendSwitches.flags, plainWordsOn)
+                    )
                     promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.HelpShown -> {
                     promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.ClearLog -> {
-                    TerminalLogStore.clearAll(context, logs)
-                    logTerminalLocal(context, "LOG CLEARED")
+                    clearHistoryNow()
                     promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.RunBackup -> {
@@ -1068,8 +1095,7 @@ fun TerminalView(
                     promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.RunRepair -> {
-                    restartBackgroundServices(context)
-                    logTerminalLocal(context, "BACKGROUND SERVICES RESTARTED")
+                    repairBackgroundServices(context)
                     promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.ShowInfo -> {
@@ -1102,6 +1128,15 @@ fun TerminalView(
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+        if (plainWordsOn) {
+            TerminalToolsRow(
+                primaryColor = FluxCyan,
+                onWhatsNew = { startInfoReveal() },
+                onClearHistory = { showClearHistoryDialog = true }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         // reverseLayout draws the newest line at the bottom and the log
         // grows upward from there, like a real terminal's scrollback --
         // visibleLogs is already newest-first, so index 0 lands at the
@@ -1216,6 +1251,15 @@ fun TerminalView(
         Spacer(modifier = Modifier.height(6.dp))
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(FluxCyan.copy(alpha = 0.3f)))
         Spacer(modifier = Modifier.height(6.dp))
+
+        if (plainWordsOn) {
+            SendOptionsPanel(
+                primaryColor = FluxCyan,
+                onInsertVariable = { insertTriggerWord("/v", variableTriggerRange != null) },
+                onBrowseTargets = { insertTriggerWord("/t", targetTriggerRange != null) }
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+        }
 
         // --- STATUSBOX: POSIX-menu styled, not another set of neon chips.
         // TYPING mode is a compact two-line block; /v and /t expand it to
@@ -1524,6 +1568,17 @@ fun TerminalView(
                     .padding(6.dp)
             )
         }
+    }
+
+    if (showClearHistoryDialog) {
+        ClearHistoryDialog(
+            primaryColor = FluxCyan,
+            onConfirm = {
+                clearHistoryNow()
+                showClearHistoryDialog = false
+            },
+            onCancel = { showClearHistoryDialog = false }
+        )
     }
 
     val savingEntry = saveDialogTarget

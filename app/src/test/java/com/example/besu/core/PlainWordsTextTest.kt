@@ -27,9 +27,12 @@ class PlainWordsTextTest {
     }
 
     @Test
-    fun theExplanation_saysNothingWorksDifferently_itTakesEffectAtOnce_andTypedCommandsKeepWorking() {
+    fun theExplanation_saysNothingChangesHowAMessageGoesOutUnlessASwitchIsTurnedOn_itTakesEffectAtOnce_andTypedCommandsKeepWorking() {
         val text = s("plain_words_explanation")
-        assertTrue(text.contains("NOTHING WORKS DIFFERENTLY"))
+        // The buttons it adds (SEND QUIETLY and the others) do change how a message goes out once the person turns one on, so it must not claim
+        // that nothing works differently at all.
+        assertTrue(text.contains("NOTHING CHANGES HOW A MESSAGE GOES OUT UNLESS YOU TURN ONE OF THOSE ON"))
+        assertTrue(!text.contains("NOTHING WORKS DIFFERENTLY"))
         assertTrue(text.contains("AT ONCE"))
         assertTrue(text.contains("TYPED COMMANDS KEEP WORKING"))
     }

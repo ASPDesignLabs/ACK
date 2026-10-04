@@ -37,6 +37,8 @@ object PlainWordsState {
     fun set(context: Context, value: Boolean) {
         AssistPrefs.setPlainWords(context, value)
         on = value
+        // The Terminal's send switches only act while they can be seen (core/SendFlags.kt), so they go off with this.
+        if (!value) TerminalSendSwitches.reset()
     }
 }
 

@@ -71,8 +71,20 @@ class PlainWordsScreensWiringTest {
     @Test
     fun theHelpersThatReachSlotAndPoseKeysAreCalledByTheMatrixScreen() {
         val design = sources().first { it.path == "ui/DesignSystem.kt" }.text
-        assertTrue(design.contains("slotLabel(node.label)"))
-        assertTrue(design.contains("poseLabel(title)"))
+        // The list of rows in a group draws each slot's name through slotLabel, and so does the editor's title: two separate places.
+        val category = design.substring(design.indexOf("fun MatrixCategory("), design.indexOf("\n}\n", design.indexOf("fun MatrixCategory(")))
+        assertTrue("the row's name in the Matrix list", category.contains("label = slotLabel(node.label),"))
+        assertTrue("the editor's title", design.contains("title = slotLabel(node.label),"))
+        assertTrue(category.contains("poseLabel(title)"))
+    }
+
+    @Test
+    fun aNumberedVariableIsNamedThroughTheTable_exceptWhereTheBuilderIsNotComposable() {
+        // "VARIABLE 1" / "VARIABLE 1 // ROOT A" are drawn as a label plus a number. A partial literal is not a whole one, so the literal test above
+        // cannot see it; this looks for the exact shape. The one place left is the Manage Autocomplete tree, built in a plain function that has no
+        // access to a composable label (a stated gap, not a decision).
+        val offenders = sources().filter { Regex("""\"VARIABLE \$\{""").containsMatchIn(noComments(it.text)) }.map { it.path }
+        assertEquals(listOf("settings/ManageAutocompleteDialog.kt"), offenders)
     }
 
     // ---- a label is display text only ----------------------------------------------------------------------------------------------

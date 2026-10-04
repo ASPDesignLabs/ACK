@@ -74,7 +74,9 @@ fun StatementComposerView(
     context: Context,
     primaryColor: Color,
     isFullscreen: Boolean = false,
-    onToggleFullscreen: (() -> Unit)? = null
+    onToggleFullscreen: (() -> Unit)? = null,
+    // PLAIN WORDS shows a button for classic Manual Override (the typed /m at the Terminal). Null means no button, so any other caller is unchanged.
+    onShowManualOverride: (() -> Unit)? = null
 ) {
     var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     var editingStatementId by remember { mutableStateOf<String?>(null) }
@@ -257,6 +259,15 @@ fun StatementComposerView(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
+
+        if (LocalPlainWords.current && onShowManualOverride != null) {
+            PlainActionButton(
+                labelFor(LabelKey.MANUAL_OVERRIDE),
+                primaryColor,
+                Modifier.fillMaxWidth().testTag(AckTags.TYPE_CLASSIC_BUTTON)
+            ) { onShowManualOverride() }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         // The one-time offer. It says what it does, learns nothing unless TURN ON is tapped, and never opens HELP or another screen.
         if (wordOfferShown) {

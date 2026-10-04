@@ -507,6 +507,31 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
+            // FIX PROBLEMS: the typed /repair as a button, shown while PLAIN WORDS is on. No confirmation, as the command: it restarts two
+            // background services and deletes nothing.
+            item {
+                if (PlainWordsState.on) {
+                    Text(
+                        stringResource(R.string.plain_ctl_fix_problems_hint),
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    PlainActionButton(
+                        stringResource(R.string.plain_ctl_fix_problems),
+                        primaryColor,
+                        Modifier.fillMaxWidth().testTag(AckTags.SETTINGS_FIX_PROBLEMS)
+                    ) {
+                        repairBackgroundServices(context)
+                        Toast.makeText(context, context.getString(R.string.plain_ctl_fix_problems_done), Toast.LENGTH_SHORT).show()
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+
             item {
                 Text("AUDIO OUTPUT ROUTING", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(12.dp))
