@@ -1427,3 +1427,16 @@ Written while the backup and DELETE DATA wording moved into `strings.xml` (docs/
   `BackupReminder` and `DataWipe` are stubs written from their real signatures. Prove a new staged file is covered by breaking it on purpose once.
 - **Source-reading tests**: a pattern like `.label` also matches `StorageCatalogue.label(...)`; use `area.label`. A "gone" literal test needs the positive
   assertion beside it (the new call is there), or a swapped argument slips through (found by mutation).
+- **Names that are not words stay as they are, in every language, and are handed to a sentence as `%1$s`.** The developer decided (AUDIO ARCHITECT) that CYBER, MECH,
+  ORGANIC, MY VOICE and the CUSTOM A, B... name a new slot is saved with are names, like a product name: the chips, the widget, HELP and every sentence agree. A
+  sentence passes them in (`CustomVoiceRemoval.MY_VOICE_LABEL`, `DefaultsText.ORGANIC` / `CYBER`) and `AudioScreenWordingTest` / `DefaultsWordingTest` fail if a
+  translation retypes one. If they are ever translated for display, do it the way the Emergency button names and the People categories are done (shown translated,
+  saved text and ids never changed; `core/EmergencyLabels.kt`, `core/ComputerLabels.kt`) and only after the widget, the watch, HELP and the Terminal can follow.
+- **An English name that is still on screen stays English inside a translated sentence**, held by a test (`ALERT:`, `FULL TEXT`, `SHOW FULL MESSAGE` in the defaults
+  offer). When that screen is migrated, change the sentence and the test together.
+- **A fixed width clips a longer word.** The DSP editor's ON / OFF buttons were `width(60.dp)`; they are `widthIn(min = 60.dp)` so DESACTIVADO fits. New buttons with a
+  short English word should not fix their width.
+- **A migration test must check that each word sits on the control that does the thing**, not only that the string exists: `AudioScreenWordingTest.everyButtonWordIs...`
+  matches a word to the action that follows it. Mutation testing showed a swapped label (SAVE on a DELETE) passes every "string exists / literal gone" check.
+- **The type-check stages a screen only if its Android edges are stubbed from their real signatures** (`tools/kotlin_check/android-typecheck/stubs/app/Audio*.kt` for
+  AUDIO ARCHITECT). A stub is written from how the real code is used, so check it against the real file when that file changes.
