@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +71,8 @@ private const val MAX_CUSTOM_PROFILES = 8
 fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List<Voice>) {
     val prefs = context.getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
     val helpManager = LocalHelpManager.current
+    // The words of the decisions in core/ (SPEECH LANGUAGE, the voice list note), in the chosen language.
+    val text = rememberText()
 
     fun reportHelpInteraction(tag: String) {
         helpManager?.onEvent(
@@ -253,10 +256,10 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         if (uris.isNotEmpty()) {
             if (CustomVoiceRepository.importVoice(context, uris)) {
                 hasCustomVoice = true
-                Toast.makeText(context, "VOICE IMPORTED -- RESTARTING", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.audio_toast_imported), Toast.LENGTH_LONG).show()
                 pendingCustomVoiceRestart = true
             } else {
-                Toast.makeText(context, "IMPORT FAILED -- SELECT BOTH .ONNX AND .ONNX.JSON", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.audio_toast_import_failed), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -281,10 +284,10 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         if (uri != null) {
             if (CustomVoiceBackupManager.importBackup(context, uri)) {
                 hasCustomVoice = true
-                Toast.makeText(context, "VOICE BACKUP RESTORED -- RESTARTING", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.audio_toast_restored), Toast.LENGTH_LONG).show()
                 pendingCustomVoiceRestart = true
             } else {
-                Toast.makeText(context, "RESTORE FAILED -- INTEGRITY CHECK", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.audio_toast_restore_failed), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -379,7 +382,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         }
 
         // --- GLOBAL OUTPUT ---
-        Text("MASTER GAIN: ${(masterGain * 100).toInt()}%", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Text(stringResource(R.string.audio_master_gain, (masterGain * 100).toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
         Slider(
             value = masterGain,
             valueRange = 0f..2f,
@@ -412,8 +415,8 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             // rather than show disabled" convention as the "+ NEW" chip
             // below, which only appears while under the profile cap.
             if (hasCustomVoice) {
-                AudioProfileChip("MY VOICE", userProfile == "MY_VOICE", primaryColor) {
-                    userProfile = "MY_VOICE"
+                AudioProfileChip(CustomVoiceRemoval.MY_VOICE_LABEL, userProfile == CustomVoiceRemoval.MY_VOICE_ID, primaryColor) {
+                    userProfile = CustomVoiceRemoval.MY_VOICE_ID
                     syncDsp()
                 }
             }
@@ -434,7 +437,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                 }
             }
             if (customVoices.size < MAX_CUSTOM_PROFILES) {
-                AudioProfileChip("+ NEW", false, primaryColor) {
+                AudioProfileChip(stringResource(R.string.audio_chip_new), false, primaryColor) {
                     createProfile()
                     showDspChainEditor = true
                 }
@@ -442,7 +445,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         }
         Spacer(modifier = Modifier.height(10.dp))
         NeonButton(
-            "MANAGE PROFILES",
+            stringResource(R.string.audio_manage_profiles),
             Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_PROFILE_MANAGE, primaryColor),
             mainColor = primaryColor
         ) {
@@ -456,7 +459,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         // Said in words, changeable at any time, and used from the very next message (OutputService re-reads it). Choosing a voice in a profile,
         // or MY VOICE, is separate and is not affected.
         NeonButton(
-            SpeechLanguageText.label(speechLanguage),
+            SpeechLanguageText.label(text, speechLanguage),
             Modifier.fillMaxWidth(),
             mainColor = primaryColor
         ) {
@@ -465,7 +468,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            SpeechLanguageText.EXPLANATION,
+            SpeechLanguageText.explanation(text),
             color = Color.Gray,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace
@@ -477,7 +480,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         Text(labelFor(LabelKey.CUSTOM_VOICE), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            if (hasCustomVoice) "STATUS: INSTALLED" else "STATUS: NOT IMPORTED",
+            stringResource(if (hasCustomVoice) R.string.audio_status_installed else R.string.audio_status_not_imported),
             color = if (hasCustomVoice) primaryColor else Color.Gray,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace
@@ -505,10 +508,10 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         if (hasCustomVoice) {
             Spacer(modifier = Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NeonButton("EXPORT VOICE BACKUP", Modifier.weight(1f), mainColor = primaryColor) {
+                NeonButton(stringResource(R.string.audio_export_voice_backup), Modifier.weight(1f), mainColor = primaryColor) {
                     exportVoiceBackupLauncher.launch("my_voice_backup.zip")
                 }
-                NeonButton("IMPORT VOICE BACKUP", Modifier.weight(1f), mainColor = primaryColor) {
+                NeonButton(stringResource(R.string.audio_import_voice_backup), Modifier.weight(1f), mainColor = primaryColor) {
                     importVoiceBackupLauncher.launch(arrayOf("application/zip"))
                 }
             }
@@ -516,7 +519,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             // The trained voice is made from the person's own recordings: the backup file is as private as a recording
             // would be, and is not encrypted.
             Text(
-                "THE VOICE BACKUP IS AS PRIVATE AS A RECORDING OF YOU, AND IS NOT ENCRYPTED. SAVE IT WHERE YOU CONTROL WHO CAN SEE IT.",
+                stringResource(R.string.audio_voice_backup_private),
                 color = Color.Gray,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace
@@ -546,10 +549,11 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         } else {
             Box(modifier = Modifier.fillMaxWidth().border(1.dp, Color.Gray, CutCornerShape(12.dp)).padding(24.dp), contentAlignment = Alignment.Center) {
                 Text(
-                    if (userProfile == "MY_VOICE") {
-                        "MY VOICE ACTIVE\nTHIS ENGINE HAS NO DSP CONTROLS OF ITS OWN"
+                    // Two short lines; the name MY VOICE is passed in, never translated.
+                    if (userProfile == CustomVoiceRemoval.MY_VOICE_ID) {
+                        stringResource(R.string.audio_my_voice_active, CustomVoiceRemoval.MY_VOICE_LABEL) + "\n" + stringResource(R.string.audio_no_dsp_controls)
                     } else {
-                        "FACTORY PRESET LOCKED\nSELECT OR CREATE A CUSTOM SLOT TO EDIT"
+                        stringResource(R.string.audio_factory_locked) + "\n" + stringResource(R.string.audio_select_or_create)
                     },
                     color = Color.Gray,
                     fontSize = 10.sp,
@@ -561,7 +565,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     }
 
     if (showVoicePicker) {
-        AudioDialogFrame(onDismissRequest = { showVoicePicker = false }, primaryColor = primaryColor, title = "SELECT SYSTEM VOICE") {
+        AudioDialogFrame(onDismissRequest = { showVoicePicker = false }, primaryColor = primaryColor, title = stringResource(R.string.audio_select_system_voice)) {
             LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                 items(systemVoices) { voice ->
                     val isSelected = editingProfile?.systemVoiceName == voice.name
@@ -580,21 +584,21 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
-            Text(VoiceListing.LIST_NOTE, color = Color.Gray, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+            Text(VoiceListing.listNote(text), color = Color.Gray, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.height(14.dp))
-            Text("CANCEL", color = Color.Red, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showVoicePicker = false }.padding(8.dp))
+            Text(stringResource(R.string.common_cancel), color = Color.Red, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showVoicePicker = false }.padding(8.dp))
         }
     }
 
     if (showDspChainEditor && editingProfile != null) {
         val p = editingProfile!!
-        val voiceName = if (p.systemVoiceName.isNotEmpty()) p.systemVoiceName.takeLast(15) else "DEFAULT"
+        val voiceName = if (p.systemVoiceName.isNotEmpty()) p.systemVoiceName.takeLast(15) else stringResource(R.string.audio_default_voice)
         val isRobotic = p.modDepth > 0.05f
         val isUnsaved = customVoices.getOrNull(activeIdx) != p
 
         AudioDialogFrame(onDismissRequest = { showDspChainEditor = false }, primaryColor = primaryColor, title = "${labelFor(LabelKey.DSP_CHAIN)} // ${p.label}") {
             Text(
-                if (isUnsaved) "UNSAVED CHANGES*" else "UP TO DATE",
+                stringResource(if (isUnsaved) R.string.audio_dsp_unsaved else R.string.audio_dsp_up_to_date),
                 color = if (isUnsaved) NeonPalette.SWATCHES[3] else Color.Gray,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace
@@ -604,7 +608,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 if (!p.useCustomVoice) {
                     NeonButton(
-                        "BASE VOICE: $voiceName",
+                        stringResource(R.string.audio_base_voice, voiceName),
                         Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_VOICE_PICKER, primaryColor),
                         mainColor = primaryColor
                     ) {
@@ -619,10 +623,10 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
-                        Text("USE MY VOICE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                        Text(stringResource(R.string.audio_use_my_voice, CustomVoiceRemoval.MY_VOICE_LABEL), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                         if (!hasCustomVoice) {
                             Text(
-                                "NO VOICE IMPORTED",
+                                stringResource(R.string.audio_no_voice_imported),
                                 color = Color.DarkGray,
                                 fontSize = 9.sp,
                                 fontFamily = FontFamily.Monospace
@@ -630,8 +634,9 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                         }
                     }
                     NeonButton(
-                        if (p.useCustomVoice) "ON" else "OFF",
-                        Modifier.width(60.dp),
+                        stringResource(if (p.useCustomVoice) R.string.common_on else R.string.common_off),
+                        // At least 60 dp, and wider when the word for ON or OFF is longer.
+                        Modifier.widthIn(min = 60.dp),
                         isActive = p.useCustomVoice,
                         mainColor = if (hasCustomVoice) primaryColor else Color.DarkGray
                     ) {
@@ -646,13 +651,13 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                 Column(modifier = Modifier.helpTarget(AckTags.AUDIO_PITCH_SPEED, primaryColor)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(modifier = Modifier.weight(1f)) {
-                            DspSlider("PITCH", p.pitch, 0.5f..2.0f, primaryColor) {
+                            DspSlider(stringResource(R.string.audio_pitch), p.pitch, 0.5f..2.0f, primaryColor) {
                                 editingProfile = p.copy(pitch = it)
                                 reportHelpInteraction(AckTags.AUDIO_PITCH_SPEED)
                             }
                         }
                         Box(modifier = Modifier.weight(1f)) {
-                            DspSlider("SPEED", p.speed, 0.5f..2.0f, primaryColor) {
+                            DspSlider(stringResource(R.string.audio_speed), p.speed, 0.5f..2.0f, primaryColor) {
                                 editingProfile = p.copy(speed = it)
                                 reportHelpInteraction(AckTags.AUDIO_PITCH_SPEED)
                             }
@@ -660,7 +665,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     }
                     Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            "RESET TO HUMAN",
+                            stringResource(R.string.audio_reset_human),
                             color = primaryColor,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -685,7 +690,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                         modifier = Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_ROBOTIC_OVERLAY, primaryColor)
                     ) {
                         Text(labelFor(LabelKey.ROBOTIC_OVERLAY), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-                        NeonButton(if (isRobotic) "ON" else "OFF", Modifier.width(60.dp), isActive = isRobotic, mainColor = primaryColor) {
+                        NeonButton(stringResource(if (isRobotic) R.string.common_on else R.string.common_off), Modifier.widthIn(min = 60.dp), isActive = isRobotic, mainColor = primaryColor) {
                             editingProfile = if (isRobotic) {
                                 p.copy(modDepth = 0f)
                             } else {
@@ -695,11 +700,11 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     }
                     if (isRobotic) {
                         Spacer(modifier = Modifier.height(4.dp))
-                        DspSlider("ROBOTIC FREQ (HZ)", p.modFreq, 0f..100f, primaryColor) {
+                        DspSlider("${stringResource(R.string.audio_robotic_freq)} (HZ)", p.modFreq, 0f..100f, primaryColor) {
                             editingProfile = p.copy(modFreq = it)
                             reportHelpInteraction(AckTags.AUDIO_ROBOTIC_OVERLAY)
                         }
-                        DspSlider("ROBOTIC DEPTH (%)", p.modDepth, 0f..1f, primaryColor) {
+                        DspSlider("${stringResource(R.string.audio_robotic_depth)} (%)", p.modDepth, 0f..1f, primaryColor) {
                             editingProfile = p.copy(modDepth = it)
                             reportHelpInteraction(AckTags.AUDIO_ROBOTIC_OVERLAY)
                         }
@@ -719,14 +724,14 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             Spacer(modifier = Modifier.height(14.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NeonButton("PREVIEW", Modifier.weight(1f), mainColor = primaryColor) {
+                NeonButton(stringResource(R.string.audio_preview), Modifier.weight(1f), mainColor = primaryColor) {
                     previewCurrentEdit()
                 }
-                NeonButton("DISCARD", Modifier.weight(1f), mainColor = Color.Gray) {
+                NeonButton(stringResource(R.string.audio_discard), Modifier.weight(1f), mainColor = Color.Gray) {
                     discardEditingProfile()
                 }
                 HeroButton(
-                    "COMMIT",
+                    stringResource(R.string.common_commit),
                     Modifier.weight(1f).testTag(AckTags.AUDIO_SAVE).helpTarget(AckTags.AUDIO_SAVE, primaryColor),
                     mainColor = NeonPalette.SWATCHES[2]
                 ) {
@@ -738,15 +743,15 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             Spacer(modifier = Modifier.height(10.dp))
 
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("CLOSE", color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showDspChainEditor = false }.padding(8.dp))
+                Text(stringResource(R.string.common_close), color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showDspChainEditor = false }.padding(8.dp))
             }
         }
     }
 
     if (showManageProfiles) {
-        AudioDialogFrame(onDismissRequest = { showManageProfiles = false }, primaryColor = primaryColor, title = "MANAGE CUSTOM PROFILES") {
+        AudioDialogFrame(onDismissRequest = { showManageProfiles = false }, primaryColor = primaryColor, title = stringResource(R.string.audio_manage_title)) {
             if (customVoices.isEmpty()) {
-                Text("NO CUSTOM PROFILES YET.", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.audio_no_profiles), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
             }
             LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
                 items(customVoices, key = { it.id }) { profile ->
@@ -762,7 +767,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
-                                "SAVE",
+                                stringResource(R.string.common_save),
                                 color = primaryColor,
                                 fontSize = 10.sp,
                                 fontFamily = FontFamily.Monospace,
@@ -781,7 +786,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
-                                "RENAME",
+                                stringResource(R.string.audio_rename),
                                 color = Color.Gray,
                                 fontSize = 9.sp,
                                 fontFamily = FontFamily.Monospace,
@@ -792,7 +797,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                             )
                         }
                         Text(
-                            "DELETE",
+                            stringResource(R.string.common_delete),
                             color = ErrorRed,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace,
@@ -805,7 +810,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             Spacer(modifier = Modifier.height(8.dp))
             if (customVoices.size < MAX_CUSTOM_PROFILES) {
                 Text(
-                    "+ NEW SLOT",
+                    stringResource(R.string.audio_new_slot),
                     color = primaryColor,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
@@ -813,18 +818,18 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     modifier = Modifier.clickable { createProfile() }.padding(8.dp)
                 )
             } else {
-                Text("SLOT LIMIT REACHED ($MAX_CUSTOM_PROFILES)", color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.audio_slot_limit, MAX_CUSTOM_PROFILES), color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Text("CLOSE", color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showManageProfiles = false }.padding(8.dp))
+            Text(stringResource(R.string.common_close), color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showManageProfiles = false }.padding(8.dp))
         }
     }
 
     if (deleteTargetId != null) {
         val target = customVoices.find { it.id == deleteTargetId }
-        AudioDialogFrame(onDismissRequest = { deleteTargetId = null }, primaryColor = ErrorRed, title = "DELETE PROFILE?") {
+        AudioDialogFrame(onDismissRequest = { deleteTargetId = null }, primaryColor = ErrorRed, title = stringResource(R.string.audio_delete_profile_title)) {
             Text(
-                "Delete \"${target?.label ?: ""}\" permanently? This cannot be undone.",
+                stringResource(R.string.audio_delete_profile_body, target?.label ?: ""),
                 color = Color.White,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp
@@ -832,11 +837,11 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             Spacer(modifier = Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text("CANCEL", color = Color.Gray, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { deleteTargetId = null }.padding(8.dp))
+                    Text(stringResource(R.string.common_cancel), color = Color.Gray, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { deleteTargetId = null }.padding(8.dp))
                 }
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Text(
-                        "DELETE",
+                        stringResource(R.string.common_delete),
                         color = ErrorRed,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,

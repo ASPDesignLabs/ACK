@@ -10,20 +10,24 @@ class Intent {
     var action: String? = null
     fun putExtra(name: String, value: String): Intent = this
     fun putExtra(name: String, value: Boolean): Intent = this
+    fun putExtra(name: String, value: Float): Intent = this
 }
 interface SharedPreferences {
     fun getString(key: String, default: String?): String?
     fun getBoolean(key: String, default: Boolean): Boolean
     fun getInt(key: String, default: Int): Int
+    fun getFloat(key: String, default: Float): Float
     fun edit(): Editor
     interface Editor {
         fun putString(key: String, value: String?): Editor
         fun putBoolean(key: String, value: Boolean): Editor
         fun putInt(key: String, value: Int): Editor
+        fun putFloat(key: String, value: Float): Editor
         fun apply()
     }
 }
 abstract class ContentResolver {
+    abstract fun openOutputStream(uri: Uri): OutputStream?
     abstract fun openOutputStream(uri: Uri, mode: String): OutputStream?
     abstract fun openInputStream(uri: Uri): InputStream?
 }

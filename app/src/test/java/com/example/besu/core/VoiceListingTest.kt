@@ -85,10 +85,13 @@ class VoiceListingTest {
 
     @Test
     fun theNoteSaysWhyVoicesAreMissing_andThatAChosenVoiceIsKept() {
-        val note = VoiceListing.LIST_NOTE
+        val note = VoiceListing.listNote(EnglishText)
         assertTrue(note.contains("INTERNET"))
         assertTrue(note.contains("NOT INSTALLED"))
         assertTrue(note.contains("ALREADY CHOSE"))
         assertEquals(note.uppercase(), note)
+        // Two sentences, one space between, none at the ends.
+        assertEquals(note.trim(), note)
+        assertTrue(note.contains("NEVER USES THE NETWORK. A VOICE YOU ALREADY CHOSE"))
     }
 }

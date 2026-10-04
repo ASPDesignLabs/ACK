@@ -49,14 +49,24 @@ object SpeechLanguagePolicy {
         appliedTag != desiredTag || voiceSetByProfile
 }
 
-/** The words around SPEECH LANGUAGE (AUDIO ARCHITECT). Capitals, like the rest of the app. */
+/**
+ * The words around SPEECH LANGUAGE (AUDIO ARCHITECT), read through [TextSource] so they are in the chosen language. MY VOICE is a name, not a
+ * translation: it is passed in, so the explanation and the chip can never disagree about it.
+ */
 object SpeechLanguageText {
-    fun label(setting: SpeechLanguage): String = "SPEECH LANGUAGE: " + when (setting) {
-        SpeechLanguage.DEVICE -> "THIS PHONE'S LANGUAGE"
-        SpeechLanguage.ENGLISH_US -> "ENGLISH (US)"
-    }
+    const val LABEL_DEVICE = "speech_language_device"
+    const val LABEL_ENGLISH_US = "speech_language_english"
+    const val EXPLANATION_WHO = "speech_language_explanation_who"
+    const val EXPLANATION_MISSING = "speech_language_explanation_missing"
 
-    const val EXPLANATION =
-        "THE LANGUAGE A PROFILE SPEAKS IN WHEN IT HAS NO VOICE OF ITS OWN. A PROFILE THAT HAS CHOSEN A VOICE USES THAT VOICE, AND MY VOICE IS NOT AFFECTED. " +
-            "IF THE PHONE'S SPEECH ENGINE DOES NOT HAVE THE LANGUAGE, ACK USES THE ENGINE'S OWN DEFAULT: A LANGUAGE THAT IS NOT AVAILABLE NEVER MEANS SILENCE."
+    fun label(text: TextSource, setting: SpeechLanguage): String = text.get(
+        when (setting) {
+            SpeechLanguage.DEVICE -> LABEL_DEVICE
+            SpeechLanguage.ENGLISH_US -> LABEL_ENGLISH_US
+        }
+    )
+
+    /** Two sentences joined here (Android trims a space left at the end of a string): who it affects, and that a missing language is never silence. */
+    fun explanation(text: TextSource): String =
+        listOf(text.get(EXPLANATION_WHO, CustomVoiceRemoval.MY_VOICE_LABEL), text.get(EXPLANATION_MISSING)).joinToString(" ")
 }

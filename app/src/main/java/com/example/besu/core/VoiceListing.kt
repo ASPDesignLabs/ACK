@@ -25,9 +25,11 @@ data class VoiceInfo(
  */
 object VoiceListing {
 
-    const val LIST_NOTE =
-        "VOICES THAT NEED THE INTERNET, OR ARE NOT INSTALLED ON THIS PHONE, ARE NOT SHOWN: ACK NEVER USES THE NETWORK. " +
-            "A VOICE YOU ALREADY CHOSE STAYS CHOSEN EVEN IF IT IS NOT SHOWN HERE."
+    const val NOTE_HIDDEN = "voice_list_note_hidden"
+    const val NOTE_CHOSEN = "voice_list_note_chosen"
+
+    /** Why a voice may be missing from the list, and that a voice already chosen stays chosen. Two sentences, joined here. */
+    fun listNote(text: TextSource): String = listOf(text.get(NOTE_HIDDEN), text.get(NOTE_CHOSEN)).joinToString(" ")
 
     // Case and accents are ignored when ordering languages ("Čeština" sorts with C, "danish" with D), and the result does not depend on the phone's
     // own language: Locale.ROOT, like the suggestion rules that avoid a Turkish-locale surprise.

@@ -57,6 +57,7 @@ object StorageCatalogue {
     // The names a backup note can mention, as resources of the label table, so they read the same as the buttons they point to.
     const val EXPORT_JSON_LABEL = "label_export_json"
     const val AUDIO_ARCHITECT_LABEL = "label_audio_architect"
+    const val EXPORT_VOICE_BACKUP_LABEL = "audio_export_voice_backup"
 
     // Area ids. data/DataWipe.kt gives the areas that need more than "delete the files" their extra steps by these.
     const val ID_MESSAGES_AND_DECKS = "MESSAGES_AND_DECKS"
@@ -247,7 +248,7 @@ object StorageCatalogue {
 
     /** How to save it first, or that it is not backed up. The names it mentions are the buttons' own, in the chosen language. */
     fun backupNote(text: TextSource, area: Area): String =
-        text.get(area.backupResource, text.get(EXPORT_JSON_LABEL), text.get(AUDIO_ARCHITECT_LABEL))
+        text.get(area.backupResource, text.get(EXPORT_JSON_LABEL), text.get(AUDIO_ARCHITECT_LABEL), text.get(EXPORT_VOICE_BACKUP_LABEL))
 
     /** The areas' names by id, in the order given, for a message. Never any content. */
     fun names(text: TextSource, ids: List<String>): String = ids.joinToString(", ") { label(text, area(it)) }

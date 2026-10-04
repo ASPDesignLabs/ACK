@@ -137,15 +137,16 @@ class DeleteDataWordingTest {
 
     @Test
     fun aBackupNoteNamesTheExportButtonsThroughTheLabelTable_notAsALiteral() {
-        // "EXPORT .JSON" and "AUDIO ARCHITECT" are the names of buttons and screens that are translated; the notes take them as arguments so a note and the button
-        // it points to cannot read differently in any language.
+        // "EXPORT .JSON", "AUDIO ARCHITECT" and "EXPORT VOICE BACKUP" are the names of buttons and screens that are translated; the notes take them as arguments
+        // so a note and the button it points to cannot read differently in any language.
         for (name in english.keys.filter { it.startsWith("area_") && it.endsWith("_backup") } + "storage_everything_not_covered") {
             val text = english.getValue(name)
             assertFalse("$name holds the literal EXPORT .JSON", text.contains("EXPORT .JSON"))
             assertFalse("$name holds the literal AUDIO ARCHITECT", text.contains("AUDIO ARCHITECT"))
+            assertFalse("$name holds the literal EXPORT VOICE BACKUP", text.contains("EXPORT VOICE BACKUP"))
         }
         assertEquals(listOf("%1\$s", "%1\$s"), StringsXml.placeholders(english.getValue("area_training_data_backup")))
-        assertEquals(listOf("%1\$s", "%2\$s"), StringsXml.placeholders(english.getValue("area_trained_voice_backup")))
+        assertEquals(listOf("%1\$s", "%3\$s", "%2\$s"), StringsXml.placeholders(english.getValue("area_trained_voice_backup")))
         assertEquals("IT IS NOT IN EXPORT .JSON. SAVE IT FIRST WITH EXPORT VOICE BACKUP (AUDIO ARCHITECT).",
             StorageCatalogue.backupNote(EnglishText, StorageCatalogue.area(StorageCatalogue.ID_TRAINED_VOICE)))
     }
@@ -264,12 +265,11 @@ class DeleteDataWordingTest {
 
     @Test
     fun theButtonNamesStillEnglishOnTheirOwnScreensAreNotTranslatedAwayInTheNotes() {
-        // SAVE ALL TO A FILE and RECORD TRAINING DATA (record training data), EXPORT VOICE BACKUP (Audio screen) and EXPORT DECK (.ZIP) (GIF decks) are literal English
-        // buttons until their screens are migrated; a note that translated them would send the person looking for a button that does not exist. When one of those
-        // screens is migrated, change this list and the notes together.
+        // SAVE ALL TO A FILE and RECORD TRAINING DATA (record training data) and EXPORT DECK (.ZIP) (GIF decks) are literal English buttons until their screens are
+        // migrated; a note that translated them would send the person looking for a button that does not exist. When one of those screens is migrated, change this
+        // list and the notes together. (EXPORT VOICE BACKUP moved with the AUDIO ARCHITECT screen: its note takes the button's name as an argument.)
         val stillEnglish = mapOf(
             "area_training_data_backup" to listOf("SAVE ALL TO A FILE (RECORD TRAINING DATA)"),
-            "area_trained_voice_backup" to listOf("EXPORT VOICE BACKUP (%2\$s)"),
             "area_gif_library_backup" to listOf("EXPORT DECK (.ZIP)"),
             "area_training_data_holds" to listOf("RECORD TRAINING DATA"),
         )

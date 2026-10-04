@@ -76,17 +76,29 @@ class SpeechLanguageTest {
 
     @Test
     fun theLabelsSayTheSettingInWords()  {
-        assertEquals("SPEECH LANGUAGE: THIS PHONE'S LANGUAGE", SpeechLanguageText.label(SpeechLanguage.DEVICE))
-        assertEquals("SPEECH LANGUAGE: ENGLISH (US)", SpeechLanguageText.label(SpeechLanguage.ENGLISH_US))
+        assertEquals("SPEECH LANGUAGE: THIS PHONE'S LANGUAGE", SpeechLanguageText.label(EnglishText, SpeechLanguage.DEVICE))
+        assertEquals("SPEECH LANGUAGE: ENGLISH (US)", SpeechLanguageText.label(EnglishText, SpeechLanguage.ENGLISH_US))
     }
 
     @Test
     fun theExplanation_saysWhoItAffects_whatItDoesNotTouch_andThatSilenceNeverHappens() {
-        val text = SpeechLanguageText.EXPLANATION
+        val text = SpeechLanguageText.explanation(EnglishText)
         assertTrue(text.contains("NO VOICE OF ITS OWN"))
         assertTrue(text.contains("CHOSEN A VOICE"))
         assertTrue(text.contains("MY VOICE"))
         assertTrue(text.contains("NOT AVAILABLE"))
         assertEquals(text.uppercase(), text)
+        // Both sentences, with one space between them and none left over.
+        assertEquals(text.trim(), text)
+        assertTrue(text.contains("NOT AFFECTED. IF THE PHONE'S SPEECH ENGINE"))
+    }
+
+    @Test
+    fun theExplanationTakesTheNameMyVoiceAsAnArgument_soTheChipAndTheSentenceCannotDisagree() {
+        val named = SpeechLanguageText.explanation(object : TextSource {
+            override fun get(name: String, vararg args: Any): String = if (args.isEmpty()) name else "$name(${args.joinToString("|")})"
+            override fun count(name: String, quantity: Int): String = name
+        })
+        assertEquals("speech_language_explanation_who(MY VOICE) speech_language_explanation_missing", named)
     }
 }

@@ -122,8 +122,8 @@ class SpeechLanguageWiringTest {
     fun thePickerShowsEachVoicesLanguage_theNote_andNoSmallText() {
         val audio = code(source("settings/AudioView.kt"))
         assertTrue(audio.contains("VoiceListing.languageLine("))
-        assertTrue(audio.contains("VoiceListing.LIST_NOTE"))
-        assertTrue(audio.contains("SpeechLanguageText.label(speechLanguage)"))
+        assertTrue(audio.contains("VoiceListing.listNote(text)"))
+        assertTrue(audio.contains("SpeechLanguageText.label(text, speechLanguage)"))
         assertTrue(audio.contains("AssistPrefs.setSpeechLanguage(context, speechLanguage)"))
         val picker = bodyOf(audio, "AudioArchitectView")
         val pickerBlock = picker.substring(picker.indexOf("if (showVoicePicker)"), picker.indexOf("if (showDspChainEditor"))
