@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.ui
 
+import com.example.besu.R
 import com.example.besu.help.*
 import com.example.besu.ui.theme.*
 import androidx.compose.foundation.background
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,7 +53,8 @@ fun TightDialogSurface(
     primaryColor: Color,
     title: String,
     subtitle: String? = null,
-    dismissLabel: String = "CLOSE",
+    // The word for CLOSE in the chosen language, for every dialog that does not name its own (about fifty do not).
+    dismissLabel: String = stringResource(R.string.common_close),
     surfaceModifier: Modifier = Modifier,
     // Rendered in the header row immediately before [dismissLabel] -- for a
     // small toggle/action that belongs next to the close control rather
