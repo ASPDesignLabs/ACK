@@ -218,4 +218,30 @@
     <string name="plain_ctl_fix_problems">FIX PROBLEMS</string>
     <string name="plain_ctl_fix_problems_hint">RESTARTS THE PARTS OF ACK THAT SPEAK AND LISTEN FOR A SHAKE. NOTHING IS DELETED. A MESSAGE BEING SPOKEN RIGHT NOW WILL STOP.</string>
     <string name="plain_ctl_fix_problems_done">ACK\'S BACKGROUND PARTS WERE RESTARTED.</string>
+    <!-- The Matrix deck screen and the header row above every screen (docs/TRANSLATIONS.md). Words that are the same everywhere are common_*. Where the
+         English is all capitals a translation into a capital-letter script keeps to capitals; where it is a sentence it is a sentence. A {VAR:A} style tag is
+         a token the app resolves: it must stay exactly as written in every language. -->
+    <string name="common_empty">EMPTY</string>
+    <string name="common_on">ON</string>
+    <string name="common_off">OFF</string>
+    <string name="common_edit">EDIT</string>
+    <string name="common_abort">ABORT</string>
+    <string name="common_commit">COMMIT</string>
+    <string name="common_enter_value">ENTER VALUE</string>
+    <string name="matrix_sequence_header">SEQUENCE :: %1$s</string>
+    <string name="matrix_manage_context">[MANAGE CONTEXT]</string>
+    <string name="matrix_root_heading">ROOT :: %1$s</string>
+    <string name="matrix_active">ACTIVE</string>
+    <string name="matrix_activate">ACTIVATE</string>
+    <string name="matrix_recorded">● RECORDED</string>
+    <string name="matrix_expand">[EXPAND ▼]</string>
+    <string name="matrix_collapse">[COLLAPSE ▲]</string>
+    <string name="matrix_root_hint">Enabled tags replace matching {VAR:A}, {VAR:B}, or {VAR:C}.</string>
+    <string name="matrix_no_shared_value">NO SHARED VALUE SET</string>
+    <string name="matrix_root_tag">ROOT %1$s</string>
+    <string name="matrix_override_title">ROOT %1$s // TAG %2$s</string>
+    <string name="matrix_shared_override_value">SHARED OVERRIDE VALUE</string>
+    <string name="header_profile">PROFILE</string>
+    <string name="header_computer">COMPUTER</string>
+    <string name="header_computer_active">%1$d ACTIVE</string>
 </resources>

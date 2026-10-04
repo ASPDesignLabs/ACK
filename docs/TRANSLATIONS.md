@@ -22,11 +22,15 @@ Only the **label table** and the words around PLAIN WORDS and INTERFACE LANGUAGE
   (`plain_words_*`, `plain_ctl_*`);
 - the INTERFACE LANGUAGE control itself (`interface_language_*`, `common_cancel`); its heading is fixed text in all five languages so it can be found
   by someone who cannot read the current one;
-- the accessibility-service description Android shows in its own settings.
+- the accessibility-service description Android shows in its own settings;
+- **screens, one at a time** (so each can be reviewed): the **Matrix deck screen** (group headings, ACTIVATE/ACTIVE, the shared-value strip and its dialog,
+  the recorded badge, MANAGE CONTEXT) and the **header row above every screen** (DECK, PROFILE, COMPUTER). Words used on several screens are `common_*`;
+  a screen's own words are `<screen>_*` (`matrix_*`, `header_*`). Still to come: the Matrix editor dialog, the composer, the voice picker, backup, the HELP
+  menu, the Emergency deck, People and places.
 
 ## What is NOT translated (it stays English in every language, and the control says so)
 
-HELP walkthroughs and their menu; the Terminal's own text (`/help`, the patch notes, command feedback); most dialogs, toasts and settings captions;
+HELP walkthroughs and their menu; every screen not listed above (and the Matrix editor dialog, the MANAGE CONTEXT dialog and the deck manager); the Terminal's own text (`/help`, the patch notes, command feedback); most dialogs, toasts and settings captions;
 the DELETE DATA and backup wording; the visual overlay and anything spoken (that is SPEECH LANGUAGE's job); starter phrases; anything a person typed.
 A Spanish screen is therefore mixed: translated names on the main screens, English in the long tail. That is the stated limit of this pass.
 

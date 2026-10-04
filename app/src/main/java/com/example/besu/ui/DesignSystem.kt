@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.ui
 
+import androidx.compose.ui.res.stringResource
 import com.example.besu.core.LabelKey
 import com.example.besu.core.SendFlags
 import com.example.besu.core.SendSwitchPolicy
@@ -2037,9 +2038,9 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
             item {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("SEQUENCE :: $deckName", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
+                    Text(stringResource(R.string.matrix_sequence_header, deckName), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                     Text(
-                        "[MANAGE CONTEXT]",
+                        stringResource(R.string.matrix_manage_context),
                         color = primaryColor,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -3880,7 +3881,7 @@ fun MatrixCategory(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Text(
-                    text = "ROOT :: ${poseLabel(title)}",
+                    text = stringResource(R.string.matrix_root_heading, poseLabel(title)),
                     color = if (isFocused) primaryColor else Color.Gray,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
@@ -3920,7 +3921,7 @@ fun MatrixCategory(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (isFocused) "ACTIVE" else "ACTIVATE",
+                        text = stringResource(if (isFocused) R.string.matrix_active else R.string.matrix_activate),
                         color = if (isFocused) primaryColor else Color.Gray,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace
@@ -3972,7 +3973,7 @@ fun MatrixCategory(
                         val activeValue = ComputerRepository.resolveTag(context, categoryId)
                         val displayValue = activeValue
                             .ifBlank { computerFallbacks.getOrNull(index).orEmpty() }
-                            .ifBlank { "EMPTY" }
+                            .ifBlank { stringResource(R.string.common_empty) }
                         categoryLabel to displayValue
                     }
 
@@ -4175,7 +4176,7 @@ fun RootOverrideStrip(
             )
 
             Text(
-                text = if (collapsed) "[EXPAND ▼]" else "[COLLAPSE ▲]",
+                text = stringResource(if (collapsed) R.string.matrix_expand else R.string.matrix_collapse),
                 color = primaryColor,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -4227,7 +4228,7 @@ fun RootOverrideStrip(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "$tag: ${if (slot.enabled) "ON" else "OFF"}",
+                                text = "$tag: ${stringResource(if (slot.enabled) R.string.common_on else R.string.common_off)}",
                                 color = if (slot.enabled) {
                                     primaryColor
                                 } else {
@@ -4252,7 +4253,7 @@ fun RootOverrideStrip(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Enabled tags replace matching {VAR:A}, {VAR:B}, or {VAR:C}.",
+                text = stringResource(R.string.matrix_root_hint),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace
@@ -4262,7 +4263,7 @@ fun RootOverrideStrip(
 
             listOf("A", "B", "C").forEach { tag ->
                 val slot = config.slots[tag] ?: RootOverrideValue()
-                val valueText = slot.value.ifBlank { "NO SHARED VALUE SET" }
+                val valueText = slot.value.ifBlank { stringResource(R.string.matrix_no_shared_value) }
 
                 Row(
                     modifier = Modifier
@@ -4329,7 +4330,7 @@ fun RootOverrideStrip(
                             )
 
                             Text(
-                                text = if (slot.enabled) "ON" else "OFF",
+                                text = stringResource(if (slot.enabled) R.string.common_on else R.string.common_off),
                                 color = if (slot.enabled) {
                                     primaryColor
                                 } else {
@@ -4347,7 +4348,7 @@ fun RootOverrideStrip(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "ROOT $tag",
+                            text = stringResource(R.string.matrix_root_tag, tag),
                             color = if (slot.enabled) primaryColor else Color.Gray,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -4385,7 +4386,7 @@ fun RootOverrideStrip(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "EDIT",
+                            text = stringResource(R.string.common_edit),
                             color = primaryColor,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -4444,10 +4445,10 @@ fun RootOverrideValueDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "ROOT $category // TAG $tag",
-        dismissLabel = "ABORT"
+        title = stringResource(R.string.matrix_override_title, poseLabel(category), tag),
+        dismissLabel = stringResource(R.string.common_abort)
     ) {
-                TightSectionLabel("SHARED OVERRIDE VALUE")
+                TightSectionLabel(stringResource(R.string.matrix_shared_override_value))
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -4459,7 +4460,7 @@ fun RootOverrideValueDialog(
                     singleLine = true,
                     placeholder = {
                         Text(
-                            text = "ENTER VALUE",
+                            text = stringResource(R.string.common_enter_value),
                             fontFamily = FontFamily.Monospace
                         )
                     },
@@ -4497,7 +4498,7 @@ fun RootOverrideValueDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "COMMIT",
+                        text = stringResource(R.string.common_commit),
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
@@ -4511,7 +4512,7 @@ fun RootOverrideValueDialog(
                     }
 
                     TightPanelButton(
-                        text = "ABORT",
+                        text = stringResource(R.string.common_abort),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -4601,7 +4602,7 @@ fun MatrixNodeItem(
                 if (isRecorded) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "● RECORDED",
+                        text = stringResource(R.string.matrix_recorded),
                         color = RadicalRed,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,
@@ -4619,7 +4620,7 @@ fun MatrixNodeItem(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         variableValues.forEachIndexed { index, value ->
-                            val displayValue = value.ifBlank { "EMPTY" }
+                            val displayValue = value.ifBlank { stringResource(R.string.common_empty) }
 
                             Box(
                                 modifier = Modifier

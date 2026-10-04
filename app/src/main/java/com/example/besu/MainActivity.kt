@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu
 
+import androidx.compose.ui.res.stringResource
 import com.example.besu.core.LabelKey
 import com.example.besu.backup.BackupReminder
 import com.example.besu.core.HelpPlaceholders
@@ -880,7 +881,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "DECK: ",
+                                        text = "${labelFor(LabelKey.DECK)}: ",
                                         color = Color.Gray,
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -922,7 +923,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "PROFILE: ",
+                                            text = "${stringResource(R.string.header_profile)}: ",
                                             color = Color.Gray,
                                             fontSize = 10.sp,
                                             fontFamily = FontFamily.Monospace
@@ -963,14 +964,14 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "COMPUTER: ",
+                                        text = "${stringResource(R.string.header_computer)}: ",
                                         color = Color.Gray,
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace
                                     )
 
                                     Text(
-                                        text = if (computerActiveCount > 0) "$computerActiveCount ACTIVE" else "OFF",
+                                        text = if (computerActiveCount > 0) stringResource(R.string.header_computer_active, computerActiveCount) else stringResource(R.string.common_off),
                                         color = if (computerActiveCount > 0) primaryColor else Color.Gray,
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace,

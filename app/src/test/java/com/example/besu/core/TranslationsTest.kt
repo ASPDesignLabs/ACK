@@ -50,6 +50,16 @@ class TranslationsTest {
     }
 
     @Test
+    fun aTokenTheAppResolvesIsKeptExactlyAsWrittenInEveryLanguage() {
+        // {VAR}, {VAR:A..C} and [COMPUTER:id] are replaced by the app at run time; a translated or altered one would silently stop working.
+        val token = Regex("""\{VAR(?::[A-C])?\}|\[COMPUTER:[A-Z0-9_]+\]""")
+        for ((tag, map) in texts) for ((name, text) in map) {
+            val expected = token.findAll(englishText.getValue(name)).map { it.value }.sorted().toList()
+            assertEquals("$tag/$name", expected, token.findAll(text).map { it.value }.sorted().toList())
+        }
+    }
+
+    @Test
     fun noTranslationIsBlank() {
         for ((tag, map) in texts) for ((name, text) in map) assertTrue("$tag/$name is blank", text.isNotBlank())
     }
@@ -110,14 +120,16 @@ class TranslationsTest {
     // ---- house style and scripts ---------------------------------------------------------------------------------------------------
 
     @Test
-    fun theLatinLanguagesKeepTheAppsAllCapitalsStyle_exceptTheScreenReaderNamesAndStoredSlotNames() {
+    fun theLatinLanguagesKeepTheAppsAllCapitalsStyleWhereEnglishHasIt_andASentenceStaysASentence() {
+        // Where the English is all capitals (the app's house style) a translation into a script with capitals is too. Where the English is mixed case
+        // (a sentence, the tabs' screen-reader names, the stored slot names) the translation is mixed case, so there is nothing to enforce.
+        fun stripped(text: String) = text.replace(Regex("""%(?:\d+\$)?[sdf]"""), "").replace(Regex("""\{VAR(?::[A-C])?\}"""), "")
         for (tag in latin) for ((name, text) in texts.getValue(tag)) {
-            if (name == "accessibility_service_description") continue
-            // The standard names of the tabs are read by a screen reader (mixed case) and the standard slot names are stored data's names (mixed case).
-            if (name.startsWith("label_nav_") && !name.endsWith("_plain")) continue
-            if (name.startsWith("label_twist_") && !name.endsWith("_plain") && !name.startsWith("label_twist_sens")) continue
-            val words = text.replace(Regex("""%(?:\d+\$)?[sdf]"""), "")
-            assertEquals("$tag/$name", words.uppercase(), words)
+            val english = stripped(englishText.getValue(name))
+            if (english.any { it.isLetter() } && english == english.uppercase()) {
+                val words = stripped(text)
+                assertEquals("$tag/$name", words.uppercase(), words)
+            }
         }
     }
 

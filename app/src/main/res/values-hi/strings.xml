@@ -209,4 +209,27 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="plain_ctl_fix_problems">समस्याएँ ठीक करें</string>
     <string name="plain_ctl_fix_problems_hint">ACK के वे हिस्से फिर से शुरू करता है जो बोलते हैं और हिलाने पर ध्यान देते हैं। कुछ भी हटाया नहीं जाता। जो संदेश उसी समय बोला जा रहा हो, वह रुक जाएगा।</string>
     <string name="plain_ctl_fix_problems_done">ACK के बैकग्राउंड हिस्से फिर से शुरू किए गए।</string>
+    <string name="common_empty">खाली</string>
+    <string name="common_on">चालू</string>
+    <string name="common_off">बंद</string>
+    <string name="common_edit">बदलें</string>
+    <string name="common_abort">रद्द करें</string>
+    <string name="common_commit">सहेजें</string>
+    <string name="common_enter_value">मान लिखें</string>
+    <string name="matrix_sequence_header">क्रम :: %1$s</string>
+    <string name="matrix_manage_context">[संदर्भ प्रबंधित करें]</string>
+    <string name="matrix_root_heading">मूल :: %1$s</string>
+    <string name="matrix_active">सक्रिय</string>
+    <string name="matrix_activate">सक्रिय करें</string>
+    <string name="matrix_recorded">● रिकॉर्ड किया गया</string>
+    <string name="matrix_expand">[फैलाएँ ▼]</string>
+    <string name="matrix_collapse">[समेटें ▲]</string>
+    <string name="matrix_root_hint">चालू किए गए टैग मेल खाने वाले {VAR:A}, {VAR:B} या {VAR:C} की जगह लेते हैं।</string>
+    <string name="matrix_no_shared_value">कोई साझा मान सेट नहीं</string>
+    <string name="matrix_root_tag">मूल %1$s</string>
+    <string name="matrix_override_title">मूल %1$s // टैग %2$s</string>
+    <string name="matrix_shared_override_value">साझा ओवरराइड मान</string>
+    <string name="header_profile">प्रोफ़ाइल</string>
+    <string name="header_computer">कंप्यूटर</string>
+    <string name="header_computer_active">%1$d सक्रिय</string>
 </resources>

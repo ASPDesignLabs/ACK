@@ -49,7 +49,6 @@ class PlainWordsScreensWiringTest {
 
     /** Keys not drawn by any screen yet. A key leaves this list the day a screen draws it, and the test says so. */
     private val notYetWired = setOf(
-        "DECK",              // the word on its own; screens use DECK NAME / MANAGE DECKS / the type names
         "DECKS",
         "POSE",              // the group heading is drawn through poseLabel(); the bare word has no screen of its own yet
         "TARGET_ENTRY",      // ENTRY rows are named by the person

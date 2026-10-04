@@ -209,4 +209,27 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="plain_ctl_fix_problems">إصلاح المشكلات</string>
     <string name="plain_ctl_fix_problems_hint">يعيد تشغيل أجزاء ACK التي تتكلم وتنتبه للهز. لا يُحذف شيء. الرسالة التي تُنطق في هذه اللحظة ستتوقف.</string>
     <string name="plain_ctl_fix_problems_done">أُعيد تشغيل أجزاء ACK العاملة في الخلفية.</string>
+    <string name="common_empty">فارغ</string>
+    <string name="common_on">مفعّل</string>
+    <string name="common_off">متوقف</string>
+    <string name="common_edit">تعديل</string>
+    <string name="common_abort">إلغاء</string>
+    <string name="common_commit">حفظ</string>
+    <string name="common_enter_value">أدخل قيمة</string>
+    <string name="matrix_sequence_header">التسلسل :: %1$s</string>
+    <string name="matrix_manage_context">[إدارة السياق]</string>
+    <string name="matrix_root_heading">الجذر :: %1$s</string>
+    <string name="matrix_active">نشط</string>
+    <string name="matrix_activate">تنشيط</string>
+    <string name="matrix_recorded">● مسجّل</string>
+    <string name="matrix_expand">[توسيع ▼]</string>
+    <string name="matrix_collapse">[طي ▲]</string>
+    <string name="matrix_root_hint">الوسوم المفعّلة تحل محل {VAR:A} و{VAR:B} و{VAR:C} المطابقة.</string>
+    <string name="matrix_no_shared_value">لا توجد قيمة مشتركة</string>
+    <string name="matrix_root_tag">الجذر %1$s</string>
+    <string name="matrix_override_title">الجذر %1$s // الوسم %2$s</string>
+    <string name="matrix_shared_override_value">قيمة التجاوز المشتركة</string>
+    <string name="header_profile">الملف</string>
+    <string name="header_computer">الحاسوب</string>
+    <string name="header_computer_active">%1$d نشط</string>
 </resources>

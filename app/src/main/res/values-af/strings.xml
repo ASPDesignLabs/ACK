@@ -209,4 +209,27 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="plain_ctl_fix_problems">LOS PROBLEME OP</string>
     <string name="plain_ctl_fix_problems_hint">HERBEGIN DIE DELE VAN ACK WAT PRAAT EN VIR \'N SKUD LUISTER. NIKS WORD GESKRAP NIE. \'N BOODSKAP WAT NOU GEPRAAT WORD, SAL STOP.</string>
     <string name="plain_ctl_fix_problems_done">ACK SE AGTERGRONDDELE IS HERBEGIN.</string>
+    <string name="common_empty">LEEG</string>
+    <string name="common_on">AAN</string>
+    <string name="common_off">AF</string>
+    <string name="common_edit">WYSIG</string>
+    <string name="common_abort">STAAK</string>
+    <string name="common_commit">STOOR</string>
+    <string name="common_enter_value">TIK \'N WAARDE</string>
+    <string name="matrix_sequence_header">REEKS :: %1$s</string>
+    <string name="matrix_manage_context">[BESTUUR KONTEKS]</string>
+    <string name="matrix_root_heading">WORTEL :: %1$s</string>
+    <string name="matrix_active">AKTIEF</string>
+    <string name="matrix_activate">AKTIVEER</string>
+    <string name="matrix_recorded">● OPGENEEM</string>
+    <string name="matrix_expand">[VOU OOP ▼]</string>
+    <string name="matrix_collapse">[VOU TOE ▲]</string>
+    <string name="matrix_root_hint">Geaktiveerde merkers vervang ooreenstemmende {VAR:A}, {VAR:B} of {VAR:C}.</string>
+    <string name="matrix_no_shared_value">GEEN GEDEELDE WAARDE GESTEL</string>
+    <string name="matrix_root_tag">WORTEL %1$s</string>
+    <string name="matrix_override_title">WORTEL %1$s // MERKER %2$s</string>
+    <string name="matrix_shared_override_value">GEDEELDE OORSKRYWINGSWAARDE</string>
+    <string name="header_profile">PROFIEL</string>
+    <string name="header_computer">REKENAAR</string>
+    <string name="header_computer_active">%1$d AKTIEF</string>
 </resources>

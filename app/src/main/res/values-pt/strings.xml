@@ -209,4 +209,27 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="plain_ctl_fix_problems">RESOLVER PROBLEMAS</string>
     <string name="plain_ctl_fix_problems_hint">REINICIA AS PARTES DO ACK QUE FALAM E ESCUTAM A SACUDIDA. NADA É EXCLUÍDO. UMA MENSAGEM SENDO FALADA NESSE MOMENTO VAI PARAR.</string>
     <string name="plain_ctl_fix_problems_done">AS PARTES DO ACK EM SEGUNDO PLANO FORAM REINICIADAS.</string>
+    <string name="common_empty">VAZIO</string>
+    <string name="common_on">ATIVADO</string>
+    <string name="common_off">DESATIVADO</string>
+    <string name="common_edit">EDITAR</string>
+    <string name="common_abort">ABORTAR</string>
+    <string name="common_commit">SALVAR</string>
+    <string name="common_enter_value">DIGITE UM VALOR</string>
+    <string name="matrix_sequence_header">SEQUÊNCIA :: %1$s</string>
+    <string name="matrix_manage_context">[GERENCIAR CONTEXTO]</string>
+    <string name="matrix_root_heading">RAIZ :: %1$s</string>
+    <string name="matrix_active">ATIVO</string>
+    <string name="matrix_activate">ATIVAR</string>
+    <string name="matrix_recorded">● GRAVADO</string>
+    <string name="matrix_expand">[EXPANDIR ▼]</string>
+    <string name="matrix_collapse">[RECOLHER ▲]</string>
+    <string name="matrix_root_hint">As tags ativadas substituem as {VAR:A}, {VAR:B} ou {VAR:C} correspondentes.</string>
+    <string name="matrix_no_shared_value">SEM VALOR COMPARTILHADO</string>
+    <string name="matrix_root_tag">RAIZ %1$s</string>
+    <string name="matrix_override_title">RAIZ %1$s // TAG %2$s</string>
+    <string name="matrix_shared_override_value">VALOR COMPARTILHADO DE SUBSTITUIÇÃO</string>
+    <string name="header_profile">PERFIL</string>
+    <string name="header_computer">COMPUTADOR</string>
+    <string name="header_computer_active">%1$d ATIVOS</string>
 </resources>

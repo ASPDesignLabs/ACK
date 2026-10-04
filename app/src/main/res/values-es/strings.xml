@@ -209,4 +209,27 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="plain_ctl_fix_problems">SOLUCIONAR PROBLEMAS</string>
     <string name="plain_ctl_fix_problems_hint">REINICIA LAS PARTES DE ACK QUE HABLAN Y ESCUCHAN LA SACUDIDA. NO SE ELIMINA NADA. UN MENSAJE QUE SE ESTÉ DICIENDO EN ESE MOMENTO SE DETENDRÁ.</string>
     <string name="plain_ctl_fix_problems_done">SE REINICIARON LAS PARTES DE ACK QUE FUNCIONAN EN SEGUNDO PLANO.</string>
+    <string name="common_empty">VACÍO</string>
+    <string name="common_on">ACTIVADO</string>
+    <string name="common_off">DESACTIVADO</string>
+    <string name="common_edit">EDITAR</string>
+    <string name="common_abort">ABORTAR</string>
+    <string name="common_commit">GUARDAR</string>
+    <string name="common_enter_value">ESCRIBE UN VALOR</string>
+    <string name="matrix_sequence_header">SECUENCIA :: %1$s</string>
+    <string name="matrix_manage_context">[ADMINISTRAR CONTEXTO]</string>
+    <string name="matrix_root_heading">RAÍZ :: %1$s</string>
+    <string name="matrix_active">ACTIVO</string>
+    <string name="matrix_activate">ACTIVAR</string>
+    <string name="matrix_recorded">● GRABADO</string>
+    <string name="matrix_expand">[EXPANDIR ▼]</string>
+    <string name="matrix_collapse">[CONTRAER ▲]</string>
+    <string name="matrix_root_hint">Las etiquetas activadas reemplazan a las {VAR:A}, {VAR:B} o {VAR:C} que coincidan.</string>
+    <string name="matrix_no_shared_value">SIN VALOR COMPARTIDO</string>
+    <string name="matrix_root_tag">RAÍZ %1$s</string>
+    <string name="matrix_override_title">RAÍZ %1$s // ETIQUETA %2$s</string>
+    <string name="matrix_shared_override_value">VALOR COMPARTIDO DE ANULACIÓN</string>
+    <string name="header_profile">PERFIL</string>
+    <string name="header_computer">COMPUTADORA</string>
+    <string name="header_computer_active">%1$d ACTIVAS</string>
 </resources>

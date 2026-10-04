@@ -287,6 +287,9 @@ Take a **backup first** (EXPORT .JSON); nothing here deletes anything.
 **A translated language**
 - [ ] Look at the bottom bar (with TalkBack on, listen to it), the header button, the Matrix group headings and the SETTINGS headings. → Spanish names. Turn **PLAIN WORDS on**. → The everyday Spanish names
   (FRASES, HISTORIAL, PERSONAS Y LUGARES, AJUSTES, SOBRE MÍ / NECESITO ESPACIO / SOCIAL ...). Anything not in `docs/TRANSLATIONS.md`'s list is still English: that is expected.
+- [ ] On the **Matrix deck** and the header row, in each language. → ACTIVATE / ACTIVE, the shared-value strip (EXPAND, ON / OFF, EDIT, NO SHARED VALUE SET, and the hint with its `{VAR:A}` tags unchanged),
+  the SEQUENCE and ROOT headings, the "recorded" badge and the DECK / PROFILE / COMPUTER words are translated; open a shared value's EDIT box and check its title, ABORT and COMMIT. With PLAIN WORDS on, the header's DECK reads PAGE (or its translation).
+  The rest of the deck editor (the node editor, MANAGE CONTEXT) is still English: that is expected.
 - [ ] Repeat for **PORTUGUÊS**, **हिन्दी** and **AFRIKAANS**. → Each shows its own script and words. Write down any text that is cut off, overlaps, or runs over a button
   (longer words in a 48 dp button are the likeliest problem).
 - [ ] Switch back to **ENGLISH** from the same control. → Everything English again after the restart.
