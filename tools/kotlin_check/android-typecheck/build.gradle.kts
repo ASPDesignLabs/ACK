@@ -12,6 +12,7 @@ dependencies {
     implementation("org.jetbrains.compose.runtime:runtime-desktop:1.7.0")
     implementation("org.jetbrains.compose.foundation:foundation-desktop:1.7.0")
     implementation("org.jetbrains.compose.material3:material3-desktop:1.7.0")
+    implementation("org.jetbrains.compose.material:material-desktop:1.7.0")
     implementation("org.jetbrains.compose.ui:ui-desktop:1.7.0")
     implementation("org.jetbrains.compose.animation:animation-core-desktop:1.7.0")
 }

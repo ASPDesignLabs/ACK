@@ -15,3 +15,6 @@ fun NeonButton(
 
 @androidx.compose.runtime.Composable
 fun labelFor(key: com.example.besu.core.LabelKey): String = key.name
+
+@androidx.compose.runtime.Composable
+fun stringFormatLabel(key: com.example.besu.core.LabelKey, vararg args: Any): String = key.name

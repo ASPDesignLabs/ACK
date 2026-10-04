@@ -29,6 +29,9 @@ cp "$A/core/TextSource.kt" "$A/core/ExportContents.kt" "$A/core/BackupReminderTe
 # DELETE DATA: its decisions are plain Kotlin (all of core/ compiles without Android, as the unit tests show), and its dialogs. DataWipe is stubbed (stubs/app/DataWipe.kt).
 cp -r "$A/core/." "$STAGE/com/example/besu/core/"
 cp "$A/settings/ManageDataDialog.kt" "$A/settings/SafetyCopyDialogs.kt" "$A/settings/DeleteVoiceDialogs.kt" "$STAGE/com/example/besu/settings/"
+# The Emergency deck. CommandRepository and TemplateEngine are stubbed from their real signatures (stubs/app/CommandRepository.kt): they read storage and the shared variables.
+mkdir -p "$STAGE/com/example/besu/decks"
+cp "$A/decks/EmergencyDeck.kt" "$STAGE/com/example/besu/decks/"
 cp "$A/data/ResourceText.kt" "$STAGE/com/example/besu/data/"
 cp "$A/ui/ResourceText.kt" "$A/ui/BackupReminderBanner.kt" "$STAGE/com/example/besu/ui/"
 cp "$A/settings/BackupWarningDialog.kt" "$STAGE/com/example/besu/settings/"
