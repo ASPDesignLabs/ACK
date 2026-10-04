@@ -29,7 +29,7 @@ class ManageAutocompleteWordingTest {
 
     @Test
     fun everyStringTheScreensNameExists_andNoneIsLeftUnused() {
-        val sources = dialog + "\n" + settings + "\n" + file("core/AutocompleteLabels.kt")
+        val sources = dialog + "\n" + settings + "\n" + file("core/AutocompleteLabels.kt") + "\n" + file("core/TreeLabels.kt")
         val referenced = Regex("""R\.string\.(autocomplete_[a-z_]+)""").findAll(dialog + "\n" + settings).map { it.groupValues[1] }.toSet()
         val missing = referenced.filter { it !in acNames }
         assertEquals("named but not defined: $missing", emptyList<String>(), missing)
@@ -58,20 +58,20 @@ class ManageAutocompleteWordingTest {
         assertTrue(dialog.contains("private fun buildAutocompleteTree(\n    context: Context,\n    text: TextSource,"))
         assertTrue(dialog.contains("buildAutocompleteTree(context, text, scopes)"))
         // Grouping and the ids that remember what is expanded use the stored pose, profile, deck and category, never a label.
-        assertTrue(dialog.contains("AcBranch(id = \"mtx_${'$'}{deckId}_${'$'}{profile}_${'$'}pose\", label = AutocompleteLabels.poseOrLayer(text, pose), children = nodeBranches)"))
-        assertTrue(dialog.contains("AcBranch(id = \"root_${'$'}category\", label = AutocompleteLabels.poseOrLayer(text, category), children = tagLeaves)"))
+        assertTrue(dialog.contains("AcBranch(id = \"mtx_${'$'}{deckId}_${'$'}{profile}_${'$'}pose\", label = TreeLabels.poseOrLayer(text, pose), children = nodeBranches)"))
+        assertTrue(dialog.contains("AcBranch(id = \"root_${'$'}category\", label = TreeLabels.poseOrLayer(text, category), children = tagLeaves)"))
         assertTrue(dialog.contains("AcBranch(id = \"mtx_deck_${'$'}deckId\", label = deckName, children = profileBranches)"))
         assertTrue(dialog.contains("AcBranch(id = \"mtx_${'$'}{deckId}_${'$'}profile\", label = profile, children = poseBranches)"))
         // A deck, a profile, a group, a slot and a node are the person's own names: shown as stored, with the default only when there is none.
         assertTrue(dialog.contains("val groupLabel = group?.label ?: \"G${'$'}{groupIndex + 1}\""))
-        assertTrue(dialog.contains("val slotLabel = slot?.label ?: AutocompleteLabels.defaultSlot(text, slotIndex)"))
-        assertTrue(dialog.contains("?.label ?: AutocompleteLabels.unknownNode(text)"))
-        assertEquals("both missing-pose fallbacks use the key that cannot be a layer name", 2, Regex("""AutocompleteLabels\.UNKNOWN_KEY""").findAll(dialog).count())
+        assertTrue(dialog.contains("val slotLabel = slot?.label ?: TreeLabels.defaultSlot(text, slotIndex)"))
+        assertTrue(dialog.contains("?.label ?: TreeLabels.unknownNode(text)"))
+        assertEquals("both missing-pose fallbacks use the key that cannot be a layer name", 2, Regex("""TreeLabels\.UNKNOWN_KEY""").findAll(dialog).count())
         assertFalse("a label must not be what a branch is identified by", Regex("""id = "[^"]*\$\{?[a-zA-Z]*[lL]abel""").containsMatchIn(dialog))
         // The three kinds keep their ids and their counts.
-        assertTrue(dialog.contains("AutocompleteLabels.kindHeading(text, AutocompleteLabels.Kind.MATRIX, matrixScopes.size)"))
-        assertTrue(dialog.contains("AutocompleteLabels.kindHeading(text, AutocompleteLabels.Kind.QUICK_ACTIONS, qaScopes.size)"))
-        assertTrue(dialog.contains("AutocompleteLabels.kindHeading(text, AutocompleteLabels.Kind.SHARED_ROOT, rootScopes.size)"))
+        assertTrue(dialog.contains("TreeLabels.kindHeading(text, TreeLabels.Kind.MATRIX, matrixScopes.size)"))
+        assertTrue(dialog.contains("TreeLabels.kindHeading(text, TreeLabels.Kind.QUICK_ACTIONS, qaScopes.size)"))
+        assertTrue(dialog.contains("TreeLabels.kindHeading(text, TreeLabels.Kind.SHARED_ROOT, rootScopes.size)"))
         for (id in listOf("kind_mtx", "kind_qa", "kind_root")) assertTrue(id, dialog.contains("id = \"$id\""))
         // A remembered value is the person's own text.
         assertTrue(dialog.contains("text = entry.value,"))

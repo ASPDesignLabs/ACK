@@ -4,6 +4,7 @@ package com.example.besu.settings
 import com.example.besu.AckTags
 import com.example.besu.R
 import com.example.besu.core.AutocompleteLabels
+import com.example.besu.core.TreeLabels
 import com.example.besu.core.TextSource
 import com.example.besu.data.*
 import com.example.besu.decks.*
@@ -122,10 +123,10 @@ private fun buildAutocompleteTree(
             val deckName = CommandRepository.getDeckName(context, deckId)
             val profileBranches = deckScopes.groupBy { it.second.info.profile ?: "DEFAULT" }.map { (profile, profileScopes) ->
                 val poseBranches = profileScopes.groupBy { (_, scope) ->
-                    scope.info.storagePath?.let { CommandRepository.findMatrixNode(context, it)?.category } ?: AutocompleteLabels.UNKNOWN_KEY
+                    scope.info.storagePath?.let { CommandRepository.findMatrixNode(context, it)?.category } ?: TreeLabels.UNKNOWN_KEY
                 }.map { (pose, poseScopes) ->
                     val nodeBranches = poseScopes.groupBy { it.second.info.storagePath ?: "" }.map { (path, nodeScopes) ->
-                        val nodeLabel = CommandRepository.findMatrixNode(context, path)?.label ?: AutocompleteLabels.unknownNode(text)
+                        val nodeLabel = CommandRepository.findMatrixNode(context, path)?.label ?: TreeLabels.unknownNode(text)
                         val tags = TemplateEngine.getVariableTags(
                             CommandRepository.getPhrase(context, path, deckId, profile)
                         )
@@ -137,13 +138,13 @@ private fun buildAutocompleteTree(
                         }.sortedBy { it.label }
                         AcBranch(id = "mtx_node_${deckId}_${profile}_$path", label = nodeLabel, children = varLeaves)
                     }.sortedBy { it.label }
-                    AcBranch(id = "mtx_${deckId}_${profile}_$pose", label = AutocompleteLabels.poseOrLayer(text, pose), children = nodeBranches)
+                    AcBranch(id = "mtx_${deckId}_${profile}_$pose", label = TreeLabels.poseOrLayer(text, pose), children = nodeBranches)
                 }.sortedBy { it.label }
                 AcBranch(id = "mtx_${deckId}_$profile", label = profile, children = poseBranches)
             }.sortedBy { it.label }
             AcBranch(id = "mtx_deck_$deckId", label = deckName, children = profileBranches)
         }.sortedBy { it.label }
-        kinds.add(AcBranch(id = "kind_mtx", label = AutocompleteLabels.kindHeading(text, AutocompleteLabels.Kind.MATRIX, matrixScopes.size), children = deckBranches))
+        kinds.add(AcBranch(id = "kind_mtx", label = TreeLabels.kindHeading(text, TreeLabels.Kind.MATRIX, matrixScopes.size), children = deckBranches))
     }
 
     val qaScopes = scopes.filter { it.second.info.fieldType == AutocompleteScopeInfo.TYPE_QUICK_ACTION }
@@ -156,7 +157,7 @@ private fun buildAutocompleteTree(
                 val groupLabel = group?.label ?: "G${groupIndex + 1}"
                 val slotBranches = groupScopes.groupBy { it.second.info.slotIndex ?: 0 }.map { (slotIndex, slotScopes) ->
                     val slot = group?.slots?.find { it.slotIndex == slotIndex }
-                    val slotLabel = slot?.label ?: AutocompleteLabels.defaultSlot(text, slotIndex)
+                    val slotLabel = slot?.label ?: TreeLabels.defaultSlot(text, slotIndex)
                     val tags = TemplateEngine.getVariableTags(slot?.template.orEmpty())
                     val tagLeaves = slotScopes.map { (scopeKey, scope) ->
                         val tagIndex = scope.info.tagIndex ?: 0
@@ -170,20 +171,20 @@ private fun buildAutocompleteTree(
             }.sortedBy { it.label }
             AcBranch(id = "qa_deck_$deckId", label = deckName, children = groupBranches)
         }.sortedBy { it.label }
-        kinds.add(AcBranch(id = "kind_qa", label = AutocompleteLabels.kindHeading(text, AutocompleteLabels.Kind.QUICK_ACTIONS, qaScopes.size), children = deckBranches))
+        kinds.add(AcBranch(id = "kind_qa", label = TreeLabels.kindHeading(text, TreeLabels.Kind.QUICK_ACTIONS, qaScopes.size), children = deckBranches))
     }
 
     val rootScopes = scopes.filter { it.second.info.fieldType == AutocompleteScopeInfo.TYPE_ROOT_OVERRIDE }
     if (rootScopes.isNotEmpty()) {
-        val categoryBranches = rootScopes.groupBy { it.second.info.category ?: AutocompleteLabels.UNKNOWN_KEY }.map { (category, catScopes) ->
+        val categoryBranches = rootScopes.groupBy { it.second.info.category ?: TreeLabels.UNKNOWN_KEY }.map { (category, catScopes) ->
             val tagLeaves = catScopes.map { (scopeKey, scope) ->
                 val tag = scope.info.tag ?: "?"
                 AcLeaf(id = "leaf_$scopeKey", label = AutocompleteLabels.rootTag(text, tag), scopeKey = scopeKey, scope = scope)
             }.sortedBy { it.label }
-            AcBranch(id = "root_$category", label = AutocompleteLabels.poseOrLayer(text, category), children = tagLeaves)
+            AcBranch(id = "root_$category", label = TreeLabels.poseOrLayer(text, category), children = tagLeaves)
         }.sortedBy { it.label }
         kinds.add(
-            AcBranch(id = "kind_root", label = AutocompleteLabels.kindHeading(text, AutocompleteLabels.Kind.SHARED_ROOT, rootScopes.size), children = categoryBranches)
+            AcBranch(id = "kind_root", label = TreeLabels.kindHeading(text, TreeLabels.Kind.SHARED_ROOT, rootScopes.size), children = categoryBranches)
         )
     }
 
