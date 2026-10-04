@@ -646,7 +646,7 @@
     <string name="audio_discard">DISCARD</string>
     <string name="audio_manage_title">MANAGE CUSTOM PROFILES</string>
     <string name="audio_no_profiles">NO CUSTOM PROFILES YET.</string>
-    <string name="audio_rename">RENAME</string>
+    <string name="common_rename">RENAME</string>
     <string name="audio_new_slot">+ NEW SLOT</string>
     <string name="audio_slot_limit">SLOT LIMIT REACHED (%1$d)</string>
     <string name="audio_delete_profile_title">DELETE PROFILE?</string>
@@ -708,4 +708,22 @@
         <item quantity="one">THIS REMOVES THE %d LEARNED WORD AND WHICH WORDS FOLLOW WHICH.</item>
         <item quantity="other">THIS REMOVES ALL %d LEARNED WORDS AND WHICH WORDS FOLLOW WHICH.</item>
     </plurals>
+    <string name="context_manage_title">MANAGE CONTEXT</string>
+    <string name="context_intro">The three base poses are permanent. Custom context layers ride on top of one pose\'s gestures and can be reordered, reassigned, renamed, or removed.</string>
+    <string name="context_immutable">[IMMUTABLE]</string>
+    <string name="context_add">+ ADD CONTEXT</string>
+    <string name="context_based_on">BASED ON: %1$s</string>
+    <string name="context_reassign">REASSIGN</string>
+    <string name="context_delete_body">Permanently remove context layer \"%1$s\"? Every phrase, variable, and shared override saved under it will be deleted across every deck and profile. This cannot be undone -- consider exporting a backup first.</string>
+    <string name="context_delete_permanently">DELETE PERMANENTLY</string>
+    <string name="context_add_title">ADD CONTEXT</string>
+    <string name="context_name_label">CONTEXT NAME</string>
+    <string name="context_name_example">E.G. SCHOOL, WORK, PLAY</string>
+    <string name="context_assign_label">ASSIGN TO POSE</string>
+    <string name="context_assign_help">The physical gesture that activates this layer\'s phrases when it is focused.</string>
+    <string name="context_rename_title">RENAME CONTEXT</string>
+    <string name="context_rename_help">Every saved phrase, variable, and override moves with the new name.</string>
+    <string name="context_confirm_rename">CONFIRM RENAME</string>
+    <string name="context_reassign_title">REASSIGN POSE // %1$s</string>
+    <string name="context_reassign_help">Choose which pose\'s physical gesture activates this context layer when it is focused.</string>
 </resources>

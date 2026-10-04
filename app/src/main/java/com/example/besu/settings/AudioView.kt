@@ -786,7 +786,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
-                                stringResource(R.string.audio_rename),
+                                stringResource(R.string.common_rename),
                                 color = Color.Gray,
                                 fontSize = 9.sp,
                                 fontFamily = FontFamily.Monospace,

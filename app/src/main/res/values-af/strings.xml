@@ -625,7 +625,7 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="audio_discard">VERWERP</string>
     <string name="audio_manage_title">BESTUUR PERSOONLIKE PROFIELE</string>
     <string name="audio_no_profiles">NOG GEEN PERSOONLIKE PROFIELE NIE.</string>
-    <string name="audio_rename">HERNOEM</string>
+    <string name="common_rename">HERNOEM</string>
     <string name="audio_new_slot">+ NUWE PLEK</string>
     <string name="audio_slot_limit">PLEKLIMIET BEREIK (%1$d)</string>
     <string name="audio_delete_profile_title">SKRAP PROFIEL?</string>
@@ -687,4 +687,22 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
         <item quantity="one">DIT VERWYDER DIE %d GELEERDE WOORD EN WATTER WOORDE WATTER ANDER VOLG.</item>
         <item quantity="other">DIT VERWYDER ALLE %d GELEERDE WOORDE EN WATTER WOORDE WATTER ANDER VOLG.</item>
     </plurals>
+    <string name="context_manage_title">BESTUUR KONTEKS</string>
+    <string name="context_intro">DIE DRIE BASISPOSES IS PERMANENT. PERSOONLIKE KONTEKSLAE RUS OP DIE GESTES VAN \'N POSE EN KAN HERORDEN, HERTOEWYS, HERNOEM OF VERWYDER WORD.</string>
+    <string name="context_immutable">[ONVERANDERLIK]</string>
+    <string name="context_add">+ VOEG KONTEKS BY</string>
+    <string name="context_based_on">GEBASEER OP: %1$s</string>
+    <string name="context_reassign">HERTOEWYS</string>
+    <string name="context_delete_body">SKRAP KONTEKSLAAG \"%1$s\" VIR ALTYD? ALLE FRASES, VERANDERLIKES EN GEDEELDE OORSKRYWINGS WAT DAARONDER GESTOOR IS, SAL OOR ALLE DEKS EN PROFIELE GESKRAP WORD. DIT KAN NIE ONGEDAAN GEMAAK WORD NIE -- OORWEEG OM EERS \'N RUGSTEUNKOPIE UIT TE VOER.</string>
+    <string name="context_delete_permanently">SKRAP VIR ALTYD</string>
+    <string name="context_add_title">VOEG KONTEKS BY</string>
+    <string name="context_name_label">KONTEKSNAAM</string>
+    <string name="context_name_example">BV. SKOOL, WERK, SPEEL</string>
+    <string name="context_assign_label">KIES \'N POSE</string>
+    <string name="context_assign_help">DIE FISIESE GESTE WAT DIE FRASES VAN HIERDIE LAAG AKTIVEER WANNEER DIT IN FOKUS IS.</string>
+    <string name="context_rename_title">HERNOEM KONTEKS</string>
+    <string name="context_rename_help">ALLE GESTOORDE FRASES, VERANDERLIKES EN OORSKRYWINGS VERPLAAS SAAM MET DIE NUWE NAAM.</string>
+    <string name="context_confirm_rename">BEVESTIG NAAM</string>
+    <string name="context_reassign_title">HERTOEWYS POSE // %1$s</string>
+    <string name="context_reassign_help">KIES WATTER POSE SE FISIESE GESTE HIERDIE KONTEKSLAAG AKTIVEER WANNEER DIT IN FOKUS IS.</string>
 </resources>

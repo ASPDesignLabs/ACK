@@ -625,7 +625,7 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="audio_discard">बदलाव हटाएँ</string>
     <string name="audio_manage_title">कस्टम प्रोफ़ाइल प्रबंधित करें</string>
     <string name="audio_no_profiles">अभी कोई कस्टम प्रोफ़ाइल नहीं है।</string>
-    <string name="audio_rename">नाम बदलें</string>
+    <string name="common_rename">नाम बदलें</string>
     <string name="audio_new_slot">+ नया स्लॉट</string>
     <string name="audio_slot_limit">स्लॉट की सीमा पूरी हो गई (%1$d)</string>
     <string name="audio_delete_profile_title">प्रोफ़ाइल हटाएँ?</string>
@@ -687,4 +687,22 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
         <item quantity="one">यह %d सीखे गए शब्द और कौन-से शब्द किसके बाद आते हैं, यह हटा देता है।</item>
         <item quantity="other">यह सभी %d सीखे गए शब्द और कौन-से शब्द किसके बाद आते हैं, यह हटा देता है।</item>
     </plurals>
+    <string name="context_manage_title">संदर्भ प्रबंधित करें</string>
+    <string name="context_intro">तीन मूल पोज़ स्थायी हैं। कस्टम संदर्भ परतें किसी एक पोज़ के इशारों के ऊपर चलती हैं और उन्हें फिर से क्रमबद्ध, दोबारा सौंपा, नाम बदला या हटाया जा सकता है।</string>
+    <string name="context_immutable">[अपरिवर्तनीय]</string>
+    <string name="context_add">+ संदर्भ जोड़ें</string>
+    <string name="context_based_on">आधार: %1$s</string>
+    <string name="context_reassign">दोबारा सौंपें</string>
+    <string name="context_delete_body">संदर्भ परत \"%1$s\" को हमेशा के लिए हटाएँ? इसके अंतर्गत सहेजे गए सभी वाक्यांश, वेरिएबल और साझा ओवरराइड सभी डेक और प्रोफ़ाइल से हटा दिए जाएँगे। इसे वापस नहीं किया जा सकता -- पहले बैकअप निर्यात करने पर विचार करें।</string>
+    <string name="context_delete_permanently">हमेशा के लिए हटाएँ</string>
+    <string name="context_add_title">संदर्भ जोड़ें</string>
+    <string name="context_name_label">संदर्भ का नाम</string>
+    <string name="context_name_example">जैसे: स्कूल, काम, खेल</string>
+    <string name="context_assign_label">पोज़ को सौंपें</string>
+    <string name="context_assign_help">वह शारीरिक इशारा जो इस परत के वाक्यांशों को तब सक्रिय करता है जब वह फ़ोकस में हो।</string>
+    <string name="context_rename_title">संदर्भ का नाम बदलें</string>
+    <string name="context_rename_help">सहेजे गए सभी वाक्यांश, वेरिएबल और ओवरराइड नए नाम के साथ चले जाते हैं।</string>
+    <string name="context_confirm_rename">नाम बदलने की पुष्टि करें</string>
+    <string name="context_reassign_title">पोज़ दोबारा सौंपें // %1$s</string>
+    <string name="context_reassign_help">चुनें कि किस पोज़ का शारीरिक इशारा इस संदर्भ परत को तब सक्रिय करता है जब वह फ़ोकस में हो।</string>
 </resources>

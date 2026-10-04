@@ -113,7 +113,7 @@ class AudioScreenWordingTest {
     @Test
     fun everyButtonWordIsOnTheControlThatDoesWhatItSays() {
         assertTrue("SAVE (rename)", wordThenAction("common_save", "renameProfile(profile.id, draftLabel)"))
-        assertTrue("RENAME", wordThenAction("audio_rename", "renaming = true"))
+        assertTrue("RENAME", wordThenAction("common_rename", "renaming = true"))
         assertTrue("DELETE in the list only opens the question", wordThenAction("common_delete", "deleteTargetId = profile.id", 300))
         assertTrue("DELETE in the question removes", wordThenAction("common_delete", "deleteProfile(it)", 500))
         assertTrue("CANCEL in the picker", wordThenAction("common_cancel", "showVoicePicker = false", 300))
@@ -205,7 +205,7 @@ class AudioScreenWordingTest {
             "audio_dsp_unsaved" to "audio_dsp_up_to_date", "audio_status_installed" to "audio_status_not_imported", "audio_pitch" to "audio_speed",
             "audio_robotic_freq" to "audio_robotic_depth", "audio_export_voice_backup" to "audio_import_voice_backup", "audio_preview" to "audio_discard",
             "audio_toast_imported" to "audio_toast_import_failed", "audio_toast_restored" to "audio_toast_restore_failed", "audio_new_slot" to "audio_slot_limit",
-            "audio_chip_new" to "audio_new_slot", "speech_language_device" to "speech_language_english", "audio_rename" to "audio_manage_profiles",
+            "audio_chip_new" to "audio_new_slot", "speech_language_device" to "speech_language_english", "common_rename" to "audio_manage_profiles",
         )
         for ((tag, map) in listOf("en" to english) + translations.toList()) for ((a, b) in pairs) {
             assertNotEquals("$tag: $a and $b read the same", map.getValue(a), map.getValue(b))

@@ -628,7 +628,7 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="audio_discard">DESCARTAR</string>
     <string name="audio_manage_title">ADMINISTRAR PERFILES PERSONALIZADOS</string>
     <string name="audio_no_profiles">TODAVÍA NO HAY PERFILES PERSONALIZADOS.</string>
-    <string name="audio_rename">CAMBIAR NOMBRE</string>
+    <string name="common_rename">CAMBIAR NOMBRE</string>
     <string name="audio_new_slot">+ NUEVA CASILLA</string>
     <string name="audio_slot_limit">LÍMITE DE CASILLAS ALCANZADO (%1$d)</string>
     <string name="audio_delete_profile_title">¿ELIMINAR PERFIL?</string>
@@ -692,4 +692,22 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
         <item quantity="many">ESTO QUITA LAS %d PALABRAS APRENDIDAS Y QUÉ PALABRAS SIGUEN A CUÁLES.</item>
         <item quantity="other">ESTO QUITA LAS %d PALABRAS APRENDIDAS Y QUÉ PALABRAS SIGUEN A CUÁLES.</item>
     </plurals>
+    <string name="context_manage_title">ADMINISTRAR CONTEXTO</string>
+    <string name="context_intro">LAS TRES POSES BASE SON PERMANENTES. LAS CAPAS DE CONTEXTO PERSONALIZADAS VAN SOBRE LOS GESTOS DE UNA POSE Y SE PUEDEN REORDENAR, REASIGNAR, RENOMBRAR O ELIMINAR.</string>
+    <string name="context_immutable">[INMUTABLE]</string>
+    <string name="context_add">+ AÑADIR CONTEXTO</string>
+    <string name="context_based_on">BASADO EN: %1$s</string>
+    <string name="context_reassign">REASIGNAR</string>
+    <string name="context_delete_body">¿ELIMINAR PARA SIEMPRE LA CAPA DE CONTEXTO \"%1$s\"? TODAS LAS FRASES, VARIABLES Y ANULACIONES COMPARTIDAS GUARDADAS EN ELLA SE ELIMINARÁN EN TODOS LOS MAZOS Y PERFILES. ESTO NO SE PUEDE DESHACER -- CONSIDERA EXPORTAR UNA COPIA ANTES.</string>
+    <string name="context_delete_permanently">ELIMINAR PARA SIEMPRE</string>
+    <string name="context_add_title">AÑADIR CONTEXTO</string>
+    <string name="context_name_label">NOMBRE DEL CONTEXTO</string>
+    <string name="context_name_example">EJ.: ESCUELA, TRABAJO, JUEGO</string>
+    <string name="context_assign_label">ASIGNAR A LA POSE</string>
+    <string name="context_assign_help">EL GESTO FÍSICO QUE ACTIVA LAS FRASES DE ESTA CAPA CUANDO ESTÁ EN FOCO.</string>
+    <string name="context_rename_title">CAMBIAR NOMBRE DEL CONTEXTO</string>
+    <string name="context_rename_help">TODAS LAS FRASES, VARIABLES Y ANULACIONES GUARDADAS SE MUEVEN CON EL NUEVO NOMBRE.</string>
+    <string name="context_confirm_rename">CONFIRMAR NUEVO NOMBRE</string>
+    <string name="context_reassign_title">REASIGNAR POSE // %1$s</string>
+    <string name="context_reassign_help">ELIGE QUÉ GESTO FÍSICO DE POSE ACTIVA ESTA CAPA DE CONTEXTO CUANDO ESTÁ EN FOCO.</string>
 </resources>

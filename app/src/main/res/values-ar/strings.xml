@@ -637,7 +637,7 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="audio_discard">تجاهل</string>
     <string name="audio_manage_title">إدارة الملفات المخصصة</string>
     <string name="audio_no_profiles">لا توجد ملفات مخصصة بعد.</string>
-    <string name="audio_rename">إعادة تسمية</string>
+    <string name="common_rename">إعادة تسمية</string>
     <string name="audio_new_slot">+ خانة جديدة</string>
     <string name="audio_slot_limit">تم بلوغ حد الخانات (%1$d)</string>
     <string name="audio_delete_profile_title">حذف الملف؟</string>
@@ -707,4 +707,22 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
         <item quantity="many">هذا يزيل كل الكلمات المتعلَّمة وعددها %d وأي الكلمات تتبع أيها.</item>
         <item quantity="other">هذا يزيل كل الكلمات المتعلَّمة وعددها %d وأي الكلمات تتبع أيها.</item>
     </plurals>
+    <string name="context_manage_title">إدارة السياق</string>
+    <string name="context_intro">الوضعيات الأساسية الثلاث دائمة. طبقات السياق المخصصة تعمل فوق إيماءات إحدى الوضعيات ويمكن إعادة ترتيبها أو إعادة تعيينها أو إعادة تسميتها أو إزالتها.</string>
+    <string name="context_immutable">[غير قابلة للتغيير]</string>
+    <string name="context_add">+ إضافة سياق</string>
+    <string name="context_based_on">مبني على: %1$s</string>
+    <string name="context_reassign">إعادة تعيين</string>
+    <string name="context_delete_body">هل تريد إزالة طبقة السياق \"%1$s\" نهائيًا؟ ستُحذف كل العبارات والمتغيرات والتجاوزات المشتركة المحفوظة تحتها عبر كل الحزم وكل الملفات. لا يمكن التراجع عن ذلك -- فكّر في تصدير نسخة احتياطية أولًا.</string>
+    <string name="context_delete_permanently">حذف نهائي</string>
+    <string name="context_add_title">إضافة سياق</string>
+    <string name="context_name_label">اسم السياق</string>
+    <string name="context_name_example">مثال: المدرسة، العمل، اللعب</string>
+    <string name="context_assign_label">التعيين إلى وضعية</string>
+    <string name="context_assign_help">الإيماءة الجسدية التي تُفعّل عبارات هذه الطبقة عندما تكون في التركيز.</string>
+    <string name="context_rename_title">إعادة تسمية السياق</string>
+    <string name="context_rename_help">كل العبارات والمتغيرات والتجاوزات المحفوظة تنتقل مع الاسم الجديد.</string>
+    <string name="context_confirm_rename">تأكيد إعادة التسمية</string>
+    <string name="context_reassign_title">إعادة تعيين الوضعية // %1$s</string>
+    <string name="context_reassign_help">اختر أي إيماءة جسدية لوضعية تُفعّل طبقة السياق هذه عندما تكون في التركيز.</string>
 </resources>

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.ui
 
+import com.example.besu.R
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -19,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -58,14 +60,11 @@ fun ManageContextDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "MANAGE CONTEXT",
-        dismissLabel = "DONE"
+        title = stringResource(R.string.context_manage_title),
+        dismissLabel = stringResource(R.string.common_done)
     ) {
                 Text(
-                    text = "The three base poses are permanent. Custom " +
-                            "context layers ride on top of one pose's " +
-                            "gestures and can be reordered, reassigned, " +
-                            "renamed, or removed.",
+                    text = stringResource(R.string.context_intro),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -124,7 +123,7 @@ fun ManageContextDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "+ ADD CONTEXT",
+                                text = stringResource(R.string.context_add),
                                 color = primaryColor,
                                 fontSize = 10.sp,
                                 fontFamily = FontFamily.Monospace,
@@ -194,16 +193,11 @@ fun ManageContextDialog(
         TightDialogSurface(
             onDismiss = { deletingEntry = null },
             primaryColor = RadicalRed,
-            title = "CONFIRM DELETE",
-            dismissLabel = "ABORT"
+            title = stringResource(R.string.common_confirm_delete),
+            dismissLabel = stringResource(R.string.common_abort)
         ) {
             Text(
-                text = "Permanently remove context layer " +
-                        "\"${deleting.name}\"? Every phrase, variable, " +
-                        "and shared override saved under it will be " +
-                        "deleted across every deck and profile. This " +
-                        "cannot be undone -- consider exporting a " +
-                        "backup first.",
+                text = stringResource(R.string.context_delete_body, deleting.name),
                 color = Color.White,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -213,7 +207,7 @@ fun ManageContextDialog(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TightPanelButton(
-                    text = "DELETE PERMANENTLY",
+                    text = stringResource(R.string.context_delete_permanently),
                     modifier = Modifier.fillMaxWidth(),
                     mainColor = RadicalRed
                 ) {
@@ -223,7 +217,7 @@ fun ManageContextDialog(
                 }
 
                 TightPanelButton(
-                    text = "CANCEL",
+                    text = stringResource(R.string.common_cancel),
                     modifier = Modifier.fillMaxWidth(),
                     isActive = false,
                     mainColor = primaryColor
@@ -246,7 +240,7 @@ private fun ImmutablePoseRow(pose: String, primaryColor: Color) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "ROOT :: $pose",
+            text = stringResource(R.string.matrix_root_heading, poseLabel(pose)),
             color = primaryColor,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
@@ -254,7 +248,7 @@ private fun ImmutablePoseRow(pose: String, primaryColor: Color) {
         )
 
         Text(
-            text = "[IMMUTABLE]",
+            text = stringResource(R.string.context_immutable),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace
@@ -296,7 +290,7 @@ private fun CustomContextRow(
                 )
 
                 Text(
-                    text = "BASED ON: ${entry.basePose}",
+                    text = stringResource(R.string.context_based_on, poseLabel(entry.basePose)),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -327,21 +321,21 @@ private fun CustomContextRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             ContextRowActionButton(
-                text = "REASSIGN",
+                text = stringResource(R.string.context_reassign),
                 primaryColor = primaryColor,
                 modifier = Modifier.weight(1f),
                 onClick = onReassign
             )
 
             ContextRowActionButton(
-                text = "RENAME",
+                text = stringResource(R.string.common_rename),
                 primaryColor = primaryColor,
                 modifier = Modifier.weight(1f),
                 onClick = onRename
             )
 
             ContextRowActionButton(
-                text = "DELETE",
+                text = stringResource(R.string.common_delete),
                 primaryColor = RadicalRed,
                 modifier = Modifier.weight(1f),
                 onClick = onDelete
@@ -430,7 +424,7 @@ private fun PosePicker(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = pose,
+                    text = poseLabel(pose),
                     color = color,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace,
@@ -460,16 +454,16 @@ private fun AddContextDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "ADD CONTEXT"
+        title = stringResource(R.string.context_add_title)
     ) {
-                TightSectionLabel("CONTEXT NAME")
+                TightSectionLabel(stringResource(R.string.context_name_label))
 
                 Spacer(modifier = Modifier.height(6.dp))
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it.uppercase().take(24) },
-                    placeholder = { Text("E.G. SCHOOL, WORK, PLAY") },
+                    placeholder = { Text(stringResource(R.string.context_name_example)) },
                     shape = AckHelpShape,
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
@@ -483,13 +477,12 @@ private fun AddContextDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TightSectionLabel("ASSIGN TO POSE")
+                TightSectionLabel(stringResource(R.string.context_assign_label))
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "The physical gesture that activates this " +
-                            "layer's phrases when it is focused.",
+                    text = stringResource(R.string.context_assign_help),
                     color = Color.DarkGray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -510,7 +503,7 @@ private fun AddContextDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "CREATE",
+                        text = stringResource(R.string.common_create),
                         modifier = Modifier.weight(1f),
                         isActive = isValid,
                         mainColor = primaryColor
@@ -521,7 +514,7 @@ private fun AddContextDialog(
                     }
 
                     TightPanelButton(
-                        text = "CANCEL",
+                        text = stringResource(R.string.common_cancel),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -550,11 +543,10 @@ private fun RenameContextDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "RENAME CONTEXT"
+        title = stringResource(R.string.context_rename_title)
     ) {
                 Text(
-                    text = "Every saved phrase, variable, and override " +
-                            "moves with the new name.",
+                    text = stringResource(R.string.context_rename_help),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -583,7 +575,7 @@ private fun RenameContextDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "CONFIRM RENAME",
+                        text = stringResource(R.string.context_confirm_rename),
                         modifier = Modifier.weight(1f),
                         isActive = isValid,
                         mainColor = primaryColor
@@ -594,7 +586,7 @@ private fun RenameContextDialog(
                     }
 
                     TightPanelButton(
-                        text = "CANCEL",
+                        text = stringResource(R.string.common_cancel),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -617,11 +609,10 @@ private fun ReassignPoseDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "REASSIGN POSE // ${entry.name}"
+        title = stringResource(R.string.context_reassign_title, entry.name)
     ) {
                 Text(
-                    text = "Choose which pose's physical gesture activates " +
-                            "this context layer when it is focused.",
+                    text = stringResource(R.string.context_reassign_help),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -642,7 +633,7 @@ private fun ReassignPoseDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "CONFIRM",
+                        text = stringResource(R.string.common_confirm),
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
@@ -650,7 +641,7 @@ private fun ReassignPoseDialog(
                     }
 
                     TightPanelButton(
-                        text = "CANCEL",
+                        text = stringResource(R.string.common_cancel),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
