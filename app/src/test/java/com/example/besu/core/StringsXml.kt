@@ -26,6 +26,20 @@ object StringsXml {
 
     fun map(file: File): Map<String, String> = read(file).associate { it.name to it.text }
 
+    /** Every `<plurals>` of [file]: its name, then each quantity (`one`, `other`, ...) with its text, escapes resolved. */
+    fun plurals(file: File): Map<String, Map<String, String>> {
+        require(file.isFile) { "missing strings file: ${file.path}" }
+        val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
+        val nodes = doc.getElementsByTagName("plurals")
+        return (0 until nodes.length).associate { i ->
+            val node = nodes.item(i)
+            val items = node.childNodes
+            val byQuantity = (0 until items.length).map { items.item(it) }.filter { it.nodeName == "item" }
+                .associate { it.attributes.getNamedItem("quantity").nodeValue to unescape(it.textContent.trim()) }
+            node.attributes.getNamedItem("name").nodeValue to byQuantity
+        }
+    }
+
     fun unescape(raw: String): String {
         val out = StringBuilder()
         var i = 0

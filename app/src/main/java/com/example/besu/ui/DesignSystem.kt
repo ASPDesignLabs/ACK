@@ -670,7 +670,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
             return TerminalPromptResult.RunBackup
         }
         // The same facts the settings dialog shows (core/ExportContents.kt), then the confirm line.
-        logTerminalLocal(context, ExportContents.terminalText())
+        logTerminalLocal(context, ExportContents.terminalText(ResourceText(context)))
         return TerminalPromptResult.Error
     }
 

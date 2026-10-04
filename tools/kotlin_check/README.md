@@ -32,6 +32,8 @@ Compiles `app/.../voicecapture/` (the screens, microphone and glue) against Comp
 `androidx.compose.*` API, together with the app's own Compose-only files (the shared buttons, HELP, tags, colours) copied in as
 they are, and small **stubs** of the few Android classes the screens call (`stubs/`).
 
+It also compiles the plain-words Terminal controls, the INTERFACE LANGUAGE section and the backup screens (the export warning and the reminder banner; `stubs/app/Backup.kt` stands in for the exporter and the reminder state, which read storage).
+
 It finds Kotlin and Compose mistakes: a misspelled function, a wrong type, a missing import, a lambda in the wrong place. It
 **cannot** find a wrong Android signature (the stubs are written from how the real code is used), a runtime problem, a layout problem,
 or anything about the microphone. Check that it still catches errors after you change it: put a typo in a copy of a screen and

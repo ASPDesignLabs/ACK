@@ -59,6 +59,41 @@ class TranslationsTest {
         }
     }
 
+    // ---- plurals ---------------------------------------------------------------------------------------------------------------
+
+    private val englishPlurals = StringsXml.plurals(StringsXml.default)
+    private val pluralTexts: Map<String, Map<String, Map<String, String>>> = files.mapValues { StringsXml.plurals(it.value) }
+
+    /** The forms each language's plural rule uses (CLDR): a missing one reads as the wrong number or crashes the lookup. */
+    private val pluralForms = mapOf(
+        "es" to setOf("one", "many", "other"),
+        "pt" to setOf("one", "many", "other"),
+        "af" to setOf("one", "other"),
+        "hi" to setOf("one", "other"),
+        "ar" to setOf("zero", "one", "two", "few", "many", "other"),
+    )
+
+    @Test
+    fun everyTranslationHasEveryPluralEnglishHas_withTheFormsItsLanguageNeeds() {
+        assertTrue("English must have at least one plural for this test to mean something", englishPlurals.isNotEmpty())
+        for ((tag, plurals) in pluralTexts) {
+            assertEquals("$tag: plurals", englishPlurals.keys, plurals.keys)
+            for ((name, forms) in plurals) {
+                assertEquals("$tag/$name: forms", pluralForms.getValue(tag), forms.keys)
+                for ((quantity, text) in forms) assertTrue("$tag/$name/$quantity is blank", text.isNotBlank())
+            }
+        }
+    }
+
+    @Test
+    fun aPluralShowsItsNumber_exceptTheArabicFormsThatNameIt() {
+        // "1 DAY" and "5 DAYS" carry the number as %d. Arabic's "one" and "two" are the words "one day" and "two days" and need none.
+        for ((tag, plurals) in pluralTexts) for ((name, forms) in plurals) for ((quantity, text) in forms) {
+            val needsNumber = !(tag == "ar" && (quantity == "one" || quantity == "two"))
+            assertEquals("$tag/$name/$quantity", needsNumber, text.contains("%d"))
+        }
+    }
+
     @Test
     fun noTranslationIsBlank() {
         for ((tag, map) in texts) for ((name, text) in map) assertTrue("$tag/$name is blank", text.isNotBlank())

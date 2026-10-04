@@ -22,6 +22,13 @@ cp "$A/settings/InterfaceLanguageSection.kt" "$STAGE/com/example/besu/settings/"
 # R is generated from the real strings file, so a name the screen uses that does not exist fails here.
 { echo "package com.example.besu"; echo "object R { object string {"; grep -o 'name="[A-Za-z0-9_]*"' "$A/../../../../res/values/strings.xml" | sed 's/name="\(.*\)"/    const val \1 = 0/'; echo "} }"; } > "$STAGE/com/example/besu/R.kt"
 cp "$A/ui/theme/Color.kt" "$STAGE/com/example/besu/ui/theme/"
+# The backup wording: the text source and the two decisions that use it, the Android edge that reads resources, and the two screens that show it.
+# BackupExporter / BackupReminder are stubbed (stubs/app/Backup.kt) because they read storage; their signatures are what these screens call.
+mkdir -p "$STAGE/com/example/besu/data"
+cp "$A/core/TextSource.kt" "$A/core/ExportContents.kt" "$A/core/BackupReminderText.kt" "$A/core/BackupReminderPolicy.kt" "$STAGE/com/example/besu/core/"
+cp "$A/data/ResourceText.kt" "$STAGE/com/example/besu/data/"
+cp "$A/ui/ResourceText.kt" "$A/ui/BackupReminderBanner.kt" "$STAGE/com/example/besu/ui/"
+cp "$A/settings/BackupWarningDialog.kt" "$STAGE/com/example/besu/settings/"
 cp -r "$H/stubs/." "$STAGE/"
 cd "$H"
 gradle --no-daemon --console=plain -q -Pkotlin.compiler.execution.strategy=in-process compileKotlin > "$H/build/check.log" 2>&1 && status=0 || status=$?

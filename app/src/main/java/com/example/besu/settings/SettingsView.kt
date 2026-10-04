@@ -167,6 +167,8 @@ fun SettingsView(
     val prefs = context.getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
 
     val helpManager = LocalHelpManager.current
+    // The words of decisions that live in core/ (the backup reminder), in the language of this screen.
+    val words = rememberText()
 
     var hideSystemMessages by remember { mutableStateOf(TerminalLogStore.getHideSystemMessages(context)) }
     var hidePathTrace by remember { mutableStateOf(TerminalLogStore.getHidePathTrace(context)) }
@@ -1211,7 +1213,7 @@ fun SettingsView(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "IMPORT MATRIX AS NEW DECK brings in a backup's matrix phrases as a brand new deck, without touching anything else. FULL RESTORE below applies everything else a backup carries -- overwriting or adding to your current setup, never deleting what it doesn't mention.",
+                    stringResource(R.string.data_port_import_note, labelFor(LabelKey.IMPORT_MATRIX), labelFor(LabelKey.FULL_RESTORE)),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1232,7 +1234,7 @@ fun SettingsView(
                 // BACKUP REMINDER: on or off, said in words (not only colour) and without animation. It reminds; it never makes a
                 // file. Checked when ACK starts, so turning it on shows nothing until then. Turning it off hides a showing one.
                 NeonButton(
-                    BackupReminderText.switchLabel(backupRemindersOn),
+                    BackupReminderText.switchLabel(words, backupRemindersOn),
                     Modifier.fillMaxWidth(),
                     mainColor = if (backupRemindersOn) primaryColor else Color.White
                 ) {
@@ -1242,7 +1244,7 @@ fun SettingsView(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    BackupReminderText.SWITCH_EXPLANATION,
+                    words.get(BackupReminderText.SWITCH_EXPLANATION),
                     color = Color.Gray,
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace
@@ -1429,9 +1431,9 @@ fun SettingsView(
     if (showImportDialog && importedBackup != null) {
         AlertDialog(
             onDismissRequest = { showImportDialog = false }, containerColor = Graphite,
-            title = { Text("IMPORT CONFIGURATION", color = primaryColor, fontFamily = FontFamily.Monospace) },
+            title = { Text(stringResource(R.string.data_port_import_title), color = primaryColor, fontFamily = FontFamily.Monospace) },
             text = { Column {
-                Text("Import as new Deck? Select identity color:", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.data_port_import_prompt), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(value = newDeckName, onValueChange = { newDeckName = it.uppercase() }, placeholder = { Text(labelFor(LabelKey.DECK_NAME)) }, colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.Gray))
                 Spacer(modifier = Modifier.height(12.dp))
@@ -1444,12 +1446,12 @@ fun SettingsView(
                     if(newDeckName.isNotEmpty()) {
                         CommandRepository.saveDeck(context, newDeckName, selectedColorIdx, importedBackup!!.matrixData)
                         showImportDialog = false; newDeckName = ""; WatchSync.sendDeckList(context)
-                        Toast.makeText(context, "DECK CREATED -- RESTARTING", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.data_port_deck_created), Toast.LENGTH_SHORT).show()
                         pendingRestart = true
                     }
                 }
             },
-            dismissButton = { Text("CANCEL", color = Color.Red, modifier = Modifier.clickable { showImportDialog = false }.padding(8.dp)) }
+            dismissButton = { Text(stringResource(R.string.common_cancel), color = Color.Red, modifier = Modifier.clickable { showImportDialog = false }.padding(8.dp)) }
         )
     }
 
@@ -1539,10 +1541,10 @@ fun SettingsView(
             },
             primaryColor = primaryColor,
             title = labelFor(LabelKey.FULL_RESTORE),
-            dismissLabel = "CANCEL"
+            dismissLabel = stringResource(R.string.common_cancel)
         ) {
             Text(
-                "This applies whatever the selected file contains -- decks, quick actions, root overrides, target computer entries, emergency prompts, voice recordings, autocomplete history, Geo-Protocol zones, visual presets, output routing, and more -- overwriting a matching entry by its id, or adding it if you don't already have one. Nothing on this device that the file doesn't mention is touched or removed. To clear something instead, use that feature's own dedicated clear/delete action.",
+                stringResource(R.string.data_port_restore_body),
                 color = Color.White,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -1551,7 +1553,7 @@ fun SettingsView(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                "One exception: this phone may have been given ACK's neutral starter phrases. If the file is older, or came from a phone without them, any starter phrase you never edited goes back to the wording that phone showed. A phrase you edited, or that the file mentions, is never touched.",
+                stringResource(R.string.data_port_restore_starters),
                 color = Color.White,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace
@@ -1560,22 +1562,22 @@ fun SettingsView(
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("RESTORE", Modifier.weight(1f), mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.data_port_restore_button), Modifier.weight(1f), mainColor = primaryColor) {
                     val rawJson = pendingFullRestoreJson
                     if (rawJson != null) {
                         val success = TransferManager.restoreBackup(context, rawJson)
                         if (success) {
                             WatchSync.sendDeckList(context)
-                            Toast.makeText(context, "PROTOCOL RESTORED -- RESTARTING", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.data_port_restored), Toast.LENGTH_SHORT).show()
                             pendingRestart = true
                         } else {
-                            Toast.makeText(context, "INTEGRITY CHECK FAILED", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.data_port_integrity_failed), Toast.LENGTH_SHORT).show()
                         }
                     }
                     showFullRestoreConfirm = false
                     pendingFullRestoreJson = null
                 }
-                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_cancel), Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
                     showFullRestoreConfirm = false
                     pendingFullRestoreJson = null
                 }

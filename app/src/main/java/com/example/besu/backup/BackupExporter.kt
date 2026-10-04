@@ -7,9 +7,11 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import android.util.Log
 import android.widget.Toast
+import com.example.besu.core.ExportContents
+import com.example.besu.data.ResourceText
 import java.io.IOException
 
-/** What happened when a backup was written. [Failure.reason] is plain language and never contains any of the person's data. */
+/** What happened when a backup was written. [Failure.reason] is the NAME of a string resource (plain language, never any of the person's data); [BackupExporter.report] shows its text. */
 sealed interface ExportResult {
     data class Success(val bytes: Long) : ExportResult
     data class Failure(val reason: String) : ExportResult
@@ -26,6 +28,13 @@ sealed interface ExportResult {
  */
 object BackupExporter {
     private const val TAG = "ACK_BACKUP"
+
+    // The reasons a backup can fail, as string resource names (strings.xml has the words in every language).
+    const val REASON_OPEN = "backup_fail_open"
+    const val REASON_NOT_ALLOWED = "backup_fail_not_allowed"
+    const val REASON_WRITE = "backup_fail_write"
+    const val REASON_MEMORY = "backup_fail_memory"
+    const val REASON_PREPARE = "backup_fail_prepare"
 
     fun writeBackup(context: Context, uri: Uri): ExportResult {
         val resolver = context.contentResolver
@@ -47,7 +56,7 @@ object BackupExporter {
             val generated = TransferManager.generateBackup(context)
             val bytes = generated.json.toByteArray(Charsets.UTF_8)
             val out = resolver.openOutputStream(uri, "w")
-                ?: return failed("THE FILE COULD NOT BE OPENED")
+                ?: return failed(REASON_OPEN)
             out.use {
                 it.write(bytes)
                 it.flush()
@@ -63,15 +72,15 @@ object BackupExporter {
             Log.i(TAG, "export written: ${bytes.size} bytes, data fingerprint ${generated.fingerprint?.take(8)}")
             ExportResult.Success(bytes.size.toLong())
         } catch (e: SecurityException) {
-            failed("THIS LOCATION DID NOT ALLOW ACK TO SAVE THERE", e)
+            failed(REASON_NOT_ALLOWED, e)
         } catch (e: IOException) {
-            failed("THE FILE COULD NOT BE WRITTEN. THE LOCATION MAY BE FULL OR READ-ONLY", e)
+            failed(REASON_WRITE, e)
         } catch (e: OutOfMemoryError) {
-            failed("THIS PHONE RAN OUT OF MEMORY PREPARING THE BACKUP", e)
+            failed(REASON_MEMORY, e)
         } catch (e: Exception) {
             // The old export code caught everything; keep that, so an unexpected error is reported rather than crashing
             // the screen that asked for the backup.
-            failed("THE BACKUP COULD NOT BE PREPARED", e)
+            failed(REASON_PREPARE, e)
         }
     }
 
@@ -80,9 +89,10 @@ object BackupExporter {
      * command feedback uses). Both outcomes are shown; a failure says plainly that nothing was saved.
      */
     fun report(context: Context, result: ExportResult) {
+        val text = ResourceText(context)
         val (message, type) = when (result) {
-            is ExportResult.Success -> "BACKUP EXPORTED" to "CMD"
-            is ExportResult.Failure -> "BACKUP FAILED: ${result.reason}. NOTHING WAS SAVED." to "CMD_ERR"
+            is ExportResult.Success -> ExportContents.exportedText(text) to "CMD"
+            is ExportResult.Failure -> ExportContents.failedText(text, result.reason) to "CMD_ERR"
         }
         Toast.makeText(
             context,

@@ -293,6 +293,10 @@ Take a **backup first** (EXPORT .JSON); nothing here deletes anything.
   is translated; try CLEAR VARS, CLEAR PROMPT and CLEAR ALL and check each confirmation shows **both** sentences. MANAGE CONTEXT's own dialog is still English: that is expected.
 - [ ] Open the **TYPE tab** (the Statement composer) in each language. → FULL SCREEN, the hint in the text box, the preview line, SAVE / COPY / SPEAK, the SAVE dialog (name, folder, example, STATEMENT SAVED), NEW FOLDER, MY STATEMENTS (the empty
   sentence, and each row's YES / NO / COPY / SPEAK / DELETE) and the shared-variable list ("… VARIABLES", "(NOT SET)") are translated. A folder or statement **you named** is shown as you typed it. The word-suggestion offer is still English: expected.
+- [ ] Open **SETTINGS → EXPORT .JSON** in each language. → The warning is translated: what the file can contain (seven lines), that it is not encrypted and has no password, and where not to save it (Google Drive, OneDrive); CHOOSE WHERE TO SAVE and CANCEL are translated; CANCEL still opens no picker.
+  In the **Terminal**, type `/backup`. → The same facts in the chosen language, and the last line still tells you to type **/backup CONFIRM**; type exactly that and the export starts, as in English.
+  Turn the backup reminder on and, if one is due, check it reads naturally with the number of days (1 day and several days; in Arabic also 2 days).
+  Check FULL RESTORE's confirmation (it says nothing on the phone is deleted, and the starter-phrase exception), IMPORT MATRIX AS NEW DECK's colour prompt, and the toasts. **With PLAIN WORDS on**, the sentence under the two buttons names them with their everyday names.
 - [ ] Repeat for **PORTUGUÊS**, **हिन्दी** and **AFRIKAANS**. → Each shows its own script and words. Write down any text that is cut off, overlaps, or runs over a button
   (longer words in a 48 dp button are the likeliest problem).
 - [ ] Switch back to **ENGLISH** from the same control. → Everything English again after the restart.

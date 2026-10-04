@@ -79,9 +79,15 @@ class StarterRestoreWiringTest {
         // The title is a label now (plain words), so the dialog is found by its key, not by its English words.
         val at = settings.indexOf("title = labelFor(LabelKey.FULL_RESTORE)")
         assertTrue(at >= 0)
-        val dialog = settings.substring(at, at + 3500)
-        assertTrue("the FULL RESTORE confirmation must mention starter phrases", dialog.contains("starter phrases", ignoreCase = true))
-        assertTrue("and that edited ones are never touched", dialog.contains("never touched", ignoreCase = true))
+        // The words are string resources now (so they can be translated): the dialog must show both paragraphs, and the English text must still say it.
+        val dialog = settings.substring(at, minOf(settings.length, at + 3500))
+        assertTrue("the dialog must draw the starter-phrases paragraph", dialog.contains("stringResource(R.string.data_port_restore_starters)"))
+        assertTrue("and the paragraph about what a restore applies", dialog.contains("stringResource(R.string.data_port_restore_body)"))
+        val english = StringsXml.map(StringsXml.default)
+        val starters = english.getValue("data_port_restore_starters")
+        assertTrue("the FULL RESTORE confirmation must mention starter phrases", starters.contains("starter phrases", ignoreCase = true))
+        assertTrue("and that edited ones are never touched", starters.contains("never touched", ignoreCase = true))
+        assertTrue("and that nothing the file does not mention is removed", english.getValue("data_port_restore_body").contains("Nothing on this device that the file doesn't mention is touched or removed"))
     }
 
     @Test
