@@ -34,6 +34,9 @@ All notable changes to ACK are logged here. These same notes are available in-ap
 - **The old, unused setup screen was removed.** It could not be reached from anywhere and still carried an earlier app name.
 - **COPY in the statement composer, and the copy buttons on contact cards, are unchanged and deliberately do not mark the text as sensitive.** What you copy shows in the phone's clipboard preview so you can check it, and stays plain on the clipboard (a keyboard's clipboard history may keep it). ACK does not clear it afterwards.
 
+### Fixed
+- **The confirmation before clearing a phrase's variables (or its prompt) now shows the whole question.** Its text was written as two lines with nothing joining them, so only the second line appeared (for example just "The prompt will remain." without "Clear every local variable value for this phrase?"). All three versions (clear variables, clear prompt, clear both) now show both sentences, worded as before. A test now fails on any two lines of text left unjoined. Built and tested without a phone: the wording is checked by reading the source, the dialog itself was never run.
+
 ## [1.0-beta.8] - 2026-10-03
 
 ### Added

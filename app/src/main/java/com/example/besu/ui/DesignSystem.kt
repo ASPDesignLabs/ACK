@@ -447,7 +447,7 @@ private val PATCH_NOTES = listOf(
     "  ENGLISH (US)) FOR A PROFILE WITH NO VOICE OF ITS OWN. A NEW INSTALL",
     "  FOLLOWS THE PHONE. AN INSTALL THAT ALREADY EXISTS STAYS ON ENGLISH",
     "  (US) UNTIL YOU CHANGE IT. A LANGUAGE THE ENGINE LACKS NEVER MEANS",
-    "  SILENCE"
+    "  SILENCE",
     "-- WORD SUGGESTIONS --",
     "- NEW: THE STATEMENT COMPOSER CAN OFFER THE REST OF THE WORD YOU ARE",
     "  TYPING, OR THE WORD THAT USUALLY COMES NEXT, AS BUTTONS UNDER THE",
@@ -461,6 +461,10 @@ private val PATCH_NOTES = listOf(
     "- THE WORDS STAY ON THIS PHONE. FORGET WORDS IN SETTINGS REMOVES ONE",
     "  WORD OR ALL OF THEM. THEY ARE IN EXPORT .JSON, WHICH NOW NAMES THEM,",
     "  AND GO WITH DELETE DATA > MESSAGES AND DECKS",
+    "-- FIXES --",
+    "- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE'S VARIABLES OR",
+    "  PROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE",
+    "  QUESTION, WORDED AS BEFORE",
     "=== ACK v1.0-BETA.8 PATCH NOTES ===",
     "-- CUSTOM VOICE --",
     "- NEW: SPEAK IN A VOICE TRAINED FROM YOUR OWN RECORDINGS, ENTIRELY",
@@ -2820,18 +2824,18 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         if (mode != null) {
             val confirmationText = when (mode) {
                 "VARS" -> {
-                    "Clear every local variable value for this phrase? "
-                     "The prompt will remain."
+                    "Clear every local variable value for this phrase? " +
+                        "The prompt will remain."
                 }
 
                 "PROMPT" -> {
-                    "Clear this prompt only? Existing local variable values "
-                     "will be preserved."
+                    "Clear this prompt only? Existing local variable values " +
+                        "will be preserved."
                 }
 
                 else -> {
-                    "Clear both the prompt and every local variable value? "
-                     "This cannot be undone from this dialog."
+                    "Clear both the prompt and every local variable value? " +
+                        "This cannot be undone from this dialog."
                 }
             }
 
