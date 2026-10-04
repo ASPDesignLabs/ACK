@@ -24,7 +24,7 @@ class MatrixEditorStringsTest {
 
     private fun editor(): String {
         val text = design
-        return text.substring(text.indexOf("fun MatrixEditor("), text.indexOf("fun ManageContextDialog("))
+        return text.substring(text.indexOf("fun MatrixEditor("), text.indexOf("fun MatrixCategory("))
     }
 
     @Test
