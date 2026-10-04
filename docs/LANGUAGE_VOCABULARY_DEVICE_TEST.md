@@ -2,8 +2,8 @@
 
 This covers the parts of Section 4 that are built so far: the **neutral starter phrases** (L1), **typing, inserting and the history
 chips** (the work behind them, B1 to B4), the **profile-change warning** (L7, the warning half), and **word suggestions** (L5, in the
-Statement Composer), and the **voice list and SPEECH LANGUAGE** (L3, part 1). **Not built yet, so not here:** plain-language mode (L2, the
-wording is proposed in `docs/PLAIN_LANGUAGE.md`), translated interface text (L3, part 2), the profile lock (decided against for now), and the
+Statement Composer), and the **voice list and SPEECH LANGUAGE** (L3, part 1). **PLAIN WORDS** (L2, section J) is built too. **Not built yet, so not here:**
+translated interface text (L3, part 2: Spanish, Portuguese, Hindi, Arabic, Afrikaans), the profile lock (decided against for now), and the
 pictures and core-vocabulary decisions (L4, L6). Their steps will be added when they are built.
 
 The rules are covered by automated tests (480 in `tools/kotlin_check`, run with `./run_unit_tests.sh`), and the repository policy tests
@@ -213,6 +213,62 @@ Take a backup first. This needs a phone with at least one non-English voice **in
 - [ ] DATA PORT → DELETE DATA → SETTINGS. → The first box says speech will be in this phone's own language afterwards; after it, SPEECH LANGUAGE reads THIS PHONE'S LANGUAGE.
 - [ ] Screen reader and a large font on the voice list. → Each row is readable and every line is at least as large as the body text.
 - [ ] Confirm ACK still declares no network permission.
+
+## J. PLAIN WORDS (L2)
+
+Wording and decisions are in `docs/PLAIN_LANGUAGE.md`. Do the steps with PLAIN WORDS **off** first, then on. Nothing here should change what a
+button *does* or what is stored: only what it is called, plus the new buttons.
+
+**The switch**
+- [ ] Open SETTINGS (the header button says PROTOCOL while it is off). → **PLAIN WORDS: OFF** is the first item, with a short explanation. On an
+  install that never answered the offer, a box above it offers TURN ON and NOT NOW. NOT NOW changes nothing and does not come back.
+- [ ] Tap **PLAIN WORDS: OFF**. → It reads **PLAIN WORDS: ON** at once, in the same place, with no restart. The header button now says
+  **SETTINGS**, and the settings headings change (for example DATA PORT → MY DATA, AUDIO ARCHITECT → VOICE AND SOUND, EXPORT .JSON → SAVE A BACKUP). The switch's own wording is the same in both modes.
+- [ ] Turn it off and on again a few times. → It always flips at once and never loses your place.
+
+**Names change, nothing else does**
+- [ ] Open the MATRIX deck. → With it on, the group headings read ABOUT ME / I NEED SPACE / SOCIAL and the rows GESTURE 1 (MAIN), GESTURE 2 ...
+  Off: IDENTITY / DEFEND / CONNECT and Twist 0 (Default), Twist 1 ... Tap ACTIVATE on a group in either mode. → The Terminal's log line still says
+  CONTEXT FOCUS: IDENTITY (the stored name), and tapping a row speaks the same phrase as before.
+- [ ] Turn it on and off, then EXPORT .JSON before and after (or compare the Matrix phrases by eye). → Nothing stored changed.
+- [ ] With TalkBack on, move across the bottom bar. → On: PHRASES, HISTORY, PEOPLE AND PLACES, LOCATION ALERTS, VOICE AND SOUND, TYPE. Off: Matrix,
+  Logs, Targets, Zones, Audio Architect, Type.
+- [ ] Open HELP and start a walkthrough (for example TARGET COMPUTER). → The coach text uses the same names as the screen (PEOPLE AND PLACES with it
+  on, TARGET COMPUTER off), and when it reads aloud you hear no curly brackets.
+- [ ] Walk through the **eight core tasks** in `docs/PLAIN_LANGUAGE.md` with it on, as someone who has never seen ACK. → You can find each one
+  without knowing ACK's own words. Write down every place you got stuck.
+
+**The Terminal screen (HISTORY)**
+- [ ] With it on, open the Terminal screen. → **WHAT'S NEW** and **CLEAR HISTORY** across the top; a **SEND OPTIONS** row above the typing box. With it
+  off, none of these show and the screen is exactly as before.
+- [ ] Tap **WHAT'S NEW**. → The patch notes appear line by line, the same as typing `/info`. Shake stops it.
+- [ ] Tap **CLEAR HISTORY**. → A box asks, with **CANCEL** first and large, and a red **CLEAR HISTORY** below it. Tap outside the box. → Nothing is
+  cleared. Tap CLEAR HISTORY, then the red one. → The history clears and says LOG CLEARED. Typing `/cls` then `/cls confirm` still works.
+- [ ] Tap **SEND OPTIONS**. → Four rows open: SEND QUIETLY, DO NOT SAVE IN HISTORY, KEEP ON SCREEN UNTIL I CLEAR IT, EMERGENCY, each reading OFF, and
+  two buttons below (INSERT A FILL-IN, BROWSE PEOPLE AND PLACES). A line says they stay on until you turn them off and that closing ACK turns them off.
+- [ ] Turn **SEND QUIETLY** on. → Its row shows ON in words and a thicker border, and the **closed** row now reads SEND OPTIONS ON: SEND QUIETLY, so a
+  switch that is on is never hidden. Send a phrase. → No sound. Send another. → Still no sound (it stays on). Leave the screen and come back. →
+  Still on.
+- [ ] Turn it off and send. → It speaks. Then try DO NOT SAVE IN HISTORY (the message is not in the history) and KEEP ON SCREEN UNTIL I CLEAR IT (it
+  stays on the display until you clear it).
+- [ ] With an **Emergency deck active**, turn **EMERGENCY** on and send. → It uses the Emergency deck's settings, with **no** confirmation question.
+  With another deck active. → It is sent normally and a warning line says no Emergency deck is active.
+- [ ] Turn one switch on, then turn PLAIN WORDS **off** in SETTINGS and send from the Terminal. → It goes out normally (a hidden switch must not act).
+  Turn PLAIN WORDS on again. → All four read OFF.
+- [ ] Turn one on, close ACK completely (swipe it away) and open it again. → All four are OFF.
+- [ ] Type `/q hello` with PLAIN WORDS on or off. → The typed commands still work in both modes.
+- [ ] Tap **INSERT A FILL-IN**. → `/v` appears at the cursor and the status box shows the Shared Variable groupings, exactly as if you had typed it. Tap it
+  again. → No second `/v`. Tap **BROWSE PEOPLE AND PLACES**. → The same for `/t`.
+
+**The other two buttons**
+- [ ] Open the TYPE tab with PLAIN WORDS on. → A **TYPE AND SPEAK (CLASSIC)** button is at the top. Tap it. → Classic Manual Override opens, and its CLOSE
+  returns to the Type tab. Do it again from FULL SCREEN. → It leaves full screen first and the quick-insert header works.
+- [ ] Open SETTINGS with it on. → Below the switch, a **FIX PROBLEMS** button with a short line about what it does. Tap it. → A message says the background
+  parts were restarted, a line appears in the Terminal history, and speaking still works. It asked no question (as the typed `/repair`).
+
+**Feel**
+- [ ] Look at every new control. → Text is readable (never tiny), every button is easy to hit, and **nothing buzzes or moves** when you tap them.
+- [ ] TalkBack on the four switches. → Each is announced as a switch, on or off.
 
 ## What to send back
 

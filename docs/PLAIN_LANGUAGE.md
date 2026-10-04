@@ -1,8 +1,14 @@
-# Plain words: the label inventory (a PROPOSAL, nothing is wired in)
+# Plain words: the label inventory (BUILT, wording still a draft for an SLP)
 
-**Status: draft for the developer and an SLP to edit. No code reads this file, and no screen changes until you approve the wording.**
-The plain wording below is a *content* decision, not an engineering one. Where I was unsure what a control does I wrote **CHECK**
-instead of guessing; the app was not run to write this, only read.
+**Status: built and wired in (the label table is `app/src/main/res/values/strings.xml`, `label_<key>` and `label_<key>_plain`; the keys are
+`core/PlainLabels.kt`).** The developer approved the wording as written. It is still a *content* draft: an SLP should edit the plain column, and
+every **CHECK** row still needs a yes/no from someone who knows what the control does. The code was built and tested without an Android SDK and
+never run on a phone; `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md` section J is the do-this-expect-that list.
+
+**Decisions made (the developer's answers):** the switch is OFF for everyone; the group names are ABOUT ME / I NEED SPACE / SOCIAL; the Terminal's
+send switches stay on until they are turned off (not reset after a send; kept in memory only, so closing ACK turns them off, and they act only while
+PLAIN WORDS is on); EMERGENCY still never asks for confirmation. Translations (Spanish, Portuguese, Hindi, Arabic, Afrikaans) are the next step and use
+this same table, one standard and one plain text per key per language.
 
 ## What this is for
 
@@ -11,9 +17,9 @@ or a speech-language pathologist (SLP) without a glossary cannot tell what they 
 name for each, and adds a visible button for the features that today only exist as Terminal commands. Done when a first-time user can do
 the eight core tasks below with no glossary.
 
-**What you chose so far:** the switch is **OFF for everyone** (a new install too), with one dismissible offer in Settings that says what
+**What you chose:** the switch is **OFF for everyone** (a new install too), with one dismissible offer in Settings that says what
 changes and starts OFF. The switch sits at the top of SETTINGS, is worded **identically in both modes** so it can always be found, and
-takes effect at once with no restart. The translation language (L3) is not chosen yet.
+takes effect at once with no restart.
 
 ## The eight core tasks (the device checklist is measured against these)
 
@@ -130,10 +136,11 @@ takes effect at once with no restart. The translation language (L3) is not chose
 | `FORCE_SPEAKER` | FORCE SPEAKER | ALWAYS USE THE PHONE SPEAKER | SETTINGS, Emergency | H | |
 | `SILENT_MODE` | SILENT MODE | SHOW ONLY, NO SOUND | SETTINGS | CHECK | |
 
-## B. Terminal-command-only features and the visible control each would get
+## B. Terminal-command-only features and the visible control each now has
 
-Today these exist **only** as typed Terminal commands. In plain mode each would get a visible button or switch; **the slash commands keep working
-in both modes**, and `/e` stays typed on purpose and never asks for confirmation (this is not changed). I checked each against the rest of the app first.
+These existed **only** as typed Terminal commands. In plain mode each has a visible button or switch (the "Proposed control" column is what was built);
+**the slash commands keep working in both modes**, and `/e` never asks for confirmation, typed or switched (this is not changed). The text on these
+controls is in `strings.xml` as `plain_ctl_*` (single strings, because they exist only in plain mode); the code is `ui/TerminalPlainControls.kt`.
 
 | Command | What it does | Already has a visible control? | Proposed control in plain mode |
 |---|---|---|---|
@@ -145,19 +152,22 @@ in both modes**, and `/e` stays typed on purpose and never asks for confirmation
 | `/q` | Send without sound | No | A SEND QUIETLY switch beside the Terminal's text box |
 | `/n` | Send without saving to the log | No | A DO NOT SAVE IN HISTORY switch beside the text box |
 | `/s` | Send and hold the message until cleared | No | A KEEP ON SCREEN UNTIL I CLEAR IT switch beside the text box |
-| `/e` | Send with emergency settings | No | An EMERGENCY switch beside the text box, **off after each send**; still no confirmation |
+| `/e` | Send with emergency settings | No | An EMERGENCY switch beside the text box. **It stays on until switched off (your answer), like the other three**; still no confirmation |
 | `/v`, `/t` | Browse Shared Variables / Target entries from the Terminal | The composer has INSERT VARIABLE and BROWSE TARGETS; the Terminal does not | Two small buttons beside the Terminal's text box |
 
-Three of these (`/q`, `/n`, `/s`) change **how a message goes out**. The switch must be visibly on while it is on, and I would reset it after each
-send so a message is never silent by accident. That is a design point to confirm, not something I decided.
+Four of these (`/q`, `/n`, `/s`, `/e`) change **how a message goes out**. You chose that they **stay on until switched off**, so the switch is made
+visibly on while it is on: ON is written in words and the border is thicker, and the closed SEND OPTIONS row names every switch that is on. They are
+kept in memory only (they survive a send and leaving the screen, not closing ACK; nothing is stored, wiped or backed up) and they act only while
+PLAIN WORDS is on, because a switch that cannot be seen must not make a message silent, unsaved or loud by accident. Turning PLAIN WORDS off turns
+them off.
 
-## C. What I need from you
+## C. What I needed from you (answered, except where noted)
 
-- Edit the **Proposed plain text** column. Nothing here is final. Every **CHECK** row needs a yes/no from someone who knows what the control does.
-- Choose or reject the group names for IDENTITY / DEFEND / CONNECT. They are the biggest content choice because they name sets of phrases people have learned.
-  A mismatch to know about: the starter phrases were placed by gesture position, so the groups do not line up with any plain name (for example
-  "No." sits under CONNECT and "Yes." under IDENTITY). Plain group names would make that visible, so the group names and the starter
-  placement (docs/STARTER_PHRASES.md) are best decided together.
-- Tell me whether the Matrix slot names should become one-based (GESTURE 1 to 4) in plain mode.
-- Confirm the switch buttons in section B (including resetting them after each send).
-- Tell me whether you want the bottom navigation to show a word under each icon in plain mode (not proposed in this pass).
+- **Open:** edit the **Proposed plain text** column with an SLP. Every **CHECK** row needs a yes/no from someone who knows what the control does.
+- **Answered:** the group names are **ABOUT ME / I NEED SPACE / SOCIAL**. **Still open:** the starter phrases were placed by gesture position, so the
+  groups do not line up with any plain name (for example "No." sits under CONNECT and "Yes." under IDENTITY). Plain group names make that visible, so the
+  group names and the starter placement (docs/STARTER_PHRASES.md) are best decided together.
+- **Built as written:** the Matrix slot names are one-based in plain mode (GESTURE 1 (MAIN), GESTURE 2 ... GESTURE 4); the stored names do not change.
+  Say if you want them different.
+- **Answered:** the switch buttons are built, and they stay on until switched off (see section B).
+- **Not built, not proposed in this pass:** a visible word under each bottom-navigation icon. The plain names are the screen-reader names for now.
