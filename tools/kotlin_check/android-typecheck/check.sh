@@ -45,6 +45,11 @@ cp "$A/settings/WordSuggestionsSection.kt" "$STAGE/com/example/besu/settings/"
 cp "$A/ui/ManageContextDialog.kt" "$STAGE/com/example/besu/ui/"
 # MANAGE AUTOCOMPLETE: the dialog (the history repository, the Quick Actions models and the deck, node and phrase lookups are stubbed from their real signatures).
 cp "$A/settings/ManageAutocompleteDialog.kt" "$STAGE/com/example/besu/settings/"
+# MANAGE RECORDINGS and the voice recording panel it embeds (the recorder, the recordings store and the command lookups are stubbed from their real signatures).
+mkdir -p "$STAGE/com/example/besu/output"
+cp "$A/settings/ManageRecordingsDialog.kt" "$STAGE/com/example/besu/settings/"
+cp "$A/output/VoiceRecordingPanel.kt" "$STAGE/com/example/besu/output/"
+cp "$A/output/AudioDsp.kt" "$STAGE/com/example/besu/output/"
 mkdir -p "$STAGE/com/example/besu/output"
 cp "$A/data/VoiceProfile.kt" "$STAGE/com/example/besu/data/"
 cp "$A/output/VoiceInfoMapping.kt" "$STAGE/com/example/besu/output/"

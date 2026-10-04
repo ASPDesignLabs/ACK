@@ -622,7 +622,7 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="audio_robotic_freq">ROBOTFREKWENSIE</string>
     <string name="audio_robotic_depth">ROBOTDIEPTE</string>
     <string name="audio_preview">VOORSKOU</string>
-    <string name="audio_discard">VERWERP</string>
+    <string name="common_discard">VERWERP</string>
     <string name="audio_manage_title">BESTUUR PERSOONLIKE PROFIELE</string>
     <string name="audio_no_profiles">NOG GEEN PERSOONLIKE PROFIELE NIE.</string>
     <string name="common_rename">HERNOEM</string>
@@ -726,5 +726,34 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <plurals name="autocomplete_fields_remembered">
         <item quantity="one">%d VELD ONTHOU</item>
         <item quantity="other">%d VELDE ONTHOU</item>
+    </plurals>
+    <string name="voice_rec_title">STEMOPNAME</string>
+    <string name="voice_rec_description">AS DIT GESTEL IS, SPEEL DIT IN PLEK VAN DIE GESINTETISEERDE FRASE HIERBO.</string>
+    <string name="voice_rec_description_key">AS DIT GESTEL IS, SPEEL DIT IN PLEK VAN DIE SLEUTEL SE TEIKENFRASE.</string>
+    <string name="voice_rec_key_title">%1$s-OPNAME</string>
+    <string name="voice_rec_help_offer">NUUT: STEMOPNAMES HET \'N LEIDRAAD IN HELP -- OPNEEM, MATRIKSNOTAS EN BESTUUR WAT JY OPGENEEM HET. VIND DIT ENIGTYD ONDER HELP.</string>
+    <string name="voice_rec_recorded">OPGENEEM (%1$s)</string>
+    <string name="voice_rec_play">SPEEL</string>
+    <string name="voice_rec_playing">SPEEL TANS...</string>
+    <string name="voice_rec_remove">VERWYDER</string>
+    <string name="voice_rec_record">NEEM OP</string>
+    <string name="voice_rec_rerecord">NEEM WEER OP</string>
+    <string name="voice_rec_recording_now">NEEM TANS OP... %1$s</string>
+    <string name="voice_rec_stop">STOP</string>
+    <string name="voice_rec_processing">VERMINDER GERAAS, SNY STILTE AF EN VLAK DIE VOLUME UIT...</string>
+    <string name="voice_rec_preview">VOORSKOU (%1$s)</string>
+    <string name="voice_rec_accept">AANVAAR</string>
+    <string name="help_got_it">[GESNAP]</string>
+    <string name="manage_rec_title">BESTUUR OPNAMES</string>
+    <string name="manage_rec_overlay">[OORLEGGING: %1$s]</string>
+    <string name="manage_rec_empty">NOG GEEN OPNAMES NIE. NEEM EEN OP VANAF \'N VINNIGE AKSIES-PLEK SE WYSIGSKERM, \'N VINNIGETOEGANG-SLEUTEL SE REC-KNOP OF \'N MATRIKS-NODUS SE REDIGEERDER.</string>
+    <string name="manage_rec_empty_prompt">(LEË BOODSKAP)</string>
+    <string name="manage_rec_unknown_node">(ONBEKENDE NODUS)</string>
+    <string name="manage_rec_disabled">GEDEAKTIVEER -- DIE INSKRYWING SE TEKS HET VERANDER SEDERT DIT OPGENEEM IS</string>
+    <string name="manage_rec_delete_title">SKRAP OPNAME</string>
+    <string name="manage_rec_delete_body">DIT VERWYDER DIE OPNAME. WAT DAARAAN GEBIND IS, BLY EN VAL TERUG OP GESINTETISEERDE SPRAAK (OF, VIR \'N MATRIKSINSKRYWING, SY NORMALE TEKS MET OPGELOSTE VERANDERLIKES). DIT KAN NIE ONGEDAAN GEMAAK WORD NIE.</string>
+    <plurals name="manage_rec_count">
+        <item quantity="one">%d OPNAME</item>
+        <item quantity="other">%d OPNAMES</item>
     </plurals>
 </resources>

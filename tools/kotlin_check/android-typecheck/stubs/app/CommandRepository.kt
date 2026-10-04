@@ -5,12 +5,18 @@ import com.example.besu.decks.EmergencyDeckConfig
 import com.example.besu.decks.EmergencyInfoCard
 import com.example.besu.decks.QuickActionsDeckConfig
 
-// Stub of the Emergency, custom-context and autocomplete-tree halves of data/CommandRepository.kt (it reads and writes storage and is not staged), written from its real signatures.
+// Stub of the Emergency, custom-context, autocomplete-tree and recordings halves of data/CommandRepository.kt (it reads and writes storage and is not staged), written from its real signatures.
 data class CustomContextEntry(val name: String, val basePose: String = "IDENTITY")
 
 data class MatrixNode(val path: String, val triggerPath: String, val label: String, val defaultPhrase: String, val category: String)
 
 object CommandRepository {
+    data class HeaderShortcut(val label: String, val phrase: String)
+    fun getHeaderShortcuts(context: Context): List<HeaderShortcut> = emptyList()
+    fun resolveQuickAction(context: Context, deckId: String, groupIndex: Int, slotIndex: Int): String = ""
+    fun getVisualOverride(context: Context, storagePath: String, deckId: String = "DEFAULT", profile: String = "DEFAULT"): String = ""
+    fun getResolvedPhrase(context: Context, storagePath: String, deckId: String = "DEFAULT", profile: String = "DEFAULT"): String = ""
+    fun setQuickActionSlotRecording(context: Context, deckId: String, groupIndex: Int, slotIndex: Int, recordingId: String?) {}
     fun getDeckName(context: Context, deckId: String = "DEFAULT"): String = deckId
     fun findMatrixNode(context: Context, path: String): MatrixNode? = null
     fun getPhrase(context: Context, storagePath: String, deckId: String = "DEFAULT", profile: String = "DEFAULT"): String = ""

@@ -643,7 +643,7 @@
     <string name="audio_robotic_freq">ROBOTIC FREQ</string>
     <string name="audio_robotic_depth">ROBOTIC DEPTH</string>
     <string name="audio_preview">PREVIEW</string>
-    <string name="audio_discard">DISCARD</string>
+    <string name="common_discard">DISCARD</string>
     <string name="audio_manage_title">MANAGE CUSTOM PROFILES</string>
     <string name="audio_no_profiles">NO CUSTOM PROFILES YET.</string>
     <string name="common_rename">RENAME</string>
@@ -747,5 +747,34 @@
     <plurals name="autocomplete_fields_remembered">
         <item quantity="one">%d FIELD REMEMBERED</item>
         <item quantity="other">%d FIELDS REMEMBERED</item>
+    </plurals>
+    <string name="voice_rec_title">VOICE RECORDING</string>
+    <string name="voice_rec_description">WHEN SET, THIS PLAYS INSTEAD OF THE SYNTHESIZED PHRASE ABOVE.</string>
+    <string name="voice_rec_description_key">WHEN SET, THIS PLAYS INSTEAD OF THE KEY\'S TARGET PHRASE.</string>
+    <string name="voice_rec_key_title">%1$s RECORDING</string>
+    <string name="voice_rec_help_offer">NEW: VOICE RECORDINGS HAS A HELP WALKTHROUGH -- RECORDING, MATRIX NOTES, AND MANAGING WHAT YOU\'VE RECORDED. FIND IT UNDER HELP ANYTIME.</string>
+    <string name="voice_rec_recorded">RECORDED (%1$s)</string>
+    <string name="voice_rec_play">PLAY</string>
+    <string name="voice_rec_playing">PLAYING...</string>
+    <string name="voice_rec_remove">REMOVE</string>
+    <string name="voice_rec_record">RECORD</string>
+    <string name="voice_rec_rerecord">RE-RECORD</string>
+    <string name="voice_rec_recording_now">RECORDING... %1$s</string>
+    <string name="voice_rec_stop">STOP</string>
+    <string name="voice_rec_processing">REDUCING NOISE, TRIMMING SILENCE &amp; LEVELING VOLUME...</string>
+    <string name="voice_rec_preview">PREVIEW (%1$s)</string>
+    <string name="voice_rec_accept">ACCEPT</string>
+    <string name="help_got_it">[GOT IT]</string>
+    <string name="manage_rec_title">MANAGE RECORDINGS</string>
+    <string name="manage_rec_overlay">[OVERLAY: %1$s]</string>
+    <string name="manage_rec_empty">NO RECORDINGS YET. RECORD ONE FROM A QUICK ACTIONS SLOT\'S EDIT SCREEN, A QUICK-ACCESS KEY\'S REC BUTTON, OR A MATRIX NODE\'S EDITOR.</string>
+    <string name="manage_rec_empty_prompt">(EMPTY PROMPT)</string>
+    <string name="manage_rec_unknown_node">(UNKNOWN NODE)</string>
+    <string name="manage_rec_disabled">DISABLED -- entry text changed since this was recorded</string>
+    <string name="manage_rec_delete_title">DELETE RECORDING</string>
+    <string name="manage_rec_delete_body">This removes the recording. Whatever it\'s bound to stays and falls back to synthesized speech (or, for a Matrix entry, its normal variable-resolved text). This cannot be undone.</string>
+    <plurals name="manage_rec_count">
+        <item quantity="one">%d RECORDING</item>
+        <item quantity="other">%d RECORDINGS</item>
     </plurals>
 </resources>

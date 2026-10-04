@@ -625,7 +625,7 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="audio_robotic_freq">FREQUÊNCIA ROBÓTICA</string>
     <string name="audio_robotic_depth">PROFUNDIDADE ROBÓTICA</string>
     <string name="audio_preview">TESTAR</string>
-    <string name="audio_discard">DESCARTAR</string>
+    <string name="common_discard">DESCARTAR</string>
     <string name="audio_manage_title">GERENCIAR PERFIS PERSONALIZADOS</string>
     <string name="audio_no_profiles">AINDA NÃO HÁ PERFIS PERSONALIZADOS.</string>
     <string name="common_rename">RENOMEAR</string>
@@ -732,5 +732,35 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
         <item quantity="one">%d CAMPO LEMBRADO</item>
         <item quantity="many">%d CAMPOS LEMBRADOS</item>
         <item quantity="other">%d CAMPOS LEMBRADOS</item>
+    </plurals>
+    <string name="voice_rec_title">GRAVAÇÃO DE VOZ</string>
+    <string name="voice_rec_description">SE DEFINIDA, ELA TOCA NO LUGAR DA FRASE SINTETIZADA ACIMA.</string>
+    <string name="voice_rec_description_key">SE DEFINIDA, ELA TOCA NO LUGAR DA FRASE DE DESTINO DA TECLA.</string>
+    <string name="voice_rec_key_title">GRAVAÇÃO DE %1$s</string>
+    <string name="voice_rec_help_offer">NOVIDADE: AS GRAVAÇÕES DE VOZ TÊM UM TUTORIAL EM HELP -- GRAVAR, NOTAS DE MATRIZ E GERENCIAR O QUE VOCÊ GRAVOU. ENCONTRE-O EM HELP QUANDO QUISER.</string>
+    <string name="voice_rec_recorded">GRAVADO (%1$s)</string>
+    <string name="voice_rec_play">TOCAR</string>
+    <string name="voice_rec_playing">TOCANDO...</string>
+    <string name="voice_rec_remove">REMOVER</string>
+    <string name="voice_rec_record">GRAVAR</string>
+    <string name="voice_rec_rerecord">GRAVAR DE NOVO</string>
+    <string name="voice_rec_recording_now">GRAVANDO... %1$s</string>
+    <string name="voice_rec_stop">PARAR</string>
+    <string name="voice_rec_processing">REDUZINDO RUÍDO, CORTANDO SILÊNCIO E NIVELANDO O VOLUME...</string>
+    <string name="voice_rec_preview">PRÉVIA (%1$s)</string>
+    <string name="voice_rec_accept">ACEITAR</string>
+    <string name="help_got_it">[ENTENDI]</string>
+    <string name="manage_rec_title">GERENCIAR GRAVAÇÕES</string>
+    <string name="manage_rec_overlay">[SOBREPOSIÇÃO: %1$s]</string>
+    <string name="manage_rec_empty">AINDA NÃO HÁ GRAVAÇÕES. GRAVE UMA NA TELA DE EDIÇÃO DE UMA VAGA DE AÇÕES RÁPIDAS, NO BOTÃO REC DE UMA TECLA DE ACESSO RÁPIDO OU NO EDITOR DE UM NÓ DA MATRIZ.</string>
+    <string name="manage_rec_empty_prompt">(MENSAGEM VAZIA)</string>
+    <string name="manage_rec_unknown_node">(NÓ DESCONHECIDO)</string>
+    <string name="manage_rec_disabled">DESATIVADA -- O TEXTO DA ENTRADA MUDOU DESDE A GRAVAÇÃO</string>
+    <string name="manage_rec_delete_title">EXCLUIR GRAVAÇÃO</string>
+    <string name="manage_rec_delete_body">ISSO REMOVE A GRAVAÇÃO. O QUE ESTIVER VINCULADO A ELA PERMANECE E VOLTA PARA A VOZ SINTETIZADA (OU, EM UMA ENTRADA DA MATRIZ, PARA O TEXTO NORMAL COM AS VARIÁVEIS RESOLVIDAS). ISSO NÃO PODE SER DESFEITO.</string>
+    <plurals name="manage_rec_count">
+        <item quantity="one">%d GRAVAÇÃO</item>
+        <item quantity="many">%d GRAVAÇÕES</item>
+        <item quantity="other">%d GRAVAÇÕES</item>
     </plurals>
 </resources>

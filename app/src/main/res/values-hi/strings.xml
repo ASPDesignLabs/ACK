@@ -622,7 +622,7 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="audio_robotic_freq">रोबोटिक आवृत्ति</string>
     <string name="audio_robotic_depth">रोबोटिक गहराई</string>
     <string name="audio_preview">पूर्वावलोकन</string>
-    <string name="audio_discard">बदलाव हटाएँ</string>
+    <string name="common_discard">बदलाव हटाएँ</string>
     <string name="audio_manage_title">कस्टम प्रोफ़ाइल प्रबंधित करें</string>
     <string name="audio_no_profiles">अभी कोई कस्टम प्रोफ़ाइल नहीं है।</string>
     <string name="common_rename">नाम बदलें</string>
@@ -726,5 +726,34 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <plurals name="autocomplete_fields_remembered">
         <item quantity="one">%d फ़ील्ड याद रखा गया</item>
         <item quantity="other">%d फ़ील्ड याद रखे गए</item>
+    </plurals>
+    <string name="voice_rec_title">आवाज़ रिकॉर्डिंग</string>
+    <string name="voice_rec_description">सेट होने पर यह ऊपर के संश्लेषित वाक्य की जगह चलता है।</string>
+    <string name="voice_rec_description_key">सेट होने पर यह कुंजी के लक्ष्य वाक्य की जगह चलता है।</string>
+    <string name="voice_rec_key_title">%1$s रिकॉर्डिंग</string>
+    <string name="voice_rec_help_offer">नया: आवाज़ रिकॉर्डिंग के लिए HELP में एक वॉकथ्रू है -- रिकॉर्ड करना, मैट्रिक्स नोट्स, और जो आपने रिकॉर्ड किया उसे प्रबंधित करना। इसे कभी भी HELP में पाएँ।</string>
+    <string name="voice_rec_recorded">रिकॉर्ड किया गया (%1$s)</string>
+    <string name="voice_rec_play">चलाएँ</string>
+    <string name="voice_rec_playing">चल रहा है...</string>
+    <string name="voice_rec_remove">हटाएँ</string>
+    <string name="voice_rec_record">रिकॉर्ड करें</string>
+    <string name="voice_rec_rerecord">फिर से रिकॉर्ड करें</string>
+    <string name="voice_rec_recording_now">रिकॉर्ड हो रहा है... %1$s</string>
+    <string name="voice_rec_stop">रोकें</string>
+    <string name="voice_rec_processing">शोर घटाया जा रहा है, चुप्पी काटी जा रही है और आवाज़ का स्तर बराबर किया जा रहा है...</string>
+    <string name="voice_rec_preview">पूर्वावलोकन (%1$s)</string>
+    <string name="voice_rec_accept">स्वीकारें</string>
+    <string name="help_got_it">[समझ गया]</string>
+    <string name="manage_rec_title">रिकॉर्डिंग प्रबंधित करें</string>
+    <string name="manage_rec_overlay">[ओवरले: %1$s]</string>
+    <string name="manage_rec_empty">अभी कोई रिकॉर्डिंग नहीं है। इसे किसी त्वरित क्रियाएँ स्लॉट की संपादन स्क्रीन, किसी त्वरित-पहुँच कुंजी के REC बटन, या किसी मैट्रिक्स नोड के संपादक से रिकॉर्ड करें।</string>
+    <string name="manage_rec_empty_prompt">(खाली संदेश)</string>
+    <string name="manage_rec_unknown_node">(अज्ञात नोड)</string>
+    <string name="manage_rec_disabled">बंद -- रिकॉर्ड होने के बाद एंट्री का पाठ बदल गया</string>
+    <string name="manage_rec_delete_title">रिकॉर्डिंग हटाएँ</string>
+    <string name="manage_rec_delete_body">यह रिकॉर्डिंग को हटाता है। जो इससे जुड़ा है वह बना रहता है और संश्लेषित आवाज़ पर लौट आता है (या मैट्रिक्स एंट्री के लिए, उसके सामान्य, वेरिएबल-सुलझे पाठ पर)। इसे वापस नहीं किया जा सकता।</string>
+    <plurals name="manage_rec_count">
+        <item quantity="one">%d रिकॉर्डिंग</item>
+        <item quantity="other">%d रिकॉर्डिंग</item>
     </plurals>
 </resources>

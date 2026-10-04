@@ -119,7 +119,7 @@ class AudioScreenWordingTest {
         assertTrue("CANCEL in the picker", wordThenAction("common_cancel", "showVoicePicker = false", 300))
         assertTrue("CANCEL in the question", wordThenAction("common_cancel", "deleteTargetId = null", 300))
         assertTrue("PREVIEW", wordThenAction("audio_preview", "previewCurrentEdit()", 200))
-        assertTrue("DISCARD", wordThenAction("audio_discard", "discardEditingProfile()", 200))
+        assertTrue("DISCARD", wordThenAction("common_discard", "discardEditingProfile()", 200))
         assertTrue("COMMIT", wordThenAction("common_commit", "saveEditingProfile()", 300))
         assertTrue("CLOSE the DSP editor", wordThenAction("common_close", "showDspChainEditor = false", 300))
         assertTrue("CLOSE the profile list", wordThenAction("common_close", "showManageProfiles = false", 300))
@@ -203,7 +203,7 @@ class AudioScreenWordingTest {
     fun wordsThatAnswerOppositeQuestionsAreDifferentInEveryLanguage() {
         val pairs = listOf(
             "audio_dsp_unsaved" to "audio_dsp_up_to_date", "audio_status_installed" to "audio_status_not_imported", "audio_pitch" to "audio_speed",
-            "audio_robotic_freq" to "audio_robotic_depth", "audio_export_voice_backup" to "audio_import_voice_backup", "audio_preview" to "audio_discard",
+            "audio_robotic_freq" to "audio_robotic_depth", "audio_export_voice_backup" to "audio_import_voice_backup", "audio_preview" to "common_discard",
             "audio_toast_imported" to "audio_toast_import_failed", "audio_toast_restored" to "audio_toast_restore_failed", "audio_new_slot" to "audio_slot_limit",
             "audio_chip_new" to "audio_new_slot", "speech_language_device" to "speech_language_english", "common_rename" to "audio_manage_profiles",
         )

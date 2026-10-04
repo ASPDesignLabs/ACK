@@ -727,7 +727,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                 NeonButton(stringResource(R.string.audio_preview), Modifier.weight(1f), mainColor = primaryColor) {
                     previewCurrentEdit()
                 }
-                NeonButton(stringResource(R.string.audio_discard), Modifier.weight(1f), mainColor = Color.Gray) {
+                NeonButton(stringResource(R.string.common_discard), Modifier.weight(1f), mainColor = Color.Gray) {
                     discardEditingProfile()
                 }
                 HeroButton(

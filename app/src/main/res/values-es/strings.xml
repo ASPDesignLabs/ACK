@@ -625,7 +625,7 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="audio_robotic_freq">FRECUENCIA ROBÓTICA</string>
     <string name="audio_robotic_depth">PROFUNDIDAD ROBÓTICA</string>
     <string name="audio_preview">PROBAR</string>
-    <string name="audio_discard">DESCARTAR</string>
+    <string name="common_discard">DESCARTAR</string>
     <string name="audio_manage_title">ADMINISTRAR PERFILES PERSONALIZADOS</string>
     <string name="audio_no_profiles">TODAVÍA NO HAY PERFILES PERSONALIZADOS.</string>
     <string name="common_rename">CAMBIAR NOMBRE</string>
@@ -732,5 +732,35 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
         <item quantity="one">%d CAMPO RECORDADO</item>
         <item quantity="many">%d CAMPOS RECORDADOS</item>
         <item quantity="other">%d CAMPOS RECORDADOS</item>
+    </plurals>
+    <string name="voice_rec_title">GRABACIÓN DE VOZ</string>
+    <string name="voice_rec_description">SI SE ESTABLECE, SE REPRODUCE EN LUGAR DE LA FRASE SINTETIZADA DE ARRIBA.</string>
+    <string name="voice_rec_description_key">SI SE ESTABLECE, SE REPRODUCE EN LUGAR DE LA FRASE DE DESTINO DE LA TECLA.</string>
+    <string name="voice_rec_key_title">GRABACIÓN DE %1$s</string>
+    <string name="voice_rec_help_offer">NUEVO: LAS GRABACIONES DE VOZ TIENEN UN TUTORIAL EN HELP -- GRABAR, NOTAS DE MATRIZ Y ADMINISTRAR LO QUE HAS GRABADO. LO ENCUENTRAS EN HELP CUANDO QUIERAS.</string>
+    <string name="voice_rec_recorded">GRABADO (%1$s)</string>
+    <string name="voice_rec_play">REPRODUCIR</string>
+    <string name="voice_rec_playing">REPRODUCIENDO...</string>
+    <string name="voice_rec_remove">QUITAR</string>
+    <string name="voice_rec_record">GRABAR</string>
+    <string name="voice_rec_rerecord">VOLVER A GRABAR</string>
+    <string name="voice_rec_recording_now">GRABANDO... %1$s</string>
+    <string name="voice_rec_stop">DETENER</string>
+    <string name="voice_rec_processing">REDUCIENDO RUIDO, RECORTANDO SILENCIO Y NIVELANDO EL VOLUMEN...</string>
+    <string name="voice_rec_preview">VISTA PREVIA (%1$s)</string>
+    <string name="voice_rec_accept">ACEPTAR</string>
+    <string name="help_got_it">[ENTENDIDO]</string>
+    <string name="manage_rec_title">ADMINISTRAR GRABACIONES</string>
+    <string name="manage_rec_overlay">[SUPERPOSICIÓN: %1$s]</string>
+    <string name="manage_rec_empty">TODAVÍA NO HAY GRABACIONES. GRABA UNA DESDE LA PANTALLA DE EDICIÓN DE UNA CASILLA DE ACCIONES RÁPIDAS, EL BOTÓN REC DE UNA TECLA DE ACCESO RÁPIDO O EL EDITOR DE UN NODO DE MATRIZ.</string>
+    <string name="manage_rec_empty_prompt">(MENSAJE VACÍO)</string>
+    <string name="manage_rec_unknown_node">(NODO DESCONOCIDO)</string>
+    <string name="manage_rec_disabled">DESACTIVADA -- EL TEXTO DE LA ENTRADA CAMBIÓ DESDE QUE SE GRABÓ</string>
+    <string name="manage_rec_delete_title">ELIMINAR GRABACIÓN</string>
+    <string name="manage_rec_delete_body">ESTO ELIMINA LA GRABACIÓN. LO QUE ESTÉ VINCULADO A ELLA SE CONSERVA Y VUELVE A LA VOZ SINTETIZADA (O, EN UNA ENTRADA DE MATRIZ, A SU TEXTO NORMAL CON LAS VARIABLES RESUELTAS). ESTO NO SE PUEDE DESHACER.</string>
+    <plurals name="manage_rec_count">
+        <item quantity="one">%d GRABACIÓN</item>
+        <item quantity="many">%d GRABACIONES</item>
+        <item quantity="other">%d GRABACIONES</item>
     </plurals>
 </resources>

@@ -634,7 +634,7 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="audio_robotic_freq">تردد الروبوت</string>
     <string name="audio_robotic_depth">عمق الروبوت</string>
     <string name="audio_preview">معاينة</string>
-    <string name="audio_discard">تجاهل</string>
+    <string name="common_discard">تجاهل</string>
     <string name="audio_manage_title">إدارة الملفات المخصصة</string>
     <string name="audio_no_profiles">لا توجد ملفات مخصصة بعد.</string>
     <string name="common_rename">إعادة تسمية</string>
@@ -750,5 +750,38 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
         <item quantity="few">%d حقول محفوظة</item>
         <item quantity="many">%d حقلًا محفوظًا</item>
         <item quantity="other">%d حقل محفوظ</item>
+    </plurals>
+    <string name="voice_rec_title">تسجيل صوتي</string>
+    <string name="voice_rec_description">عند تعيينه، يُشغَّل بدلا من العبارة المركّبة أعلاه.</string>
+    <string name="voice_rec_description_key">عند تعيينه، يُشغَّل بدلا من العبارة المستهدفة للمفتاح.</string>
+    <string name="voice_rec_key_title">تسجيل %1$s</string>
+    <string name="voice_rec_help_offer">جديد: التسجيلات الصوتية لها جولة إرشادية في HELP -- التسجيل وملاحظات المصفوفة وإدارة ما سجلته. ستجدها تحت HELP في أي وقت.</string>
+    <string name="voice_rec_recorded">مسجّل (%1$s)</string>
+    <string name="voice_rec_play">تشغيل</string>
+    <string name="voice_rec_playing">جارٍ التشغيل...</string>
+    <string name="voice_rec_remove">إزالة</string>
+    <string name="voice_rec_record">تسجيل</string>
+    <string name="voice_rec_rerecord">إعادة التسجيل</string>
+    <string name="voice_rec_recording_now">جارٍ التسجيل... %1$s</string>
+    <string name="voice_rec_stop">إيقاف</string>
+    <string name="voice_rec_processing">جارٍ تقليل الضوضاء وقص الصمت وتسوية مستوى الصوت...</string>
+    <string name="voice_rec_preview">معاينة (%1$s)</string>
+    <string name="voice_rec_accept">قبول</string>
+    <string name="help_got_it">[فهمت]</string>
+    <string name="manage_rec_title">إدارة التسجيلات</string>
+    <string name="manage_rec_overlay">[طبقة العرض: %1$s]</string>
+    <string name="manage_rec_empty">لا توجد تسجيلات بعد. سجّل واحدًا من شاشة تعديل خانة في الإجراءات السريعة، أو زر REC لمفتاح وصول سريع، أو محرر عقدة في المصفوفة.</string>
+    <string name="manage_rec_empty_prompt">(رسالة فارغة)</string>
+    <string name="manage_rec_unknown_node">(عقدة غير معروفة)</string>
+    <string name="manage_rec_disabled">معطّل -- تغيّر نص الإدخال منذ تسجيله</string>
+    <string name="manage_rec_delete_title">حذف التسجيل</string>
+    <string name="manage_rec_delete_body">هذا يزيل التسجيل. ما هو مرتبط به يبقى ويعود إلى الكلام المركّب (أو، لإدخال في المصفوفة، إلى نصه العادي بعد حل المتغيرات). لا يمكن التراجع عن ذلك.</string>
+    <plurals name="manage_rec_count">
+        <item quantity="zero">%d تسجيل</item>
+        <item quantity="one">تسجيل واحد</item>
+        <item quantity="two">تسجيلان</item>
+        <item quantity="few">%d تسجيلات</item>
+        <item quantity="many">%d تسجيلًا</item>
+        <item quantity="other">%d تسجيل</item>
     </plurals>
 </resources>

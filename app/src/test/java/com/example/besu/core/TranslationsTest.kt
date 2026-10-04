@@ -112,6 +112,7 @@ class TranslationsTest {
         "common_ok", // "OK" is how Portuguese and Afrikaans write it too
         "common_no", // "NO" is Spanish for no
         "label_pose_connect_plain", "label_variable", // real words in Spanish and Portuguese that are spelled as in English (SOCIAL, VARIABLE)
+        "voice_rec_stop", // STOP is how Afrikaans says it too
         "tree_kind_count", // "<name> (<count>)": only placeholders, the words come in as arguments
         "autocomplete_variable", "autocomplete_var_n", // VARIABLE is how Spanish writes it, VAR is how Spanish and Portuguese abbreviate it
         "people_wizard_in", // "IN <name>" is Afrikaans too

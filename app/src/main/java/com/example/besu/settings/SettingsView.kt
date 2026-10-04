@@ -1593,14 +1593,14 @@ fun SettingsView(
         TightDialogSurface(
             onDismiss = { recordingKeyIndex = null },
             primaryColor = primaryColor,
-            title = "$keyLabel RECORDING"
+            title = stringResource(R.string.voice_rec_key_title, keyLabel)
         ) {
             VoiceRecordingPanel(
                 context = context,
                 primaryColor = primaryColor,
                 panelKey = "qk_$keyIndex",
                 existingRecording = VoiceRecordingRepository.getForQuickAccessKey(context, keyIndex),
-                description = "WHEN SET, THIS PLAYS INSTEAD OF THE KEY'S TARGET PHRASE.",
+                description = stringResource(R.string.voice_rec_description_key),
                 onAccept = { pcm, sampleRate ->
                     VoiceRecordingRepository.saveForQuickAccessKey(context, keyIndex, pcm, sampleRate)
                     recordingRefreshKey++

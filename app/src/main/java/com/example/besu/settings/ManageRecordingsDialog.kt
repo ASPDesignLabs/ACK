@@ -2,6 +2,10 @@
 package com.example.besu.settings
 
 import com.example.besu.AckTags
+import com.example.besu.R
+import com.example.besu.core.RecordingLabels
+import com.example.besu.core.TextSource
+import com.example.besu.core.TreeLabels
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.output.*
@@ -33,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,7 +112,7 @@ private fun recConnectorPrefix(row: RecTreeVisualRow): String {
 // branches that actually lead to a recording are built -- this is a
 // browser for what exists, not the full theoretical deck/profile/pose
 // space.
-private fun buildRecordingTree(context: Context, recordings: List<VoiceRecording>): List<RecTreeNode> {
+private fun buildRecordingTree(context: Context, text: TextSource, recordings: List<VoiceRecording>): List<RecTreeNode> {
     val kinds = mutableListOf<RecTreeNode>()
 
     val quickActionRecs = recordings.filter { it.owner == RecordingOwner.QUICK_ACTION }
@@ -120,14 +125,14 @@ private fun buildRecordingTree(context: Context, recordings: List<VoiceRecording
                 val groupLabel = group?.label ?: "G${groupIndex + 1}"
                 val slotLeaves = groupRecs.map { rec ->
                     val slotLabel = group?.slots?.find { it.slotIndex == rec.slotIndex }?.label
-                        ?: "SLOT ${(rec.slotIndex ?: 0) + 1}"
+                        ?: TreeLabels.defaultSlot(text, rec.slotIndex ?: 0)
                     RecLeaf(id = "leaf_${rec.id}", label = slotLabel, recording = rec)
                 }.sortedBy { it.label }
                 RecBranch(id = "qa_${deckId}_g$groupIndex", label = groupLabel, children = slotLeaves)
             }.sortedBy { it.label }
             RecBranch(id = "qa_deck_$deckId", label = deckName, children = qaGroupBranches)
         }.sortedBy { it.label }
-        kinds.add(RecBranch(id = "kind_qa", label = "QUICK ACTIONS (${quickActionRecs.size})", children = qaDeckBranches))
+        kinds.add(RecBranch(id = "kind_qa", label = TreeLabels.kindHeading(text, TreeLabels.Kind.QUICK_ACTIONS, quickActionRecs.size), children = qaDeckBranches))
     }
 
     val keyRecs = recordings.filter { it.owner == RecordingOwner.QUICK_ACCESS_KEY }
@@ -138,7 +143,7 @@ private fun buildRecordingTree(context: Context, recordings: List<VoiceRecording
             val keyLabel = shortcuts.getOrNull(index)?.label ?: "M${index + 1}"
             RecLeaf(id = "leaf_${rec.id}", label = keyLabel, recording = rec)
         }.sortedBy { it.label }
-        kinds.add(RecBranch(id = "kind_qk", label = "QUICK-ACCESS KEYS (${keyRecs.size})", children = keyLeaves))
+        kinds.add(RecBranch(id = "kind_qk", label = TreeLabels.kindHeading(text, TreeLabels.Kind.QUICK_ACCESS_KEYS, keyRecs.size), children = keyLeaves))
     }
 
     val matrixRecs = recordings.filter { it.owner == RecordingOwner.MATRIX_NODE }
@@ -147,20 +152,20 @@ private fun buildRecordingTree(context: Context, recordings: List<VoiceRecording
             val deckName = CommandRepository.getDeckName(context, deckId)
             val profileBranches = deckRecs.groupBy { it.profile ?: "DEFAULT" }.map { (profile, profileRecs) ->
                 val poseBranches = profileRecs.groupBy { rec ->
-                    rec.path?.let { CommandRepository.findMatrixNode(context, it)?.category } ?: "UNKNOWN"
+                    rec.path?.let { CommandRepository.findMatrixNode(context, it)?.category } ?: TreeLabels.UNKNOWN_KEY
                 }.map { (pose, poseRecs) ->
                     val nodeLeaves = poseRecs.map { rec ->
                         val nodeLabel = rec.path?.let { CommandRepository.findMatrixNode(context, it)?.label }
-                            ?: "UNKNOWN NODE"
+                            ?: TreeLabels.unknownNode(text)
                         RecLeaf(id = "leaf_${rec.id}", label = nodeLabel, recording = rec)
                     }.sortedBy { it.label }
-                    RecBranch(id = "mtx_${deckId}_${profile}_$pose", label = pose, children = nodeLeaves)
+                    RecBranch(id = "mtx_${deckId}_${profile}_$pose", label = TreeLabels.poseOrLayer(text, pose), children = nodeLeaves)
                 }.sortedBy { it.label }
                 RecBranch(id = "mtx_${deckId}_$profile", label = profile, children = poseBranches)
             }.sortedBy { it.label }
             RecBranch(id = "mtx_deck_$deckId", label = deckName, children = profileBranches)
         }.sortedBy { it.label }
-        kinds.add(RecBranch(id = "kind_mtx", label = "MATRIX (${matrixRecs.size})", children = matrixDeckBranches))
+        kinds.add(RecBranch(id = "kind_mtx", label = TreeLabels.kindHeading(text, TreeLabels.Kind.MATRIX, matrixRecs.size), children = matrixDeckBranches))
     }
 
     return kinds
@@ -169,33 +174,49 @@ private fun buildRecordingTree(context: Context, recordings: List<VoiceRecording
 // The text that would actually reach the overlay/log if this recording's
 // owner were triggered right now -- a Matrix node prefers its visual
 // override (see CommandRepository.getVisualOverride), matching exactly
-// what MatrixCategory's row and dispatch already show/send.
-private fun resolveOverlayText(context: Context, recording: VoiceRecording): String {
+// what MatrixCategory's row and dispatch already show/send. [text] is null
+// when there is none, and [missing] says why.
+private data class OverlayText(val text: String?, val missing: RecordingLabels.Missing)
+
+private fun findOverlayText(context: Context, recording: VoiceRecording): OverlayText {
     return when (recording.owner) {
         RecordingOwner.QUICK_ACTION -> {
             val deckId = recording.deckId ?: "DEFAULT"
             val groupIndex = recording.groupIndex ?: 0
             val slotIndex = recording.slotIndex ?: 0
-            CommandRepository.resolveQuickAction(context, deckId, groupIndex, slotIndex).ifBlank { "(EMPTY PROMPT)" }
+            OverlayText(
+                CommandRepository.resolveQuickAction(context, deckId, groupIndex, slotIndex).takeIf { it.isNotBlank() },
+                RecordingLabels.Missing.EMPTY_PROMPT
+            )
         }
         RecordingOwner.QUICK_ACCESS_KEY -> {
             val index = recording.slotIndex ?: 0
-            CommandRepository.getHeaderShortcuts(context).getOrNull(index)?.phrase
-                ?.ifBlank { "(EMPTY PROMPT)" } ?: "(EMPTY PROMPT)"
+            OverlayText(
+                CommandRepository.getHeaderShortcuts(context).getOrNull(index)?.phrase?.takeIf { it.isNotBlank() },
+                RecordingLabels.Missing.EMPTY_PROMPT
+            )
         }
         RecordingOwner.MATRIX_NODE -> {
             val path = recording.path
             if (path == null) {
-                "(UNKNOWN NODE)"
+                OverlayText(null, RecordingLabels.Missing.UNKNOWN_NODE)
             } else {
                 val deckId = recording.deckId ?: "DEFAULT"
                 val profile = recording.profile ?: "DEFAULT"
-                CommandRepository.getVisualOverride(context, path, deckId, profile).ifBlank {
-                    CommandRepository.getResolvedPhrase(context, path, deckId, profile).ifBlank { "(EMPTY PROMPT)" }
-                }
+                val override = CommandRepository.getVisualOverride(context, path, deckId, profile)
+                OverlayText(
+                    if (override.isNotBlank()) override else CommandRepository.getResolvedPhrase(context, path, deckId, profile).takeIf { it.isNotBlank() },
+                    RecordingLabels.Missing.EMPTY_PROMPT
+                )
             }
         }
     }
+}
+
+// What the preview sends to the on-screen overlay: the English placeholders, exactly as before (the overlay is not translated).
+private fun resolveOverlayText(context: Context, recording: VoiceRecording): String {
+    val found = findOverlayText(context, recording)
+    return found.text ?: found.missing.overlayText
 }
 
 private fun deleteRecordingTarget(context: Context, target: VoiceRecording) {
@@ -245,9 +266,10 @@ fun ManageRecordingsDialog(
     primaryColor: Color,
     onDismiss: () -> Unit
 ) {
+    val text = rememberText()
     var refreshKey by remember { mutableIntStateOf(0) }
     val recordings = remember(refreshKey) { VoiceRecordingRepository.getAll(context) }
-    val tree = remember(refreshKey) { buildRecordingTree(context, recordings) }
+    val tree = remember(refreshKey) { buildRecordingTree(context, text, recordings) }
 
     var expandedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var isPlayingId by remember { mutableStateOf<String?>(null) }
@@ -290,11 +312,11 @@ fun ManageRecordingsDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "MANAGE RECORDINGS",
-        subtitle = "${recordings.size} RECORDING${if (recordings.size == 1) "" else "S"}",
+        title = stringResource(R.string.manage_rec_title),
+        subtitle = text.count("manage_rec_count", recordings.size),
         headerActions = {
             Text(
-                text = if (showOverlayOnPreview) "[OVERLAY: ON]" else "[OVERLAY: OFF]",
+                text = RecordingLabels.overlayToggle(text, showOverlayOnPreview),
                 color = if (showOverlayOnPreview) primaryColor else Color.Gray,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -316,9 +338,7 @@ fun ManageRecordingsDialog(
     ) {
         if (!hasSeenHelpOffer) {
             HelpOfferBanner(
-                message = "NEW: VOICE RECORDINGS HAS A HELP WALKTHROUGH -- RECORDING, " +
-                    "MATRIX NOTES, AND MANAGING WHAT YOU'VE RECORDED. FIND IT UNDER HELP " +
-                    "ANYTIME.",
+                message = stringResource(R.string.voice_rec_help_offer),
                 primaryColor = primaryColor,
                 onDismiss = {
                     VoiceRecordingRepository.markHelpOfferSeen(context)
@@ -330,7 +350,7 @@ fun ManageRecordingsDialog(
 
         if (recordings.isEmpty()) {
             Text(
-                "NO RECORDINGS YET. RECORD ONE FROM A QUICK ACTIONS SLOT'S EDIT SCREEN, A QUICK-ACCESS KEY'S REC BUTTON, OR A MATRIX NODE'S EDITOR.",
+                stringResource(R.string.manage_rec_empty),
                 color = Color.DarkGray,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -390,11 +410,11 @@ fun ManageRecordingsDialog(
         TightDialogSurface(
             onDismiss = { confirmingDeleteId = null },
             primaryColor = RadicalRed,
-            title = "DELETE RECORDING",
-            dismissLabel = "CANCEL"
+            title = stringResource(R.string.manage_rec_delete_title),
+            dismissLabel = stringResource(R.string.common_cancel)
         ) {
             Text(
-                "This removes the recording. Whatever it's bound to stays and falls back to synthesized speech (or, for a Matrix entry, its normal variable-resolved text). This cannot be undone.",
+                stringResource(R.string.manage_rec_delete_body),
                 color = Color.White,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -403,14 +423,14 @@ fun ManageRecordingsDialog(
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("DELETE", Modifier.weight(1f), mainColor = RadicalRed) {
+                TightPanelButton(stringResource(R.string.common_delete), Modifier.weight(1f), mainColor = RadicalRed) {
                     if (target != null) {
                         deleteRecordingTarget(context, target)
                     }
                     confirmingDeleteId = null
                     refreshKey++
                 }
-                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_cancel), Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
                     confirmingDeleteId = null
                 }
             }
@@ -423,7 +443,7 @@ fun ManageRecordingsDialog(
         TightDialogSurface(
             onDismiss = { reRecordTargetId = null },
             primaryColor = primaryColor,
-            title = "RE-RECORD"
+            title = stringResource(R.string.voice_rec_rerecord)
         ) {
             VoiceRecordingPanel(
                 context = context,
@@ -458,7 +478,11 @@ private fun RecTreeLeafCard(
 ) {
     val recording = leaf.recording
 
-    val overlayText = remember(recording.id) { resolveOverlayText(context, recording) }
+    val text = rememberText()
+    val overlayText = remember(recording.id) {
+        val found = findOverlayText(context, recording)
+        found.text ?: RecordingLabels.missingText(text, found.missing)
+    }
     val fileSize = remember(recording.id) {
         VoiceRecordingRepository.formatFileSize(VoiceRecordingRepository.getAudioFileSizeBytes(context, recording.id))
     }
@@ -500,7 +524,7 @@ private fun RecTreeLeafCard(
 
             if (recording.owner == RecordingOwner.MATRIX_NODE && !recording.enabled) {
                 Text(
-                    text = "DISABLED -- entry text changed since this was recorded",
+                    text = stringResource(R.string.manage_rec_disabled),
                     color = RadicalRed,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace,
@@ -512,20 +536,20 @@ private fun RecTreeLeafCard(
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 TightPanelButton(
-                    text = if (isPlaying) "PLAYING..." else "PLAY",
+                    text = stringResource(if (isPlaying) R.string.voice_rec_playing else R.string.voice_rec_play),
                     modifier = Modifier.weight(1f),
                     isActive = !isPlaying,
                     mainColor = primaryColor,
                     onClick = onPlay
                 )
                 TightPanelButton(
-                    text = "RE-RECORD",
+                    text = stringResource(R.string.voice_rec_rerecord),
                     modifier = Modifier.weight(1f),
                     mainColor = primaryColor,
                     onClick = onReRecord
                 )
                 TightPanelButton(
-                    text = "DELETE",
+                    text = stringResource(R.string.common_delete),
                     modifier = Modifier.weight(1f),
                     mainColor = RadicalRed,
                     onClick = onDeleteRequested
