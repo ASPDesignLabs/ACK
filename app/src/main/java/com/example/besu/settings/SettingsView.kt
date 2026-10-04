@@ -1252,7 +1252,7 @@ fun SettingsView(
 
                 Spacer(modifier = Modifier.height(16.dp))
                 // Opens a list of what can be deleted; nothing is deleted by this tap, and every delete asks twice.
-                NeonButton("DELETE DATA", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+                NeonButton(stringResource(R.string.delete_data_title), Modifier.fillMaxWidth(), mainColor = RadicalRed) {
                     showManageData = true
                 }
 
@@ -1264,8 +1264,9 @@ fun SettingsView(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             SafetyCopyPolicy.rowText(
-                                SafetyCopyPolicy.dateText(copy.createdAtMs, ZoneId.systemDefault()),
-                                StorageCatalogue.describeSize(copy.sizeBytes)
+                                words,
+                                SafetyCopyPolicy.dateText(words, copy.createdAtMs, ZoneId.systemDefault()),
+                                StorageCatalogue.describeSize(words, copy.sizeBytes)
                             ),
                             color = Color.Gray,
                             fontSize = 12.sp,
@@ -1273,7 +1274,7 @@ fun SettingsView(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         // Opens two confirmations; nothing is deleted by this tap.
-                        NeonButton("DELETE", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+                        NeonButton(stringResource(R.string.common_delete), Modifier.fillMaxWidth(), mainColor = RadicalRed) {
                             safetyCopyFirst = copy
                         }
                     }
@@ -1480,12 +1481,13 @@ fun SettingsView(
         SafetyCopyFirstDialog(
             primaryColor = primaryColor,
             paragraphs = SafetyCopyPolicy.firstConfirmation(
-                SafetyCopyPolicy.dateText(firstCopy.createdAtMs, ZoneId.systemDefault()),
-                StorageCatalogue.describeSize(firstCopy.sizeBytes),
+                words,
+                SafetyCopyPolicy.dateText(words, firstCopy.createdAtMs, ZoneId.systemDefault()),
+                StorageCatalogue.describeSize(words, firstCopy.sizeBytes),
                 hasNewerExport
             ),
             offersExportFirst = SafetyCopyPolicy.offersExportFirst(hasNewerExport),
-            proceedLabel = SafetyCopyPolicy.proceedLabel(hasNewerExport),
+            proceedLabel = SafetyCopyPolicy.proceedLabel(words, hasNewerExport),
             onExportFirst = { startBackupExport() },
             onProceed = { safetyCopySecond = firstCopy },
             onCancel = { safetyCopyFirst = null }
@@ -1499,7 +1501,7 @@ fun SettingsView(
                 val gone = SafetyCopies.delete(context, secondCopy)
                 Toast.makeText(
                     context,
-                    if (gone) "SAFETY COPY DELETED" else "COULD NOT DELETE THE SAFETY COPY",
+                    context.getString(if (gone) R.string.safety_copy_deleted else R.string.safety_copy_not_deleted),
                     Toast.LENGTH_LONG
                 ).show()
                 safetyCopySecond = null
@@ -1525,7 +1527,7 @@ fun SettingsView(
                 if (needsRestart) {
                     // Memory caches (the deck list and so on) make a restart the reliable way to show a clean state. Same
                     // toast -> flag -> delayed restart as FULL RESTORE; the 1.5 s delay is load-bearing (see CLAUDE.md).
-                    Toast.makeText(context, "DATA DELETED -- RESTARTING", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.delete_data_done_restarting), Toast.LENGTH_LONG).show()
                     pendingRestart = true
                 }
             },

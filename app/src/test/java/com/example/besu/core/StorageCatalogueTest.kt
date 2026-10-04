@@ -11,12 +11,23 @@ import java.io.File
 class StorageCatalogueTest {
     private val areas = StorageCatalogue.areas
 
+    // The words are string resources; these tests read the real English ones through EnglishText.
+    private val text = EnglishText
+    private fun label(a: StorageCatalogue.Area) = StorageCatalogue.label(text, a)
+    private fun holds(a: StorageCatalogue.Area) = StorageCatalogue.holds(text, a)
+    private fun note(a: StorageCatalogue.Area) = StorageCatalogue.backupNote(text, a)
+    private fun first(a: StorageCatalogue.Area, amount: String = "X") = StorageCatalogue.firstConfirmation(text, a, amount)
+    private fun firstEverything(amount: String = "X") = StorageCatalogue.firstConfirmationEverything(text, amount)
+    private val notElsewhere get() = text.get(StorageCatalogue.NOT_ELSEWHERE)
+    private val watchNote get() = text.get(StorageCatalogue.WATCH_NOTE)
+    private val restartNote get() = text.get(StorageCatalogue.RESTART_NOTE)
+
     // --- the catalogue's own consistency ---------------------------------------------------------------------------
 
     @Test
     fun idsAndLabelsAreUnique() {
         assertEquals(areas.size, areas.map { it.id }.toSet().size)
-        assertEquals(areas.size, areas.map { it.label }.toSet().size)
+        assertEquals(areas.size, areas.map { label(it) }.toSet().size)
     }
 
     @Test
@@ -27,7 +38,7 @@ class StorageCatalogueTest {
                 "MESSAGE RECORDINGS", "TRAINING DATA", "TRAINED VOICE", "GIF LIBRARY", "SAFETY COPIES", "TEMPORARY FILES",
                 "SETTINGS",
             ),
-            areas.map { it.label },
+            areas.map { label(it) },
         )
     }
 
@@ -36,20 +47,20 @@ class StorageCatalogueTest {
         // They are derived from what the person typed, like the typing history that area already holds.
         val area = StorageCatalogue.area(StorageCatalogue.ID_MESSAGES_AND_DECKS)
         assertTrue(LearnedWordsStore.FOLDER in area.folders)
-        assertTrue(area.holds.contains("LEARNED WORDS"))
+        assertTrue(holds(area).contains("LEARNED WORDS"))
         assertEquals(Coverage.EXPORT_JSON, area.coverage)
-        assertTrue(StorageCatalogue.firstConfirmation(area, "X").any { it.contains("LEARNED WORDS") })
+        assertTrue(first(area).any { it.contains("LEARNED WORDS") })
         assertTrue(area.restartAfter)
     }
 
     @Test
     fun everyAreaHasWordsAndNamesItsBackupStatus() {
         for (a in areas) {
-            assertTrue("${a.id}: label", a.label.isNotBlank())
-            assertTrue("${a.id}: holds", a.holds.isNotBlank())
-            assertTrue("${a.id}: backupNote", a.backupNote.isNotBlank())
-            assertEquals("${a.id}: words are capitals like the rest of the app", a.holds.uppercase(), a.holds)
-            assertEquals(a.backupNote.uppercase(), a.backupNote)
+            assertTrue("${a.id}: label", label(a).isNotBlank() && label(a) != a.labelResource)
+            assertTrue("${a.id}: holds", holds(a).isNotBlank() && holds(a) != a.holdsResource)
+            assertTrue("${a.id}: backupNote", note(a).isNotBlank() && note(a) != a.backupResource)
+            assertEquals("${a.id}: words are capitals like the rest of the app", holds(a).uppercase(), holds(a))
+            assertEquals(note(a).uppercase(), note(a))
         }
     }
 
@@ -171,29 +182,29 @@ class StorageCatalogueTest {
     @Test
     fun everyConfirmationSaysFilesSavedElsewhereAreNotDeleted() {
         for (a in areas) {
-            assertTrue(a.id, StorageCatalogue.NOT_ELSEWHERE in StorageCatalogue.firstConfirmation(a, "X"))
+            assertTrue(a.id, notElsewhere in first(a))
         }
-        assertTrue(StorageCatalogue.NOT_ELSEWHERE in StorageCatalogue.firstConfirmationEverything("X"))
-        assertTrue(StorageCatalogue.NOT_ELSEWHERE.contains("EXPORTS, PACKAGES, BACKUPS"))
-        assertTrue(StorageCatalogue.NOT_ELSEWHERE.contains("COPIED TO ANOTHER APP"))
+        assertTrue(notElsewhere in firstEverything())
+        assertTrue(notElsewhere.contains("EXPORTS, PACKAGES, BACKUPS"))
+        assertTrue(notElsewhere.contains("COPIED TO ANOTHER APP"))
     }
 
     @Test
     fun theWatchWarningAppearsForPeopleAndPlacesAndEverythingOnly() {
         for (a in areas) {
-            val has = StorageCatalogue.WATCH_NOTE in StorageCatalogue.firstConfirmation(a, "X")
+            val has = watchNote in first(a)
             assertEquals(a.id, a.id == StorageCatalogue.ID_PEOPLE_AND_PLACES, has)
         }
-        assertTrue(StorageCatalogue.WATCH_NOTE in StorageCatalogue.firstConfirmationEverything("X"))
-        assertEquals("A PAIRED WATCH MAY KEEP NAMES UNTIL IT NEXT CONNECTS.", StorageCatalogue.WATCH_NOTE)
+        assertTrue(watchNote in firstEverything())
+        assertEquals("A PAIRED WATCH MAY KEEP NAMES UNTIL IT NEXT CONNECTS.", watchNote)
     }
 
     @Test
     fun theRestartIsAnnouncedExactlyWhereItHappens() {
         for (a in areas) {
-            assertEquals(a.id, a.restartAfter, StorageCatalogue.RESTART_NOTE in StorageCatalogue.firstConfirmation(a, "X"))
+            assertEquals(a.id, a.restartAfter, restartNote in first(a))
         }
-        assertTrue(StorageCatalogue.RESTART_NOTE in StorageCatalogue.firstConfirmationEverything("X"))
+        assertTrue(restartNote in firstEverything())
     }
 
     @Test
@@ -205,10 +216,11 @@ class StorageCatalogueTest {
 
     @Test
     fun anAreaNotInExportJsonNamesTheBackupThatDoesCoverIt() {
-        fun note(id: String) = StorageCatalogue.area(id).backupNote
+        fun note(id: String) = note(StorageCatalogue.area(id))
         assertTrue(note(StorageCatalogue.ID_TRAINING_DATA).contains("SAVE ALL TO A FILE"))
         assertTrue(note(StorageCatalogue.ID_TRAINING_DATA).contains("NOT IN EXPORT .JSON"))
         assertTrue(note(StorageCatalogue.ID_TRAINED_VOICE).contains("EXPORT VOICE BACKUP"))
+        assertTrue(note(StorageCatalogue.ID_TRAINED_VOICE).contains("(AUDIO ARCHITECT)"))
         assertTrue(note(StorageCatalogue.ID_GIF_LIBRARY).contains("EXPORT DECK (.ZIP)"))
         for (id in listOf(StorageCatalogue.ID_TERMINAL_LOG, StorageCatalogue.ID_SAFETY_COPIES)) {
             assertTrue(id, note(id).contains("NOT BACKED UP"))
@@ -217,49 +229,49 @@ class StorageCatalogueTest {
 
     @Test
     fun deleteEverythingNamesWhatExportJsonDoesNotCover() {
-        val notIn = StorageCatalogue.everythingNotInExportJson()
+        val notIn = StorageCatalogue.everythingNotInExportJson().map { label(it) }
         for (label in listOf("TERMINAL LOG", "TRAINING DATA", "TRAINED VOICE", "GIF LIBRARY", "SAFETY COPIES", "TEMPORARY FILES")) {
             assertTrue("missing $label in $notIn", label in notIn)
         }
         for (label in listOf("MESSAGES AND DECKS", "EMERGENCY INFO CARD", "PEOPLE AND PLACES", "SETTINGS")) {
             assertFalse("$label is in EXPORT .JSON", label in notIn)
         }
-        val text = StorageCatalogue.firstConfirmationEverything("X").joinToString("\n")
-        for (label in notIn) assertTrue(label, text.contains(label))
+        val everything = firstEverything().joinToString("\n")
+        for (label in notIn) assertTrue(label, everything.contains(label))
     }
 
     @Test
     fun settingsSaysWhatItResetsAndWhatItKeeps() {
         val settings = StorageCatalogue.area(StorageCatalogue.ID_SETTINGS)
-        assertTrue(settings.holds.contains("VOICE PROFILES"))
-        assertTrue(settings.holds.contains("PRACTICE SCORES"))
-        assertTrue(settings.holds.contains("OUTPUT DEVICE"))
-        assertTrue(StorageCatalogue.firstConfirmation(settings, "X").any { it.contains("ORGANIC") && it.contains("FULL TEXT") })
+        assertTrue(holds(settings).contains("VOICE PROFILES"))
+        assertTrue(holds(settings).contains("PRACTICE SCORES"))
+        assertTrue(holds(settings).contains("OUTPUT DEVICE"))
+        assertTrue(first(settings).any { it.contains("ORGANIC") && it.contains("FULL TEXT") })
         assertEquals(setOf(StorageCatalogue.KEY_TERMINAL_LOG), settings.prefsFilesClearedExcept.getValue(StorageCatalogue.FILE_ACK_PREFS))
     }
 
     @Test
     fun theSecondConfirmationWordsAreFixed() {
-        assertEquals("THIS CANNOT BE UNDONE.", StorageCatalogue.CANNOT_UNDO)
+        assertEquals("THIS CANNOT BE UNDONE.", text.get(StorageCatalogue.CANNOT_UNDO))
     }
 
     // --- the amount stored -----------------------------------------------------------------------------------------
 
     @Test
     fun amountsAreDescribedAtTheirBoundaries() {
-        assertEquals("NOTHING STORED", StorageCatalogue.describeAmount(0, 0))
-        assertEquals("1 ITEM, UNDER 1 KB", StorageCatalogue.describeAmount(1, 1))
-        assertEquals("2 ITEMS, UNDER 1 KB", StorageCatalogue.describeAmount(1023, 2))
-        assertEquals("2 ITEMS, 1 KB", StorageCatalogue.describeAmount(1024, 2))
-        assertEquals("3 ITEMS, 1023 KB", StorageCatalogue.describeAmount(1024L * 1024L - 1, 3))
-        assertEquals("3 ITEMS, 1.0 MB", StorageCatalogue.describeAmount(1024L * 1024L, 3))
-        assertEquals("1 ITEM, 12.5 MB", StorageCatalogue.describeAmount((12.5 * 1024 * 1024).toLong(), 1))
+        assertEquals("NOTHING STORED", StorageCatalogue.describeAmount(text, 0, 0))
+        assertEquals("1 ITEM, UNDER 1 KB", StorageCatalogue.describeAmount(text, 1, 1))
+        assertEquals("2 ITEMS, UNDER 1 KB", StorageCatalogue.describeAmount(text, 1023, 2))
+        assertEquals("2 ITEMS, 1 KB", StorageCatalogue.describeAmount(text, 1024, 2))
+        assertEquals("3 ITEMS, 1023 KB", StorageCatalogue.describeAmount(text, 1024L * 1024L - 1, 3))
+        assertEquals("3 ITEMS, 1.0 MB", StorageCatalogue.describeAmount(text, 1024L * 1024L, 3))
+        assertEquals("1 ITEM, 12.5 MB", StorageCatalogue.describeAmount(text, (12.5 * 1024 * 1024).toLong(), 1))
     }
 
     @Test
     fun anEmptyFolderWithOneEmptyFileStillSaysSomethingIsThere() {
         // 1 item of 0 bytes is not "nothing stored": the file exists.
-        assertEquals("1 ITEM, UNDER 1 KB", StorageCatalogue.describeAmount(0, 1))
+        assertEquals("1 ITEM, UNDER 1 KB", StorageCatalogue.describeAmount(text, 0, 1))
     }
 
     // --- the drift guard: every storage name the app uses must be decided here -------------------------------------

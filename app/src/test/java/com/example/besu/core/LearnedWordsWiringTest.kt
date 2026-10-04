@@ -144,7 +144,7 @@ class LearnedWordsWiringTest {
     @Test
     fun deleteDataSaysTheLearnedWordsAreIncluded_andFindsTheFolder() {
         val area = StorageCatalogue.area(StorageCatalogue.ID_MESSAGES_AND_DECKS)
-        assertTrue(area.holds.contains("LEARNED WORDS"))
+        assertTrue(StorageCatalogue.holds(EnglishText, area).contains("LEARNED WORDS"))
         assertTrue(LearnedWordsStore.FOLDER in area.folders)
     }
 }

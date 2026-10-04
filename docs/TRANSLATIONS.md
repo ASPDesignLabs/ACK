@@ -25,18 +25,19 @@ Only the **label table** and the words around PLAIN WORDS and INTERFACE LANGUAGE
 - the accessibility-service description Android shows in its own settings;
 - **screens, one at a time** (so each can be reviewed): the **Matrix deck screen** (group headings, ACTIVATE/ACTIVE, the shared-value strip and its dialog,
   the recorded badge, MANAGE CONTEXT), the **Matrix editor dialog** opened from a row (template, variables, target-tag fallbacks, the voice-recording panel
-  text, the three CLEAR confirmations and the recording notices) the **Statement composer** (the TYPE tab: FULL SCREEN, the preview, SAVE / COPY / SPEAK, the save and new-folder dialogs, MY STATEMENTS and its row buttons) the **header row above every screen** (DECK, PROFILE, COMPUTER) and the **backup wording** (the EXPORT .JSON warning that the file is not encrypted and where not to save it,
+  text, the three CLEAR confirmations and the recording notices) the **Statement composer** (the TYPE tab: FULL SCREEN, the preview, SAVE / COPY / SPEAK, the save and new-folder dialogs, MY STATEMENTS and its row buttons) the **header row above every screen** (DECK, PROFILE, COMPUTER) the **DELETE DATA wording** (the twelve areas and what each holds and how it is backed up, both confirmations, the amounts, what is said after a delete, the safety-copy rows and their two dialogs, and DELETE CUSTOM VOICE's two dialogs) and the **backup wording** (the EXPORT .JSON warning that the file is not encrypted and where not to save it,
   the backup reminder and its switch, why a backup failed, IMPORT MATRIX AS NEW DECK and the FULL RESTORE confirmation). Words used on several
   screens are `common_*`; a screen's own words are `<screen>_*` (`matrix_*`, `matrix_edit_*`, `composer_*`, `header_*`, `export_*`, `backup_*`, `data_port_*`). The decisions that choose
   those words (`core/ExportContents.kt`, `core/BackupReminderText.kt`) stay plain Kotlin and name them through a `TextSource`, so they are still tested against the real English text.
+  DELETE DATA reports a delete by area **id** and says the areas' names in the chosen language, so no decision depends on a translated word. Its sentences that keep a delete safe (THIS CANNOT BE UNDONE, back up first, files saved elsewhere are not deleted, the restart and watch notes) are checked to be present in every language (`DeleteDataWordingTest`). A backup note names EXPORT .JSON and AUDIO ARCHITECT through the label table, so it reads like the button it points to; it still names **SAVE ALL TO A FILE, RECORD TRAINING DATA, EXPORT VOICE BACKUP and EXPORT DECK (.ZIP) in English**, because those buttons are English on their own screens until those screens are migrated (change the notes and `DeleteDataWordingTest` together then). The date of a safety copy uses the language's month names with Latin digits. DELETE DATA's area names do not follow PLAIN WORDS, as before.
   Two things must survive translation exactly: the typed command in `export_terminal_confirm` (`/backup CONFIRM`, which the Terminal accepts) and the `%1$s` / `%2$s` placeholders. A count of days
   is a `<plurals>` entry, so each language gets the forms its grammar needs (Arabic has six). Still to come: the MANAGE CONTEXT dialog,
-  the word-suggestion offer and strip (their text lives in `core/` constants), the voice picker, the DELETE DATA dialogs, the HELP menu, the Emergency deck, People and places.
+  the word-suggestion offer and strip (their text lives in `core/` constants), the voice picker, the HELP menu, the Emergency deck, People and places.
 
 ## What is NOT translated (it stays English in every language, and the control says so)
 
 HELP walkthroughs and their menu; every screen not listed above (and the MANAGE CONTEXT dialog and the deck manager); the Terminal's own text (`/help`, the patch notes, command feedback); most dialogs, toasts and settings captions;
-the DELETE DATA wording and the Terminal's own replies; the visual overlay and anything spoken (that is SPEECH LANGUAGE's job); starter phrases; anything a person typed.
+the Terminal's own replies; the visual overlay and anything spoken (that is SPEECH LANGUAGE's job); starter phrases; anything a person typed.
 A Spanish screen is therefore mixed: translated names on the main screens, English in the long tail. That is the stated limit of this pass.
 
 ## How it behaves

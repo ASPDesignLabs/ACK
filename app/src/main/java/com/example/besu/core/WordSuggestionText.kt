@@ -42,13 +42,17 @@ object WordSuggestionText {
     const val BACK_UP_FIRST = "BACK UP FIRST"
     const val CONTINUE = "CONTINUE"
     const val CANCEL = "CANCEL"
-    const val FORGET_ALL_SECOND = StorageCatalogue.CANNOT_UNDO
+    // The same two sentences DELETE DATA says (strings.xml `storage_cannot_undo`, `storage_not_elsewhere`). This screen's own words move to string
+    // resources in a later change; until then they stay word for word, and WordSuggestionTextTest fails if the two ever differ.
+    const val FORGET_ALL_SECOND = "THIS CANNOT BE UNDONE."
+    const val NOT_ELSEWHERE =
+        "THIS DOES NOT DELETE FILES YOU SAVED ELSEWHERE (EXPORTS, PACKAGES, BACKUPS) OR ANYTHING YOU COPIED TO ANOTHER APP."
 
     fun forgetAllFirstConfirmation(count: Int): List<String> = listOf(
         "THIS REMOVES ${if (count == 1) "THE 1 LEARNED WORD" else "ALL $count LEARNED WORDS"} AND WHICH WORDS FOLLOW WHICH.",
         "THEY ARE IN EXPORT .JSON. SAVE IT FIRST IF YOU MIGHT WANT THEM BACK.",
         "NAMES FROM TARGET COMPUTER AND SHARED VARIABLES ARE NOT AFFECTED: THEY ARE NOT STORED HERE.",
         "WORD SUGGESTIONS STAYS ON OR OFF AS IT IS. WHILE IT IS ON, WORDS ARE LEARNED AGAIN AS YOU SAVE, SPEAK OR COPY.",
-        StorageCatalogue.NOT_ELSEWHERE,
+        NOT_ELSEWHERE,
     )
 }

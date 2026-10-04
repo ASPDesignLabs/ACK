@@ -12,4 +12,7 @@ interface TextSource {
 
     /** The text named [name] (a plurals resource) in the word form that fits [quantity], with the quantity filled in. */
     fun count(name: String, quantity: Int): String
+
+    /** The language these words are in (a BCP 47 tag such as "es" or "ar-EG"), so a date can use that language's month names. English unless the source says otherwise. */
+    val languageTag: String get() = "en"
 }

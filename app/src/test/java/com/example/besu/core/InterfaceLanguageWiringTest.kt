@@ -184,7 +184,7 @@ class InterfaceLanguageWiringTest {
     @Test
     fun deleteDataSettingsSaysTheScreenFollowsThePhoneAfterwards() {
         val settings = StorageCatalogue.area(StorageCatalogue.ID_SETTINGS)
-        assertTrue(StorageCatalogue.firstConfirmation(settings, "X").any { it.contains("ACK'S OWN WORDS IN THIS PHONE'S LANGUAGE") })
-        assertTrue(StorageCatalogue.firstConfirmationEverything("X").any { it.contains("ACK'S OWN WORDS IN THIS PHONE'S LANGUAGE") })
+        assertTrue(StorageCatalogue.firstConfirmation(EnglishText, settings, "X").any { it.contains("ACK'S OWN WORDS IN THIS PHONE'S LANGUAGE") })
+        assertTrue(StorageCatalogue.firstConfirmationEverything(EnglishText, "X").any { it.contains("ACK'S OWN WORDS IN THIS PHONE'S LANGUAGE") })
     }
 }

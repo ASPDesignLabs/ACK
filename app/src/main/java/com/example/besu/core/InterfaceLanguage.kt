@@ -65,15 +65,22 @@ object InterfaceLanguagePolicy {
 }
 
 /**
- * The script of the screens in this run of ACK, set once when the main screen starts (a change of language restarts ACK, so it cannot change under a
- * running screen) and read wherever letter spacing is chosen (ui/ScriptSpacing.kt). Plain Kotlin so both the Android edge and the screens can use it.
+ * The language and script of the screens in this run of ACK, set once when the main screen starts (a change of language restarts ACK, so it cannot change
+ * under a running screen). The script is read wherever letter spacing is chosen (ui/ScriptSpacing.kt) and the tag wherever a date is written in the
+ * words' own language (data/ResourceText.kt). Plain Kotlin so both the Android edge and the screens can use it.
  */
 object ActiveScript {
     @Volatile
     var joinsLetters: Boolean = false
         private set
 
+    /** The language the words are in: the one [InterfaceLanguagePolicy.effectiveTag] chose, English until the main screen has started. */
+    @Volatile
+    var tag: String = "en"
+        private set
+
     fun use(tag: String) {
+        this.tag = tag
         joinsLetters = InterfaceLanguagePolicy.joinsLetters(tag)
     }
 }

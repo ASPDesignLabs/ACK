@@ -168,7 +168,7 @@ class SpeechLanguageWiringTest {
     @Test
     fun deleteDataSettingsSaysThePhonesLanguageIsTheDefaultAfterwards() {
         val settings = StorageCatalogue.area(StorageCatalogue.ID_SETTINGS)
-        assertTrue(StorageCatalogue.firstConfirmation(settings, "X").any { it.contains("SPEECH IN THIS PHONE'S OWN LANGUAGE") })
-        assertTrue(StorageCatalogue.firstConfirmationEverything("X").any { it.contains("SPEECH IN THIS PHONE'S OWN LANGUAGE") })
+        assertTrue(StorageCatalogue.firstConfirmation(EnglishText, settings, "X").any { it.contains("SPEECH IN THIS PHONE'S OWN LANGUAGE") })
+        assertTrue(StorageCatalogue.firstConfirmationEverything(EnglishText, "X").any { it.contains("SPEECH IN THIS PHONE'S OWN LANGUAGE") })
     }
 }

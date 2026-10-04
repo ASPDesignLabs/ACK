@@ -3,6 +3,7 @@ package com.example.besu.settings
 
 import com.example.besu.core.LabelKey
 import com.example.besu.*
+import com.example.besu.R
 import com.example.besu.backup.*
 import com.example.besu.core.SpeechLanguage
 import com.example.besu.core.SpeechLanguageText
@@ -265,10 +266,10 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     ) { uri: Uri? ->
         if (uri != null) {
             val success = CustomVoiceBackupManager.exportVoice(context, uri)
-            voiceBackupStatus = if (success) "VOICE BACKUP SAVED." else "VOICE BACKUP FAILED. NOTHING WAS DELETED."
+            voiceBackupStatus = context.getString(if (success) R.string.delete_voice_backup_saved else R.string.delete_voice_backup_failed)
             Toast.makeText(
                 context,
-                if (success) "VOICE BACKUP EXPORTED" else "EXPORT FAILED",
+                context.getString(if (success) R.string.delete_voice_backup_toast_ok else R.string.delete_voice_backup_toast_failed),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -318,11 +319,13 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             }
             Toast.makeText(
                 context,
-                when {
-                    allGone -> "CUSTOM VOICE DELETED"
-                    !stillUsable -> "VOICE REMOVED, BUT SOME FILES COULD NOT BE DELETED"
-                    else -> "COULD NOT DELETE THE VOICE"
-                },
+                context.getString(
+                    when {
+                        allGone -> R.string.delete_voice_deleted
+                        !stillUsable -> R.string.delete_voice_partly
+                        else -> R.string.delete_voice_failed
+                    }
+                ),
                 Toast.LENGTH_LONG
             ).show()
         }

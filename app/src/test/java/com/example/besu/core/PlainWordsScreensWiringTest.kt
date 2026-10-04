@@ -145,10 +145,7 @@ class PlainWordsScreensWiringTest {
         "EMERGENCY" to setOf("ui/DesignSystem.kt", "decks/CreateDeckDialog.kt", "decks/EmergencyDeck.kt", "data/CommandRepository.kt", "output/OutputService.kt"),
         "EMOJI" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
         "GIF" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
-        "VARIABLE" to setOf("ui/DesignSystem.kt"),
-        // The DELETE DATA confirmations use fixed, tested words (core/StorageCatalogue.kt); that surface is not part of this pass.
-        "SAFETY COPIES" to setOf("core/StorageCatalogue.kt"),
-        "TERMINAL LOG" to setOf("core/StorageCatalogue.kt")
+        "VARIABLE" to setOf("ui/DesignSystem.kt")
     )
 
     @Test

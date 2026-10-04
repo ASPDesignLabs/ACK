@@ -149,7 +149,7 @@ class StarterSeedWiringTest {
     @Test
     fun theWipeConfirmationsSayTheMatrixIsStarterPhrasesAfterwards() {
         val area = StorageCatalogue.area(StorageCatalogue.ID_MESSAGES_AND_DECKS)
-        assertTrue(StorageCatalogue.firstConfirmation(area, "X").any { it.contains("STARTER PHRASES") })
-        assertTrue(StorageCatalogue.firstConfirmationEverything("X").any { it.contains("STARTER PHRASES") })
+        assertTrue(StorageCatalogue.firstConfirmation(EnglishText, area, "X").any { it.contains("STARTER PHRASES") })
+        assertTrue(StorageCatalogue.firstConfirmationEverything(EnglishText, "X").any { it.contains("STARTER PHRASES") })
     }
 }

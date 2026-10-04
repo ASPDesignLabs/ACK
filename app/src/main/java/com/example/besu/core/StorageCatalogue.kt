@@ -4,9 +4,13 @@ package com.example.besu.core
 import java.util.Locale
 
 /**
- * Everything ACK stores on this phone, grouped into the areas DELETE DATA offers, and the words its confirmations use.
+ * Everything ACK stores on this phone, grouped into the areas DELETE DATA offers, and what its confirmations say.
  * Pure data and decisions (no `android.*`) so it is tested without a phone. data/DataWipe.kt does the deleting by walking
  * this list; settings/ManageDataDialog.kt only displays it.
+ *
+ * The words are string resources (`area_<id>_label` / `_holds` / `_backup`, `storage_*`), in the chosen language: an [Area] names them and a
+ * [TextSource] supplies them, so every decision here is still tested against the real English text. A result is reported by area **id**, never by
+ * its label, so no decision depends on a translated word.
  *
  * Nothing here deletes anything by itself, and nothing is deleted that is not named here. A test scans the app's source for
  * every preference file and folder it writes and fails if one is not in an area below (or in [NOT_PERSONAL]), so a new
@@ -22,9 +26,6 @@ object StorageCatalogue {
 
     class Area(
         val id: String,
-        val label: String,
-        /** What it holds, in plain words. */
-        val holds: String,
         /** Preference files cleared completely. */
         val prefsFilesCleared: Set<String> = emptySet(),
         /** Shared preference files cleared except for the keys listed (another area owns those keys). */
@@ -36,13 +37,26 @@ object StorageCatalogue {
         /** Everything in the cache folder. */
         val clearsCache: Boolean = false,
         val coverage: Coverage,
-        /** The sentence that names how to save it first, or says it is not backed up. */
-        val backupNote: String,
-        /** What is true afterwards that the person might not expect; shown in the first confirmation. */
-        val afterNote: String? = null,
+        /** The resource that says what is true afterwards that the person might not expect; shown in the first confirmation. */
+        val afterResource: String? = null,
         /** Memory caches (the deck list and so on) make a restart the reliable way to show a clean state. */
         val restartAfter: Boolean,
-    )
+    ) {
+        private val key: String get() = id.lowercase(Locale.ROOT)
+
+        /** The area's name. */
+        val labelResource: String get() = "area_${key}_label"
+
+        /** What it holds, in plain words. */
+        val holdsResource: String get() = "area_${key}_holds"
+
+        /** The sentence that names how to save it first, or says it is not backed up. It may name EXPORT .JSON and AUDIO ARCHITECT ([BACKUP_NOTE_ARGUMENTS]). */
+        val backupResource: String get() = "area_${key}_backup"
+    }
+
+    // The names a backup note can mention, as resources of the label table, so they read the same as the buttons they point to.
+    const val EXPORT_JSON_LABEL = "label_export_json"
+    const val AUDIO_ARCHITECT_LABEL = "label_audio_architect"
 
     // Area ids. data/DataWipe.kt gives the areas that need more than "delete the files" their extra steps by these.
     const val ID_MESSAGES_AND_DECKS = "MESSAGES_AND_DECKS"
@@ -67,143 +81,104 @@ object StorageCatalogue {
     /** Written by data/InstallState.kt. Only DELETE EVERYTHING removes it, so the next launch is treated as a new install. */
     const val FILE_INSTALL_STATE = "ack_install_state"
 
-    private const val DEFAULTS_AFTER =
-        "AFTERWARDS ACK STARTS WITH ITS DEFAULT SETTINGS: THE ORGANIC VOICE, THE FULL TEXT DISPLAY PRESET, SPEECH IN THIS PHONE'S OWN LANGUAGE, AND ACK'S OWN WORDS IN THIS PHONE'S LANGUAGE WHERE ACK HAS THEM."
+    // What is true after SETTINGS (or EVERYTHING) is deleted: the new-install defaults are seeded again (data/InstallState.kt).
+    const val AFTER_DEFAULTS = "area_after_defaults"
 
     // The Matrix deck is given ACK's neutral starter phrases again after this area is deleted (data/StarterSeed.kt), so a wiped
     // phone does not fall back to the developer's own built-in wording.
-    private const val STARTERS_AFTER =
-        "AFTERWARDS THE MATRIX DECK SHOWS ACK'S NEUTRAL STARTER PHRASES, NOT ITS OLD BUILT-IN WORDING."
+    const val AFTER_STARTERS = "area_after_starters"
 
     val areas: List<Area> = listOf(
         Area(
             id = ID_MESSAGES_AND_DECKS,
-            label = "MESSAGES AND DECKS",
-            holds = "YOUR DECKS, MESSAGES, STATEMENTS, SHARED VARIABLES, TYPING HISTORY AND THE LEARNED WORDS BEHIND WORD SUGGESTIONS. NOT THE EMERGENCY INFO CARD.",
             // ack_starter_seed is the starter seed's own note of which phrases it wrote (per phone, never backed up).
             prefsFilesCleared = setOf("ack_statements", "ack_autocomplete_history", StarterSets.RECORD_FILE),
             prefsFilesClearedExcept = mapOf(FILE_MATRIX_CONFIG to setOf(KEY_EMERGENCY_INFO_CARD)),
             // The learned words (data/LearnedWordsRepository.kt): derived from typed statements, so they go with them.
             folders = setOf(LearnedWordsStore.FOLDER),
             coverage = Coverage.EXPORT_JSON,
-            backupNote = "IT IS IN EXPORT .JSON.",
-            afterNote = STARTERS_AFTER,
+            afterResource = AFTER_STARTERS,
             restartAfter = true,
         ),
         Area(
             id = ID_EMERGENCY_INFO_CARD,
-            label = "EMERGENCY INFO CARD",
-            holds = "THE MEDICAL ID CARD: NAME, DATE OF BIRTH, BLOOD TYPE, CONDITIONS, MEDICATIONS, ALLERGIES AND CONTACTS.",
             prefsKeysRemoved = mapOf(FILE_MATRIX_CONFIG to setOf(KEY_EMERGENCY_INFO_CARD)),
             coverage = Coverage.EXPORT_JSON,
-            backupNote = "IT IS IN EXPORT .JSON.",
             restartAfter = true,
         ),
         Area(
             id = ID_PEOPLE_AND_PLACES,
-            label = "PEOPLE AND PLACES",
-            holds = "TARGET COMPUTER ENTRIES: NAMES, PHONE NUMBERS, ADDRESSES AND EMAILS.",
             prefsFilesCleared = setOf("ack_targets"),
             coverage = Coverage.EXPORT_JSON,
-            backupNote = "IT IS IN EXPORT .JSON.",
             restartAfter = true,
         ),
         Area(
             id = ID_SAVED_LOCATIONS,
-            label = "SAVED LOCATIONS",
-            holds = "GEO-PROTOCOL ZONES (MAP COORDINATES) AND ANY MAP FILE YOU IMPORTED. LOCATION ALERTS ARE SWITCHED OFF FIRST.",
             prefsFilesCleared = setOf("ack_geo_secure"),
             folders = setOf("geo_maps"),
             coverage = Coverage.EXPORT_JSON,
-            backupNote = "THE ZONES ARE IN EXPORT .JSON. THE MAP FILE IS NOT.",
             restartAfter = true,
         ),
         Area(
             id = ID_TERMINAL_LOG,
-            label = "TERMINAL LOG",
-            holds = "THE TERMINAL'S RECORD OF WHAT WAS SAID AND DONE.",
             prefsKeysRemoved = mapOf(FILE_ACK_PREFS to setOf(KEY_TERMINAL_LOG)),
             coverage = Coverage.NOT_BACKED_UP,
-            backupNote = "IT IS NOT BACKED UP ANYWHERE.",
             restartAfter = false,
         ),
         Area(
             id = ID_MESSAGE_RECORDINGS,
-            label = "MESSAGE RECORDINGS",
-            holds = "VOICE RECORDINGS ATTACHED TO QUICK ACTIONS, KEYS AND MATRIX MESSAGES.",
             prefsFilesCleared = setOf("ack_voice_recordings"),
             folders = setOf("recordings"),
             coverage = Coverage.EXPORT_JSON,
-            backupNote = "THE RECORDINGS ARE IN EXPORT .JSON.",
             restartAfter = true,
         ),
         Area(
             id = ID_TRAINING_DATA,
-            label = "TRAINING DATA",
-            holds = "RECORDINGS, NOTES AND SCRIPTS FROM RECORD TRAINING DATA.",
             prefsFilesCleared = setOf("ack_training_capture"),
             folders = setOf("training_capture"),
             coverage = Coverage.OTHER_BACKUP,
-            backupNote = "THESE RECORDINGS ARE NOT IN EXPORT .JSON. SAVE THEM FIRST WITH SAVE ALL TO A FILE " +
-                "(RECORD TRAINING DATA). YOUR WRITTEN SCRIPTS ARE IN EXPORT .JSON.",
             restartAfter = true,
         ),
         Area(
             id = ID_TRAINED_VOICE,
-            label = "TRAINED VOICE",
-            holds = "YOUR TRAINED VOICE MODEL. VOICES THAT USE IT SWITCH TO A NORMAL VOICE.",
             folders = setOf("custom_voice"),
             coverage = Coverage.OTHER_BACKUP,
-            backupNote = "IT IS NOT IN EXPORT .JSON. SAVE IT FIRST WITH EXPORT VOICE BACKUP (AUDIO ARCHITECT).",
             restartAfter = true,
         ),
         Area(
             id = ID_GIF_LIBRARY,
-            label = "GIF LIBRARY",
-            holds = "THE GIF DECKS' PICTURES AND THEIR CATEGORIES.",
             prefsFilesCleared = setOf("ack_gif_library"),
             folders = setOf("gif_library"),
             coverage = Coverage.OTHER_BACKUP,
-            backupNote = "IT IS NOT IN EXPORT .JSON. SAVE EACH GIF DECK FIRST WITH EXPORT DECK (.ZIP) IN THAT DECK.",
             restartAfter = true,
         ),
         Area(
             id = ID_SAFETY_COPIES,
-            label = "SAFETY COPIES",
-            holds = "THE PRIVATE COPIES ACK MADE BEFORE A DATA UPGRADE.",
             folders = setOf("auto_backups"),
             coverage = Coverage.NOT_BACKED_UP,
-            backupNote = "THEY ARE NOT BACKED UP ANYWHERE.",
             restartAfter = false,
         ),
         Area(
             id = ID_TEMPORARY_FILES,
-            label = "TEMPORARY FILES",
-            holds = "PREVIEW AND SPEECH AUDIO AND INTERRUPTED IMPORTS. ACK MAKES THEM AGAIN WHEN NEEDED.",
             clearsCache = true,
             coverage = Coverage.NOT_BACKED_UP,
-            backupNote = "THERE IS NOTHING TO BACK UP.",
             restartAfter = false,
         ),
         Area(
             id = ID_SETTINGS,
-            label = "SETTINGS",
-            holds = "ALL OTHER SETTINGS: VOICE PROFILES, OUTPUT DEVICE, THEME, GESTURES, VISUAL PRESETS, PRACTICE SCORES AND BACKUP REMINDER NOTES.",
             prefsFilesCleared = setOf(
                 "app_prefs", "gestures", "ack_visual_presets", "ack_deck_trainer", "ack_training_game", "ack_backup_state",
                 AssistSettings.FILE,
             ),
             prefsFilesClearedExcept = mapOf(FILE_ACK_PREFS to setOf(KEY_TERMINAL_LOG)),
             coverage = Coverage.EXPORT_JSON,
-            backupNote = "MOST SETTINGS ARE IN EXPORT .JSON. PRACTICE SCORES AND THE LIGHT OR DARK CHOICE ARE NOT.",
-            afterNote = DEFAULTS_AFTER,
+            afterResource = AFTER_DEFAULTS,
             restartAfter = true,
         ),
     )
 
     /** DELETE EVERYTHING: every area above, plus [FILE_INSTALL_STATE]. */
     const val EVERYTHING_ID = "EVERYTHING"
-    const val EVERYTHING_LABEL = "EVERYTHING"
     val everythingOnlyPrefsFiles: Set<String> = setOf(FILE_INSTALL_STATE)
 
     fun area(id: String): Area = areas.first { it.id == id }
@@ -229,55 +204,117 @@ object StorageCatalogue {
     fun geofencesNeedConfirmedRemoval(geoEnabled: Boolean, optimizedMode: Boolean): Boolean = geoEnabled && optimizedMode
 
     /** Areas whose backup is not EXPORT .JSON (fully or at all). */
-    fun everythingNotInExportJson(): List<String> = areas.filter { it.coverage != Coverage.EXPORT_JSON }.map { it.label }
+    fun everythingNotInExportJson(): List<Area> = areas.filter { it.coverage != Coverage.EXPORT_JSON }
 
-    // --- amount stored ----------------------------------------------------------------------------------------------
+    // --- the words, through a TextSource -----------------------------------------------------------------------------
+    // These constants are resource names (strings.xml, in every language), not words.
+
+    const val EVERYTHING_LABEL = "storage_everything_label"
+    const val EVERYTHING_HOLDS = "storage_everything_holds"
+    const val COUNTING = "storage_counting"
+    const val NOT_ELSEWHERE = "storage_not_elsewhere"
+    const val WATCH_NOTE = "storage_watch_note"
+    const val RESTART_NOTE = "storage_restart_note"
+    const val CANNOT_UNDO = "storage_cannot_undo"
+    private const val THIS_DELETES = "storage_this_deletes"
+    private const val STORED_NOW = "storage_stored_now"
+    private const val EVERYTHING_DELETES = "storage_everything_deletes"
+    private const val EVERYTHING_NOT_COVERED = "storage_everything_not_covered"
+    private const val NOTHING_STORED = "storage_nothing"
+    private const val AMOUNT = "storage_amount"
+    private const val ITEMS = "storage_items"
+    private const val SIZE_UNDER_1_KB = "storage_size_under_1kb"
+    private const val SIZE_KB = "storage_size_kb"
+    private const val SIZE_MB = "storage_size_mb"
+    private const val DELETED_STATUS = "delete_data_deleted"
+    private const val DELETED_TOAST = "delete_data_deleted_toast"
+    private const val FAILED_STATUS = "delete_data_failed"
+    private const val GOOGLE_NOTE = "delete_data_google_note"
+    private const val NOT_RESTARTED = "delete_data_not_restarted"
+    private const val LOG_DELETED = "delete_data_log_deleted"
+    private const val LOG_INCOMPLETE = "delete_data_log_incomplete"
+    private const val LOG_INCOMPLETE_DELETED = "delete_data_log_incomplete_deleted"
+
+    /** The area's name. */
+    fun label(text: TextSource, area: Area): String = text.get(area.labelResource)
+
+    /** The name of an area by id, or EVERYTHING's. */
+    fun labelOf(text: TextSource, id: String): String =
+        if (id == EVERYTHING_ID) text.get(EVERYTHING_LABEL) else label(text, area(id))
+
+    /** What the area holds, in plain words. */
+    fun holds(text: TextSource, area: Area): String = text.get(area.holdsResource)
+
+    /** How to save it first, or that it is not backed up. The names it mentions are the buttons' own, in the chosen language. */
+    fun backupNote(text: TextSource, area: Area): String =
+        text.get(area.backupResource, text.get(EXPORT_JSON_LABEL), text.get(AUDIO_ARCHITECT_LABEL))
+
+    /** The areas' names by id, in the order given, for a message. Never any content. */
+    fun names(text: TextSource, ids: List<String>): String = ids.joinToString(", ") { label(text, area(it)) }
 
     /** "NOTHING STORED", or e.g. "3 ITEMS, 12 KB". Bytes are approximate for settings files (the size of their values). */
-    fun describeAmount(bytes: Long, items: Int): String {
-        if (items <= 0 && bytes <= 0L) return "NOTHING STORED"
-        val noun = if (items == 1) "ITEM" else "ITEMS"
-        return "$items $noun, ${describeSize(bytes)}"
+    fun describeAmount(text: TextSource, bytes: Long, items: Int): String {
+        if (items <= 0 && bytes <= 0L) return text.get(NOTHING_STORED)
+        return text.get(AMOUNT, text.count(ITEMS, items), describeSize(text, bytes))
     }
 
     /** "UNDER 1 KB", "12 KB" or "1.4 MB": one size in the words DELETE DATA and the safety-copy list share. */
-    fun describeSize(bytes: Long): String = when {
-        bytes < 1024L -> "UNDER 1 KB"
-        bytes < 1024L * 1024L -> "${bytes / 1024L} KB"
-        else -> String.format(Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0))
+    fun describeSize(text: TextSource, bytes: Long): String = when {
+        bytes < 1024L -> text.get(SIZE_UNDER_1_KB)
+        bytes < 1024L * 1024L -> text.get(SIZE_KB, bytes / 1024L)
+        else -> text.get(SIZE_MB, String.format(Locale.ROOT, "%.1f", bytes / (1024.0 * 1024.0)))
     }
-
-    // --- the confirmations' words -----------------------------------------------------------------------------------
-
-    const val NOT_ELSEWHERE =
-        "THIS DOES NOT DELETE FILES YOU SAVED ELSEWHERE (EXPORTS, PACKAGES, BACKUPS) OR ANYTHING YOU COPIED TO ANOTHER APP."
-    const val WATCH_NOTE = "A PAIRED WATCH MAY KEEP NAMES UNTIL IT NEXT CONNECTS."
-    const val RESTART_NOTE = "ACK WILL RESTART WHEN IT IS DONE."
-    const val CANNOT_UNDO = "THIS CANNOT BE UNDONE."
 
     /** Only an area that EXPORT .JSON covers can offer BACK UP FIRST; the others name the backup that does cover them. */
     fun offersBackupFirst(area: Area): Boolean = area.coverage == Coverage.EXPORT_JSON
 
     /** The first confirmation's paragraphs for one area: what goes, how much, how to save it first, and what stays. */
-    fun firstConfirmation(area: Area, amountText: String): List<String> = buildList {
-        add("THIS DELETES: ${area.holds}")
-        add("STORED NOW: $amountText.")
-        add(area.backupNote)
-        area.afterNote?.let { add(it) }
-        if (touchesWatchNames(listOf(area))) add(WATCH_NOTE)
-        if (area.restartAfter) add(RESTART_NOTE)
-        add(NOT_ELSEWHERE)
+    fun firstConfirmation(text: TextSource, area: Area, amountText: String): List<String> = buildList {
+        add(text.get(THIS_DELETES, holds(text, area)))
+        add(text.get(STORED_NOW, amountText))
+        add(backupNote(text, area))
+        area.afterResource?.let { add(text.get(it)) }
+        if (touchesWatchNames(listOf(area))) add(text.get(WATCH_NOTE))
+        if (area.restartAfter) add(text.get(RESTART_NOTE))
+        add(text.get(NOT_ELSEWHERE))
     }
 
     /** The same, for DELETE EVERYTHING. */
-    fun firstConfirmationEverything(amountText: String): List<String> = buildList {
-        add("THIS DELETES ALL OF THE ${areas.size} AREAS LISTED ABOVE, AND ACK'S NOTE OF WHETHER THIS PHONE IS A NEW INSTALL.")
-        add("STORED NOW: $amountText.")
-        add("EXPORT .JSON DOES NOT COVER: ${everythingNotInExportJson().joinToString(", ")}. SAVE THOSE FIRST IF YOU NEED THEM.")
-        add(DEFAULTS_AFTER)
-        add(STARTERS_AFTER)
-        add(WATCH_NOTE)
-        add(RESTART_NOTE)
-        add(NOT_ELSEWHERE)
+    fun firstConfirmationEverything(text: TextSource, amountText: String): List<String> = buildList {
+        add(text.get(EVERYTHING_DELETES, areas.size))
+        add(text.get(STORED_NOW, amountText))
+        add(text.get(EVERYTHING_NOT_COVERED, text.get(EXPORT_JSON_LABEL), everythingNotInExportJson().joinToString(", ") { label(text, it) }))
+        add(text.get(AFTER_DEFAULTS))
+        add(text.get(AFTER_STARTERS))
+        add(text.get(WATCH_NOTE))
+        add(text.get(RESTART_NOTE))
+        add(text.get(NOT_ELSEWHERE))
+    }
+
+    // --- what is said after a delete (areas by id; the words never decide anything) -----------------------------------------------
+
+    /** Shown in the dialog after a delete that needed no restart. */
+    fun successStatus(text: TextSource, deletedIds: List<String>): String = text.get(DELETED_STATUS, names(text, deletedIds))
+
+    /** The toast for the same. */
+    fun successToast(text: TextSource, deletedIds: List<String>): String = text.get(DELETED_TOAST, names(text, deletedIds))
+
+    /**
+     * Shown after a delete that did not all go through: which areas could not be deleted, which were, a note for SAVED LOCATIONS (Google's location service
+     * has to confirm its alerts are removed first), and that ACK did not restart. Sentences are joined with a space here (a resource's own trailing space is
+     * trimmed by Android).
+     */
+    fun failureStatus(text: TextSource, deletedIds: List<String>, failedIds: List<String>): String = buildList {
+        add(text.get(FAILED_STATUS, names(text, failedIds)))
+        if (deletedIds.isNotEmpty()) add(text.get(DELETED_STATUS, names(text, deletedIds)))
+        if (ID_SAVED_LOCATIONS in failedIds) add(text.get(GOOGLE_NOTE, label(text, area(ID_SAVED_LOCATIONS))))
+        add(text.get(NOT_RESTARTED))
+    }.joinToString(" ")
+
+    /** The one Terminal line after a delete: the areas by name, never their content. */
+    fun logLine(text: TextSource, deletedIds: List<String>, failedIds: List<String>): String = when {
+        failedIds.isEmpty() -> text.get(LOG_DELETED, names(text, deletedIds))
+        deletedIds.isEmpty() -> text.get(LOG_INCOMPLETE, names(text, failedIds))
+        else -> text.get(LOG_INCOMPLETE_DELETED, names(text, failedIds), names(text, deletedIds))
     }
 }

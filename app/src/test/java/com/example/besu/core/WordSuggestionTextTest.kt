@@ -81,9 +81,15 @@ class WordSuggestionTextTest {
         assertTrue(text.contains("EXPORT .JSON"))
         assertTrue(text.contains("TARGET COMPUTER"))
         assertTrue(text.contains("STAYS ON OR OFF"))
-        assertTrue("files saved elsewhere are not touched, and it says so", StorageCatalogue.NOT_ELSEWHERE in first)
+        assertTrue("files saved elsewhere are not touched, and it says so", WordSuggestionText.NOT_ELSEWHERE in first)
         assertTrue(WordSuggestionText.forgetAllFirstConfirmation(1).joinToString("\n").contains("THE 1 LEARNED WORD "))
         assertEquals("THIS CANNOT BE UNDONE.", WordSuggestionText.FORGET_ALL_SECOND)
+    }
+
+    @Test
+    fun theTwoSentencesSharedWithDeleteDataAreWordForWordTheSame() {
+        assertEquals(EnglishText.get(StorageCatalogue.CANNOT_UNDO), WordSuggestionText.FORGET_ALL_SECOND)
+        assertEquals(EnglishText.get(StorageCatalogue.NOT_ELSEWHERE), WordSuggestionText.NOT_ELSEWHERE)
     }
 
     @Test

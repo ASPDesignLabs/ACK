@@ -2,6 +2,7 @@
 package com.example.besu.data
 
 import android.content.Context
+import com.example.besu.core.ActiveScript
 import com.example.besu.core.TextSource
 
 /**
@@ -9,6 +10,9 @@ import com.example.besu.core.TextSource
  * data/InterfaceLocale.kt). A name that is not a resource reads as itself, so a gap is visible rather than a crash or a blank.
  */
 class ResourceText(private val context: Context) : TextSource {
+    /** The language the words are really in (the chosen one, or the phone's if ACK has it, otherwise English), not the phone's own setting. */
+    override val languageTag: String get() = ActiveScript.tag
+
     override fun get(name: String, vararg args: Any): String {
         val id = context.resources.getIdentifier(name, "string", context.packageName)
         if (id == 0) return name
