@@ -661,4 +661,21 @@
     <string name="speech_language_explanation_missing">IF THE PHONE\'S SPEECH ENGINE DOES NOT HAVE THE LANGUAGE, ACK USES THE ENGINE\'S OWN DEFAULT: A LANGUAGE THAT IS NOT AVAILABLE NEVER MEANS SILENCE.</string>
     <string name="voice_list_note_hidden">VOICES THAT NEED THE INTERNET, OR ARE NOT INSTALLED ON THIS PHONE, ARE NOT SHOWN: ACK NEVER USES THE NETWORK.</string>
     <string name="voice_list_note_chosen">A VOICE YOU ALREADY CHOSE STAYS CHOSEN EVEN IF IT IS NOT SHOWN HERE.</string>
+    <string name="defaults_title">NEWER DEFAULTS</string>
+    <string name="defaults_banner_voice">NEW INSTALLS NOW START WITH THE UNPROCESSED VOICE. YOURS IS UNCHANGED, AND NOTHING CHANGES UNLESS YOU CHOOSE.</string>
+    <string name="defaults_banner_full">NEW INSTALLS NOW START WITH FULL MESSAGES ON SCREEN. YOURS IS UNCHANGED, AND NOTHING CHANGES UNLESS YOU CHOOSE.</string>
+    <string name="defaults_banner_both">NEW INSTALLS NOW START WITH THE UNPROCESSED VOICE AND FULL MESSAGES ON SCREEN. YOURS IS UNCHANGED, AND NOTHING CHANGES UNLESS YOU CHOOSE.</string>
+    <string name="defaults_review">[REVIEW]</string>
+    <string name="defaults_not_now">[NOT NOW]</string>
+    <string name="defaults_intro">New installs start with these settings. Yours stay exactly as they are unless you switch one on below and tap %1$s.</string>
+    <string name="defaults_voice_title">USE THE UNPROCESSED VOICE (%1$s)</string>
+    <string name="defaults_voice_detail">Now: %1$s, a robotic effect voice, and Emergency messages use it too. %1$s stays available to choose again.</string>
+    <string name="defaults_full_title">SHOW THE FULL MESSAGE ON SCREEN</string>
+    <string name="defaults_full_detail">Now: a message over 5 words is cut to ALERT: plus 3 words, so the screen can show less than was spoken. This adds a display preset called FULL TEXT (your current colours and size, with SHOW FULL MESSAGE on) and makes it the active one. Your current preset is kept as it is.</string>
+    <string name="defaults_back_up_first">BACK UP FIRST</string>
+    <string name="defaults_back_up_hint">Saves a copy of your whole setup to a file you choose (the same as %1$s). Optional.</string>
+    <string name="defaults_backup_saved">BACKUP SAVED. NOTHING HAS BEEN CHANGED YET.</string>
+    <string name="defaults_backup_failed">BACKUP FAILED. NOTHING WAS CHANGED.</string>
+    <string name="defaults_apply">APPLY</string>
+    <string name="defaults_updated">SETTINGS UPDATED</string>
 </resources>

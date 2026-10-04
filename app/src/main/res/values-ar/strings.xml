@@ -652,4 +652,21 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="speech_language_explanation_missing">إذا لم يكن لدى محرك النطق في الهاتف هذه اللغة، يستخدم ACK لغة المحرك الافتراضية: اللغة غير المتاحة لا تعني الصمت أبدًا.</string>
     <string name="voice_list_note_hidden">الأصوات التي تحتاج إلى الإنترنت أو غير المثبتة على هذا الهاتف لا تظهر: ACK لا يستخدم الشبكة أبدًا.</string>
     <string name="voice_list_note_chosen">الصوت الذي اخترته من قبل يبقى مختارًا حتى لو لم يظهر هنا.</string>
+    <string name="defaults_title">الإعدادات الافتراضية الأحدث</string>
+    <string name="defaults_banner_voice">التثبيتات الجديدة تبدأ الآن بالصوت غير المعالج. تثبيتك لم يتغير، ولن يتغير شيء ما لم تختر.</string>
+    <string name="defaults_banner_full">التثبيتات الجديدة تبدأ الآن بعرض الرسائل كاملة على الشاشة. تثبيتك لم يتغير، ولن يتغير شيء ما لم تختر.</string>
+    <string name="defaults_banner_both">التثبيتات الجديدة تبدأ الآن بالصوت غير المعالج وبعرض الرسائل كاملة على الشاشة. تثبيتك لم يتغير، ولن يتغير شيء ما لم تختر.</string>
+    <string name="defaults_review">[مراجعة]</string>
+    <string name="defaults_not_now">[ليس الآن]</string>
+    <string name="defaults_intro">التثبيتات الجديدة تبدأ بهذه الإعدادات. إعداداتك تبقى كما هي تمامًا ما لم تفعّل أحدها أدناه وتضغط على %1$s.</string>
+    <string name="defaults_voice_title">استخدام الصوت غير المعالج (%1$s)</string>
+    <string name="defaults_voice_detail">الآن: %1$s، وهو صوت بمؤثر روبوتي، ورسائل الطوارئ تستخدمه أيضًا. يبقى %1$s متاحًا لاختياره مرة أخرى.</string>
+    <string name="defaults_full_title">عرض الرسالة كاملة على الشاشة</string>
+    <string name="defaults_full_detail">الآن: الرسالة التي تزيد على 5 كلمات تُقصّ إلى ALERT: و3 كلمات، فقد تعرض الشاشة أقل مما قيل. يضيف هذا إعداد عرض باسم FULL TEXT (بألوانك وحجمك الحاليين، مع تفعيل SHOW FULL MESSAGE) ويجعله النشط. يبقى إعدادك الحالي كما هو.</string>
+    <string name="defaults_back_up_first">نسخ احتياطي أولا</string>
+    <string name="defaults_back_up_hint">يحفظ نسخة من إعداداتك كاملة في ملف تختاره (مثل %1$s). اختياري.</string>
+    <string name="defaults_backup_saved">تم حفظ النسخة الاحتياطية. لم يتغير شيء بعد.</string>
+    <string name="defaults_backup_failed">فشل النسخ الاحتياطي. لم يتغير شيء.</string>
+    <string name="defaults_apply">تطبيق</string>
+    <string name="defaults_updated">تم تحديث الإعدادات</string>
 </resources>

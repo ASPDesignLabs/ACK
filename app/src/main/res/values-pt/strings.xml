@@ -643,4 +643,21 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="speech_language_explanation_missing">SE O MOTOR DE VOZ DO CELULAR NÃO TIVER ESSE IDIOMA, O ACK USA O IDIOMA PADRÃO DO MOTOR: UM IDIOMA INDISPONÍVEL NUNCA SIGNIFICA SILÊNCIO.</string>
     <string name="voice_list_note_hidden">VOZES QUE PRECISAM DA INTERNET OU NÃO ESTÃO INSTALADAS NESTE CELULAR NÃO SÃO MOSTRADAS: O ACK NUNCA USA A REDE.</string>
     <string name="voice_list_note_chosen">UMA VOZ QUE VOCÊ JÁ ESCOLHEU CONTINUA ESCOLHIDA MESMO QUE NÃO APAREÇA AQUI.</string>
+    <string name="defaults_title">NOVOS PADRÕES</string>
+    <string name="defaults_banner_voice">AS INSTALAÇÕES NOVAS AGORA COMEÇAM COM A VOZ SEM PROCESSAMENTO. A SUA NÃO MUDA, E NADA MUDA A MENOS QUE VOCÊ ESCOLHA.</string>
+    <string name="defaults_banner_full">AS INSTALAÇÕES NOVAS AGORA COMEÇAM COM AS MENSAGENS COMPLETAS NA TELA. A SUA NÃO MUDA, E NADA MUDA A MENOS QUE VOCÊ ESCOLHA.</string>
+    <string name="defaults_banner_both">AS INSTALAÇÕES NOVAS AGORA COMEÇAM COM A VOZ SEM PROCESSAMENTO E AS MENSAGENS COMPLETAS NA TELA. A SUA NÃO MUDA, E NADA MUDA A MENOS QUE VOCÊ ESCOLHA.</string>
+    <string name="defaults_review">[REVISAR]</string>
+    <string name="defaults_not_now">[AGORA NÃO]</string>
+    <string name="defaults_intro">AS INSTALAÇÕES NOVAS COMEÇAM COM ESTAS CONFIGURAÇÕES. AS SUAS FICAM EXATAMENTE COMO ESTÃO A MENOS QUE VOCÊ ATIVE UMA ABAIXO E TOQUE EM %1$s.</string>
+    <string name="defaults_voice_title">USAR A VOZ SEM PROCESSAMENTO (%1$s)</string>
+    <string name="defaults_voice_detail">AGORA: %1$s, UMA VOZ COM EFEITO ROBÓTICO, E AS MENSAGENS DE EMERGÊNCIA TAMBÉM A USAM. %1$s CONTINUA DISPONÍVEL PARA ESCOLHER DE NOVO.</string>
+    <string name="defaults_full_title">MOSTRAR A MENSAGEM COMPLETA NA TELA</string>
+    <string name="defaults_full_detail">AGORA: UMA MENSAGEM COM MAIS DE 5 PALAVRAS É CORTADA PARA ALERT: MAIS 3 PALAVRAS, ENTÃO A TELA PODE MOSTRAR MENOS DO QUE FOI DITO. ISSO ADICIONA UMA PREDEFINIÇÃO DE TELA CHAMADA FULL TEXT (SUAS CORES E TAMANHO ATUAIS, COM SHOW FULL MESSAGE ATIVADO) E A TORNA A ATIVA. SUA PREDEFINIÇÃO ATUAL É MANTIDA COMO ESTÁ.</string>
+    <string name="defaults_back_up_first">FAZER CÓPIA ANTES</string>
+    <string name="defaults_back_up_hint">SALVA UMA CÓPIA DE TODA A SUA CONFIGURAÇÃO EM UM ARQUIVO QUE VOCÊ ESCOLHER (O MESMO QUE %1$s). OPCIONAL.</string>
+    <string name="defaults_backup_saved">CÓPIA SALVA. NADA FOI ALTERADO AINDA.</string>
+    <string name="defaults_backup_failed">FALHA NA CÓPIA. NADA FOI ALTERADO.</string>
+    <string name="defaults_apply">APLICAR</string>
+    <string name="defaults_updated">CONFIGURAÇÕES ATUALIZADAS</string>
 </resources>

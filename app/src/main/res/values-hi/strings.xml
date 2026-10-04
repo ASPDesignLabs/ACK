@@ -640,4 +640,21 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="speech_language_explanation_missing">अगर फ़ोन के बोलने वाले इंजन में वह भाषा नहीं है, तो ACK इंजन की अपनी डिफ़ॉल्ट भाषा इस्तेमाल करता है: उपलब्ध न होने वाली भाषा का मतलब कभी चुप्पी नहीं होता।</string>
     <string name="voice_list_note_hidden">जिन आवाज़ों को इंटरनेट चाहिए, या जो इस फ़ोन पर इंस्टॉल नहीं हैं, वे नहीं दिखाई जातीं: ACK कभी नेटवर्क इस्तेमाल नहीं करता।</string>
     <string name="voice_list_note_chosen">जो आवाज़ आप पहले चुन चुके हैं वह चुनी रहती है, भले ही वह यहाँ न दिखे।</string>
+    <string name="defaults_title">नए डिफ़ॉल्ट</string>
+    <string name="defaults_banner_voice">नई इंस्टॉलेशन अब बिना प्रोसेस की हुई आवाज़ के साथ शुरू होती हैं। आपकी इंस्टॉलेशन नहीं बदली है, और आप चुनें तब तक कुछ नहीं बदलेगा।</string>
+    <string name="defaults_banner_full">नई इंस्टॉलेशन अब स्क्रीन पर पूरे संदेश के साथ शुरू होती हैं। आपकी इंस्टॉलेशन नहीं बदली है, और आप चुनें तब तक कुछ नहीं बदलेगा।</string>
+    <string name="defaults_banner_both">नई इंस्टॉलेशन अब बिना प्रोसेस की हुई आवाज़ और स्क्रीन पर पूरे संदेश के साथ शुरू होती हैं। आपकी इंस्टॉलेशन नहीं बदली है, और आप चुनें तब तक कुछ नहीं बदलेगा।</string>
+    <string name="defaults_review">[देखें]</string>
+    <string name="defaults_not_now">[अभी नहीं]</string>
+    <string name="defaults_intro">नई इंस्टॉलेशन इन सेटिंग के साथ शुरू होती हैं। आपकी सेटिंग वैसी ही रहती हैं जब तक आप नीचे कोई एक चालू करके %1$s न दबाएँ।</string>
+    <string name="defaults_voice_title">बिना प्रोसेस की हुई आवाज़ इस्तेमाल करें (%1$s)</string>
+    <string name="defaults_voice_detail">अभी: %1$s, रोबोट प्रभाव वाली आवाज़, और आपातकालीन संदेश भी उसी का इस्तेमाल करते हैं। %1$s दोबारा चुनने के लिए उपलब्ध रहती है।</string>
+    <string name="defaults_full_title">स्क्रीन पर पूरा संदेश दिखाएँ</string>
+    <string name="defaults_full_detail">अभी: 5 शब्दों से लंबा संदेश ALERT: और 3 शब्दों तक काट दिया जाता है, इसलिए स्क्रीन पर बोले गए से कम दिख सकता है। यह FULL TEXT नाम की एक डिस्प्ले प्रीसेट जोड़ता है (आपके मौजूदा रंग और आकार, SHOW FULL MESSAGE चालू के साथ) और उसे सक्रिय कर देता है। आपकी मौजूदा प्रीसेट जैसी है वैसी ही रहती है।</string>
+    <string name="defaults_back_up_first">पहले बैकअप लें</string>
+    <string name="defaults_back_up_hint">आपकी पूरी सेटअप की एक प्रति आपकी चुनी हुई फ़ाइल में सहेजता है (%1$s के जैसा ही)। वैकल्पिक।</string>
+    <string name="defaults_backup_saved">बैकअप सहेजा गया। अभी तक कुछ नहीं बदला है।</string>
+    <string name="defaults_backup_failed">बैकअप नहीं हो सका। कुछ भी नहीं बदला गया।</string>
+    <string name="defaults_apply">लागू करें</string>
+    <string name="defaults_updated">सेटिंग अपडेट हो गईं</string>
 </resources>

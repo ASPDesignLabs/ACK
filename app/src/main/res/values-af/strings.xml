@@ -640,4 +640,21 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="speech_language_explanation_missing">AS DIE FOON SE SPRAAKENJIN DIE TAAL NIE HET NIE, GEBRUIK ACK DIE ENJIN SE EIE STANDAARD: \'N TAAL WAT NIE BESKIKBAAR IS NIE, BETEKEN NOOIT STILTE NIE.</string>
     <string name="voice_list_note_hidden">STEMME WAT DIE INTERNET NODIG HET, OF NIE OP HIERDIE FOON GEÏNSTALLEER IS NIE, WORD NIE GEWYS NIE: ACK GEBRUIK NOOIT DIE NETWERK NIE.</string>
     <string name="voice_list_note_chosen">\'N STEM WAT JY REEDS GEKIES HET, BLY GEKIES AL WORD DIT NIE HIER GEWYS NIE.</string>
+    <string name="defaults_title">NUWER STANDAARDINSTELLINGS</string>
+    <string name="defaults_banner_voice">NUWE INSTALLASIES BEGIN NOU MET DIE ONVERWERKTE STEM. JOUNE VERANDER NIE, EN NIKS VERANDER TENSY JY DIT KIES NIE.</string>
+    <string name="defaults_banner_full">NUWE INSTALLASIES BEGIN NOU MET VOLLE BOODSKAPPE OP DIE SKERM. JOUNE VERANDER NIE, EN NIKS VERANDER TENSY JY DIT KIES NIE.</string>
+    <string name="defaults_banner_both">NUWE INSTALLASIES BEGIN NOU MET DIE ONVERWERKTE STEM EN VOLLE BOODSKAPPE OP DIE SKERM. JOUNE VERANDER NIE, EN NIKS VERANDER TENSY JY DIT KIES NIE.</string>
+    <string name="defaults_review">[KYK DEUR]</string>
+    <string name="defaults_not_now">[NIE NOU NIE]</string>
+    <string name="defaults_intro">NUWE INSTALLASIES BEGIN MET HIERDIE INSTELLINGS. JOUNE BLY PRESIES SOOS HULLE IS TENSY JY HIERONDER EEN AANSKAKEL EN %1$s TIK.</string>
+    <string name="defaults_voice_title">GEBRUIK DIE ONVERWERKTE STEM (%1$s)</string>
+    <string name="defaults_voice_detail">NOU: %1$s, \'N ROBOTEFFEKSTEM, EN NOODBOODSKAPPE GEBRUIK DIT OOK. %1$s BLY BESKIKBAAR OM WEER TE KIES.</string>
+    <string name="defaults_full_title">WYS DIE VOLLE BOODSKAP OP DIE SKERM</string>
+    <string name="defaults_full_detail">NOU: \'N BOODSKAP VAN MEER AS 5 WOORDE WORD AFGESNY TOT ALERT: PLUS 3 WOORDE, SODAT DIE SKERM MINDER KAN WYS AS WAT GESÊ IS. DIT VOEG \'N SKERMVOORINSTELLING GENAAM FULL TEXT BY (JOU HUIDIGE KLEURE EN GROOTTE, MET SHOW FULL MESSAGE AAN) EN MAAK DIT DIE AKTIEWE EEN. JOU HUIDIGE VOORINSTELLING BLY SOOS DIT IS.</string>
+    <string name="defaults_back_up_first">MAAK EERS \'N RUGSTEUNKOPIE</string>
+    <string name="defaults_back_up_hint">STOOR \'N KOPIE VAN JOU HELE OPSTELLING IN \'N LÊER WAT JY KIES (DIESELFDE AS %1$s). OPSIONEEL.</string>
+    <string name="defaults_backup_saved">RUGSTEUNKOPIE GESTOOR. NIKS IS NOG VERANDER NIE.</string>
+    <string name="defaults_backup_failed">RUGSTEUNKOPIE MISLUK. NIKS IS VERANDER NIE.</string>
+    <string name="defaults_apply">PAS TOE</string>
+    <string name="defaults_updated">INSTELLINGS OPGEDATEER</string>
 </resources>

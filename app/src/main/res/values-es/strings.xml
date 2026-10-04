@@ -643,4 +643,21 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="speech_language_explanation_missing">SI EL MOTOR DE VOZ DEL TELÉFONO NO TIENE ESE IDIOMA, ACK USA EL IDIOMA PREDETERMINADO DEL MOTOR: UN IDIOMA NO DISPONIBLE NUNCA SIGNIFICA SILENCIO.</string>
     <string name="voice_list_note_hidden">NO SE MUESTRAN LAS VOCES QUE NECESITAN INTERNET O NO ESTÁN INSTALADAS EN ESTE TELÉFONO: ACK NUNCA USA LA RED.</string>
     <string name="voice_list_note_chosen">UNA VOZ QUE YA ELEGISTE SIGUE ELEGIDA AUNQUE NO SE MUESTRE AQUÍ.</string>
+    <string name="defaults_title">NUEVOS VALORES PREDETERMINADOS</string>
+    <string name="defaults_banner_voice">LAS INSTALACIONES NUEVAS AHORA EMPIEZAN CON LA VOZ SIN PROCESAR. LA TUYA NO CAMBIA, Y NADA CAMBIA A MENOS QUE LO ELIJAS.</string>
+    <string name="defaults_banner_full">LAS INSTALACIONES NUEVAS AHORA EMPIEZAN CON LOS MENSAJES COMPLETOS EN PANTALLA. LA TUYA NO CAMBIA, Y NADA CAMBIA A MENOS QUE LO ELIJAS.</string>
+    <string name="defaults_banner_both">LAS INSTALACIONES NUEVAS AHORA EMPIEZAN CON LA VOZ SIN PROCESAR Y LOS MENSAJES COMPLETOS EN PANTALLA. LA TUYA NO CAMBIA, Y NADA CAMBIA A MENOS QUE LO ELIJAS.</string>
+    <string name="defaults_review">[REVISAR]</string>
+    <string name="defaults_not_now">[AHORA NO]</string>
+    <string name="defaults_intro">LAS INSTALACIONES NUEVAS EMPIEZAN CON ESTOS AJUSTES. LOS TUYOS SE QUEDAN EXACTAMENTE COMO ESTÁN A MENOS QUE ACTIVES UNO ABAJO Y TOQUES %1$s.</string>
+    <string name="defaults_voice_title">USAR LA VOZ SIN PROCESAR (%1$s)</string>
+    <string name="defaults_voice_detail">AHORA: %1$s, UNA VOZ CON EFECTO ROBÓTICO, Y LOS MENSAJES DE EMERGENCIA TAMBIÉN LA USAN. %1$s SIGUE DISPONIBLE PARA ELEGIRLA DE NUEVO.</string>
+    <string name="defaults_full_title">MOSTRAR EL MENSAJE COMPLETO EN PANTALLA</string>
+    <string name="defaults_full_detail">AHORA: UN MENSAJE DE MÁS DE 5 PALABRAS SE CORTA A ALERT: MÁS 3 PALABRAS, ASÍ QUE LA PANTALLA PUEDE MOSTRAR MENOS DE LO QUE SE DIJO. ESTO AÑADE UN AJUSTE DE PANTALLA LLAMADO FULL TEXT (TUS COLORES Y TAMAÑO ACTUALES, CON SHOW FULL MESSAGE ACTIVADO) Y LO HACE EL ACTIVO. TU AJUSTE ACTUAL SE CONSERVA TAL COMO ESTÁ.</string>
+    <string name="defaults_back_up_first">HACER COPIA ANTES</string>
+    <string name="defaults_back_up_hint">GUARDA UNA COPIA DE TODA TU CONFIGURACIÓN EN UN ARCHIVO QUE ELIJAS (LO MISMO QUE %1$s). OPCIONAL.</string>
+    <string name="defaults_backup_saved">COPIA GUARDADA. TODAVÍA NO SE HA CAMBIADO NADA.</string>
+    <string name="defaults_backup_failed">FALLÓ LA COPIA. NO SE CAMBIÓ NADA.</string>
+    <string name="defaults_apply">APLICAR</string>
+    <string name="defaults_updated">AJUSTES ACTUALIZADOS</string>
 </resources>

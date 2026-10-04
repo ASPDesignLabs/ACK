@@ -131,10 +131,10 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                 val json = TransferManager.generateBackupJson(context)
                 val out = context.contentResolver.openOutputStream(uri) ?: throw java.io.IOException("could not open the file")
                 out.use { it.write(json.toByteArray()) }
-                defaultsBackupStatus = "BACKUP SAVED. NOTHING HAS BEEN CHANGED YET."
+                defaultsBackupStatus = context.getString(R.string.defaults_backup_saved)
             } catch (e: Exception) {
                 Log.e("ACK_BACKUP", "backup before applying the newer defaults failed", e)
-                defaultsBackupStatus = "BACKUP FAILED. NOTHING WAS CHANGED."
+                defaultsBackupStatus = context.getString(R.string.defaults_backup_failed)
             }
         }
     }
@@ -874,7 +874,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                 InstallState.dismissDefaultsPrompt(context)
                 showDefaultsReview = false
                 defaultsPromptRefresh++
-                Toast.makeText(context, "SETTINGS UPDATED", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.defaults_updated), Toast.LENGTH_SHORT).show()
             },
             onDismiss = { showDefaultsReview = false }
         )
