@@ -43,6 +43,8 @@ cp "$A/settings/AudioView.kt" "$A/settings/DefaultsPrompt.kt" "$STAGE/com/exampl
 cp "$A/settings/WordSuggestionsSection.kt" "$STAGE/com/example/besu/settings/"
 # MANAGE CONTEXT: the custom context layer dialogs (moved out of DesignSystem.kt so they can be checked). The context functions are stubbed in stubs/app/CommandRepository.kt.
 cp "$A/ui/ManageContextDialog.kt" "$STAGE/com/example/besu/ui/"
+# MANAGE AUTOCOMPLETE: the dialog (the history repository, the Quick Actions models and the deck, node and phrase lookups are stubbed from their real signatures).
+cp "$A/settings/ManageAutocompleteDialog.kt" "$STAGE/com/example/besu/settings/"
 mkdir -p "$STAGE/com/example/besu/output"
 cp "$A/data/VoiceProfile.kt" "$STAGE/com/example/besu/data/"
 cp "$A/output/VoiceInfoMapping.kt" "$STAGE/com/example/besu/output/"

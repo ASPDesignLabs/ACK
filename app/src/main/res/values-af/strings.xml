@@ -705,4 +705,26 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="context_confirm_rename">BEVESTIG NAAM</string>
     <string name="context_reassign_title">HERTOEWYS POSE // %1$s</string>
     <string name="context_reassign_help">KIES WATTER POSE SE FISIESE GESTE HIERDIE KONTEKSLAAG AKTIVEER WANNEER DIT IN FOKUS IS.</string>
+    <string name="autocomplete_section_title">OUTOVOLTOOIING</string>
+    <string name="autocomplete_section_help">ACK ONTHOU WAT JY GETIK HET IN DIE VERANDERLIKE-VELDE VAN MATRIKS EN VINNIGE AKSIES EN IN GEDEELDE WORTELVERANDERLIKES, EN BIED JOU MEESGEBRUIKTE VROEËRE WAARDES TERUG AAN AS TIKBARE KNOPPIES WAT VERNOU SOOS JY TIK. SLEGS OP HIERDIE TOESTEL, EN INGESLUIT IN RUGSTEUNKOPIEË MET %1$s.</string>
+    <string name="autocomplete_manage">BESTUUR OUTOVOLTOOIING</string>
+    <string name="autocomplete_empty">NOG NIKS ONTHOU NIE. BEGIN TIK IN \'N MATRIKS-NODUS SE VERANDERLIKE, \'N VINNIGE AKSIES-PLEK SE VERANDERLIKE OF \'N GEDEELDE WORTELVERANDERLIKE -- ACK ONTHOU DIT HIER.</string>
+    <string name="autocomplete_kind_count">%1$s (%2$d)</string>
+    <string name="autocomplete_variable">VERANDERLIKE %1$d</string>
+    <string name="autocomplete_variable_root">VERANDERLIKE %1$d // WORTEL %2$s</string>
+    <string name="autocomplete_var_n">VER %1$d</string>
+    <string name="autocomplete_tag">MERKER %1$s</string>
+    <string name="autocomplete_slot_n">PLEK %1$d</string>
+    <string name="autocomplete_unknown">ONBEKEND</string>
+    <string name="autocomplete_unknown_node">ONBEKENDE NODUS</string>
+    <string name="autocomplete_clear_all">VEE ALLE OUTOVOLTOOI-GESKIEDENIS</string>
+    <string name="autocomplete_clear_all_button">VEE ALLES</string>
+    <string name="autocomplete_clear_all_body">DIT VERWYDER ELKE ONTHOUDE WAARDE VIR ELKE VELD VAN MATRIKS, VINNIGE AKSIES EN GEDEELDE WORTELVERANDERLIKES. DIT KAN NIE ONGEDAAN GEMAAK WORD NIE.</string>
+    <string name="autocomplete_clear_field_title">VEE VELDGESKIEDENIS</string>
+    <string name="autocomplete_clear_field_body">DIT VERWYDER ELKE ONTHOUDE WAARDE VIR HIERDIE ENE VELD. NIKS ANDERS WORD GERAAK NIE. DIT KAN NIE ONGEDAAN GEMAAK WORD NIE.</string>
+    <string name="autocomplete_clear_this_field">VEE HIERDIE VELD SE GESKIEDENIS</string>
+    <plurals name="autocomplete_fields_remembered">
+        <item quantity="one">%d VELD ONTHOU</item>
+        <item quantity="other">%d VELDE ONTHOU</item>
+    </plurals>
 </resources>

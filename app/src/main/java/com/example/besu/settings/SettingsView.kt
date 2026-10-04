@@ -1404,17 +1404,17 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("AUTOCOMPLETE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
+                Text(stringResource(R.string.autocomplete_section_title), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "ACK remembers what you've typed into Matrix and Quick Actions variable fields and Shared Root Variables, offering your most-used past values back as tappable chips that narrow as you type. Local to this device, and included in EXPORT .JSON backups.",
+                    stringResource(R.string.autocomplete_section_help, labelFor(LabelKey.EXPORT_JSON)),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 NeonButton(
-                    "MANAGE AUTOCOMPLETE",
+                    stringResource(R.string.autocomplete_manage),
                     Modifier
                         .fillMaxWidth()
                         .testTag(AckTags.AUTOCOMPLETE_MANAGE_BTN)

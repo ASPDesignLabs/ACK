@@ -112,6 +112,8 @@ class TranslationsTest {
         "common_ok", // "OK" is how Portuguese and Afrikaans write it too
         "common_no", // "NO" is Spanish for no
         "label_pose_connect_plain", "label_variable", // real words in Spanish and Portuguese that are spelled as in English (SOCIAL, VARIABLE)
+        "autocomplete_kind_count", // "<name> (<count>)": only placeholders, the words come in as arguments
+        "autocomplete_variable", "autocomplete_var_n", // VARIABLE is how Spanish writes it, VAR is how Spanish and Portuguese abbreviate it
         "people_wizard_in", // "IN <name>" is Afrikaans too
         "people_day_sat", // "SAT" is Afrikaans' short Saterdag too
         "storage_amount", "storage_size_kb", "storage_size_mb", // only placeholders and a unit (KB, MB) that every one of these languages writes as it is
@@ -177,7 +179,7 @@ class TranslationsTest {
     fun hindiAndArabicTextIsInItsOwnScript_exceptTheShortListOfPlainSymbolsAndAcronyms() {
         val devanagari = Regex("[\\u0900-\\u097F]")
         val arabic = Regex("[\\u0600-\\u06FF]")
-        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb") // placeholders and units, which have no letters of their own
+        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "autocomplete_kind_count") // placeholders and units, which have no letters of their own
         for ((tag, script) in listOf("hi" to devanagari, "ar" to arabic)) for ((name, text) in texts.getValue(tag)) {
             if (name in latinOnlyAllowed) continue
             assertTrue("$tag/$name has no ${if (tag == "hi") "Devanagari" else "Arabic"} letters: $text", script.containsMatchIn(text))

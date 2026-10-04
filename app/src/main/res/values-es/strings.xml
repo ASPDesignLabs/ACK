@@ -710,4 +710,27 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="context_confirm_rename">CONFIRMAR NUEVO NOMBRE</string>
     <string name="context_reassign_title">REASIGNAR POSE // %1$s</string>
     <string name="context_reassign_help">ELIGE QUÉ GESTO FÍSICO DE POSE ACTIVA ESTA CAPA DE CONTEXTO CUANDO ESTÁ EN FOCO.</string>
+    <string name="autocomplete_section_title">AUTOCOMPLETADO</string>
+    <string name="autocomplete_section_help">ACK RECUERDA LO QUE HAS ESCRITO EN LOS CAMPOS DE VARIABLES DE MATRIZ Y ACCIONES RÁPIDAS Y EN VARIABLES RAÍZ COMPARTIDAS, Y TE OFRECE DE NUEVO TUS VALORES PASADOS MÁS USADOS COMO BOTONES QUE SE ACOTAN A MEDIDA QUE ESCRIBES. SOLO EN ESTE DISPOSITIVO, Y SE INCLUYE EN LAS COPIAS QUE HACES CON %1$s.</string>
+    <string name="autocomplete_manage">ADMINISTRAR AUTOCOMPLETADO</string>
+    <string name="autocomplete_empty">TODAVÍA NO SE RECUERDA NADA. EMPIEZA A ESCRIBIR EN LA VARIABLE DE UN NODO DE MATRIZ, EN LA VARIABLE DE UNA CASILLA DE ACCIONES RÁPIDAS O EN UNA VARIABLE RAÍZ COMPARTIDA -- ACK LO RECUERDA AQUÍ.</string>
+    <string name="autocomplete_kind_count">%1$s (%2$d)</string>
+    <string name="autocomplete_variable">VARIABLE %1$d</string>
+    <string name="autocomplete_variable_root">VARIABLE %1$d // RAÍZ %2$s</string>
+    <string name="autocomplete_var_n">VAR %1$d</string>
+    <string name="autocomplete_tag">ETIQUETA %1$s</string>
+    <string name="autocomplete_slot_n">CASILLA %1$d</string>
+    <string name="autocomplete_unknown">DESCONOCIDO</string>
+    <string name="autocomplete_unknown_node">NODO DESCONOCIDO</string>
+    <string name="autocomplete_clear_all">BORRAR TODO EL HISTORIAL DE AUTOCOMPLETADO</string>
+    <string name="autocomplete_clear_all_button">BORRAR TODO</string>
+    <string name="autocomplete_clear_all_body">ESTO ELIMINA TODOS LOS VALORES RECORDADOS DE TODOS LOS CAMPOS DE MATRIZ, ACCIONES RÁPIDAS Y VARIABLES RAÍZ COMPARTIDAS. ESTO NO SE PUEDE DESHACER.</string>
+    <string name="autocomplete_clear_field_title">BORRAR HISTORIAL DEL CAMPO</string>
+    <string name="autocomplete_clear_field_body">ESTO ELIMINA TODOS LOS VALORES RECORDADOS DE ESTE CAMPO. NO SE AFECTA NADA MÁS. ESTO NO SE PUEDE DESHACER.</string>
+    <string name="autocomplete_clear_this_field">BORRAR EL HISTORIAL DE ESTE CAMPO</string>
+    <plurals name="autocomplete_fields_remembered">
+        <item quantity="one">%d CAMPO RECORDADO</item>
+        <item quantity="many">%d CAMPOS RECORDADOS</item>
+        <item quantity="other">%d CAMPOS RECORDADOS</item>
+    </plurals>
 </resources>

@@ -80,10 +80,11 @@ class PlainWordsScreensWiringTest {
     @Test
     fun aNumberedVariableIsNamedThroughTheTable_exceptWhereTheBuilderIsNotComposable() {
         // "VARIABLE 1" / "VARIABLE 1 // ROOT A" are drawn as a label plus a number. A partial literal is not a whole one, so the literal test above
-        // cannot see it; this looks for the exact shape. The one place left is the Manage Autocomplete tree, built in a plain function that has no
-        // access to a composable label (a stated gap, not a decision).
+        // cannot see it; this looks for the exact shape. The Manage Autocomplete tree used to be the one place left (it is built in a plain function with no
+        // access to a composable label); it now reads its words through a TextSource (core/AutocompleteLabels.kt), so no literal is left. That tree still shows the
+        // standard names whatever PLAIN WORDS says, as DELETE DATA does: a stated gap, not a decision.
         val offenders = sources().filter { Regex("""\"VARIABLE \$\{""").containsMatchIn(noComments(it.text)) }.map { it.path }
-        assertEquals(listOf("settings/ManageAutocompleteDialog.kt"), offenders)
+        assertEquals(emptyList<String>(), offenders)
     }
 
     // ---- a label is display text only ----------------------------------------------------------------------------------------------

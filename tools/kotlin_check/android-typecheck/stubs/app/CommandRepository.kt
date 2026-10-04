@@ -3,11 +3,18 @@ package com.example.besu.data
 import android.content.Context
 import com.example.besu.decks.EmergencyDeckConfig
 import com.example.besu.decks.EmergencyInfoCard
+import com.example.besu.decks.QuickActionsDeckConfig
 
-// Stub of the Emergency and custom-context halves of data/CommandRepository.kt (it reads and writes storage and is not staged), written from its real signatures.
+// Stub of the Emergency, custom-context and autocomplete-tree halves of data/CommandRepository.kt (it reads and writes storage and is not staged), written from its real signatures.
 data class CustomContextEntry(val name: String, val basePose: String = "IDENTITY")
 
+data class MatrixNode(val path: String, val triggerPath: String, val label: String, val defaultPhrase: String, val category: String)
+
 object CommandRepository {
+    fun getDeckName(context: Context, deckId: String = "DEFAULT"): String = deckId
+    fun findMatrixNode(context: Context, path: String): MatrixNode? = null
+    fun getPhrase(context: Context, storagePath: String, deckId: String = "DEFAULT", profile: String = "DEFAULT"): String = ""
+    fun getQuickActionsConfig(context: Context, deckId: String = "DEFAULT"): QuickActionsDeckConfig = QuickActionsDeckConfig(deckId)
     fun getCustomContextEntries(context: Context): List<CustomContextEntry> = emptyList()
     fun addCustomContextEntry(context: Context, name: String, basePose: String): Boolean = false
     fun renameCustomContextEntry(context: Context, oldName: String, newName: String): Boolean = false

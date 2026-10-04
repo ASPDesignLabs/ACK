@@ -726,4 +726,26 @@
     <string name="context_confirm_rename">CONFIRM RENAME</string>
     <string name="context_reassign_title">REASSIGN POSE // %1$s</string>
     <string name="context_reassign_help">Choose which pose\'s physical gesture activates this context layer when it is focused.</string>
+    <string name="autocomplete_section_title">AUTOCOMPLETE</string>
+    <string name="autocomplete_section_help">ACK remembers what you\'ve typed into Matrix and Quick Actions variable fields and Shared Root Variables, offering your most-used past values back as tappable chips that narrow as you type. Local to this device, and included in %1$s backups.</string>
+    <string name="autocomplete_manage">MANAGE AUTOCOMPLETE</string>
+    <string name="autocomplete_empty">NOTHING REMEMBERED YET. START TYPING INTO A MATRIX NODE\'S VARIABLE, A QUICK ACTIONS SLOT\'S VARIABLE, OR A SHARED ROOT VARIABLE -- ACK REMEMBERS IT HERE.</string>
+    <string name="autocomplete_kind_count">%1$s (%2$d)</string>
+    <string name="autocomplete_variable">VARIABLE %1$d</string>
+    <string name="autocomplete_variable_root">VARIABLE %1$d // ROOT %2$s</string>
+    <string name="autocomplete_var_n">VAR %1$d</string>
+    <string name="autocomplete_tag">TAG %1$s</string>
+    <string name="autocomplete_slot_n">SLOT %1$d</string>
+    <string name="autocomplete_unknown">UNKNOWN</string>
+    <string name="autocomplete_unknown_node">UNKNOWN NODE</string>
+    <string name="autocomplete_clear_all">CLEAR ALL AUTOCOMPLETE HISTORY</string>
+    <string name="autocomplete_clear_all_button">CLEAR ALL</string>
+    <string name="autocomplete_clear_all_body">This removes every remembered value for every Matrix, Quick Actions, and Shared Root Variable field. This cannot be undone.</string>
+    <string name="autocomplete_clear_field_title">CLEAR FIELD HISTORY</string>
+    <string name="autocomplete_clear_field_body">This removes every remembered value for this one field. Nothing else is affected. This cannot be undone.</string>
+    <string name="autocomplete_clear_this_field">CLEAR THIS FIELD\'S HISTORY</string>
+    <plurals name="autocomplete_fields_remembered">
+        <item quantity="one">%d FIELD REMEMBERED</item>
+        <item quantity="other">%d FIELDS REMEMBERED</item>
+    </plurals>
 </resources>

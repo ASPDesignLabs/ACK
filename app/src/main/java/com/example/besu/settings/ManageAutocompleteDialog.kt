@@ -2,6 +2,9 @@
 package com.example.besu.settings
 
 import com.example.besu.AckTags
+import com.example.besu.R
+import com.example.besu.core.AutocompleteLabels
+import com.example.besu.core.TextSource
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -31,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,6 +111,7 @@ private fun acConnectorPrefix(row: AcTreeVisualRow): String {
 // "browser for what exists" convention as MANAGE RECORDINGS' tree.
 private fun buildAutocompleteTree(
     context: Context,
+    text: TextSource,
     scopes: List<Pair<String, AutocompleteScope>>
 ): List<AcTreeNode> {
     val kinds = mutableListOf<AcTreeNode>()
@@ -117,32 +122,28 @@ private fun buildAutocompleteTree(
             val deckName = CommandRepository.getDeckName(context, deckId)
             val profileBranches = deckScopes.groupBy { it.second.info.profile ?: "DEFAULT" }.map { (profile, profileScopes) ->
                 val poseBranches = profileScopes.groupBy { (_, scope) ->
-                    scope.info.storagePath?.let { CommandRepository.findMatrixNode(context, it)?.category } ?: "UNKNOWN"
+                    scope.info.storagePath?.let { CommandRepository.findMatrixNode(context, it)?.category } ?: AutocompleteLabels.UNKNOWN_KEY
                 }.map { (pose, poseScopes) ->
                     val nodeBranches = poseScopes.groupBy { it.second.info.storagePath ?: "" }.map { (path, nodeScopes) ->
-                        val nodeLabel = CommandRepository.findMatrixNode(context, path)?.label ?: "UNKNOWN NODE"
+                        val nodeLabel = CommandRepository.findMatrixNode(context, path)?.label ?: AutocompleteLabels.unknownNode(text)
                         val tags = TemplateEngine.getVariableTags(
                             CommandRepository.getPhrase(context, path, deckId, profile)
                         )
                         val varLeaves = nodeScopes.map { (scopeKey, scope) ->
                             val slotIndex = scope.info.slotIndex ?: 0
                             val tag = tags.getOrNull(slotIndex)
-                            val label = if (tag == null) {
-                                "VARIABLE ${slotIndex + 1}"
-                            } else {
-                                "VARIABLE ${slotIndex + 1} // ROOT $tag"
-                            }
+                            val label = AutocompleteLabels.variable(text, slotIndex, tag)
                             AcLeaf(id = "leaf_$scopeKey", label = label, scopeKey = scopeKey, scope = scope)
                         }.sortedBy { it.label }
                         AcBranch(id = "mtx_node_${deckId}_${profile}_$path", label = nodeLabel, children = varLeaves)
                     }.sortedBy { it.label }
-                    AcBranch(id = "mtx_${deckId}_${profile}_$pose", label = pose, children = nodeBranches)
+                    AcBranch(id = "mtx_${deckId}_${profile}_$pose", label = AutocompleteLabels.poseOrLayer(text, pose), children = nodeBranches)
                 }.sortedBy { it.label }
                 AcBranch(id = "mtx_${deckId}_$profile", label = profile, children = poseBranches)
             }.sortedBy { it.label }
             AcBranch(id = "mtx_deck_$deckId", label = deckName, children = profileBranches)
         }.sortedBy { it.label }
-        kinds.add(AcBranch(id = "kind_mtx", label = "MATRIX (${matrixScopes.size})", children = deckBranches))
+        kinds.add(AcBranch(id = "kind_mtx", label = AutocompleteLabels.kindHeading(text, AutocompleteLabels.Kind.MATRIX, matrixScopes.size), children = deckBranches))
     }
 
     val qaScopes = scopes.filter { it.second.info.fieldType == AutocompleteScopeInfo.TYPE_QUICK_ACTION }
@@ -155,12 +156,12 @@ private fun buildAutocompleteTree(
                 val groupLabel = group?.label ?: "G${groupIndex + 1}"
                 val slotBranches = groupScopes.groupBy { it.second.info.slotIndex ?: 0 }.map { (slotIndex, slotScopes) ->
                     val slot = group?.slots?.find { it.slotIndex == slotIndex }
-                    val slotLabel = slot?.label ?: "SLOT ${slotIndex + 1}"
+                    val slotLabel = slot?.label ?: AutocompleteLabels.defaultSlot(text, slotIndex)
                     val tags = TemplateEngine.getVariableTags(slot?.template.orEmpty())
                     val tagLeaves = slotScopes.map { (scopeKey, scope) ->
                         val tagIndex = scope.info.tagIndex ?: 0
                         val tag = tags.getOrNull(tagIndex)
-                        val label = tag?.let { "VAR:$it" } ?: "VAR ${tagIndex + 1}"
+                        val label = AutocompleteLabels.quickActionField(text, tagIndex, tag)
                         AcLeaf(id = "leaf_$scopeKey", label = label, scopeKey = scopeKey, scope = scope)
                     }.sortedBy { it.label }
                     AcBranch(id = "qa_slot_${deckId}_${groupIndex}_$slotIndex", label = slotLabel, children = tagLeaves)
@@ -169,20 +170,20 @@ private fun buildAutocompleteTree(
             }.sortedBy { it.label }
             AcBranch(id = "qa_deck_$deckId", label = deckName, children = groupBranches)
         }.sortedBy { it.label }
-        kinds.add(AcBranch(id = "kind_qa", label = "QUICK ACTIONS (${qaScopes.size})", children = deckBranches))
+        kinds.add(AcBranch(id = "kind_qa", label = AutocompleteLabels.kindHeading(text, AutocompleteLabels.Kind.QUICK_ACTIONS, qaScopes.size), children = deckBranches))
     }
 
     val rootScopes = scopes.filter { it.second.info.fieldType == AutocompleteScopeInfo.TYPE_ROOT_OVERRIDE }
     if (rootScopes.isNotEmpty()) {
-        val categoryBranches = rootScopes.groupBy { it.second.info.category ?: "UNKNOWN" }.map { (category, catScopes) ->
+        val categoryBranches = rootScopes.groupBy { it.second.info.category ?: AutocompleteLabels.UNKNOWN_KEY }.map { (category, catScopes) ->
             val tagLeaves = catScopes.map { (scopeKey, scope) ->
                 val tag = scope.info.tag ?: "?"
-                AcLeaf(id = "leaf_$scopeKey", label = "TAG $tag", scopeKey = scopeKey, scope = scope)
+                AcLeaf(id = "leaf_$scopeKey", label = AutocompleteLabels.rootTag(text, tag), scopeKey = scopeKey, scope = scope)
             }.sortedBy { it.label }
-            AcBranch(id = "root_$category", label = category, children = tagLeaves)
+            AcBranch(id = "root_$category", label = AutocompleteLabels.poseOrLayer(text, category), children = tagLeaves)
         }.sortedBy { it.label }
         kinds.add(
-            AcBranch(id = "kind_root", label = "SHARED ROOT VARIABLES (${rootScopes.size})", children = categoryBranches)
+            AcBranch(id = "kind_root", label = AutocompleteLabels.kindHeading(text, AutocompleteLabels.Kind.SHARED_ROOT, rootScopes.size), children = categoryBranches)
         )
     }
 
@@ -195,9 +196,10 @@ fun ManageAutocompleteDialog(
     primaryColor: Color,
     onDismiss: () -> Unit
 ) {
+    val text = rememberText()
     var refreshKey by remember { mutableIntStateOf(0) }
     val scopes = remember(refreshKey) { AutocompleteHistoryRepository.listAllScopes(context) }
-    val tree = remember(refreshKey) { buildAutocompleteTree(context, scopes) }
+    val tree = remember(refreshKey) { buildAutocompleteTree(context, text, scopes) }
 
     var expandedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var confirmingClearKey by remember { mutableStateOf<String?>(null) }
@@ -206,12 +208,12 @@ fun ManageAutocompleteDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "MANAGE AUTOCOMPLETE",
-        subtitle = "${scopes.size} FIELD${if (scopes.size == 1) "" else "S"} REMEMBERED"
+        title = stringResource(R.string.autocomplete_manage),
+        subtitle = text.count("autocomplete_fields_remembered", scopes.size)
     ) {
         if (scopes.isEmpty()) {
             Text(
-                "NOTHING REMEMBERED YET. START TYPING INTO A MATRIX NODE'S VARIABLE, A QUICK ACTIONS SLOT'S VARIABLE, OR A SHARED ROOT VARIABLE -- ACK REMEMBERS IT HERE.",
+                stringResource(R.string.autocomplete_empty),
                 color = Color.DarkGray,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -266,7 +268,7 @@ fun ManageAutocompleteDialog(
             Spacer(modifier = Modifier.height(12.dp))
 
             TightPanelButton(
-                text = "CLEAR ALL AUTOCOMPLETE HISTORY",
+                text = stringResource(R.string.autocomplete_clear_all),
                 modifier = Modifier.fillMaxWidth(),
                 mainColor = RadicalRed,
                 onClick = { confirmingClearAll = true }
@@ -279,11 +281,11 @@ fun ManageAutocompleteDialog(
         TightDialogSurface(
             onDismiss = { confirmingClearKey = null },
             primaryColor = RadicalRed,
-            title = "CLEAR FIELD HISTORY",
-            dismissLabel = "CANCEL"
+            title = stringResource(R.string.autocomplete_clear_field_title),
+            dismissLabel = stringResource(R.string.common_cancel)
         ) {
             Text(
-                "This removes every remembered value for this one field. Nothing else is affected. This cannot be undone.",
+                stringResource(R.string.autocomplete_clear_field_body),
                 color = Color.White,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -292,12 +294,12 @@ fun ManageAutocompleteDialog(
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("CLEAR", Modifier.weight(1f), mainColor = RadicalRed) {
+                TightPanelButton(stringResource(R.string.common_clear), Modifier.weight(1f), mainColor = RadicalRed) {
                     AutocompleteHistoryRepository.clearScope(context, clearingKey)
                     confirmingClearKey = null
                     refreshKey++
                 }
-                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_cancel), Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
                     confirmingClearKey = null
                 }
             }
@@ -308,11 +310,11 @@ fun ManageAutocompleteDialog(
         TightDialogSurface(
             onDismiss = { confirmingClearAll = false },
             primaryColor = RadicalRed,
-            title = "CLEAR ALL AUTOCOMPLETE HISTORY",
-            dismissLabel = "CANCEL"
+            title = stringResource(R.string.autocomplete_clear_all),
+            dismissLabel = stringResource(R.string.common_cancel)
         ) {
             Text(
-                "This removes every remembered value for every Matrix, Quick Actions, and Shared Root Variable field. This cannot be undone.",
+                stringResource(R.string.autocomplete_clear_all_body),
                 color = Color.White,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -321,12 +323,12 @@ fun ManageAutocompleteDialog(
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("CLEAR ALL", Modifier.weight(1f), mainColor = RadicalRed) {
+                TightPanelButton(stringResource(R.string.autocomplete_clear_all_button), Modifier.weight(1f), mainColor = RadicalRed) {
                     AutocompleteHistoryRepository.clearAll(context)
                     confirmingClearAll = false
                     refreshKey++
                 }
-                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_cancel), Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
                     confirmingClearAll = false
                 }
             }
@@ -394,7 +396,7 @@ private fun AcTreeLeafCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             TightPanelButton(
-                text = "CLEAR THIS FIELD'S HISTORY",
+                text = stringResource(R.string.autocomplete_clear_this_field),
                 modifier = Modifier.fillMaxWidth(),
                 mainColor = RadicalRed,
                 onClick = onClearRequested
