@@ -2329,11 +2329,11 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             },
             primaryColor = primaryColor,
             title = slotLabel(node.label),
-            subtitle = "LIVE-SAVE EDITOR",
+            subtitle = stringResource(R.string.matrix_edit_subtitle),
             surfaceModifier = Modifier.testTag(AckTags.EDIT_NODE_DIALOG)
         ) {
                 Column {
-                    TightSectionLabel("MACRO TEMPLATE")
+                    TightSectionLabel(stringResource(R.string.matrix_edit_template))
 
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -2360,7 +2360,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         maxLines = 4,
                         placeholder = {
                             Text(
-                                text = "ENTER OUTPUT PHRASE...",
+                                text = stringResource(R.string.matrix_edit_phrase_hint),
                                 color = Color.DarkGray,
                                 fontFamily = FontFamily.Monospace
                             )
@@ -2385,7 +2385,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     val recordingIsActive = matrixRecording?.enabled == true
 
                     if (!recordingIsActive) {
-                        TightSectionLabel("INSERT VARIABLE TOKEN")
+                        TightSectionLabel(stringResource(R.string.matrix_edit_insert_token))
 
                         Spacer(modifier = Modifier.height(6.dp))
 
@@ -2467,9 +2467,9 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             panelKey = "mtx_${activeDeckId}_${activeProfile}_${node.path}",
                             existingRecording = matrixRecording,
                             description = if (recordingIsActive) {
-                                "RECORDED PROMPT -- VARIABLES BELOW ARE HIDDEN AND INACTIVE WHILE THIS PLAYS. THEIR VALUES ARE KEPT. REMOVE THIS RECORDING TO GET THEM BACK."
+                                stringResource(R.string.matrix_edit_recorded_note)
                             } else {
-                                "WHEN SET, THIS PLAYS INSTEAD OF THE TEMPLATE ABOVE."
+                                stringResource(R.string.matrix_edit_recording_hint)
                             },
                             onAccept = { pcm, sampleRate ->
                                 val saved = VoiceRecordingRepository.saveForMatrixNode(
@@ -2493,7 +2493,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         // that recording this entry disables its variables
                         // while active -- see showAttachRecordingWarning.
                         Text(
-                            text = "VOICE RECORDING",
+                            text = stringResource(R.string.matrix_edit_voice_recording),
                             color = primaryColor,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -2502,15 +2502,14 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "This entry has $variableCount variable(s) and $computerTagCount target tag(s). " +
-                                "Recording a voice prompt disables them while active.",
+                            text = stringResource(R.string.matrix_edit_voice_info, variableCount, computerTagCount),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         TightPanelButton(
-                            text = "ATTACH VOICE RECORDING",
+                            text = stringResource(R.string.matrix_edit_attach_recording),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag(AckTags.VOICE_REC_MATRIX_ATTACH_BTN)
@@ -2527,15 +2526,12 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     if (recordingIsActive) {
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        TightSectionLabel("VISUAL PROMPT OVERRIDE", color = primaryColor)
+                        TightSectionLabel(stringResource(R.string.matrix_edit_visual_override), color = primaryColor)
 
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "WHAT SHOWS ON SCREEN WHILE THIS RECORDING PLAYS. LEAVE BLANK " +
-                                "TO SHOW THE RAW TEMPLATE TEXT ABOVE AS-IS (VARIABLE TOKENS " +
-                                "INCLUDED, UNRESOLVED). YOUR TEMPLATE AND VARIABLES ARE NEVER " +
-                                "CHANGED BY THIS -- IT ONLY REPLACES WHAT'S DISPLAYED.",
+                            text = stringResource(R.string.matrix_edit_visual_hint),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -2558,7 +2554,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             maxLines = 3,
                             placeholder = {
                                 Text(
-                                    text = "e.g. \"Hi Sarah, nice to see you\"",
+                                    text = stringResource(R.string.matrix_edit_visual_example),
                                     color = Color.DarkGray,
                                     fontFamily = FontFamily.Monospace
                                 )
@@ -2582,15 +2578,14 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     if (matrixRecording?.enabled == false) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "DISABLED -- this entry's text changed since this recording was made. " +
-                                "It won't play until you re-enable it above.",
+                            text = stringResource(R.string.matrix_edit_disabled_note),
                             color = RadicalRed,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         TightPanelButton(
-                            text = "RE-ENABLE (MATCH CURRENT TEXT)",
+                            text = stringResource(R.string.matrix_edit_reenable),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag(AckTags.VOICE_REC_MATRIX_REENABLE_BTN)
@@ -2615,7 +2610,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
-                            text = "LOCAL VARIABLE DATA",
+                            text = stringResource(R.string.matrix_edit_local_data),
                             color = NeonPalette.SWATCHES[3],
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -2625,8 +2620,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "Saved immediately. Tagged A/B/C values can be "
-                                    + "replaced by enabled root overrides.",
+                            text = stringResource(R.string.matrix_edit_local_hint),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -2642,7 +2636,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             val label = if (tag == null) {
                                 "${labelFor(LabelKey.VARIABLE)} ${index + 1}"
                             } else {
-                                "${labelFor(LabelKey.VARIABLE)} ${index + 1} // ROOT $tag"
+                                "${labelFor(LabelKey.VARIABLE)} ${index + 1} // ${stringResource(R.string.matrix_root_tag, tag)}"
                             }
 
                             // Per node, per variable slot -- typing the
@@ -2690,7 +2684,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 },
                                 placeholder = {
                                     Text(
-                                        text = "ENTER LOCAL FALLBACK...",
+                                        text = stringResource(R.string.matrix_edit_fallback_hint),
                                         color = Color.DarkGray,
                                         fontFamily = FontFamily.Monospace
                                     )
@@ -2729,7 +2723,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
-                            text = "TARGET TAG FALLBACKS",
+                            text = stringResource(R.string.matrix_edit_fallbacks_title),
                             color = NeonPalette.SWATCHES[3],
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -2739,10 +2733,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "[COMPUTER:X] resolves to whichever entry is " +
-                                "currently active for that category in the Target " +
-                                "Computer. If nothing is active, the fallback below " +
-                                "is used instead.",
+                            text = stringResource(R.string.matrix_edit_fallbacks_hint),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -2773,14 +2764,14 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 singleLine = true,
                                 label = {
                                     Text(
-                                        text = "TARGET TAG ${index + 1} // $categoryLabel",
+                                        text = stringResource(R.string.matrix_edit_target_tag, index + 1, categoryLabel),
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 10.sp
                                     )
                                 },
                                 placeholder = {
                                     Text(
-                                        text = "ENTER LOCAL FALLBACK...",
+                                        text = stringResource(R.string.matrix_edit_fallback_hint),
                                         color = Color.DarkGray,
                                         fontFamily = FontFamily.Monospace
                                     )
@@ -2820,7 +2811,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace
                         )
-                        TightSectionLabel("DESTRUCTIVE CONTROLS", color = RadicalRed)
+                        TightSectionLabel(stringResource(R.string.matrix_edit_destructive), color = RadicalRed)
                     }
 
                     if (destructiveControlsExpanded) {
@@ -2831,7 +2822,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             TightPanelButton(
-                                text = "CLEAR VARS",
+                                text = stringResource(R.string.matrix_edit_clear_vars),
                                 modifier = Modifier.weight(1f),
                                 isActive = false,
                                 mainColor = RadicalRed
@@ -2840,7 +2831,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             }
 
                             TightPanelButton(
-                                text = "CLEAR PROMPT",
+                                text = stringResource(R.string.matrix_edit_clear_prompt),
                                 modifier = Modifier.weight(1f),
                                 isActive = false,
                                 mainColor = RadicalRed
@@ -2852,7 +2843,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(6.dp))
 
                         TightPanelButton(
-                            text = "CLEAR ALL",
+                            text = stringResource(R.string.matrix_edit_clear_all),
                             modifier = Modifier.fillMaxWidth(),
                             isActive = false,
                             mainColor = RadicalRed
@@ -2869,7 +2860,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "COMMIT",
+                        text = stringResource(R.string.common_commit),
                         modifier = Modifier
                             .weight(1f)
                             .testTag(AckTags.MATRIX_COMMIT_BUTTON)
@@ -2884,7 +2875,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     }
 
                     TightPanelButton(
-                        text = "CLOSE",
+                        text = stringResource(R.string.common_close),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -2899,18 +2890,15 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         if (mode != null) {
             val confirmationText = when (mode) {
                 "VARS" -> {
-                    "Clear every local variable value for this phrase? " +
-                        "The prompt will remain."
+                    stringResource(R.string.matrix_edit_confirm_vars)
                 }
 
                 "PROMPT" -> {
-                    "Clear this prompt only? Existing local variable values " +
-                        "will be preserved."
+                    stringResource(R.string.matrix_edit_confirm_prompt)
                 }
 
                 else -> {
-                    "Clear both the prompt and every local variable value? " +
-                        "This cannot be undone from this dialog."
+                    stringResource(R.string.matrix_edit_confirm_all)
                 }
             }
 
@@ -2919,8 +2907,8 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     clearMode = null
                 },
                 primaryColor = RadicalRed,
-                title = "CONFIRM CLEAR",
-                dismissLabel = "ABORT"
+                title = stringResource(R.string.matrix_edit_confirm_title),
+                dismissLabel = stringResource(R.string.common_abort)
             ) {
                 Text(
                     text = confirmationText,
@@ -2936,7 +2924,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "CONFIRM",
+                        text = stringResource(R.string.common_confirm),
                         modifier = Modifier.weight(1f),
                         mainColor = RadicalRed
                     ) {
@@ -2982,7 +2970,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     }
 
                     TightPanelButton(
-                        text = "CANCEL",
+                        text = stringResource(R.string.common_cancel),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -2997,14 +2985,11 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             TightDialogSurface(
                 onDismiss = { showAttachRecordingWarning = false },
                 primaryColor = primaryColor,
-                title = "VOICE RECORDING",
-                dismissLabel = "CANCEL"
+                title = stringResource(R.string.matrix_edit_voice_recording),
+                dismissLabel = stringResource(R.string.common_cancel)
             ) {
                 Text(
-                    text = "This entry has $variableCount variable(s) and $computerTagCount " +
-                        "target tag(s). Attaching a recording plays it back exactly as " +
-                        "recorded, ignoring what they'd resolve to. Their values are kept, " +
-                        "not deleted -- remove the recording at any time to get them back.",
+                    text = stringResource(R.string.matrix_edit_attach_body, variableCount, computerTagCount),
                     color = Color.White,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
@@ -3017,7 +3002,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "CONFIRM",
+                        text = stringResource(R.string.common_confirm),
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
@@ -3025,7 +3010,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         showAttachRecordingWarning = false
                     }
                     TightPanelButton(
-                        text = "CANCEL",
+                        text = stringResource(R.string.common_cancel),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -3040,14 +3025,11 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             TightDialogSurface(
                 onDismiss = { showStaleWarning = false },
                 primaryColor = RadicalRed,
-                title = "RECORDING DISABLED",
-                dismissLabel = "OK"
+                title = stringResource(R.string.matrix_edit_rec_disabled_title),
+                dismissLabel = stringResource(R.string.common_ok)
             ) {
                 Text(
-                    text = "This entry's text changed since its recording was made, so the " +
-                        "recording has been disabled to avoid mismatched audio. It hasn't " +
-                        "been deleted -- re-enable it from the VOICE RECORDING panel above " +
-                        "once you're happy with the new wording.",
+                    text = stringResource(R.string.matrix_edit_rec_disabled_body),
                     color = Color.White,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
@@ -3056,7 +3038,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                 Spacer(modifier = Modifier.height(16.dp))
 
                 TightPanelButton(
-                    text = "OK, GOT IT",
+                    text = stringResource(R.string.matrix_edit_got_it),
                     modifier = Modifier.fillMaxWidth(),
                     mainColor = RadicalRed
                 ) {
@@ -3075,11 +3057,11 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         TightDialogSurface(
             onDismiss = { variableEditRequest = null },
             primaryColor = primaryColor,
-            title = "${request.nodeLabel} // VAR ${request.index + 1}",
-            dismissLabel = "ABORT"
+            title = "${slotLabel(request.nodeLabel)} // ${stringFormatLabel(LabelKey.VARIABLE_TAG, request.index + 1)}",
+            dismissLabel = stringResource(R.string.common_abort)
         ) {
                 Column {
-                    TightSectionLabel("LIVE VARIABLE VALUE")
+                    TightSectionLabel(stringResource(R.string.matrix_edit_live_value))
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -3091,7 +3073,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         singleLine = true,
                         placeholder = {
                             Text(
-                                text = "ENTER VALUE",
+                                text = stringResource(R.string.common_enter_value),
                                 fontFamily = FontFamily.Monospace
                             )
                         },
@@ -3135,7 +3117,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "UPDATE",
+                        text = stringResource(R.string.common_update),
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
@@ -3178,7 +3160,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     }
 
                     TightPanelButton(
-                        text = "ABORT",
+                        text = stringResource(R.string.common_abort),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
