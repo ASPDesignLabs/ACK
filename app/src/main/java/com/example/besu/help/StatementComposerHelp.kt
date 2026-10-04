@@ -7,15 +7,15 @@ object StatementComposerHelp {
     val module = HelpModule(
         id = "statement_composer",
         category = HelpCategory.BASICS_MANUAL_OVERRIDE,
-        title = "STATEMENT COMPOSER",
+        title = "{{COMPOSER:STATEMENT COMPOSER}}",
         summary = "BUILD, SAVE, COPY, OR SPEAK MULTI-SENTENCE STATEMENTS.",
         destination = HelpDestination.TYPE,
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "STATEMENT COMPOSER",
-                body = "Build longer, structured statements from Target Computer " +
-                    "entries and Shared Root Variables, then save, copy, or speak " +
+                title = "{{COMPOSER:STATEMENT COMPOSER}}",
+                body = "Build longer, structured statements from {{TARGET_COMPUTER:Target Computer}} " +
+                    "entries and {{SHARED_VARIABLES:Shared Root Variables}}, then save, copy, or speak " +
                     "them. Saved statements stay mutable -- they always resolve " +
                     "against whatever those entries currently hold, not a frozen " +
                     "snapshot."
@@ -32,8 +32,8 @@ object StatementComposerHelp {
             ),
             HelpStep(
                 id = "variable_context",
-                title = "VARIABLE CONTEXT",
-                body = "Pick which Shared Root Variables grouping this statement's " +
+                title = "{{VARIABLE_CONTEXT:VARIABLE CONTEXT}}",
+                body = "Pick which {{SHARED_VARIABLES:Shared Root Variables}} grouping this statement's " +
                     "variables use. A/B/C slots are only unique within one " +
                     "grouping, same as a Matrix phrase resolving against its own " +
                     "node's pose.",
@@ -62,7 +62,7 @@ object StatementComposerHelp {
             HelpStep(
                 id = "insert_target_chip",
                 title = "INSERT A LIVE REFERENCE",
-                body = "Tap a Target Computer chip to insert a live reference -- " +
+                body = "Tap a {{TARGET_COMPUTER:Target Computer}} chip to insert a live reference -- " +
                     "it always resolves to whatever's currently active in that " +
                     "category. It goes where your cursor is, with a space " +
                     "added only where one is needed. Long-press a chip to " +
@@ -74,7 +74,7 @@ object StatementComposerHelp {
             HelpStep(
                 id = "browse_targets",
                 title = "BROWSE FOR A SPECIFIC ENTRY",
-                body = "BROWSE TARGETS opens the full Target Computer tree. " +
+                body = "{{BROWSE_TARGETS:BROWSE TARGETS}} opens the full {{TARGET_COMPUTER:Target Computer}} tree. " +
                     "Entries picked here insert as plain text, not a live " +
                     "reference -- a browsed entry might not be the active one, " +
                     "so it can't be represented as a token.",
@@ -84,7 +84,7 @@ object StatementComposerHelp {
             HelpStep(
                 id = "insert_variable",
                 title = "INSERT A VARIABLE",
-                body = "INSERT VARIABLE browses the current grouping's A/B/C " +
+                body = "{{INSERT_VARIABLE:INSERT VARIABLE}} browses the current grouping's A/B/C " +
                     "Shared Root Variable slots and inserts a live reference to " +
                     "whichever one you tap.",
                 action = HelpAction.Interact(AckTags.COMPOSER_VARIABLE_TOGGLE),
@@ -92,7 +92,7 @@ object StatementComposerHelp {
             ),
             HelpStep(
                 id = "preview",
-                title = "LIVE PREVIEW",
+                title = "{{LIVE_PREVIEW:LIVE PREVIEW}}",
                 body = "This shows exactly what the statement will say or copy " +
                     "as right now, with every reference resolved.",
                 targetTag = AckTags.COMPOSER_PREVIEW
@@ -125,9 +125,9 @@ object StatementComposerHelp {
             ),
             HelpStep(
                 id = "statements_list",
-                title = "MY STATEMENTS",
-                body = "MY STATEMENTS organizes everything you've saved into " +
-                    "folders, tree-and-leaf, the same shape as Target Computer " +
+                title = "{{MY_STATEMENTS:MY STATEMENTS}}",
+                body = "{{MY_STATEMENTS:MY STATEMENTS}} organizes everything you've saved into " +
+                    "folders, tree-and-leaf, the same shape as {{TARGET_COMPUTER:Target Computer}} " +
                     "entries. Tap a folder to expand it, or a statement to " +
                     "reload it for editing, copy, speak, or delete it right " +
                     "from the list.",

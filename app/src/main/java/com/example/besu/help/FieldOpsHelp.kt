@@ -119,13 +119,13 @@ object FieldOpsHelp {
     val deckTrainerModule = HelpModule(
         id = "field_ops_deck_trainer",
         category = HelpCategory.FIELD_OPS,
-        title = "DECK TRAINER",
-        summary = "SCORED PRACTICE AGAINST YOUR OWN MATRIX OR QUICK ACTIONS DECK.",
+        title = "{{DECK:DECK}} TRAINER",
+        summary = "SCORED PRACTICE AGAINST YOUR OWN MATRIX OR {{DECK_TYPE_QUICK:QUICK ACTIONS}} {{DECK:DECK}}.",
         steps = listOf(
             HelpStep(
                 id = "live",
-                title = "DECK TRAINER",
-                body = "Pick a deck (and, for Matrix, a profile) to train against. " +
+                title = "{{DECK:DECK}} TRAINER",
+                body = "Pick a {{DECK:deck}} (and, for Matrix, a profile) to train against. " +
                     "Each round shows the real statement that pose/modifier combo " +
                     "resolves to in your own configuration -- root variables included."
             )

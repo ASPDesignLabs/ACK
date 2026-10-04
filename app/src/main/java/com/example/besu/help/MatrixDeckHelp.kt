@@ -5,22 +5,22 @@ import com.example.besu.*
 object MatrixDeckHelpCopy {
     const val HEADER_INTRO =
         "The ACK Command Bar is your always-available control surface. " +
-                "It shows your active deck, active profile, quick phrases, " +
+                "It shows your active {{DECK:deck}}, active profile, quick phrases, " +
                 "watch connection state, system settings, and Help access."
 
     const val HEADER_DECK =
-        "DECK selects the communication system currently loaded in ACK. " +
-                "A deck can be a Matrix, emergency board, quick-action board, " +
+        "{{DECK:DECK}} selects the communication system currently loaded in ACK. " +
+                "A {{DECK:deck}} can be a Matrix, emergency board, quick-action board, " +
                 "emoji board, GIF board, or another custom workflow."
 
     const val HEADER_PROFILE =
         "PROFILE selects the active communication profile inside a Matrix " +
-                "deck. Profiles let the same gesture structure use different " +
+                "{{DECK:deck}}. Profiles let the same gesture structure use different " +
                 "phrasing for different situations."
 
     const val HEADER_SHORTCUTS =
         "The compact buttons beside ACK are header shortcuts. Tap one to " +
-                "immediately transmit its saved phrase without opening a deck."
+                "immediately transmit its saved phrase without opening a {{DECK:deck}}."
 
     const val HEADER_PROTOCOL =
         "PROTOCOL opens system configuration: watch behavior, sensor " +
@@ -41,7 +41,7 @@ object MatrixDeckHelpCopy {
                 "effortless when using the app."
 
     const val DECK_PROFILE_START =
-        "Start by selecting a Matrix deck. Matrix decks support profiles, " +
+        "Start by selecting a Matrix {{DECK:deck}}. Matrix {{DECKS:decks}} support profiles, " +
                 "gesture mapping, local variables, and shared root values."
 
     const val DECK_PROFILE_PROFILE =
@@ -51,7 +51,7 @@ object MatrixDeckHelpCopy {
                 "different, tap CHANGE PROFILE to go ahead."
 
     const val DECK_PROFILE_COMPLETE =
-        "Deck and profile selection complete. You can now switch between " +
+        "{{DECK:Deck}} and profile selection complete. You can now switch between " +
                 "communication environments before transmitting a phrase."
 
     const val MATRIX_INTRO =
@@ -110,7 +110,7 @@ object MatrixDeckHelp {
                 ),
                 HelpStep(
                     id = "header_deck",
-                    title = "DECK SELECTOR",
+                    title = "{{DECK:DECK}} SELECTOR",
                     body = MatrixDeckHelpCopy.HEADER_DECK,
                     targetTag = AckTags.DECK_SELECTOR
                 ),
@@ -154,14 +154,14 @@ object MatrixDeckHelp {
         HelpModule(
             id = DECK_PROFILE_MODULE_ID,
             category = HelpCategory.BASICS_NAVIGATION,
-            title = "DECK AND PROFILE SELECTION",
-            summary = "LOAD A MATRIX DECK, THEN SWITCH ITS ACTIVE PROFILE.",
+            title = "{{DECK:DECK}} AND PROFILE SELECTION",
+            summary = "LOAD A MATRIX {{DECK:DECK}}, THEN SWITCH ITS ACTIVE PROFILE.",
             destination = HelpDestination.MATRIX,
             requiresMatrixDeck = true,
             steps = listOf(
                 HelpStep(
                     id = "select_deck",
-                    title = "SELECT A MATRIX DECK",
+                    title = "SELECT A MATRIX {{DECK:DECK}}",
                     body = MatrixDeckHelpCopy.DECK_PROFILE_START,
                     action = HelpAction.DeckSelected(AckTags.DECK_SELECTOR),
                     targetTag = AckTags.DECK_SELECTOR

@@ -13,7 +13,7 @@ object GeoProtocolHelp {
             HelpStep(
                 id = "intro",
                 title = "GEO-PROTOCOL",
-                body = "Geo-Protocol manages location-aware ACK behavior and zones."
+                body = "{{GEO_PROTOCOL:Geo-Protocol}} manages location-aware ACK behavior and zones."
             ),
             HelpStep(
                 id = "geo_view",
@@ -28,7 +28,7 @@ object GeoProtocolHelp {
                 title = "MAP DATA",
                 body = "No region map ships with the app. Zones still work by coordinate " +
                     "with nothing imported, but you can import your own Mapsforge-compatible " +
-                    ".map file here any time to see real basemap tiles on the Tactical Grid.",
+                    ".map file here any time to see real basemap tiles on the {{GEO_GRID:Tactical Grid}}.",
                 action = HelpAction.Interact(AckTags.GEO_MAP_IMPORT),
                 targetTag = AckTags.GEO_MAP_IMPORT
             )

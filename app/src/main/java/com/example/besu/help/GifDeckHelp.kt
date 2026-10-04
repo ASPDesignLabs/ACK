@@ -6,13 +6,13 @@ object GifDeckHelp {
     val module = HelpModule(
         id = "deck_gif",
         category = HelpCategory.USING_DECKS,
-        title = "GIF DECK",
+        title = "GIF {{DECK:DECK}}",
         summary = "LOCAL GIF IMPORT, CATEGORIES, NAVIGATION, AND DISPLAY.",
         steps = listOf(
             HelpStep(
                 id = "intro",
                 title = "LOCAL GIF LIBRARY",
-                body = "GIF decks use local files. Imported GIFs stay organized " +
+                body = "GIF {{DECKS:decks}} use local files. Imported GIFs stay organized " +
                     "by category and can be displayed full-screen."
             ),
             HelpStep(

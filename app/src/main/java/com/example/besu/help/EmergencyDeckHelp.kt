@@ -6,13 +6,13 @@ object EmergencyDeckHelp {
     val module = HelpModule(
         id = "deck_emergency",
         category = HelpCategory.USING_DECKS,
-        title = "EMERGENCY DECK",
+        title = "EMERGENCY {{DECK:DECK}}",
         summary = "HIGH-PRIORITY PROMPTS, OUTPUT OVERRIDES, AND CLEARING.",
         steps = listOf(
             HelpStep(
                 id = "intro",
                 title = "EMERGENCY OUTPUT",
-                body = "The Emergency deck is intended for immediate, " +
+                body = "The Emergency {{DECK:deck}} is intended for immediate, " +
                     "high-priority communication with minimal interaction."
             ),
             HelpStep(
@@ -55,7 +55,7 @@ object EmergencyDeckHelp {
                 id = "info_save",
                 title = "FILL IT OUT",
                 body = "Tap EDIT to fill in your own info. It's saved once, not per " +
-                    "deck, so it's the same card no matter which deck you're in.",
+                    "{{DECK:deck}}, so it's the same card no matter which {{DECK:deck}} you're in.",
                 action = HelpAction.CommitText(AckTags.EMERGENCY_INFO_SAVE),
                 targetTag = AckTags.EMERGENCY_INFO_SAVE
             )

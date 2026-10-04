@@ -6,14 +6,14 @@ object TargetComputerHelp {
     val module = HelpModule(
         id = "target_computer",
         category = HelpCategory.CONTEXTUAL_SYSTEMS,
-        title = "TARGET COMPUTER",
+        title = "{{TARGET_COMPUTER:TARGET COMPUTER}}",
         summary = "CATEGORY TREES, TARGET TAGS, AND GUIDED SETUP.",
         destination = HelpDestination.TARGETS,
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "TARGET COMPUTER",
-                body = "The Target Computer organizes reusable prompt " +
+                title = "{{TARGET_COMPUTER:TARGET COMPUTER}}",
+                body = "The {{TARGET_COMPUTER:Target Computer}} organizes reusable prompt " +
                     "content -- names, places, food, actions, and anything " +
                     "else you add -- into categories you define. Each " +
                     "category holds one active pick at a time, which can " +
@@ -68,7 +68,7 @@ object TargetComputerHelp {
             HelpStep(
                 id = "computer_tag",
                 title = "USING A TARGET IN A PHRASE",
-                body = "In the Matrix phrase editor, INSERT TARGET TAG " +
+                body = "In the Matrix phrase editor, {{INSERT_TARGET_TAG:INSERT TARGET TAG}} " +
                     "adds a tag like [COMPUTER:PEOPLE] to your template, " +
                     "at your cursor. " +
                     "It resolves to that category's current active pick " +
@@ -88,8 +88,8 @@ object TargetComputerHelp {
             ),
             HelpStep(
                 id = "completion",
-                title = "TARGET COMPUTER TRAINING COMPLETE",
-                body = "Target Computer training complete. You can now " +
+                title = "{{TARGET_COMPUTER:TARGET COMPUTER}} TRAINING COMPLETE",
+                body = "{{TARGET_COMPUTER:Target Computer}} training complete. You can now " +
                     "build categories, navigate and edit their trees, " +
                     "insert target tags into phrases, and check what's " +
                     "currently active."

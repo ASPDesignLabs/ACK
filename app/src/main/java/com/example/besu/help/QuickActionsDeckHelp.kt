@@ -6,18 +6,18 @@ object QuickActionsDeckHelp {
     val module = HelpModule(
         id = "deck_quick_actions",
         category = HelpCategory.USING_DECKS,
-        title = "QUICK ACTIONS DECK",
+        title = "{{DECK_TYPE_QUICK:QUICK ACTIONS}} {{DECK:DECK}}",
         summary = "THREE POSES, FOUR ACTIONS EACH -- FAST, FIXED OUTPUT.",
         destination = HelpDestination.MATRIX,
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "QUICK ACTIONS",
-                body = "Quick Actions is a simpler, fixed alternative to the Matrix " +
-                    "deck: three groups of four phrases, meant for your most common " +
+                title = "{{DECK_TYPE_QUICK:QUICK ACTIONS}}",
+                body = "{{DECK_TYPE_QUICK:Quick Actions}} is a simpler, fixed alternative to the Matrix " +
+                    "{{DECK:deck}}: three groups of four phrases, meant for your most common " +
                     "lines rather than live remapping.\n\n" +
-                    "While a Quick Actions deck is active, it takes over completely -- " +
-                    "the watch's pose and twist choose a phrase from THIS deck instead " +
+                    "While a {{DECK_TYPE_QUICK:Quick Actions}} {{DECK:deck}} is active, it takes over completely -- " +
+                    "the watch's pose and twist choose a phrase from THIS {{DECK:deck}} instead " +
                     "of running the usual Matrix categories."
             ),
             HelpStep(
@@ -72,7 +72,7 @@ object QuickActionsDeckHelp {
             HelpStep(
                 id = "complete",
                 title = "READY TO GO",
-                body = "That's the whole deck: pick a pose per group, four " +
+                body = "That's the whole {{DECK:deck}}: pick a pose per group, four " +
                     "phrases per pose, edited and played back right here."
             )
         )

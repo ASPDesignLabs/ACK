@@ -187,6 +187,9 @@ object AckTags {
     const val WORD_SUGGESTIONS_SWITCH = "WORD_SUGGESTIONS_SWITCH"
     const val WORD_SUGGESTIONS_FORGET_BTN = "WORD_SUGGESTIONS_FORGET_BTN"
 
+    // PLAIN WORDS (settings/SettingsView.kt, top of SETTINGS).
+    const val PLAIN_WORDS_SWITCH = "PLAIN_WORDS_SWITCH"
+
     // RECORD TRAINING DATA (voicecapture/*, entered from AUDIO ARCHITECT's
     // CUSTOM VOICE section).
     const val TRAIN_ENTRY_BTN = "TRAIN_ENTRY_BTN"

@@ -11,13 +11,13 @@ object RecordTrainingDataHelp {
     val module = HelpModule(
         id = "record_training_data",
         category = HelpCategory.BASICS_PERSONALIZATION,
-        title = "RECORD TRAINING DATA",
+        title = "{{RECORD_TRAINING:RECORD TRAINING DATA}}",
         summary = "RECORD YOUR VOICE FOR A VOICE MODEL, WITHOUT YOUR COMPUTER.",
         destination = HelpDestination.AUDIO,
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "RECORD TRAINING DATA",
+                title = "{{RECORD_TRAINING:RECORD TRAINING DATA}}",
                 body = "This gathers recordings of your voice on this phone, so you can collect them wherever you are and train a voice model " +
                     "later. You read text aloud. The phone records it, cuts it into clips, notes how each one went, and keeps them. " +
                     "Nothing is sent anywhere: the recordings stay on this phone until you save them to a file and move that file yourself."
@@ -25,7 +25,7 @@ object RecordTrainingDataHelp {
             HelpStep(
                 id = "open",
                 title = "OPEN IT",
-                body = "Tap RECORD TRAINING DATA, under CUSTOM VOICE.",
+                body = "Tap {{RECORD_TRAINING:RECORD TRAINING DATA}}, under {{CUSTOM_VOICE:CUSTOM VOICE}}.",
                 action = HelpAction.Interact(AckTags.TRAIN_ENTRY_BTN),
                 targetTag = AckTags.TRAIN_ENTRY_BTN
             ),
@@ -105,7 +105,7 @@ object RecordTrainingDataHelp {
                 id = "end",
                 title = "ENDING A SESSION",
                 body = "END SESSION asks first, and everything already kept stays kept. If the app closes unexpectedly, the next time you open " +
-                    "RECORD TRAINING DATA it repairs what it can, and holds a repaired recording back until you listen to it and decide.",
+                    "{{RECORD_TRAINING:RECORD TRAINING DATA}} it repairs what it can, and holds a repaired recording back until you listen to it and decide.",
                 targetTag = AckTags.TRAIN_END_BTN,
                 coachPlacement = HelpCoachPlacement.TOP
             ),

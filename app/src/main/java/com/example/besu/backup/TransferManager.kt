@@ -393,6 +393,7 @@ object TransferManager {
             warnBeforeProfileChange = AssistPrefs.profileChangeWarningStored(context),
             learnedWords = LearnedWordsRepository.exportForBackup(context),
             speechLanguage = AssistPrefs.speechLanguageStored(context),
+            plainWords = AssistPrefs.plainWordsStored(context),
         )
     }
 
@@ -1410,6 +1411,10 @@ object TransferManager {
 
         // SPEECH LANGUAGE: a backup that says nothing (null) leaves the device's own choice alone.
         SpeechLanguage.fromStored(backup.speechLanguage)?.let { AssistPrefs.setSpeechLanguage(context, it) }
+
+        // PLAIN WORDS: a backup that says nothing (null) leaves the device's own choice alone. The label wording is a switch, so it is applied at
+        // once; the screens redraw from the saved value when next opened.
+        backup.plainWords?.let { AssistPrefs.setPlainWords(context, it) }
 
         // Restoring adopts the backup's active deck/profile/category
         // focus -- unchanged from every prior version of this restore

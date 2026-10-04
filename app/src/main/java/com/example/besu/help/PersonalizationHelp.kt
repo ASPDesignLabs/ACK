@@ -6,14 +6,14 @@ object PersonalizationHelp {
     val module = HelpModule(
         id = "personalization",
         category = HelpCategory.BASICS_PERSONALIZATION,
-        title = "AUDIO ARCHITECT",
+        title = "{{AUDIO_ARCHITECT:AUDIO ARCHITECT}}",
         summary = "VOICE PROFILES, DSP, OUTPUT ROUTING, AND CUSTOM SLOTS.",
         destination = HelpDestination.AUDIO,
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "AUDIO ARCHITECT",
-                body = "Audio Architect controls how ACK sounds when it speaks. " +
+                title = "{{AUDIO_ARCHITECT:AUDIO ARCHITECT}}",
+                body = "{{AUDIO_ARCHITECT:Audio Architect}} controls how ACK sounds when it speaks. " +
                     "It lets you configure output volume, routing behavior, " +
                     "voice profiles, and custom signal processing."
             ),
@@ -21,8 +21,8 @@ object PersonalizationHelp {
                 id = "global_output",
                 title = "GLOBAL OUTPUT",
                 body = "Global Output settings affect ACK's overall speech " +
-                    "behavior. Master Gain controls output level. Force Speaker, " +
-                    "Guide Vox, and Silent Mode now live in PROTOCOL, alongside " +
+                    "behavior. Master Gain controls output level. {{FORCE_SPEAKER:Force Speaker}}, " +
+                    "Guide Vox, and {{SILENT_MODE:Silent Mode}} now live in PROTOCOL, alongside " +
                     "the rest of ACK's system-wide configuration."
             ),
             HelpStep(
@@ -39,7 +39,7 @@ object PersonalizationHelp {
                 title = "FACTORY VOICE PRESETS",
                 body = "Factory presets provide ready-to-use voice styles. They " +
                     "are useful when you want a consistent voice without editing " +
-                    "a full DSP chain. Select a factory preset to use it as the " +
+                    "a full {{DSP_CHAIN:DSP chain}}. Select a factory preset to use it as the " +
                     "active speech profile."
             ),
             HelpStep(
@@ -47,7 +47,7 @@ object PersonalizationHelp {
                 title = "CUSTOM PROFILE SLOTS",
                 body = "Custom profile slots can store your own voice designs. " +
                     "Select one of the custom slots below to open " +
-                    "its editable DSP Chain in a popup.",
+                    "its editable {{DSP_CHAIN:DSP Chain}} in a popup.",
                 action = HelpAction.Interact(AckTags.AUDIO_PROFILE_SELECT),
                 targetTag = AckTags.AUDIO_PROFILE_SELECT
             ),
@@ -62,8 +62,8 @@ object PersonalizationHelp {
             ),
             HelpStep(
                 id = "dsp_chain",
-                title = "DSP CHAIN",
-                body = "The DSP Chain opens as a popup when a custom profile is " +
+                title = "{{DSP_CHAIN:DSP CHAIN}}",
+                body = "The {{DSP_CHAIN:DSP Chain}} opens as a popup when a custom profile is " +
                     "selected or created. It controls the source voice and signal " +
                     "treatment stored inside that custom slot."
             ),
@@ -89,8 +89,8 @@ object PersonalizationHelp {
             ),
             HelpStep(
                 id = "robotic_overlay",
-                title = "ROBOTIC OVERLAY",
-                body = "The Robotic Overlay ring-modulates the selected voice. " +
+                title = "{{ROBOTIC_OVERLAY:ROBOTIC OVERLAY}}",
+                body = "The {{ROBOTIC_OVERLAY:Robotic Overlay}} ring-modulates the selected voice. " +
                     "Enable it to reveal frequency and depth controls directly " +
                     "below. Frequency changes the character of the effect, " +
                     "while depth controls how strongly the processed signal " +
@@ -100,8 +100,8 @@ object PersonalizationHelp {
             ),
             HelpStep(
                 id = "bitcrush",
-                title = "BITCRUSH TEXTURE",
-                body = "Bitcrush adds a deliberately digital texture to the voice. " +
+                title = "{{BITCRUSH:BITCRUSH}} TEXTURE",
+                body = "{{BITCRUSH:Bitcrush}} adds a deliberately digital texture to the voice. " +
                     "Use subtle values for a lightly synthesized edge, or higher " +
                     "values for a more aggressively processed communication style.",
                 action = HelpAction.Interact(AckTags.AUDIO_BITCRUSH),
@@ -118,8 +118,8 @@ object PersonalizationHelp {
             ),
             HelpStep(
                 id = "completion",
-                title = "AUDIO ARCHITECT COMPLETE",
-                body = "Audio Architect training complete. You can now configure " +
+                title = "{{AUDIO_ARCHITECT:AUDIO ARCHITECT}} COMPLETE",
+                body = "{{AUDIO_ARCHITECT:Audio Architect}} training complete. You can now configure " +
                     "global output, select voice profiles, build a custom DSP " +
                     "Chain, and save it to a reusable custom slot."
             )

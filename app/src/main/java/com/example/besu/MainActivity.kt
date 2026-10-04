@@ -2,6 +2,7 @@
 package com.example.besu
 
 import com.example.besu.backup.BackupReminder
+import com.example.besu.core.HelpPlaceholders
 import com.example.besu.core.ProfileSwapDiff
 import com.example.besu.core.SlotChange
 import com.example.besu.core.TextInsertion
@@ -597,10 +598,12 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         val module = helpManager.activeModule ?: return@LaunchedEffect
         val step = helpManager.currentStep ?: return@LaunchedEffect
 
+        // The step's own text, in the wording the person sees (PLAIN WORDS): a placeholder must never be read aloud as braces.
+        fun spoken(text: String) = HelpPlaceholders.substitute(text, PlainWordsState.on) { key, plain -> LabelText.resolveOrNull(context, key, plain) }
         val spokenText = buildString {
-            append(step.title)
+            append(spoken(step.title))
             append(". ")
-            append(step.body)
+            append(spoken(step.body))
         }
 
         val intent = Intent(context, OutputService::class.java).apply {
@@ -703,8 +706,12 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         )
     }
 
+    // PLAIN WORDS (ui/PlainWords.kt): read once here, then every screen below redraws in place when the switch is flipped.
+    remember { PlainWordsState.load(context) }
+
     CompositionLocalProvider(
-        LocalHelpManager provides helpManager
+        LocalHelpManager provides helpManager,
+        LocalPlainWords provides PlainWordsState.on
     ) {
         Scaffold(
             containerColor = VoidBlack,

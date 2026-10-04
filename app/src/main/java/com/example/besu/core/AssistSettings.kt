@@ -17,6 +17,8 @@ object AssistSettings {
     const val KEY_WARN_OFFER_DISMISSED = "warn_profile_change_offer_dismissed"
 
     const val KEY_SPEECH_LANGUAGE = "speech_language"
+    const val KEY_PLAIN_WORDS = "plain_words"
+    const val KEY_PLAIN_WORDS_OFFER_DISMISSED = "plain_words_offer_dismissed"
     const val KEY_WORD_SUGGESTIONS = "word_suggestions"
     const val KEY_WORD_OFFER_DISMISSED = "word_suggestions_offer_dismissed"
 
@@ -46,4 +48,13 @@ object AssistSettings {
 
     /** The one-time offer: while the switch is off and the offer was never answered. Turning the switch on from SETTINGS counts as an answer. */
     fun shouldOfferWordSuggestions(switchOn: Boolean, offerDismissed: Boolean): Boolean = !switchOn && !offerDismissed
+
+    /**
+     * What PLAIN WORDS is when nothing is stored, and what every install is given: off. The developer's decision: it is **never seeded** (a new install
+     * included), and one dismissible offer says what it changes and starts with the switch off. (A test keeps both keys out of [SEED_KEYS].)
+     */
+    const val PLAIN_WORDS_FALLBACK = false
+
+    /** The one-time offer in SETTINGS: while the switch is off and the offer was never answered. Choosing the switch by hand counts as an answer. */
+    fun shouldOfferPlainWords(switchOn: Boolean, offerDismissed: Boolean): Boolean = !switchOn && !offerDismissed
 }

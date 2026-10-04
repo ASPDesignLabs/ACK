@@ -25,6 +25,8 @@ object AssistPrefs {
     private const val KEY_WARN_PROFILE_CHANGE = "warn_profile_change"
     private const val KEY_WARN_OFFER_DISMISSED = "warn_profile_change_offer_dismissed"
     private const val KEY_SPEECH_LANGUAGE = "speech_language"
+    private const val KEY_PLAIN_WORDS = "plain_words"
+    private const val KEY_PLAIN_WORDS_OFFER_DISMISSED = "plain_words_offer_dismissed"
     private const val KEY_WORD_SUGGESTIONS = "word_suggestions"
     private const val KEY_WORD_OFFER_DISMISSED = "word_suggestions_offer_dismissed"
 
@@ -97,5 +99,26 @@ object AssistPrefs {
     /** commit(), so the choice is on disk before the person leaves the screen. */
     fun setSpeechLanguage(context: Context, setting: SpeechLanguage) {
         prefs(context).edit().putString(KEY_SPEECH_LANGUAGE, setting.stored).commit()
+    }
+
+    /** Whether labels are shown in everyday words. Off when nothing is stored, on every install (never seeded: the developer's decision). */
+    fun isPlainWordsOn(context: Context): Boolean = prefs(context).getBoolean(KEY_PLAIN_WORDS, AssistSettings.PLAIN_WORDS_FALLBACK)
+
+    /** The stored choice, or null if there is none. Backed up as a nullable field. */
+    fun plainWordsStored(context: Context): Boolean? {
+        val p = prefs(context)
+        return if (p.contains(KEY_PLAIN_WORDS)) p.getBoolean(KEY_PLAIN_WORDS, AssistSettings.PLAIN_WORDS_FALLBACK) else null
+    }
+
+    /** commit(), so the choice is on disk before the person leaves the screen. Choosing either way also answers the one-time offer. */
+    fun setPlainWords(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(KEY_PLAIN_WORDS, on).putBoolean(KEY_PLAIN_WORDS_OFFER_DISMISSED, true).commit()
+    }
+
+    fun isPlainWordsOfferDismissed(context: Context): Boolean = prefs(context).getBoolean(KEY_PLAIN_WORDS_OFFER_DISMISSED, false)
+
+    /** NOT NOW: hides the offer for good and changes no setting. */
+    fun dismissPlainWordsOffer(context: Context) {
+        prefs(context).edit().putBoolean(KEY_PLAIN_WORDS_OFFER_DISMISSED, true).commit()
     }
 }

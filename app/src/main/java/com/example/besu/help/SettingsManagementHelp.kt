@@ -15,12 +15,12 @@ object SettingsManagementHelp {
                 title = "PROTOCOL OVERVIEW",
                 body = "PROTOCOL contains ACK's system-wide configuration. " +
                         "These controls affect the application independently of " +
-                        "the currently active deck."
+                        "the currently active {{DECK:deck}}."
             ),
             HelpStep(
                 id = "audio_output_routing",
                 title = "AUDIO OUTPUT ROUTING",
-                body = "Force Speaker can direct speech toward the device speaker " +
+                body = "{{FORCE_SPEAKER:Force Speaker}} can direct speech toward the device speaker " +
                         "when that is appropriate for your setup. Guide Vox controls " +
                         "whether tutorial and guide narration is spoken aloud. Silent " +
                         "Mode shows prompts as normal but never speaks them out loud.",
@@ -49,8 +49,8 @@ object SettingsManagementHelp {
             ),
             HelpStep(
                 id = "environment_sensor",
-                title = "ENVIRONMENT SENSOR",
-                body = "The Environment Sensor estimates local sound levels using " +
+                title = "{{ENV_SENSOR:ENVIRONMENT SENSOR}}",
+                body = "The {{ENV_SENSOR:Environment Sensor}} estimates local sound levels using " +
                         "the microphone in your handset. For most devices this is a " +
                         "small sensor, so the readings are not 100% accurate. Good enough " +
                         "to help judge exposure time. " +
@@ -62,8 +62,8 @@ object SettingsManagementHelp {
             ),
             HelpStep(
                 id = "quick_access_keys",
-                title = "QUICK-ACCESS KEYS",
-                body = "Quick-Access Keys appear in the ACK Command bar. Each " +
+                title = "{{QUICK_ACCESS_KEYS:QUICK-ACCESS KEYS}}",
+                body = "{{QUICK_ACCESS_KEYS:Quick-Access Keys}} appear in the ACK Command bar. Each " +
                         "slot has a short label and a saved phrase. Configure these " +
                         "for phrases that need to be available with minimal effort.",
                 // action = HelpAction.Interact(AckTags.SETTINGS_SHORTCUTS),
@@ -71,10 +71,10 @@ object SettingsManagementHelp {
             ),
             HelpStep(
                 id = "data_port",
-                title = "DATA PORT",
-                body = "The Data Port manages configuration transfer and backup. " +
-                        "Export creates a JSON backup and warns what the file contains, Import Matrix As New Deck " +
-                        "brings in a backup's matrix phrases as a new deck, and " +
+                title = "{{DATA_PORT:DATA PORT}}",
+                body = "The {{DATA_PORT:Data Port}} manages configuration transfer and backup. " +
+                        "Export creates a JSON backup and warns what the file contains, Import Matrix As New {{DECK:Deck}} " +
+                        "brings in a backup's matrix phrases as a new {{DECK:deck}}, and " +
                         "Full Restore applies everything else a backup carries -- " +
                         "overwriting or adding to your current setup, never " +
                         "deleting what it doesn't mention. " +

@@ -2,6 +2,7 @@
 package com.example.besu.help
 
 import com.example.besu.data.*
+import com.example.besu.ui.helpText
 import com.example.besu.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -142,7 +143,7 @@ fun HelpMenuDialog(
                             .padding(horizontal = 14.dp, vertical = 10.dp)
                     ) {
                         Text(
-                            text = selectedCategory.title,
+                            text = helpText(selectedCategory.title),
                             color = primaryColor,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
@@ -153,7 +154,7 @@ fun HelpMenuDialog(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = selectedCategory.subtitle,
+                            text = helpText(selectedCategory.subtitle),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -273,7 +274,7 @@ private fun HelpCategoryChip(
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
         Text(
-            text = category.title.substringAfter("// ").trim(),
+            text = helpText(category.title.substringAfter("// ").trim()),
             color = textColor,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
@@ -309,7 +310,7 @@ private fun HelpModuleMenuItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = module.title,
+                text = helpText(module.title),
                 color = primaryColor,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
@@ -332,7 +333,7 @@ private fun HelpModuleMenuItem(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = module.summary,
+            text = helpText(module.summary),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace

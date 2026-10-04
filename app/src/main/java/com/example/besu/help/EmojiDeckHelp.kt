@@ -6,13 +6,13 @@ object EmojiDeckHelp {
     val module = HelpModule(
         id = "deck_emoji",
         category = HelpCategory.USING_DECKS,
-        title = "EMOJI DECK",
+        title = "EMOJI {{DECK:DECK}}",
         summary = "VISUAL PROMPTS, TEXT, LIBRARY PICKS, AND RELATED PANELS.",
         steps = listOf(
             HelpStep(
                 id = "intro",
                 title = "EMOJI EXPRESS",
-                body = "The Emoji deck displays visual communication prompts. " +
+                body = "The Emoji {{DECK:deck}} displays visual communication prompts. " +
                     "It can show an emoji alone or pair it with overlay text."
             ),
             HelpStep(

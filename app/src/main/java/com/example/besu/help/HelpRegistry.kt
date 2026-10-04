@@ -21,14 +21,14 @@ object HelpRegistry {
         HelpModule(
             id = "manual_override",
             category = HelpCategory.BASICS_MANUAL_OVERRIDE,
-            title = "MANUAL OVERRIDE",
-            summary = "MEMORY BANKS, SAVED PHRASES, AND DIRECT TEXT OUTPUT.",
+            title = "{{MANUAL_OVERRIDE:MANUAL OVERRIDE}}",
+            summary = "{{MEMORY_BANKS:MEMORY BANKS}}, SAVED PHRASES, AND DIRECT TEXT OUTPUT.",
             destination = HelpDestination.TERMINAL,
             steps = listOf(
                 HelpStep(
                     id = "intro",
-                    title = "MANUAL OVERRIDE",
-                    body = "Manual Override provides direct text communication " +
+                    title = "{{MANUAL_OVERRIDE:MANUAL OVERRIDE}}",
+                    body = "{{MANUAL_OVERRIDE:Manual Override}} provides direct text communication " +
                         "when watch input is unavailable or inconvenient. It's " +
                         "reached from TERMINAL now that TYPE is the statement " +
                         "composer."

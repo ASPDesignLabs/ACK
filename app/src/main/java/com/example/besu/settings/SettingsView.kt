@@ -2,8 +2,10 @@
 package com.example.besu.settings
 
 import com.example.besu.*
+import com.example.besu.R
 import com.example.besu.backup.*
 import com.example.besu.core.AssistSettings
+import androidx.compose.ui.res.stringResource
 import com.example.besu.core.BackupReminderText
 import com.example.besu.core.ProfileWarningText
 import com.example.besu.core.SafetyCopyPolicy
@@ -442,6 +444,68 @@ fun SettingsView(
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         LazyColumn(modifier = Modifier.weight(1f)) {
+            // PLAIN WORDS (ui/PlainWords.kt): first on the screen so it can always be found. Its own words are plain string resources, not labels from the
+            // table, so they read the same in both modes. Flipping it redraws everything in place: no restart, nothing lost.
+            item {
+                val plainOn = PlainWordsState.on
+                var plainOffered by remember {
+                    mutableStateOf(
+                        AssistSettings.shouldOfferPlainWords(
+                            switchOn = AssistPrefs.isPlainWordsOn(context),
+                            offerDismissed = AssistPrefs.isPlainWordsOfferDismissed(context)
+                        )
+                    )
+                }
+                if (plainOffered) {
+                    val offerShape = CutCornerShape(8.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, primaryColor.copy(alpha = 0.6f), offerShape)
+                            .background(primaryColor.copy(alpha = 0.08f), offerShape)
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.plain_words_offer),
+                            color = Color.LightGray,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            NeonButton(stringResource(R.string.plain_words_turn_on), Modifier.weight(1f), mainColor = primaryColor) {
+                                PlainWordsState.set(context, true)
+                                plainOffered = false
+                            }
+                            NeonButton(stringResource(R.string.plain_words_not_now), Modifier.weight(1f), mainColor = Color.White) {
+                                AssistPrefs.dismissPlainWordsOffer(context)
+                                plainOffered = false
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                NeonButton(
+                    stringResource(if (plainOn) R.string.plain_words_switch_on else R.string.plain_words_switch_off),
+                    Modifier.fillMaxWidth().testTag(AckTags.PLAIN_WORDS_SWITCH).helpTarget(AckTags.PLAIN_WORDS_SWITCH, primaryColor),
+                    mainColor = if (plainOn) primaryColor else Color.White
+                ) {
+                    PlainWordsState.set(context, !plainOn)
+                    plainOffered = false
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    stringResource(R.string.plain_words_explanation),
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
             item {
                 Text("AUDIO OUTPUT ROUTING", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(12.dp))

@@ -82,4 +82,34 @@ class AssistSettingsTest {
         assertFalse(AssistSettings.shouldOfferWordSuggestions(switchOn = true, offerDismissed = false))
         assertFalse(AssistSettings.shouldOfferWordSuggestions(switchOn = true, offerDismissed = true))
     }
+
+    // ---- PLAIN WORDS (L2) ---------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun plainWordsIsOffWhenNothingIsStored_isNeverSeeded_andIsNotInTheSeedKeys() {
+        // The developer's decision: OFF for everyone, a new install included, with one dismissible offer. So nothing seeds it.
+        assertFalse(AssistSettings.PLAIN_WORDS_FALLBACK)
+        assertFalse(AssistSettings.KEY_PLAIN_WORDS in AssistSettings.SEED_KEYS)
+        assertFalse(AssistSettings.KEY_PLAIN_WORDS_OFFER_DISMISSED in AssistSettings.SEED_KEYS)
+    }
+
+    @Test
+    fun thePlainWordsKeysAreStableAndDistinct() {
+        assertEquals("plain_words", AssistSettings.KEY_PLAIN_WORDS)
+        assertEquals("plain_words_offer_dismissed", AssistSettings.KEY_PLAIN_WORDS_OFFER_DISMISSED)
+        val keys = listOf(
+            AssistSettings.KEY_WARN_PROFILE_CHANGE, AssistSettings.KEY_WARN_OFFER_DISMISSED, AssistSettings.KEY_WORD_SUGGESTIONS,
+            AssistSettings.KEY_WORD_OFFER_DISMISSED, AssistSettings.KEY_SPEECH_LANGUAGE, AssistSettings.KEY_PLAIN_WORDS,
+            AssistSettings.KEY_PLAIN_WORDS_OFFER_DISMISSED,
+        )
+        assertEquals("a key is used twice", keys.size, keys.toSet().size)
+    }
+
+    @Test
+    fun theOfferGoesToEveryoneWhileTheSwitchIsOffAndTheOfferWasNeverAnswered() {
+        assertTrue(AssistSettings.shouldOfferPlainWords(switchOn = false, offerDismissed = false))
+        assertFalse(AssistSettings.shouldOfferPlainWords(switchOn = false, offerDismissed = true))
+        assertFalse(AssistSettings.shouldOfferPlainWords(switchOn = true, offerDismissed = false))
+        assertFalse(AssistSettings.shouldOfferPlainWords(switchOn = true, offerDismissed = true))
+    }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.help
 
+import com.example.besu.ui.helpText
 import com.example.besu.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -88,7 +89,7 @@ fun HelpCoachPanel(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = step.title,
+            text = helpText(step.title),
             color = Color.White,
             fontSize = 13.sp,
             fontFamily = FontFamily.Monospace,
@@ -99,7 +100,7 @@ fun HelpCoachPanel(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = step.body,
+            text = helpText(step.body),
             color = Color.White.copy(alpha = 0.84f),
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
@@ -154,7 +155,7 @@ fun HelpCoachPanel(
                     Spacer(modifier = Modifier.height(3.dp))
 
                     Text(
-                        text = helpActionInstruction(step.action),
+                        text = helpText(helpActionInstruction(step.action)),
                         color = Color.Gray,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace
@@ -239,7 +240,7 @@ private fun helpActionInstruction(action: HelpAction): String {
         is HelpAction.CommitFile -> "COMMIT A FILE TO PROCEED."
         is HelpAction.OverlayCleared -> "CLEAR THE ACTIVE OVERLAY TO PROCEED."
         is HelpAction.WatchEvent -> "WAITING FOR WATCH EVENT: ${action.eventType}"
-        is HelpAction.DeckSelected -> "SELECT A MATRIX DECK TO PROCEED."
+        is HelpAction.DeckSelected -> "SELECT A MATRIX {{DECK:DECK}} TO PROCEED."
         is HelpAction.ProfileSelected -> "SELECT A PROFILE TO PROCEED."
         is HelpAction.KeyboardDismissed -> {
             "TYPE IF NEEDED, THEN CLOSE THE KEYBOARD TO PROCEED."

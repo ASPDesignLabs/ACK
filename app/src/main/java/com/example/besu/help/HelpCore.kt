@@ -14,11 +14,11 @@ enum class HelpCategory(
 ) {
     BASICS_NAVIGATION(
         title = "BASICS // NAVIGATION",
-        subtitle = "DECKS, PROFILES, CONTEXT, AND PROMPTS"
+        subtitle = "{{DECKS:DECKS}}, PROFILES, CONTEXT, AND PROMPTS"
     ),
     BASICS_DECKS(
-        title = "BASICS // DECK MANAGEMENT",
-        subtitle = "CREATE, ORGANIZE, RECOLOR, AND REMOVE DECKS"
+        title = "BASICS // {{DECK:DECK}} MANAGEMENT",
+        subtitle = "CREATE, ORGANIZE, RECOLOR, AND REMOVE {{DECKS:DECKS}}"
     ),
     BASICS_SETTINGS(
         title = "BASICS // SETTINGS",
@@ -26,19 +26,19 @@ enum class HelpCategory(
     ),
     BASICS_PERSONALIZATION(
         title = "BASICS // PERSONALIZATION",
-        subtitle = "AUDIO ARCHITECT AND OUTPUT CUSTOMIZATION"
+        subtitle = "{{AUDIO_ARCHITECT:AUDIO ARCHITECT}} AND OUTPUT CUSTOMIZATION"
     ),
     BASICS_MANUAL_OVERRIDE(
-        title = "BASICS // MANUAL OVERRIDE",
-        subtitle = "MEMORY BANKS AND DIRECT TEXT INPUT"
+        title = "BASICS // {{MANUAL_OVERRIDE:MANUAL OVERRIDE}}",
+        subtitle = "{{MEMORY_BANKS:MEMORY BANKS}} AND DIRECT TEXT INPUT"
     ),
     USING_DECKS(
-        title = "USING DECKS",
-        subtitle = "DECK-SPECIFIC WORKFLOWS AND CONTROLS"
+        title = "USING {{DECKS:DECKS}}",
+        subtitle = "{{DECK:DECK}}-SPECIFIC WORKFLOWS AND CONTROLS"
     ),
     CONTEXTUAL_SYSTEMS(
         title = "CONTEXTUAL SYSTEMS",
-        subtitle = "TARGET COMPUTER, GEO-PROTOCOL, AND LOGS"
+        subtitle = "{{TARGET_COMPUTER:TARGET COMPUTER}}, {{GEO_PROTOCOL:GEO-PROTOCOL}}, AND LOGS"
     ),
     FIELD_OPS(
         title = "FIELD OPS // GESTURE TRAINING",

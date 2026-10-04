@@ -21,15 +21,15 @@ object VoiceRecordingsHelp {
             HelpStep(
                 id = "intro",
                 title = "VOICE RECORDINGS",
-                body = "Any Quick Actions slot, Quick-Access key, or Matrix node can play " +
+                body = "Any {{DECK_TYPE_QUICK:Quick Actions}} slot, Quick-Access key, or Matrix node can play " +
                     "your own recorded voice instead of synthesized speech. The record, " +
                     "preview, and accept flow is identical everywhere it shows up -- this " +
-                    "walkthrough uses a Quick Actions slot as the example."
+                    "walkthrough uses a {{DECK_TYPE_QUICK:Quick Actions}} slot as the example."
             ),
             HelpStep(
                 id = "open_slot",
                 title = "OPEN A SLOT",
-                body = "Hold a Quick Actions slot to open its editor.",
+                body = "Hold a {{DECK_TYPE_QUICK:Quick Actions}} slot to open its editor.",
                 action = HelpAction.Interact(AckTags.QUICK_ACTION_SLOT),
                 targetTag = AckTags.QUICK_ACTION_SLOT
             ),
@@ -174,7 +174,7 @@ object VoiceRecordingsHelp {
             HelpStep(
                 id = "intro",
                 title = "MANAGE RECORDINGS",
-                body = "Every recording you've made -- Quick Actions, Quick-Access keys, " +
+                body = "Every recording you've made -- {{DECK_TYPE_QUICK:Quick Actions}}, {{QUICK_ACCESS_KEYS:Quick-Access keys}}, " +
                     "and Matrix nodes alike -- lives in one browsable tree under PROTOCOL."
             ),
             HelpStep(
@@ -187,8 +187,8 @@ object VoiceRecordingsHelp {
             HelpStep(
                 id = "tree",
                 title = "DRILL DOWN",
-                body = "Recordings are grouped by how they're used: Deck > Group > Slot for " +
-                    "Quick Actions, a flat list for Quick-Access keys, and Deck > Profile > " +
+                body = "Recordings are grouped by how they're used: {{DECK:Deck}} > Group > Slot for " +
+                    "{{DECK_TYPE_QUICK:Quick Actions}}, a flat list for {{QUICK_ACCESS_KEYS:Quick-Access keys}}, and {{DECK:Deck}} > Profile > " +
                     "Pose > Slot for Matrix. Tap a branch row to expand or collapse it.",
                 targetTag = AckTags.VOICE_REC_MANAGE_TREE
             ),
