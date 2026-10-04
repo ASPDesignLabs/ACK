@@ -1374,3 +1374,32 @@ exist. The profile-change warning is described in the last subsection. The devic
   wired in until the developer approves the wording. The developer chose the switch **off for everyone**, with one dismissible offer.
 - **A test that bars a function may not bar a whole object:** `ProfileWarningWiringTest` used to fail if `OutputService` mentioned `AssistPrefs` at all; it now bars only the
   profile warning's own functions, because the service legitimately reads other switches in that object.
+
+### PLAIN WORDS (L2) and INTERFACE LANGUAGE (L3, part 2) — rules that must stay true
+Wording and decisions: `docs/PLAIN_LANGUAGE.md`, `docs/TRANSLATIONS.md`. Checklist: `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md` sections J and K.
+
+- **A label is display text only.** The table is string resources (`label_<key>` standard, `label_<key>_plain` everyday) keyed by `core/LabelKey`; a screen asks
+  `labelFor(LabelKey.X)` (`ui/PlainWords.kt`). A label never reaches an id, a storage key, a tag, an event, a log line, a token or anything typed: stored pose and
+  slot names ("IDENTITY", "Twist 1") are matched exactly and shown through `poseLabel`/`slotLabel`, never rewritten. `PlainWordsScreensWiringTest` enforces this
+  (no label inside `putExtra`/`onEvent`/`Log`/`upsert`, nothing but screens reads labels, no `.uppercase()` on one, no wired label also drawn as its English
+  literal; the few places an English text is still logic are listed there and checked not to go stale). **A key with no screen yet goes on that test's short
+  `notYetWired` list with a reason.** HELP text holds `{{KEY:Original}}` placeholders filled at draw time and for the spoken text (`helpText`, `HelpPlaceholders`).
+- **PLAIN WORDS is off for everyone, never seeded** (the developer's decision), flips at once with no restart (Compose state, `PlainWordsState`, provided beside
+  `LocalHelpManager`), and its own switch is worded identically in both modes so it can always be found. It is in EXPORT .JSON (nullable) and on the fingerprint ignore list.
+- **The Terminal's plain-mode controls call the same code as the typed commands** (`clearHistoryNow`, `repairBackgroundServices`, `showLegacyManualOverride`, the
+  `/v` and `/t` triggers); every typed command keeps working. The four send switches (`/q /n /s /e`) **stay on until turned off** (developer's choice), are kept in
+  memory only (`TerminalSendSwitches`, nothing stored, wiped or backed up), count **only while PLAIN WORDS is on** (`SendSwitchPolicy`, a hidden switch must never make a
+  message silent, unsaved or loud), and are turned off with it. `/e` and its switch never ask for confirmation. The closed SEND OPTIONS row names every switch that is on.
+  New controls there: 12 sp or larger, 48 dp, no haptics, no animation, ON/OFF written in words.
+- **INTERFACE LANGUAGE: an install that exists stays English, a new one follows the phone.** Read with nothing stored is ENGLISH; `seedFreshInstallDefaults` writes DEVICE
+  (a seed key); DELETE DATA > SETTINGS reseeds it and says so. It is applied in `MainActivity.attachBaseContext` (`data/InterfaceLocale.kt`), never fails the launch, and a
+  change **asks first and restarts once** (shared delayed `restartApp`). **No `android:localeConfig`**: Android 13's per-app screen would be a second switch the in-app one
+  silently overrides (a test fails if it appears). Every `letterSpacing = N.sp` goes through `looseSpacing()` (Arabic joins; spacing pulls it apart); a test fails on a raw one.
+- **The five translations (es, pt, hi, ar, af) are DRAFTS written without a native speaker** and must keep saying so (the notice at the top of each file, the control, the
+  CHANGELOG, `THIRD_PARTY_NOTICES.md`). `TranslationsTest` checks completeness and safety only (same strings and `%1$s` placeholders, standard ≠ everyday, no two buttons
+  sharing an everyday name except the four same-place pairs, capitals for es/pt/af, own script for hi/ar, escaping, the notice), never that the words are right. HELP, the
+  Terminal, most dialogs and everything spoken stay English in every language; say so wherever the language is offered.
+- **Kotlin the tests cannot compile can still hide a build error.** Two lines of text with nothing joining them are not one sentence: in a `when` branch only the last is used
+  (the clear-variables confirmation lost its question this way), in a `listOf(` it is a build error (the `/info` notes did). `AdjacentTextLinesTest` and
+  `TerminalTextListsShapeTest` read every source file for it. `tools/kotlin_check/android-typecheck` type-checks `ui/TerminalPlainControls.kt`,
+  `settings/InterfaceLanguageSection.kt` and the capture screens against Compose, with `R` generated from the real `strings.xml` (a wrong string name fails it).
