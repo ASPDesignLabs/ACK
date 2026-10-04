@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.computer
 
+import com.example.besu.R
 import com.example.besu.ui.*
 import com.example.besu.ui.theme.*
 import android.content.Context
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,15 +69,15 @@ fun ComputerWizard(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "GUIDED SETUP",
-        subtitle = category?.let { "IN ${it.label.uppercase()}" },
-        dismissLabel = "FINISH"
+        title = stringResource(R.string.people_wizard_title),
+        subtitle = category?.let { stringResource(R.string.people_wizard_in, categoryName(it).uppercase()) },
+        dismissLabel = stringResource(R.string.people_wizard_finish)
     ) {
         if (category == null) {
             // --- STEP: PICK OR CREATE A CATEGORY TO START ---
             if (!newCategoryMode) {
                 Text(
-                    text = "Pick a category to build, or start a new one.",
+                    text = stringResource(R.string.people_wizard_pick),
                     color = Color.Gray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
@@ -85,21 +87,21 @@ fun ComputerWizard(
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     categories.forEach { cat ->
-                        WizardOptionRow(label = cat.label, primaryColor = primaryColor) {
+                        WizardOptionRow(label = categoryName(cat), primaryColor = primaryColor) {
                             categoryId = cat.id
                             pathStack = emptyList()
                         }
                     }
 
-                    WizardOptionRow(label = "+ NEW CATEGORY", primaryColor = primaryColor) {
+                    WizardOptionRow(label = stringResource(R.string.people_wizard_new_category), primaryColor = primaryColor) {
                         newCategoryMode = true
                     }
                 }
             } else {
                 WizardNameStep(
                     primaryColor = primaryColor,
-                    prompt = "NAME THE NEW CATEGORY",
-                    placeholder = "E.G. FEELINGS",
+                    prompt = stringResource(R.string.people_wizard_name_category),
+                    placeholder = stringResource(R.string.people_example_category),
                     onCancel = { newCategoryMode = false },
                     onCreate = { label ->
                         val created = ComputerRepository.createCategory(context, label)
@@ -118,7 +120,8 @@ fun ComputerWizard(
             if (pendingAddType == null) {
                 // --- STEP: WHAT'S NEXT AT THE CURRENT LEVEL ---
                 Text(
-                    text = "ADDING TO: ${currentNode.label.uppercase()}",
+                    // The category's own root shows the category's name as it is shown; any other level is a name the person typed.
+                    text = stringResource(R.string.people_wizard_adding_to, (if (currentNode.id == category.root.id) categoryName(category) else currentNode.label).uppercase()),
                     color = Color.Gray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
@@ -127,14 +130,14 @@ fun ComputerWizard(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    WizardOptionRow(label = "+ ADD SUBCATEGORY HERE", primaryColor = primaryColor) {
+                    WizardOptionRow(label = stringResource(R.string.people_wizard_add_sub), primaryColor = primaryColor) {
                         pendingAddType = ComputerNodeType.CATEGORY
                     }
-                    WizardOptionRow(label = "+ ADD ENTRY HERE", primaryColor = primaryColor) {
+                    WizardOptionRow(label = stringResource(R.string.people_wizard_add_entry), primaryColor = primaryColor) {
                         pendingAddType = ComputerNodeType.ENTRY
                     }
                     if (pathStack.isNotEmpty()) {
-                        WizardOptionRow(label = "↑ UP ONE LEVEL", primaryColor = primaryColor) {
+                        WizardOptionRow(label = stringResource(R.string.people_wizard_up), primaryColor = primaryColor) {
                             pathStack = pathStack.dropLast(1)
                         }
                     }
@@ -144,8 +147,8 @@ fun ComputerWizard(
 
                 WizardNameStep(
                     primaryColor = primaryColor,
-                    prompt = if (addType == ComputerNodeType.CATEGORY) "NAME THE NEW SUBCATEGORY" else "NAME THE NEW ENTRY",
-                    placeholder = if (addType == ComputerNodeType.CATEGORY) "E.G. FRIENDS" else "E.G. MOM",
+                    prompt = stringResource(if (addType == ComputerNodeType.CATEGORY) R.string.people_wizard_name_sub else R.string.people_wizard_name_entry),
+                    placeholder = stringResource(if (addType == ComputerNodeType.CATEGORY) R.string.people_example_subcategory else R.string.people_example_entry),
                     onCancel = { pendingAddType = null },
                     onCreate = { label ->
                         val created = ComputerRepository.addNode(
@@ -223,9 +226,9 @@ private fun WizardNameStep(
     Spacer(modifier = Modifier.height(16.dp))
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        TightPanelButton("CREATE", Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
+        TightPanelButton(stringResource(R.string.common_create), Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
             if (isValid) onCreate(name.trim())
         }
-        TightPanelButton("BACK", Modifier.weight(1f), isActive = false, mainColor = primaryColor, onClick = onCancel)
+        TightPanelButton(stringResource(R.string.common_back), Modifier.weight(1f), isActive = false, mainColor = primaryColor, onClick = onCancel)
     }
 }
