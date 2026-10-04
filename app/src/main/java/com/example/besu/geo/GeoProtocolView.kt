@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.geo
 
+import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.data.*
 import com.example.besu.help.*
@@ -245,7 +246,7 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
                 }
 
                 Row(modifier = Modifier.fillMaxWidth().background(VoidBlack.copy(alpha = 0.85f)).windowInsetsPadding(WindowInsets.statusBars).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (editingZoneId != null) "EDIT SECURE NODE" else "DEPLOY NEW NODE", color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                    Text(if (editingZoneId != null) labelFor(LabelKey.GEO_EDIT_NODE) else labelFor(LabelKey.GEO_ADD_NODE), color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(if (isTracking) "[TRACKING: ON]" else "[TRACKING: OFF]", color = if (isTracking) primaryColor else Color.Gray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.clickable { isTracking = !isTracking }.padding(end = 16.dp))
                         Text("[ABORT]", color = Color.Red, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { isMapFullscreen = false; editingZoneId = null })
@@ -281,14 +282,14 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text("GEO-PROTOCOL", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(labelFor(LabelKey.GEO_PROTOCOL), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
             NeonButton(if (isMasterEnabled) "SYSTEM: ON" else "SYSTEM: OFF", isActive = isMasterEnabled, mainColor = primaryColor) {
                 GeoRepository.setGeoEnabled(context, !isMasterEnabled); GeoEngineController.syncEngineState(context); refreshKey++
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text("COMPUTE ENGINE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Text(labelFor(LabelKey.GEO_ENGINE), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GeoEngineMode.entries.forEachIndexed { index, mode ->
@@ -347,7 +348,7 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("SECURE NODES [${zones.size}]", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+        Text("${labelFor(LabelKey.GEO_NODES)} [${zones.size}]", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(12.dp))
 
         LazyColumn(modifier = Modifier.weight(1f)) {
@@ -361,7 +362,7 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        HeroButton("OPEN TACTICAL GRID", modifier = Modifier.fillMaxWidth(), mainColor = primaryColor) {
+        HeroButton(labelFor(LabelKey.GEO_OPEN_GRID), modifier = Modifier.fillMaxWidth(), mainColor = primaryColor) {
             openMapAtCurrentLocation()
         }
     }

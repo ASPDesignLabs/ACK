@@ -56,6 +56,10 @@
     <string name="label_target_entry_plain">PERSON OR PLACE</string>
     <string name="label_target_category">CATEGORY</string>
     <string name="label_target_category_plain">LIST</string>
+    <string name="label_target_add_category">ADD CATEGORY</string>
+    <string name="label_target_add_category_plain">ADD A LIST</string>
+    <string name="label_target_category_options">CATEGORY OPTIONS</string>
+    <string name="label_target_category_options_plain">LIST OPTIONS</string>
     <string name="label_contact_cards">CONTACT CARDS</string>
     <string name="label_contact_cards_plain">CONTACT DETAILS</string>
     <string name="label_shared_variables">SHARED ROOT VARIABLES</string>
@@ -90,12 +94,20 @@
     <string name="label_bitcrush_plain">ROUGH SOUND EFFECT</string>
     <string name="label_custom_voice">CUSTOM VOICE</string>
     <string name="label_custom_voice_plain">MY OWN VOICE</string>
+    <string name="label_delete_custom_voice">DELETE CUSTOM VOICE</string>
+    <string name="label_delete_custom_voice_plain">DELETE MY OWN VOICE</string>
+    <string name="label_import_custom_voice">IMPORT CUSTOM VOICE</string>
+    <string name="label_import_custom_voice_plain">IMPORT MY OWN VOICE</string>
+    <string name="label_reimport_custom_voice">RE-IMPORT CUSTOM VOICE</string>
+    <string name="label_reimport_custom_voice_plain">IMPORT MY OWN VOICE AGAIN</string>
     <string name="label_record_training">RECORD TRAINING DATA</string>
     <string name="label_record_training_plain">RECORD FOR MY OWN VOICE</string>
     <string name="label_geo_protocol">GEO-PROTOCOL</string>
     <string name="label_geo_protocol_plain">LOCATION ALERTS</string>
     <string name="label_geo_grid">TACTICAL GRID</string>
     <string name="label_geo_grid_plain">MAP</string>
+    <string name="label_geo_open_grid">OPEN TACTICAL GRID</string>
+    <string name="label_geo_open_grid_plain">OPEN MAP</string>
     <string name="label_geo_engine">COMPUTE ENGINE</string>
     <string name="label_geo_engine_plain">HOW LOCATION IS CHECKED</string>
     <string name="label_terminal">TERMINAL</string>
@@ -156,12 +168,18 @@
     <string name="label_variable_plain">FILL-IN</string>
     <string name="label_variable_tag">VAR %1$s</string>
     <string name="label_variable_tag_plain">FILL-IN %1$s</string>
+    <string name="label_add_var">+ VAR</string>
+    <string name="label_add_var_plain">+ FILL-IN</string>
     <string name="label_geo_nodes">SECURE NODES</string>
     <string name="label_geo_nodes_plain">SAVED PLACES</string>
     <string name="label_geo_add_node">DEPLOY NEW NODE</string>
     <string name="label_geo_add_node_plain">ADD A PLACE</string>
+    <string name="label_geo_edit_node">EDIT SECURE NODE</string>
+    <string name="label_geo_edit_node_plain">EDIT SAVED PLACE</string>
     <string name="label_dsp_chain">DSP CHAIN</string>
     <string name="label_dsp_chain_plain">SOUND EFFECTS</string>
+    <string name="label_dsp_edit">EDIT DSP CHAIN</string>
+    <string name="label_dsp_edit_plain">EDIT SOUND EFFECTS</string>
 
     <!-- PLAIN WORDS switch (SETTINGS, top). Worded the same in both modes on purpose, so it can always be found: it never goes through the label table. -->
     <string name="plain_words_switch_on">PLAIN WORDS: ON</string>

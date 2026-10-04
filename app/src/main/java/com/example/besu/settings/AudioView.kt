@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.settings
 
+import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.backup.*
 import com.example.besu.core.SpeechLanguage
@@ -354,7 +355,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     if (showTrainingCapture) {
         TrainingCaptureHome(context, primaryColor) { showTrainingCapture = false }
     } else Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("AUDIO ARCHITECT", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+        Text(labelFor(LabelKey.AUDIO_ARCHITECT), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(10.dp))
 
         if (defaultsOfferNow.any) {
@@ -391,7 +392,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         Spacer(modifier = Modifier.height(10.dp))
 
         // --- VOICE PROFILE SELECTOR ---
-        Text("VOICE PROFILE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Text(labelFor(LabelKey.VOICE_PROFILE), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
         Spacer(modifier = Modifier.height(8.dp))
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -470,7 +471,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         Spacer(modifier = Modifier.height(10.dp))
 
         // --- CUSTOM TRAINED VOICE ---
-        Text("CUSTOM VOICE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Text(labelFor(LabelKey.CUSTOM_VOICE), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             if (hasCustomVoice) "STATUS: INSTALLED" else "STATUS: NOT IMPORTED",
@@ -480,7 +481,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         )
         Spacer(modifier = Modifier.height(6.dp))
         NeonButton(
-            if (hasCustomVoice) "RE-IMPORT CUSTOM VOICE" else "IMPORT CUSTOM VOICE",
+            if (hasCustomVoice) labelFor(LabelKey.REIMPORT_CUSTOM_VOICE) else labelFor(LabelKey.IMPORT_CUSTOM_VOICE),
             Modifier.fillMaxWidth(),
             mainColor = primaryColor
         ) {
@@ -491,7 +492,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         }
         Spacer(modifier = Modifier.height(6.dp))
         NeonButton(
-            "RECORD TRAINING DATA",
+            labelFor(LabelKey.RECORD_TRAINING),
             Modifier.fillMaxWidth().testTag(AckTags.TRAIN_ENTRY_BTN).helpTarget(AckTags.TRAIN_ENTRY_BTN, primaryColor),
             mainColor = primaryColor
         ) {
@@ -519,7 +520,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             )
             Spacer(modifier = Modifier.height(10.dp))
             // Opens two confirmations; nothing is removed by this tap.
-            NeonButton("DELETE CUSTOM VOICE", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+            NeonButton(labelFor(LabelKey.DELETE_CUSTOM_VOICE), Modifier.fillMaxWidth(), mainColor = RadicalRed) {
                 voiceBackupStatus = null
                 showDeleteVoiceFirst = true
             }
@@ -533,7 +534,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             val isUnsaved = customVoices.getOrNull(activeIdx) != p
 
             NeonButton(
-                "EDIT DSP CHAIN // ${p.label}${if (isUnsaved) " *" else ""}",
+                "${labelFor(LabelKey.DSP_EDIT)} // ${p.label}${if (isUnsaved) " *" else ""}",
                 Modifier.fillMaxWidth(),
                 mainColor = primaryColor
             ) {
@@ -588,7 +589,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         val isRobotic = p.modDepth > 0.05f
         val isUnsaved = customVoices.getOrNull(activeIdx) != p
 
-        AudioDialogFrame(onDismissRequest = { showDspChainEditor = false }, primaryColor = primaryColor, title = "DSP CHAIN // ${p.label}") {
+        AudioDialogFrame(onDismissRequest = { showDspChainEditor = false }, primaryColor = primaryColor, title = "${labelFor(LabelKey.DSP_CHAIN)} // ${p.label}") {
             Text(
                 if (isUnsaved) "UNSAVED CHANGES*" else "UP TO DATE",
                 color = if (isUnsaved) NeonPalette.SWATCHES[3] else Color.Gray,
@@ -680,7 +681,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth().helpTarget(AckTags.AUDIO_ROBOTIC_OVERLAY, primaryColor)
                     ) {
-                        Text("ROBOTIC OVERLAY", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                        Text(labelFor(LabelKey.ROBOTIC_OVERLAY), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                         NeonButton(if (isRobotic) "ON" else "OFF", Modifier.width(60.dp), isActive = isRobotic, mainColor = primaryColor) {
                             editingProfile = if (isRobotic) {
                                 p.copy(modDepth = 0f)
@@ -704,7 +705,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Box(modifier = Modifier.helpTarget(AckTags.AUDIO_BITCRUSH, primaryColor)) {
-                        DspSlider("BITCRUSH (%)", p.crush, 0f..1f, primaryColor) {
+                        DspSlider("${labelFor(LabelKey.BITCRUSH)} (%)", p.crush, 0f..1f, primaryColor) {
                             editingProfile = p.copy(crush = it)
                             reportHelpInteraction(AckTags.AUDIO_BITCRUSH)
                         }

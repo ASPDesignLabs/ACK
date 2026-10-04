@@ -145,6 +145,17 @@ class PlainLabelsTest {
     }
 
     @Test
+    fun aPoseNameIsRecognisedOnlyWhenItIsExactlyOneOfTheThree() {
+        assertEquals(LabelKey.POSE_IDENTITY, PlainLabels.poseLabelKey("IDENTITY"))
+        assertEquals(LabelKey.POSE_DEFEND, PlainLabels.poseLabelKey("DEFEND"))
+        assertEquals(LabelKey.POSE_CONNECT, PlainLabels.poseLabelKey("CONNECT"))
+        // A custom layer's own name, in any case, is never renamed.
+        assertNull(PlainLabels.poseLabelKey("identity"))
+        assertNull(PlainLabels.poseLabelKey("WORK"))
+        assertNull(PlainLabels.poseLabelKey(""))
+    }
+
+    @Test
     fun theKeyNamesCanBeLookedUpSafely() {
         assertEquals(LabelKey.DECK, LabelKey.fromName("DECK"))
         assertNull(LabelKey.fromName("deck"))

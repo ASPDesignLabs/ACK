@@ -76,7 +76,8 @@ class StarterRestoreWiringTest {
     @Test
     fun theRestoreConfirmationSaysStartersYouNeverEditedGoBack() {
         val settings = source("settings/SettingsView.kt")
-        val at = settings.indexOf("title = \"FULL RESTORE FROM JSON\"")
+        // The title is a label now (plain words), so the dialog is found by its key, not by its English words.
+        val at = settings.indexOf("title = labelFor(LabelKey.FULL_RESTORE)")
         assertTrue(at >= 0)
         val dialog = settings.substring(at, at + 3500)
         assertTrue("the FULL RESTORE confirmation must mention starter phrases", dialog.contains("starter phrases", ignoreCase = true))

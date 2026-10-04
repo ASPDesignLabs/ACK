@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.voicecapture
 
+import com.example.besu.core.LabelKey
+import com.example.besu.ui.labelFor
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -214,7 +216,7 @@ fun TrainingCaptureHome(context: Context, primaryColor: Color, onClose: () -> Un
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("RECORD TRAINING DATA", color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(labelFor(LabelKey.RECORD_TRAINING), color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
             Text(
                 "[CLOSE]", color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
                 modifier = Modifier.heightIn(min = 48.dp).clickable { onClose() }.padding(horizontal = 8.dp, vertical = 12.dp),

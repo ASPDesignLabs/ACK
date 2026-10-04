@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.ui
 
+import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.backup.*
 import com.example.besu.computer.*
@@ -1530,7 +1531,7 @@ fun TerminalView(
         TightDialogSurface(
             onDismiss = { saveDialogTarget = null; newTagInput = "" },
             primaryColor = FluxCyan,
-            title = "SAVE TO MEMORY BANK"
+            title = labelFor(LabelKey.SAVE_TO_MEMORY_BANK)
         ) {
             Text(
                 "\"$textToSave\"",
@@ -1652,7 +1653,7 @@ fun TypeView(
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("MANUAL OVERRIDE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+        Text(labelFor(LabelKey.MANUAL_OVERRIDE), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -1701,7 +1702,7 @@ fun TypeView(
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
-                text = if (showBrowsePanel) "[HIDE TARGET BROWSER]" else "[BROWSE TARGETS]",
+                text = if (showBrowsePanel) "[HIDE TARGET BROWSER]" else "[${labelFor(LabelKey.BROWSE_TARGETS)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -1716,7 +1717,7 @@ fun TypeView(
             )
 
             Text(
-                text = if (savedPhrases.isNotEmpty()) "[MEMORY BANKS (${savedPhrases.size})]" else "[MEMORY BANKS]",
+                text = if (savedPhrases.isNotEmpty()) "[${labelFor(LabelKey.MEMORY_BANKS)} (${savedPhrases.size})]" else "[${labelFor(LabelKey.MEMORY_BANKS)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -1765,7 +1766,7 @@ fun TypeView(
         TightDialogSurface(
             onDismiss = { showMemoryBanks = false },
             primaryColor = primaryColor,
-            title = "MEMORY BANKS",
+            title = labelFor(LabelKey.MEMORY_BANKS),
             dismissLabel = "CLOSE"
         ) {
             if (savedPhrases.isEmpty()) {
@@ -2248,7 +2249,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                 closeEditor()
             },
             primaryColor = primaryColor,
-            title = node.label,
+            title = slotLabel(node.label),
             subtitle = "LIVE-SAVE EDITOR",
             surfaceModifier = Modifier.testTag(AckTags.EDIT_NODE_DIALOG)
         ) {
@@ -2314,7 +2315,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             TightPanelButton(
-                                text = "+ VAR",
+                                text = labelFor(LabelKey.ADD_VAR),
                                 modifier = Modifier.weight(1f),
                                 mainColor = primaryColor
                             ) {
@@ -2349,7 +2350,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         if (computerCategories.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            TightSectionLabel("INSERT TARGET TAG")
+                            TightSectionLabel(labelFor(LabelKey.INSERT_TARGET_TAG))
 
                             Spacer(modifier = Modifier.height(6.dp))
 
@@ -2560,9 +2561,9 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 .getOrNull(index)
 
                             val label = if (tag == null) {
-                                "VARIABLE ${index + 1}"
+                                "${labelFor(LabelKey.VARIABLE)} ${index + 1}"
                             } else {
-                                "VARIABLE ${index + 1} // ROOT $tag"
+                                "${labelFor(LabelKey.VARIABLE)} ${index + 1} // ROOT $tag"
                             }
 
                             // Per node, per variable slot -- typing the
@@ -3802,7 +3803,7 @@ fun MatrixCategory(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Text(
-                    text = "ROOT :: $title",
+                    text = "ROOT :: ${poseLabel(title)}",
                     color = if (isFocused) primaryColor else Color.Gray,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
@@ -3925,7 +3926,7 @@ fun MatrixCategory(
                     }
 
                     MatrixNodeItem(
-                        label = node.label,
+                        label = slotLabel(node.label),
                         phrase = recordedDisplayPhrase,
                         variableValues = if (recordingIsActive) emptyList() else variableValues,
                         computerTagChips = if (recordingIsActive) emptyList() else computerTagChips,
@@ -4088,7 +4089,7 @@ fun RootOverrideStrip(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "SHARED ROOT VARIABLES",
+                text = labelFor(LabelKey.SHARED_VARIABLES),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,

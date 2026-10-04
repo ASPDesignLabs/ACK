@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.decks
 
+import com.example.besu.core.LabelKey
+import com.example.besu.ui.labelFor
 import com.example.besu.*
 import com.example.besu.data.*
 import com.example.besu.help.*
@@ -109,7 +111,7 @@ fun CreateDeckDialog(
                 .padding(18.dp)
         ) {
             Text(
-                text = "CREATE DECK",
+                text = labelFor(LabelKey.DECK_CREATE),
                 color = primaryColor,
                 fontSize = 16.sp,
                 fontFamily = FontFamily.Monospace,
@@ -135,7 +137,7 @@ fun CreateDeckDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     DeckTypeOption(
-                        text = "MATRIX",
+                        text = labelFor(LabelKey.DECK_TYPE_MATRIX),
                         selected = deckType == DeckType.MATRIX,
                         primaryColor = primaryColor,
                         modifier = Modifier.weight(1f)
@@ -148,7 +150,7 @@ fun CreateDeckDialog(
                     }
 
                     DeckTypeOption(
-                        text = "QUICK ACTIONS",
+                        text = labelFor(LabelKey.DECK_TYPE_QUICK),
                         selected = deckType == DeckType.QUICK_ACTIONS,
                         primaryColor = primaryColor,
                         modifier = Modifier.weight(1f)
@@ -166,7 +168,7 @@ fun CreateDeckDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     DeckTypeOption(
-                        text = "EMERGENCY",
+                        text = labelFor(LabelKey.DECK_TYPE_EMERGENCY),
                         selected = deckType == DeckType.EMERGENCY,
                         primaryColor = primaryColor,
                         modifier = Modifier.weight(1f)
@@ -179,7 +181,7 @@ fun CreateDeckDialog(
                     }
 
                     DeckTypeOption(
-                        text = "EMOJI",
+                        text = labelFor(LabelKey.DECK_TYPE_EMOJI),
                         selected = deckType == DeckType.EMOJI,
                         primaryColor = primaryColor,
                         modifier = Modifier.weight(1f)
@@ -197,7 +199,7 @@ fun CreateDeckDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     DeckTypeOption(
-                        text = "GIF",
+                        text = labelFor(LabelKey.DECK_TYPE_GIF),
                         selected = deckType == DeckType.GIF,
                         primaryColor = primaryColor,
                         modifier = Modifier.weight(1f)
@@ -225,7 +227,7 @@ fun CreateDeckDialog(
             Spacer(modifier = Modifier.height(18.dp))
 
             CreateDeckSectionLabel(
-                text = "DECK NAME",
+                text = labelFor(LabelKey.DECK_NAME),
                 color = primaryColor
             )
 

@@ -108,7 +108,7 @@ class PlainWordsWiringTest {
     @Test
     fun aLabelReadsTheModeTheLanguageAndTheRightResourceName() {
         val plain = code(source("ui/PlainWords.kt"))
-        val label = topLevel(plain, "label")
+        val label = topLevel(plain, "labelFor")
         assertTrue(label.contains("LocalPlainWords.current"))
         assertTrue("a change of language re-reads the resource", label.contains("LocalConfiguration.current"))
         assertTrue(plain.contains("key.resourceName(plain)"))
@@ -125,7 +125,7 @@ class PlainWordsWiringTest {
         assertTrue("PLAIN WORDS must come before every other section", switchAt in 0 until firstSection)
         val item = settings.substring(settings.indexOf("val plainOn = PlainWordsState.on"), firstSection)
         assertTrue(item.contains("stringResource(if (plainOn) R.string.plain_words_switch_on else R.string.plain_words_switch_off)"))
-        assertFalse("the switch must not go through the label table", item.contains("label(LabelKey"))
+        assertFalse("the switch must not go through the label table", item.contains("labelFor(LabelKey"))
         assertTrue(item.contains("PlainWordsState.set(context, !plainOn)"))
     }
 

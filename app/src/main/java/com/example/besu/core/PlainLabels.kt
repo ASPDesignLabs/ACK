@@ -36,6 +36,8 @@ enum class LabelKey {
     TARGET_COMPUTER,
     TARGET_ENTRY,
     TARGET_CATEGORY,
+    TARGET_ADD_CATEGORY,
+    TARGET_CATEGORY_OPTIONS,
     CONTACT_CARDS,
     SHARED_VARIABLES,
     VARIABLE_CONTEXT,
@@ -53,9 +55,13 @@ enum class LabelKey {
     ROBOTIC_OVERLAY,
     BITCRUSH,
     CUSTOM_VOICE,
+    DELETE_CUSTOM_VOICE,
+    IMPORT_CUSTOM_VOICE,
+    REIMPORT_CUSTOM_VOICE,
     RECORD_TRAINING,
     GEO_PROTOCOL,
     GEO_GRID,
+    GEO_OPEN_GRID,
     GEO_ENGINE,
     TERMINAL,
     TERMINAL_LOG,
@@ -86,9 +92,12 @@ enum class LabelKey {
     TWIST_3_MAPPED,
     VARIABLE,
     VARIABLE_TAG,
+    ADD_VAR,
     GEO_NODES,
     GEO_ADD_NODE,
+    GEO_EDIT_NODE,
     DSP_CHAIN,
+    DSP_EDIT,
     ;
 
     /** The string resource that holds this label's standard text, or its plain text. */
@@ -106,6 +115,17 @@ object PlainLabels {
      * draw that stored text). Only an exact match counts: a name the person typed is never renamed.
      */
     fun slotLabelKey(stored: String): LabelKey? = slotNames[stored]
+
+    /**
+     * The key for a pose name (the Matrix groups IDENTITY, DEFEND and CONNECT). These names are also stored as ids and Shared Variable groupings, so
+     * only what is drawn is renamed; a custom layer's own name is never touched.
+     */
+    fun poseLabelKey(stored: String): LabelKey? = when (stored) {
+        "IDENTITY" -> LabelKey.POSE_IDENTITY
+        "DEFEND" -> LabelKey.POSE_DEFEND
+        "CONNECT" -> LabelKey.POSE_CONNECT
+        else -> null
+    }
 
     private val slotNames: Map<String, LabelKey> = mapOf(
         "Twist 0 (Default)" to LabelKey.TWIST_0,

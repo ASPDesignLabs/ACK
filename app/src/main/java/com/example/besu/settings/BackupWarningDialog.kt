@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.settings
 
+import com.example.besu.core.LabelKey
+import com.example.besu.ui.labelFor
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,7 +42,7 @@ fun BackupWarningDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "EXPORT .JSON",
+        title = labelFor(LabelKey.EXPORT_JSON),
         dismissLabel = "CANCEL"
     ) {
         Text(

@@ -52,18 +52,29 @@ object LabelText {
 
 /** The label for [key] in the wording the person chose (standard or plain) and the language of the phone. */
 @Composable
-fun label(key: LabelKey): String {
+fun labelFor(key: LabelKey): String {
     val plain = LocalPlainWords.current
     val context = LocalContext.current
     val configuration = LocalConfiguration.current // a change of language re-reads the resource
     return remember(key, plain, configuration) { LabelText.resolve(context, key, plain) }
 }
 
+/** A label that holds a format placeholder (`VAR %1$s`), filled in with [args]. */
+@Composable
+fun stringFormatLabel(key: LabelKey, vararg args: Any): String = String.format(labelFor(key), *args)
+
 /** The label for a Matrix slot's stored name ("Twist 1"), or the stored text itself when it is a name the person typed. */
 @Composable
 fun slotLabel(stored: String): String {
     val key = com.example.besu.core.PlainLabels.slotLabelKey(stored) ?: return stored
-    return label(key)
+    return labelFor(key)
+}
+
+/** The label for a pose name (IDENTITY, DEFEND, CONNECT), or the name itself when it is a custom layer's own name. */
+@Composable
+fun poseLabel(stored: String): String {
+    val key = com.example.besu.core.PlainLabels.poseLabelKey(stored) ?: return stored
+    return labelFor(key)
 }
 
 /** HELP text with its `{{KEY:Original}}` placeholders filled in for the chosen wording (core/PlainLabels.kt `HelpPlaceholders`). */

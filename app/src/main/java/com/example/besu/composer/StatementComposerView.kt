@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.composer
 
+import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.computer.*
 import com.example.besu.core.AssistSettings
@@ -224,7 +225,7 @@ fun StatementComposerView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "STATEMENT COMPOSER",
+                labelFor(LabelKey.COMPOSER),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -277,7 +278,7 @@ fun StatementComposerView(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        TightSectionLabel("VARIABLE CONTEXT")
+        TightSectionLabel(labelFor(LabelKey.VARIABLE_CONTEXT))
         Spacer(modifier = Modifier.height(6.dp))
         VariableContextRow(
             context = context,
@@ -335,7 +336,7 @@ fun StatementComposerView(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        TightSectionLabel("LIVE PREVIEW")
+        TightSectionLabel(labelFor(LabelKey.LIVE_PREVIEW))
         Spacer(modifier = Modifier.height(6.dp))
         Box(
             modifier = Modifier
@@ -380,7 +381,7 @@ fun StatementComposerView(
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
-                text = if (showTargetBrowsePanel) "[HIDE TARGET BROWSER]" else "[BROWSE TARGETS]",
+                text = if (showTargetBrowsePanel) "[HIDE TARGET BROWSER]" else "[${labelFor(LabelKey.BROWSE_TARGETS)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -395,7 +396,7 @@ fun StatementComposerView(
             )
 
             Text(
-                text = if (showVariablePicker) "[HIDE VARIABLES]" else "[INSERT VARIABLE]",
+                text = if (showVariablePicker) "[HIDE VARIABLES]" else "[${labelFor(LabelKey.INSERT_VARIABLE)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -411,9 +412,9 @@ fun StatementComposerView(
 
             Text(
                 text = if (statementCount > 0) {
-                    "[MY STATEMENTS ($statementCount)]"
+                    "[${labelFor(LabelKey.MY_STATEMENTS)} ($statementCount)]"
                 } else {
-                    "[MY STATEMENTS]"
+                    "[${labelFor(LabelKey.MY_STATEMENTS)}]"
                 },
                 color = primaryColor,
                 fontSize = 10.sp,
@@ -667,7 +668,7 @@ fun StatementComposerView(
                 confirmingDeleteId = null
             },
             primaryColor = primaryColor,
-            title = "MY STATEMENTS",
+            title = labelFor(LabelKey.MY_STATEMENTS),
             dismissLabel = "CLOSE"
         ) {
             Text(
@@ -914,7 +915,7 @@ private fun SharedVariablePicker(
             ) {
                 Column {
                     Text(
-                        text = "VAR $tag",
+                        text = stringFormatLabel(LabelKey.VARIABLE_TAG, tag),
                         color = primaryColor,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,

@@ -9,6 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.besu.core.CustomVoiceRemoval
+import com.example.besu.core.LabelKey
+import com.example.besu.ui.labelFor
 import com.example.besu.ui.NeonButton
 import com.example.besu.ui.RadicalRed
 import com.example.besu.ui.TightDialogSurface
@@ -34,7 +36,7 @@ fun DeleteVoiceFirstDialog(
     TightDialogSurface(
         onDismiss = onCancel,
         primaryColor = primaryColor,
-        title = "DELETE CUSTOM VOICE",
+        title = labelFor(LabelKey.DELETE_CUSTOM_VOICE),
         dismissLabel = "CANCEL"
     ) {
         ConfirmBodyText("THIS REMOVES YOUR TRAINED VOICE FROM THIS PHONE: THE VOICE MODEL, ITS SETTINGS FILE, AND THE TEMPORARY FILE MADE FROM IT.")
@@ -81,7 +83,7 @@ fun DeleteVoiceSecondDialog(
     TightDialogSurface(
         onDismiss = onCancel,
         primaryColor = primaryColor,
-        title = "DELETE CUSTOM VOICE",
+        title = labelFor(LabelKey.DELETE_CUSTOM_VOICE),
         dismissLabel = "CANCEL"
     ) {
         ConfirmBodyText("THIS CANNOT BE UNDONE.", bold = true, color = RadicalRed)

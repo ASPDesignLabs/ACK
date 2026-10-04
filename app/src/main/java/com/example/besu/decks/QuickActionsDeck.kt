@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.decks
 
+import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.computer.*
 import com.example.besu.core.SlotFamily
@@ -99,7 +100,7 @@ fun QuickActionsDeck(
             .padding(16.dp)
     ) {
         Text(
-            text = "QUICK ACTIONS",
+            text = labelFor(LabelKey.DECK_TYPE_QUICK),
             color = primaryColor,
             fontSize = 20.sp,
             fontWeight = FontWeight.Black,
@@ -537,7 +538,7 @@ private fun QuickActionEditorDialog(
                 if (computerCategories.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    TightSectionLabel("INSERT TARGET TAG", color = primaryColor)
+                    TightSectionLabel(labelFor(LabelKey.INSERT_TARGET_TAG), color = primaryColor)
 
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -846,7 +847,7 @@ private fun QuickActionGroupEditorDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TightSectionLabel("WATCH POSE", color = primaryColor)
+                TightSectionLabel(labelFor(LabelKey.WATCH_POSE), color = primaryColor)
 
                 Text(
                     text = "WHICH GESTURE ON THE WATCH FIRES THIS GROUP.",

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.computer
 
+import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.help.*
 import com.example.besu.ui.*
@@ -88,7 +89,7 @@ fun TargetQuickAccessRow(
             .testTag(AckTags.MANUAL_TARGET_QUICK_ROW)
             .helpTarget(AckTags.MANUAL_TARGET_QUICK_ROW, primaryColor)
     ) {
-        TightSectionLabel("TARGET COMPUTER")
+        TightSectionLabel(labelFor(LabelKey.TARGET_COMPUTER))
         Spacer(modifier = Modifier.height(6.dp))
 
         if (activePicks.isEmpty()) {

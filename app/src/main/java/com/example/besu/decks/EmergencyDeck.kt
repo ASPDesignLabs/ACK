@@ -2,6 +2,9 @@
 package com.example.besu.decks
 
 import com.example.besu.*
+import com.example.besu.core.LabelKey
+import com.example.besu.ui.labelFor
+import com.example.besu.ui.stringFormatLabel
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.output.*
@@ -566,7 +569,7 @@ private fun EmergencySlotEditorDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 AckTextField(
-                    label = tag?.let { "VAR:$it" } ?: "VARIABLE ${index + 1}",
+                    label = tag?.let { stringFormatLabel(LabelKey.VARIABLE_TAG, it) } ?: "${labelFor(LabelKey.VARIABLE)} ${index + 1}",
                     value = localValues.getOrNull(index).orEmpty(),
                     primaryColor = primaryColor,
                     onValueChange = { value ->

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.computer
 
+import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.backup.*
 import com.example.besu.help.*
@@ -86,7 +87,7 @@ fun TargetView(context: Context, primaryColor: Color) {
 
         // --- HEADER ---
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("TARGET COMPUTER", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(labelFor(LabelKey.TARGET_COMPUTER), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("CATEGORIES", color = if(subMode=="CATEGORIES") primaryColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { subMode = "CATEGORIES" })
                 Text("|", color = Color.DarkGray)
@@ -538,7 +539,7 @@ private fun ContactCardBrowserPanel(
             .padding(10.dp)
     ) {
         Text(
-            text = "CONTACT CARDS",
+            text = labelFor(LabelKey.CONTACT_CARDS),
             color = primaryColor,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
@@ -608,7 +609,7 @@ private fun AddCategoryDialog(
     var name by remember { mutableStateOf("") }
     val isValid = name.trim().isNotEmpty()
 
-    TightDialogSurface(onDismiss = onDismiss, primaryColor = primaryColor, title = "ADD CATEGORY") {
+    TightDialogSurface(onDismiss = onDismiss, primaryColor = primaryColor, title = labelFor(LabelKey.TARGET_ADD_CATEGORY)) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
@@ -647,7 +648,7 @@ private fun CategoryOptionsDialog(
     var confirmingDelete by remember { mutableStateOf(false) }
     val isValid = name.trim().isNotEmpty()
 
-    TightDialogSurface(onDismiss = onDismiss, primaryColor = primaryColor, title = "CATEGORY OPTIONS") {
+    TightDialogSurface(onDismiss = onDismiss, primaryColor = primaryColor, title = labelFor(LabelKey.TARGET_CATEGORY_OPTIONS)) {
         TightSectionLabel("NAME")
         Spacer(modifier = Modifier.height(6.dp))
         OutlinedTextField(

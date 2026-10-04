@@ -2,6 +2,7 @@
 package com.example.besu.computer
 
 import com.example.besu.*
+import com.example.besu.core.LabelKey
 import com.example.besu.geo.*
 import com.example.besu.help.*
 import com.example.besu.ui.*
@@ -530,7 +531,7 @@ private fun AddTreeNodeDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = if (kind == ComputerNodeType.CATEGORY) "ADD CATEGORY" else "ADD ENTRY",
+        title = if (kind == ComputerNodeType.CATEGORY) labelFor(LabelKey.TARGET_ADD_CATEGORY) else "ADD ENTRY",
         subtitle = "UNDER: ${parentLabel.uppercase()}"
     ) {
         OutlinedTextField(

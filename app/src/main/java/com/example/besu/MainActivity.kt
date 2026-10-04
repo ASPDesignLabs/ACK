@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu
 
+import com.example.besu.core.LabelKey
 import com.example.besu.backup.BackupReminder
 import com.example.besu.core.HelpPlaceholders
 import com.example.besu.core.ProfileSwapDiff
@@ -839,7 +840,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 }
 
                                 Text(
-                                    text = "AUGMENTED COMM LINK",
+                                    text = labelFor(LabelKey.APP_TAGLINE),
                                     color = if (isLiveLinkActive) {
                                         NeonPalette.SWATCHES[2]
                                     } else {
@@ -1048,7 +1049,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = "PROTOCOL",
+                                        text = labelFor(LabelKey.SETTINGS_ENTRY),
                                         color = if (viewMode == "SETTINGS") {
                                             Color.White
                                         } else {
@@ -1183,7 +1184,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     }
                                 } else {
                                     Text(
-                                        text = "MANAGE DECKS",
+                                        text = labelFor(LabelKey.DECK_MANAGE),
                                         color = Color.White,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1513,7 +1514,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                         ) {
                             NeonIconButton(
                                 icon = BottomNavIcon.SPEAK,
-                                description = "Matrix",
+                                description = labelFor(LabelKey.NAV_MATRIX),
                                 modifier = Modifier.weight(1f),
                                 isActive = viewMode == "MATRIX",
                                 mainColor = primaryColor
@@ -1527,7 +1528,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             NeonIconButton(
                                 icon = BottomNavIcon.TERMINAL,
-                                description = "Logs",
+                                description = labelFor(LabelKey.NAV_LOGS),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag(AckTags.TERMINAL_VIEW)
@@ -1540,7 +1541,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             NeonIconButton(
                                 icon = BottomNavIcon.CROSSHAIR,
-                                description = "Targets",
+                                description = labelFor(LabelKey.NAV_TARGETS),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag(AckTags.TARGETS_VIEW)
@@ -1553,7 +1554,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             NeonIconButton(
                                 icon = BottomNavIcon.MAP,
-                                description = "Zones",
+                                description = labelFor(LabelKey.NAV_ZONES),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag(AckTags.GEO_VIEW)
@@ -1566,7 +1567,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             NeonIconButton(
                                 icon = BottomNavIcon.AUDIO,
-                                description = "Audio Architect",
+                                description = labelFor(LabelKey.NAV_AUDIO),
                                 modifier = Modifier.weight(1f),
                                 isActive = viewMode == "AUDIO",
                                 mainColor = primaryColor
@@ -1576,7 +1577,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             NeonIconButton(
                                 icon = BottomNavIcon.KEYBOARD,
-                                description = "Type",
+                                description = labelFor(LabelKey.NAV_TYPE),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag(AckTags.MANUAL_INPUT_BTN)
@@ -2591,7 +2592,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
                 },
                 label = {
                     Text(
-                        text = "DECK NAME",
+                        text = labelFor(LabelKey.DECK_NAME),
                         fontFamily = FontFamily.Monospace
                     )
                 },

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.settings
 
+import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.R
 import com.example.besu.backup.*
@@ -511,7 +512,7 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SettingsToggleRow(
-                    title = "FORCE SPEAKER",
+                    title = labelFor(LabelKey.FORCE_SPEAKER),
                     description = "Routes speech to the device's built-in speaker instead of the current audio route.",
                     checked = forceSpeaker,
                     primaryColor = primaryColor,
@@ -648,7 +649,7 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
-                    title = "GUIDE VOX",
+                    title = labelFor(LabelKey.VOX),
                     description = "Controls whether tutorial and guide narration is spoken aloud.",
                     checked = guideVoxEnabled,
                     primaryColor = primaryColor,
@@ -662,7 +663,7 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
-                    title = "SILENT MODE",
+                    title = labelFor(LabelKey.SILENT_MODE),
                     description = "Shows prompts as normal but never speaks them out loud -- for places where sound itself is the problem. Emergency messages and tutorial narration are never silenced.",
                     checked = silentOutput,
                     primaryColor = primaryColor,
@@ -757,7 +758,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("HARDWARE CONFIG", color = NeonPalette.SWATCHES[5], fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.HARDWARE_CONFIG), color = NeonPalette.SWATCHES[5], fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text("CROWN RESISTANCE: LEVEL ${crownSens.toInt()}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
@@ -768,7 +769,7 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("TWIST SENSITIVITY: ${String.format("%.1f", motTwist)}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text("${labelFor(LabelKey.TWIST_SENS)}: ${String.format("%.1f", motTwist)}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = motTwist, onValueChange = { motTwist = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 2.0f..12.0f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
@@ -826,7 +827,7 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("AUTO-CRYO: ${autoCryo.toInt()} MIN", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text("${labelFor(LabelKey.CRYO)}: ${autoCryo.toInt()} MIN", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = autoCryo, onValueChange = { autoCryo = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 1f..10f, steps = 8, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[3], activeTrackColor = NeonPalette.SWATCHES[3], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
@@ -839,7 +840,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("SHAKE KILL SWITCH", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.SHAKE_KILL), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     "Shake the phone to immediately stop whatever it's currently saying or showing -- a backstop for a mistaken watch fire or a wrong tap.",
@@ -860,7 +861,7 @@ fun SettingsView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("TRAIN / TEST", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+                    Text(labelFor(LabelKey.TRAIN_TEST), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
                     Text(
                         text = if (isShakeTestActive) "[STOP]" else "[TEST]",
                         color = if (isShakeTestActive) Color.Red else primaryColor,
@@ -907,7 +908,7 @@ fun SettingsView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("ENVIRONMENT SENSOR", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                    Text(labelFor(LabelKey.ENV_SENSOR), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                     if (hasMicPermission) {
                         Text(
                             text = if (isMonitoringActive) "[STOP]" else "[SCAN]",
@@ -986,7 +987,7 @@ fun SettingsView(
             }
 
             item {
-                Text("QUICK-ACCESS KEYS", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.QUICK_ACCESS_KEYS), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 for (i in 0..2) {
@@ -1042,7 +1043,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("TERMINAL LOG", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.TERMINAL_LOG), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SettingsToggleRow(
@@ -1088,7 +1089,7 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    "STATUSBOX TEXT COLOR",
+                    "${labelFor(LabelKey.STATUSBOX)} TEXT COLOR",
                     color = Color.Gray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
@@ -1152,11 +1153,11 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("DATA PORT", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.DATA_PORT), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     NeonButton(
-                        "EXPORT .JSON",
+                        labelFor(LabelKey.EXPORT_JSON),
                         Modifier
                             .weight(1f)
                             .helpTarget(AckTags.SETTINGS_DATA_PORT, primaryColor),
@@ -1166,7 +1167,7 @@ fun SettingsView(
 
                         reportHelpInteraction(AckTags.SETTINGS_DATA_PORT)
                     }
-                    NeonButton("IMPORT MATRIX AS NEW DECK", Modifier.weight(1f), mainColor = primaryColor) { importLauncher.launch(arrayOf("application/json")) }
+                    NeonButton(labelFor(LabelKey.IMPORT_MATRIX), Modifier.weight(1f), mainColor = primaryColor) { importLauncher.launch(arrayOf("application/json")) }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
@@ -1177,7 +1178,7 @@ fun SettingsView(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 NeonButton(
-                    "FULL RESTORE FROM JSON",
+                    labelFor(LabelKey.FULL_RESTORE),
                     Modifier
                         .fillMaxWidth()
                         .testTag(AckTags.SETTINGS_FULL_RESTORE_BTN)
@@ -1216,7 +1217,7 @@ fun SettingsView(
                 // Only when ACK has made one (before a data upgrade): they hold the same data as an export and are not encrypted.
                 if (safetyCopies.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
-                    Text("SAFETY COPIES", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                    Text(labelFor(LabelKey.SAFETY_COPIES), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                     safetyCopies.forEach { copy ->
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -1382,7 +1383,7 @@ fun SettingsView(
                 }
             }
         }
-        HeroButton("UPLOAD PROTOCOL", Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
+        HeroButton(labelFor(LabelKey.UPLOAD_PROTOCOL), Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
     }
 
     if (showImportDialog && importedBackup != null) {
@@ -1392,14 +1393,14 @@ fun SettingsView(
             text = { Column {
                 Text("Import as new Deck? Select identity color:", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(value = newDeckName, onValueChange = { newDeckName = it.uppercase() }, placeholder = { Text("DECK NAME") }, colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.Gray))
+                OutlinedTextField(value = newDeckName, onValueChange = { newDeckName = it.uppercase() }, placeholder = { Text(labelFor(LabelKey.DECK_NAME)) }, colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.Gray))
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                     NeonPalette.SWATCHES.forEachIndexed { index, color -> Box(modifier = Modifier.padding(4.dp).size(36.dp).background(color, CutCornerShape(4.dp)).border(2.dp, if(selectedColorIdx == index) Color.White else Color.Transparent, CutCornerShape(4.dp)).clickable { selectedColorIdx = index }) }
                 }
             }},
             confirmButton = {
-                NeonButton("CREATE DECK", isActive = true, mainColor = primaryColor) {
+                NeonButton(labelFor(LabelKey.DECK_CREATE), isActive = true, mainColor = primaryColor) {
                     if(newDeckName.isNotEmpty()) {
                         CommandRepository.saveDeck(context, newDeckName, selectedColorIdx, importedBackup!!.matrixData)
                         showImportDialog = false; newDeckName = ""; WatchSync.sendDeckList(context)
@@ -1497,7 +1498,7 @@ fun SettingsView(
                 pendingFullRestoreJson = null
             },
             primaryColor = primaryColor,
-            title = "FULL RESTORE FROM JSON",
+            title = labelFor(LabelKey.FULL_RESTORE),
             dismissLabel = "CANCEL"
         ) {
             Text(
