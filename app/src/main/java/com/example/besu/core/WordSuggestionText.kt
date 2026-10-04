@@ -2,57 +2,62 @@
 package com.example.besu.core
 
 /**
- * The words around WORD SUGGESTIONS (SETTINGS and the one-time offer in the Statement Composer). One source, so the screens only display what
- * is here and a test can hold the wording to what the feature really does. Capitals, like the rest of the app.
+ * The words around WORD SUGGESTIONS (SETTINGS, FORGET WORDS and the one-time offer in the Statement Composer), read through a [TextSource] so they are in the
+ * chosen language. What is decided here is which sentence is said and how they are put together; a test holds the English to what the feature really does. The
+ * names of buttons and screens a sentence points to (EXPORT .JSON, TARGET COMPUTER, FORGET WORDS) are passed in as arguments, so a sentence and the button it
+ * names cannot read differently. The two sentences DELETE DATA also says are read from the same resources (`storage_cannot_undo`, `storage_not_elsewhere`),
+ * so they cannot differ.
  */
 object WordSuggestionText {
-    fun switchLabel(on: Boolean): String = "WORD SUGGESTIONS: ${if (on) "ON" else "OFF"}"
+    const val SWITCH_ON = "words_switch_on"
+    const val SWITCH_OFF = "words_switch_off"
+    const val FORGET_BUTTON = "words_forget_button"
+    const val TARGET_COMPUTER_LABEL = "label_target_computer"
 
-    const val SWITCH_EXPLANATION =
-        "WHEN ON, THE STATEMENT COMPOSER OFFERS WORDS UNDER THE TEXT BOX: THE REST OF THE WORD YOU ARE TYPING, OR THE WORD THAT USUALLY COMES NEXT. " +
-            "NOTHING IS ADDED UNTIL YOU TAP IT. " +
-            "IT STARTS EMPTY AND LEARNS ONLY FROM STATEMENTS YOU SAVE, SPEAK OR COPY, AND FROM NAMES YOU ALREADY KEEP IN TARGET COMPUTER AND SHARED VARIABLES. " +
-            "IT NEVER LEARNS FROM THE EMERGENCY DECK, THE TERMINAL, MANUAL OVERRIDE, TAGS OR NUMBERS. " +
-            "THE WORDS ARE KEPT ON THIS PHONE ONLY AND ARE INCLUDED IF YOU SAVE EXPORT .JSON. FORGET WORDS REMOVES THEM."
+    private const val EXPLAIN_WHEN_ON = "words_explain_when_on"
+    private const val EXPLAIN_TAP = "words_explain_tap"
+    private const val EXPLAIN_LEARNS = "words_explain_learns"
+    private const val EXPLAIN_NEVER = "words_explain_never"
+    private const val EXPLAIN_KEPT = "words_explain_kept"
+    private const val COUNT_NONE = "words_count_none"
+    private const val COUNT = "words_count"
+    private const val USED = "words_used"
+    private const val FORGET_REMOVES = "words_forget_removes"
+    private const val FORGET_SAVED = "words_forget_saved"
+    private const val FORGET_NAMES = "words_forget_names"
+    private const val FORGET_STAYS = "words_forget_stays"
 
-    // For everyone: said once, dismissible, and nothing is learned unless it is tapped.
-    const val OFFER_TEXT =
-        "NEW: WORD SUGGESTIONS IN THE STATEMENT COMPOSER. IT IS OFF AND NOTHING IS LEARNED UNLESS YOU TURN IT ON."
-    const val OFFER_TURN_ON = "TURN ON"
-    const val OFFER_NOT_NOW = "NOT NOW"
+    /** ON or OFF said in words, not only by colour. */
+    fun switchLabel(text: TextSource, on: Boolean): String = text.get(if (on) SWITCH_ON else SWITCH_OFF)
+
+    /** What it offers, that nothing is added without a tap, what it learns from and never learns from, and where the words are kept: five sentences, joined here. */
+    fun explanation(text: TextSource): String = listOf(
+        text.get(EXPLAIN_WHEN_ON),
+        text.get(EXPLAIN_TAP),
+        text.get(EXPLAIN_LEARNS, text.get(TARGET_COMPUTER_LABEL)),
+        text.get(EXPLAIN_NEVER),
+        text.get(EXPLAIN_KEPT, text.get(StorageCatalogue.EXPORT_JSON_LABEL), text.get(FORGET_BUTTON)),
+    ).joinToString(" ")
 
     // ---- FORGET WORDS (SETTINGS) ----------------------------------------------------------------------------------------------
 
-    const val FORGET_BUTTON = "FORGET WORDS"
-    const val FORGET_TITLE = "FORGET WORDS"
-    const val FORGET_EMPTY =
-        "NO WORDS LEARNED YET. THEY APPEAR HERE AFTER YOU SAVE, SPEAK OR COPY A STATEMENT WITH WORD SUGGESTIONS ON."
+    fun countLine(text: TextSource, count: Int): String = if (count <= 0) text.get(COUNT_NONE) else text.get(COUNT, count)
 
-    fun countLine(count: Int): String = "WORDS LEARNED: ${if (count <= 0) "NONE YET" else count.toString()}"
+    /** How often a word was used; the word for "time" has the forms each language needs. */
+    fun usedLine(text: TextSource, times: Int): String = text.count(USED, times)
 
-    fun usedLine(times: Int): String = "USED $times ${if (times == 1) "TIME" else "TIMES"}"
-
-    // One word: removing it only takes one more tap to confirm, and it can be learned again.
-    const val REMOVE_QUESTION = "REMOVE THIS WORD? IT CAN BE LEARNED AGAIN LATER."
-    const val REMOVE = "REMOVE"
-    const val REMOVE_CANCEL = "KEEP"
-
-    // All of them: asks twice, names the backup first, and says what is not touched.
-    const val FORGET_ALL = "FORGET ALL WORDS"
-    const val BACK_UP_FIRST = "BACK UP FIRST"
-    const val CONTINUE = "CONTINUE"
-    const val CANCEL = "CANCEL"
-    // The same two sentences DELETE DATA says (strings.xml `storage_cannot_undo`, `storage_not_elsewhere`). This screen's own words move to string
-    // resources in a later change; until then they stay word for word, and WordSuggestionTextTest fails if the two ever differ.
-    const val FORGET_ALL_SECOND = "THIS CANNOT BE UNDONE."
-    const val NOT_ELSEWHERE =
-        "THIS DOES NOT DELETE FILES YOU SAVED ELSEWHERE (EXPORTS, PACKAGES, BACKUPS) OR ANYTHING YOU COPIED TO ANOTHER APP."
-
-    fun forgetAllFirstConfirmation(count: Int): List<String> = listOf(
-        "THIS REMOVES ${if (count == 1) "THE 1 LEARNED WORD" else "ALL $count LEARNED WORDS"} AND WHICH WORDS FOLLOW WHICH.",
-        "THEY ARE IN EXPORT .JSON. SAVE IT FIRST IF YOU MIGHT WANT THEM BACK.",
-        "NAMES FROM TARGET COMPUTER AND SHARED VARIABLES ARE NOT AFFECTED: THEY ARE NOT STORED HERE.",
-        "WORD SUGGESTIONS STAYS ON OR OFF AS IT IS. WHILE IT IS ON, WORDS ARE LEARNED AGAIN AS YOU SAVE, SPEAK OR COPY.",
-        NOT_ELSEWHERE,
+    /** Asking about all of them: says what is removed (with the count), the backup first, what is not touched, and what stays as it is. Five sentences, shown one after another. */
+    fun forgetAllFirstConfirmation(text: TextSource, count: Int): List<String> = listOf(
+        text.count(FORGET_REMOVES, count),
+        text.get(FORGET_SAVED, text.get(StorageCatalogue.EXPORT_JSON_LABEL)),
+        text.get(FORGET_NAMES, text.get(TARGET_COMPUTER_LABEL)),
+        text.get(FORGET_STAYS),
+        notElsewhere(text),
     )
+
+    /** The second confirmation: the same sentence DELETE DATA says. */
+    fun forgetAllSecond(text: TextSource): String = text.get(StorageCatalogue.CANNOT_UNDO)
+
+    /** Files saved elsewhere are not deleted: the same sentence DELETE DATA says. */
+    fun notElsewhere(text: TextSource): String = text.get(StorageCatalogue.NOT_ELSEWHERE)
 }

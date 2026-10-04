@@ -167,7 +167,7 @@ class WordSuggestionsUiWiringTest {
     fun theSwitchWritesThroughAssistPrefs_andSaysOnOrOffInWords() {
         val c = code(section)
         assertTrue(c.contains("AssistPrefs.setWordSuggestions(context, on)"))
-        assertTrue(c.contains("WordSuggestionText.switchLabel(on)"))
+        assertTrue(c.contains("WordSuggestionText.switchLabel(text, on)"))
     }
 
     @Test
@@ -176,19 +176,19 @@ class WordSuggestionsUiWiringTest {
         // one word: REMOVE only opens a question; the word goes only from the question's own REMOVE
         assertEquals(1, Regex("""LearnedWordsRepository\.forget\(""").findAll(c).count())
         val forgetAt = c.indexOf("LearnedWordsRepository.forget(")
-        assertTrue("forget(word) must sit after the confirmation question", forgetAt > c.indexOf("WordSuggestionText.REMOVE_QUESTION"))
+        assertTrue("forget(word) must sit after the confirmation question", forgetAt > c.indexOf("R.string.words_remove_question"))
         // all: one call, only inside the second confirmation, and a first confirmation that offers BACK UP FIRST
         assertEquals(1, Regex("""LearnedWordsRepository\.forgetAll\(""").findAll(c).count())
         val second = blockAfter(c, "if (secondForAll) {")
         assertTrue(second.contains("LearnedWordsRepository.forgetAll(context)"))
-        assertTrue(second.contains("WordSuggestionText.FORGET_ALL_SECOND"))
+        assertTrue(second.contains("WordSuggestionText.forgetAllSecond(text)"))
         val first = blockAfter(c, "if (firstForAll && !secondForAll) {")
-        assertTrue(first.contains("WordSuggestionText.BACK_UP_FIRST"))
-        assertTrue(first.contains("WordSuggestionText.forgetAllFirstConfirmation("))
+        assertTrue(first.contains("R.string.delete_data_back_up_first"))
+        assertTrue(first.contains("WordSuggestionText.forgetAllFirstConfirmation(text, words.size)"))
         assertFalse("the first confirmation deletes nothing", first.contains("forgetAll("))
         // CANCEL comes before the destructive button on the second confirmation
-        val cancelAt = second.indexOf("NeonButton(WordSuggestionText.CANCEL")
-        val forgetAllAt = second.indexOf("NeonButton(WordSuggestionText.FORGET_ALL")
+        val cancelAt = second.indexOf("NeonButton(stringResource(R.string.common_cancel)")
+        val forgetAllAt = second.indexOf("NeonButton(stringResource(R.string.words_forget_all)")
         assertTrue("both buttons must be there", cancelAt >= 0 && forgetAllAt >= 0)
         assertTrue("CANCEL must come first", cancelAt < forgetAllAt)
     }

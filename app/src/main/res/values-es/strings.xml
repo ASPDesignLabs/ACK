@@ -660,4 +660,36 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="defaults_backup_failed">FALLÓ LA COPIA. NO SE CAMBIÓ NADA.</string>
     <string name="defaults_apply">APLICAR</string>
     <string name="defaults_updated">AJUSTES ACTUALIZADOS</string>
+    <string name="words_title">SUGERENCIAS DE PALABRAS</string>
+    <string name="words_switch_on">SUGERENCIAS DE PALABRAS: ACTIVADAS</string>
+    <string name="words_switch_off">SUGERENCIAS DE PALABRAS: DESACTIVADAS</string>
+    <string name="words_explain_when_on">AL ACTIVARLAS, EL COMPOSITOR DE MENSAJES OFRECE PALABRAS DEBAJO DEL CUADRO DE TEXTO: EL RESTO DE LA PALABRA QUE ESCRIBES, O LA PALABRA QUE SUELE VENIR DESPUÉS.</string>
+    <string name="words_explain_tap">NO SE AÑADE NADA HASTA QUE LA TOCAS.</string>
+    <string name="words_explain_learns">EMPIEZA VACÍO Y SOLO APRENDE DE LOS MENSAJES QUE GUARDAS, DICES O COPIAS, Y DE LOS NOMBRES QUE YA TIENES EN %1$s Y EN VARIABLES RAÍZ COMPARTIDAS.</string>
+    <string name="words_explain_never">NUNCA APRENDE DEL MAZO DE EMERGENCIA, LA TERMINAL, LA ANULACIÓN MANUAL, LAS ETIQUETAS NI LOS NÚMEROS.</string>
+    <string name="words_explain_kept">LAS PALABRAS SE GUARDAN SOLO EN ESTE TELÉFONO Y SE INCLUYEN SI GUARDAS %1$s. %2$s LAS QUITA.</string>
+    <string name="words_offer_text">NUEVO: SUGERENCIAS DE PALABRAS EN EL COMPOSITOR DE MENSAJES. ESTÁ DESACTIVADO Y NO SE APRENDE NADA A MENOS QUE LO ACTIVES.</string>
+    <string name="words_offer_turn_on">ACTIVAR</string>
+    <string name="words_offer_not_now">AHORA NO</string>
+    <string name="words_forget_button">OLVIDAR PALABRAS</string>
+    <string name="words_forget_empty">TODAVÍA NO SE HA APRENDIDO NINGUNA PALABRA. APARECEN AQUÍ DESPUÉS DE GUARDAR, DECIR O COPIAR UN MENSAJE CON LAS SUGERENCIAS DE PALABRAS ACTIVADAS.</string>
+    <string name="words_count_none">PALABRAS APRENDIDAS: NINGUNA TODAVÍA</string>
+    <string name="words_count">PALABRAS APRENDIDAS: %1$d</string>
+    <string name="words_remove_question">¿QUITAR ESTA PALABRA? SE PUEDE VOLVER A APRENDER MÁS ADELANTE.</string>
+    <string name="words_remove">QUITAR</string>
+    <string name="words_keep">CONSERVAR</string>
+    <string name="words_forget_all">OLVIDAR TODAS LAS PALABRAS</string>
+    <string name="words_forget_saved">ESTÁN EN %1$s. GUÁRDALO ANTES SI QUIZÁ QUIERES RECUPERARLAS.</string>
+    <string name="words_forget_names">LOS NOMBRES DE %1$s Y DE LAS VARIABLES RAÍZ COMPARTIDAS NO SE VEN AFECTADOS: NO SE GUARDAN AQUÍ.</string>
+    <string name="words_forget_stays">LAS SUGERENCIAS DE PALABRAS SIGUEN ACTIVADAS O DESACTIVADAS COMO ESTÁN. MIENTRAS ESTÉN ACTIVADAS, SE VUELVEN A APRENDER PALABRAS AL GUARDAR, DECIR O COPIAR.</string>
+    <plurals name="words_used">
+        <item quantity="one">USADA %d VEZ</item>
+        <item quantity="many">USADA %d VECES</item>
+        <item quantity="other">USADA %d VECES</item>
+    </plurals>
+    <plurals name="words_forget_removes">
+        <item quantity="one">ESTO QUITA %d PALABRA APRENDIDA Y QUÉ PALABRAS SIGUEN A CUÁLES.</item>
+        <item quantity="many">ESTO QUITA LAS %d PALABRAS APRENDIDAS Y QUÉ PALABRAS SIGUEN A CUÁLES.</item>
+        <item quantity="other">ESTO QUITA LAS %d PALABRAS APRENDIDAS Y QUÉ PALABRAS SIGUEN A CUÁLES.</item>
+    </plurals>
 </resources>

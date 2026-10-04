@@ -657,4 +657,34 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="defaults_backup_failed">बैकअप नहीं हो सका। कुछ भी नहीं बदला गया।</string>
     <string name="defaults_apply">लागू करें</string>
     <string name="defaults_updated">सेटिंग अपडेट हो गईं</string>
+    <string name="words_title">शब्द सुझाव</string>
+    <string name="words_switch_on">शब्द सुझाव: चालू</string>
+    <string name="words_switch_off">शब्द सुझाव: बंद</string>
+    <string name="words_explain_when_on">चालू होने पर, कथन संपादक टेक्स्ट बॉक्स के नीचे शब्द सुझाता है: आप जो शब्द टाइप कर रहे हैं उसका बाकी हिस्सा, या वह शब्द जो आमतौर पर आगे आता है।</string>
+    <string name="words_explain_tap">जब तक आप उस पर टैप न करें, कुछ नहीं जुड़ता।</string>
+    <string name="words_explain_learns">यह खाली शुरू होता है और सिर्फ़ उन कथनों से सीखता है जिन्हें आप सहेजते, बोलते या कॉपी करते हैं, और उन नामों से जो आप पहले से %1$s और साझा मूल वेरिएबल में रखते हैं।</string>
+    <string name="words_explain_never">यह आपातकाल डेक, टर्मिनल, मैन्युअल ओवरराइड, टैग या संख्याओं से कभी नहीं सीखता।</string>
+    <string name="words_explain_kept">शब्द सिर्फ़ इसी फ़ोन पर रखे जाते हैं और अगर आप %1$s सहेजें तो उसमें शामिल होते हैं। %2$s उन्हें हटा देता है।</string>
+    <string name="words_offer_text">नया: कथन संपादक में शब्द सुझाव। यह बंद है और जब तक आप इसे चालू न करें, कुछ नहीं सीखा जाता।</string>
+    <string name="words_offer_turn_on">चालू करें</string>
+    <string name="words_offer_not_now">अभी नहीं</string>
+    <string name="words_forget_button">शब्द भूलें</string>
+    <string name="words_forget_empty">अभी तक कोई शब्द नहीं सीखा गया। शब्द सुझाव चालू रहते हुए कोई कथन सहेजने, बोलने या कॉपी करने के बाद वे यहाँ दिखते हैं।</string>
+    <string name="words_count_none">सीखे गए शब्द: अभी कोई नहीं</string>
+    <string name="words_count">सीखे गए शब्द: %1$d</string>
+    <string name="words_remove_question">यह शब्द हटाएँ? इसे बाद में फिर से सीखा जा सकता है।</string>
+    <string name="words_remove">हटाएँ</string>
+    <string name="words_keep">रखें</string>
+    <string name="words_forget_all">सभी शब्द भूलें</string>
+    <string name="words_forget_saved">वे %1$s में हैं। अगर आप उन्हें वापस चाहें तो पहले उसे सहेजें।</string>
+    <string name="words_forget_names">%1$s और साझा मूल वेरिएबल के नामों पर असर नहीं पड़ता: वे यहाँ नहीं रखे जाते।</string>
+    <string name="words_forget_stays">शब्द सुझाव जैसा है वैसा चालू या बंद रहता है। इसके चालू रहते, सहेजने, बोलने या कॉपी करने पर शब्द फिर से सीखे जाते हैं।</string>
+    <plurals name="words_used">
+        <item quantity="one">%d बार इस्तेमाल हुआ</item>
+        <item quantity="other">%d बार इस्तेमाल हुआ</item>
+    </plurals>
+    <plurals name="words_forget_removes">
+        <item quantity="one">यह %d सीखे गए शब्द और कौन-से शब्द किसके बाद आते हैं, यह हटा देता है।</item>
+        <item quantity="other">यह सभी %d सीखे गए शब्द और कौन-से शब्द किसके बाद आते हैं, यह हटा देता है।</item>
+    </plurals>
 </resources>

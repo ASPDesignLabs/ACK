@@ -669,4 +669,42 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="defaults_backup_failed">فشل النسخ الاحتياطي. لم يتغير شيء.</string>
     <string name="defaults_apply">تطبيق</string>
     <string name="defaults_updated">تم تحديث الإعدادات</string>
+    <string name="words_title">اقتراحات الكلمات</string>
+    <string name="words_switch_on">اقتراحات الكلمات: مفعّلة</string>
+    <string name="words_switch_off">اقتراحات الكلمات: متوقفة</string>
+    <string name="words_explain_when_on">عند التفعيل، يقترح محرر العبارات كلمات أسفل مربع النص: بقية الكلمة التي تكتبها، أو الكلمة التي تأتي عادة بعدها.</string>
+    <string name="words_explain_tap">لا تتم إضافة شيء حتى تضغط عليه.</string>
+    <string name="words_explain_learns">يبدأ فارغًا ولا يتعلم إلا من العبارات التي تحفظها أو تنطقها أو تنسخها، ومن الأسماء التي تحتفظ بها بالفعل في %1$s والمتغيرات الجذرية المشتركة.</string>
+    <string name="words_explain_never">لا يتعلم أبدًا من حزمة الطوارئ أو الطرفية أو التجاوز اليدوي أو الوسوم أو الأرقام.</string>
+    <string name="words_explain_kept">تبقى الكلمات على هذا الهاتف فقط وتُضمَّن إذا حفظت %1$s. %2$s يزيلها.</string>
+    <string name="words_offer_text">جديد: اقتراحات الكلمات في محرر العبارات. هي متوقفة ولا يتم تعلم أي شيء ما لم تفعّلها.</string>
+    <string name="words_offer_turn_on">تفعيل</string>
+    <string name="words_offer_not_now">ليس الآن</string>
+    <string name="words_forget_button">نسيان الكلمات</string>
+    <string name="words_forget_empty">لا توجد كلمات متعلَّمة بعد. تظهر هنا بعد أن تحفظ عبارة أو تنطقها أو تنسخها مع تفعيل اقتراحات الكلمات.</string>
+    <string name="words_count_none">الكلمات المتعلَّمة: لا شيء بعد</string>
+    <string name="words_count">الكلمات المتعلَّمة: %1$d</string>
+    <string name="words_remove_question">هل تريد إزالة هذه الكلمة؟ يمكن تعلمها مرة أخرى لاحقًا.</string>
+    <string name="words_remove">إزالة</string>
+    <string name="words_keep">إبقاء</string>
+    <string name="words_forget_all">نسيان كل الكلمات</string>
+    <string name="words_forget_saved">هي موجودة في %1$s. احفظه أولًا إذا كنت قد ترغب في استعادتها.</string>
+    <string name="words_forget_names">أسماء %1$s والمتغيرات الجذرية المشتركة لا تتأثر: فهي غير مخزنة هنا.</string>
+    <string name="words_forget_stays">تبقى اقتراحات الكلمات مفعّلة أو متوقفة كما هي. وما دامت مفعّلة، تُتعلَّم الكلمات من جديد عند الحفظ أو النطق أو النسخ.</string>
+    <plurals name="words_used">
+        <item quantity="zero">استُخدمت %d مرة</item>
+        <item quantity="one">استُخدمت مرة واحدة</item>
+        <item quantity="two">استُخدمت مرتين</item>
+        <item quantity="few">استُخدمت %d مرات</item>
+        <item quantity="many">استُخدمت %d مرة</item>
+        <item quantity="other">استُخدمت %d مرة</item>
+    </plurals>
+    <plurals name="words_forget_removes">
+        <item quantity="zero">هذا يزيل كل الكلمات المتعلَّمة وعددها %d وأي الكلمات تتبع أيها.</item>
+        <item quantity="one">هذا يزيل الكلمة المتعلَّمة الوحيدة وأي الكلمات تتبع أيها.</item>
+        <item quantity="two">هذا يزيل الكلمتين المتعلَّمتين وأي الكلمات تتبع أيها.</item>
+        <item quantity="few">هذا يزيل كل الكلمات المتعلَّمة وعددها %d وأي الكلمات تتبع أيها.</item>
+        <item quantity="many">هذا يزيل كل الكلمات المتعلَّمة وعددها %d وأي الكلمات تتبع أيها.</item>
+        <item quantity="other">هذا يزيل كل الكلمات المتعلَّمة وعددها %d وأي الكلمات تتبع أيها.</item>
+    </plurals>
 </resources>

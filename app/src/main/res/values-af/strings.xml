@@ -657,4 +657,34 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="defaults_backup_failed">RUGSTEUNKOPIE MISLUK. NIKS IS VERANDER NIE.</string>
     <string name="defaults_apply">PAS TOE</string>
     <string name="defaults_updated">INSTELLINGS OPGEDATEER</string>
+    <string name="words_title">WOORDVOORSTELLE</string>
+    <string name="words_switch_on">WOORDVOORSTELLE: AAN</string>
+    <string name="words_switch_off">WOORDVOORSTELLE: AF</string>
+    <string name="words_explain_when_on">WANNEER AAN, BIED DIE BOODSKAPSKRYWER WOORDE ONDER DIE TEKSKAS AAN: DIE RES VAN DIE WOORD WAT JY TIK, OF DIE WOORD WAT GEWOONLIK VOLG.</string>
+    <string name="words_explain_tap">NIKS WORD BYGEVOEG TOTDAT JY DAAROP TIK NIE.</string>
+    <string name="words_explain_learns">DIT BEGIN LEEG EN LEER SLEGS VAN BOODSKAPPE WAT JY STOOR, PRAAT OF KOPIEER, EN VAN NAME WAT JY REEDS IN %1$s EN GEDEELDE WORTELVERANDERLIKES HOU.</string>
+    <string name="words_explain_never">DIT LEER NOOIT VAN DIE NOODGEVAL-DEK, DIE TERMINAAL, HANDMATIGE OORSKRYWING, MERKERS OF GETALLE NIE.</string>
+    <string name="words_explain_kept">DIE WOORDE WORD SLEGS OP HIERDIE FOON GEHOU EN WORD INGESLUIT AS JY %1$s STOOR. %2$s VERWYDER HULLE.</string>
+    <string name="words_offer_text">NUUT: WOORDVOORSTELLE IN DIE BOODSKAPSKRYWER. DIT IS AF EN NIKS WORD GELEER TENSY JY DIT AANSKAKEL NIE.</string>
+    <string name="words_offer_turn_on">SKAKEL AAN</string>
+    <string name="words_offer_not_now">NIE NOU NIE</string>
+    <string name="words_forget_button">VERGEET WOORDE</string>
+    <string name="words_forget_empty">NOG GEEN WOORDE GELEER NIE. HULLE VERSKYN HIER NADAT JY \'N BOODSKAP STOOR, PRAAT OF KOPIEER MET WOORDVOORSTELLE AAN.</string>
+    <string name="words_count_none">WOORDE GELEER: NOG GEEN</string>
+    <string name="words_count">WOORDE GELEER: %1$d</string>
+    <string name="words_remove_question">VERWYDER HIERDIE WOORD? DIT KAN LATER WEER GELEER WORD.</string>
+    <string name="words_remove">VERWYDER</string>
+    <string name="words_keep">HOU</string>
+    <string name="words_forget_all">VERGEET ALLE WOORDE</string>
+    <string name="words_forget_saved">HULLE IS IN %1$s. STOOR DIT EERS AS JY HULLE MISKIEN TERUG WIL HÊ.</string>
+    <string name="words_forget_names">NAME UIT %1$s EN GEDEELDE WORTELVERANDERLIKES WORD NIE GERAAK NIE: HULLE WORD NIE HIER GEBERG NIE.</string>
+    <string name="words_forget_stays">WOORDVOORSTELLE BLY AAN OF AF SOOS DIT IS. TERWYL DIT AAN IS, WORD WOORDE WEER GELEER AS JY STOOR, PRAAT OF KOPIEER.</string>
+    <plurals name="words_used">
+        <item quantity="one">%d KEER GEBRUIK</item>
+        <item quantity="other">%d KEER GEBRUIK</item>
+    </plurals>
+    <plurals name="words_forget_removes">
+        <item quantity="one">DIT VERWYDER DIE %d GELEERDE WOORD EN WATTER WOORDE WATTER ANDER VOLG.</item>
+        <item quantity="other">DIT VERWYDER ALLE %d GELEERDE WOORDE EN WATTER WOORDE WATTER ANDER VOLG.</item>
+    </plurals>
 </resources>

@@ -9,7 +9,6 @@ import com.example.besu.computer.*
 import com.example.besu.core.AssistSettings
 import com.example.besu.core.Prediction
 import com.example.besu.core.TextInsertion
-import com.example.besu.core.WordSuggestionText
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -1252,7 +1251,7 @@ private fun consumeSingleUseComputerTags(context: Context, template: String) {
     }
 }
 
-// The one-time offer for WORD SUGGESTIONS (core/WordSuggestionText.kt holds the words, tested). Same shape as the PROFILES offer in SETTINGS: it says
+// The one-time offer for WORD SUGGESTIONS (its words are string resources, words_offer_*). Same shape as the PROFILES offer in SETTINGS: it says
 // what it is, that it is off, and that nothing is learned unless TURN ON is tapped. 12 sp text, 12 sp buttons, no animation.
 @Composable
 private fun WordSuggestionsOffer(
@@ -1270,7 +1269,7 @@ private fun WordSuggestionsOffer(
             .padding(12.dp)
     ) {
         Text(
-            WordSuggestionText.OFFER_TEXT,
+            stringResource(R.string.words_offer_text),
             color = Color.LightGray,
             fontSize = 12.sp,
             lineHeight = 17.sp,
@@ -1278,8 +1277,8 @@ private fun WordSuggestionsOffer(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NeonButton(WordSuggestionText.OFFER_TURN_ON, Modifier.weight(1f), mainColor = primaryColor) { onTurnOn() }
-            NeonButton(WordSuggestionText.OFFER_NOT_NOW, Modifier.weight(1f), mainColor = Color.White) { onNotNow() }
+            NeonButton(stringResource(R.string.words_offer_turn_on), Modifier.weight(1f), mainColor = primaryColor) { onTurnOn() }
+            NeonButton(stringResource(R.string.words_offer_not_now), Modifier.weight(1f), mainColor = Color.White) { onNotNow() }
         }
     }
 }

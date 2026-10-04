@@ -678,4 +678,34 @@
     <string name="defaults_backup_failed">BACKUP FAILED. NOTHING WAS CHANGED.</string>
     <string name="defaults_apply">APPLY</string>
     <string name="defaults_updated">SETTINGS UPDATED</string>
+    <string name="words_title">WORD SUGGESTIONS</string>
+    <string name="words_switch_on">WORD SUGGESTIONS: ON</string>
+    <string name="words_switch_off">WORD SUGGESTIONS: OFF</string>
+    <string name="words_explain_when_on">WHEN ON, THE STATEMENT COMPOSER OFFERS WORDS UNDER THE TEXT BOX: THE REST OF THE WORD YOU ARE TYPING, OR THE WORD THAT USUALLY COMES NEXT.</string>
+    <string name="words_explain_tap">NOTHING IS ADDED UNTIL YOU TAP IT.</string>
+    <string name="words_explain_learns">IT STARTS EMPTY AND LEARNS ONLY FROM STATEMENTS YOU SAVE, SPEAK OR COPY, AND FROM NAMES YOU ALREADY KEEP IN %1$s AND SHARED VARIABLES.</string>
+    <string name="words_explain_never">IT NEVER LEARNS FROM THE EMERGENCY DECK, THE TERMINAL, MANUAL OVERRIDE, TAGS OR NUMBERS.</string>
+    <string name="words_explain_kept">THE WORDS ARE KEPT ON THIS PHONE ONLY AND ARE INCLUDED IF YOU SAVE %1$s. %2$s REMOVES THEM.</string>
+    <string name="words_offer_text">NEW: WORD SUGGESTIONS IN THE STATEMENT COMPOSER. IT IS OFF AND NOTHING IS LEARNED UNLESS YOU TURN IT ON.</string>
+    <string name="words_offer_turn_on">TURN ON</string>
+    <string name="words_offer_not_now">NOT NOW</string>
+    <string name="words_forget_button">FORGET WORDS</string>
+    <string name="words_forget_empty">NO WORDS LEARNED YET. THEY APPEAR HERE AFTER YOU SAVE, SPEAK OR COPY A STATEMENT WITH WORD SUGGESTIONS ON.</string>
+    <string name="words_count_none">WORDS LEARNED: NONE YET</string>
+    <string name="words_count">WORDS LEARNED: %1$d</string>
+    <string name="words_remove_question">REMOVE THIS WORD? IT CAN BE LEARNED AGAIN LATER.</string>
+    <string name="words_remove">REMOVE</string>
+    <string name="words_keep">KEEP</string>
+    <string name="words_forget_all">FORGET ALL WORDS</string>
+    <string name="words_forget_saved">THEY ARE IN %1$s. SAVE IT FIRST IF YOU MIGHT WANT THEM BACK.</string>
+    <string name="words_forget_names">NAMES FROM %1$s AND SHARED VARIABLES ARE NOT AFFECTED: THEY ARE NOT STORED HERE.</string>
+    <string name="words_forget_stays">WORD SUGGESTIONS STAYS ON OR OFF AS IT IS. WHILE IT IS ON, WORDS ARE LEARNED AGAIN AS YOU SAVE, SPEAK OR COPY.</string>
+    <plurals name="words_used">
+        <item quantity="one">USED %d TIME</item>
+        <item quantity="other">USED %d TIMES</item>
+    </plurals>
+    <plurals name="words_forget_removes">
+        <item quantity="one">THIS REMOVES THE %d LEARNED WORD AND WHICH WORDS FOLLOW WHICH.</item>
+        <item quantity="other">THIS REMOVES ALL %d LEARNED WORDS AND WHICH WORDS FOLLOW WHICH.</item>
+    </plurals>
 </resources>
