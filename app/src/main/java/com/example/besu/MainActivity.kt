@@ -124,6 +124,12 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    // INTERFACE LANGUAGE (core/InterfaceLanguage.kt): the language of ACK's own words is applied here, before anything reads a string resource. It
+    // changes only after a restart, which is what a change of language does. If anything goes wrong it shows English and ACK still opens.
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(InterfaceLocale.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -776,7 +782,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         fontSize = 28.sp,
                                         fontFamily = FontFamily.Monospace,
                                         fontWeight = FontWeight.Black,
-                                        letterSpacing = 4.sp
+                                        letterSpacing = looseSpacing(4.sp)
                                     )
 
                                     Spacer(modifier = Modifier.width(16.dp))
@@ -849,7 +855,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     fontSize = 8.sp,
                                     fontFamily = FontFamily.Monospace,
                                     fontWeight = FontWeight.Bold,
-                                    letterSpacing = 2.sp
+                                    letterSpacing = looseSpacing(2.sp)
                                 )
 
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -878,7 +884,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         color = Color.Gray,
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace,
-                                        letterSpacing = 1.sp
+                                        letterSpacing = looseSpacing(1.sp)
                                     )
 
                                     Text(
@@ -1189,7 +1195,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
                                         fontWeight = FontWeight.Black,
-                                        letterSpacing = 1.sp
+                                        letterSpacing = looseSpacing(1.sp)
                                     )
 
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -2082,7 +2088,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
         }
     }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.settings
 
+import com.example.besu.ui.looseSpacing
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -57,7 +58,7 @@ fun WordSuggestionsSection(
     var refresh by remember { mutableIntStateOf(0) }
     val count = remember(refresh) { LearnedWordsRepository.wordCount(context) }
 
-    Text("WORD SUGGESTIONS", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+    Text("WORD SUGGESTIONS", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
     Spacer(modifier = Modifier.height(10.dp))
 
     // On or off, said in words (not only colour) and without animation. Choosing it by hand also answers the composer's one-time offer.

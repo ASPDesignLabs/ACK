@@ -282,7 +282,7 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(labelFor(LabelKey.GEO_PROTOCOL), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(labelFor(LabelKey.GEO_PROTOCOL), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
             NeonButton(if (isMasterEnabled) "SYSTEM: ON" else "SYSTEM: OFF", isActive = isMasterEnabled, mainColor = primaryColor) {
                 GeoRepository.setGeoEnabled(context, !isMasterEnabled); GeoEngineController.syncEngineState(context); refreshKey++
             }
@@ -348,7 +348,7 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("${labelFor(LabelKey.GEO_NODES)} [${zones.size}]", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+        Text("${labelFor(LabelKey.GEO_NODES)} [${zones.size}]", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
         Spacer(modifier = Modifier.height(12.dp))
 
         LazyColumn(modifier = Modifier.weight(1f)) {
@@ -428,7 +428,7 @@ private fun GeoMapActionConfirmDialog(
                 .border(1.dp, primaryColor, CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp))
                 .padding(18.dp)
         ) {
-            Text(title, color = primaryColor, fontSize = 15.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+            Text(title, color = primaryColor, fontSize = 15.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(1.sp))
             Spacer(modifier = Modifier.height(12.dp))
             Text(body, color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.height(18.dp))

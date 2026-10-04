@@ -99,7 +99,7 @@ fun HeroButton(text: String, modifier: Modifier = Modifier, mainColor: Color, on
         colors = ButtonDefaults.buttonColors(containerColor = Graphite, contentColor = mainColor),
         border = BorderStroke(2.dp, mainColor)
     ) {
-        Text(text.uppercase(), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 4.sp, fontSize = 12.sp)
+        Text(text.uppercase(), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = looseSpacing(4.sp), fontSize = 12.sp)
     }
 }
 

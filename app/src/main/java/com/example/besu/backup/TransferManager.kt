@@ -5,6 +5,7 @@ import com.example.besu.capture.TrainingScript
 import com.example.besu.capture.TrainingStore
 import com.example.besu.computer.*
 import com.example.besu.core.BackupFingerprint
+import com.example.besu.core.InterfaceLanguage
 import com.example.besu.core.SpeechLanguage
 import com.example.besu.data.*
 import com.example.besu.decks.*
@@ -393,6 +394,7 @@ object TransferManager {
             warnBeforeProfileChange = AssistPrefs.profileChangeWarningStored(context),
             learnedWords = LearnedWordsRepository.exportForBackup(context),
             speechLanguage = AssistPrefs.speechLanguageStored(context),
+            interfaceLanguage = AssistPrefs.interfaceLanguageStored(context),
             plainWords = AssistPrefs.plainWordsStored(context),
         )
     }
@@ -1047,6 +1049,12 @@ object TransferManager {
             return false
         }
 
+        // 23. INTERFACE LANGUAGE: one of the stored names, or null. Anything else is not a setting this build knows.
+        if (backup.interfaceLanguage != null && InterfaceLanguage.fromStored(backup.interfaceLanguage) == null) {
+            Log.e("ACK_IMPORT", "interfaceLanguage is not a known language setting: \"${backup.interfaceLanguage.take(20)}\" (${backup.interfaceLanguage.length} chars)")
+            return false
+        }
+
         return true
     }
 
@@ -1411,6 +1419,10 @@ object TransferManager {
 
         // SPEECH LANGUAGE: a backup that says nothing (null) leaves the device's own choice alone.
         SpeechLanguage.fromStored(backup.speechLanguage)?.let { AssistPrefs.setSpeechLanguage(context, it) }
+
+        // INTERFACE LANGUAGE: a backup that says nothing (null) leaves the device's own choice alone. A FULL RESTORE restarts ACK afterwards, which is when
+        // the language is applied.
+        InterfaceLanguage.fromStored(backup.interfaceLanguage)?.let { AssistPrefs.setInterfaceLanguage(context, it) }
 
         // PLAIN WORDS: a backup that says nothing (null) leaves the device's own choice alone. The label wording is a switch, so it is applied at
         // once; the screens redraw from the saved value when next opened.

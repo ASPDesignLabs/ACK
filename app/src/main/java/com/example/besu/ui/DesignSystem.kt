@@ -152,7 +152,7 @@ fun NeonButton(
         // FIX: Button is always enabled so we can click it to switch tabs
         enabled = true 
     ) {
-        Text(text.uppercase(), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, fontSize = 12.sp)
+        Text(text.uppercase(), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp), fontSize = 12.sp)
     }
 }
 
@@ -322,7 +322,7 @@ fun RowScope.ThemeOption(
             .clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if(active) activeColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+        Text(label, color = if(active) activeColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
     }
 }
 
@@ -467,6 +467,13 @@ private val PATCH_NOTES = listOf(
     "  AND CLOSING ACK TURNS THEM OFF. THE TYPED COMMANDS STILL WORK",
     "- NEW: TYPE AND SPEAK (CLASSIC) ON THE TYPE TAB, FIX PROBLEMS IN",
     "  SETTINGS. LONG-TAIL TEXT AND THIS LIST STAY IN ACK'S OWN WORDS",
+    "-- LANGUAGE --",
+    "- NEW: A LANGUAGE CONTROL IN SETTINGS: ACK'S OWN WORDS IN SPANISH,",
+    "  PORTUGUESE, HINDI, ARABIC OR AFRIKAANS. AN INSTALL THAT ALREADY",
+    "  EXISTS STAYS ENGLISH UNTIL YOU CHOOSE; A NEW INSTALL FOLLOWS THE",
+    "  PHONE. CHOOSING ASKS FIRST AND RESTARTS ACK ONCE",
+    "- THESE ARE DRAFTS NOT YET CHECKED BY NATIVE SPEAKERS. HELP, THIS",
+    "  SCREEN AND MANY DIALOGS STAY IN ENGLISH. SEE DOCS/TRANSLATIONS.MD",
     "-- FIXES --",
     "- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE'S VARIABLES OR",
     "  PROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE",
@@ -1498,7 +1505,7 @@ fun TerminalView(
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                             fontSize = STATUSBOX_FONT_SIZE,
-                            letterSpacing = 2.sp
+                            letterSpacing = looseSpacing(2.sp)
                         )
                     }
 
@@ -1723,7 +1730,7 @@ fun TypeView(
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text(labelFor(LabelKey.MANUAL_OVERRIDE), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+        Text(labelFor(LabelKey.MANUAL_OVERRIDE), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -1817,7 +1824,7 @@ fun TypeView(
         // behind its own popup -- previously a single saved phrase would
         // permanently hide recents from this screen.
         if (recentPhrases.isNotEmpty()) {
-            Text("CACHE [RECENT]", color = primaryColor.copy(alpha=0.7f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+            Text("CACHE [RECENT]", color = primaryColor.copy(alpha=0.7f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
             Spacer(modifier = Modifier.height(8.dp))
             // Bounded height, not weight(1f) -- the outer Column now scrolls
             // (see below), and weight() only makes sense against a parent
@@ -1927,7 +1934,7 @@ fun QuickAccessAccordion(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("[$tag]", color = if(isExpanded) primaryColor else Color.Gray, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+                    Text("[$tag]", color = if(isExpanded) primaryColor else Color.Gray, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(1.sp))
                     Text(if(isExpanded) "▼" else "▶", color = if(isExpanded) primaryColor else Color.Gray, fontSize = 10.sp)
                 }
             }
@@ -2030,7 +2037,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
             item {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("SEQUENCE :: $deckName", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                    Text("SEQUENCE :: $deckName", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                     Text(
                         "[MANAGE CONTEXT]",
                         color = primaryColor,
@@ -2489,7 +2496,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 2.sp
+                            letterSpacing = looseSpacing(2.sp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -3292,7 +3299,7 @@ fun ManageContextDialog(
                                 fontSize = 10.sp,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
+                                letterSpacing = looseSpacing(1.sp)
                             )
                         }
                     }
@@ -3877,7 +3884,7 @@ fun MatrixCategory(
                     color = if (isFocused) primaryColor else Color.Gray,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
-                    letterSpacing = 2.sp
+                    letterSpacing = looseSpacing(2.sp)
                 )
             }
 
@@ -4164,7 +4171,7 @@ fun RootOverrideStrip(
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Text(
@@ -4719,7 +4726,7 @@ fun BuilderGuideCard(category: String, primaryColor: Color) {
         else -> "UNKNOWN" to "No data available."
     }
     Column(modifier = Modifier.fillMaxWidth().border(1.dp, primaryColor, CutCornerShape(8.dp)).background(primaryColor.copy(alpha = 0.05f)).padding(12.dp)) {
-        Text("// TACTICAL GUIDE: $title", color = primaryColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text("// TACTICAL GUIDE: $title", color = primaryColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(1.sp))
         Spacer(modifier = Modifier.height(4.dp))
         Text(body, color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
     }

@@ -507,6 +507,21 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
+            // INTERFACE LANGUAGE (settings/InterfaceLanguageSection.kt): the language of ACK's own words. A choice asks first and restarts ACK once.
+            item {
+                InterfaceLanguageSection(
+                    current = AssistPrefs.interfaceLanguage(context),
+                    primaryColor = primaryColor
+                ) { language ->
+                    AssistPrefs.setInterfaceLanguage(context, language)
+                    Toast.makeText(context, context.getString(R.string.interface_language_restarting), Toast.LENGTH_SHORT).show()
+                    pendingRestart = true
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
             // FIX PROBLEMS: the typed /repair as a button, shown while PLAIN WORDS is on. No confirmation, as the command: it restarts two
             // background services and deletes nothing.
             item {
@@ -533,7 +548,7 @@ fun SettingsView(
             }
 
             item {
-                Text("AUDIO OUTPUT ROUTING", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text("AUDIO OUTPUT ROUTING", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SettingsToggleRow(
@@ -716,7 +731,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("WATCH AUDIO FEEDBACK", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text("WATCH AUDIO FEEDBACK", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ThemeOption(0, "SHARP", if(toneTheme == 0) 0 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 0; syncAll()
@@ -734,7 +749,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("VISUAL PROMPT DISPLAY", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text("VISUAL PROMPT DISPLAY", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
@@ -783,7 +798,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text(labelFor(LabelKey.HARDWARE_CONFIG), color = NeonPalette.SWATCHES[5], fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.HARDWARE_CONFIG), color = NeonPalette.SWATCHES[5], fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text("CROWN RESISTANCE: LEVEL ${crownSens.toInt()}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
@@ -865,7 +880,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text(labelFor(LabelKey.SHAKE_KILL), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.SHAKE_KILL), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     "Shake the phone to immediately stop whatever it's currently saying or showing -- a backstop for a mistaken watch fire or a wrong tap.",
@@ -886,7 +901,7 @@ fun SettingsView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(labelFor(LabelKey.TRAIN_TEST), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+                    Text(labelFor(LabelKey.TRAIN_TEST), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(1.sp))
                     Text(
                         text = if (isShakeTestActive) "[STOP]" else "[TEST]",
                         color = if (isShakeTestActive) Color.Red else primaryColor,
@@ -933,7 +948,7 @@ fun SettingsView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(labelFor(LabelKey.ENV_SENSOR), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                    Text(labelFor(LabelKey.ENV_SENSOR), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                     if (hasMicPermission) {
                         Text(
                             text = if (isMonitoringActive) "[STOP]" else "[SCAN]",
@@ -1012,7 +1027,7 @@ fun SettingsView(
             }
 
             item {
-                Text(labelFor(LabelKey.QUICK_ACCESS_KEYS), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.QUICK_ACCESS_KEYS), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 for (i in 0..2) {
@@ -1068,7 +1083,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text(labelFor(LabelKey.TERMINAL_LOG), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.TERMINAL_LOG), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SettingsToggleRow(
@@ -1178,7 +1193,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text(labelFor(LabelKey.DATA_PORT), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.DATA_PORT), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     NeonButton(
@@ -1242,7 +1257,7 @@ fun SettingsView(
                 // Only when ACK has made one (before a data upgrade): they hold the same data as an export and are not encrypted.
                 if (safetyCopies.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
-                    Text(labelFor(LabelKey.SAFETY_COPIES), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                    Text(labelFor(LabelKey.SAFETY_COPIES), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                     safetyCopies.forEach { copy ->
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -1266,7 +1281,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("VOICE RECORDINGS", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text("VOICE RECORDINGS", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     "Manage voice clips recorded for Quick Actions prompts.",
@@ -1316,7 +1331,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("PROFILES", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text("PROFILES", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // The one-time offer, only where nothing was ever stored. It says what it does, starts with the switch OFF, and changes nothing
@@ -1386,7 +1401,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("AUTOCOMPLETE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text("AUTOCOMPLETE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     "ACK remembers what you've typed into Matrix and Quick Actions variable fields and Shared Root Variables, offering your most-used past values back as tappable chips that narrow as you type. Local to this device, and included in EXPORT .JSON backups.",

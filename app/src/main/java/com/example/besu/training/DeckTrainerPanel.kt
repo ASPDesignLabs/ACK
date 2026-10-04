@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.training
 
+import com.example.besu.ui.looseSpacing
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.ui.theme.*
@@ -120,7 +121,7 @@ fun DeckTrainerPanel(
                             fontSize = 13.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp
+                            letterSpacing = looseSpacing(1.sp)
                         )
 
                         Text(
@@ -249,7 +250,7 @@ private fun DeckConfigScreen(
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -281,7 +282,7 @@ private fun DeckConfigScreen(
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp
+                letterSpacing = looseSpacing(0.8.sp)
             )
 
             Text(
@@ -334,7 +335,7 @@ private fun DeckConfigScreen(
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -381,7 +382,7 @@ private fun DeckPlayingScreen(
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -408,7 +409,7 @@ private fun DeckPlayingScreen(
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.6.sp
+                    letterSpacing = looseSpacing(0.6.sp)
                 )
             }
 
@@ -462,7 +463,7 @@ private fun DeckResultsScreen(
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp
+            letterSpacing = looseSpacing(0.8.sp)
         )
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -505,7 +506,7 @@ private fun DeckResultsScreen(
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -539,7 +540,7 @@ private fun ExpandableHeaderRow(
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp
+            letterSpacing = looseSpacing(0.8.sp)
         )
 
         Text(
@@ -579,7 +580,7 @@ private fun PickRow(
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp
+            letterSpacing = looseSpacing(0.8.sp)
         )
 
         if (description != null) {
@@ -616,7 +617,7 @@ private fun DeckActionButton(
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
     }
 }
@@ -633,7 +634,7 @@ private fun LabeledStat(
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
 
         Spacer(modifier = Modifier.height(2.dp))
@@ -706,7 +707,7 @@ private fun DeckTelemetryReadout(
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
 
         Spacer(modifier = Modifier.height(4.dp))

@@ -87,7 +87,7 @@ fun TargetView(context: Context, primaryColor: Color) {
 
         // --- HEADER ---
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(labelFor(LabelKey.TARGET_COMPUTER), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(labelFor(LabelKey.TARGET_COMPUTER), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("CATEGORIES", color = if(subMode=="CATEGORIES") primaryColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { subMode = "CATEGORIES" })
                 Text("|", color = Color.DarkGray)
@@ -544,7 +544,7 @@ private fun ContactCardBrowserPanel(
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -579,7 +579,7 @@ private fun ContactCardBrowserSectionLabel(text: String) {
         fontSize = 9.sp,
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Bold,
-        letterSpacing = 1.sp,
+        letterSpacing = looseSpacing(1.sp),
         modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
     )
 }

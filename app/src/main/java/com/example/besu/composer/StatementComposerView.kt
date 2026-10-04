@@ -231,7 +231,7 @@ fun StatementComposerView(
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 2.sp
+                letterSpacing = looseSpacing(2.sp)
             )
 
             if (onToggleFullscreen != null) {

@@ -154,6 +154,10 @@ data class AckBackup(
     // ("nothing to say about this field": restore leaves the device's own choice alone).
     val speechLanguage: String? = null,
 
+    // INTERFACE LANGUAGE (data/AssistPrefs.kt): one of InterfaceLanguage's stored names ("DEVICE", "ENGLISH", "ES", "PT", "HI", "AR", "AF"); null on a backup
+    // made before it existed, or by a phone that never stored one ("nothing to say about this field": restore leaves the device's own choice alone).
+    val interfaceLanguage: String? = null,
+
     // PLAIN WORDS (data/AssistPrefs.kt): null on a backup made before it existed, or by a phone where nothing was ever stored ("nothing to say about
     // this field": restore leaves the device's own choice alone).
     val plainWords: Boolean? = null

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.help
 
+import com.example.besu.ui.looseSpacing
 import com.example.besu.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -73,7 +74,7 @@ fun PoseSelectorDialog(
                             fontSize = 13.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp
+                            letterSpacing = looseSpacing(1.sp)
                         )
 
                         Text(
@@ -147,7 +148,7 @@ private fun PoseOptionRow(
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp
+            letterSpacing = looseSpacing(0.8.sp)
         )
 
         Spacer(modifier = Modifier.height(4.dp))

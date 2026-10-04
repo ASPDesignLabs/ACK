@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BESU</string>
+    <string name="app_name" translatable="false">BESU</string>
     <string name="accessibility_service_description">Emotional AAC allows you to display emotions on your screen using the accessibility button. Tap the button to select an emotion.</string>
 
     <!-- PLAIN WORDS (docs/PLAIN_LANGUAGE.md): every jargon label, in its standard form and its everyday form. Display text only: never an id,
@@ -204,6 +204,17 @@
     <string name="plain_ctl_clear_history">CLEAR HISTORY</string>
     <string name="plain_ctl_clear_history_body">THIS REMOVES EVERY LINE OF THE HISTORY SHOWN ON THIS SCREEN. IT CANNOT BE UNDONE.</string>
     <string name="plain_ctl_cancel">CANCEL</string>
+
+    <!-- INTERFACE LANGUAGE (settings/InterfaceLanguageSection.kt). The heading is fixed text: the word for language in every language ACK has, so it can be
+         found by someone who cannot read the current one. -->
+    <string name="interface_language_all" translatable="false">LANGUAGE · IDIOMA · भाषा · اللغة · TAAL</string>
+    <string name="interface_language_explanation">THE LANGUAGE OF ACK\'S OWN WORDS: THE NAMES ON BUTTONS AND HEADINGS. IT DOES NOT TRANSLATE WHAT YOU TYPE OR WHAT IS SPOKEN (SPEECH LANGUAGE, IN THE AUDIO SETTINGS, DOES THAT). THE WORDING IN EVERY LANGUAGE EXCEPT ENGLISH IS A DRAFT THAT NATIVE SPEAKERS HAVE NOT CHECKED YET. HELP, THE TERMINAL AND MANY DIALOGS ARE STILL IN ENGLISH.</string>
+    <string name="interface_language_device">THIS PHONE\'S LANGUAGE</string>
+    <string name="interface_language_confirm_title">CHANGE LANGUAGE</string>
+    <string name="interface_language_confirm_body">ACK WILL RESTART ONCE AND SHOW ITS OWN WORDS IN THIS LANGUAGE: %1$s. NOTHING IS DELETED OR CHANGED. YOU CAN CHANGE IT BACK HERE.</string>
+    <string name="interface_language_confirm">CHANGE AND RESTART</string>
+    <string name="interface_language_restarting">RESTARTING ACK TO CHANGE THE LANGUAGE</string>
+    <string name="common_cancel">CANCEL</string>
     <string name="plain_ctl_fix_problems">FIX PROBLEMS</string>
     <string name="plain_ctl_fix_problems_hint">RESTARTS THE PARTS OF ACK THAT SPEAK AND LISTEN FOR A SHAKE. NOTHING IS DELETED. A MESSAGE BEING SPOKEN RIGHT NOW WILL STOP.</string>
     <string name="plain_ctl_fix_problems_done">ACK\'S BACKGROUND PARTS WERE RESTARTED.</string>

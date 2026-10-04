@@ -355,7 +355,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
     if (showTrainingCapture) {
         TrainingCaptureHome(context, primaryColor) { showTrainingCapture = false }
     } else Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text(labelFor(LabelKey.AUDIO_ARCHITECT), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+        Text(labelFor(LabelKey.AUDIO_ARCHITECT), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
         Spacer(modifier = Modifier.height(10.dp))
 
         if (defaultsOfferNow.any) {
@@ -899,7 +899,7 @@ internal fun AudioDialogFrame(
                 fontSize = 14.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
             Spacer(modifier = Modifier.height(14.dp))
             content()

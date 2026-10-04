@@ -4,6 +4,8 @@ package com.example.besu.data
 import android.content.Context
 import android.util.Log
 import com.example.besu.core.AssistSettings
+import com.example.besu.core.InterfaceLanguage
+import com.example.besu.core.InterfaceLanguagePolicy
 import com.example.besu.core.SpeechLanguage
 import com.example.besu.core.SpeechLanguagePolicy
 
@@ -25,6 +27,7 @@ object AssistPrefs {
     private const val KEY_WARN_PROFILE_CHANGE = "warn_profile_change"
     private const val KEY_WARN_OFFER_DISMISSED = "warn_profile_change_offer_dismissed"
     private const val KEY_SPEECH_LANGUAGE = "speech_language"
+    private const val KEY_INTERFACE_LANGUAGE = "interface_language"
     private const val KEY_PLAIN_WORDS = "plain_words"
     private const val KEY_PLAIN_WORDS_OFFER_DISMISSED = "plain_words_offer_dismissed"
     private const val KEY_WORD_SUGGESTIONS = "word_suggestions"
@@ -68,6 +71,10 @@ object AssistPrefs {
             if (!p.contains(KEY_SPEECH_LANGUAGE)) {
                 p.edit().putString(KEY_SPEECH_LANGUAGE, SpeechLanguagePolicy.FRESH_INSTALL.stored).commit()
             }
+            // The same for the language of ACK's own words: a new install follows the phone, one that already existed stays English until chosen.
+            if (!p.contains(KEY_INTERFACE_LANGUAGE)) {
+                p.edit().putString(KEY_INTERFACE_LANGUAGE, InterfaceLanguagePolicy.FRESH_INSTALL.stored).commit()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "could not seed the profile-change warning", e)
         }
@@ -99,6 +106,18 @@ object AssistPrefs {
     /** commit(), so the choice is on disk before the person leaves the screen. */
     fun setSpeechLanguage(context: Context, setting: SpeechLanguage) {
         prefs(context).edit().putString(KEY_SPEECH_LANGUAGE, setting.stored).commit()
+    }
+
+    /** The language of ACK's own words. English when nothing (or something unreadable) is stored, so an existing install is unchanged. */
+    fun interfaceLanguage(context: Context): InterfaceLanguage =
+        InterfaceLanguage.fromStored(prefs(context).getString(KEY_INTERFACE_LANGUAGE, null)) ?: InterfaceLanguagePolicy.FALLBACK
+
+    /** The stored value, or null if there is none (never chosen, never seeded). Backed up as a nullable field. */
+    fun interfaceLanguageStored(context: Context): String? = prefs(context).getString(KEY_INTERFACE_LANGUAGE, null)
+
+    /** commit(), so the choice is on disk before ACK restarts to apply it. */
+    fun setInterfaceLanguage(context: Context, setting: InterfaceLanguage) {
+        prefs(context).edit().putString(KEY_INTERFACE_LANGUAGE, setting.stored).commit()
     }
 
     /** Whether labels are shown in everyday words. Off when nothing is stored, on every install (never seeded: the developer's decision). */

@@ -195,6 +195,9 @@ object AckTags {
     const val TERMINAL_WHATS_NEW = "TERMINAL_WHATS_NEW"
     const val TERMINAL_CLEAR_HISTORY = "TERMINAL_CLEAR_HISTORY"
 
+    // INTERFACE LANGUAGE (settings/InterfaceLanguageSection.kt).
+    const val INTERFACE_LANGUAGE = "INTERFACE_LANGUAGE"
+
     // The other two plain-mode buttons: the Type tab's way into classic Manual Override, and SETTINGS' FIX PROBLEMS.
     const val TYPE_CLASSIC_BUTTON = "TYPE_CLASSIC_BUTTON"
     const val SETTINGS_FIX_PROBLEMS = "SETTINGS_FIX_PROBLEMS"

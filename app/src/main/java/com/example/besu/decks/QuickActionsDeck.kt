@@ -105,7 +105,7 @@ fun QuickActionsDeck(
             fontSize = 20.sp,
             fontWeight = FontWeight.Black,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 2.sp
+            letterSpacing = looseSpacing(2.sp)
         )
 
         Spacer(modifier = Modifier.height(8.dp))

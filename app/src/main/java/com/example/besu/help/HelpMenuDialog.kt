@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.help
 
+import com.example.besu.ui.looseSpacing
 import com.example.besu.data.*
 import com.example.besu.ui.helpText
 import com.example.besu.ui.theme.*
@@ -109,7 +110,7 @@ fun HelpMenuDialog(
                         color = Color.Gray,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,
-                        letterSpacing = 1.sp,
+                        letterSpacing = looseSpacing(1.sp),
                         modifier = Modifier.padding(horizontal = 14.dp)
                     )
 
@@ -148,7 +149,7 @@ fun HelpMenuDialog(
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
+                            letterSpacing = looseSpacing(1.sp)
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))
@@ -215,7 +216,7 @@ private fun HelpHeader(
                 fontSize = 15.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 1.5.sp
+                letterSpacing = looseSpacing(1.5.sp)
             )
 
             Spacer(modifier = Modifier.height(5.dp))
@@ -225,7 +226,7 @@ private fun HelpHeader(
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 0.8.sp
+                letterSpacing = looseSpacing(0.8.sp)
             )
         }
 
@@ -279,7 +280,7 @@ private fun HelpCategoryChip(
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp
+            letterSpacing = looseSpacing(0.5.sp)
         )
     }
 }
@@ -315,7 +316,7 @@ private fun HelpModuleMenuItem(
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp,
+                letterSpacing = looseSpacing(0.8.sp),
                 modifier = Modifier.weight(1f)
             )
 

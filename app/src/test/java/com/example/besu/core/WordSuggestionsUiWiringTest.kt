@@ -200,7 +200,7 @@ class WordSuggestionsUiWiringTest {
         for (m in Regex("""fontSize = (\d+)\.sp[^\n]*""").findAll(c)) {
             val size = m.groupValues[1].toInt()
             // The section heading follows the other SETTINGS headings (10 sp, letter-spaced); everything else is 12 sp or more.
-            assertTrue("text under 12 sp: ${m.value}", size >= 12 || m.value.contains("letterSpacing = 2.sp"))
+            assertTrue("text under 12 sp: ${m.value}", size >= 12 || m.value.contains("letterSpacing = looseSpacing(2.sp)"))
         }
     }
 

@@ -710,7 +710,7 @@ internal fun ContactCardTypeCheckbox(
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
     }
 }

@@ -95,7 +95,7 @@ fun TightDialogSurface(
                                 fontSize = 13.sp,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
+                                letterSpacing = looseSpacing(1.sp)
                             )
 
                             if (subtitle != null) {
@@ -106,7 +106,7 @@ fun TightDialogSurface(
                                     color = Color.Gray,
                                     fontSize = 9.sp,
                                     fontFamily = FontFamily.Monospace,
-                                    letterSpacing = 1.sp
+                                    letterSpacing = looseSpacing(1.sp)
                                 )
                             }
                         }
@@ -171,7 +171,7 @@ fun TightPanelButton(
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
     }
 }
@@ -184,6 +184,6 @@ fun TightSectionLabel(text: String, color: Color = Color.Gray) {
         fontSize = 10.sp,
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Bold,
-        letterSpacing = 1.sp
+        letterSpacing = looseSpacing(1.sp)
     )
 }

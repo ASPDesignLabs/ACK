@@ -15,6 +15,10 @@ mkdir -p "$STAGE/com/example/besu/core" "$STAGE/com/example/besu/settings"
 cp "$A/core/SendFlags.kt" "$A/core/PlainLabels.kt" "$STAGE/com/example/besu/core/"
 cp "$A/ui/TerminalPlainControls.kt" "$STAGE/com/example/besu/ui/"
 cp "$A/settings/ConfirmDialogParts.kt" "$STAGE/com/example/besu/settings/"
+# INTERFACE LANGUAGE: the section screen, its rules, and the letter-spacing helper every screen now calls.
+cp "$A/core/InterfaceLanguage.kt" "$STAGE/com/example/besu/core/"
+cp "$A/ui/ScriptSpacing.kt" "$STAGE/com/example/besu/ui/"
+cp "$A/settings/InterfaceLanguageSection.kt" "$STAGE/com/example/besu/settings/"
 # R is generated from the real strings file, so a name the screen uses that does not exist fails here.
 { echo "package com.example.besu"; echo "object R { object string {"; grep -o 'name="[A-Za-z0-9_]*"' "$A/../../../../res/values/strings.xml" | sed 's/name="\(.*\)"/    const val \1 = 0/'; echo "} }"; } > "$STAGE/com/example/besu/R.kt"
 cp "$A/ui/theme/Color.kt" "$STAGE/com/example/besu/ui/theme/"

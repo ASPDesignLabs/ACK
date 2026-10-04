@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.decks
 
+import com.example.besu.ui.looseSpacing
 import com.example.besu.*
 import com.example.besu.core.LabelKey
 import com.example.besu.ui.labelFor
@@ -227,7 +228,7 @@ fun EmergencyDeck(
             fontSize = 20.sp,
             fontWeight = FontWeight.Black,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 2.sp
+            letterSpacing = looseSpacing(2.sp)
         )
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -937,7 +938,7 @@ private fun EmergencyInfoField(label: String, value: String) {
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
 
         Spacer(modifier = Modifier.height(2.dp))
@@ -1231,7 +1232,7 @@ private fun AckDialogShell(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Black,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(18.dp))

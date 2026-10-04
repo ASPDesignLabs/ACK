@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.help
 
+import com.example.besu.ui.looseSpacing
 import com.example.besu.ui.helpText
 import com.example.besu.ui.theme.*
 import androidx.compose.foundation.background
@@ -61,7 +62,7 @@ fun HelpCoachPanel(
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Text(
@@ -94,7 +95,7 @@ fun HelpCoachPanel(
             fontSize = 13.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Black,
-            letterSpacing = 0.8.sp
+            letterSpacing = looseSpacing(0.8.sp)
         )
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -149,7 +150,7 @@ fun HelpCoachPanel(
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.7.sp
+                        letterSpacing = looseSpacing(0.7.sp)
                     )
 
                     Spacer(modifier = Modifier.height(3.dp))
@@ -221,7 +222,7 @@ private fun HelpCoachAction(
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
     }
 }

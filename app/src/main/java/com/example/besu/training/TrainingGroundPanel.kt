@@ -118,7 +118,7 @@ fun TrainingGroundPanel(
                             fontSize = 13.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp
+                            letterSpacing = looseSpacing(1.sp)
                         )
 
                         Text(
@@ -149,7 +149,7 @@ fun TrainingGroundPanel(
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp
+                            letterSpacing = looseSpacing(0.8.sp)
                         )
 
                         NeonToggle(
@@ -229,7 +229,7 @@ private fun ConfigScreen(
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -260,7 +260,7 @@ private fun ConfigScreen(
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp
+                letterSpacing = looseSpacing(0.8.sp)
             )
 
             Text(
@@ -313,7 +313,7 @@ private fun ConfigScreen(
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -360,7 +360,7 @@ private fun PlayingScreen(
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -372,7 +372,7 @@ private fun PlayingScreen(
                 fontSize = 16.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 0.8.sp
+                letterSpacing = looseSpacing(0.8.sp)
             )
         }
 
@@ -415,7 +415,7 @@ private fun ResultsScreen(
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp
+            letterSpacing = looseSpacing(0.8.sp)
         )
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -458,7 +458,7 @@ private fun ResultsScreen(
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -495,7 +495,7 @@ private fun DifficultyRow(
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp
+            letterSpacing = looseSpacing(0.8.sp)
         )
 
         Spacer(modifier = Modifier.height(3.dp))
@@ -530,7 +530,7 @@ private fun GameActionButton(
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
     }
 }
@@ -547,7 +547,7 @@ private fun LabeledStat(
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
 
         Spacer(modifier = Modifier.height(2.dp))
@@ -617,7 +617,7 @@ private fun TelemetryReadout(
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
 
         Spacer(modifier = Modifier.height(4.dp))

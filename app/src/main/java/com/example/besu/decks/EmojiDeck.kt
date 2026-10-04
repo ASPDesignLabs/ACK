@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.decks
 
+import com.example.besu.ui.looseSpacing
 import com.example.besu.*
 import com.example.besu.data.*
 import com.example.besu.help.*
@@ -183,7 +184,7 @@ fun EmojiDeck(
                     color = primaryColor,
                     size = 18.sp,
                     weight = FontWeight.Black,
-                    letterSpacing = 2.sp
+                    letterSpacing = looseSpacing(2.sp)
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -503,7 +504,7 @@ private fun EmojiSlotButton(
                     color = Color.White,
                     size = 7.sp,
                     weight = FontWeight.Black,
-                    letterSpacing = 1.sp,
+                    letterSpacing = looseSpacing(1.sp),
                     modifier = Modifier.align(Alignment.BottomEnd)
                 )
             }
@@ -991,7 +992,7 @@ private fun RelatedEmojiPanelViewerSlot(
                     color = Color.White,
                     size = 7.sp,
                     weight = FontWeight.Black,
-                    letterSpacing = 1.sp,
+                    letterSpacing = looseSpacing(1.sp),
                     modifier = Modifier.align(Alignment.BottomEnd)
                 )
             }
@@ -1338,7 +1339,7 @@ private fun AckDialogShell(
                 color = primaryColor,
                 size = 15.sp,
                 weight = FontWeight.Black,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))

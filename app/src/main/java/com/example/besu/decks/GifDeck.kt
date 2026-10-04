@@ -253,7 +253,7 @@ fun GifDeck(
                 fontSize = 15.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

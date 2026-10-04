@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.decks
 
+import com.example.besu.ui.looseSpacing
 import com.example.besu.core.LabelKey
 import com.example.besu.ui.labelFor
 import com.example.besu.*
@@ -116,7 +117,7 @@ fun CreateDeckDialog(
                 fontSize = 16.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(18.dp))

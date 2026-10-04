@@ -17,6 +17,7 @@ object AssistSettings {
     const val KEY_WARN_OFFER_DISMISSED = "warn_profile_change_offer_dismissed"
 
     const val KEY_SPEECH_LANGUAGE = "speech_language"
+    const val KEY_INTERFACE_LANGUAGE = "interface_language"
     const val KEY_PLAIN_WORDS = "plain_words"
     const val KEY_PLAIN_WORDS_OFFER_DISMISSED = "plain_words_offer_dismissed"
     const val KEY_WORD_SUGGESTIONS = "word_suggestions"
@@ -32,7 +33,7 @@ object AssistSettings {
      * The keys the seed writes, which InstallClassifier ignores so an interrupted seed still reads as fresh. The "offer dismissed"
      * note is not one: only a tap ever writes it.
      */
-    val SEED_KEYS: Set<String> = setOf(KEY_WARN_PROFILE_CHANGE, KEY_SPEECH_LANGUAGE)
+    val SEED_KEYS: Set<String> = setOf(KEY_WARN_PROFILE_CHANGE, KEY_SPEECH_LANGUAGE, KEY_INTERFACE_LANGUAGE)
 
     /**
      * The one-time offer in SETTINGS: only where no value is stored (the person never chose, and a new install was already seeded) and

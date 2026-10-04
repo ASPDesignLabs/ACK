@@ -341,7 +341,7 @@ fun ManualOverrideHeaderTakeover(
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
         Text(
             text = "CLOSE THE KEYBOARD TO RETURN TO THE HEADER.",

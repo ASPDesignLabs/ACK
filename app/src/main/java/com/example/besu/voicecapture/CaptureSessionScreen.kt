@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.voicecapture
 
+import com.example.besu.ui.looseSpacing
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -335,7 +336,7 @@ private fun CaptureButton(text: String, modifier: Modifier = Modifier, color: Co
     ) {
         Text(
             text.uppercase(), color = c, fontSize = if (compact) 9.sp else 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
-            letterSpacing = if (compact) 0.sp else 1.sp, textAlign = TextAlign.Center, maxLines = 1,
+            letterSpacing = looseSpacing(if (compact) 0.sp else 1.sp), textAlign = TextAlign.Center, maxLines = 1,
         )
     }
 }
@@ -380,7 +381,7 @@ private fun SetupView(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(if (free) "FREE SPEECH" else "RECORD A SCRIPT", color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(if (free) "FREE SPEECH" else "RECORD A SCRIPT", color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
             Text(
                 "[BACK]", color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
                 modifier = Modifier.heightIn(min = 48.dp).clickable(enabled = phase != Phase.CHECKING) { onBack() }.padding(horizontal = 8.dp, vertical = 12.dp),

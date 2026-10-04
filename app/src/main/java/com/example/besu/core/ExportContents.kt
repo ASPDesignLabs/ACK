@@ -54,7 +54,7 @@ object ExportContents {
                 "outputRouteBtAddress", "outputRouteBtLabel", "terminalRetentionDays", "terminalHideSystemMessages",
                 "terminalHidePathTrace", "terminalMonospaceEnabled", "terminalStatusboxColorIndex", "shakeThreshold",
                 "rootOverrideCollapsed", "activeDeckId", "activeDeckColorIndex", "activeProfile", "activeCategoryFocus",
-                "warnBeforeProfileChange", "speechLanguage", "plainWords",
+                "warnBeforeProfileChange", "speechLanguage", "interfaceLanguage", "plainWords",
             ),
         ),
     )

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.voicecapture
 
+import com.example.besu.ui.looseSpacing
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -89,7 +90,7 @@ internal fun ScriptEditorScreen(context: Context, primaryColor: Color, scriptId:
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(if (existing == null) "NEW SCRIPT" else "EDIT SCRIPT", color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(if (existing == null) "NEW SCRIPT" else "EDIT SCRIPT", color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
             Text(
                 "[BACK]", color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
                 modifier = Modifier.heightIn(min = 48.dp).clickable { if (dirty) confirmLeave = true else onDone(false) }.padding(horizontal = 8.dp, vertical = 12.dp),
