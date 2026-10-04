@@ -75,6 +75,7 @@ class TranslationsTest {
         "label_nav_type", "label_nav_type_plain",
         "label_data_port_plain", // "MY DATA" is how Afrikaans says it too
         "common_ok", // "OK" is how Portuguese and Afrikaans write it too
+        "common_no", // "NO" is Spanish for no
         "label_pose_connect_plain", "label_variable", // real words in Spanish and Portuguese that are spelled as in English (SOCIAL, VARIABLE)
     )
 

@@ -79,6 +79,13 @@ fun poseLabel(stored: String): String {
     return labelFor(key)
 }
 
+/** A pose name as a heading: its label, or a layer the person named in capitals, as the app has always shown it. */
+@Composable
+fun poseHeading(stored: String): String {
+    val key = com.example.besu.core.PlainLabels.poseLabelKey(stored) ?: return stored.uppercase()
+    return labelFor(key)
+}
+
 /** HELP text with its `{{KEY:Original}}` placeholders filled in for the chosen wording (core/PlainLabels.kt `HelpPlaceholders`). */
 @Composable
 fun helpText(text: String): String {

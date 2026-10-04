@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.composer
 
+import androidx.compose.ui.res.stringResource
+import com.example.besu.R
 import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.computer.*
@@ -199,7 +201,7 @@ fun StatementComposerView(
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("ACK STATEMENT", resolved))
         consumeSingleUseComputerTags(context, template)
-        Toast.makeText(context, "COPIED", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.composer_copied), Toast.LENGTH_SHORT).show()
     }
 
     fun speakResolvedText(template: String, resolved: String, sourceTag: String) {
@@ -236,7 +238,7 @@ fun StatementComposerView(
 
             if (onToggleFullscreen != null) {
                 Text(
-                    text = if (isFullscreen) "[EXIT FULL SCREEN]" else "[FULL SCREEN]",
+                    text = stringResource(if (isFullscreen) R.string.composer_exit_full_screen else R.string.composer_full_screen),
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -322,7 +324,7 @@ fun StatementComposerView(
             ),
             placeholder = {
                 Text(
-                    "COMPOSE A STATEMENT...",
+                    stringResource(R.string.composer_hint),
                     color = Color.Gray,
                     fontFamily = FontFamily.Monospace
                 )
@@ -359,7 +361,7 @@ fun StatementComposerView(
                 .padding(10.dp)
         ) {
             Text(
-                text = resolvedPreview.ifBlank { "NOTHING TO PREVIEW YET." },
+                text = resolvedPreview.ifBlank { stringResource(R.string.composer_preview_empty) },
                 color = if (resolvedPreview.isBlank()) Color.DarkGray else primaryColor,
                 fontSize = 13.sp,
                 fontFamily = FontFamily.Monospace
@@ -392,7 +394,7 @@ fun StatementComposerView(
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
-                text = if (showTargetBrowsePanel) "[HIDE TARGET BROWSER]" else "[${labelFor(LabelKey.BROWSE_TARGETS)}]",
+                text = if (showTargetBrowsePanel) stringResource(R.string.composer_hide_targets) else "[${labelFor(LabelKey.BROWSE_TARGETS)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -407,7 +409,7 @@ fun StatementComposerView(
             )
 
             Text(
-                text = if (showVariablePicker) "[HIDE VARIABLES]" else "[${labelFor(LabelKey.INSERT_VARIABLE)}]",
+                text = if (showVariablePicker) stringResource(R.string.composer_hide_variables) else "[${labelFor(LabelKey.INSERT_VARIABLE)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -472,7 +474,7 @@ fun StatementComposerView(
             modifier = Modifier.fillMaxWidth()
         ) {
             TightPanelButton(
-                text = "SAVE",
+                text = stringResource(R.string.common_save),
                 modifier = Modifier
                     .weight(1f)
                     .testTag(AckTags.COMPOSER_SAVE_BTN)
@@ -492,7 +494,7 @@ fun StatementComposerView(
             }
 
             TightPanelButton(
-                text = "COPY",
+                text = stringResource(R.string.common_copy),
                 modifier = Modifier
                     .weight(1f)
                     .testTag(AckTags.COMPOSER_COPY_BTN)
@@ -506,7 +508,7 @@ fun StatementComposerView(
             }
 
             HeroButton(
-                text = "SPEAK",
+                text = stringResource(R.string.common_speak),
                 modifier = Modifier
                     .weight(1f)
                     .testTag(AckTags.COMPOSER_SPEAK_BTN)
@@ -525,14 +527,14 @@ fun StatementComposerView(
         TightDialogSurface(
             onDismiss = { showSaveDialog = false },
             primaryColor = primaryColor,
-            title = "SAVE STATEMENT"
+            title = stringResource(R.string.composer_save_title)
         ) {
-            TightSectionLabel("LABEL")
+            TightSectionLabel(stringResource(R.string.composer_label))
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = saveLabelInput,
                 onValueChange = { saveLabelInput = it },
-                placeholder = { Text("E.G. \"ORDER AT A CAFE\"") },
+                placeholder = { Text(stringResource(R.string.composer_label_example)) },
                 shape = AckHelpShape,
                 colors = NeonTextFieldColors(primaryColor),
                 modifier = Modifier.fillMaxWidth()
@@ -545,9 +547,9 @@ fun StatementComposerView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TightSectionLabel("FOLDER")
+                TightSectionLabel(stringResource(R.string.composer_folder))
                 Text(
-                    text = "[+ NEW FOLDER]",
+                    text = stringResource(R.string.composer_new_folder_button),
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -573,7 +575,7 @@ fun StatementComposerView(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TightPanelButton("SAVE", modifier = Modifier.weight(1f), mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_save), modifier = Modifier.weight(1f), mainColor = primaryColor) {
                     if (saveLabelInput.isNotBlank()) {
                         val existing = editingStatementId
                             ?.let { id -> StatementRepository.findNode(statementRoot, id) }
@@ -591,7 +593,7 @@ fun StatementComposerView(
                         editingStatementId = node.id
                         refreshKey++
                         showSaveDialog = false
-                        Toast.makeText(context, "STATEMENT SAVED", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.composer_saved_toast), Toast.LENGTH_SHORT).show()
                         // CommitText/TextCommitted, not Interact -- matches
                         // every other "SAVE" action's HELP wiring in the app
                         // (QUICK_ACTION_SAVE, EMERGENCY_SAVE, AUDIO_SAVE,
@@ -602,7 +604,7 @@ fun StatementComposerView(
                     }
                 }
                 TightPanelButton(
-                    "CANCEL",
+                    stringResource(R.string.common_cancel),
                     modifier = Modifier.weight(1f),
                     isActive = false,
                     mainColor = primaryColor
@@ -617,14 +619,14 @@ fun StatementComposerView(
         TightDialogSurface(
             onDismiss = { showNewFolderDialog = false },
             primaryColor = primaryColor,
-            title = "NEW FOLDER"
+            title = stringResource(R.string.composer_new_folder_title)
         ) {
-            TightSectionLabel("LABEL")
+            TightSectionLabel(stringResource(R.string.composer_label))
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = newFolderLabelInput,
                 onValueChange = { newFolderLabelInput = it },
-                placeholder = { Text("E.G. \"CAFE VISITS\"") },
+                placeholder = { Text(stringResource(R.string.composer_folder_example)) },
                 shape = AckHelpShape,
                 colors = NeonTextFieldColors(primaryColor),
                 modifier = Modifier.fillMaxWidth()
@@ -642,7 +644,7 @@ fun StatementComposerView(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TightPanelButton("CREATE", modifier = Modifier.weight(1f), mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_create), modifier = Modifier.weight(1f), mainColor = primaryColor) {
                     if (newFolderLabelInput.isNotBlank()) {
                         val folder = StatementRepository.createFolder(
                             context,
@@ -661,7 +663,7 @@ fun StatementComposerView(
                     }
                 }
                 TightPanelButton(
-                    "CANCEL",
+                    stringResource(R.string.common_cancel),
                     modifier = Modifier.weight(1f),
                     isActive = false,
                     mainColor = primaryColor
@@ -680,10 +682,10 @@ fun StatementComposerView(
             },
             primaryColor = primaryColor,
             title = labelFor(LabelKey.MY_STATEMENTS),
-            dismissLabel = "CLOSE"
+            dismissLabel = stringResource(R.string.common_close)
         ) {
             Text(
-                text = "[+ NEW FOLDER]",
+                text = stringResource(R.string.composer_new_folder_button),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -698,8 +700,7 @@ fun StatementComposerView(
 
             if (statementRoot.children.isEmpty()) {
                 Text(
-                    text = "NOTHING SAVED YET. COMPOSE A STATEMENT ABOVE AND TAP SAVE, " +
-                        "OR ADD A FOLDER TO GET ORGANIZED FIRST.",
+                    text = stringResource(R.string.composer_nothing_saved),
                     color = Color.DarkGray,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
@@ -902,7 +903,7 @@ private fun SharedVariablePicker(
             .background(primaryColor.copy(alpha = 0.04f), CutCornerShape(8.dp))
             .padding(10.dp)
     ) {
-        TightSectionLabel("${category.uppercase()} VARIABLES")
+        TightSectionLabel(stringResource(R.string.composer_variables_title, poseHeading(category)))
         Spacer(modifier = Modifier.height(8.dp))
 
         listOf("A", "B", "C").forEach { tag ->
@@ -910,7 +911,7 @@ private fun SharedVariablePicker(
             val preview = if (slot?.enabled == true && slot.value.isNotBlank()) {
                 slot.value
             } else {
-                "(NOT SET)"
+                stringResource(R.string.composer_not_set)
             }
 
             Box(
@@ -1023,14 +1024,14 @@ private fun StatementFolderRow(
             if (isConfirmingDelete) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "DELETE ALL?",
+                        stringResource(R.string.composer_delete_all_q),
                         color = Color(0xFFFF4444),
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "[YES]",
+                        "[${stringResource(R.string.common_yes)}]",
                         color = Color(0xFFFF4444),
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -1038,7 +1039,7 @@ private fun StatementFolderRow(
                         modifier = Modifier.clickable { onDeleteConfirm() }
                     )
                     Text(
-                        "[NO]",
+                        "[${stringResource(R.string.common_no)}]",
                         color = primaryColor,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -1049,7 +1050,7 @@ private fun StatementFolderRow(
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "[+ SUB]",
+                        stringResource(R.string.composer_add_sub),
                         color = primaryColor,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -1057,7 +1058,7 @@ private fun StatementFolderRow(
                         modifier = Modifier.clickable { onAddSubfolder() }
                     )
                     Text(
-                        "[DELETE]",
+                        "[${stringResource(R.string.common_delete)}]",
                         color = Color(0xFFFF4444),
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -1111,14 +1112,14 @@ private fun StatementLeafRow(
         if (isConfirmingDelete) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    "DELETE?",
+                    stringResource(R.string.composer_delete_q),
                     color = Color(0xFFFF4444),
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "[YES]",
+                    "[${stringResource(R.string.common_yes)}]",
                     color = Color(0xFFFF4444),
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -1126,7 +1127,7 @@ private fun StatementLeafRow(
                     modifier = Modifier.clickable { onDeleteConfirm() }
                 )
                 Text(
-                    "[NO]",
+                    "[${stringResource(R.string.common_no)}]",
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -1137,7 +1138,7 @@ private fun StatementLeafRow(
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    "[COPY]",
+                    "[${stringResource(R.string.common_copy)}]",
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -1145,7 +1146,7 @@ private fun StatementLeafRow(
                     modifier = Modifier.clickable { onCopy() }
                 )
                 Text(
-                    "[SPEAK]",
+                    "[${stringResource(R.string.common_speak)}]",
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -1153,7 +1154,7 @@ private fun StatementLeafRow(
                     modifier = Modifier.clickable { onSpeak() }
                 )
                 Text(
-                    "[DELETE]",
+                    "[${stringResource(R.string.common_delete)}]",
                     color = Color(0xFFFF4444),
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,

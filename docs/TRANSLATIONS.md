@@ -25,9 +25,9 @@ Only the **label table** and the words around PLAIN WORDS and INTERFACE LANGUAGE
 - the accessibility-service description Android shows in its own settings;
 - **screens, one at a time** (so each can be reviewed): the **Matrix deck screen** (group headings, ACTIVATE/ACTIVE, the shared-value strip and its dialog,
   the recorded badge, MANAGE CONTEXT), the **Matrix editor dialog** opened from a row (template, variables, target-tag fallbacks, the voice-recording panel
-  text, the three CLEAR confirmations and the recording notices) and the **header row above every screen** (DECK, PROFILE, COMPUTER). Words used on several
-  screens are `common_*`; a screen's own words are `<screen>_*` (`matrix_*`, `matrix_edit_*`, `header_*`). Still to come: the MANAGE CONTEXT dialog, the composer,
-  the voice picker, backup, the HELP menu, the Emergency deck, People and places.
+  text, the three CLEAR confirmations and the recording notices) the **Statement composer** (the TYPE tab: FULL SCREEN, the preview, SAVE / COPY / SPEAK, the save and new-folder dialogs, MY STATEMENTS and its row buttons) and the **header row above every screen** (DECK, PROFILE, COMPUTER). Words used on several
+  screens are `common_*`; a screen's own words are `<screen>_*` (`matrix_*`, `matrix_edit_*`, `composer_*`, `header_*`). Still to come: the MANAGE CONTEXT dialog,
+  the word-suggestion offer and strip (their text lives in `core/` constants), the voice picker, backup, the HELP menu, the Emergency deck, People and places.
 
 ## What is NOT translated (it stays English in every language, and the control says so)
 

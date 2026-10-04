@@ -291,6 +291,8 @@ Take a **backup first** (EXPORT .JSON); nothing here deletes anything.
   the SEQUENCE and ROOT headings, the "recorded" badge and the DECK / PROFILE / COMPUTER words are translated; open a shared value's EDIT box and check its title, ABORT and COMMIT. With PLAIN WORDS on, the header's DECK reads PAGE (or its translation).
   Tap a Matrix row's EDIT: the editor dialog (template, INSERT VARIABLE TOKEN, voice recording, visual override, local variable data, target tag fallbacks, DESTRUCTIVE CONTROLS)
   is translated; try CLEAR VARS, CLEAR PROMPT and CLEAR ALL and check each confirmation shows **both** sentences. MANAGE CONTEXT's own dialog is still English: that is expected.
+- [ ] Open the **TYPE tab** (the Statement composer) in each language. → FULL SCREEN, the hint in the text box, the preview line, SAVE / COPY / SPEAK, the SAVE dialog (name, folder, example, STATEMENT SAVED), NEW FOLDER, MY STATEMENTS (the empty
+  sentence, and each row's YES / NO / COPY / SPEAK / DELETE) and the shared-variable list ("… VARIABLES", "(NOT SET)") are translated. A folder or statement **you named** is shown as you typed it. The word-suggestion offer is still English: expected.
 - [ ] Repeat for **PORTUGUÊS**, **हिन्दी** and **AFRIKAANS**. → Each shows its own script and words. Write down any text that is cut off, overlaps, or runs over a button
   (longer words in a 48 dp button are the likeliest problem).
 - [ ] Switch back to **ENGLISH** from the same control. → Everything English again after the restart.

@@ -22,14 +22,14 @@ class MatrixDeckScreenStringsTest {
     }
     private val english get() = StringsXml.map(StringsXml.default)
 
-    private val groups = listOf("matrix_", "header_")
+    private val groups = listOf("matrix_", "header_", "composer_")
 
     private fun allSources(): List<String> =
         RepoFiles.file(base).walkTopDown().filter { it.isFile && it.extension == "kt" }.map { noComments(it.readText(Charsets.UTF_8)) }.toList()
 
     @Test
     fun everyStringTheScreenNamesExists_andNoMatrixOrHeaderStringIsLeftUnused() {
-        val used = allSources().flatMap { Regex("""R\.string\.((?:matrix|header|common)_[a-z_]+)""").findAll(it).map { m -> m.groupValues[1] }.toList() }.toSet()
+        val used = allSources().flatMap { Regex("""R\.string\.((?:matrix|header|composer|common)_[a-z_]+)""").findAll(it).map { m -> m.groupValues[1] }.toList() }.toSet()
         val defined = english.keys.filter { name -> groups.any { name.startsWith(it) } || name.startsWith("common_") }.toSet()
         assertEquals("named but not defined: ${used - defined}", emptySet<String>(), used - defined)
         val unused = defined.filter { name -> name !in used }
