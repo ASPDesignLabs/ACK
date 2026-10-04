@@ -1403,3 +1403,27 @@ Wording and decisions: `docs/PLAIN_LANGUAGE.md`, `docs/TRANSLATIONS.md`. Checkli
   (the clear-variables confirmation lost its question this way), in a `listOf(` it is a build error (the `/info` notes did). `AdjacentTextLinesTest` and
   `TerminalTextListsShapeTest` read every source file for it. `tools/kotlin_check/android-typecheck` type-checks `ui/TerminalPlainControls.kt`,
   `settings/InterfaceLanguageSection.kt` and the capture screens against Compose, with `R` generated from the real `strings.xml` (a wrong string name fails it).
+
+### Wording in string resources (INTERFACE LANGUAGE, long tail) — rules that must stay true
+Written while the backup and DELETE DATA wording moved into `strings.xml` (docs/TRANSLATIONS.md has the translation side).
+
+- **A decision in `core/` names its words by resource and reads them through `core/TextSource`.** `ExportContents`, `BackupReminderText`, `StorageCatalogue`,
+  `SafetyCopyPolicy` stay plain Kotlin; the Android edge is `data/ResourceText.kt` (`ui/rememberText()` in a composable), the tests' is `EnglishText` (the real
+  English strings file, plurals by English's rule). A name that is not a resource reads as itself, so a gap shows. Never put `android.*` in `core/` to get a string.
+- **A result is carried by id, never by a label.** `DataWipe.Result` holds area ids; screens and the Terminal line turn them into names. Anything that compares a
+  displayed word (for example "did SAVED LOCATIONS fail?") breaks the day it is translated.
+- **A resource's trailing space is trimmed by Android.** Join sentences in code (`joinToString(" ")`), never with a space at the end of a string.
+- **A button or screen name inside a sentence is an argument, not a literal**, when that name is translated (`%1$s` = `label_export_json`), so a note and the
+  button it points to read the same in every language. A name that is still a literal English button on its own screen stays English in every translation until
+  that screen moves, and `DeleteDataWordingTest.theButtonNamesStillEnglish...` holds it there: change the notes and that test together.
+- **A toast, a launcher callback and a `semantics {}` block are not composable lambdas**: read their text with `context.getString(R.string.x)` (or resolve it
+  just before). Any file outside `com.example.besu` that uses `R.string` needs `import com.example.besu.R` (`ResourceImportTest`).
+- **Every confirmation that deletes keeps its safety sentences in every language** (cannot be undone, back up first, files saved elsewhere are not deleted, the
+  restart and watch notes); `DeleteDataWordingTest` fails if one is missing, is still English, or loses a placeholder. `/backup CONFIRM` and `/cls CONFIRM` are
+  typed commands and are never translated.
+- **Dates and numbers keep Latin digits.** `DateTimeFormatter.ofPattern(pattern, locale)` already does; only `localizedBy` would change that (a test pins it).
+  The date's language is `ActiveScript.tag` (the language the words are really in), not the phone's setting.
+- **The type-check (`tools/kotlin_check/run_typecheck.sh`) now compiles all of `core/` and the backup and DELETE DATA screens**; `BackupExporter`,
+  `BackupReminder` and `DataWipe` are stubs written from their real signatures. Prove a new staged file is covered by breaking it on purpose once.
+- **Source-reading tests**: a pattern like `.label` also matches `StorageCatalogue.label(...)`; use `area.label`. A "gone" literal test needs the positive
+  assertion beside it (the new call is there), or a swapped argument slips through (found by mutation).
