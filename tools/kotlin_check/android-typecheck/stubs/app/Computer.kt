@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.computer
 import android.content.Context
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 
-// Stubs of computer/ComputerRepository.kt (it reads and writes storage) and computer/ContactCardView.kt's dialog, written from their real signatures.
+// Stub of computer/ComputerRepository.kt (it reads and writes storage), written from its real signatures.
 object ComputerRepository {
     data class ContactCardListing(val categoryId: String, val node: ComputerNode)
     data class InitResult(val categories: List<ComputerCategory>, val didMigrate: Boolean)
@@ -24,6 +22,3 @@ object ComputerRepository {
     fun clearActiveEntry(context: Context, categoryId: String) {}
     fun ensureInitialized(context: Context): InitResult = InitResult(emptyList(), false)
 }
-
-@Composable
-fun ContactCardDialog(context: Context, primaryColor: Color, categoryId: String, nodeId: String, onDismiss: () -> Unit) {}

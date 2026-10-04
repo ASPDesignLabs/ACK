@@ -15,6 +15,10 @@ import com.example.besu.ui.rememberText
 fun categoryName(category: ComputerCategory): String =
     ComputerLabels.shownCategoryLabel(rememberText(), category.id, category.label)
 
+/** A place card's day as shown (its short name in the chosen language); the saved key ("MON") never changes (core/ComputerLabels.kt). */
+@Composable
+internal fun dayName(day: String): String = ComputerLabels.dayLabel(rememberText(), day)
+
 /** The words for a display mode ("TREE" or "DROPDOWN"); the mode itself is a logic value and stays as it is. */
 @Composable
 internal fun displayModeLabel(mode: String): String =

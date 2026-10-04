@@ -592,4 +592,30 @@
     <string name="people_quick_insert_hint">CLOSE THE KEYBOARD TO RETURN TO THE HEADER.</string>
     <string name="people_hide_browser">[HIDE FULL BROWSER]</string>
     <string name="people_browse_all">[BROWSE ALL ENTRIES]</string>
+    <!-- People and places, part 2: contact cards and opening hours. The brand names X, FACEBOOK and LINKEDIN stay as they are. -->
+    <string name="common_copied">COPIED</string>
+    <string name="people_person_card">PERSON CARD</string>
+    <string name="people_place_card">PLACE CARD</string>
+    <string name="people_done_editing">[DONE EDITING]</string>
+    <string name="people_edit_link">[EDIT]</string>
+    <string name="people_phone">PHONE</string>
+    <string name="people_address">ADDRESS</string>
+    <string name="people_hours">HOURS</string>
+    <string name="people_email">EMAIL</string>
+    <string name="people_example_place_name">E.G. TOPS FRIENDLY MARKETS</string>
+    <string name="people_example_phone">E.G. (555) 555-1234</string>
+    <string name="people_example_address">E.G. 123 MAIN ST</string>
+    <string name="people_example_email">E.G. NAME@EXAMPLE.COM</string>
+    <string name="people_example_x">E.G. @HANDLE</string>
+    <string name="people_example_handle">E.G. HANDLE</string>
+    <string name="people_hours_open">OPEN</string>
+    <string name="people_hours_close">CLOSE</string>
+    <string name="people_day_mon">MON</string>
+    <string name="people_day_tue">TUE</string>
+    <string name="people_day_wed">WED</string>
+    <string name="people_day_thu">THU</string>
+    <string name="people_day_fri">FRI</string>
+    <string name="people_day_sat">SAT</string>
+    <string name="people_day_sun">SUN</string>
+    <string name="people_no_app">NO APP AVAILABLE FOR THIS ACTION</string>
 </resources>

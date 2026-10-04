@@ -113,6 +113,7 @@ class TranslationsTest {
         "common_no", // "NO" is Spanish for no
         "label_pose_connect_plain", "label_variable", // real words in Spanish and Portuguese that are spelled as in English (SOCIAL, VARIABLE)
         "people_wizard_in", // "IN <name>" is Afrikaans too
+        "people_day_sat", // "SAT" is Afrikaans' short Saterdag too
         "storage_amount", "storage_size_kb", "storage_size_mb", // only placeholders and a unit (KB, MB) that every one of these languages writes as it is
     )
 

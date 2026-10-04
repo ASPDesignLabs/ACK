@@ -30,9 +30,9 @@ cp "$A/core/TextSource.kt" "$A/core/ExportContents.kt" "$A/core/BackupReminderTe
 cp -r "$A/core/." "$STAGE/com/example/besu/core/"
 cp "$A/settings/ManageDataDialog.kt" "$A/settings/SafetyCopyDialogs.kt" "$A/settings/DeleteVoiceDialogs.kt" "$STAGE/com/example/besu/settings/"
 # People and places: the category, tree, wizard and quick-insert screens and the models they draw. ComputerRepository, the contact card dialog and the visual editor are
-# stubbed from their real signatures (stubs/app/Computer.kt); the contact card screen has its own staging below once it moves.
+# stubbed from their real signatures (stubs/app/Computer.kt).
 mkdir -p "$STAGE/com/example/besu/computer"
-cp "$A/computer/ComputerModels.kt" "$A/computer/CategoryNames.kt" "$A/computer/TargetView.kt" "$A/computer/ComputerTreeWindow.kt" "$A/computer/ComputerWizard.kt" "$A/computer/ManualOverrideTargetBrowser.kt" "$STAGE/com/example/besu/computer/"
+cp "$A/computer/ComputerModels.kt" "$A/computer/CategoryNames.kt" "$A/computer/TargetView.kt" "$A/computer/ComputerTreeWindow.kt" "$A/computer/ComputerWizard.kt" "$A/computer/ManualOverrideTargetBrowser.kt" "$A/computer/ContactCardView.kt" "$STAGE/com/example/besu/computer/"
 # The Emergency deck. CommandRepository and TemplateEngine are stubbed from their real signatures (stubs/app/CommandRepository.kt): they read storage and the shared variables.
 mkdir -p "$STAGE/com/example/besu/decks"
 cp "$A/decks/EmergencyDeck.kt" "$STAGE/com/example/besu/decks/"

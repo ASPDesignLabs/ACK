@@ -15,7 +15,9 @@ abstract class Context {
     abstract fun getString(id: Int, vararg formatArgs: Any): String
     abstract fun getSharedPreferences(name: String, mode: Int): SharedPreferences
     abstract fun startService(intent: Intent): Any?
-    companion object { const val MODE_PRIVATE = 0 }
+    abstract fun startActivity(intent: Intent)
+    abstract fun getSystemService(name: String): Any?
+    companion object { const val MODE_PRIVATE = 0; const val CLIPBOARD_SERVICE = "clipboard" }
 }
 open class ContextWrapper(base: Context?) : Context() {
     open val baseContext: Context? = base
@@ -30,4 +32,6 @@ open class ContextWrapper(base: Context?) : Context() {
     override fun getString(id: Int, vararg formatArgs: Any): String = baseContext!!.getString(id, *formatArgs)
     override fun getSharedPreferences(name: String, mode: Int): SharedPreferences = baseContext!!.getSharedPreferences(name, mode)
     override fun startService(intent: Intent): Any? = baseContext!!.startService(intent)
+    override fun startActivity(intent: Intent) = baseContext!!.startActivity(intent)
+    override fun getSystemService(name: String): Any? = baseContext!!.getSystemService(name)
 }

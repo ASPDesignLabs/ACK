@@ -32,6 +32,13 @@ object ComputerLabels {
         return if (default != null && stored == default.second) text.get(defaultResource(id)) else stored
     }
 
+    /** The seven day keys a place card's opening hours are saved with (`CONTACT_CARD_DAYS`, a test reads the source). */
+    val DAYS: List<String> = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
+
+    /** A day as shown on a place card: its short name in the chosen language. The saved key ("MON") is never changed; anything else is shown as it is. */
+    fun dayLabel(text: TextSource, day: String): String =
+        if (day in DAYS) text.get("people_day_${day.lowercase()}") else day
+
     /** What to save from an editor: the name as it was stored if the field was left as shown, otherwise what was typed. */
     fun nameToSave(typed: String, shownAtStart: String, storedAtStart: String): String =
         if (typed.trim() == shownAtStart.trim()) storedAtStart else typed

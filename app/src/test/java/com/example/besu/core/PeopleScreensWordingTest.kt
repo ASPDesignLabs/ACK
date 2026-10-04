@@ -22,8 +22,8 @@ class PeopleScreensWordingTest {
     private fun file(name: String) = noComments(RepoFiles.read("$base/$name"))
     private val english get() = StringsXml.map(StringsXml.default)
     private val translations get() = StringsXml.translations().mapValues { StringsXml.map(it.value) }
-    private val screens = listOf("TargetView.kt", "ComputerTreeWindow.kt", "ComputerWizard.kt", "ManualOverrideTargetBrowser.kt")
-    private val newCommon = listOf("common_undo", "common_clear", "common_done", "common_back", "common_name", "common_confirm_delete")
+    private val screens = listOf("TargetView.kt", "ComputerTreeWindow.kt", "ComputerWizard.kt", "ManualOverrideTargetBrowser.kt", "ContactCardView.kt")
+    private val newCommon = listOf("common_undo", "common_clear", "common_done", "common_back", "common_name", "common_confirm_delete", "common_copied")
 
     @Test
     fun everyStringTheScreensNameExists_andNoneIsLeftUnused() {
@@ -31,10 +31,9 @@ class PeopleScreensWordingTest {
         val referenced = sources.flatMap { Regex("""R\.string\.((?:people_[a-z0-9_]+)|(?:common_[a-z_]+))""").findAll(it).map { m -> m.groupValues[1] }.toList() }.toSet()
         // Names the screens write as plain strings (the delete-count plural), and the four default category names built from their ids by ComputerLabels.
         val named = Regex(""""(people_[a-z0-9_]+)"""").findAll(sources.joinToString("\n")).map { it.groupValues[1] }.toSet() +
-            ComputerLabels.DEFAULT_CATEGORIES.map { ComputerLabels.defaultResource(it.first) }
+            ComputerLabels.DEFAULT_CATEGORIES.map { ComputerLabels.defaultResource(it.first) } + ComputerLabels.DAYS.map { "people_day_${it.lowercase()}" }
         val used = referenced + named
         val definedPeople = english.keys.filter { it.startsWith("people_") }.toSet() + StringsXml.plurals(StringsXml.default).keys.filter { it.startsWith("people_") }
-        // The contact card screen is a separate change; its strings (added with it) are the only ones allowed to wait.
         val missing = referenced.filter { it !in english.keys && it !in definedPeople }
         assertEquals("named but not defined: $missing", emptyList<String>(), missing)
         val unused = definedPeople - used
@@ -71,6 +70,61 @@ class PeopleScreensWordingTest {
             assertTrue("$name needs an explicit R import outside the base package", text.contains("import com.example.besu.R"))
         }
         assertTrue("ComputerTreeWindow uses testTag and must import it", file("ComputerTreeWindow.kt").contains("import androidx.compose.ui.platform.testTag"))
+    }
+
+    // ---- the contact card ----------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun theContactCardReadsItsWordsFromResources_andItsToastsThroughTheContext() {
+        val card = file("ContactCardView.kt")
+        val gone = listOf(
+            "\"PLACE CARD\"", "\"PERSON CARD\"", "\"[DONE EDITING]\"", "\"[EDIT]\"", "label = \"NAME\"", "TightSectionLabel(\"NAME\")", "label = \"PHONE\"", "label = \"ADDRESS\"",
+            "TightSectionLabel(\"HOURS\")", "label = \"EMAIL\"", "E.G. TOPS FRIENDLY MARKETS",
+            "E.G. (555) 555-1234", "E.G. 123 MAIN ST", "E.G. NAME@EXAMPLE.COM", "E.G. @HANDLE", "\"E.G. HANDLE\"", "\"OPEN\")", "\"CLOSE\")", "\"NO APP AVAILABLE FOR THIS ACTION\"", "Toast.makeText(context, \"COPIED\"",
+            "label = day.day",
+        )
+        for (literal in gone) assertFalse("ContactCardView.kt still holds $literal", card.contains(literal))
+        // A toast is not in a composable lambda: it reads through the context.
+        assertTrue(card.contains("Toast.makeText(context, context.getString(R.string.people_no_app), Toast.LENGTH_SHORT).show()"))
+        assertTrue(card.contains("Toast.makeText(context, context.getString(R.string.common_copied), Toast.LENGTH_SHORT).show()"))
+        assertFalse(Regex("""Toast\.makeText\([^)]*stringResource""").containsMatchIn(card))
+        assertTrue(card.contains("label = dayName(day.day),"))
+        // The two titles are the right way round, and a phone opens the dialer, an address the map, an email the mail app.
+        assertTrue(card.contains("title = stringResource(if (localCard.type == ContactCardType.PLACE) R.string.people_place_card else R.string.people_person_card),"))
+        assertTrue(card.contains("Intent(Intent.ACTION_DIAL, Uri.parse(\"tel:"))
+        assertTrue(card.contains("Intent(Intent.ACTION_VIEW, Uri.parse(\"geo:0,0?q="))
+        assertTrue(card.contains("Intent(Intent.ACTION_SENDTO, Uri.parse(\"mailto:"))
+        assertTrue(card.contains("HourTimeField(day.open, primaryColor, stringResource(R.string.people_hours_open))"))
+        assertTrue(card.contains("HourTimeField(day.close, primaryColor, stringResource(R.string.people_hours_close))"))
+    }
+
+    @Test
+    fun theBrandNamesAndWhatACardDoesAreUnchanged() {
+        val card = file("ContactCardView.kt")
+        // X, FACEBOOK and LINKEDIN are names of services, not words; the keys the profile link is built from are logic.
+        for (brand in listOf("label = \"X\",", "label = \"FACEBOOK\",", "label = \"LINKEDIN\",")) assertTrue(brand, card.contains(brand))
+        assertTrue(card.contains("\"X\" -> \"https://x.com/\$handle\""))
+        assertTrue(card.contains("\"FACEBOOK\" -> \"https://facebook.com/\$handle\""))
+        assertTrue(card.contains("\"LINKEDIN\" -> \"https://linkedin.com/in/\$handle\""))
+        // The actions a tap or a long press does, and the label the clipboard is given, are as they were.
+        assertTrue(card.contains("Uri.parse(\"tel:\${Uri.encode(phone)}\")"))
+        assertTrue(card.contains("Uri.parse(\"geo:0,0?q=\${Uri.encode(address)}\")"))
+        assertTrue(card.contains("Uri.parse(\"mailto:\${Uri.encode(email)}\")"))
+        assertTrue(card.contains("onCopy = { copyToClipboard(context, \"NAME\", card.name) }"))
+        assertTrue(card.contains("onCopy = { copyToClipboard(context, \"PHONE\", card.phone) }"))
+        assertTrue(card.contains("intent.putExtra(\"source\", \"COMPUTER/CONTACT\")"))
+        // An hours checkbox changes the saved flag of the day it is for, whatever the day is called on screen.
+        assertTrue(card.contains("updated[index] = day.copy(enabled = !day.enabled)"))
+        assertTrue(card.contains("onCopy = { copyToClipboard(context, \"EMAIL\", card.email) }"))
+    }
+
+    @Test
+    fun opensAndClosesAreDifferentWordsInEveryLanguage_asAreThePersonAndPlaceCards() {
+        for (map in listOf(english) + translations.values) {
+            assertTrue(map.getValue("people_hours_open") != map.getValue("people_hours_close"))
+            assertTrue(map.getValue("people_person_card") != map.getValue("people_place_card"))
+            assertTrue(map.getValue("people_person") != map.getValue("people_place"))
+        }
     }
 
     // ---- a category is drawn through the shown-name helper and never rewritten by it ------------------------------------------------

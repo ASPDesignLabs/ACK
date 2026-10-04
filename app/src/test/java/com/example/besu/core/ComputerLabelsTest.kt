@@ -84,6 +84,44 @@ class ComputerLabelsTest {
         assertEquals("PERSONAS 2", ComputerLabels.nameToSave("PERSONAS 2", "PERSONAS", "PEOPLE"))
     }
 
+    // ---- a place card's days -----------------------------------------------------------------------------------------------------
+
+    @Test
+    fun theDayKeysAreTheOnesTheCardSavesHoursWith() {
+        val models = RepoFiles.read("app/src/main/java/com/example/besu/computer/ComputerModels.kt")
+        assertTrue(models.contains("val CONTACT_CARD_DAYS = listOf(\"MON\", \"TUE\", \"WED\", \"THU\", \"FRI\", \"SAT\", \"SUN\")"))
+        assertEquals(listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"), ComputerLabels.DAYS)
+    }
+
+    @Test
+    fun aDayIsShownInTheChosenLanguage_andInEnglishItIsTheSavedKey() {
+        for (day in ComputerLabels.DAYS) assertEquals(day, ComputerLabels.dayLabel(EnglishText, day))
+        for (tag in languages) {
+            val text = FileText(tag)
+            val shown = ComputerLabels.DAYS.map { ComputerLabels.dayLabel(text, it) }
+            assertEquals("$tag: seven different day names", 7, shown.toSet().size)
+            // Really translated: at most two may read like the English key (a short name two languages share, such as Afrikaans SAT).
+            assertTrue("$tag: day names are still English: $shown", shown.zip(ComputerLabels.DAYS).count { it.first != it.second } >= 5)
+            for ((i, name) in shown.withIndex()) assertTrue("$tag/${ComputerLabels.DAYS[i]}: $name", name.isNotBlank() && !name.startsWith("people_day_"))
+        }
+    }
+
+    @Test
+    fun aDayThatIsNotOneOfTheSevenIsShownAsItIs() {
+        for (text in listOf<TextSource>(EnglishText, FileText("es"))) {
+            assertEquals("mon", ComputerLabels.dayLabel(text, "mon"))
+            assertEquals("", ComputerLabels.dayLabel(text, ""))
+            assertEquals("HOLIDAY", ComputerLabels.dayLabel(text, "HOLIDAY"))
+        }
+    }
+
+    @Test
+    fun copiedReadsTheSameOnEveryScreen_inEveryLanguage() {
+        for (map in listOf(StringsXml.map(StringsXml.default)) + StringsXml.translations().values.map { StringsXml.map(it) }) {
+            assertEquals(map.getValue("composer_copied"), map.getValue("common_copied"))
+        }
+    }
+
     @Test
     fun theNamesThatAreAlsoOnTheContactCardPanelAreNotMixedUp() {
         // The PLACES section of the contact card panel (people_places) and the default category PLACES are separate strings with the same English word.
