@@ -2,6 +2,7 @@
 package com.example.besu.ui
 
 import androidx.compose.ui.res.stringResource
+import com.example.besu.R
 import com.example.besu.core.LabelKey
 import com.example.besu.core.SendFlags
 import com.example.besu.core.SendSwitchPolicy
