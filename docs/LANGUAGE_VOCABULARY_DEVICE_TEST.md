@@ -2,8 +2,8 @@
 
 This covers the parts of Section 4 that are built so far: the **neutral starter phrases** (L1), **typing, inserting and the history
 chips** (the work behind them, B1 to B4), the **profile-change warning** (L7, the warning half), and **word suggestions** (L5, in the
-Statement Composer), and the **voice list and SPEECH LANGUAGE** (L3, part 1). **PLAIN WORDS** (L2, section J) is built too. **Not built yet, so not here:**
-translated interface text (L3, part 2: Spanish, Portuguese, Hindi, Arabic, Afrikaans), the profile lock (decided against for now), and the
+Statement Composer), and the **voice list and SPEECH LANGUAGE** (L3, part 1). **PLAIN WORDS** (L2, section J) and **INTERFACE LANGUAGE** with five draft translations (L3, part 2, section K) are built too. **Not built yet, so not here:**
+the profile lock (decided against for now), and the
 pictures and core-vocabulary decisions (L4, L6). Their steps will be added when they are built.
 
 The rules are covered by automated tests (480 in `tools/kotlin_check`, run with `./run_unit_tests.sh`), and the repository policy tests
@@ -269,6 +269,39 @@ button *does* or what is stored: only what it is called, plus the new buttons.
 **Feel**
 - [ ] Look at every new control. → Text is readable (never tiny), every button is easy to hit, and **nothing buzzes or moves** when you tap them.
 - [ ] TalkBack on the four switches. → Each is announced as a switch, on or off.
+
+## K. INTERFACE LANGUAGE (L3, part 2): five DRAFT translations
+
+Rules and limits are in `docs/TRANSLATIONS.md`. **The translations are drafts written without a native speaker**: this list checks that they *work*, not that
+they are right. If you read one of the languages (or know someone who does), write down every word that is wrong or odd, with the screen it is on.
+Take a **backup first** (EXPORT .JSON); nothing here deletes anything.
+
+**The control, and an existing install staying English**
+- [ ] On a phone that already had ACK (set to Spanish, Portuguese, Hindi, Arabic or Afrikaans in the system settings), update and open ACK. → Everything is still
+  **English**. (An existing install must not change language by itself.)
+- [ ] Open SETTINGS. → Just under PLAIN WORDS is a **LANGUAGE · IDIOMA · भाषा · اللغة · TAAL** heading, a short explanation that says the translations are drafts and that
+  HELP, the Terminal and many dialogs stay English, and choices: THIS PHONE'S LANGUAGE, ENGLISH, ESPAÑOL, PORTUGUÊS, हिन्दी, العربية, AFRIKAANS. The current one has a tick and a thicker border.
+- [ ] Tap **ESPAÑOL**. → A box says ACK will restart once, that nothing is deleted, and that you can change it back. **CANCEL** is first and large. Tap outside the box. → Nothing changes.
+- [ ] Tap ESPAÑOL again, then **CHANGE AND RESTART**. → A message says ACK is restarting, then ACK reopens (the screen you were on is not kept).
+
+**A translated language**
+- [ ] Look at the bottom bar (with TalkBack on, listen to it), the header button, the Matrix group headings and the SETTINGS headings. → Spanish names. Turn **PLAIN WORDS on**. → The everyday Spanish names
+  (FRASES, HISTORIAL, PERSONAS Y LUGARES, AJUSTES, SOBRE MÍ / NECESITO ESPACIO / SOCIAL ...). Anything not in `docs/TRANSLATIONS.md`'s list is still English: that is expected.
+- [ ] Repeat for **PORTUGUÊS**, **हिन्दी** and **AFRIKAANS**. → Each shows its own script and words. Write down any text that is cut off, overlaps, or runs over a button
+  (longer words in a 48 dp button are the likeliest problem).
+- [ ] Switch back to **ENGLISH** from the same control. → Everything English again after the restart.
+- [ ] Switch to **THIS PHONE'S LANGUAGE** on a phone set to a language ACK has. → That language. On a phone set to another language (for example German). → English.
+
+**Arabic (right to left)**
+- [ ] Choose **العربية**. → After the restart the screens are **mirrored**: the bottom bar, buttons and text start on the right. The words are **joined** (not spaced apart letter by letter).
+- [ ] Open the Matrix, the composer, SETTINGS and a dialog. → Nothing is cut off at an edge, no icon or toggle is in the wrong place or points the wrong way, and typing in the composer still works.
+  Write down every screen that looks wrong.
+- [ ] Choose **ENGLISH** again. → Left to right again.
+
+**Backup, restore and wipe**
+- [ ] Choose a language, then EXPORT .JSON and look at the warning. → It still lists SETTINGS AND HISTORY (the language is part of that). Restore that file after choosing English. → ACK restarts (the usual restore restart) and shows the saved language.
+- [ ] DELETE DATA → SETTINGS. → The first confirmation says ACK'S OWN WORDS WILL BE IN THIS PHONE'S LANGUAGE afterwards. After it, a phone set to Spanish shows Spanish.
+- [ ] A **brand-new install** on a phone set to Spanish. → Spanish from the first screen, with **PLAIN WORDS still off**.
 
 ## What to send back
 
