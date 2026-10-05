@@ -100,3 +100,41 @@ helpmod_deck_quick_actions_save_slot_title	SAVE AND PLAY BACK
 helpmod_deck_quick_actions_save_slot_body	Commit the action, then tap it normally -- it speaks the resolved phrase immediately, so you can check it sounds right.
 helpmod_deck_quick_actions_complete_title	READY TO GO
 helpmod_deck_quick_actions_complete_body	That's the whole {{DECK:deck}}: pick a pose per group, four phrases per pose, edited and played back right here.
+helpmod_settings_management_title	SETTINGS MANAGEMENT
+helpmod_settings_management_summary	AUDIO ROUTING, WATCH AUDIO, HARDWARE, SENSORS, SHORTCUTS, AND DATA.
+helpmod_settings_management_intro_title	PROTOCOL OVERVIEW
+helpmod_settings_management_intro_body	PROTOCOL contains ACK's system-wide configuration. These controls affect the application independently of the currently active {{DECK:deck}}.
+helpmod_settings_management_audio_output_routing_title	AUDIO OUTPUT ROUTING
+helpmod_settings_management_audio_output_routing_body	{{FORCE_SPEAKER:Force Speaker}} can direct speech toward the device speaker when that is appropriate for your setup. Guide Vox controls whether tutorial and guide narration is spoken aloud. Silent Mode shows prompts as normal but never speaks them out loud.
+helpmod_settings_management_watch_audio_title	WATCH AUDIO FEEDBACK
+helpmod_settings_management_watch_audio_body	This section controls audio feedback played by the watch when issuing pose commands. Select a texture preset and adjust the watch feedback volume to fit your needs.
+helpmod_settings_management_hardware_config_title	WATCH CONFIGURATION
+helpmod_settings_management_hardware_config_body	Hardware Configuration controls the behavior of ACK's watch input system. Crown Resistance adjusts how much rotation is needed. Twist Sensitivity controls motion response. Gravity Lock controls pose stability, and Auto-Cryo controls automatic idle behavior.
+helpmod_settings_management_environment_sensor_title	{{ENV_SENSOR:ENVIRONMENT SENSOR}}
+helpmod_settings_management_environment_sensor_body	The {{ENV_SENSOR:Environment Sensor}} estimates local sound levels using the microphone in your handset. For most devices this is a small sensor, so the readings are not 100% accurate. Good enough to help judge exposure time. Use the scan control to begin or stop monitoring. This can help you judge whether speech output may need a different volume, route, or communication strategy.
+helpmod_settings_management_quick_access_keys_title	{{QUICK_ACCESS_KEYS:QUICK-ACCESS KEYS}}
+helpmod_settings_management_quick_access_keys_body	{{QUICK_ACCESS_KEYS:Quick-Access Keys}} appear in the ACK Command bar. Each slot has a short label and a saved phrase. Configure these for phrases that need to be available with minimal effort.
+helpmod_settings_management_data_port_title	{{DATA_PORT:DATA PORT}}
+helpmod_settings_management_data_port_body	The {{DATA_PORT:Data Port}} manages configuration transfer and backup. Export creates a JSON backup and warns what the file contains, Import Matrix As New {{DECK:Deck}} brings in a backup's matrix phrases as a new {{DECK:deck}}, and Full Restore applies everything else a backup carries -- overwriting or adding to your current setup, never deleting what it doesn't mention. The guide has moved upward so these controls remain visible.
+helpmod_settings_management_completion_title	SETTINGS MANAGEMENT COMPLETE
+helpmod_settings_management_completion_body	Protocol training complete. You now know where to tune audio output routing, watch feedback, hardware response, environmental scanning, header shortcuts, and configuration backups.
+helpmod_target_computer_title	{{TARGET_COMPUTER:TARGET COMPUTER}}
+helpmod_target_computer_summary	CATEGORY TREES, TARGET TAGS, AND GUIDED SETUP.
+helpmod_target_computer_intro_title	{{TARGET_COMPUTER:TARGET COMPUTER}}
+helpmod_target_computer_intro_body	The {{TARGET_COMPUTER:Target Computer}} organizes reusable prompt content -- names, places, food, actions, and anything else you add -- into categories you define. Each category holds one active pick at a time, which can be dropped into outgoing phrases without retyping it.
+helpmod_target_computer_open_category_title	OPEN A CATEGORY
+helpmod_target_computer_open_category_body	Tap any category chip to view what's inside it. Long-press a chip to rename it, change whether its pick clears itself after use, or delete it.
+helpmod_target_computer_add_category_title	ADD A CATEGORY
+helpmod_target_computer_add_category_body	Beyond the defaults, add as many categories as you want. The four shipped categories can be renamed too -- nothing about them is fixed.
+helpmod_target_computer_tree_navigation_title	TAP TO SELECT, HOLD TO EDIT
+helpmod_target_computer_tree_navigation_body	Inside a category: tap a subcategory to open it, tap an entry to make it that category's active pick (tap it again to clear it). Long-press anything to rename or delete it. "+ CATEGORY" and "+ ENTRY" add new items under whatever you last tapped.
+helpmod_target_computer_display_modes_title	TREE OR DROPDOWN
+helpmod_target_computer_display_modes_body	Switch between a branching TREE view and a cascading DROPDOWN view of the same category -- whichever is faster for how deep you've organized it.
+helpmod_target_computer_guide_me_title	GUIDED SETUP
+helpmod_target_computer_guide_me_body	Not sure where to start? GUIDE ME walks you through adding categories and entries one step at a time, staying wherever you're building instead of sending you back to the start after every add.
+helpmod_target_computer_computer_tag_title	USING A TARGET IN A PHRASE
+helpmod_target_computer_computer_tag_body	In the Matrix phrase editor, {{INSERT_TARGET_TAG:INSERT TARGET TAG}} adds a tag like [COMPUTER:PEOPLE] to your template, at your cursor. It resolves to that category's current active pick -- or to an authored fallback if nothing is active.
+helpmod_target_computer_status_indicator_title	CHECK WHAT'S ACTIVE
+helpmod_target_computer_status_indicator_body	The COMPUTER status in the header shows how many categories currently have an active pick. Tap it to see every category's pick at a glance and clear any of them on the spot.
+helpmod_target_computer_completion_title	{{TARGET_COMPUTER:TARGET COMPUTER}} TRAINING COMPLETE
+helpmod_target_computer_completion_body	{{TARGET_COMPUTER:Target Computer}} training complete. You can now build categories, navigate and edit their trees, insert target tags into phrases, and check what's currently active.

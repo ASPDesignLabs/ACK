@@ -2,97 +2,71 @@
 package com.example.besu.help
 
 import com.example.besu.*
+/** This family's words are string resources (helpmod_<module id>_..., core/HelpWalkthroughText.kt), read where a step is drawn or spoken. */
 object TargetComputerHelp {
     val module = HelpModule(
         id = "target_computer",
         category = HelpCategory.CONTEXTUAL_SYSTEMS,
-        title = "{{TARGET_COMPUTER:TARGET COMPUTER}}",
-        summary = "CATEGORY TREES, TARGET TAGS, AND GUIDED SETUP.",
+        title = "helpmod_target_computer_title",
+        summary = "helpmod_target_computer_summary",
         destination = HelpDestination.TARGETS,
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "{{TARGET_COMPUTER:TARGET COMPUTER}}",
-                body = "The {{TARGET_COMPUTER:Target Computer}} organizes reusable prompt " +
-                    "content -- names, places, food, actions, and anything " +
-                    "else you add -- into categories you define. Each " +
-                    "category holds one active pick at a time, which can " +
-                    "be dropped into outgoing phrases without retyping it."
+                title = "helpmod_target_computer_intro_title",
+                body = "helpmod_target_computer_intro_body"
             ),
             HelpStep(
                 id = "open_category",
-                title = "OPEN A CATEGORY",
-                body = "Tap any category chip to view what's inside it. " +
-                    "Long-press a chip to rename it, change whether its " +
-                    "pick clears itself after use, or delete it.",
+                title = "helpmod_target_computer_open_category_title",
+                body = "helpmod_target_computer_open_category_body",
                 action = HelpAction.Interact(AckTags.TARGET_SLOT),
                 targetTag = AckTags.TARGET_SLOT
             ),
             HelpStep(
                 id = "add_category",
-                title = "ADD A CATEGORY",
-                body = "Beyond the defaults, add as many categories as you " +
-                    "want. The four shipped categories can be renamed too " +
-                    "-- nothing about them is fixed.",
+                title = "helpmod_target_computer_add_category_title",
+                body = "helpmod_target_computer_add_category_body",
                 action = HelpAction.Interact(AckTags.COMPUTER_ADD_CATEGORY),
                 targetTag = AckTags.COMPUTER_ADD_CATEGORY
             ),
             HelpStep(
                 id = "tree_navigation",
-                title = "TAP TO SELECT, HOLD TO EDIT",
-                body = "Inside a category: tap a subcategory to open it, " +
-                    "tap an entry to make it that category's active pick " +
-                    "(tap it again to clear it). Long-press anything to " +
-                    "rename or delete it. \"+ CATEGORY\" and \"+ ENTRY\" " +
-                    "add new items under whatever you last tapped."
+                title = "helpmod_target_computer_tree_navigation_title",
+                body = "helpmod_target_computer_tree_navigation_body"
             ),
             HelpStep(
                 id = "display_modes",
-                title = "TREE OR DROPDOWN",
-                body = "Switch between a branching TREE view and a " +
-                    "cascading DROPDOWN view of the same category -- " +
-                    "whichever is faster for how deep you've organized it.",
+                title = "helpmod_target_computer_display_modes_title",
+                body = "helpmod_target_computer_display_modes_body",
                 action = HelpAction.Interact(AckTags.COMPUTER_TREE_WINDOW_MODE),
                 targetTag = AckTags.COMPUTER_TREE_WINDOW_MODE
             ),
             HelpStep(
                 id = "guide_me",
-                title = "GUIDED SETUP",
-                body = "Not sure where to start? GUIDE ME walks you " +
-                    "through adding categories and entries one step at a " +
-                    "time, staying wherever you're building instead of " +
-                    "sending you back to the start after every add.",
+                title = "helpmod_target_computer_guide_me_title",
+                body = "helpmod_target_computer_guide_me_body",
                 action = HelpAction.Interact(AckTags.COMPUTER_GUIDE_ME),
                 targetTag = AckTags.COMPUTER_GUIDE_ME
             ),
             HelpStep(
                 id = "computer_tag",
-                title = "USING A TARGET IN A PHRASE",
-                body = "In the Matrix phrase editor, {{INSERT_TARGET_TAG:INSERT TARGET TAG}} " +
-                    "adds a tag like [COMPUTER:PEOPLE] to your template, " +
-                    "at your cursor. " +
-                    "It resolves to that category's current active pick " +
-                    "-- or to an authored fallback if nothing is active.",
+                title = "helpmod_target_computer_computer_tag_title",
+                body = "helpmod_target_computer_computer_tag_body",
                 action = HelpAction.Interact(AckTags.MATRIX_INSERT_COMPUTER_TAG),
                 targetTag = AckTags.MATRIX_INSERT_COMPUTER_TAG
             ),
             HelpStep(
                 id = "status_indicator",
-                title = "CHECK WHAT'S ACTIVE",
-                body = "The COMPUTER status in the header shows how many " +
-                    "categories currently have an active pick. Tap it to " +
-                    "see every category's pick at a glance and clear any " +
-                    "of them on the spot.",
+                title = "helpmod_target_computer_status_indicator_title",
+                body = "helpmod_target_computer_status_indicator_body",
                 action = HelpAction.Interact(AckTags.COMPUTER_STATUS_INDICATOR),
                 targetTag = AckTags.COMPUTER_STATUS_INDICATOR
             ),
             HelpStep(
                 id = "completion",
-                title = "{{TARGET_COMPUTER:TARGET COMPUTER}} TRAINING COMPLETE",
-                body = "{{TARGET_COMPUTER:Target Computer}} training complete. You can now " +
-                    "build categories, navigate and edit their trees, " +
-                    "insert target tags into phrases, and check what's " +
-                    "currently active."
+                title = "helpmod_target_computer_completion_title",
+                body = "helpmod_target_computer_completion_body"
             )
         )
     )

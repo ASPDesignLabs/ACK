@@ -24,12 +24,12 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
         "FieldOpsHelp.kt", "MatrixDeckHelp.kt",
-        "PersonalizationHelp.kt", "RecordTrainingDataHelp.kt", "SettingsManagementHelp.kt", "StatementComposerHelp.kt", "TargetComputerHelp.kt", "VoiceRecordingsHelp.kt",
+        "PersonalizationHelp.kt", "RecordTrainingDataHelp.kt", "StatementComposerHelp.kt", "VoiceRecordingsHelp.kt",
         // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
         "HelpRegistry.kt",
     )
@@ -178,6 +178,9 @@ class HelpWalkthroughWordingTest {
         "helpmod_geo_protocol_map_data_title" to "geo_map_data",
         "helpmod_deck_emergency_overrides_title" to "emergency_overrides_title",
         "helpmod_deck_management_intro_title" to "label_decks",
+        "helpmod_settings_management_audio_output_routing_title" to "settings_audio_routing_heading",
+        "helpmod_settings_management_watch_audio_title" to "settings_watch_audio_heading",
+        "helpmod_target_computer_guide_me_title" to "people_wizard_title",
     )
 
     /** A text that names a label in plain words (English has no placeholder there), so every language holds that label's own standard word, and it does not follow PLAIN WORDS (a known gap). */
@@ -196,6 +199,19 @@ class HelpWalkthroughWordingTest {
         "helpmod_basics_navigation_profile_selector_body" to listOf("header_profile"),
         "helpmod_deck_quick_actions_groups_intro_body" to listOf("label_pose_identity", "label_pose_defend", "label_pose_connect"),
         "helpmod_deck_quick_actions_edit_group_body" to listOf("common_edit", "qa_group_root_title"),
+        // The nav button that opens the settings screen, the switches and sliders in AUDIO OUTPUT ROUTING and the watch configuration, and the DATA PORT buttons.
+        "helpmod_settings_management_intro_title" to listOf("label_settings_entry"),
+        "helpmod_settings_management_intro_body" to listOf("label_settings_entry"),
+        "helpmod_settings_management_completion_body" to listOf("label_settings_entry"),
+        "helpmod_settings_management_audio_output_routing_body" to listOf("label_vox", "label_silent_mode"),
+        "helpmod_settings_management_hardware_config_body" to listOf("label_cryo", "label_twist_sens"),
+        "helpmod_settings_management_data_port_body" to listOf("label_export_json", "label_full_restore", "label_import_matrix"),
+        // The Target Computer screen's own buttons and the header's COMPUTER status.
+        "helpmod_target_computer_tree_navigation_body" to listOf("people_add_category_button", "people_add_entry_button"),
+        "helpmod_target_computer_display_modes_title" to listOf("people_mode_tree", "people_mode_dropdown"),
+        "helpmod_target_computer_display_modes_body" to listOf("people_mode_tree", "people_mode_dropdown"),
+        "helpmod_target_computer_guide_me_body" to listOf("people_guide_me"),
+        "helpmod_target_computer_status_indicator_body" to listOf("header_computer"),
     )
 
     @Test
@@ -205,9 +221,10 @@ class HelpWalkthroughWordingTest {
     }
 
     @Test
-    fun aTextThatNamesALabelInPlainWordsHoldsThatLabelsOwnWordInEveryLanguage() {
-        for ((tag, map) in everyLanguage) for ((name, sources) in namesLabelLiterally) for (source in sources) {
-            val word = map.getValue(source)
+    fun aTextThatNamesALabelInPlainWordsHoldsThatLabelsOwnWordInEveryTranslation() {
+        // English may name a button loosely ("Export", "Full Restore"); a translation names it by the word the screen shows, so the step and the button always agree.
+        for ((tag, map) in translations) for ((name, sources) in namesLabelLiterally) for (source in sources) {
+            val word = map.getValue(source).trim('[', ']')
             assertTrue("$tag/$name does not hold \"$word\" ($source): ${map.getValue(name)}", map.getValue(name).contains(word, ignoreCase = true))
         }
     }
@@ -218,7 +235,7 @@ class HelpWalkthroughWordingTest {
             val body = map.getValue("helpmod_geo_protocol_map_data_body")
             assertTrue("$tag: Mapsforge is a name: $body", body.contains("Mapsforge", ignoreCase = true))
             assertTrue("$tag: the .map file kind is named: $body", body.contains(".map", ignoreCase = true))
-            for ((name, text) in map.filter { it.key.startsWith(HelpWalkthroughText.PREFIX) }) assertFalse("$tag/$name takes an argument nothing passes: $text", text.contains("%"))
+            for ((name, text) in map.filter { it.key.startsWith(HelpWalkthroughText.PREFIX) }) assertFalse("$tag/$name takes an argument nothing passes: $text", Regex("""%(\d+\$)?[sdf]""").containsMatchIn(text))
         }
     }
 
@@ -245,6 +262,20 @@ class HelpWalkthroughWordingTest {
             for ((tag, map) in translations) assertEquals("$tag/$name: the same literal tokens as English", tokens, literal.findAll(map.getValue(name)).map { it.value }.sorted().toList())
         }
         assertTrue("expected at least the Quick Actions {{tags}} step", checked >= 1)
+    }
+
+    @Test
+    fun aStoredTagInEnglishIsKeptExactlyInEveryLanguage() {
+        // [COMPUTER:PEOPLE] is the token the phrase editor really inserts; it is never translated.
+        val tag = Regex("""\[[A-Z]+:[A-Z_]+\]""")
+        var checked = 0
+        for ((name, text) in english.filter { it.key.startsWith(HelpWalkthroughText.PREFIX) }) {
+            for (token in tag.findAll(text).map { it.value }) {
+                checked++
+                for ((lang, map) in translations) assertTrue("$lang/$name lost the token $token: ${map.getValue(name)}", map.getValue(name).contains(token))
+            }
+        }
+        assertTrue("expected the Target Computer tag step", checked >= 1)
     }
 
     @Test
