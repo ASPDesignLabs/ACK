@@ -920,4 +920,11 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
         <item quantity="many">%1$d GESTOS VÃO DIZER ALGO DIFERENTE SE VOCÊ MUDAR PARA %2$s:</item>
         <item quantity="other">%1$d GESTOS VÃO DIZER ALGO DIFERENTE SE VOCÊ MUDAR PARA %2$s:</item>
     </plurals>
+    <string name="deck_create_type">TIPO DE %1$s</string>
+    <string name="deck_create_color">COR DE %1$s</string>
+    <string name="deck_create_desc_matrix">UMA MATRIZ COMPLETA DE 3 POSES COM SUAS PRÓPRIAS FRASES, CAMADAS DE CONTEXTO E PERFIS.</string>
+    <string name="deck_create_desc_quick">TRÊS GRUPOS DE AÇÕES COM QUATRO VAGAS CONFIGURÁVEIS POR GRUPO.</string>
+    <string name="deck_create_desc_emergency">QUATRO VAGAS DE MENSAGENS IMEDIATAS COM SUBSTITUIÇÕES DE EMERGÊNCIA OPCIONAIS.</string>
+    <string name="deck_create_desc_emoji">PÁGINAS SÓ VISUAIS DE EMOJI COM GRADES CONFIGURÁVEIS E TEXTO OPCIONAL.</string>
+    <string name="deck_create_desc_gif">BIBLIOTECA LOCAL DE GIF COM CATEGORIAS, PRÉVIAS E REPRODUÇÃO EM TELA CHEIA.</string>
 </resources>

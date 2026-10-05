@@ -41,6 +41,8 @@ cp "$A/computer/ComputerModels.kt" "$A/computer/CategoryNames.kt" "$A/computer/T
 # The Emergency deck. CommandRepository and TemplateEngine are stubbed from their real signatures (stubs/app/CommandRepository.kt): they read storage and the shared variables.
 mkdir -p "$STAGE/com/example/besu/decks"
 cp "$A/decks/EmergencyDeck.kt" "$STAGE/com/example/besu/decks/"
+# The CREATE DECK dialog (its words are string resources; DeckType is stubbed in stubs/app/Data.kt).
+cp "$A/decks/CreateDeckDialog.kt" "$STAGE/com/example/besu/decks/"
 # AUDIO ARCHITECT: the screen and its one-time defaults offer. Everything it calls outside the Compose-only files (the output service, the voice stores, the backup
 # manager, the capture home screen) is stubbed from its real signatures (stubs/app/Audio.kt).
 cp "$A/settings/AudioView.kt" "$A/settings/DefaultsPrompt.kt" "$STAGE/com/example/besu/settings/"

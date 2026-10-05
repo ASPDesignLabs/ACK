@@ -931,4 +931,11 @@
         <item quantity="one">%1$d GESTURE WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO %2$s:</item>
         <item quantity="other">%1$d GESTURES WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO %2$s:</item>
     </plurals>
+    <string name="deck_create_type">%1$s TYPE</string>
+    <string name="deck_create_color">%1$s COLOR</string>
+    <string name="deck_create_desc_matrix">A full 3-pose Matrix with its own phrases, context layers, and profiles.</string>
+    <string name="deck_create_desc_quick">Three action groups with four configurable slots per group.</string>
+    <string name="deck_create_desc_emergency">Four immediate prompt slots with optional emergency overrides.</string>
+    <string name="deck_create_desc_emoji">Visual-only emoji pages with configurable grids and optional text.</string>
+    <string name="deck_create_desc_gif">Local GIF library with categories, previews, and fullscreen playback.</string>
 </resources>

@@ -950,4 +950,11 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
         <item quantity="many">%1$d إيماءة ستنطق شيئًا مختلفًا إذا انتقلت إلى %2$s:</item>
         <item quantity="other">%1$d إيماءة ستنطق شيئًا مختلفًا إذا انتقلت إلى %2$s:</item>
     </plurals>
+    <string name="deck_create_type">نوع %1$s</string>
+    <string name="deck_create_color">لون %1$s</string>
+    <string name="deck_create_desc_matrix">مصفوفة كاملة بثلاث وضعيات مع عباراتها وطبقات السياق والملفات الخاصة بها.</string>
+    <string name="deck_create_desc_quick">ثلاث مجموعات إجراءات بأربع خانات قابلة للضبط في كل مجموعة.</string>
+    <string name="deck_create_desc_emergency">أربع خانات رسائل فورية مع تجاوزات طوارئ اختيارية.</string>
+    <string name="deck_create_desc_emoji">صفحات إيموجي مرئية فقط بشبكات قابلة للضبط ونص اختياري.</string>
+    <string name="deck_create_desc_gif">مكتبة GIF محلية بفئات ومعاينات وتشغيل بملء الشاشة.</string>
 </resources>

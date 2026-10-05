@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.decks
 
+import com.example.besu.R
 import com.example.besu.ui.looseSpacing
 import com.example.besu.core.LabelKey
 import com.example.besu.ui.labelFor
@@ -33,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -68,27 +70,15 @@ fun CreateDeckDialog(
 
     val helpManager = LocalHelpManager.current
 
-    val description = when (deckType) {
-        DeckType.MATRIX -> {
-            "A full 3-pose Matrix with its own phrases, context layers, and profiles."
+    val description = stringResource(
+        when (deckType) {
+            DeckType.MATRIX -> R.string.deck_create_desc_matrix
+            DeckType.QUICK_ACTIONS -> R.string.deck_create_desc_quick
+            DeckType.EMERGENCY -> R.string.deck_create_desc_emergency
+            DeckType.EMOJI -> R.string.deck_create_desc_emoji
+            DeckType.GIF -> R.string.deck_create_desc_gif
         }
-
-        DeckType.QUICK_ACTIONS -> {
-            "Three action groups with four configurable slots per group."
-        }
-
-        DeckType.EMERGENCY -> {
-            "Four immediate prompt slots with optional emergency overrides."
-        }
-
-        DeckType.EMOJI -> {
-            "Visual-only emoji pages with configurable grids and optional text."
-        }
-
-        DeckType.GIF -> {
-            "Local GIF library with categories, previews, and fullscreen playback."
-        }
-    }
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -123,7 +113,7 @@ fun CreateDeckDialog(
             Spacer(modifier = Modifier.height(18.dp))
 
             CreateDeckSectionLabel(
-                text = "DECK TYPE",
+                text = stringResource(R.string.deck_create_type, labelFor(LabelKey.DECK)),
                 color = primaryColor
             )
 
@@ -245,7 +235,7 @@ fun CreateDeckDialog(
             Spacer(modifier = Modifier.height(18.dp))
 
             CreateDeckSectionLabel(
-                text = "DECK COLOR",
+                text = stringResource(R.string.deck_create_color, labelFor(LabelKey.DECK)),
                 color = primaryColor
             )
 
@@ -265,7 +255,7 @@ fun CreateDeckDialog(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 CreateDeckButton(
-                    text = "CANCEL",
+                    text = stringResource(R.string.common_cancel),
                     color = Color.Gray,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -273,7 +263,7 @@ fun CreateDeckDialog(
                 }
 
                 CreateDeckButton(
-                    text = "CREATE",
+                    text = stringResource(R.string.common_create),
                     color = primaryColor,
                     modifier = Modifier
                         .weight(1f)
