@@ -1400,11 +1400,12 @@ Wording and decisions: `docs/PLAIN_LANGUAGE.md`, `docs/TRANSLATIONS.md`. Checkli
 - **The five translations (es, pt, hi, ar, af) are DRAFTS written without a native speaker** and must keep saying so (the notice at the top of each file, the control, the
   CHANGELOG, `THIRD_PARTY_NOTICES.md`). `TranslationsTest` checks completeness and safety only (same strings and `%1$s` placeholders, standard ≠ everyday, no two buttons
   sharing an everyday name except the four same-place pairs, capitals for es/pt/af, own script for hi/ar, escaping, the notice), never that the words are right. The HELP
-  **walkthroughs' own text** (module titles and summaries, step titles and bodies, the options on the two chooser dialogs), the Terminal, most dialogs and everything
-  spoken stay English in every language; say so wherever the language is offered. HELP's chrome (the header button, the menu, the cards, the choosers, the coach panel) is translated.
+  **walkthroughs' own text** (module titles and summaries, step titles and bodies, the options on the two chooser dialogs), **the lines other parts of ACK write into the Terminal**
+  (the output service, the watch, Geo, the path trace: English text through the `ACK_LOG` broadcast), most dialogs and everything spoken stay English in every language; say so
+  wherever the language is offered. HELP's chrome (the header button, the menu, the cards, the choosers, the coach panel) and the Terminal's own words (see below) are translated.
 - **Kotlin the tests cannot compile can still hide a build error.** Two lines of text with nothing joining them are not one sentence: in a `when` branch only the last is used
-  (the clear-variables confirmation lost its question this way), in a `listOf(` it is a build error (the `/info` notes did). `AdjacentTextLinesTest` and
-  `TerminalTextListsShapeTest` read every source file for it. `tools/kotlin_check/android-typecheck` type-checks `ui/TerminalPlainControls.kt`,
+  (the clear-variables confirmation lost its question this way), in a `listOf(` it is a build error (the `/info` notes did, which is one reason they are string resources
+  now). `AdjacentTextLinesTest` reads every source file for it, and `TerminalTextListsShapeTest` fails if a hand-written list of text lines is put back in `ui/DesignSystem.kt`. `tools/kotlin_check/android-typecheck` type-checks `ui/TerminalPlainControls.kt`,
   `settings/InterfaceLanguageSection.kt` and the capture screens against Compose, with `R` generated from the real `strings.xml` (a wrong string name fails it).
 
 ### Wording in string resources (INTERFACE LANGUAGE, long tail) — rules that must stay true
@@ -1469,8 +1470,9 @@ Tests: `SettingsWordingTest` (the screen's words, parts A to C), `OutputRouteTex
   `ms`, `s` and `dB` stay as they are; `String.format("%.1f", x)` is left to the phone's own number format and passed in as an argument. A Bluetooth device's own name is shown exactly as the phone gives it.
 - **A sentence names a screen or a button as an argument only where its English is already all capitals.** A mixed-case English description that names "Target Computer" or "Quick Actions"
   keeps the standard names (the translation uses the language's own label, checked by a test) and does not follow PLAIN WORDS: a known gap. `REC` and `+REC` on the Quick-Access key
-  buttons stay the English abbreviation (the buttons are narrow, and MANAGE RECORDINGS' empty-state sentence names them as REC). `RESOLVE` and `TYPING` stay English inside the
-  sentences that mention them, because the Terminal prints them in English.
+  buttons stay the English abbreviation (the buttons are narrow, and MANAGE RECORDINGS' empty-state sentence names them as REC). `RESOLVE` stays English inside the
+  sentence that mentions it (the PATH trace lines are written in English by the data layer); the Terminal's own TYPING word is handed to the sentence as an argument
+  (`settings_term_statusbox_desc`).
 - **A gesture is named the way the Matrix screen names it** in the profile-change dialog (`slotLabel`, handed to `ProfileSwapText.lines` as `names`); a profile's own name and the person's
   phrases are shown as typed, and the connector "becomes:" stays lower case in every language because it sits between two phrases the person typed.
 - **A fixed width clips a longer word** (again): `ThemeOption` (SHARP / CLEAN / SOFT) is `widthIn(min = 60.dp)` with a little side padding.
@@ -1490,3 +1492,34 @@ Covers CREATE DECK, QUICK ACTIONS, EMOJI and GIF (`decks/CreateDeckDialog.kt`, `
 - **`labelFor` is composable: capture it (and `rememberText()`) before a launcher callback.** A toast inside `rememberLauncherForActivityResult` uses `words` / `context.getString`, never `stringResource`.
 - **Test-writing lessons.** `StringsXml.map` turns a resource's `\n` escape into a real line break, so resource-side tests compare a real newline while source-reading tests of the `.kt` keep the escape. A regex through an indented Compose block needs 700 characters or more between anchors (a 300 limit failed twice on indentation alone). All 64 deliberate breaks of these four screens (swapped labels, a translated saved name, a shifted plural argument, a dropped placeholder) are caught by a test.
 - **Known open items:** `GifRepository.importGif` leaves a partly copied file when an oversized GIF is refused, and the import dialog creates its category before the import runs; the zip folder name `UNCATEGORIZED` in `GifBackupManager` is a stored name and stays English.
+
+### Terminal and Manual Override wording — rules that must stay true
+Covers `ui/DesignSystem.kt`'s legacy Manual Override screen (TYPE behind `/m`), the Terminal's own words and `/info`. Decisions are plain Kotlin with tests in every language
+(`core/ManualOverrideText.kt`, `core/TerminalText.kt`, `core/PatchNotes.kt`; `ManualOverrideTextTest`, `TerminalTextTest`, `PatchNotesTest`); the screen is read by `ManualOverrideWordingTest`
+and `TerminalWordingTest`. `ui/DesignSystem.kt` uses the SDK, so it is syntax-checked only.
+
+- **Typed commands are logic and are never translated.** `/help /q /n /s /e /v /t /cls /backup /repair /info /m` and the word `CONFIRM` in `/cls CONFIRM` stay exactly as typed inside every
+  translated sentence, and a command that is not known is echoed back exactly as typed (a test feeds it `%`, `$`, quotes and Arabic). `TerminalText.HELP_COMMANDS` holds each command as typed
+  beside the resource that says what it does; the `/help` command column is padded to 17 characters **in code** so a description never has to keep the spacing, and the English output is held
+  identical to the old list line for line. A check that a typed word survived must look for it **as a whole word**: "/cls CONFIRMAR" contains "/cls CONFIRM" and the parser would not accept it.
+- **What the Terminal says is two different things.** Its own words (STATUSBOX, the prompt hint, replies to typed commands, `/help`, `/info`) are translated; lines other parts of ACK send in
+  through `ACK_LOG` arrive as English text, are saved as written and stay English (translating them would mean carrying them by id through every sender and the saved log). A reply the Terminal
+  writes itself is saved in the language of that moment, so a log kept across a language change shows both. Each reply keeps its log type (`CMD`, `CMD_WARN`, `CMD_ERR`), which decides how it is
+  shown and filtered; a test pins each.
+- **`/info`'s notes are one string per bullet or heading (`info_*`), listed in `PatchNotes.ENTRIES`.** English keeps its hard-wrapped lines (a bullet's lines joined by a line break) so `/info`
+  reveals exactly the lines it always did, and the two-space continuation indent is added **in code**, because Android collapses runs of spaces in a resource (the same trap as a trailing
+  space). A translation is one line per note and need not keep the English line breaks. A long line waits one more 2 s step per 71 characters (the longest English line), so a translated bullet
+  gets time to be read; shake still stops it.
+- **A release's new notes ship in English and are translated later.** `TranslationsTest` does not demand the `info_*` family in every language (Android falls back to the English string per
+  string); `PatchNotesTest` fails if a name in `ENTRIES` has no English string, or an `info_*` string is not listed. To add notes: the English strings, their names in `ENTRIES`, CHANGELOG.md
+  (which carries the same notes); translations when wanted.
+- **A name that is still English on its own screen stays English inside a translated sentence**, so a reader can find it: `RECORD FREE SPEECH` and the capture screens' buttons, Freeform Studio's
+  `ADD RECORDINGS FROM ACK`, commands, file names (`DOCS/....MD`), `STARTERS`, `MY VOICE`, `ACK WEAR`. `PatchNotesTest.thingsThatAreNotWordsComeThroughEveryTranslationExactly` holds the list;
+  extend it when a note names something new, and when a capture screen is migrated, change the notes and that test together.
+- **A saved phrase is a format argument, never part of the format.** The delete confirmation is two strings joined by one space in code (`ManualOverrideText.deleteQuestion`: the question with the
+  phrase exactly as saved in straight quotes, then the warning that it cannot be undone and to export a backup first), so a test can check both are said in every language; it is fed a phrase with
+  `%s`, `$1`, a quote and a line break. `/cls` has the same shape (`term_cls_question` and `term_cls_warning`, then the typed instruction): one combined string let a translation quietly lose its warning.
+- **A shared word pinned in one group is flipped, not forgotten, in the next.** The Terminal's save dialog spells four words like the Manual Override one; the Manual Override change left it literal
+  and pinned that with a test, and the Terminal change flipped the pin and read the same strings. Do the same when a later group shares words with an earlier one.
+- **A source-reading test that quotes `$name` inside a `"""` raw string needs `[$]`** (the template swallows it); `\$` does not work there.
+- **ENCODE and TRANSMIT have no entry in the PLAIN WORDS table**, so they read the same in both modes (a stated gap, like the HELP step names).
