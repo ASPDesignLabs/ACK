@@ -1222,4 +1222,6 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="deckmenu_final_gif">GIF-LÊERS WAT BY HIERDIE %1$s HOU, WORD OOK VERWYDER.</string>
     <string name="deckmenu_delete_permanently">[SKRAP VIR ALTYD]</string>
     <string name="manual_close">[MAAK TOE]</string>
+    <string name="deckmenu_final_backup">RUGSTEUN EERS MET %1$s.</string>
+    <string name="deckmenu_final_backup_gif">OM DIE GIF-LÊERS TE BEHOU, GEBRUIK EERS %2$s EN DAN %1$s OP DIE %3$s-SKERM.</string>
 </resources>

@@ -19,6 +19,8 @@ class DeckMenuTextTest {
     private val translations get() = StringsXml.translations().mapValues { StringsXml.map(it.value) }
     private val english get() = StringsXml.map(StringsXml.default)
     private fun count(text: String, part: String) = Regex(Regex.escape(part)).findAll(text).count()
+    private val words = DeckMenuText.BackupWords(exportJson = "EXPORT .JSON", gifExportEntry = "EXPORT DECK (.ZIP)", gifBackupMenu = "BACKUP", gifLabel = "GIF")
+    private val marked = DeckMenuText.BackupWords(exportJson = "XJX", gifExportEntry = "EEE", gifBackupMenu = "MMM", gifLabel = "GGG")
     private val awkwardNames = listOf("Work", "100% %s %d", "price \$5 \$1", "she said \"no\"", "line one\nline two", "[BRACKETS] // SLASHES")
 
     // ---- English is exactly what the menu always said -------------------------------------------------------------------------------
@@ -35,12 +37,16 @@ class DeckMenuTextTest {
         assertEquals("EDIT: QUICK ACTIONS", DeckMenuText.editTitle(t, "QUICK ACTIONS"))
         assertEquals("CONFIRM DECK DELETION", DeckMenuText.deleteTitle(t, "DECK"))
         assertEquals("MARK Work FOR DELETION?", DeckMenuText.deleteQuestion(t, "Work"))
-        val plain = DeckMenuText.finalConfirmation(t, "Work", "DECK", isGifDeck = false)
+        val plain = DeckMenuText.finalConfirmation(t, "Work", "DECK", isGifDeck = false, words = words)
         assertEquals("DELETE Work PERMANENTLY?", plain.question)
         assertEquals("THIS REMOVES THE DECK AND ITS LOCAL CONFIGURATION.", plain.removes)
         assertNull(plain.gifWarning)
-        val gif = DeckMenuText.finalConfirmation(t, "Work", "DECK", isGifDeck = true)
+        assertEquals("THIS CANNOT BE UNDONE. BACK UP FIRST WITH EXPORT .JSON.", plain.backupAdvice)
+        val gif = DeckMenuText.finalConfirmation(t, "Work", "DECK", isGifDeck = true, words = words)
         assertEquals("GIF FILES BELONGING TO THIS DECK WILL ALSO BE REMOVED.", gif.gifWarning)
+        assertEquals("THIS CANNOT BE UNDONE. TO KEEP THE GIF FILES, FIRST USE BACKUP, THEN EXPORT DECK (.ZIP), ON THE GIF SCREEN.", gif.backupAdvice)
+        // With PLAIN WORDS the export label is the everyday one.
+        assertEquals("THIS CANNOT BE UNDONE. BACK UP FIRST WITH SAVE A BACKUP.", DeckMenuText.finalConfirmation(t, "Work", "PAGE", false, DeckMenuText.BackupWords("SAVE A BACKUP", "x", "y", "z")).backupAdvice)
         // The same sentences with the everyday word for DECK (PLAIN WORDS).
         assertEquals("SELECT A PAGE TO RENAME, RECOLOR, OR DELETE", DeckMenuText.manageHint(t, "PAGE"))
         assertEquals("SYSTEM GESTURE PHRASES PAGE LOCKED", DeckMenuText.lockedTitle(t, "GESTURE PHRASES", "PAGE"))
@@ -123,8 +129,8 @@ class DeckMenuTextTest {
         for ((tag, _) in translations) {
             val f = FileText(tag)
             for (name in awkwardNames) {
-                val plain = DeckMenuText.finalConfirmation(f, name, "DDD", isGifDeck = false)
-                val gif = DeckMenuText.finalConfirmation(f, name, "DDD", isGifDeck = true)
+                val plain = DeckMenuText.finalConfirmation(f, name, "DDD", isGifDeck = false, words = marked)
+                val gif = DeckMenuText.finalConfirmation(f, name, "DDD", isGifDeck = true, words = marked)
                 assertEquals("$tag: '$name' once in '${plain.question}'", 1, count(plain.question, name))
                 assertFalse("$tag: a placeholder leaked", plain.question.replace(name, "").contains("%"))
                 assertTrue("$tag: a question: ${plain.question}", plain.question.trimEnd().endsWith("?") || plain.question.trimEnd().endsWith("؟"))
@@ -133,14 +139,43 @@ class DeckMenuTextTest {
                 assertEquals("$tag: the same question and the same loss either way", plain.question, gif.question)
                 assertEquals("$tag", plain.removes, gif.removes)
             }
-            val gif = DeckMenuText.finalConfirmation(f, "N", "DDD", isGifDeck = true)
+            val gif = DeckMenuText.finalConfirmation(f, "N", "DDD", isGifDeck = true, words = marked)
             assertEquals("$tag: the DECK word once in '${gif.removes}'", 1, count(gif.removes, "DDD"))
             assertEquals("$tag: the DECK word once in '${gif.gifWarning}'", 1, count(gif.gifWarning!!, "DDD"))
-            assertTrue("$tag: the GIF sentence names GIF files, in Latin or in the label's script: ${gif.gifWarning}", gif.gifWarning!!.contains("GIF") || tag == "hi" || tag == "ar")
+            // "GIF files" names the file kind: Latin in es, pt and af, the label's own script in hi and ar (as the GIF deck's own sentences do).
+            val kind = mapOf("hi" to "जीआईएफ", "ar" to "جيف").getOrDefault(tag, "GIF")
+            assertTrue("$tag: the GIF sentence names the file kind '$kind': ${gif.gifWarning}", gif.gifWarning!!.contains(kind))
             assertNotEquals("$tag: the two questions are different", DeckMenuText.deleteQuestion(f, "N"), gif.question)
             assertNotEquals("$tag: the loss sentence is not English", "THIS REMOVES THE DDD AND ITS LOCAL CONFIGURATION.", gif.removes)
             assertNotEquals("$tag: the GIF sentence is not English", "GIF FILES BELONGING TO THIS DDD WILL ALSO BE REMOVED.", gif.gifWarning)
             assertNotEquals("$tag: the two sentences differ", gif.removes, gif.gifWarning)
+        }
+    }
+
+    @Test
+    fun theFinalDialogAlwaysSaysItCannotBeUndoneAndWhatToBackUpFirst_aGifDeckBeingPointedAtItsOwnBackupMenu_inEveryLanguage() {
+        for ((tag, map) in translations) {
+            val f = FileText(tag)
+            val cannotUndo = map.getValue("storage_cannot_undo")
+            val plain = DeckMenuText.finalConfirmation(f, "N", "DDD", isGifDeck = false, words = marked).backupAdvice
+            val gif = DeckMenuText.finalConfirmation(f, "N", "DDD", isGifDeck = true, words = marked).backupAdvice
+            for ((which, advice) in listOf("deck" to plain, "gif" to gif)) {
+                assertTrue("$tag/$which: it says it cannot be undone first: $advice", advice.startsWith(cannotUndo + " "))
+                assertFalse("$tag/$which: a placeholder leaked: $advice", advice.contains("%"))
+                assertFalse("$tag/$which: no double space where the sentences join: $advice", advice.contains("  "))
+                assertTrue("$tag/$which: more than the warning: $advice", advice.length > cannotUndo.length + 8)
+            }
+            // A deck's configuration is in EXPORT .JSON, so that is the advice; a GIF deck's files are not, so it is the GIF screen's BACKUP menu and never EXPORT .JSON.
+            assertEquals("$tag: the export label once", 1, count(plain, "XJX"))
+            for (gifWord in listOf("EEE", "MMM", "GGG")) assertEquals("$tag: no GIF word in the other advice ($gifWord)", 0, count(plain, gifWord))
+            for (gifWord in listOf("EEE", "MMM", "GGG")) assertEquals("$tag: the GIF word once ($gifWord) in '$gif'", 1, count(gif, gifWord))
+            assertEquals("$tag: not EXPORT .JSON for a GIF deck", 0, count(gif, "XJX"))
+            assertNotEquals("$tag: the two pieces of advice differ", plain, gif)
+            assertNotEquals("$tag: still English", "THIS CANNOT BE UNDONE. BACK UP FIRST WITH XJX.", plain)
+            assertNotEquals("$tag: still English", "THIS CANNOT BE UNDONE. TO KEEP THE GIF FILES, FIRST USE MMM, THEN EEE, ON THE GGG SCREEN.", gif)
+            assertNotEquals("$tag: the cannot-undo sentence is not English", "THIS CANNOT BE UNDONE.", cannotUndo)
+            // The GIF advice names the order: the BACKUP menu is opened before its export entry.
+            assertTrue("$tag: BACKUP is named before the export entry in '$gif'", gif.indexOf("MMM") < gif.indexOf("EEE") || tag == "ar")
         }
     }
 
@@ -164,7 +199,7 @@ class DeckMenuTextTest {
     fun theArgumentsAreWhereTheCodePutsThem() {
         val expected = mapOf(
             "deckmenu_system_default" to "%1\$s", "deckmenu_manage_hint" to "%1\$s", "deckmenu_locked_title" to "%1\$s %2\$s", "deckmenu_locked_body" to "%1\$s %2\$s", "deckmenu_edit_title" to "%1\$s",
-            "deckmenu_delete_title" to "%1\$s", "deckmenu_delete_question" to "%1\$s", "deckmenu_final_question" to "%1\$s", "deckmenu_final_removes" to "%1\$s", "deckmenu_final_gif" to "%1\$s",
+            "deckmenu_delete_title" to "%1\$s", "deckmenu_delete_question" to "%1\$s", "deckmenu_final_question" to "%1\$s", "deckmenu_final_removes" to "%1\$s", "deckmenu_final_gif" to "%1\$s", "deckmenu_final_backup" to "%1\$s", "deckmenu_final_backup_gif" to "%1\$s %2\$s %3\$s",
             "deckmenu_manage" to "", "deckmenu_exit_manage" to "", "deckmenu_locked_tag" to "", "deckmenu_edit_tag" to "", "deckmenu_ui_color" to "", "deckmenu_continue" to "", "deckmenu_cancel" to "",
             "deckmenu_final_title" to "", "deckmenu_delete_permanently" to "", "manual_close" to "",
         )

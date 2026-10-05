@@ -1219,7 +1219,9 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="deckmenu_final_title">अंतिम पुष्टि</string>
     <string name="deckmenu_final_question">%1$s को हमेशा के लिए हटाएँ?</string>
     <string name="deckmenu_final_removes">यह %1$s और उसकी स्थानीय कॉन्फ़िगरेशन को हटा देता है।</string>
-    <string name="deckmenu_final_gif">इस %1$s की GIF फ़ाइलें भी हटा दी जाएँगी।</string>
+    <string name="deckmenu_final_gif">इस %1$s की जीआईएफ फ़ाइलें भी हटा दी जाएँगी।</string>
     <string name="deckmenu_delete_permanently">[हमेशा के लिए हटाएँ]</string>
     <string name="manual_close">[बंद करें]</string>
+    <string name="deckmenu_final_backup">पहले %1$s से बैकअप लें।</string>
+    <string name="deckmenu_final_backup_gif">जीआईएफ फ़ाइलें रखने के लिए पहले %3$s स्क्रीन पर %2$s और फिर %1$s का उपयोग करें।</string>
 </resources>

@@ -9,7 +9,8 @@ package com.example.besu.core
  * The words for the deck and for a deck's type come in as arguments too (`labelFor(LabelKey.DECK)` and the deck-type labels), so they follow PLAIN WORDS and the language like every other screen.
  *
  * **Deleting a deck asks twice and never deletes on the first.** The first question marks the deck for deletion; the second names what is lost (the deck, its local configuration, and for a GIF deck its
- * GIF files) and is the only place the delete button is. The GIF sentence is part of the decision ([finalConfirmation]) so a test can check it is said for a GIF deck, in every language, and only then.
+ * GIF files), says it cannot be undone and what to back up first, and is the only place the delete button is. The GIF sentence and the back-up advice are part of the decision ([finalConfirmation]) so a test can
+ * check they are said, in every language, for the right kind of deck.
  */
 object DeckMenuText {
     /** The always-present Matrix deck's row. [matrixWord] is the deck-type label for Matrix (it follows PLAIN WORDS). */
@@ -35,12 +36,25 @@ object DeckMenuText {
     fun deleteTitle(text: TextSource, deckWord: String): String = text.get("deckmenu_delete_title", deckWord)
     fun deleteQuestion(text: TextSource, deckName: String): String = text.get("deckmenu_delete_question", deckName)
 
-    /** The final deletion dialog's body. [gifWarning] is null for every deck but a GIF deck, whose files are deleted with it. */
-    class FinalConfirmation(val question: String, val removes: String, val gifWarning: String?)
+    /**
+     * The words the back-up advice points at, each as the screen it names words it (so they follow PLAIN WORDS and the language): [exportJson] the EXPORT .JSON label; for a GIF deck, whose files are not in that
+     * file, [gifExportEntry] the GIF screen's EXPORT DECK (.ZIP) entry, [gifBackupMenu] its BACKUP button and [gifLabel] the GIF deck-type label.
+     */
+    class BackupWords(val exportJson: String, val gifExportEntry: String, val gifBackupMenu: String, val gifLabel: String)
 
-    fun finalConfirmation(text: TextSource, deckName: String, deckWord: String, isGifDeck: Boolean): FinalConfirmation = FinalConfirmation(
+    /**
+     * The final deletion dialog's body. [gifWarning] is null for every deck but a GIF deck, whose files are deleted with it. [backupAdvice] is always said: that it cannot be undone, then what to back up first. Every
+     * other deck's configuration is in EXPORT .JSON; a GIF deck's files are not, so its advice is the GIF screen's own BACKUP menu.
+     */
+    class FinalConfirmation(val question: String, val removes: String, val gifWarning: String?, val backupAdvice: String)
+
+    fun finalConfirmation(text: TextSource, deckName: String, deckWord: String, isGifDeck: Boolean, words: BackupWords): FinalConfirmation = FinalConfirmation(
         question = text.get("deckmenu_final_question", deckName),
         removes = text.get("deckmenu_final_removes", deckWord),
         gifWarning = if (isGifDeck) text.get("deckmenu_final_gif", deckWord) else null,
+        backupAdvice = listOf(
+            text.get("storage_cannot_undo"),
+            if (isGifDeck) text.get("deckmenu_final_backup_gif", words.gifExportEntry, words.gifBackupMenu, words.gifLabel) else text.get("deckmenu_final_backup", words.exportJson),
+        ).joinToString(" "),
     )
 }

@@ -1235,4 +1235,6 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="deckmenu_final_gif">OS ARQUIVOS GIF DE %1$s TAMBÉM SERÃO REMOVIDOS.</string>
     <string name="deckmenu_delete_permanently">[EXCLUIR PERMANENTEMENTE]</string>
     <string name="manual_close">[FECHAR]</string>
+    <string name="deckmenu_final_backup">FAÇA ANTES UMA CÓPIA COM %1$s.</string>
+    <string name="deckmenu_final_backup_gif">PARA MANTER OS ARQUIVOS GIF, USE ANTES %2$s E DEPOIS %1$s NA TELA %3$s.</string>
 </resources>

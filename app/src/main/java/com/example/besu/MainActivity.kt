@@ -1908,7 +1908,18 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     )
                                 },
                                 text = {
-                                    val confirmation = DeckMenuText.finalConfirmation(deckMenuWords, deck.name, deckWord, deck.type == DeckType.GIF)
+                                    val confirmation = DeckMenuText.finalConfirmation(
+                                        deckMenuWords,
+                                        deck.name,
+                                        deckWord,
+                                        deck.type == DeckType.GIF,
+                                        DeckMenuText.BackupWords(
+                                            exportJson = labelFor(LabelKey.EXPORT_JSON),
+                                            gifExportEntry = stringResource(R.string.gif_export_deck, deckWord),
+                                            gifBackupMenu = stringResource(R.string.gif_backup),
+                                            gifLabel = labelFor(LabelKey.DECK_TYPE_GIF)
+                                        )
+                                    )
                                     Column {
                                         Text(
                                             text = confirmation.question,
@@ -1936,6 +1947,15 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                                 fontFamily = FontFamily.Monospace
                                             )
                                         }
+
+                                        Spacer(modifier = Modifier.height(10.dp))
+
+                                        Text(
+                                            text = confirmation.backupAdvice,
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontFamily = FontFamily.Monospace
+                                        )
                                     }
                                 },
                                 confirmButton = {

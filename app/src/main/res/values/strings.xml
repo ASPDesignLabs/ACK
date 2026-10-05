@@ -1243,4 +1243,6 @@
     <string name="deckmenu_final_gif">GIF FILES BELONGING TO THIS %1$s WILL ALSO BE REMOVED.</string>
     <string name="deckmenu_delete_permanently">[DELETE PERMANENTLY]</string>
     <string name="manual_close">[CLOSE]</string>
+    <string name="deckmenu_final_backup">BACK UP FIRST WITH %1$s.</string>
+    <string name="deckmenu_final_backup_gif">TO KEEP THE GIF FILES, FIRST USE %2$s, THEN %1$s, ON THE %3$s SCREEN.</string>
 </resources>

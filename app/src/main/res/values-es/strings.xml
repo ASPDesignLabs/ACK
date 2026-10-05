@@ -1235,4 +1235,6 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="deckmenu_final_gif">TAMBIÉN SE ELIMINARÁN LOS ARCHIVOS GIF DE %1$s.</string>
     <string name="deckmenu_delete_permanently">[ELIMINAR PARA SIEMPRE]</string>
     <string name="manual_close">[CERRAR]</string>
+    <string name="deckmenu_final_backup">HAZ ANTES UNA COPIA CON %1$s.</string>
+    <string name="deckmenu_final_backup_gif">PARA CONSERVAR LOS ARCHIVOS GIF, USA ANTES %2$s Y LUEGO %1$s EN LA PANTALLA %3$s.</string>
 </resources>

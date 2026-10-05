@@ -115,10 +115,22 @@ class DeckMenuWordingTest {
     @Test
     fun theFinalDialogShowsTheGifSentenceOnlyWhenTheDecisionGivesOne_andTheDeckIsTestedByItsType() {
         val last = finalDialog
-        assertTrue(last.contains("DeckMenuText.finalConfirmation(deckMenuWords, deck.name, deckWord, deck.type == DeckType.GIF)"))
+        assertTrue(Regex("""DeckMenuText\.finalConfirmation\(\s*deckMenuWords,\s*deck\.name,\s*deckWord,\s*deck\.type == DeckType\.GIF,\s*DeckMenuText\.BackupWords\(""").containsMatchIn(last))
         assertTrue(Regex("""if \(confirmation\.gifWarning != null\) \{[\s\S]{0,300}?text = confirmation\.gifWarning,""").containsMatchIn(last))
         assertTrue(last.contains("text = confirmation.question,") && last.contains("text = confirmation.removes,"))
         assertEquals("the word for DECK is the label, in both dialogs", 2, Regex("""val deckWord = labelFor\(LabelKey\.DECK\)""").findAll(main).count())
+    }
+
+    @Test
+    fun theFinalDialogShowsTheBackUpAdviceNextToTheDeleteButton_inTwelvePoint_withTheWordsOfTheScreensItNames() {
+        val last = finalDialog
+        assertTrue("the advice is drawn at 12 sp (new text keeps the floor) and in white", Regex("""text = confirmation\.backupAdvice,\s*color = Color\.White,\s*fontSize = 12\.sp,""").containsMatchIn(last))
+        assertTrue("it is in the same dialog as the delete button, before it", last.indexOf("confirmation.backupAdvice") in 1 until last.indexOf("R.string.deckmenu_delete_permanently"))
+        assertFalse("the first dialog does not carry it", firstDialog.contains("backupAdvice"))
+        assertTrue("EXPORT .JSON, as that button reads", last.contains("exportJson = labelFor(LabelKey.EXPORT_JSON),"))
+        assertTrue("the GIF screen's export entry, worded the way that screen words it", last.contains("gifExportEntry = stringResource(R.string.gif_export_deck, deckWord),"))
+        assertTrue("the GIF screen's BACKUP button", last.contains("gifBackupMenu = stringResource(R.string.gif_backup),"))
+        assertTrue("the GIF deck type's label", last.contains("gifLabel = labelFor(LabelKey.DECK_TYPE_GIF)"))
     }
 
     @Test

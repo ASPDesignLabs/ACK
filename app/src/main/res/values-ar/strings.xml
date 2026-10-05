@@ -1271,7 +1271,9 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="deckmenu_final_title">التأكيد النهائي</string>
     <string name="deckmenu_final_question">هل تريد حذف %1$s نهائيًا؟</string>
     <string name="deckmenu_final_removes">يؤدي هذا إلى إزالة %1$s وإعداداتها المحلية.</string>
-    <string name="deckmenu_final_gif">ستُحذف أيضًا ملفات GIF الخاصة بـ%1$s.</string>
+    <string name="deckmenu_final_gif">ستُحذف أيضًا ملفات جيف الخاصة بـ%1$s.</string>
     <string name="deckmenu_delete_permanently">[حذف نهائي]</string>
     <string name="manual_close">[إغلاق]</string>
+    <string name="deckmenu_final_backup">أنشئ نسخة احتياطية أولاً باستخدام %1$s.</string>
+    <string name="deckmenu_final_backup_gif">للاحتفاظ بملفات جيف، استخدم أولاً %2$s ثم %1$s في شاشة %3$s.</string>
 </resources>
