@@ -52,7 +52,6 @@ class PlainWordsScreensWiringTest {
         "DECKS",
         "TARGET_ENTRY",      // ENTRY rows are named by the person
         "TARGET_CATEGORY",
-        "GEO_GRID",          // the screen uses GEO_OPEN_GRID
         "TERMINAL"           // the Terminal's own plain-mode pass is a separate step
     )
 

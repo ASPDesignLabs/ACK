@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.geo
 
+import com.example.besu.R
+import com.example.besu.core.GeoText
 import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.data.*
@@ -34,6 +36,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -130,6 +133,7 @@ val MAP_3D_SHADER = """
 
 @Composable
 fun GeoProtocolView(context: Context, primaryColor: Color) {
+    val words = rememberText()
     var refreshKey by remember { mutableIntStateOf(0) }
     var showPermissionModal by remember { mutableStateOf(false) }
 
@@ -237,7 +241,7 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            "NO MAP DATA IMPORTED -- COORDINATES ONLY",
+                            stringResource(R.string.geo_no_map_overlay),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -248,23 +252,23 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
                 Row(modifier = Modifier.fillMaxWidth().background(VoidBlack.copy(alpha = 0.85f)).windowInsetsPadding(WindowInsets.statusBars).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(if (editingZoneId != null) labelFor(LabelKey.GEO_EDIT_NODE) else labelFor(LabelKey.GEO_ADD_NODE), color = primaryColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (isTracking) "[TRACKING: ON]" else "[TRACKING: OFF]", color = if (isTracking) primaryColor else Color.Gray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.clickable { isTracking = !isTracking }.padding(end = 16.dp))
-                        Text("[ABORT]", color = Color.Red, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { isMapFullscreen = false; editingZoneId = null })
+                        Text(GeoText.trackingSwitch(words, isTracking), color = if (isTracking) primaryColor else Color.Gray, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.clickable { isTracking = !isTracking }.padding(end = 16.dp))
+                        Text(stringResource(R.string.geo_abort_tag), color = Color.Red, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { isMapFullscreen = false; editingZoneId = null })
                     }
                 }
 
                 Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(VoidBlack.copy(alpha = 0.9f)).windowInsetsPadding(WindowInsets.navigationBars).padding(48.dp)) {
-                    Text("TARGET: ${String.format("%.4f, %.4f", crosshairLat, crosshairLng)}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                    Text(GeoText.target(words, crosshairLat, crosshairLng), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                         if (editingZoneId != null) {
-                            NeonButton("PURGE", Modifier.weight(1f), mainColor = Color.Red) {
+                            NeonButton(stringResource(R.string.geo_purge), Modifier.weight(1f), mainColor = Color.Red) {
                                 GeoRepository.deleteZone(context, editingZoneId!!)
                                 GeoEngineController.syncEngineState(context)
                                 isMapFullscreen = false; editingZoneId = null; refreshKey++
                             }
                         }
-                        HeroButton("LOCK COORDINATE", modifier = Modifier.weight(2f), mainColor = primaryColor) {
+                        HeroButton(stringResource(R.string.geo_lock_coordinate), modifier = Modifier.weight(2f), mainColor = primaryColor) {
                             if (editingZoneId != null) {
                                 val existing = zones.find { it.id == editingZoneId }
                                 if (existing != null) GeoRepository.saveZone(context, existing.copy(lat = crosshairLat, lng = crosshairLng))
@@ -283,7 +287,7 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(labelFor(LabelKey.GEO_PROTOCOL), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
-            NeonButton(if (isMasterEnabled) "SYSTEM: ON" else "SYSTEM: OFF", isActive = isMasterEnabled, mainColor = primaryColor) {
+            NeonButton(GeoText.systemSwitch(words, isMasterEnabled), isActive = isMasterEnabled, mainColor = primaryColor) {
                 GeoRepository.setGeoEnabled(context, !isMasterEnabled); GeoEngineController.syncEngineState(context); refreshKey++
             }
         }
@@ -302,26 +306,22 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("MAP DATA", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Text(stringResource(R.string.geo_map_data), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            if (userMapFile != null) {
-                "IMPORTED -- ${"%.1f".format(userMapFile.length() / 1_048_576f)} MB"
-            } else {
-                "NONE -- TACTICAL GRID RENDERS COORDINATES ONLY"
-            },
+            GeoText.mapStatus(words, userMapFile?.let { it.length() / 1_048_576f }, labelFor(LabelKey.GEO_GRID)),
             color = if (userMapFile != null) primaryColor else Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace
         )
         if (mapImportError != null) {
             Spacer(modifier = Modifier.height(4.dp))
-            Text("IMPORT FAILED: $mapImportError", color = Color.Red, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+            Text(GeoText.importFailed(words, mapImportError), color = Color.Red, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
         }
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             NeonButton(
-                text = "IMPORT MAP FILE",
+                text = stringResource(R.string.geo_import_map),
                 mainColor = primaryColor,
                 modifier = Modifier
                     .testTag(AckTags.GEO_MAP_IMPORT)
@@ -331,13 +331,13 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
                 mapImportLauncher.launch(arrayOf("*/*"))
             }
             if (userMapFile != null) {
-                NeonButton(text = "REMOVE", mainColor = Color.Red) {
+                NeonButton(text = stringResource(R.string.geo_remove), mainColor = Color.Red) {
                     showMapRemoveConfirm = true
                 }
             }
         }
         Text(
-            "A REGION MAP IS NOT REQUIRED -- ZONES STILL WORK BY COORDINATE. IMPORT A MAPSFORGE-COMPATIBLE .MAP FILE FOR VISUALS.",
+            stringResource(R.string.geo_map_hint),
             color = Color.DarkGray,
             fontSize = 8.sp,
             fontFamily = FontFamily.Monospace,
@@ -372,15 +372,9 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
     pendingMapImportUri?.let { uri ->
         GeoMapActionConfirmDialog(
             primaryColor = primaryColor,
-            title = if (userMapFile != null) "REPLACE MAP DATA?" else "IMPORT MAP DATA?",
-            body = if (userMapFile != null) {
-                "This replaces the currently imported map file. The old file cannot be recovered " +
-                    "unless you still have the original on your device to import again."
-            } else {
-                "This copies the selected file into ACK's private storage. It stays on this " +
-                    "device only and is never bundled into or read from any backup you export."
-            },
-            confirmLabel = "IMPORT",
+            title = GeoText.mapActionTitle(words, GeoText.importAction(userMapFile != null)),
+            body = GeoText.mapActionBody(words, GeoText.importAction(userMapFile != null)),
+            confirmLabel = stringResource(R.string.geo_import),
             onDismiss = { pendingMapImportUri = null },
             onConfirm = {
                 val result = GeoRepository.importUserMapFile(context, uri)
@@ -389,7 +383,7 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
                     mapImportError = null
                     refreshKey++
                 } else {
-                    mapImportError = result.exceptionOrNull()?.message ?: "Unknown error"
+                    mapImportError = result.exceptionOrNull()?.message ?: words.get("geo_unknown_error")
                 }
             }
         )
@@ -398,9 +392,9 @@ fun GeoProtocolView(context: Context, primaryColor: Color) {
     if (showMapRemoveConfirm) {
         GeoMapActionConfirmDialog(
             primaryColor = Color.Red,
-            title = "REMOVE MAP DATA?",
-            body = "Tactical Grid will fall back to coordinates only until a new map file is imported.",
-            confirmLabel = "REMOVE",
+            title = GeoText.mapActionTitle(words, GeoText.MapAction.REMOVE),
+            body = GeoText.mapActionBody(words, GeoText.MapAction.REMOVE),
+            confirmLabel = stringResource(R.string.geo_remove),
             onDismiss = { showMapRemoveConfirm = false },
             onConfirm = {
                 GeoRepository.clearUserMapFile(context)
@@ -433,7 +427,7 @@ private fun GeoMapActionConfirmDialog(
             Text(body, color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
             Spacer(modifier = Modifier.height(18.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                NeonButton(text = "CANCEL", mainColor = Color.Gray, modifier = Modifier.weight(1f)) { onDismiss() }
+                NeonButton(text = stringResource(R.string.common_cancel), mainColor = Color.Gray, modifier = Modifier.weight(1f)) { onDismiss() }
                 NeonButton(text = confirmLabel, mainColor = primaryColor, modifier = Modifier.weight(1f)) { onConfirm() }
             }
         }
@@ -566,12 +560,13 @@ fun TacticalMapView(
 
 @Composable
 fun GeoZoneCard(zone: GeoZone, primaryColor: Color, availableDecks: List<DeckMeta>, onUpdate: (GeoZone) -> Unit, onDelete: () -> Unit, onEdit: () -> Unit) {
+    val words = rememberText()
     var enterExpanded by remember { mutableStateOf(false) }
     var exitExpanded by remember { mutableStateOf(false) }
-    val enterOptions = listOf("DEFAULT" to "SYSTEM DEFAULT") + availableDecks.map { it.id to it.name }
-    val exitOptions = listOf("NONE" to "DO NOTHING", "PREVIOUS" to "REVERT TO PREVIOUS", "DEFAULT" to "SYSTEM DEFAULT") + availableDecks.map { it.id to it.name }
-    val enterLabel = enterOptions.find { it.first == zone.enterDeckId }?.second ?: zone.enterDeckId
-    val exitLabel = exitOptions.find { it.first == zone.exitDeckId }?.second ?: zone.exitDeckId
+    val enterOptions = GeoText.enterOptions(words, availableDecks.map { it.id to it.name })
+    val exitOptions = GeoText.exitOptions(words, availableDecks.map { it.id to it.name })
+    val enterLabel = GeoText.optionLabel(enterOptions, zone.enterDeckId)
+    val exitLabel = GeoText.optionLabel(exitOptions, zone.exitDeckId)
     val allowedRadii = listOf(10f, 20f, 30f, 50f, 100f, 200f, 300f, 400f, 500f, 600f, 700f, 800f)
     val currentIndex = allowedRadii.indexOf(zone.radiusMeters).let { if (it == -1) 4 else it }.toFloat()
 
@@ -579,21 +574,21 @@ fun GeoZoneCard(zone: GeoZone, primaryColor: Color, availableDecks: List<DeckMet
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(value = zone.name, onValueChange = { onUpdate(zone.copy(name = it.uppercase())) }, modifier = Modifier.weight(1f).height(50.dp), colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent), textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp, fontWeight = FontWeight.Bold))
             Row {
-                Text(" [EDIT]", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { onEdit() }.padding(8.dp))
-                Text(" [PURGE]", color = Color.Red, fontSize = 10.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { onDelete() }.padding(8.dp))
+                Text(" " + stringResource(R.string.geo_edit_tag), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { onEdit() }.padding(8.dp))
+                Text(" " + stringResource(R.string.geo_purge_tag), color = Color.Red, fontSize = 10.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { onDelete() }.padding(8.dp))
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        Text("RADIUS: ${zone.radiusMeters.toInt()}m", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Text(GeoText.radius(words, zone.radiusMeters.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
         Slider(value = currentIndex, onValueChange = { indexFloat -> onUpdate(zone.copy(radiusMeters = allowedRadii[indexFloat.toInt()])) }, valueRange = 0f..(allowedRadii.size - 1).toFloat(), steps = allowedRadii.size - 2, colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor, inactiveTrackColor = Color.DarkGray))
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
             Box(modifier = Modifier.weight(1f)) {
-                Column(modifier = Modifier.clickable { enterExpanded = true }) { Text("ENTER DECK:", color = Color.Gray, fontSize = 8.sp, fontFamily = FontFamily.Monospace); Text(enterLabel, color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
+                Column(modifier = Modifier.clickable { enterExpanded = true }) { Text(GeoText.enterDeckLabel(words, labelFor(LabelKey.DECK)), color = Color.Gray, fontSize = 8.sp, fontFamily = FontFamily.Monospace); Text(enterLabel, color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
                 DropdownMenu(expanded = enterExpanded, onDismissRequest = { enterExpanded = false }, modifier = Modifier.background(Graphite)) { enterOptions.forEach { (id, name) -> DropdownMenuItem(text = { Text(name, color = primaryColor, fontFamily = FontFamily.Monospace) }, onClick = { onUpdate(zone.copy(enterDeckId = id)); enterExpanded = false }) } }
             }
             Box(modifier = Modifier.weight(1f)) {
-                Column(modifier = Modifier.clickable { exitExpanded = true }) { Text("EXIT DECK:", color = Color.Gray, fontSize = 8.sp, fontFamily = FontFamily.Monospace); Text(exitLabel, color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
+                Column(modifier = Modifier.clickable { exitExpanded = true }) { Text(GeoText.exitDeckLabel(words, labelFor(LabelKey.DECK)), color = Color.Gray, fontSize = 8.sp, fontFamily = FontFamily.Monospace); Text(exitLabel, color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
                 DropdownMenu(expanded = exitExpanded, onDismissRequest = { exitExpanded = false }, modifier = Modifier.background(Graphite)) { exitOptions.forEach { (id, name) -> DropdownMenuItem(text = { Text(name, color = primaryColor, fontFamily = FontFamily.Monospace) }, onClick = { onUpdate(zone.copy(exitDeckId = id)); exitExpanded = false }) } }
             }
         }
