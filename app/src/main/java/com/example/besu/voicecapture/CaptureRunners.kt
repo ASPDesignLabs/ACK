@@ -4,6 +4,7 @@ package com.example.besu.voicecapture
 import android.content.Context
 import android.util.Log
 import com.example.besu.capture.CaptureListener
+import com.example.besu.capture.CaptureNotice
 import com.example.besu.capture.CaptureTime
 import com.example.besu.capture.Card
 import com.example.besu.capture.ClipFlags
@@ -73,7 +74,7 @@ class ScriptSessionRunner(
 
     @Volatile var state = RunState.PAUSED
         private set
-    @Volatile var message = ""
+    @Volatile var notice: CaptureNotice? = null
         private set
     @Volatile var currentCard = pending.firstOrNull() ?: -1
         private set
@@ -119,7 +120,7 @@ class ScriptSessionRunner(
     fun pause() { engine.pause() }
 
     fun resume() {
-        message = ""
+        notice = null
         state = RunState.LISTENING
         engine.resume()
     }
@@ -154,7 +155,7 @@ class ScriptSessionRunner(
         this.attempt = attempt
         cardsLeft = engine.cardsLeft
         state = RunState.LISTENING
-        message = ""
+        notice = null
     }
 
     override fun onClipKept(clip: StoredClip, cardsLeft: Int) {
@@ -163,15 +164,15 @@ class ScriptSessionRunner(
         this.cardsLeft = cardsLeft
     }
 
-    override fun onPaused(reason: PauseReason, message: String) {
+    override fun onPaused(reason: PauseReason, notice: CaptureNotice?) {
         state = RunState.PAUSED
-        this.message = if (reason == PauseReason.REQUESTED) "" else message
+        this.notice = if (reason == PauseReason.REQUESTED) null else notice
         Log.i(TrainingCapture.LOG_TAG, "script session $sessionId paused: $reason")
     }
 
     override fun onFinished() {
         state = RunState.FINISHED
-        message = ""
+        notice = null
         Log.i(TrainingCapture.LOG_TAG, "script session $sessionId ended: $kept clips kept, $cardsLeft cards left")
     }
 
@@ -199,7 +200,7 @@ class FreeSessionRunner(
         private set
     @Volatile var isSpeech = false
         private set
-    @Volatile var message = ""
+    @Volatile var notice: CaptureNotice? = null
         private set
     @Volatile var stoppedByItself = false
         private set
@@ -248,8 +249,8 @@ class FreeSessionRunner(
         this.isSpeech = isSpeech
     }
 
-    override fun onStoppedByItself(reason: PauseReason, message: String) {
-        this.message = message
+    override fun onStoppedByItself(reason: PauseReason, notice: CaptureNotice) {
+        this.notice = notice
         stoppedByItself = true
         mic.sink = null
         Log.i(TrainingCapture.LOG_TAG, "free session $sessionId stopped by itself: $reason")

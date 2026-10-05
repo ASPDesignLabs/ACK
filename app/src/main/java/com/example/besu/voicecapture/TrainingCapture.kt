@@ -10,6 +10,7 @@ import android.media.MediaRecorder
 import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.example.besu.capture.CaptureNotice
 import com.example.besu.capture.CardSplitter
 import com.example.besu.capture.ClipState
 import com.example.besu.capture.SpeechSpan
@@ -114,9 +115,9 @@ class TrainingMicrophone {
     @Volatile
     var sink: ((ShortArray, Int) -> Unit)? = null
 
-    /** Set when the microphone stopped working after it had started, in words for the person. */
+    /** Set when the microphone stopped working after it had started: what happened, worded where it is drawn (core/CaptureText.notice). */
     @Volatile
-    var failure: String? = null
+    var failure: CaptureNotice? = null
         private set
 
     @Volatile
@@ -126,10 +127,10 @@ class TrainingMicrophone {
 
     val isOpen: Boolean get() = running
 
-    /** Opens the microphone. Returns null on success, or a message saying why not. */
-    fun open(context: Context): String? {
+    /** Opens the microphone. Returns null on success, or what went wrong. */
+    fun open(context: Context): CaptureNotice? {
         if (running) return null
-        if (!TrainingCapture.hasMicPermission(context)) return "THE MICROPHONE IS NOT ALLOWED. ALLOW IT IN THE PHONE'S SETTINGS FOR ACK."
+        if (!TrainingCapture.hasMicPermission(context)) return CaptureNotice.MicNotAllowed
         for (rate in intArrayOf(48_000, 44_100)) {
             val min = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
             if (min <= 0) continue
@@ -166,12 +167,12 @@ class TrainingMicrophone {
                             try {
                                 sink?.invoke(buf, n)
                             } catch (e: Exception) {
-                                failure = "SOMETHING WENT WRONG WHILE RECORDING: ${e.message ?: e.javaClass.simpleName}"
+                                failure = CaptureNotice.MicTrouble(e.message ?: e.javaClass.simpleName)
                                 Log.e(TrainingCapture.LOG_TAG, "recording failed in the audio handler", e)
                                 running = false
                             }
                         } else if (n < 0) {
-                            failure = "THE MICROPHONE STOPPED (ERROR $n). ANOTHER APP MAY BE USING IT."
+                            failure = CaptureNotice.MicStopped(n)
                             Log.e(TrainingCapture.LOG_TAG, "microphone read returned $n")
                             running = false
                         }
@@ -181,7 +182,7 @@ class TrainingMicrophone {
             }
         }
         Log.e(TrainingCapture.LOG_TAG, "microphone: no combination of rate and source could be opened")
-        return "THE MICROPHONE COULD NOT BE OPENED. ANOTHER APP MAY BE USING IT."
+        return CaptureNotice.MicCouldNotOpen
     }
 
     fun close() {

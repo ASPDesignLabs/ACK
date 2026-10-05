@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.capture
 
+import com.example.besu.core.CaptureText
+import com.example.besu.core.EnglishText
+import com.example.besu.core.FileText
 import com.example.besu.core.RepoFiles
+import com.example.besu.core.StringsXml
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -11,6 +15,12 @@ class FreeSpeechNoticeTest {
     private val screen = "app/src/main/java/com/example/besu/voicecapture/CaptureSessionScreen.kt"
     private val home = "app/src/main/java/com/example/besu/voicecapture/TrainingCaptureHome.kt"
     private val help = "app/src/main/java/com/example/besu/help/RecordTrainingDataHelp.kt"
+    private val english get() = StringsXml.map(StringsXml.default)
+    private val translations get() = StringsXml.translations().mapValues { StringsXml.map(it.value) }
+
+    // The setup notice is read through the decision (it carries the engine's own limit); the home line is a plain string resource.
+    private val setupToken = "CaptureText.freeNoticeSetup(words)"
+    private val homeToken = "R.string.capture_free_notice_home"
 
     // --- the words ---
 
@@ -19,26 +29,49 @@ class FreeSpeechNoticeTest {
         assertEquals(
             "FREE SPEECH RECORDS EVERYTHING THE MICROPHONE HEARS, INCLUDING ANYONE NEARBY, FOR UP TO 90 MINUTES. " +
                 "TELL THEM FIRST, OR RECORD SOMEWHERE ELSE.",
-            FreeSpeechNotice.SETUP,
+            CaptureText.freeNoticeSetup(EnglishText),
         )
     }
 
     @Test
     fun theMinutesInTheNoticeAreTheRealLimit() {
         assertEquals(5_400, CaptureConstants.MAX_FREE_SESSION_S) // 90 minutes: if this changes, the notice follows it
-        assertTrue(FreeSpeechNotice.SETUP.contains("FOR UP TO ${CaptureConstants.MAX_FREE_SESSION_S / 60} MINUTES"))
+        assertTrue(CaptureText.freeNoticeSetup(EnglishText).contains("FOR UP TO ${CaptureConstants.MAX_FREE_SESSION_S / 60} MINUTES"))
+        // The sentence under the timer says the same limit, from the same constant.
+        assertTrue(CaptureText.freeNote(EnglishText).contains("AT ${CaptureConstants.MAX_FREE_SESSION_S / 60} MINUTES"))
+        // In every language the number is written once, as the engine's own limit.
+        for (tag in translations.keys) {
+            val text = FileText(tag)
+            for (sentence in listOf(CaptureText.freeNoticeSetup(text), CaptureText.freeNote(text))) {
+                assertEquals("$tag: the limit once in '$sentence'", 1, Regex("90").findAll(sentence).count())
+            }
+        }
     }
 
     @Test
     fun theHomeAndHelpSentencesAreTheApprovedOnes() {
-        assertEquals("IT ALSO RECORDS ANYONE NEARBY.", FreeSpeechNotice.HOME)
+        assertEquals("IT ALSO RECORDS ANYONE NEARBY.", english.getValue("capture_free_notice_home"))
         assertEquals("It also records anyone nearby.", FreeSpeechNotice.HELP)
     }
 
     @Test
     fun screenWordsAreCapitalsLikeTheRestOfTheApp() {
-        assertEquals(FreeSpeechNotice.SETUP.uppercase(), FreeSpeechNotice.SETUP)
-        assertEquals(FreeSpeechNotice.HOME.uppercase(), FreeSpeechNotice.HOME)
+        assertEquals(CaptureText.freeNoticeSetup(EnglishText).uppercase(), CaptureText.freeNoticeSetup(EnglishText))
+        assertEquals(english.getValue("capture_free_notice_home").uppercase(), english.getValue("capture_free_notice_home"))
+        for (tag in listOf("es", "pt", "af")) {
+            assertEquals("$tag setup", CaptureText.freeNoticeSetup(FileText(tag)).uppercase(), CaptureText.freeNoticeSetup(FileText(tag)))
+            assertEquals("$tag home", translations.getValue(tag).getValue("capture_free_notice_home").uppercase(), translations.getValue(tag).getValue("capture_free_notice_home"))
+        }
+    }
+
+    @Test
+    fun theNoticeIsInEveryLanguage_andSaysSomethingElseThanTheEnglish() {
+        for ((tag, map) in translations) {
+            assertTrue("$tag setup", map.getValue("capture_free_notice_setup") != english.getValue("capture_free_notice_setup"))
+            assertTrue("$tag home", map.getValue("capture_free_notice_home") != english.getValue("capture_free_notice_home"))
+            assertEquals("$tag: the minutes are the only placeholder", listOf("%1\$d"), StringsXml.placeholders(map.getValue("capture_free_notice_setup")))
+            assertEquals("$tag: the home line has no placeholder", emptyList<String>(), StringsXml.placeholders(map.getValue("capture_free_notice_home")))
+        }
     }
 
     // --- where the words are used (the screens are Compose, so these read the source) ---
@@ -46,9 +79,9 @@ class FreeSpeechNoticeTest {
     @Test
     fun theSetupNoticeIsOnlyForFreeSpeechAndComesBeforeTheQuietCheckButton() {
         val source = RepoFiles.read(screen)
-        val at = source.indexOf("FreeSpeechNotice.SETUP")
-        assertTrue("the setup screen does not show FreeSpeechNotice.SETUP", at >= 0)
-        assertEquals("the notice must be shown exactly once", at, source.lastIndexOf("FreeSpeechNotice.SETUP"))
+        val at = source.indexOf(setupToken)
+        assertTrue("the setup screen does not show the setup notice", at >= 0)
+        assertEquals("the notice must be shown exactly once", at, source.lastIndexOf(setupToken))
         // The nearest condition above the notice must be exactly `if (free)`, so script recording is unchanged (comments in between are fine).
         val condition = source.lastIndexOf("if (", at)
         assertTrue("no condition above the notice", condition >= 0)
@@ -56,21 +89,21 @@ class FreeSpeechNoticeTest {
             "the notice must sit directly inside `if (free)`, not `${source.substring(condition, minOf(source.length, condition + 24)).lineSequence().first()}`",
             source.startsWith("if (free)", condition),
         )
-        val button = source.indexOf("START QUIET CHECK")
+        val button = source.indexOf("CaptureText.startQuietLabel(words)")
         assertTrue(button >= 0)
         assertTrue("the notice must come before START QUIET CHECK", at < button)
-        assertTrue("it belongs in the BEFORE YOU START block", source.lastIndexOf("BEFORE YOU START", at) in 0 until at)
+        assertTrue("it belongs in the BEFORE YOU START block", source.lastIndexOf("R.string.capture_before_title", at) in 0 until at)
     }
 
     @Test
     fun theHomeAndHelpTextsUseTheSameWords() {
-        assertTrue(RepoFiles.read(home).contains("FreeSpeechNotice.HOME"))
+        assertTrue(RepoFiles.read(home).contains(homeToken))
         assertTrue(RepoFiles.read(help).contains("FreeSpeechNotice.HELP"))
     }
 
     @Test
     fun theNewTextIsAtLeastTwelveSp() {
-        for ((file, token) in listOf(screen to "FreeSpeechNotice.SETUP", home to "FreeSpeechNotice.HOME")) {
+        for ((file, token) in listOf(screen to setupToken, home to homeToken)) {
             val source = RepoFiles.read(file)
             val at = source.indexOf(token)
             assertTrue("$token not found in $file", at >= 0)
@@ -82,7 +115,7 @@ class FreeSpeechNoticeTest {
 
     @Test
     fun theNoticesUseNoAlarmColour() {
-        for ((file, token) in listOf(screen to "FreeSpeechNotice.SETUP", home to "FreeSpeechNotice.HOME")) {
+        for ((file, token) in listOf(screen to setupToken, home to homeToken)) {
             val source = RepoFiles.read(file)
             val at = source.indexOf(token)
             assertTrue("$token is not shown in $file", at >= 0)

@@ -7,8 +7,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The RECORD TRAINING DATA library, the script editor and the session detail dialog (`voicecapture/TrainingCaptureHome.kt`, `ScriptEditor.kt`, `SessionDetailDialog.kt`) read their words from string
- * resources in the chosen language. They use the SDK and cannot be compiled here (they are syntax-checked), so this reads them: the old English literals are gone, every string they name exists in every language
+ * The RECORD TRAINING DATA library, the script editor, the session detail dialog and the recording screen (`voicecapture/TrainingCaptureHome.kt`, `ScriptEditor.kt`, `SessionDetailDialog.kt`,
+ * `CaptureSessionScreen.kt`) read their words from string resources in the chosen language. They use the SDK and cannot be compiled here (they are syntax-checked), so this reads them: the old English literals are gone, every string they name exists in every language
  * and none is left unused, each word sits on the control that does what it says, a delete still takes two steps with the delete only in the last, a stored value (a mark's id, a line setting) is still what is saved,
  * and none of these screens gained a standard button (those buzz, and a buzz is audible to a microphone that may be open). CaptureTextTest holds the decisions.
  */
@@ -22,6 +22,11 @@ class CaptureWordingTest {
     private val home get() = noComments(RepoFiles.read("$base/voicecapture/TrainingCaptureHome.kt"))
     private val editor get() = noComments(RepoFiles.read("$base/voicecapture/ScriptEditor.kt"))
     private val detail get() = noComments(RepoFiles.read("$base/voicecapture/SessionDetailDialog.kt"))
+    private val session get() = noComments(RepoFiles.read("$base/voicecapture/CaptureSessionScreen.kt"))
+    private val runners get() = noComments(RepoFiles.read("$base/voicecapture/CaptureRunners.kt"))
+    private val microphone get() = noComments(RepoFiles.read("$base/voicecapture/TrainingCapture.kt"))
+    private val scriptEngine get() = noComments(RepoFiles.read("$base/capture/ScriptCaptureEngine.kt"))
+    private val freeEngine get() = noComments(RepoFiles.read("$base/capture/FreeCaptureEngine.kt"))
     private val english get() = StringsXml.map(StringsXml.default)
     private val translations get() = StringsXml.translations().mapValues { StringsXml.map(it.value) }
 
@@ -265,5 +270,101 @@ class CaptureWordingTest {
         assertTrue(sizes.findAll(home).map { it.groupValues[1].toInt() }.toSet().all { it >= 9 })
         assertTrue("the notice's dismiss button is 48 dp high", home.contains("heightIn(min = 48.dp)"))
         for (screen in listOf(home, editor, detail)) assertFalse("a fixed width would clip a longer word", Regex("""\.width\(\d+\.dp\)""").containsMatchIn(screen))
+    }
+
+    // ---- the recording screen ---------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun theOldEnglishLiteralsAreGoneFromTheRecordingScreen() {
+        val r = session
+        for (literal in listOf(
+            "\"RECORD A SCRIPT\"", "\"FREE SPEECH\"", "\"[BACK]\"", "CARDS ARE SIZED", "ALREADY RECORDED", "NAME THIS SESSION", "WHERE AND HOW YOU ARE RECORDING", "WHAT YOU WILL TALK ABOUT", "HOW LONG TO WAIT",
+            "SECONDS OF QUIET", "BEFORE YOU START", "PUT THE PHONE WHERE", "START QUIET CHECK", "STAY QUIET", "\"CHECK AGAIN\"", "\"START RECORDING\"", "CARD \${", " KEPT, ", "\"PAUSED\"", "HEARING YOU",
+            "LISTENING.", "\"NEXT: ", "LAST SAVED", "\"REDO LAST\"", "\"PAUSE\"", "\"RESUME\"", "\"END SESSION\"", "STOP AND KEEP", "FINISHING THE RECORDING", "SESSION ENDED", "CLIP(S) KEPT",
+            "EVERYTHING KEPT IS SAFE", "\"DONE\"", "END THIS SESSION?", "EVERYTHING YOU HAVE RECORDED", "KEEP RECORDING", "THE AUDIO IS KEPT WHOLE", "NOT ENOUGH ROOM", "THE MICROPHONE", "NOT ON THIS PHONE",
+            "COULD NOT BE READ", "COULD NOT BE STARTED", "String.format", "Locale", "FreeSpeechNotice", ".describe()", "DiskGuard.describe", "PIECE(S)",
+        )) assertFalse("CaptureSessionScreen still holds $literal", r.contains(literal))
+    }
+
+    @Test
+    fun theEnginesTheRunnersAndTheMicrophoneSayNoWords() {
+        // Each reports what happened as a CaptureNotice; the screen words it. No string literal in these files holds two capitalised words in a row (a drawn sentence); log lines are lower case.
+        val sentence = Regex(""""[^"\n]*[A-Z]{3,}[ ,.:'][A-Z]{2,}[^"\n]*"""")
+        for ((name, source) in listOf("ScriptCaptureEngine" to scriptEngine, "FreeCaptureEngine" to freeEngine, "CaptureRunners" to runners, "TrainingCapture" to microphone)) {
+            assertEquals("$name holds a drawn sentence: ${sentence.find(source)?.value}", null, sentence.find(source))
+            assertFalse("$name describes a notice itself", source.contains("describe("))
+        }
+        for (e in listOf(scriptEngine, freeEngine)) assertFalse("an engine says its own words", e.contains("message: String"))
+        assertTrue(scriptEngine.contains("CaptureNotice.CouldNotSave(e.message)") && scriptEngine.contains("CaptureNotice.OutOfRoomKeptClipsSafe(DiskGuard.room(free, sampleRate))") &&
+            scriptEngine.contains("CaptureNotice.NothingHeard(CaptureConstants.NO_SPEECH_TIMEOUT_HOPS / 100)") && scriptEngine.contains("pauseInternal(PauseReason.REQUESTED, null)"))
+        assertTrue(freeEngine.contains("CaptureNotice.CouldNotSave(e.message)") && freeEngine.contains("CaptureNotice.LongestRecording(maxSeconds / 60)") &&
+            freeEngine.contains("CaptureNotice.OutOfRoomRecordingSaved(DiskGuard.room(free, sampleRate))"))
+        assertTrue(microphone.contains("CaptureNotice.MicNotAllowed") && microphone.contains("CaptureNotice.MicTrouble(") && microphone.contains("CaptureNotice.MicStopped(n)") && microphone.contains("CaptureNotice.MicCouldNotOpen"))
+        assertTrue("a person's own pause says nothing", runners.contains("this.notice = if (reason == PauseReason.REQUESTED) null else notice"))
+    }
+
+    @Test
+    fun aProblemOnTheRecordingScreenIsAKind_notASentence() {
+        val r = session
+        for (assignment in listOf("micError = \"", "loadError = \"", "summary = \"", "message = \"")) assertFalse("the screen assigns a sentence: $assignment", r.contains(assignment))
+        assertEquals("every notice is worded where it is drawn", 4, Regex("""Notice\(CaptureText\.notice\(words, """).findAll(r).count())
+        for (kind in listOf("CaptureNotice.ScriptGone", "CaptureNotice.ScriptUnreadable(e.message)", "CaptureNotice.NotEnoughRoomToStart(DiskGuard.room(free2, 48_000), DiskGuard.MIN_FREE_TO_START_BYTES / (1024 * 1024))",
+            "CaptureNotice.MicDenied", "CaptureNotice.CouldNotStart(e.message)")) assertTrue(kind, r.contains(kind))
+        assertTrue("a technical message is passed as it came", r.contains("notice = failure ?: r.notice") && r.contains("notice = failure ?: f.notice"))
+        assertTrue("the summary is a kind too", r.contains("CaptureText.SessionSummary.Script(r.kept, r.cardsLeft)") && r.contains("CaptureText.SessionSummary.NothingRecorded") && r.contains("CaptureText.SessionSummary.Free(result.durationS, result.pieces.size)"))
+        // A stored value is never read back from a word drawn on this screen.
+        assertFalse(Regex("""==\s*(stringResource|words\.get|CaptureText\.)""").containsMatchIn(r))
+    }
+
+    @Test
+    fun theRecordingScreensButtonsDoWhatTheirWordsSay() {
+        val r = session
+        assertTrue(Regex("""R\.string\.capture_redo_last\)[\s\S]{0,500}?runner\?\.redoLast\(\)""").containsMatchIn(r))
+        assertTrue(Regex("""R\.string\.capture_pause\), Modifier\.weight\(1f\)\.testTag\(AckTags\.TRAIN_PAUSE_BTN\)[\s\S]{0,500}?runner\?\.pause\(\)""").containsMatchIn(r))
+        assertTrue(Regex("""R\.string\.capture_resume\), Modifier\.weight\(1f\)\.testTag\(AckTags\.TRAIN_PAUSE_BTN\)[\s\S]{0,500}?runner\?\.resume\(\)""").containsMatchIn(r))
+        assertTrue(Regex("""R\.string\.capture_resume\), Modifier\.fillMaxWidth\(\), color = primaryColor\) \{ runner\?\.resume\(\) \}""").containsMatchIn(r))
+        assertTrue(Regex("""R\.string\.capture_pause\), Modifier\.fillMaxWidth\(\), color = primaryColor\) \{ runner\?\.pause\(\) \}""").containsMatchIn(r))
+        assertTrue(Regex("""R\.string\.capture_end_session\), Modifier\.fillMaxWidth\(\)\.testTag\(AckTags\.TRAIN_END_BTN\)[\s\S]{0,300}?onClick = onEnd""").containsMatchIn(r))
+        assertTrue(Regex("""R\.string\.capture_stop_keep\), Modifier\.fillMaxWidth\(\)\.testTag\(AckTags\.TRAIN_END_BTN\)[\s\S]{0,300}?onClick = onEnd""").containsMatchIn(r))
+        assertTrue(Regex("""R\.string\.capture_check_again\)[\s\S]{0,300}?onClick = onCheck""").containsMatchIn(r))
+        assertTrue(Regex("""CaptureText\.startQuietLabel\(words\),[\s\S]{0,500}?onClick = onCheck""").containsMatchIn(r))
+        assertTrue(Regex("""R\.string\.capture_start_recording\)[\s\S]{0,500}?\{ if \(!bad\) onStart\(\) \}""").containsMatchIn(r))
+        assertTrue(Regex("""R\.string\.capture_back\)[\s\S]{0,300}?\{ onBack\(\) \}""").containsMatchIn(r))
+        assertTrue(Regex("""R\.string\.common_done\)[\s\S]{0,200}?\{ onDone\(\) \}""").containsMatchIn(r))
+        for (tag in listOf("TRAIN_QUIET_CHECK_BTN", "TRAIN_START_BTN", "TRAIN_REDO_BTN", "TRAIN_PAUSE_BTN", "TRAIN_END_BTN", "TRAIN_CARD_TEXT")) assertTrue(tag, r.contains("helpTarget(AckTags.$tag"))
+    }
+
+    @Test
+    fun aMarkIsDrawnAsItsWordAndToggledByItsId() {
+        val r = session
+        assertTrue(Regex("""CaptureText\.markWord\(words, flag\)[\s\S]{0,200}?runner\?\.toggleMark\(flag\)""").containsMatchIn(r))
+        assertFalse("a drawn word is never what is stored", r.contains("toggleMark(CaptureText"))
+        assertTrue("the marks a person can set are still the stored ones", r.contains("for (flag in ClipFlags.PERSON)"))
+        assertTrue("a mark shows as set from the stored ids", r.contains("active = flag in snap.marks"))
+    }
+
+    @Test
+    fun endingASessionStillAsksFirst_andOnlyTheAnswerEnds() {
+        val r = session
+        assertEquals("one place ends a session", 1, Regex("""r\.end\(\)""").findAll(r).count())
+        assertTrue(Regex("""R\.string\.capture_end_session\), cancelLabel = stringResource\(R\.string\.capture_continue_recording\)[\s\S]{0,300}?r\.end\(\); finishScript\(r\)""").containsMatchIn(r))
+        assertTrue("the end button only opens the question", r.contains("onEnd = { confirmEnd = true }") && r.contains("BackHandler(enabled = phase == Phase.CAPTURING) { confirmEnd = true }"))
+    }
+
+    @Test
+    fun aLongerWordOnARecordingButtonWrapsInsteadOfBeingCutOff() {
+        // The five marks sit across a narrow screen at 9 sp; a translated word such as POCO CLARO has to fit or wrap. Two lines are allowed (the buttons are at least 48 dp high and grow), and a fixed width is never used.
+        val button = bodyOf(session, "private fun CaptureButton(", "private fun LevelMeter")
+        assertTrue(button.contains("maxLines = 2"))
+        assertFalse(button.contains("maxLines = 1"))
+        assertTrue(button.contains("heightIn(min = if (compact) 48.dp else 56.dp)"))
+        assertFalse(Regex("""\.width\(\d+\.dp\)""").containsMatchIn(session))
+    }
+
+    @Test
+    fun theRecordingScreenStillAnimatesNothingAndMakesNoSoundOrVibration() {
+        val r = session
+        for (forbidden in listOf("NeonButton(", "NeonToggle(", "Toast", "performHapticFeedback", "LocalHapticFeedback", "Vibrator", "VibrationEffect", "ToneGenerator", "MediaPlayer", "SoundPool")) assertFalse("CaptureSessionScreen uses $forbidden", r.contains(forbidden))
+        assertFalse(Regex("""animate[A-Za-z]*AsState|AnimatedVisibility|Crossfade|infiniteRepeatable""").containsMatchIn(r))
     }
 }

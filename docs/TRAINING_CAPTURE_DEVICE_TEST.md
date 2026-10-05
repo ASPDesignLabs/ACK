@@ -21,7 +21,7 @@ deleting steps say so.
 - [ ] Open **HELP**. → Under BASICS // PERSONALIZATION there is **RECORD TRAINING DATA**. Run it once to the end. → Each step highlights
   the control it talks about when that control is on screen, and the two tapping steps wait for the tap.
 
-**If ACK's INTERFACE LANGUAGE is not English**, the library, the script editor and a session's details read in that language (drafts); the steps below quote the English words. The screen where a card is read, the quiet check and the free-speech setup are still English for now. Marks, line settings and states are stored in English whatever the language, and a package written in any language holds the same stored words.
+**If ACK's INTERFACE LANGUAGE is not English**, every screen here reads in that language (drafts: the library, the script editor, a session's details and the recording screen with its notices); the steps below quote the English words. Marks, line settings and states are stored in English whatever the language, and a package written in any language holds the same stored words. In Arabic, check the room level and any error number read left to right.
 
 ## B. Scripts (editing asks before it changes anything)
 

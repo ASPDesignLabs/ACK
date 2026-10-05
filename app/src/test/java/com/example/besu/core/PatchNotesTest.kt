@@ -326,12 +326,19 @@ class PatchNotesTest {
     @Test
     fun theNotesThatNameTheCaptureButtonsUseTheWordsThoseButtonsCarry_inEveryLanguage() {
         // RECORD FREE SPEECH and SAVE ALL TO A FILE are translated buttons now (the capture screens moved to string resources), so a note that names one must say
-        // the word the button says in that language, not the English it used to keep. REDO LAST and PAUSE move with the session screen.
+        // the word the button says in that language, not the English it used to keep. The same holds for REDO LAST, PAUSE and the marks (the recording screen's buttons).
         val names = mapOf("info_nr_privacy_7" to "capture_record_free", "info_b8_train_3" to "capture_record_free", "info_b8_train_9" to "capture_save_all")
         for ((tag, map) in mapOf("en" to english) + translations) for ((note, button) in names) {
             assertTrue("$tag/$note names '${map.getValue(button)}'", map.getValue(note).contains(map.getValue(button)))
         }
+        val recordingScreen = listOf("capture_redo_last", "capture_pause", "capture_mark_noise", "capture_mark_unclear", "capture_mark_laugh", "capture_mark_cough", "capture_mark_stumble")
+        for ((tag, map) in mapOf("en" to english) + translations) for (button in recordingScreen) {
+            assertTrue("$tag/info_b8_train_5 names '${map.getValue(button)}'", map.getValue("info_b8_train_5").contains(map.getValue(button)))
+        }
         for ((tag, map) in translations) {
+            for (word in listOf("REDO LAST", "PAUSE", "NOISE", "UNCLEAR", "LAUGH", "COUGH", "STUMBLE")) {
+                assertFalse("$tag/info_b8_train_5 still types the English '$word'", Regex("(?<![A-Za-z])$word(?![A-Za-z])").containsMatchIn(map.getValue("info_b8_train_5")))
+            }
             assertFalse("$tag/info_b8_train_9 still types the English button", map.getValue("info_b8_train_9").contains("SAVE ALL TO A FILE"))
             for (note in listOf("info_nr_privacy_7", "info_b8_train_3")) assertFalse("$tag/$note still types the English button", map.getValue(note).contains("RECORD FREE SPEECH"))
         }
@@ -341,7 +348,7 @@ class PatchNotesTest {
     fun thingsThatAreNotWordsComeThroughEveryTranslationExactly() {
         val tokens = listOf(
             Regex("""(?<![A-Za-z])/[a-z]+"""), Regex("""[A-Z][A-Z_0-9]*\.MD"""), Regex("""\.ONNX(\.JSON)?"""), Regex("""\.ZIP"""), Regex("""ACK_IMPORT"""), Regex("""GPL-3\.0-OR-LATER"""),
-            Regex("""ADD RECORDINGS FROM ACK"""), Regex("""REDO LAST"""), Regex("""STARTERS"""), Regex("""FREEFORM STUDIO"""), Regex("""ACK WEAR"""),
+            Regex("""ADD RECORDINGS FROM ACK"""), Regex("""STARTERS"""), Regex("""FREEFORM STUDIO"""), Regex("""ACK WEAR"""),
             Regex("""OVERSEER"""), Regex("""MY VOICE"""), Regex("""v1\.0-BETA\.8"""), Regex("""TOOLS/FREEFORM_STUDIO/INSTALL\.SH"""), Regex("""DOCS/[A-Z_]+\.MD"""),
         )
         for ((tag, map) in translations) for (name in PatchNotes.ENTRIES) {

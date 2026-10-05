@@ -2,23 +2,16 @@
 package com.example.besu.capture
 
 /**
- * What RECORD FREE SPEECH says about other people. It records everything the microphone hears, so anyone nearby is recorded too,
- * and neither the home screen nor the setup screen used to say so. Plain Kotlin (no `android.*`) so the words are tested without
- * a phone; the screens only show them.
+ * What RECORD FREE SPEECH says about other people. It records everything the microphone hears, so anyone nearby is recorded too.
  *
- * Text only, by design: the capture screens make no sound and no vibration while the microphone is open (a buzz would land in the
- * recording), so this is never a dialog, a toast or a standard button. The minutes come from [CaptureConstants.MAX_FREE_SESSION_S],
- * so the notice cannot say a limit the engine does not enforce.
+ * The two sentences the capture screens show (the setup screen's paragraph and the home screen's line) are string resources in the chosen language
+ * (`capture_free_notice_setup`, `capture_free_notice_home`; core/CaptureText.freeNoticeSetup). They are text only, by design: the capture screens make no sound
+ * and no vibration while the microphone is open (a buzz would land in the recording), so this is never a dialog, a toast or a standard button. The minutes in the
+ * setup sentence come from [CaptureConstants.MAX_FREE_SESSION_S], so the notice cannot say a limit the engine does not enforce.
+ *
+ * Only the HELP walkthrough's sentence is still a constant here, because the walkthroughs' own text is English (and written in sentence case).
  */
 object FreeSpeechNotice {
-    /** On the free-speech setup screen, in the BEFORE YOU START block, ahead of START QUIET CHECK. Free speech only. */
-    val SETUP: String =
-        "FREE SPEECH RECORDS EVERYTHING THE MICROPHONE HEARS, INCLUDING ANYONE NEARBY, " +
-            "FOR UP TO ${CaptureConstants.MAX_FREE_SESSION_S / 60} MINUTES. TELL THEM FIRST, OR RECORD SOMEWHERE ELSE."
-
-    /** On the RECORD TRAINING DATA home screen, under the free-speech description. */
-    const val HOME = "IT ALSO RECORDS ANYONE NEARBY."
-
     /** In the HELP walkthrough's free-speech step (which is written in sentence case). */
     const val HELP = "It also records anyone nearby."
 }

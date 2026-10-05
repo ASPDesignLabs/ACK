@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.core
 
+import com.example.besu.capture.CaptureConstants
+import com.example.besu.capture.CaptureNotice
 import com.example.besu.capture.ClipFlags
 import com.example.besu.capture.ClipState
+import com.example.besu.capture.DiskRoom
+import com.example.besu.capture.NoiseVerdict
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -316,6 +320,202 @@ class CaptureTextTest {
                 assertEquals("$tag: the minutes once in '$summary'", 1, count(summary, "3"))
                 assertEquals("$tag: the pace once in '$summary'", 1, count(summary, "2.5"))
             }
+        }
+    }
+
+    // ---- the recording screen ---------------------------------------------------------------------------------------------------------
+
+    private val lrm = "\u200e"
+
+    @Test
+    fun theRecordingScreenEnglishIsExactlyWhatItAlwaysSaid() {
+        assertEquals("10 CARDS", CaptureText.setupCardsLine(t, 10, 10, includeDone = false))
+        assertEquals("10 CARDS, 4 ALREADY RECORDED. THIS SESSION STARTS AT THE FIRST ONE THAT IS NOT.", CaptureText.setupCardsLine(t, 10, 6, includeDone = false))
+        assertEquals("including the recorded ones, nothing is skipped", "10 CARDS", CaptureText.setupCardsLine(t, 10, 6, includeDone = true))
+        assertEquals("0 CARDS", CaptureText.setupCardsLine(t, 0, 0, includeDone = false))
+        assertEquals("INCLUDING CARDS ALREADY RECORDED", CaptureText.includeDoneLabel(t, includeDone = true, allDone = false))
+        assertEquals("INCLUDING CARDS ALREADY RECORDED", CaptureText.includeDoneLabel(t, includeDone = false, allDone = true))
+        assertEquals("SKIPPING CARDS ALREADY RECORDED", CaptureText.includeDoneLabel(t, includeDone = false, allDone = false))
+        assertEquals("CARDS ARE SIZED FOR 2.6 WORDS A SECOND (YOUR PACE).", CaptureText.paceLine(t, 2.6, own = true))
+        assertEquals("CARDS ARE SIZED FOR 2.6 WORDS A SECOND (A TYPICAL PACE; THE PHONE LEARNS YOURS FROM WHAT YOU KEEP).", CaptureText.paceLine(t, 2.6, own = false))
+        assertEquals("1.2 SECONDS OF QUIET ENDS A CARD. RAISE IT IF YOU PAUSE A LOT IN THE MIDDLE OF A SENTENCE.", CaptureText.waitNote(t, 120))
+        assertEquals("0.5 SECONDS OF QUIET ENDS A CARD. RAISE IT IF YOU PAUSE A LOT IN THE MIDDLE OF A SENTENCE.", CaptureText.waitNote(t, 50))
+        assertEquals("START QUIET CHECK (2 SECONDS)", CaptureText.startQuietLabel(t))
+        assertEquals(
+            "THE AUDIO IS KEPT WHOLE. WHEN YOU STOP, THE PHONE SUGGESTS WHERE IT COULD BE CUT AND THE COMPUTER DECIDES. IT STOPS BY ITSELF AT 90 MINUTES OR WHEN THE PHONE IS NEARLY FULL, KEEPING EVERYTHING.",
+            CaptureText.freeNote(t),
+        )
+        assertEquals("ROOM LEVEL -60.8 dB: GOOD.", CaptureText.noiseVerdict(t, NoiseVerdict.GOOD, -60.8))
+        assertEquals("ROOM LEVEL -24.0 dB: LOUD. QUIET WORDS MAY BE MISSED. A QUIETER SPOT WILL GIVE BETTER TRAINING DATA.", CaptureText.noiseVerdict(t, NoiseVerdict.LOUD_ROOM, -24.0))
+        assertEquals("NOTHING WAS HEARD. IS THE MICROPHONE COVERED OR MUTED?", CaptureText.noiseVerdict(t, NoiseVerdict.NO_SIGNAL, -120.0))
+        assertEquals("A SOUND INTERRUPTED THE QUIET CHECK. STAY QUIET AND TRY AGAIN.", CaptureText.noiseVerdict(t, NoiseVerdict.INTERRUPTED, -50.0))
+        assertEquals("CARD 3 OF 10", CaptureText.cardHeading(t, 3, 10, attempt = 1))
+        assertEquals("CARD 3 OF 10  (TRY 2)", CaptureText.cardHeading(t, 3, 10, attempt = 2))
+        assertEquals("2 KEPT, 3 LEFT", CaptureText.keptLeft(t, 2, 3))
+        assertEquals("PAUSED", CaptureText.scriptStatus(t, paused = true, inSpeech = false))
+        assertEquals("a pause wins over hearing", "PAUSED", CaptureText.scriptStatus(t, paused = true, inSpeech = true))
+        assertEquals("HEARING YOU...", CaptureText.scriptStatus(t, paused = false, inSpeech = true))
+        assertEquals("LISTENING. READ THE CARD WHEN YOU ARE READY.", CaptureText.scriptStatus(t, paused = false, inSpeech = false))
+        assertEquals("PAUSED", CaptureText.freeStatus(t, paused = true, inSpeech = true))
+        assertEquals("RECORDING. HEARING YOU...", CaptureText.freeStatus(t, paused = false, inSpeech = true))
+        assertEquals("RECORDING. TALK WHENEVER YOU LIKE.", CaptureText.freeStatus(t, paused = false, inSpeech = false))
+        assertEquals("NEXT: A short one.", CaptureText.nextLine(t, "A short one."))
+        assertEquals("NEXT: " + "x".repeat(70), CaptureText.nextLine(t, "x".repeat(70)))
+        assertEquals("NEXT: " + "x".repeat(70) + "...", CaptureText.nextLine(t, "x".repeat(71)))
+        assertEquals("LAST SAVED: CARD 4, 3.2 S. MARK IT IF NEEDED:", CaptureText.lastSaved(t, 4, 3.24))
+        assertEquals("3 CLIP(S) KEPT, 2 CARD(S) LEFT FOR NEXT TIME.", CaptureText.summary(t, CaptureText.SessionSummary.Script(3, 2)))
+        assertEquals("3 CLIP(S) KEPT. EVERY CARD IN THIS SCRIPT NOW HAS A CLIP.", CaptureText.summary(t, CaptureText.SessionSummary.Script(3, 0)))
+        assertEquals("1:05 RECORDED. THE PHONE SUGGESTS 3 PIECE(S); THE COMPUTER DECIDES THE REAL CUTS.", CaptureText.summary(t, CaptureText.SessionSummary.Free(65.0, 3)))
+        assertEquals("NOTHING WAS RECORDED.", CaptureText.summary(t, CaptureText.SessionSummary.NothingRecorded))
+        assertEquals(
+            "EVERYTHING KEPT IS SAFE ON THIS PHONE. OPEN THE SESSION FROM THE LIST TO LISTEN TO CLIPS, THEN USE SAVE TO A FILE AND MOVE THE FILE TO YOUR COMPUTER.",
+            CaptureText.finishedNote(t),
+        )
+    }
+
+    @Test
+    fun theNoticesInEnglishAreExactlyWhatTheEnginesAndTheMicrophoneAlwaysSaid() {
+        val room = "50 MB free, room for about 0 minutes of recording"
+        assertEquals("THE RECORDING COULD NOT BE SAVED: disk gone", CaptureText.notice(t, CaptureNotice.CouldNotSave("disk gone")))
+        assertEquals("THE RECORDING COULD NOT BE SAVED: STORAGE ERROR", CaptureText.notice(t, CaptureNotice.CouldNotSave(null)))
+        assertEquals("OUT OF ROOM: $room. KEPT CLIPS ARE SAFE", CaptureText.notice(t, CaptureNotice.OutOfRoomKeptClipsSafe(DiskRoom(50, 0))))
+        assertEquals("OUT OF ROOM: $room. WHAT WAS RECORDED IS SAVED", CaptureText.notice(t, CaptureNotice.OutOfRoomRecordingSaved(DiskRoom(50, 0))))
+        assertEquals("OUT OF ROOM: 1234 MB free, room for about 56 minutes of recording. KEPT CLIPS ARE SAFE", CaptureText.notice(t, CaptureNotice.OutOfRoomKeptClipsSafe(DiskRoom(1234, 56))))
+        assertEquals("NOTHING HEARD FOR 20 SECONDS: PAUSED", CaptureText.notice(t, CaptureNotice.NothingHeard(20)))
+        assertEquals("THE LONGEST RECORDING (90 MINUTES) WAS REACHED: SAVED. START A NEW ONE TO CARRY ON", CaptureText.notice(t, CaptureNotice.LongestRecording(90)))
+        assertEquals("THE MICROPHONE IS NOT ALLOWED. ALLOW IT IN THE PHONE'S SETTINGS FOR ACK.", CaptureText.notice(t, CaptureNotice.MicNotAllowed))
+        assertEquals("THE MICROPHONE IS NOT ALLOWED. ALLOW IT IN THE PHONE'S SETTINGS FOR ACK, THEN TRY AGAIN.", CaptureText.notice(t, CaptureNotice.MicDenied))
+        assertEquals("THE MICROPHONE COULD NOT BE OPENED. ANOTHER APP MAY BE USING IT.", CaptureText.notice(t, CaptureNotice.MicCouldNotOpen))
+        assertEquals("SOMETHING WENT WRONG WHILE RECORDING: IllegalStateException", CaptureText.notice(t, CaptureNotice.MicTrouble("IllegalStateException")))
+        assertEquals("THE MICROPHONE STOPPED (ERROR -3). ANOTHER APP MAY BE USING IT.", CaptureText.notice(t, CaptureNotice.MicStopped(-3)))
+        assertEquals(
+            "NOT ENOUGH ROOM TO RECORD: 120 MB free, room for about 0 minutes of recording. FREE UP SPACE FIRST (NEEDS 300 MB).",
+            CaptureText.notice(t, CaptureNotice.NotEnoughRoomToStart(DiskRoom(120, 0), 300)),
+        )
+        assertEquals("THE SCRIPT IS NOT ON THIS PHONE ANY MORE.", CaptureText.notice(t, CaptureNotice.ScriptGone))
+        assertEquals("THE SCRIPT COULD NOT BE READ.", CaptureText.notice(t, CaptureNotice.ScriptUnreadable(null)))
+        assertEquals("what the store said, as it said it", "left as it is", CaptureText.notice(t, CaptureNotice.ScriptUnreadable("left as it is")))
+        assertEquals("THE SESSION COULD NOT BE STARTED.", CaptureText.notice(t, CaptureNotice.CouldNotStart(null)))
+        assertEquals("already exists", CaptureText.notice(t, CaptureNotice.CouldNotStart("already exists")))
+    }
+
+    @Test
+    fun theNumbersInTheNoticesAreTheEnginesOwn_inEveryLanguage() {
+        // The idle limit and the longest recording are the engine's own constants, so a notice cannot say a limit the engine does not keep.
+        assertEquals(20, CaptureConstants.NO_SPEECH_TIMEOUT_HOPS / 100)
+        assertEquals(90, CaptureConstants.MAX_FREE_SESSION_S / 60)
+        for ((tag, f) in listOf("en" to t as TextSource) + languages) {
+            assertTrue("$tag idle", CaptureText.notice(f, CaptureNotice.NothingHeard(20)).contains("20"))
+            assertTrue("$tag longest", CaptureText.notice(f, CaptureNotice.LongestRecording(90)).contains("90"))
+            val room = CaptureText.notice(f, CaptureNotice.OutOfRoomKeptClipsSafe(DiskRoom(1234, 56)))
+            assertTrue("$tag room: $room", room.contains("1234") && room.contains("56"))
+            val noRoom = CaptureText.notice(f, CaptureNotice.NotEnoughRoomToStart(DiskRoom(120, 7), 300))
+            assertTrue("$tag no room: $noRoom", noRoom.contains("120") && noRoom.contains("7") && noRoom.contains("300"))
+            assertEquals("$tag: the same room sentence inside both out-of-room notices", 1, count(CaptureText.notice(f, CaptureNotice.OutOfRoomRecordingSaved(DiskRoom(1234, 56))), CaptureText.roomLeft(f, DiskRoom(1234, 56))))
+            val stopped = CaptureText.notice(f, CaptureNotice.MicStopped(-3))
+            assertTrue("$tag stopped: $stopped", stopped.contains("-3"))
+        }
+    }
+
+    @Test
+    fun everyRecordingScreenWordReadsInTheLanguage_andNeverTheEnglish() {
+        val kinds = listOf(
+            CaptureNotice.CouldNotSave("x"), CaptureNotice.CouldNotSave(null), CaptureNotice.OutOfRoomKeptClipsSafe(DiskRoom(1, 2)), CaptureNotice.OutOfRoomRecordingSaved(DiskRoom(1, 2)),
+            CaptureNotice.NothingHeard(20), CaptureNotice.LongestRecording(90), CaptureNotice.MicNotAllowed, CaptureNotice.MicDenied, CaptureNotice.MicCouldNotOpen, CaptureNotice.MicTrouble("x"),
+            CaptureNotice.MicStopped(-3), CaptureNotice.NotEnoughRoomToStart(DiskRoom(1, 2), 300), CaptureNotice.ScriptGone, CaptureNotice.ScriptUnreadable(null), CaptureNotice.CouldNotStart(null),
+        )
+        for ((tag, f) in languages) {
+            for (kind in kinds) assertNotEquals("$tag/$kind is still English", CaptureText.notice(t, kind), CaptureText.notice(f, kind))
+            val pairs = mapOf(
+                "setupCards" to (CaptureText.setupCardsLine(f, 10, 10, false) to CaptureText.setupCardsLine(t, 10, 10, false)),
+                "setupSkipping" to (CaptureText.setupCardsLine(f, 10, 6, false) to CaptureText.setupCardsLine(t, 10, 6, false)),
+                "includeDone" to (CaptureText.includeDoneLabel(f, true, false) to CaptureText.includeDoneLabel(t, true, false)),
+                "skipping" to (CaptureText.includeDoneLabel(f, false, false) to CaptureText.includeDoneLabel(t, false, false)),
+                "paceOwn" to (CaptureText.paceLine(f, 2.6, true) to CaptureText.paceLine(t, 2.6, true)),
+                "paceTypical" to (CaptureText.paceLine(f, 2.6, false) to CaptureText.paceLine(t, 2.6, false)),
+                "waitNote" to (CaptureText.waitNote(f, 120) to CaptureText.waitNote(t, 120)),
+                "startQuiet" to (CaptureText.startQuietLabel(f) to CaptureText.startQuietLabel(t)),
+                "freeNote" to (CaptureText.freeNote(f) to CaptureText.freeNote(t)),
+                "freeNotice" to (CaptureText.freeNoticeSetup(f) to CaptureText.freeNoticeSetup(t)),
+                "good" to (CaptureText.noiseVerdict(f, NoiseVerdict.GOOD, -60.8) to CaptureText.noiseVerdict(t, NoiseVerdict.GOOD, -60.8)),
+                "loud" to (CaptureText.noiseVerdict(f, NoiseVerdict.LOUD_ROOM, -24.0) to CaptureText.noiseVerdict(t, NoiseVerdict.LOUD_ROOM, -24.0)),
+                "none" to (CaptureText.noiseVerdict(f, NoiseVerdict.NO_SIGNAL, -120.0) to CaptureText.noiseVerdict(t, NoiseVerdict.NO_SIGNAL, -120.0)),
+                "interrupted" to (CaptureText.noiseVerdict(f, NoiseVerdict.INTERRUPTED, -50.0) to CaptureText.noiseVerdict(t, NoiseVerdict.INTERRUPTED, -50.0)),
+                "heading" to (CaptureText.cardHeading(f, 3, 10, 1) to CaptureText.cardHeading(t, 3, 10, 1)),
+                "keptLeft" to (CaptureText.keptLeft(f, 2, 3) to CaptureText.keptLeft(t, 2, 3)),
+                "paused" to (CaptureText.scriptStatus(f, true, false) to CaptureText.scriptStatus(t, true, false)),
+                "hearing" to (CaptureText.scriptStatus(f, false, true) to CaptureText.scriptStatus(t, false, true)),
+                "listening" to (CaptureText.scriptStatus(f, false, false) to CaptureText.scriptStatus(t, false, false)),
+                "freeHearing" to (CaptureText.freeStatus(f, false, true) to CaptureText.freeStatus(t, false, true)),
+                "freeTalk" to (CaptureText.freeStatus(f, false, false) to CaptureText.freeStatus(t, false, false)),
+                "next" to (CaptureText.nextLine(f, "abc") to CaptureText.nextLine(t, "abc")),
+                "lastSaved" to (CaptureText.lastSaved(f, 4, 3.2) to CaptureText.lastSaved(t, 4, 3.2)),
+                "summaryLeft" to (CaptureText.summary(f, CaptureText.SessionSummary.Script(3, 2)) to CaptureText.summary(t, CaptureText.SessionSummary.Script(3, 2))),
+                "summaryAll" to (CaptureText.summary(f, CaptureText.SessionSummary.Script(3, 0)) to CaptureText.summary(t, CaptureText.SessionSummary.Script(3, 0))),
+                "summaryFree" to (CaptureText.summary(f, CaptureText.SessionSummary.Free(65.0, 3)) to CaptureText.summary(t, CaptureText.SessionSummary.Free(65.0, 3))),
+                "nothing" to (CaptureText.summary(f, CaptureText.SessionSummary.NothingRecorded) to CaptureText.summary(t, CaptureText.SessionSummary.NothingRecorded)),
+                "finishedNote" to (CaptureText.finishedNote(f) to CaptureText.finishedNote(t)),
+            )
+            for ((what, both) in pairs) assertNotEquals("$tag/$what is still English: ${both.first}", both.second, both.first)
+        }
+    }
+
+    @Test
+    fun aNumberThatCanBeNegativeHasALeftToRightMarkInArabicAndNowhereElse() {
+        // The room level and the microphone's error code are negative: in a right-to-left paragraph a minus sign in front of a bare number is drawn after it. Arabic puts a mark directly before the number; no other language does.
+        val signed = listOf("capture_room_db", "capture_noise_good", "capture_noise_loud", "capture_n_mic_stopped")
+        for ((tag, map) in translations) for (name in signed) {
+            val text = map.getValue(name)
+            val number = Regex("""%1\$[sd]""").find(text)!!
+            if (tag == "ar") assertTrue("$tag/$name: a mark directly before the number: $text", text.substring(0, number.range.first).endsWith(lrm))
+            else assertFalse("$tag/$name must not hold a mark", text.contains(lrm))
+        }
+        for (name in signed) assertFalse("en/$name must not hold a mark", english.getValue(name).contains(lrm))
+        // Everything else in these screens (sizes, counts, lengths) is never negative, so no other Arabic string holds one.
+        val withMark = translations.getValue("ar").filter { it.key.startsWith("capture_") && it.value.contains(lrm) }.keys
+        assertEquals(signed.toSet(), withMark)
+    }
+
+    @Test
+    fun theCardHeadingKeepsItsOwnTwoSpaces_inEveryLanguage() {
+        // Android trims a resource's leading space, so the two spaces before "(TRY n)" are written by the decision, not by the string.
+        for ((tag, f) in listOf("en" to t as TextSource) + languages) {
+            val first = CaptureText.cardHeading(f, 2, 9, 1)
+            val second = CaptureText.cardHeading(f, 2, 9, 2)
+            assertTrue("$tag: $second", second.startsWith(first + "  ") && second.length > first.length + 2)
+            assertFalse("$tag: the first try has no try mark: $first", first.contains("  "))
+        }
+        assertFalse("no capture string starts or ends with a space", english.filter { it.key.startsWith("capture_") }.any { it.value != it.value.trim() })
+    }
+
+    @Test
+    fun aLongNextCardIsCutAtSeventyCharactersWithThreeDots_inEveryLanguage() {
+        for ((tag, f) in listOf("en" to t as TextSource) + languages) {
+            val exact = CaptureText.nextLine(f, "y".repeat(70))
+            val over = CaptureText.nextLine(f, "y".repeat(71))
+            assertEquals("$tag: seventy is not cut", 70, count(exact, "y"))
+            assertFalse("$tag: no dots at seventy: $exact", exact.contains("..."))
+            assertEquals("$tag: seventy-one is cut to seventy", 70, count(over, "y"))
+            assertTrue("$tag: and shows dots: $over", over.contains("..."))
+        }
+    }
+
+    @Test
+    fun theFinishedNoteNamesTheSaveButtonAsItReadsInTheLanguage() {
+        for ((tag, map) in listOf("en" to english) + translations.toList()) {
+            val f = if (tag == "en") t else FileText(tag)
+            assertEquals("$tag: the button's name once", 1, count(CaptureText.finishedNote(f), map.getValue("capture_save_file")))
+        }
+    }
+
+    @Test
+    fun theScriptSummaryIsChosenByTheCardsLeft_notByAWord() {
+        for ((tag, f) in listOf("en" to t as TextSource) + languages) {
+            val left = CaptureText.summary(f, CaptureText.SessionSummary.Script(3, 1))
+            val all = CaptureText.summary(f, CaptureText.SessionSummary.Script(3, 0))
+            assertNotEquals("$tag", left, all)
+            assertTrue("$tag: kept count in both", left.contains("3") && all.contains("3"))
+            assertTrue("$tag: cards left in the one that has some: $left", left.contains("1"))
         }
     }
 }

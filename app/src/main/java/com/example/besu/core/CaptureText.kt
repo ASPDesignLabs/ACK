@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.core
 
+import com.example.besu.capture.CaptureConstants
+import com.example.besu.capture.CaptureNotice
 import com.example.besu.capture.ClipFlags
 import com.example.besu.capture.ClipState
+import com.example.besu.capture.DiskRoom
+import com.example.besu.capture.NoiseVerdict
 import java.util.Locale
 
 /**
@@ -183,4 +187,95 @@ object CaptureText {
 
     /** "NOTES: LONG, NOISE": the marks on a clip that the person did not set (the automatic ones), in words. */
     fun notesLine(text: TextSource, flags: List<String>): String = text.get("capture_notes", flags.filter { it !in ClipFlags.PERSON }.joinToString(", ") { markWord(text, it) })
+
+    // ---- the recording screen: setup, the quiet check, the live card, free speech and the summary --------------------------------------------
+
+    /** The setup line about the cards: how many, and (when the session starts partway) how many are already recorded. [pending] is how many this session would record. */
+    fun setupCardsLine(text: TextSource, cards: Int, pending: Int, includeDone: Boolean): String =
+        if (pending < cards && !includeDone) text.get("capture_setup_cards_skipping", cards, cards - pending) else text.get("capture_setup_cards", cards)
+
+    /** What the toggle says it is doing: including or skipping the cards that already have a clip (the screen's own state, never read back from this word). */
+    fun includeDoneLabel(text: TextSource, includeDone: Boolean, allDone: Boolean): String =
+        text.get(if (includeDone || allDone) "capture_including_done" else "capture_skipping_done")
+
+    /** "CARDS ARE SIZED FOR 2.6 WORDS A SECOND (...)"; [own] is true when the pace is the person's measured one. */
+    fun paceLine(text: TextSource, pace: Double, own: Boolean): String = text.get(if (own) "capture_pace_own" else "capture_pace_typical", oneDecimal(pace))
+
+    /** How long a quiet gap ends a card, in seconds with one decimal ([endWaitHops] is in 10 ms hops). */
+    fun waitNote(text: TextSource, endWaitHops: Int): String = text.get("capture_wait_note", oneDecimal(endWaitHops / 100.0))
+
+    /** The button that starts the quiet check, with its real length ([CaptureConstants.NOISE_CHECK_S]). */
+    fun startQuietLabel(text: TextSource): String = text.get("capture_start_quiet", CaptureConstants.NOISE_CHECK_S.toInt())
+
+    /** The paragraph about anyone nearby on the free-speech setup screen, with the engine's own limit in minutes. */
+    fun freeNoticeSetup(text: TextSource): String = text.get("capture_free_notice_setup", CaptureConstants.MAX_FREE_SESSION_S / 60)
+
+    /** The note under the free recording's timer, with the engine's own limit in minutes. */
+    fun freeNote(text: TextSource): String = text.get("capture_free_note", CaptureConstants.MAX_FREE_SESSION_S / 60)
+
+    /** What the quiet check heard. [floorDbfs] is the room level to one decimal, as the check measured it (negative; it is written as a number and never changed). */
+    fun noiseVerdict(text: TextSource, verdict: NoiseVerdict, floorDbfs: Double?): String = when (verdict) {
+        NoiseVerdict.GOOD -> text.get("capture_noise_good", floorDbfs.toString())
+        NoiseVerdict.LOUD_ROOM -> text.get("capture_noise_loud", floorDbfs.toString())
+        NoiseVerdict.NO_SIGNAL -> text.get("capture_noise_none")
+        NoiseVerdict.INTERRUPTED -> text.get("capture_noise_interrupted")
+    }
+
+    /** "CARD 3 OF 10", and "  (TRY 2)" after it from the second try on. [card] counts from 1. */
+    fun cardHeading(text: TextSource, card: Int, total: Int, attempt: Int): String =
+        text.get("capture_card_of", card, total) + if (attempt > 1) "  " + text.get("capture_try", attempt) else ""
+
+    fun keptLeft(text: TextSource, kept: Int, left: Int): String = text.get("capture_kept_left", kept, left)
+
+    /** What a script session is doing now: paused, hearing the person, or waiting for them. */
+    fun scriptStatus(text: TextSource, paused: Boolean, inSpeech: Boolean): String =
+        text.get(if (paused) "capture_paused" else if (inSpeech) "capture_hearing" else "capture_listening")
+
+    /** What a free recording is doing now. */
+    fun freeStatus(text: TextSource, paused: Boolean, inSpeech: Boolean): String =
+        text.get(if (paused) "capture_paused" else if (inSpeech) "capture_free_hearing" else "capture_free_talk")
+
+    /** The line about the card after this one: its text as written, cut to 70 characters with "..." when longer. */
+    fun nextLine(text: TextSource, cardText: String): String = text.get("capture_next", cardText.take(70) + if (cardText.length > 70) "..." else "")
+
+    /** "LAST SAVED: CARD 4, 3.2 S. MARK IT IF NEEDED:". */
+    fun lastSaved(text: TextSource, card: Int, seconds: Double): String = text.get("capture_last_saved", card, oneDecimal(seconds))
+
+    /** How a session ended, carried by what happened (never by a sentence). */
+    sealed interface SessionSummary {
+        data class Script(val kept: Int, val cardsLeft: Int) : SessionSummary
+        data class Free(val durationS: Double, val pieces: Int) : SessionSummary
+        object NothingRecorded : SessionSummary
+    }
+
+    fun summary(text: TextSource, summary: SessionSummary): String = when (summary) {
+        is SessionSummary.Script -> text.get(if (summary.cardsLeft > 0) "capture_summary_script_left" else "capture_summary_script_all", summary.kept, summary.cardsLeft)
+        is SessionSummary.Free -> text.get("capture_summary_free", clock(summary.durationS), summary.pieces)
+        SessionSummary.NothingRecorded -> text.get("capture_nothing_recorded")
+    }
+
+    /** The paragraph after a session ends; it names the SAVE TO A FILE button as that button reads in the language. */
+    fun finishedNote(text: TextSource): String = text.get("capture_finished_note", text.get("capture_save_file"))
+
+    // ---- what the engines, the microphone and the screen report ----------------------------------------------------------------------------
+
+    /** "500 MB free, room for about 20 minutes of recording" (English keeps its lower case; the numbers are the engine's). */
+    fun roomLeft(text: TextSource, room: DiskRoom): String = text.get("capture_room_left", room.megabytes, room.minutes)
+
+    fun notice(text: TextSource, notice: CaptureNotice): String = when (notice) {
+        is CaptureNotice.CouldNotSave -> text.get("capture_n_save_failed", notice.detail ?: text.get("capture_n_storage_error"))
+        is CaptureNotice.OutOfRoomKeptClipsSafe -> text.get("capture_n_room_clips", roomLeft(text, notice.room))
+        is CaptureNotice.OutOfRoomRecordingSaved -> text.get("capture_n_room_free", roomLeft(text, notice.room))
+        is CaptureNotice.NothingHeard -> text.get("capture_n_idle", notice.seconds)
+        is CaptureNotice.LongestRecording -> text.get("capture_n_longest", notice.minutes)
+        CaptureNotice.MicNotAllowed -> text.get("capture_n_mic_not_allowed")
+        CaptureNotice.MicDenied -> text.get("capture_n_mic_denied")
+        CaptureNotice.MicCouldNotOpen -> text.get("capture_n_mic_open")
+        is CaptureNotice.MicTrouble -> text.get("capture_n_mic_trouble", notice.detail)
+        is CaptureNotice.MicStopped -> text.get("capture_n_mic_stopped", notice.errorCode)
+        is CaptureNotice.NotEnoughRoomToStart -> text.get("capture_n_no_room", roomLeft(text, notice.room), notice.needMegabytes)
+        CaptureNotice.ScriptGone -> text.get("capture_n_script_gone")
+        is CaptureNotice.ScriptUnreadable -> notice.detail ?: text.get("capture_n_script_unreadable")
+        is CaptureNotice.CouldNotStart -> notice.detail ?: text.get("capture_n_start_failed")
+    }
 }

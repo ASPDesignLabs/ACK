@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -38,25 +39,27 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.besu.AckTags
+import com.example.besu.R
 import com.example.besu.capture.CaptureConstants
+import com.example.besu.capture.CaptureNotice
 import com.example.besu.capture.Card
 import com.example.besu.capture.CardSplitter
 import com.example.besu.capture.ClipFlags
 import com.example.besu.capture.DiskGuard
-import com.example.besu.capture.FreeSpeechNotice
 import com.example.besu.capture.NoiseCheck
 import com.example.besu.capture.NoiseVerdict
 import com.example.besu.capture.StoreException
 import com.example.besu.capture.TrainingScript
+import com.example.besu.core.CaptureText
 import com.example.besu.help.HelpEvent
 import com.example.besu.help.LocalHelpManager
 import com.example.besu.help.helpTarget
 import com.example.besu.ui.RadicalRed
 import com.example.besu.ui.TightPanelButton
 import com.example.besu.ui.TightSectionLabel
+import com.example.besu.ui.rememberText
 import com.example.besu.ui.theme.Graphite
 import com.example.besu.ui.theme.VoidBlack
-import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -66,7 +69,7 @@ private enum class Phase { SETUP, CHECKING, CHECKED, CAPTURING, FINISHING, FINIS
 // What the screen shows, copied from the runner about ten times a second. A data class, so an unchanged copy does not recompose.
 private data class CaptureSnapshot(
     val state: RunState = RunState.PAUSED,
-    val message: String = "",
+    val notice: CaptureNotice? = null,
     val currentCard: Int = -1,
     val attempt: Int = 1,
     val levelDb: Int = -120,
@@ -100,6 +103,7 @@ private fun Context.findActivity(): Activity? {
 internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptId: String?, free: Boolean, onDone: () -> Unit) {
     val store = remember { TrainingCapture.store(context) }
     val helpManager = LocalHelpManager.current
+    val words = rememberText()
     val mic = remember { TrainingMicrophone() }
 
     var phase by remember { mutableStateOf(Phase.SETUP) }
@@ -109,11 +113,11 @@ internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptI
     var includeDone by remember { mutableStateOf(false) }
     var pace by remember { mutableDoubleStateOf(CaptureConstants.DEFAULT_PACE_WPS) }
     var paceIsMeasured by remember { mutableStateOf(false) }
-    var loadError by remember { mutableStateOf("") }
+    var loadError by remember { mutableStateOf<CaptureNotice?>(null) }
     var label by remember { mutableStateOf(TrainingCapture.lastLabel(context)) }
     var topic by remember { mutableStateOf("") }
     var endWait by remember { mutableIntStateOf(TrainingCapture.endWaitHops(context)) }
-    var micError by remember { mutableStateOf("") }
+    var micError by remember { mutableStateOf<CaptureNotice?>(null) }
     var noise by remember { mutableStateOf<NoiseCheckRunner?>(null) }
     var noiseSeconds by remember { mutableDoubleStateOf(0.0) }
     var noiseResult by remember { mutableStateOf<NoiseCheck?>(null) }
@@ -121,25 +125,26 @@ internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptI
     var freeRunner by remember { mutableStateOf<FreeSessionRunner?>(null) }
     var snap by remember { mutableStateOf(CaptureSnapshot()) }
     var confirmEnd by remember { mutableStateOf(false) }
-    var summary by remember { mutableStateOf("") }
+    var summary by remember { mutableStateOf<CaptureText.SessionSummary?>(null) }
 
     // Load the script and work out the cards, off the main thread (a long text takes a moment).
     LaunchedEffect(scriptId) {
         if (scriptId == null) return@LaunchedEffect
         try {
             val loaded = withContext(Dispatchers.IO) {
-                val sc = store.getScript(scriptId) ?: throw StoreException("THE SCRIPT IS NOT ON THIS PHONE ANY MORE.")
+                val sc = store.getScript(scriptId) ?: return@withContext null
                 val measured = TrainingCapture.measuredPace(store)
                 val p = measured ?: CaptureConstants.DEFAULT_PACE_WPS
                 Triple(sc, CardSplitter.splitCards(sc.text, p, sc.lines), Triple(p, measured != null, store.doneCardTexts(sc.id)))
             }
+            if (loaded == null) { loadError = CaptureNotice.ScriptGone; return@LaunchedEffect }
             script = loaded.first
             cards = loaded.second
             pace = loaded.third.first
             paceIsMeasured = loaded.third.second
             doneTexts = loaded.third.third
         } catch (e: StoreException) {
-            loadError = e.message ?: "THE SCRIPT COULD NOT BE READ."
+            loadError = CaptureNotice.ScriptUnreadable(e.message)
         }
     }
 
@@ -171,11 +176,11 @@ internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptI
     }
 
     fun beginQuietCheck() {
-        micError = ""
+        micError = null
         noiseResult = null
         val free2 = TrainingCapture.usableBytes(context)
         if (!DiskGuard.canStart(free2)) {
-            micError = "NOT ENOUGH ROOM TO RECORD: ${DiskGuard.describe(free2, 48_000)}. FREE UP SPACE FIRST (NEEDS ${DiskGuard.MIN_FREE_TO_START_BYTES / (1024 * 1024)} MB)."
+            micError = CaptureNotice.NotEnoughRoomToStart(DiskGuard.room(free2, 48_000), DiskGuard.MIN_FREE_TO_START_BYTES / (1024 * 1024))
             return
         }
         val error = mic.open(context)
@@ -188,7 +193,7 @@ internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptI
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) beginQuietCheck() else micError = "THE MICROPHONE IS NOT ALLOWED. ALLOW IT IN THE PHONE'S SETTINGS FOR ACK, THEN TRY AGAIN."
+        if (granted) beginQuietCheck() else micError = CaptureNotice.MicDenied
     }
 
     fun startCapture() {
@@ -208,13 +213,13 @@ internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptI
             }
             phase = Phase.CAPTURING
         } catch (e: StoreException) {
-            micError = e.message ?: "THE SESSION COULD NOT BE STARTED."
+            micError = CaptureNotice.CouldNotStart(e.message)
         }
     }
 
     fun finishScript(r: ScriptSessionRunner) {
         mic.close()
-        summary = "${r.kept} CLIP(S) KEPT" + if (r.cardsLeft > 0) ", ${r.cardsLeft} CARD(S) LEFT FOR NEXT TIME." else ". EVERY CARD IN THIS SCRIPT NOW HAS A CLIP."
+        summary = CaptureText.SessionSummary.Script(r.kept, r.cardsLeft)
         phase = Phase.FINISHED
     }
 
@@ -243,14 +248,14 @@ internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptI
                 if (failure != null && r.state == RunState.LISTENING) r.pause()
                 val last = r.lastKept
                 snap = CaptureSnapshot(
-                    state = r.state, message = failure ?: r.message, currentCard = r.currentCard, attempt = r.attempt, levelDb = r.level.toInt(),
+                    state = r.state, notice = failure ?: r.notice, currentCard = r.currentCard, attempt = r.attempt, levelDb = r.level.toInt(),
                     inSpeech = r.inSpeech, kept = r.kept, cardsLeft = r.cardsLeft, lastKeptCard = last?.card ?: 0, lastKeptSeconds = last?.durationS ?: 0.0,
                     marks = r.marks(), canRedo = r.canRedo, hasLast = last != null,
                 )
                 if (r.state == RunState.FINISHED) finishScript(r)
             } else if (f != null) {
                 if (failure != null && !f.isPaused && !f.isStopped) f.pause()
-                snap = CaptureSnapshot(message = failure ?: f.message, levelDb = f.level.toInt(), inSpeech = f.isSpeech, seconds = f.seconds, paused = f.isPaused, stopped = f.isStopped)
+                snap = CaptureSnapshot(notice = failure ?: f.notice, levelDb = f.level.toInt(), inSpeech = f.isSpeech, seconds = f.seconds, paused = f.isPaused, stopped = f.isStopped)
                 if (f.isStopped) {
                     phase = Phase.FINISHING
                 }
@@ -265,7 +270,7 @@ internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptI
         if (phase != Phase.FINISHING || f == null) return@LaunchedEffect
         val result = withContext(Dispatchers.IO) { try { f.stop() } catch (e: Exception) { null } }
         mic.close()
-        summary = if (result == null) "NOTHING WAS RECORDED." else "${clock(result.durationS)} RECORDED. THE PHONE SUGGESTS ${result.pieces.size} PIECE(S); THE COMPUTER DECIDES THE REAL CUTS."
+        summary = if (result == null) CaptureText.SessionSummary.NothingRecorded else CaptureText.SessionSummary.Free(result.durationS, result.pieces.size)
         phase = Phase.FINISHED
     }
 
@@ -291,23 +296,23 @@ internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptI
         )
         Phase.CAPTURING -> if (free) FreeCaptureView(primaryColor, snap, freeRunner, onEnd = { freeRunner?.let { phase = Phase.FINISHING; Unit } })
         else ScriptCaptureView(primaryColor, snap, runner, cards, onEnd = { confirmEnd = true })
-        Phase.FINISHING -> CenterMessage("FINISHING THE RECORDING AND LOOKING FOR GOOD PLACES TO CUT IT...", primaryColor)
+        Phase.FINISHING -> CenterMessage(stringResource(R.string.capture_finishing), primaryColor)
         Phase.FINISHED -> Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("SESSION ENDED", color = primaryColor, fontSize = 16.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-            Text(summary, color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+            Text(stringResource(R.string.capture_session_ended), color = primaryColor, fontSize = 16.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+            summary?.let { Text(CaptureText.summary(words, it), color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace) }
             Text(
-                "EVERYTHING KEPT IS SAFE ON THIS PHONE. OPEN THE SESSION FROM THE LIST TO LISTEN TO CLIPS, THEN USE SAVE TO A FILE AND MOVE THE FILE TO YOUR COMPUTER.",
+                CaptureText.finishedNote(words),
                 color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace,
             )
-            TightPanelButton("DONE", Modifier.fillMaxWidth(), mainColor = primaryColor) { onDone() }
+            TightPanelButton(stringResource(R.string.common_done), Modifier.fillMaxWidth(), mainColor = primaryColor) { onDone() }
         }
     }
 
     if (confirmEnd) {
         ConfirmDialog(
-            title = "END THIS SESSION?",
-            body = "EVERYTHING YOU HAVE RECORDED STAYS SAVED. THE CARD YOU WERE ABOUT TO READ IS NOT RECORDED. YOU CAN START ANOTHER SESSION AND CARRY ON.",
-            confirmLabel = "END SESSION", cancelLabel = "KEEP RECORDING", primaryColor = primaryColor,
+            title = stringResource(R.string.capture_end_title),
+            body = stringResource(R.string.capture_end_body),
+            confirmLabel = stringResource(R.string.capture_end_session), cancelLabel = stringResource(R.string.capture_continue_recording), primaryColor = primaryColor,
             onConfirm = {
                 confirmEnd = false
                 val r = runner
@@ -336,7 +341,7 @@ private fun CaptureButton(text: String, modifier: Modifier = Modifier, color: Co
     ) {
         Text(
             text.uppercase(), color = c, fontSize = if (compact) 9.sp else 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
-            letterSpacing = looseSpacing(if (compact) 0.sp else 1.sp), textAlign = TextAlign.Center, maxLines = 1,
+            letterSpacing = looseSpacing(if (compact) 0.sp else 1.sp), textAlign = TextAlign.Center, maxLines = 2,
         )
     }
 }
@@ -361,14 +366,14 @@ private fun SetupView(
     onIncludeDone: (Boolean) -> Unit,
     pace: Double,
     paceIsMeasured: Boolean,
-    loadError: String,
+    loadError: CaptureNotice?,
     label: String,
     onLabel: (String) -> Unit,
     topic: String,
     onTopic: (String) -> Unit,
     endWait: Int,
     onEndWait: (Int) -> Unit,
-    micError: String,
+    micError: CaptureNotice?,
     phase: Phase,
     noiseSeconds: Double,
     noise: NoiseCheck?,
@@ -376,47 +381,48 @@ private fun SetupView(
     onStart: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val words = rememberText()
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(if (free) "FREE SPEECH" else "RECORD A SCRIPT", color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
+            Text(stringResource(if (free) R.string.capture_free_speech else R.string.capture_record_script_title), color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
             Text(
-                "[BACK]", color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
+                stringResource(R.string.capture_back), color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
                 modifier = Modifier.heightIn(min = 48.dp).clickable(enabled = phase != Phase.CHECKING) { onBack() }.padding(horizontal = 8.dp, vertical = 12.dp),
             )
         }
-        if (loadError.isNotEmpty()) Notice(loadError, RadicalRed, onDismiss = null)
-        if (micError.isNotEmpty()) Notice(micError, RadicalRed, onDismiss = null)
+        loadError?.let { Notice(CaptureText.notice(words, it), RadicalRed, onDismiss = null) }
+        micError?.let { Notice(CaptureText.notice(words, it), RadicalRed, onDismiss = null) }
 
         if (!free && script != null) {
             Text(script.title, color = Color.White, fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
             Text(
-                "$cardsCount CARDS" + if (pendingCount < cardsCount && !includeDone) ", ${cardsCount - pendingCount} ALREADY RECORDED. THIS SESSION STARTS AT THE FIRST ONE THAT IS NOT." else "",
+                CaptureText.setupCardsLine(words, cardsCount, pendingCount, includeDone),
                 color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace,
             )
             Text(
-                "CARDS ARE SIZED FOR ${String.format(Locale.ROOT, "%.1f", pace)} WORDS A SECOND" + if (paceIsMeasured) " (YOUR PACE)." else " (A TYPICAL PACE; THE PHONE LEARNS YOURS FROM WHAT YOU KEEP).",
+                CaptureText.paceLine(words, pace, paceIsMeasured),
                 color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace,
             )
             if (cardsCount > 0 && (pendingCount < cardsCount || allDone)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    TightPanelButton(if (includeDone || allDone) "INCLUDING CARDS ALREADY RECORDED" else "SKIPPING CARDS ALREADY RECORDED", Modifier.weight(1f), mainColor = primaryColor) { onIncludeDone(!includeDone) }
+                    TightPanelButton(CaptureText.includeDoneLabel(words, includeDone, allDone), Modifier.weight(1f), mainColor = primaryColor) { onIncludeDone(!includeDone) }
                 }
             }
         }
 
-        TightSectionLabel("NAME THIS SESSION (OPTIONAL)", color = primaryColor)
-        Text("WHERE AND HOW YOU ARE RECORDING, FOR YOUR OWN NOTES: \"CLOSET, PHONE ON A STAND, 30 CM\".", color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+        TightSectionLabel(stringResource(R.string.capture_name_session), color = primaryColor)
+        Text(stringResource(R.string.capture_name_hint), color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
         SimpleField(label, primaryColor, onLabel)
         if (free) {
-            TightSectionLabel("WHAT YOU WILL TALK ABOUT (OPTIONAL)", color = primaryColor)
+            TightSectionLabel(stringResource(R.string.capture_topic), color = primaryColor)
             SimpleField(topic, primaryColor, onTopic)
         } else {
-            TightSectionLabel("HOW LONG TO WAIT FOR YOU TO FINISH A CARD", color = primaryColor)
+            TightSectionLabel(stringResource(R.string.capture_wait_title), color = primaryColor)
             Text(
-                String.format(Locale.ROOT, "%.1f SECONDS OF QUIET ENDS A CARD. RAISE IT IF YOU PAUSE A LOT IN THE MIDDLE OF A SENTENCE.", endWait / 100.0),
+                CaptureText.waitNote(words, endWait),
                 color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace,
             )
             Slider(
@@ -426,31 +432,29 @@ private fun SetupView(
             )
         }
 
-        TightSectionLabel("BEFORE YOU START", color = primaryColor)
+        TightSectionLabel(stringResource(R.string.capture_before_title), color = primaryColor)
         Text(
-            "PUT THE PHONE WHERE IT WILL STAY (A STAND, OR PROPPED ON BOOKS) AND KEEP YOUR MOUTH THE SAME DISTANCE FROM IT THE WHOLE TIME. " +
-                "THE SCREEN STAYS ON AND THE PHONE WILL NOT ROTATE. IT MAKES NO SOUND AND NO VIBRATION WHILE IT LISTENS. " +
-                "IF YOU LEAVE THE APP, RECORDING PAUSES.",
+            stringResource(R.string.capture_before_text),
             color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace,
         )
         if (free) {
-            // Free speech keeps everything the microphone hears, so anyone nearby is recorded too (wording: capture/FreeSpeechNotice.kt).
+            // Free speech keeps everything the microphone hears, so anyone nearby is recorded too (wording: capture_free_notice_setup, through CaptureText.freeNoticeSetup).
             // Text only, in this screen's own palette and at 12 sp: this screen makes no sound or vibration, so no dialog, toast or
             // standard button here. Script recording does not show it.
             Text(
-                FreeSpeechNotice.SETUP,
+                CaptureText.freeNoticeSetup(words),
                 color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
             )
         }
 
         when (phase) {
             Phase.SETUP -> TightPanelButton(
-                "START QUIET CHECK (2 SECONDS)",
+                CaptureText.startQuietLabel(words),
                 Modifier.fillMaxWidth().testTag(AckTags.TRAIN_QUIET_CHECK_BTN).helpTarget(AckTags.TRAIN_QUIET_CHECK_BTN, primaryColor),
                 isActive = free || pendingCount > 0 || includeDone, mainColor = primaryColor, onClick = onCheck,
             )
             Phase.CHECKING -> {
-                Text("STAY QUIET...", color = primaryColor, fontSize = 22.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black)
+                Text(stringResource(R.string.capture_stay_quiet), color = primaryColor, fontSize = 22.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black)
                 Box(modifier = Modifier.fillMaxWidth().height(14.dp).background(Color.DarkGray)) {
                     Box(modifier = Modifier.fillMaxWidth((noiseSeconds / CaptureConstants.NOISE_CHECK_S).toFloat().coerceIn(0f, 1f)).fillMaxHeight().background(primaryColor))
                 }
@@ -458,11 +462,11 @@ private fun SetupView(
             else -> {
                 val verdict = noise?.verdict()
                 val bad = verdict == NoiseVerdict.NO_SIGNAL || verdict == NoiseVerdict.INTERRUPTED
-                Text(noise?.describe() ?: "", color = if (verdict == NoiseVerdict.GOOD) primaryColor else RadicalRed, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                Text(noise?.let { CaptureText.noiseVerdict(words, it.verdict(), it.floorDbfs()) } ?: "", color = if (verdict == NoiseVerdict.GOOD) primaryColor else RadicalRed, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    TightPanelButton("CHECK AGAIN", Modifier.weight(1f), isActive = bad, mainColor = primaryColor, onClick = onCheck)
+                    TightPanelButton(stringResource(R.string.capture_check_again), Modifier.weight(1f), isActive = bad, mainColor = primaryColor, onClick = onCheck)
                     TightPanelButton(
-                        "START RECORDING", Modifier.weight(1f).testTag(AckTags.TRAIN_START_BTN).helpTarget(AckTags.TRAIN_START_BTN, primaryColor),
+                        stringResource(R.string.capture_start_recording), Modifier.weight(1f).testTag(AckTags.TRAIN_START_BTN).helpTarget(AckTags.TRAIN_START_BTN, primaryColor),
                         isActive = !bad, mainColor = primaryColor,
                     ) { if (!bad) onStart() }
                 }
@@ -485,27 +489,24 @@ private fun SimpleField(value: String, primaryColor: Color, onValueChange: (Stri
 @Composable
 private fun ScriptCaptureView(primaryColor: Color, snap: CaptureSnapshot, runner: ScriptSessionRunner?, cards: List<Card>, onEnd: () -> Unit) {
     val helpManager = LocalHelpManager.current
+    val words = rememberText()
     val card = cards.getOrNull(snap.currentCard)
     val next = cards.getOrNull(snap.currentCard + 1)
     val listening = snap.state == RunState.LISTENING
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                "CARD ${snap.currentCard + 1} OF ${cards.size}" + if (snap.attempt > 1) "  (TRY ${snap.attempt})" else "",
+                CaptureText.cardHeading(words, snap.currentCard + 1, cards.size, snap.attempt),
                 color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
             )
-            Text("${snap.kept} KEPT, ${snap.cardsLeft} LEFT", color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+            Text(CaptureText.keptLeft(words, snap.kept, snap.cardsLeft), color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
         }
         LevelMeter(snap.levelDb, if (snap.inSpeech) primaryColor else Color.Gray)
         Text(
-            when {
-                snap.state == RunState.PAUSED -> "PAUSED"
-                snap.inSpeech -> "HEARING YOU..."
-                else -> "LISTENING. READ THE CARD WHEN YOU ARE READY."
-            },
+            CaptureText.scriptStatus(words, paused = snap.state == RunState.PAUSED, inSpeech = snap.inSpeech),
             color = if (snap.state == RunState.PAUSED) RadicalRed else primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
         )
-        if (snap.message.isNotEmpty()) Notice(snap.message, RadicalRed, onDismiss = null)
+        snap.notice?.let { Notice(CaptureText.notice(words, it), RadicalRed, onDismiss = null) }
 
         Box(
             modifier = Modifier.fillMaxWidth().weight(1f).border(1.dp, primaryColor, CutCornerShape(12.dp)).background(Graphite, CutCornerShape(12.dp)).padding(16.dp)
@@ -517,61 +518,62 @@ private fun ScriptCaptureView(primaryColor: Color, snap: CaptureSnapshot, runner
             )
         }
         if (next != null) {
-            Text("NEXT: " + next.text.take(70) + if (next.text.length > 70) "..." else "", color = Color.DarkGray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, maxLines = 2)
+            Text(CaptureText.nextLine(words, next.text), color = Color.DarkGray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, maxLines = 2)
         }
         if (snap.hasLast) {
             Text(
-                "LAST SAVED: CARD ${snap.lastKeptCard}, ${String.format(Locale.ROOT, "%.1f", snap.lastKeptSeconds)} S. MARK IT IF NEEDED:",
+                CaptureText.lastSaved(words, snap.lastKeptCard, snap.lastKeptSeconds),
                 color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
                 for (flag in ClipFlags.PERSON) {
-                    CaptureButton(flag, Modifier.weight(1f), color = primaryColor, active = flag in snap.marks, compact = true) { runner?.toggleMark(flag) }
+                    CaptureButton(CaptureText.markWord(words, flag), Modifier.weight(1f), color = primaryColor, active = flag in snap.marks, compact = true) { runner?.toggleMark(flag) }
                 }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            CaptureButton("REDO LAST", Modifier.weight(1f).testTag(AckTags.TRAIN_REDO_BTN).helpTarget(AckTags.TRAIN_REDO_BTN, primaryColor), color = primaryColor, active = snap.canRedo) {
+            CaptureButton(stringResource(R.string.capture_redo_last), Modifier.weight(1f).testTag(AckTags.TRAIN_REDO_BTN).helpTarget(AckTags.TRAIN_REDO_BTN, primaryColor), color = primaryColor, active = snap.canRedo) {
                 helpManager?.onEvent(HelpEvent.Interacted(AckTags.TRAIN_REDO_BTN))
                 runner?.redoLast()
             }
             if (listening) {
-                CaptureButton("PAUSE", Modifier.weight(1f).testTag(AckTags.TRAIN_PAUSE_BTN).helpTarget(AckTags.TRAIN_PAUSE_BTN, primaryColor), color = primaryColor) {
+                CaptureButton(stringResource(R.string.capture_pause), Modifier.weight(1f).testTag(AckTags.TRAIN_PAUSE_BTN).helpTarget(AckTags.TRAIN_PAUSE_BTN, primaryColor), color = primaryColor) {
                     helpManager?.onEvent(HelpEvent.Interacted(AckTags.TRAIN_PAUSE_BTN))
                     runner?.pause()
                 }
             } else {
-                CaptureButton("RESUME", Modifier.weight(1f).testTag(AckTags.TRAIN_PAUSE_BTN).helpTarget(AckTags.TRAIN_PAUSE_BTN, primaryColor), color = primaryColor) {
+                CaptureButton(stringResource(R.string.capture_resume), Modifier.weight(1f).testTag(AckTags.TRAIN_PAUSE_BTN).helpTarget(AckTags.TRAIN_PAUSE_BTN, primaryColor), color = primaryColor) {
                     helpManager?.onEvent(HelpEvent.Interacted(AckTags.TRAIN_PAUSE_BTN))
                     runner?.resume()
                 }
             }
         }
-        CaptureButton("END SESSION", Modifier.fillMaxWidth().testTag(AckTags.TRAIN_END_BTN).helpTarget(AckTags.TRAIN_END_BTN, primaryColor), color = RadicalRed, onClick = onEnd)
+        CaptureButton(stringResource(R.string.capture_end_session), Modifier.fillMaxWidth().testTag(AckTags.TRAIN_END_BTN).helpTarget(AckTags.TRAIN_END_BTN, primaryColor), color = RadicalRed, onClick = onEnd)
     }
 }
 
 @Composable
 private fun FreeCaptureView(primaryColor: Color, snap: CaptureSnapshot, runner: FreeSessionRunner?, onEnd: () -> Unit) {
+    val words = rememberText()
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("FREE SPEECH", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.capture_free_speech), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
         Text(clock(snap.seconds), color = Color.White, fontSize = 56.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black)
         LevelMeter(snap.levelDb, if (snap.inSpeech) primaryColor else Color.Gray)
         Text(
-            if (snap.paused) "PAUSED" else if (snap.inSpeech) "RECORDING. HEARING YOU..." else "RECORDING. TALK WHENEVER YOU LIKE.",
+            CaptureText.freeStatus(words, paused = snap.paused, inSpeech = snap.inSpeech),
             color = if (snap.paused) RadicalRed else primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
         )
-        if (snap.message.isNotEmpty()) Notice(snap.message, RadicalRed, onDismiss = null)
+        snap.notice?.let { Notice(CaptureText.notice(words, it), RadicalRed, onDismiss = null) }
         Text(
-            "THE AUDIO IS KEPT WHOLE. WHEN YOU STOP, THE PHONE SUGGESTS WHERE IT COULD BE CUT AND THE COMPUTER DECIDES. IT STOPS BY ITSELF AT 90 MINUTES OR WHEN THE PHONE IS NEARLY FULL, KEEPING EVERYTHING.",
+            CaptureText.freeNote(words),
             color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace,
         )
         Spacer(modifier = Modifier.weight(1f))
         if (snap.paused) {
-            CaptureButton("RESUME", Modifier.fillMaxWidth(), color = primaryColor) { runner?.resume() }
+            CaptureButton(stringResource(R.string.capture_resume), Modifier.fillMaxWidth(), color = primaryColor) { runner?.resume() }
         } else {
-            CaptureButton("PAUSE", Modifier.fillMaxWidth(), color = primaryColor) { runner?.pause() }
+            CaptureButton(stringResource(R.string.capture_pause), Modifier.fillMaxWidth(), color = primaryColor) { runner?.pause() }
         }
-        CaptureButton("STOP AND KEEP", Modifier.fillMaxWidth().testTag(AckTags.TRAIN_END_BTN).helpTarget(AckTags.TRAIN_END_BTN, primaryColor), color = RadicalRed, onClick = onEnd)
+        CaptureButton(stringResource(R.string.capture_stop_keep), Modifier.fillMaxWidth().testTag(AckTags.TRAIN_END_BTN).helpTarget(AckTags.TRAIN_END_BTN, primaryColor), color = RadicalRed, onClick = onEnd)
     }
 }

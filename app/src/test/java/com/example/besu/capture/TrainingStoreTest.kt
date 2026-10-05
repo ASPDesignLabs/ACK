@@ -396,6 +396,8 @@ class TrainingStoreTest {
         assertFalse(DiskGuard.mustStop(100 * mb))
         assertEquals(0L, DiskGuard.minutesLeft(50 * mb, 48_000))
         assertEquals(60L, DiskGuard.minutesLeft(100 * mb + 60L * 48_000 * 2 * 60, 48_000))
-        assertTrue(DiskGuard.describe(500 * mb, 48_000).startsWith("500 MB free"))
+        assertEquals("what is left is numbers (the screen words them)", DiskRoom(500, DiskGuard.minutesLeft(500 * mb, 48_000)), DiskGuard.room(500 * mb, 48_000))
+        assertEquals(DiskRoom(0, 0), DiskGuard.room(0, 48_000))
+        assertEquals("whole megabytes, rounded down", 299L, DiskGuard.room(299 * mb + mb - 1, 48_000).megabytes)
     }
 }

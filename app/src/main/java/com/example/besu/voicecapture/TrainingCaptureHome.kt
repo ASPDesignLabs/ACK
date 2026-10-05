@@ -39,7 +39,6 @@ import com.example.besu.capture.CaptureSession
 import com.example.besu.capture.CaptureTime
 import com.example.besu.capture.CardSplitter
 import com.example.besu.capture.ClipState
-import com.example.besu.capture.FreeSpeechNotice
 import com.example.besu.capture.PackagePlanner
 import com.example.besu.capture.PackageVerifier
 import com.example.besu.capture.PackageWriteException
@@ -303,9 +302,9 @@ fun TrainingCaptureHome(context: Context, primaryColor: Color, onClose: () -> Un
             CaptureText.freeIntro(words, CaptureConstants.MAX_FREE_SESSION_S / 60),
             color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace,
         )
-        // Anyone nearby is recorded too (wording: capture/FreeSpeechNotice.kt). Text only, 12 sp.
+        // Anyone nearby is recorded too (wording: capture_free_notice_home). Text only, 12 sp.
         Text(
-            FreeSpeechNotice.HOME,
+            stringResource(R.string.capture_free_notice_home),
             color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
         )
         TightPanelButton(
