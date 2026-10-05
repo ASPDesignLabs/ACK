@@ -24,11 +24,10 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt", "RecordTrainingDataHelp.kt", "MatrixDeckHelp.kt", "VoiceRecordingsHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt", "RecordTrainingDataHelp.kt", "MatrixDeckHelp.kt", "VoiceRecordingsHelp.kt", "FieldOpsHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
-        "FieldOpsHelp.kt",
         // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
         "HelpRegistry.kt",
     )
@@ -196,6 +195,8 @@ class HelpWalkthroughWordingTest {
         "helpmod_voice_rec_recording_accept_title" to "voice_rec_accept",
         "helpmod_voice_rec_matrix_accept_title" to "voice_rec_accept",
         "helpmod_voice_rec_manage_intro_title" to "manage_rec_title",
+        "helpmod_field_ops_training_ground_title" to "train_title",
+        "helpmod_field_ops_training_ground_live_title" to "train_title",
     )
 
     /** A text that names a label in plain words (English has no placeholder there), so every language holds that label's own standard word, and it does not follow PLAIN WORDS (a known gap). */
@@ -271,6 +272,19 @@ class HelpWalkthroughWordingTest {
         "helpmod_voice_rec_manage_intro_body" to listOf("label_settings_entry"),
         "helpmod_voice_rec_manage_open_body" to listOf("manage_rec_title"),
         "helpmod_voice_rec_manage_actions_body" to listOf("voice_rec_play", "voice_rec_rerecord", "common_delete"),
+        // FIELD OPS: each pose walkthrough names its own pose by the word the pose has everywhere else in that language.
+        "helpmod_field_ops_gesture_training_title" to listOf("label_pose_identity"),
+        "helpmod_field_ops_gesture_training_summary" to listOf("label_pose_identity"),
+        "helpmod_field_ops_gesture_training_pose_lock_title" to listOf("label_pose_identity"),
+        "helpmod_field_ops_gesture_training_pose_locked_body" to listOf("label_pose_identity"),
+        "helpmod_field_ops_pose_defend_title" to listOf("label_pose_defend"),
+        "helpmod_field_ops_pose_defend_summary" to listOf("label_pose_defend"),
+        "helpmod_field_ops_pose_defend_pose_lock_title" to listOf("label_pose_defend"),
+        "helpmod_field_ops_pose_defend_pose_locked_body" to listOf("label_pose_defend"),
+        "helpmod_field_ops_pose_connect_title" to listOf("label_pose_connect"),
+        "helpmod_field_ops_pose_connect_summary" to listOf("label_pose_connect"),
+        "helpmod_field_ops_pose_connect_pose_lock_title" to listOf("label_pose_connect"),
+        "helpmod_field_ops_pose_connect_pose_locked_body" to listOf("label_pose_connect"),
     )
 
     @Test
@@ -292,6 +306,22 @@ class HelpWalkthroughWordingTest {
             assertTrue("$tag: the body names it too", map.getValue("helpmod_matrix_prompt_creation_identity_root_body").contains(heading))
             val link = map.getValue("helpmod_ack_command_bar_header_watch_link_body")
             for (state in listOf("OFFLINE", "ARMED", "LOCKED")) assertTrue("$tag: the watch's own state word $state: $link", link.contains(state, ignoreCase = tag == "en"))
+        }
+    }
+
+    @Test
+    fun theThreePoseWalkthroughsSayTheSameSharedSteps_andTheWatchsOwnStateWordsSurvive() {
+        val modules = listOf("gesture_training", "pose_defend", "pose_connect")
+        for ((tag, map) in everyLanguage) {
+            for (step in listOf("intro", "wake_gesture", "system_armed", "fire_command", "sync_complete", "pose_locked")) for (part in listOf("title", "body")) {
+                if (step == "pose_locked" && part == "body") continue // names its own pose
+                val texts = modules.map { map.getValue("helpmod_field_ops_${it}_${step}_$part") }.toSet()
+                assertEquals("$tag: $step $part differs between the three pose walkthroughs", 1, texts.size)
+            }
+            for (m in modules) {
+                assertTrue("$tag/$m: the watch's ARMED state word", map.getValue("helpmod_field_ops_${m}_system_armed_body").contains("ARMED", ignoreCase = tag == "en"))
+                assertTrue("$tag/$m: the FIRE state word", map.getValue("helpmod_field_ops_${m}_fire_command_body").contains("FIRE", ignoreCase = tag == "en"))
+            }
         }
     }
 
