@@ -2,174 +2,86 @@
 package com.example.besu.help
 
 import com.example.besu.*
-object MatrixDeckHelpCopy {
-    const val HEADER_INTRO =
-        "The ACK Command Bar is your always-available control surface. " +
-                "It shows your active {{DECK:deck}}, active profile, quick phrases, " +
-                "watch connection state, system settings, and Help access."
 
-    const val HEADER_DECK =
-        "{{DECK:DECK}} selects the communication system currently loaded in ACK. " +
-                "A {{DECK:deck}} can be a Matrix, emergency board, quick-action board, " +
-                "emoji board, GIF board, or another custom workflow."
-
-    const val HEADER_PROFILE =
-        "PROFILE selects the active communication profile inside a Matrix " +
-                "{{DECK:deck}}. Profiles let the same gesture structure use different " +
-                "phrasing for different situations."
-
-    const val HEADER_SHORTCUTS =
-        "The compact buttons beside ACK are header shortcuts. Tap one to " +
-                "immediately transmit its saved phrase without opening a {{DECK:deck}}."
-
-    const val HEADER_PROTOCOL =
-        "PROTOCOL opens system configuration: watch behavior, sensor " +
-                "settings, shortcuts, data controls, and output preferences."
-
-    const val HEADER_HELP =
-        "HELP opens this training system. Modules guide you through live " +
-                "controls instead of making you memorize the whole machine."
-
-    const val HEADER_LINK =
-        "The pulsing square is the watch link indicator. Its color and the " +
-                "nearby status label show whether the watch is offline, armed, " +
-                "locked, or actively communicating with ACK."
-
-    const val HEADER_COMPLETE =
-        "Command Bar training complete! The ACK Command Bar remains present " +
-                "at all times, making access to shortcuts and status " +
-                "effortless when using the app."
-
-    const val DECK_PROFILE_START =
-        "Start by selecting a Matrix {{DECK:deck}}. Matrix {{DECKS:decks}} support profiles, " +
-                "gesture mapping, local variables, and shared root values."
-
-    const val DECK_PROFILE_PROFILE =
-        "Now select a profile. Profiles let one gesture system adapt to " +
-                "different communication contexts without rebuilding the Matrix. " +
-                "If ACK asks first because a gesture would say something " +
-                "different, tap CHANGE PROFILE to go ahead."
-
-    const val DECK_PROFILE_COMPLETE =
-        "{{DECK:Deck}} and profile selection complete. You can now switch between " +
-                "communication environments before transmitting a phrase."
-
-    const val MATRIX_INTRO =
-        "The ACK Matrix maps watch poses and twists to communication " +
-                "phrases. Each category is a gesture context, and each row is " +
-                "a phrase node that can be edited or played manually."
-
-    const val MATRIX_IDENTITY =
-        "ROOT :: IDENTITY is the primary status-reporting context. Its " +
-                "gesture rows are commonly used for direct personal output. " +
-                "Each row can hold a phrase and local fallback values."
-
-    const val MATRIX_EDIT_FIRST =
-        "Your first prompt lives in Twist 0. Tap the highlighted Twist 0 " +
-                "row to open its Live Save Editor."
-
-    const val MATRIX_EDITOR =
-        "This is the Live Save Editor. Use MACRO TEMPLATE to type the phrase " +
-                "you want ACK to transmit. Changes are saved while you work. " +
-                "Variables are powerful and useful, but they get their own " +
-                "training module so we do not summon the complexity goblins yet."
-
-    const val MATRIX_COMMIT =
-        "Destructive Controls can clear local values, the prompt, or both. " +
-                "They are intentionally dramatic. Your prompt is already " +
-                "live-saved, but tap COMMIT now to confirm this editing pass and " +
-                "return to the Matrix."
-
-    const val MATRIX_PLAYBACK =
-        "Your prompt is now ready for manual playback. Tap the highlighted " +
-                "play control beside Twist 0 to transmit the phrase you created."
-
-    const val MATRIX_COMPLETE =
-        "Prompt creation complete. You edited a Matrix node, saved its " +
-                "template, and played it back from the Matrix."
-}
-
+/** This family's words are string resources (helpmod_<module id>_..., core/HelpWalkthroughText.kt), read where a step is drawn or spoken. */
 object MatrixDeckHelp {
-    const val HEADER_MODULE_ID = "ack_command_bar"
-    const val DECK_PROFILE_MODULE_ID = "deck_profile_selection"
-    const val PROMPTS_MODULE_ID = "matrix_prompt_creation"
 
     val modules: List<HelpModule> = listOf(
         HelpModule(
-            id = HEADER_MODULE_ID,
+            id = "ack_command_bar",
             category = HelpCategory.BASICS_NAVIGATION,
-            title = "ACK COMMAND BAR",
-            summary = "HEADER CONTROLS, SHORTCUTS, WATCH LINK, AND HELP.",
+            title = "helpmod_ack_command_bar_title",
+            summary = "helpmod_ack_command_bar_summary",
             destination = HelpDestination.MATRIX,
             requiresMatrixDeck = true,
             steps = listOf(
                 HelpStep(
                     id = "header_intro",
-                    title = "ACK COMMAND BAR",
-                    body = MatrixDeckHelpCopy.HEADER_INTRO
+                    title = "helpmod_ack_command_bar_header_intro_title",
+                    body = "helpmod_ack_command_bar_header_intro_body"
                 ),
                 HelpStep(
                     id = "header_deck",
-                    title = "{{DECK:DECK}} SELECTOR",
-                    body = MatrixDeckHelpCopy.HEADER_DECK,
+                    title = "helpmod_ack_command_bar_header_deck_title",
+                    body = "helpmod_ack_command_bar_header_deck_body",
                     targetTag = AckTags.DECK_SELECTOR
                 ),
                 HelpStep(
                     id = "header_profile",
-                    title = "PROFILE SELECTOR",
-                    body = MatrixDeckHelpCopy.HEADER_PROFILE,
+                    title = "helpmod_ack_command_bar_header_profile_title",
+                    body = "helpmod_ack_command_bar_header_profile_body",
                     targetTag = AckTags.PROFILE_SELECTOR
                 ),
                 HelpStep(
                     id = "header_shortcuts",
-                    title = "SHORTCUT ROW",
-                    body = MatrixDeckHelpCopy.HEADER_SHORTCUTS,
+                    title = "helpmod_ack_command_bar_header_shortcuts_title",
+                    body = "helpmod_ack_command_bar_header_shortcuts_body",
                     targetTag = AckTags.HEADER_SHORTCUTS
                 ),
                 HelpStep(
                     id = "header_protocol",
-                    title = "PROTOCOL",
-                    body = MatrixDeckHelpCopy.HEADER_PROTOCOL,
+                    title = "helpmod_ack_command_bar_header_protocol_title",
+                    body = "helpmod_ack_command_bar_header_protocol_body",
                     targetTag = AckTags.CONFIG_BUTTON
                 ),
                 HelpStep(
                     id = "header_help",
-                    title = "HELP SYSTEM",
-                    body = MatrixDeckHelpCopy.HEADER_HELP,
+                    title = "helpmod_ack_command_bar_header_help_title",
+                    body = "helpmod_ack_command_bar_header_help_body",
                     targetTag = AckTags.HELP_BUTTON
                 ),
                 HelpStep(
                     id = "header_watch_link",
-                    title = "WATCH LINK",
-                    body = MatrixDeckHelpCopy.HEADER_LINK,
+                    title = "helpmod_ack_command_bar_header_watch_link_title",
+                    body = "helpmod_ack_command_bar_header_watch_link_body",
                     targetTag = AckTags.LIVE_LINK
                 ),
                 HelpStep(
                     id = "header_complete",
-                    title = "COMMAND BAR COMPLETE",
-                    body = MatrixDeckHelpCopy.HEADER_COMPLETE
+                    title = "helpmod_ack_command_bar_header_complete_title",
+                    body = "helpmod_ack_command_bar_header_complete_body"
                 )
             )
         ),
         HelpModule(
-            id = DECK_PROFILE_MODULE_ID,
+            id = "deck_profile_selection",
             category = HelpCategory.BASICS_NAVIGATION,
-            title = "{{DECK:DECK}} AND PROFILE SELECTION",
-            summary = "LOAD A MATRIX {{DECK:DECK}}, THEN SWITCH ITS ACTIVE PROFILE.",
+            title = "helpmod_deck_profile_selection_title",
+            summary = "helpmod_deck_profile_selection_summary",
             destination = HelpDestination.MATRIX,
             requiresMatrixDeck = true,
             steps = listOf(
                 HelpStep(
                     id = "select_deck",
-                    title = "SELECT A MATRIX {{DECK:DECK}}",
-                    body = MatrixDeckHelpCopy.DECK_PROFILE_START,
+                    title = "helpmod_deck_profile_selection_select_deck_title",
+                    body = "helpmod_deck_profile_selection_select_deck_body",
                     action = HelpAction.DeckSelected(AckTags.DECK_SELECTOR),
                     targetTag = AckTags.DECK_SELECTOR
                 ),
                 HelpStep(
                     id = "select_profile",
-                    title = "SELECT A PROFILE",
-                    body = MatrixDeckHelpCopy.DECK_PROFILE_PROFILE,
+                    title = "helpmod_deck_profile_selection_select_profile_title",
+                    body = "helpmod_deck_profile_selection_select_profile_body",
                     action = HelpAction.ProfileSelected(
                         AckTags.PROFILE_SELECTOR
                     ),
@@ -177,34 +89,34 @@ object MatrixDeckHelp {
                 ),
                 HelpStep(
                     id = "deck_profile_complete",
-                    title = "SELECTION COMPLETE",
-                    body = MatrixDeckHelpCopy.DECK_PROFILE_COMPLETE
+                    title = "helpmod_deck_profile_selection_deck_profile_complete_title",
+                    body = "helpmod_deck_profile_selection_deck_profile_complete_body"
                 )
             )
         ),
         HelpModule(
-            id = PROMPTS_MODULE_ID,
+            id = "matrix_prompt_creation",
             category = HelpCategory.BASICS_NAVIGATION,
-            title = "CREATING AND USING PROMPTS",
-            summary = "EDIT A MATRIX NODE, SAVE ITS TEMPLATE, AND PLAY IT.",
+            title = "helpmod_matrix_prompt_creation_title",
+            summary = "helpmod_matrix_prompt_creation_summary",
             destination = HelpDestination.MATRIX,
             requiresMatrixDeck = true,
             steps = listOf(
                 HelpStep(
                     id = "matrix_intro",
-                    title = "THE ACK MATRIX",
-                    body = MatrixDeckHelpCopy.MATRIX_INTRO
+                    title = "helpmod_matrix_prompt_creation_matrix_intro_title",
+                    body = "helpmod_matrix_prompt_creation_matrix_intro_body"
                 ),
                 HelpStep(
                     id = "identity_root",
-                    title = "ROOT :: IDENTITY",
-                    body = MatrixDeckHelpCopy.MATRIX_IDENTITY,
+                    title = "helpmod_matrix_prompt_creation_identity_root_title",
+                    body = "helpmod_matrix_prompt_creation_identity_root_body",
                     targetTag = AckTags.MATRIX_ROOT_IDENTITY
                 ),
                 HelpStep(
                     id = "edit_twist_zero",
-                    title = "EDIT YOUR FIRST PROMPT",
-                    body = MatrixDeckHelpCopy.MATRIX_EDIT_FIRST,
+                    title = "helpmod_matrix_prompt_creation_edit_twist_zero_title",
+                    body = "helpmod_matrix_prompt_creation_edit_twist_zero_body",
                     action = HelpAction.Interact(
                         AckTags.MATRIX_ROW_TARGET
                     ),
@@ -212,8 +124,8 @@ object MatrixDeckHelp {
                 ),
                 HelpStep(
                     id = "macro_template",
-                    title = "LIVE SAVE EDITOR",
-                    body = MatrixDeckHelpCopy.MATRIX_EDITOR,
+                    title = "helpmod_matrix_prompt_creation_macro_template_title",
+                    body = "helpmod_matrix_prompt_creation_macro_template_body",
                     action = HelpAction.KeyboardDismissed(
                         AckTags.MACRO_TEMPLATE_INPUT
                     ),
@@ -221,8 +133,8 @@ object MatrixDeckHelp {
                 ),
                 HelpStep(
                     id = "commit_prompt",
-                    title = "SAVE YOUR PROMPT",
-                    body = MatrixDeckHelpCopy.MATRIX_COMMIT,
+                    title = "helpmod_matrix_prompt_creation_commit_prompt_title",
+                    body = "helpmod_matrix_prompt_creation_commit_prompt_body",
                     action = HelpAction.Interact(
                         AckTags.MATRIX_COMMIT_BUTTON
                     ),
@@ -230,8 +142,8 @@ object MatrixDeckHelp {
                 ),
                 HelpStep(
                     id = "play_prompt",
-                    title = "PLAY BACK YOUR PROMPT",
-                    body = MatrixDeckHelpCopy.MATRIX_PLAYBACK,
+                    title = "helpmod_matrix_prompt_creation_play_prompt_title",
+                    body = "helpmod_matrix_prompt_creation_play_prompt_body",
                     action = HelpAction.Interact(
                         AckTags.MATRIX_PLAY_BUTTON
                     ),
@@ -239,8 +151,8 @@ object MatrixDeckHelp {
                 ),
                 HelpStep(
                     id = "prompt_complete",
-                    title = "PROMPT COMPLETE",
-                    body = MatrixDeckHelpCopy.MATRIX_COMPLETE
+                    title = "helpmod_matrix_prompt_creation_prompt_complete_title",
+                    body = "helpmod_matrix_prompt_creation_prompt_complete_body"
                 )
             )
         )

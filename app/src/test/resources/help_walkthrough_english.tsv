@@ -226,3 +226,45 @@ helpmod_record_training_data_save_file_title	SAVING TO A FILE
 helpmod_record_training_data_save_file_body	SAVE ALL TO A FILE makes a package you choose where to put. The phone then reads it back and checks every recording in it; if anything is wrong it removes the file and tells you nothing was lost. Move the file to your computer yourself, check it there, and only then delete a session from the phone. The phone never deletes one because you saved it.
 helpmod_record_training_data_complete_title	THAT IS THE PHONE'S PART
 helpmod_record_training_data_complete_body	On the computer, Freeform Studio imports the package and does the rest: it listens again, lines the words up with the text you read, and lets you review every piece before anything is used for training.
+helpmod_ack_command_bar_title	ACK COMMAND BAR
+helpmod_ack_command_bar_summary	HEADER CONTROLS, SHORTCUTS, WATCH LINK, AND HELP.
+helpmod_ack_command_bar_header_intro_title	ACK COMMAND BAR
+helpmod_ack_command_bar_header_intro_body	The ACK Command Bar is your always-available control surface. It shows your active {{DECK:deck}}, active profile, quick phrases, watch connection state, system settings, and Help access.
+helpmod_ack_command_bar_header_deck_title	{{DECK:DECK}} SELECTOR
+helpmod_ack_command_bar_header_deck_body	{{DECK:DECK}} selects the communication system currently loaded in ACK. A {{DECK:deck}} can be a Matrix, emergency board, quick-action board, emoji board, GIF board, or another custom workflow.
+helpmod_ack_command_bar_header_profile_title	PROFILE SELECTOR
+helpmod_ack_command_bar_header_profile_body	PROFILE selects the active communication profile inside a Matrix {{DECK:deck}}. Profiles let the same gesture structure use different phrasing for different situations.
+helpmod_ack_command_bar_header_shortcuts_title	SHORTCUT ROW
+helpmod_ack_command_bar_header_shortcuts_body	The compact buttons beside ACK are header shortcuts. Tap one to immediately transmit its saved phrase without opening a {{DECK:deck}}.
+helpmod_ack_command_bar_header_protocol_title	PROTOCOL
+helpmod_ack_command_bar_header_protocol_body	PROTOCOL opens system configuration: watch behavior, sensor settings, shortcuts, data controls, and output preferences.
+helpmod_ack_command_bar_header_help_title	HELP SYSTEM
+helpmod_ack_command_bar_header_help_body	HELP opens this training system. Modules guide you through live controls instead of making you memorize the whole machine.
+helpmod_ack_command_bar_header_watch_link_title	WATCH LINK
+helpmod_ack_command_bar_header_watch_link_body	The pulsing square is the watch link indicator. Its color and the nearby status label show whether the watch is offline, armed, locked, or actively communicating with ACK.
+helpmod_ack_command_bar_header_complete_title	COMMAND BAR COMPLETE
+helpmod_ack_command_bar_header_complete_body	Command Bar training complete! The ACK Command Bar remains present at all times, making access to shortcuts and status effortless when using the app.
+helpmod_deck_profile_selection_title	{{DECK:DECK}} AND PROFILE SELECTION
+helpmod_deck_profile_selection_summary	LOAD A MATRIX {{DECK:DECK}}, THEN SWITCH ITS ACTIVE PROFILE.
+helpmod_deck_profile_selection_select_deck_title	SELECT A MATRIX {{DECK:DECK}}
+helpmod_deck_profile_selection_select_deck_body	Start by selecting a Matrix {{DECK:deck}}. Matrix {{DECKS:decks}} support profiles, gesture mapping, local variables, and shared root values.
+helpmod_deck_profile_selection_select_profile_title	SELECT A PROFILE
+helpmod_deck_profile_selection_select_profile_body	Now select a profile. Profiles let one gesture system adapt to different communication contexts without rebuilding the Matrix. If ACK asks first because a gesture would say something different, tap CHANGE PROFILE to go ahead.
+helpmod_deck_profile_selection_deck_profile_complete_title	SELECTION COMPLETE
+helpmod_deck_profile_selection_deck_profile_complete_body	{{DECK:Deck}} and profile selection complete. You can now switch between communication environments before transmitting a phrase.
+helpmod_matrix_prompt_creation_title	CREATING AND USING PROMPTS
+helpmod_matrix_prompt_creation_summary	EDIT A MATRIX NODE, SAVE ITS TEMPLATE, AND PLAY IT.
+helpmod_matrix_prompt_creation_matrix_intro_title	THE ACK MATRIX
+helpmod_matrix_prompt_creation_matrix_intro_body	The ACK Matrix maps watch poses and twists to communication phrases. Each category is a gesture context, and each row is a phrase node that can be edited or played manually.
+helpmod_matrix_prompt_creation_identity_root_title	ROOT :: IDENTITY
+helpmod_matrix_prompt_creation_identity_root_body	ROOT :: IDENTITY is the primary status-reporting context. Its gesture rows are commonly used for direct personal output. Each row can hold a phrase and local fallback values.
+helpmod_matrix_prompt_creation_edit_twist_zero_title	EDIT YOUR FIRST PROMPT
+helpmod_matrix_prompt_creation_edit_twist_zero_body	Your first prompt lives in Twist 0. Tap the highlighted Twist 0 row to open its Live Save Editor.
+helpmod_matrix_prompt_creation_macro_template_title	LIVE SAVE EDITOR
+helpmod_matrix_prompt_creation_macro_template_body	This is the Live Save Editor. Use MACRO TEMPLATE to type the phrase you want ACK to transmit. Changes are saved while you work. Variables are powerful and useful, but they get their own training module so we do not summon the complexity goblins yet.
+helpmod_matrix_prompt_creation_commit_prompt_title	SAVE YOUR PROMPT
+helpmod_matrix_prompt_creation_commit_prompt_body	Destructive Controls can clear local values, the prompt, or both. They are intentionally dramatic. Your prompt is already live-saved, but tap COMMIT now to confirm this editing pass and return to the Matrix.
+helpmod_matrix_prompt_creation_play_prompt_title	PLAY BACK YOUR PROMPT
+helpmod_matrix_prompt_creation_play_prompt_body	Your prompt is now ready for manual playback. Tap the highlighted play control beside Twist 0 to transmit the phrase you created.
+helpmod_matrix_prompt_creation_prompt_complete_title	PROMPT COMPLETE
+helpmod_matrix_prompt_creation_prompt_complete_body	Prompt creation complete. You edited a Matrix node, saved its template, and played it back from the Matrix.

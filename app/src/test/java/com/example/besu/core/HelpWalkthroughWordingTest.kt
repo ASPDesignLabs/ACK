@@ -24,11 +24,11 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt", "RecordTrainingDataHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt", "RecordTrainingDataHelp.kt", "MatrixDeckHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
-        "FieldOpsHelp.kt", "MatrixDeckHelp.kt",
+        "FieldOpsHelp.kt",
         "VoiceRecordingsHelp.kt",
         // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
         "HelpRegistry.kt",
@@ -185,6 +185,8 @@ class HelpWalkthroughWordingTest {
         "helpmod_statement_composer_save_title" to "common_save",
         "helpmod_statement_composer_copy_title" to "common_copy",
         "helpmod_statement_composer_speak_title" to "common_speak",
+        "helpmod_ack_command_bar_header_protocol_title" to "label_settings_entry",
+        "helpmod_matrix_prompt_creation_macro_template_title" to "matrix_edit_subtitle",
     )
 
     /** A text that names a label in plain words (English has no placeholder there), so every language holds that label's own standard word, and it does not follow PLAIN WORDS (a known gap). */
@@ -236,12 +238,36 @@ class HelpWalkthroughWordingTest {
         "helpmod_record_training_data_end_body" to listOf("capture_end_session"),
         "helpmod_record_training_data_free_body" to listOf("capture_record_free", "capture_free_notice_home"),
         "helpmod_record_training_data_save_file_body" to listOf("capture_save_all"),
+        // The command bar's buttons, the profile-change confirmation, and the Matrix editor's own headings and controls.
+        "helpmod_ack_command_bar_header_profile_body" to listOf("header_profile"),
+        "helpmod_ack_command_bar_header_protocol_body" to listOf("label_settings_entry"),
+        "helpmod_ack_command_bar_header_help_title" to listOf("help_button"),
+        "helpmod_ack_command_bar_header_help_body" to listOf("help_button"),
+        "helpmod_deck_profile_selection_select_profile_body" to listOf("profile_warn_change"),
+        "helpmod_matrix_prompt_creation_macro_template_body" to listOf("matrix_edit_subtitle", "matrix_edit_template"),
+        "helpmod_matrix_prompt_creation_commit_prompt_body" to listOf("matrix_edit_destructive", "common_commit"),
     )
 
     @Test
     fun aTitleThatNamesALabelOrAControlIsThatLabelsOrControlsOwnWordInEveryLanguage() {
-        for ((tag, map) in everyLanguage) for ((name, source) in isExactly) assertEquals("$tag/$name", map.getValue(source), map.getValue(name))
+        // English writes this step's title "LIVE SAVE EDITOR" (a space) where the screen says "LIVE-SAVE EDITOR"; English stays as it always was, so only the translations are held to the screen.
+        val englishWritesItDifferently = setOf("helpmod_matrix_prompt_creation_macro_template_title")
+        for ((tag, map) in everyLanguage) for ((name, source) in isExactly) {
+            if (tag == "en" && name in englishWritesItDifferently) continue
+            assertEquals("$tag/$name", map.getValue(source), map.getValue(name))
+        }
         assertTrue("every entry names a walkthrough string that exists", (isExactly.keys + namesLabelLiterally.keys).all { it in english })
+    }
+
+    @Test
+    fun theRootIdentityHeadingIsTheScreensHeadingWithTheLanguagesOwnPoseWord_andTheWatchStatesStayAsTheWatchShowsThem() {
+        for ((tag, map) in everyLanguage) {
+            val heading = map.getValue("matrix_root_heading").replace("%1\$s", map.getValue("label_pose_identity"))
+            assertEquals("$tag: the step's title is the heading the Matrix shows", heading, map.getValue("helpmod_matrix_prompt_creation_identity_root_title"))
+            assertTrue("$tag: the body names it too", map.getValue("helpmod_matrix_prompt_creation_identity_root_body").contains(heading))
+            val link = map.getValue("helpmod_ack_command_bar_header_watch_link_body")
+            for (state in listOf("OFFLINE", "ARMED", "LOCKED")) assertTrue("$tag: the watch's own state word $state: $link", link.contains(state, ignoreCase = tag == "en"))
+        }
     }
 
     @Test
