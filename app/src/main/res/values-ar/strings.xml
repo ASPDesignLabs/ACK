@@ -853,4 +853,29 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
         <item quantity="many">%d خطوة</item>
         <item quantity="other">%d خطوة</item>
     </plurals>
+    <string name="settings_audio_routing_heading">توجيه مخرجات الصوت</string>
+    <string name="settings_force_speaker_desc">يوجّه الكلام إلى مكبر الصوت المدمج في الجهاز بدلًا من مسار الصوت الحالي.</string>
+    <string name="settings_output_device">جهاز الإخراج</string>
+    <string name="settings_route_overridden">تم تجاوزه بواسطة %1$s أعلاه</string>
+    <string name="settings_route_auto">تلقائي (افتراضي النظام)</string>
+    <string name="settings_route_auto_hint">أيًّا كان مسار الصوت الحالي في الهاتف</string>
+    <string name="settings_route_watch">ساعة ACK</string>
+    <string name="settings_route_connected">متصل</string>
+    <string name="settings_route_not_connected">غير متصل الآن -- يعود إلى تلقائي عند تعذّر الوصول</string>
+    <string name="settings_route_bt_device">جهاز بلوتوث</string>
+    <string name="settings_route_bt_none">لا توجد أجهزة بلوتوث متصلة الآن</string>
+    <string name="settings_vox_desc">يتحكم في نطق شرح الدروس والإرشادات بصوت عالٍ أم لا.</string>
+    <string name="settings_silent_desc">يعرض الرسائل كالمعتاد لكنه لا ينطقها بصوت عالٍ أبدًا -- لأماكن يكون فيها الصوت نفسه هو المشكلة. رسائل الطوارئ وشرح الدروس لا يُكتمان أبدًا.</string>
+    <string name="settings_silent_no_display">%1$s مفعّل وإذن العرض متوقف: لن تُنطق الرسالة ولن تُعرض.</string>
+    <string name="overlay_banner_text">إذن العرض متوقف. تُنطق الرسائل لكنها لا تظهر على الشاشة.</string>
+    <string name="overlay_banner_allow">سماح</string>
+    <string name="settings_watch_audio_heading">ملاحظات صوت الساعة</string>
+    <string name="settings_tone_sharp">حاد</string>
+    <string name="settings_tone_clean">نقي</string>
+    <string name="settings_tone_soft">ناعم</string>
+    <string name="settings_watch_volume">مستوى صوت الساعة: %1$d%%</string>
+    <string name="settings_visual_heading">عرض الرسائل المرئية</string>
+    <string name="settings_visual_desc">تملأ رسائل النص والإيموجي وGIF الشاشة وتدوّر محتواها في مكانه لتظهر الكلمات كبيرة دون التفاف.</string>
+    <string name="settings_force_rotation">فرض تدوير الجهاز</string>
+    <string name="settings_force_rotation_desc">%1$s: تدوير الرسالة فقط. %2$s: تدوير الشاشة كلها (السلوك القديم).</string>
 </resources>

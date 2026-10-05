@@ -829,4 +829,29 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
         <item quantity="many">%d PASOS</item>
         <item quantity="other">%d PASOS</item>
     </plurals>
+    <string name="settings_audio_routing_heading">ENRUTAMIENTO DE LA SALIDA DE AUDIO</string>
+    <string name="settings_force_speaker_desc">ENVÍA LA VOZ AL ALTAVOZ INTEGRADO DEL DISPOSITIVO EN VEZ DE LA RUTA DE AUDIO ACTUAL.</string>
+    <string name="settings_output_device">DISPOSITIVO DE SALIDA</string>
+    <string name="settings_route_overridden">ANULADO POR %1$s (ARRIBA)</string>
+    <string name="settings_route_auto">AUTOMÁTICO (PREDETERMINADO DEL SISTEMA)</string>
+    <string name="settings_route_auto_hint">LA RUTA DE AUDIO QUE EL TELÉFONO TENGA EN ESE MOMENTO</string>
+    <string name="settings_route_watch">RELOJ ACK</string>
+    <string name="settings_route_connected">CONECTADO</string>
+    <string name="settings_route_not_connected">NO CONECTADO AHORA -- VUELVE A AUTOMÁTICO CUANDO NO SE PUEDE ALCANZAR</string>
+    <string name="settings_route_bt_device">DISPOSITIVO BLUETOOTH</string>
+    <string name="settings_route_bt_none">NO HAY DISPOSITIVOS BLUETOOTH CONECTADOS AHORA</string>
+    <string name="settings_vox_desc">CONTROLA SI LA NARRACIÓN DE LOS TUTORIALES Y GUÍAS SE DICE EN VOZ ALTA.</string>
+    <string name="settings_silent_desc">MUESTRA LOS MENSAJES COMO SIEMPRE PERO NUNCA LOS DICE EN VOZ ALTA -- PARA LUGARES DONDE EL SONIDO ES EL PROBLEMA. LOS MENSAJES DE EMERGENCIA Y LA NARRACIÓN DE LOS TUTORIALES NUNCA SE SILENCIAN.</string>
+    <string name="settings_silent_no_display">%1$s ESTÁ ACTIVADO Y EL PERMISO DE PANTALLA ESTÁ DESACTIVADO: UN MENSAJE NO SE DIRÍA NI SE MOSTRARÍA.</string>
+    <string name="overlay_banner_text">EL PERMISO DE PANTALLA ESTÁ DESACTIVADO. LOS MENSAJES SE DICEN EN VOZ ALTA PERO NO SE MUESTRAN EN LA PANTALLA.</string>
+    <string name="overlay_banner_allow">PERMITIR</string>
+    <string name="settings_watch_audio_heading">RESPUESTA DE AUDIO DEL RELOJ</string>
+    <string name="settings_tone_sharp">AGUDO</string>
+    <string name="settings_tone_clean">LIMPIO</string>
+    <string name="settings_tone_soft">SUAVE</string>
+    <string name="settings_watch_volume">VOLUMEN DEL RELOJ: %1$d%%</string>
+    <string name="settings_visual_heading">PANTALLA DE MENSAJES VISUALES</string>
+    <string name="settings_visual_desc">LOS MENSAJES DE TEXTO, EMOJI Y GIF LLENAN LA PANTALLA Y GIRAN SU CONTENIDO EN SU LUGAR PARA QUE LAS PALABRAS SE VEAN GRANDES SIN PARTIRSE.</string>
+    <string name="settings_force_rotation">FORZAR ROTACIÓN DEL DISPOSITIVO</string>
+    <string name="settings_force_rotation_desc">%1$s: GIRA SOLO EL MENSAJE. %2$s: GIRA TODA LA PANTALLA (COMPORTAMIENTO ANTERIOR).</string>
 </resources>

@@ -842,4 +842,29 @@
         <item quantity="one">%d STEP</item>
         <item quantity="other">%d STEPS</item>
     </plurals>
+    <string name="settings_audio_routing_heading">AUDIO OUTPUT ROUTING</string>
+    <string name="settings_force_speaker_desc">Routes speech to the device\'s built-in speaker instead of the current audio route.</string>
+    <string name="settings_output_device">OUTPUT DEVICE</string>
+    <string name="settings_route_overridden">OVERRIDDEN BY %1$s ABOVE</string>
+    <string name="settings_route_auto">AUTO (SYSTEM DEFAULT)</string>
+    <string name="settings_route_auto_hint">WHATEVER THE PHONE\'S CURRENT AUDIO ROUTE IS</string>
+    <string name="settings_route_watch">ACK WATCH</string>
+    <string name="settings_route_connected">CONNECTED</string>
+    <string name="settings_route_not_connected">NOT CURRENTLY CONNECTED -- FALLS BACK TO AUTO WHEN UNREACHABLE</string>
+    <string name="settings_route_bt_device">BLUETOOTH DEVICE</string>
+    <string name="settings_route_bt_none">NO BLUETOOTH DEVICES CURRENTLY CONNECTED</string>
+    <string name="settings_vox_desc">Controls whether tutorial and guide narration is spoken aloud.</string>
+    <string name="settings_silent_desc">Shows prompts as normal but never speaks them out loud -- for places where sound itself is the problem. Emergency messages and tutorial narration are never silenced.</string>
+    <string name="settings_silent_no_display">%1$s IS ON AND DISPLAY PERMISSION IS OFF: A MESSAGE WOULD BE NEITHER SPOKEN NOR SHOWN.</string>
+    <string name="overlay_banner_text">DISPLAY PERMISSION IS OFF. MESSAGES ARE SPOKEN BUT NOT SHOWN ON SCREEN.</string>
+    <string name="overlay_banner_allow">ALLOW</string>
+    <string name="settings_watch_audio_heading">WATCH AUDIO FEEDBACK</string>
+    <string name="settings_tone_sharp">SHARP</string>
+    <string name="settings_tone_clean">CLEAN</string>
+    <string name="settings_tone_soft">SOFT</string>
+    <string name="settings_watch_volume">WATCH VOLUME: %1$d%%</string>
+    <string name="settings_visual_heading">VISUAL PROMPT DISPLAY</string>
+    <string name="settings_visual_desc">Text/emoji/GIF prompts fill the screen and rotate their content in place so words display large without wrapping.</string>
+    <string name="settings_force_rotation">FORCE DEVICE ROTATION</string>
+    <string name="settings_force_rotation_desc">%1$s: rotate the prompt only. %2$s: rotate the whole screen (old behavior).</string>
 </resources>

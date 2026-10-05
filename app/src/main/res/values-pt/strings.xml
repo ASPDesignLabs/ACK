@@ -829,4 +829,29 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
         <item quantity="many">%d PASSOS</item>
         <item quantity="other">%d PASSOS</item>
     </plurals>
+    <string name="settings_audio_routing_heading">ROTEAMENTO DA SAÍDA DE ÁUDIO</string>
+    <string name="settings_force_speaker_desc">ENVIA A VOZ PARA O ALTO-FALANTE EMBUTIDO DO DISPOSITIVO EM VEZ DA ROTA DE ÁUDIO ATUAL.</string>
+    <string name="settings_output_device">DISPOSITIVO DE SAÍDA</string>
+    <string name="settings_route_overridden">SUBSTITUÍDO POR %1$s (ACIMA)</string>
+    <string name="settings_route_auto">AUTOMÁTICO (PADRÃO DO SISTEMA)</string>
+    <string name="settings_route_auto_hint">QUALQUER QUE SEJA A ROTA DE ÁUDIO ATUAL DO CELULAR</string>
+    <string name="settings_route_watch">RELÓGIO ACK</string>
+    <string name="settings_route_connected">CONECTADO</string>
+    <string name="settings_route_not_connected">NÃO CONECTADO AGORA -- VOLTA PARA AUTOMÁTICO QUANDO NÃO FOR ALCANÇÁVEL</string>
+    <string name="settings_route_bt_device">DISPOSITIVO BLUETOOTH</string>
+    <string name="settings_route_bt_none">NENHUM DISPOSITIVO BLUETOOTH CONECTADO AGORA</string>
+    <string name="settings_vox_desc">CONTROLA SE A NARRAÇÃO DOS TUTORIAIS E GUIAS É FALADA EM VOZ ALTA.</string>
+    <string name="settings_silent_desc">MOSTRA AS MENSAGENS NORMALMENTE, MAS NUNCA AS FALA EM VOZ ALTA -- PARA LUGARES ONDE O PRÓPRIO SOM É O PROBLEMA. MENSAGENS DE EMERGÊNCIA E A NARRAÇÃO DOS TUTORIAIS NUNCA SÃO SILENCIADAS.</string>
+    <string name="settings_silent_no_display">%1$s ESTÁ ATIVADO E A PERMISSÃO DE EXIBIÇÃO ESTÁ DESATIVADA: UMA MENSAGEM NÃO SERIA FALADA NEM MOSTRADA.</string>
+    <string name="overlay_banner_text">A PERMISSÃO DE EXIBIÇÃO ESTÁ DESATIVADA. AS MENSAGENS SÃO FALADAS, MAS NÃO APARECEM NA TELA.</string>
+    <string name="overlay_banner_allow">PERMITIR</string>
+    <string name="settings_watch_audio_heading">RETORNO DE ÁUDIO DO RELÓGIO</string>
+    <string name="settings_tone_sharp">AGUDO</string>
+    <string name="settings_tone_clean">LIMPO</string>
+    <string name="settings_tone_soft">SUAVE</string>
+    <string name="settings_watch_volume">VOLUME DO RELÓGIO: %1$d%%</string>
+    <string name="settings_visual_heading">EXIBIÇÃO VISUAL DE MENSAGENS</string>
+    <string name="settings_visual_desc">MENSAGENS DE TEXTO, EMOJI E GIF PREENCHEM A TELA E GIRAM O CONTEÚDO NO LUGAR PARA QUE AS PALAVRAS APAREÇAM GRANDES SEM QUEBRAR.</string>
+    <string name="settings_force_rotation">FORÇAR ROTAÇÃO DO DISPOSITIVO</string>
+    <string name="settings_force_rotation_desc">%1$s: GIRA SÓ A MENSAGEM. %2$s: GIRA A TELA INTEIRA (COMPORTAMENTO ANTIGO).</string>
 </resources>

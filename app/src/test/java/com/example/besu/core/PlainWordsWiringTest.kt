@@ -130,7 +130,7 @@ class PlainWordsWiringTest {
     fun theSwitchIsTheFirstThingInSettings_andIsWordedTheSameInBothModes() {
         val settings = code(source("settings/SettingsView.kt"))
         val switchAt = settings.indexOf("AckTags.PLAIN_WORDS_SWITCH")
-        val firstSection = settings.indexOf("Text(\"AUDIO OUTPUT ROUTING\"")
+        val firstSection = settings.indexOf("Text(stringResource(R.string.settings_audio_routing_heading)")
         assertTrue("PLAIN WORDS must come before every other section", switchAt in 0 until firstSection)
         val item = plainItem(settings)
         assertTrue(item.contains("stringResource(if (plainOn) R.string.plain_words_switch_on else R.string.plain_words_switch_off)"))

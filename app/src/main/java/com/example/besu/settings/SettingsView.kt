@@ -2,6 +2,7 @@
 package com.example.besu.settings
 
 import com.example.besu.core.LabelKey
+import com.example.besu.core.OutputRouteText
 import com.example.besu.*
 import com.example.besu.R
 import com.example.besu.backup.*
@@ -550,12 +551,12 @@ fun SettingsView(
             }
 
             item {
-                Text("AUDIO OUTPUT ROUTING", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
+                Text(stringResource(R.string.settings_audio_routing_heading), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SettingsToggleRow(
                     title = labelFor(LabelKey.FORCE_SPEAKER),
-                    description = "Routes speech to the device's built-in speaker instead of the current audio route.",
+                    description = stringResource(R.string.settings_force_speaker_desc),
                     checked = forceSpeaker,
                     primaryColor = primaryColor,
                     modifier = Modifier.testTag(AckTags.SETTINGS_AUDIO_ROUTING).helpTarget(AckTags.SETTINGS_AUDIO_ROUTING, primaryColor)
@@ -584,19 +585,14 @@ fun SettingsView(
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "OUTPUT DEVICE",
+                            text = stringResource(R.string.settings_output_device),
                             color = if (forceSpeaker) Color.DarkGray else Color.White,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = when {
-                                forceSpeaker -> "OVERRIDDEN BY FORCE SPEAKER ABOVE"
-                                outputRouteMode == "BLUETOOTH" -> outputRouteBtLabel ?: "BLUETOOTH DEVICE"
-                                outputRouteMode == "WATCH" -> "ACK WATCH"
-                                else -> "AUTO (SYSTEM DEFAULT)"
-                            },
+                            text = OutputRouteText.summary(words, forceSpeaker, outputRouteMode, outputRouteBtLabel, labelFor(LabelKey.FORCE_SPEAKER)),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -612,8 +608,8 @@ fun SettingsView(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         OutputRouteRow(
-                            label = "AUTO (SYSTEM DEFAULT)",
-                            hint = "WHATEVER THE PHONE'S CURRENT AUDIO ROUTE IS",
+                            label = stringResource(R.string.settings_route_auto),
+                            hint = stringResource(R.string.settings_route_auto_hint),
                             isSelected = outputRouteMode == "AUTO",
                             primaryColor = primaryColor
                         ) {
@@ -625,12 +621,8 @@ fun SettingsView(
                         }
 
                         OutputRouteRow(
-                            label = "ACK WATCH",
-                            hint = if (isWatchConnected) {
-                                "CONNECTED"
-                            } else {
-                                "NOT CURRENTLY CONNECTED -- FALLS BACK TO AUTO WHEN UNREACHABLE"
-                            },
+                            label = stringResource(R.string.settings_route_watch),
+                            hint = OutputRouteText.watchHint(words, isWatchConnected),
                             isSelected = outputRouteMode == "WATCH",
                             primaryColor = primaryColor
                         ) {
@@ -645,7 +637,7 @@ fun SettingsView(
                             val deviceLabel = AudioRouting.friendlyLabel(device)
                             OutputRouteRow(
                                 label = deviceLabel,
-                                hint = "CONNECTED",
+                                hint = stringResource(R.string.settings_route_connected),
                                 isSelected = outputRouteMode == "BLUETOOTH" &&
                                     outputRouteBtAddress == device.address,
                                 primaryColor = primaryColor
@@ -668,8 +660,8 @@ fun SettingsView(
                             connectedBtDevices.none { it.address == outputRouteBtAddress }
                         if (selectedBtMissing) {
                             OutputRouteRow(
-                                label = outputRouteBtLabel ?: "BLUETOOTH DEVICE",
-                                hint = "NOT CURRENTLY CONNECTED -- FALLS BACK TO AUTO WHEN UNREACHABLE",
+                                label = OutputRouteText.bluetoothName(words, outputRouteBtLabel),
+                                hint = stringResource(R.string.settings_route_not_connected),
                                 isSelected = true,
                                 primaryColor = primaryColor,
                                 enabled = false,
@@ -679,7 +671,7 @@ fun SettingsView(
 
                         if (connectedBtDevices.isEmpty() && !selectedBtMissing) {
                             Text(
-                                text = "NO BLUETOOTH DEVICES CURRENTLY CONNECTED",
+                                text = stringResource(R.string.settings_route_bt_none),
                                 color = Color.DarkGray,
                                 fontSize = 9.sp,
                                 fontFamily = FontFamily.Monospace
@@ -692,7 +684,7 @@ fun SettingsView(
 
                 SettingsToggleRow(
                     title = labelFor(LabelKey.VOX),
-                    description = "Controls whether tutorial and guide narration is spoken aloud.",
+                    description = stringResource(R.string.settings_vox_desc),
                     checked = guideVoxEnabled,
                     primaryColor = primaryColor,
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_AUDIO_ROUTING, primaryColor)
@@ -706,7 +698,7 @@ fun SettingsView(
 
                 SettingsToggleRow(
                     title = labelFor(LabelKey.SILENT_MODE),
-                    description = "Shows prompts as normal but never speaks them out loud -- for places where sound itself is the problem. Emergency messages and tutorial narration are never silenced.",
+                    description = stringResource(R.string.settings_silent_desc),
                     checked = silentOutput,
                     primaryColor = primaryColor,
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_AUDIO_ROUTING, primaryColor)
@@ -722,7 +714,7 @@ fun SettingsView(
                 if (silentOutput && !canDrawOverlays) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "SILENT MODE IS ON AND DISPLAY PERMISSION IS OFF: A MESSAGE WOULD BE NEITHER SPOKEN NOR SHOWN.",
+                        stringResource(R.string.settings_silent_no_display, labelFor(LabelKey.SILENT_MODE)),
                         color = ErrorRed,
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace,
@@ -733,29 +725,29 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("WATCH AUDIO FEEDBACK", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
+                Text(stringResource(R.string.settings_watch_audio_heading), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ThemeOption(0, "SHARP", if(toneTheme == 0) 0 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 0; syncAll()
+                    ThemeOption(0, stringResource(R.string.settings_tone_sharp), if(toneTheme == 0) 0 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 0; syncAll()
                         reportHelpInteraction(AckTags.SETTINGS_WATCH_AUDIO)}
-                    ThemeOption(1, "CLEAN", if(toneTheme == 1) 1 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 1; syncAll()
+                    ThemeOption(1, stringResource(R.string.settings_tone_clean), if(toneTheme == 1) 1 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 1; syncAll()
                         reportHelpInteraction(AckTags.SETTINGS_WATCH_AUDIO)}
-                    ThemeOption(2, "SOFT", if(toneTheme == 2) 2 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 2; syncAll()
+                    ThemeOption(2, stringResource(R.string.settings_tone_soft), if(toneTheme == 2) 2 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 2; syncAll()
                         reportHelpInteraction(AckTags.SETTINGS_WATCH_AUDIO)}
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("WATCH VOLUME: ${(toneVolume * 100).toInt()}%", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_watch_volume, (toneVolume * 100).toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = toneVolume, onValueChange = { toneVolume = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor, inactiveTrackColor = Color.DarkGray))
             }
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("VISUAL PROMPT DISPLAY", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
+                Text(stringResource(R.string.settings_visual_heading), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    "Text/emoji/GIF prompts fill the screen and rotate their content in place so words display large without wrapping.",
+                    stringResource(R.string.settings_visual_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -770,14 +762,14 @@ fun SettingsView(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "FORCE DEVICE ROTATION",
+                            stringResource(R.string.settings_force_rotation),
                             color = if (forceDeviceRotation) primaryColor else Color.White,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "OFF: rotate the prompt only. ON: rotate the whole screen (old behavior).",
+                            stringResource(R.string.settings_force_rotation_desc, stringResource(R.string.common_off), stringResource(R.string.common_on)),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace

@@ -80,13 +80,13 @@ fun DspSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float
 fun ThemeOption(id: Int, label: String, current: Int, activeColor: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val active = id == current
     Box(
-        modifier = modifier.width(60.dp).height(40.dp)
+        modifier = modifier.widthIn(min = 60.dp).height(40.dp)
             .background(if(active) activeColor.copy(alpha=0.1f) else Color.Transparent)
             .border(1.dp, if(active) activeColor else Color.DarkGray, CutCornerShape(8.dp))
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if(active) activeColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+        Text(label, color = if(active) activeColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp))
     }
 }
 

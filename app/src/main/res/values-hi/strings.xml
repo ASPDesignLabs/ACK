@@ -821,4 +821,29 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
         <item quantity="one">%d चरण</item>
         <item quantity="other">%d चरण</item>
     </plurals>
+    <string name="settings_audio_routing_heading">ऑडियो आउटपुट रूटिंग</string>
+    <string name="settings_force_speaker_desc">आवाज़ को मौजूदा ऑडियो रूट की जगह डिवाइस के बिल्ट-इन स्पीकर पर भेजता है।</string>
+    <string name="settings_output_device">आउटपुट डिवाइस</string>
+    <string name="settings_route_overridden">ऊपर %1$s द्वारा बदला गया</string>
+    <string name="settings_route_auto">ऑटो (सिस्टम डिफ़ॉल्ट)</string>
+    <string name="settings_route_auto_hint">फ़ोन का मौजूदा ऑडियो रूट जो भी हो</string>
+    <string name="settings_route_watch">ACK घड़ी</string>
+    <string name="settings_route_connected">कनेक्टेड</string>
+    <string name="settings_route_not_connected">अभी कनेक्ट नहीं है -- पहुँच से बाहर होने पर ऑटो पर लौट जाता है</string>
+    <string name="settings_route_bt_device">ब्लूटूथ डिवाइस</string>
+    <string name="settings_route_bt_none">अभी कोई ब्लूटूथ डिवाइस कनेक्ट नहीं है</string>
+    <string name="settings_vox_desc">तय करता है कि ट्यूटोरियल और गाइड की आवाज़ बोलकर सुनाई जाए या नहीं।</string>
+    <string name="settings_silent_desc">संदेश सामान्य रूप से दिखाता है लेकिन उन्हें कभी बोलकर नहीं सुनाता -- उन जगहों के लिए जहाँ आवाज़ ही समस्या है। आपातकालीन संदेश और ट्यूटोरियल की आवाज़ कभी म्यूट नहीं होती।</string>
+    <string name="settings_silent_no_display">%1$s चालू है और डिस्प्ले अनुमति बंद है: कोई संदेश न बोला जाएगा न दिखाया जाएगा।</string>
+    <string name="overlay_banner_text">डिस्प्ले अनुमति बंद है। संदेश बोले जाते हैं लेकिन स्क्रीन पर नहीं दिखाए जाते।</string>
+    <string name="overlay_banner_allow">अनुमति दें</string>
+    <string name="settings_watch_audio_heading">घड़ी की ऑडियो प्रतिक्रिया</string>
+    <string name="settings_tone_sharp">तेज़</string>
+    <string name="settings_tone_clean">साफ़</string>
+    <string name="settings_tone_soft">मुलायम</string>
+    <string name="settings_watch_volume">घड़ी का वॉल्यूम: %1$d%%</string>
+    <string name="settings_visual_heading">विज़ुअल संदेश डिस्प्ले</string>
+    <string name="settings_visual_desc">टेक्स्ट/इमोजी/GIF संदेश पूरी स्क्रीन भरते हैं और अपनी सामग्री को वहीं घुमाते हैं ताकि शब्द बिना टूटे बड़े दिखें।</string>
+    <string name="settings_force_rotation">डिवाइस रोटेशन ज़बरदस्ती</string>
+    <string name="settings_force_rotation_desc">%1$s: केवल संदेश को घुमाएँ। %2$s: पूरी स्क्रीन को घुमाएँ (पुराना व्यवहार)।</string>
 </resources>

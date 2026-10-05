@@ -44,3 +44,9 @@ watch it fail. If you use a new Android class or function in `voicecapture/`, ad
 The feature is a lot of code that decides what is recorded and kept. The decisions are in plain Kotlin so they can be tested; the
 Android edges are kept thin. This is how that split is checked when there is no phone and no SDK to hand. Nothing in here is part of
 the app.
+
+## `./run_syntax_check.sh File.kt ...`: a parse-only check for the Android-only files
+
+Some screens (SettingsView.kt, the display-permission banner and the shared components) use the Android SDK, so they are not staged for the type-check above. This compiles them
+with no classpath and reports only **syntax** errors, which finds a missing parenthesis or brace from a wording edit; it cannot find a wrong name or type (the unit tests that read
+the source and the strings file do that). It was proved by breaking a copy on purpose.

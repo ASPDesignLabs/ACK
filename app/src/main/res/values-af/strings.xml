@@ -821,4 +821,29 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
         <item quantity="one">%d STAP</item>
         <item quantity="other">%d STAPPE</item>
     </plurals>
+    <string name="settings_audio_routing_heading">KLANKUITVOER-ROETERING</string>
+    <string name="settings_force_speaker_desc">STUUR SPRAAK NA DIE TOESTEL SE INGEBOUDE LUIDSPREKER IN PLEK VAN DIE HUIDIGE KLANKROETE.</string>
+    <string name="settings_output_device">UITVOERTOESTEL</string>
+    <string name="settings_route_overridden">OORSKRYF DEUR %1$s (HIERBO)</string>
+    <string name="settings_route_auto">OUTOMATIES (STELSELSTANDAARD)</string>
+    <string name="settings_route_auto_hint">WATTER KLANKROETE DIE FOON TANS OOK GEBRUIK</string>
+    <string name="settings_route_watch">ACK-HOROLOSIE</string>
+    <string name="settings_route_connected">VERBIND</string>
+    <string name="settings_route_not_connected">TANS NIE VERBIND NIE -- VAL TERUG NA OUTOMATIES AS DIT NIE BEREIKBAAR IS NIE</string>
+    <string name="settings_route_bt_device">BLUETOOTH-TOESTEL</string>
+    <string name="settings_route_bt_none">GEEN BLUETOOTH-TOESTELLE IS TANS VERBIND NIE</string>
+    <string name="settings_vox_desc">BEHEER OF DIE VERTELLING VAN LEIDRADE EN GIDSE HARDOP GESÊ WORD.</string>
+    <string name="settings_silent_desc">WYS BOODSKAPPE SOOS GEWOONLIK MAAR SÊ HULLE NOOIT HARDOP NIE -- VIR PLEKKE WAAR KLANK SELF DIE PROBLEEM IS. NOODBOODSKAPPE EN LEIDRAADVERTELLING WORD NOOIT STIL GEMAAK NIE.</string>
+    <string name="settings_silent_no_display">%1$s IS AAN EN DIE VERTOONTOESTEMMING IS AF: \'N BOODSKAP SOU NIE GESÊ OF GEWYS WORD NIE.</string>
+    <string name="overlay_banner_text">VERTOONTOESTEMMING IS AF. BOODSKAPPE WORD HARDOP GESÊ MAAR NIE OP DIE SKERM GEWYS NIE.</string>
+    <string name="overlay_banner_allow">LAAT TOE</string>
+    <string name="settings_watch_audio_heading">HOROLOSIE-KLANKTERUGVOER</string>
+    <string name="settings_tone_sharp">SKERP</string>
+    <string name="settings_tone_clean">SKOON</string>
+    <string name="settings_tone_soft">SAGTE</string>
+    <string name="settings_watch_volume">HOROLOSIE-VOLUME: %1$d%%</string>
+    <string name="settings_visual_heading">VISUELE BOODSKAPVERTONING</string>
+    <string name="settings_visual_desc">TEKS-, EMOJI- EN GIF-BOODSKAPPE VUL DIE SKERM EN DRAAI HUL INHOUD ONDERWYL DIT DAAR IS SODAT WOORDE GROOT VERSKYN SONDER OM TE BREEK.</string>
+    <string name="settings_force_rotation">FORSEER TOESTELDRAAIING</string>
+    <string name="settings_force_rotation_desc">%1$s: DRAAI SLEGS DIE BOODSKAP. %2$s: DRAAI DIE HELE SKERM (OU GEDRAG).</string>
 </resources>
