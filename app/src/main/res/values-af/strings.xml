@@ -1486,4 +1486,16 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="helpmod_deck_gif_category_body">GEBRUIK DIE KATEGORIEKIESER OM DIE AKTIEWE GIF-WIEL TE FILTREER.</string>
     <string name="helpmod_deck_gif_landscape_title">LANDSKAPVERTONING</string>
     <string name="helpmod_deck_gif_landscape_body">SKAKEL LANDSKAPVERTONING AAN WANNEER \'N GIF BAAT VIND BY \'N BREDER VOLSKERMVOORSTELLING.</string>
+    <string name="helpmod_deck_emoji_title">EMOJI-{{DECK}}</string>
+    <string name="helpmod_deck_emoji_summary">VISUELE KUETE, TEKS, KEUSES UIT DIE BIBLIOTEEK EN VERWANTE PANELE.</string>
+    <string name="helpmod_deck_emoji_intro_title">EMOJI: DRUK UIT</string>
+    <string name="helpmod_deck_emoji_intro_body">DIE EMOJI-{{DECK}} VERTOON VISUELE KOMMUNIKASIEKUETE. DIT KAN \'N EMOJI ALLEEN WYS OF DIT MET OORLEGTEKS KOMBINEER.</string>
+    <string name="helpmod_deck_emoji_slot_title">STEL \'N PLEK IN</string>
+    <string name="helpmod_deck_emoji_slot_body">HOU \'N EMOJI-PLEK IN OM DIE EMOJI, ETIKET EN OPSIONELE VERTOONTEKS TE STEL.</string>
+    <string name="helpmod_deck_emoji_library_title">EMOJI-BIBLIOTEEK</string>
+    <string name="helpmod_deck_emoji_library_body">GEBRUIK DIE BIBLIOTEEK VIR ALGEMENE KOMMUNIKASIESIMBOLE, OF TIK DIREK \'N EIE EMOJI IN.</string>
+    <string name="helpmod_deck_emoji_related_title">VERWANTE PANELE</string>
+    <string name="helpmod_deck_emoji_related_body">\'N GEKONFIGUREERDE EMOJI KAN EEN VERWANTE PANEEL OOPMAAK. DIT IS NUTTIG OM SOORTGELYKE ANTWOORDE OF BEHOEFTES TE GROEPEER.</string>
+    <string name="helpmod_deck_emoji_clear_title">VERTONING SKOONMAAK</string>
+    <string name="helpmod_deck_emoji_clear_body">WANNEER JY \'N EMOJI VERTOON, KAN ACK WAG VIR DIE NORMALE TYDVERLOOP OF JOU GEKONFIGUREERDE SKOONMAAKGEDRAG.</string>
 </resources>

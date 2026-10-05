@@ -1486,4 +1486,16 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="helpmod_deck_gif_category_body">सक्रिय GIF व्हील को फ़िल्टर करने के लिए श्रेणी चयनकर्ता का उपयोग करें।</string>
     <string name="helpmod_deck_gif_landscape_title">लैंडस्केप डिस्प्ले</string>
     <string name="helpmod_deck_gif_landscape_body">जब किसी GIF को चौड़े फ़ुल-स्क्रीन प्रदर्शन से लाभ हो, तब लैंडस्केप डिस्प्ले चालू करें।</string>
+    <string name="helpmod_deck_emoji_title">इमोजी {{DECK}}</string>
+    <string name="helpmod_deck_emoji_summary">विज़ुअल प्रॉम्प्ट, टेक्स्ट, लाइब्रेरी से चुने गए इमोजी और संबंधित पैनल।</string>
+    <string name="helpmod_deck_emoji_intro_title">इमोजी अभिव्यक्ति</string>
+    <string name="helpmod_deck_emoji_intro_body">इमोजी {{DECK}} विज़ुअल कम्युनिकेशन प्रॉम्प्ट दिखाता है। यह अकेला इमोजी दिखा सकता है या उसे ओवरले टेक्स्ट के साथ जोड़ सकता है।</string>
+    <string name="helpmod_deck_emoji_slot_title">स्लॉट कॉन्फ़िगर करें</string>
+    <string name="helpmod_deck_emoji_slot_body">किसी इमोजी स्लॉट को दबाए रखकर उसका इमोजी, लेबल और वैकल्पिक डिस्प्ले टेक्स्ट सेट करें।</string>
+    <string name="helpmod_deck_emoji_library_title">इमोजी लाइब्रेरी</string>
+    <string name="helpmod_deck_emoji_library_body">सामान्य संचार प्रतीकों के लिए लाइब्रेरी का उपयोग करें, या सीधे कोई कस्टम इमोजी दर्ज करें।</string>
+    <string name="helpmod_deck_emoji_related_title">संबंधित पैनल</string>
+    <string name="helpmod_deck_emoji_related_body">कॉन्फ़िगर किया गया इमोजी एक संबंधित पैनल खोल सकता है। यह मिलते-जुलते जवाबों या ज़रूरतों को समूहित करने के लिए उपयोगी है।</string>
+    <string name="helpmod_deck_emoji_clear_title">डिस्प्ले क्लियर होना</string>
+    <string name="helpmod_deck_emoji_clear_body">जब आप कोई इमोजी दिखाते हैं, तो ACK उसके सामान्य टाइमआउट या आपके तय किए गए क्लियर करने के व्यवहार का इंतज़ार कर सकता है।</string>
 </resources>

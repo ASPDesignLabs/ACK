@@ -1562,4 +1562,16 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="helpmod_deck_gif_category_body">استخدم محدد الفئة لتصفية عجلة GIF النشطة.</string>
     <string name="helpmod_deck_gif_landscape_title">العرض الأفقي</string>
     <string name="helpmod_deck_gif_landscape_body">فعّل العرض الأفقي عندما يستفيد ملف GIF من عرض أوسع بملء الشاشة.</string>
+    <string name="helpmod_deck_emoji_title">{{DECK}} إيموجي</string>
+    <string name="helpmod_deck_emoji_summary">تنبيهات مرئية ونص واختيارات من المكتبة ولوحات ذات صلة.</string>
+    <string name="helpmod_deck_emoji_intro_title">تعبير الإيموجي</string>
+    <string name="helpmod_deck_emoji_intro_body">تعرض {{DECK}} الإيموجي رسائل تواصل مرئية. يمكنها عرض إيموجي وحده أو إقرانه بنص متراكب.</string>
+    <string name="helpmod_deck_emoji_slot_title">إعداد خانة</string>
+    <string name="helpmod_deck_emoji_slot_body">اضغط مطولًا على خانة إيموجي لإعداد الإيموجي والتسمية ونص العرض الاختياري.</string>
+    <string name="helpmod_deck_emoji_library_title">مكتبة الإيموجي</string>
+    <string name="helpmod_deck_emoji_library_body">استخدم المكتبة لرموز التواصل الشائعة، أو أدخل إيموجي مخصصًا مباشرة.</string>
+    <string name="helpmod_deck_emoji_related_title">لوحات ذات صلة</string>
+    <string name="helpmod_deck_emoji_related_body">يمكن لإيموجي مُعدّ أن يفتح لوحة واحدة ذات صلة. هذا مفيد لتجميع الردود أو الاحتياجات المتشابهة.</string>
+    <string name="helpmod_deck_emoji_clear_title">مسح العرض</string>
+    <string name="helpmod_deck_emoji_clear_body">عند عرض إيموجي، قد ينتظر ACK انتهاء المهلة العادية أو سلوك المسح الذي أعددته.</string>
 </resources>

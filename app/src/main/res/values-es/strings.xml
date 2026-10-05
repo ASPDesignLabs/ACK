@@ -1505,4 +1505,16 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="helpmod_deck_gif_category_body">USA EL SELECTOR DE CATEGORÍA PARA FILTRAR LA RUEDA DE GIF ACTIVA.</string>
     <string name="helpmod_deck_gif_landscape_title">VISUALIZACIÓN HORIZONTAL</string>
     <string name="helpmod_deck_gif_landscape_body">ACTIVA LA VISUALIZACIÓN HORIZONTAL CUANDO UN GIF SE VEA MEJOR EN UNA PRESENTACIÓN MÁS ANCHA A PANTALLA COMPLETA.</string>
+    <string name="helpmod_deck_emoji_title">{{DECK}} DE EMOJI</string>
+    <string name="helpmod_deck_emoji_summary">AVISOS VISUALES, TEXTO, ELECCIONES DE LA BIBLIOTECA Y PANELES RELACIONADOS.</string>
+    <string name="helpmod_deck_emoji_intro_title">EMOJI: EXPRESAR</string>
+    <string name="helpmod_deck_emoji_intro_body">{{DECK}} DE EMOJI MUESTRA AVISOS VISUALES DE COMUNICACIÓN. PUEDE MOSTRAR UN EMOJI SOLO O COMBINARLO CON TEXTO SUPERPUESTO.</string>
+    <string name="helpmod_deck_emoji_slot_title">CONFIGURAR UNA CASILLA</string>
+    <string name="helpmod_deck_emoji_slot_body">MANTÉN PULSADA UNA CASILLA DE EMOJI PARA CONFIGURAR SU EMOJI, SU ETIQUETA Y SU TEXTO OPCIONAL PARA MOSTRAR.</string>
+    <string name="helpmod_deck_emoji_library_title">BIBLIOTECA DE EMOJI</string>
+    <string name="helpmod_deck_emoji_library_body">USA LA BIBLIOTECA PARA SÍMBOLOS DE COMUNICACIÓN COMUNES, O INTRODUCE UN EMOJI PERSONALIZADO DIRECTAMENTE.</string>
+    <string name="helpmod_deck_emoji_related_title">PANELES RELACIONADOS</string>
+    <string name="helpmod_deck_emoji_related_body">UN EMOJI CONFIGURADO PUEDE ABRIR UN PANEL RELACIONADO. ES ÚTIL PARA AGRUPAR RESPUESTAS O NECESIDADES SIMILARES.</string>
+    <string name="helpmod_deck_emoji_clear_title">BORRADO DE LA PANTALLA</string>
+    <string name="helpmod_deck_emoji_clear_body">CUANDO MUESTRAS UN EMOJI, ACK PUEDE ESPERAR SU TIEMPO LÍMITE NORMAL O EL COMPORTAMIENTO DE BORRADO QUE CONFIGURASTE.</string>
 </resources>

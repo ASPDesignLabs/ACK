@@ -1507,4 +1507,16 @@
     <string name="helpmod_deck_gif_category_body">Use the category selector to filter the active GIF wheel.</string>
     <string name="helpmod_deck_gif_landscape_title">LANDSCAPE DISPLAY</string>
     <string name="helpmod_deck_gif_landscape_body">Enable landscape display when a GIF benefits from a wider full-screen presentation.</string>
+    <string name="helpmod_deck_emoji_title">EMOJI {{DECK:DECK}}</string>
+    <string name="helpmod_deck_emoji_summary">VISUAL PROMPTS, TEXT, LIBRARY PICKS, AND RELATED PANELS.</string>
+    <string name="helpmod_deck_emoji_intro_title">EMOJI EXPRESS</string>
+    <string name="helpmod_deck_emoji_intro_body">The Emoji {{DECK:deck}} displays visual communication prompts. It can show an emoji alone or pair it with overlay text.</string>
+    <string name="helpmod_deck_emoji_slot_title">CONFIGURE A TILE</string>
+    <string name="helpmod_deck_emoji_slot_body">Hold an emoji tile to configure its emoji, label, and optional display text.</string>
+    <string name="helpmod_deck_emoji_library_title">EMOJI LIBRARY</string>
+    <string name="helpmod_deck_emoji_library_body">Use the library for common communication symbols, or enter a custom emoji directly.</string>
+    <string name="helpmod_deck_emoji_related_title">RELATED PANELS</string>
+    <string name="helpmod_deck_emoji_related_body">A configured emoji can open one related panel. This is useful for grouping similar responses or needs.</string>
+    <string name="helpmod_deck_emoji_clear_title">DISPLAY CLEARING</string>
+    <string name="helpmod_deck_emoji_clear_body">When you display an emoji, ACK may wait for its normal timeout or your configured clearing behavior.</string>
 </resources>
