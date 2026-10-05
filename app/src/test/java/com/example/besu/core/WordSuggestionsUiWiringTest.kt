@@ -209,14 +209,22 @@ class WordSuggestionsUiWiringTest {
     @Test
     fun theComposerHelpSaysWhereToTurnItOn_thatItIsOff_andNothingIsAddedWithoutATap() {
         val help = source("help/StatementComposerHelp.kt")
-        // The body is several string literals joined with +, so join them before looking for a phrase that spans two.
         val step = help.substring(help.indexOf("id = \"word_suggestions\""), help.indexOf("id = \"insert_target_chip\""))
-            .replace(Regex("\"\\s*\\+\\s*\""), "")
-        assertTrue(step.contains("off until you turn it on"))
-        assertTrue(step.contains("SETTINGS > WORD SUGGESTIONS"))
-        assertTrue(step.contains("until you tap"))
+        // The words are a string resource now (helpmod_statement_composer_word_suggestions_body); the step in the source holds only its name, its tag and what it waits for.
+        assertTrue(step.contains("helpmod_statement_composer_word_suggestions_body"))
+        val body = StringsXml.map(StringsXml.default).getValue("helpmod_statement_composer_word_suggestions_body")
+        assertTrue(body.contains("off until you turn it on"))
+        assertTrue(body.contains("SETTINGS > WORD SUGGESTIONS"))
+        assertTrue(body.contains("until you tap"))
         assertTrue(step.contains("AckTags.COMPOSER_WORD_STRIP"))
         assertFalse("a Read step: nothing waits for the person to turn it on", step.contains("HelpAction."))
+        // Every translation keeps the path to the switch (the two names the settings screen shows, joined by an arrow) and the name of the button that forgets, so a person can find both.
+        for ((tag, file) in StringsXml.translations()) {
+            val map = StringsXml.map(file)
+            val text = map.getValue("helpmod_statement_composer_word_suggestions_body")
+            assertTrue("$tag: the path to the switch", text.contains(map.getValue("help_view_settings") + " > " + map.getValue("words_title")))
+            assertTrue("$tag: the button that forgets what was learned", text.contains(map.getValue("words_forget_button")))
+        }
     }
 
     @Test

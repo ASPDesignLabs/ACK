@@ -24,12 +24,12 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
         "FieldOpsHelp.kt", "MatrixDeckHelp.kt",
-        "RecordTrainingDataHelp.kt", "StatementComposerHelp.kt", "VoiceRecordingsHelp.kt",
+        "RecordTrainingDataHelp.kt", "VoiceRecordingsHelp.kt",
         // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
         "HelpRegistry.kt",
     )
@@ -182,6 +182,9 @@ class HelpWalkthroughWordingTest {
         "helpmod_settings_management_watch_audio_title" to "settings_watch_audio_heading",
         "helpmod_target_computer_guide_me_title" to "people_wizard_title",
         "helpmod_personalization_manage_profiles_title" to "audio_manage_profiles",
+        "helpmod_statement_composer_save_title" to "common_save",
+        "helpmod_statement_composer_copy_title" to "common_copy",
+        "helpmod_statement_composer_speak_title" to "common_speak",
     )
 
     /** A text that names a label in plain words (English has no placeholder there), so every language holds that label's own standard word, and it does not follow PLAIN WORDS (a known gap). */
@@ -218,6 +221,13 @@ class HelpWalkthroughWordingTest {
         "helpmod_personalization_manage_profiles_body" to listOf("audio_manage_profiles"),
         "helpmod_personalization_save_profile_body" to listOf("common_commit", "label_dsp_chain"),
         "helpmod_personalization_completion_body" to listOf("label_dsp_chain"),
+        // The Composer's buttons: FULL SCREEN (without its brackets), SAVE, COPY, SPEAK; and the Shared Root Variables label.
+        "helpmod_statement_composer_fullscreen_body" to listOf("composer_full_screen"),
+        "helpmod_statement_composer_save_body" to listOf("common_save"),
+        "helpmod_statement_composer_copy_body" to listOf("common_copy"),
+        "helpmod_statement_composer_speak_body" to listOf("common_speak"),
+        "helpmod_statement_composer_insert_variable_body" to listOf("label_shared_variables"),
+        "helpmod_statement_composer_word_suggestions_title" to listOf("words_title"),
     )
 
     @Test
