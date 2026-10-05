@@ -24,11 +24,11 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
-        "BasicsNavigationHelp.kt", "DeckManagementHelp.kt", "EmergencyDeckHelp.kt", "EmojiDeckHelp.kt", "FieldOpsHelp.kt", "GifDeckHelp.kt", "MatrixDeckHelp.kt",
+        "BasicsNavigationHelp.kt", "DeckManagementHelp.kt", "EmergencyDeckHelp.kt", "EmojiDeckHelp.kt", "FieldOpsHelp.kt", "MatrixDeckHelp.kt",
         "PersonalizationHelp.kt", "QuickActionsDeckHelp.kt", "RecordTrainingDataHelp.kt", "SettingsManagementHelp.kt", "StatementComposerHelp.kt", "TargetComputerHelp.kt", "VoiceRecordingsHelp.kt",
         // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
         "HelpRegistry.kt",
@@ -179,6 +179,8 @@ class HelpWalkthroughWordingTest {
     private val namesLabelLiterally = mapOf(
         "helpmod_logs_intro_title" to listOf("label_terminal"),
         "helpmod_logs_intro_body" to listOf("label_terminal"),
+        // "Choose IMPORT": the word on the screen's import button (and its confirm button) in each language.
+        "helpmod_deck_gif_import_body" to listOf("gif_import_confirm"),
     )
 
     @Test

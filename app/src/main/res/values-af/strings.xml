@@ -1474,4 +1474,16 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="helpmod_logs_intro_body">DIE TERMINAAL TEKEN ACK-STELSELAKTIWITEIT, UITSETGEBEURTENISSE EN HOROLOSIE-GEKOPPELDE STATUSBOODSKAPPE AAN.</string>
     <string name="helpmod_logs_terminal_title">LEES GEBEURTENISSE</string>
     <string name="helpmod_logs_terminal_body">GEBRUIK DIE LOGGE OM TE BEVESTIG WAT ACK ONTVANG, OPGELOS EN GESTUUR HET.</string>
+    <string name="helpmod_deck_gif_title">GIF-{{DECK}}</string>
+    <string name="helpmod_deck_gif_summary">PLAASLIKE GIF-INVOER, KATEGORIEË, NAVIGASIE EN VERTONING.</string>
+    <string name="helpmod_deck_gif_intro_title">PLAASLIKE GIF-BIBLIOTEEK</string>
+    <string name="helpmod_deck_gif_intro_body">GIF-{{DECKS}} GEBRUIK PLAASLIKE LÊERS. GEÏMPORTEERDE GIF\'S BLY PER KATEGORIE GEORGANISEER EN KAN OP VOLSKERM VERTOON WORD.</string>
+    <string name="helpmod_deck_gif_import_title">VOER \'N GIF IN</string>
+    <string name="helpmod_deck_gif_import_body">KIES VOER IN EN SELEKTEER \'N PLAASLIKE GIF-LÊER.</string>
+    <string name="helpmod_deck_gif_commit_import_title">NAAM EN KATEGORISEER</string>
+    <string name="helpmod_deck_gif_commit_import_body">GEE DIE GIF \'N TITEL, KIES OF SKEP \'N KATEGORIE EN BEVESTIG DIE INVOER.</string>
+    <string name="helpmod_deck_gif_category_title">GIF-KATEGORIEË</string>
+    <string name="helpmod_deck_gif_category_body">GEBRUIK DIE KATEGORIEKIESER OM DIE AKTIEWE GIF-WIEL TE FILTREER.</string>
+    <string name="helpmod_deck_gif_landscape_title">LANDSKAPVERTONING</string>
+    <string name="helpmod_deck_gif_landscape_body">SKAKEL LANDSKAPVERTONING AAN WANNEER \'N GIF BAAT VIND BY \'N BREDER VOLSKERMVOORSTELLING.</string>
 </resources>

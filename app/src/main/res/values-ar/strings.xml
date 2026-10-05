@@ -1550,4 +1550,16 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="helpmod_logs_intro_body">تسجّل الطرفية نشاط نظام ACK وأحداث المخرجات ورسائل الحالة المرتبطة بالساعة.</string>
     <string name="helpmod_logs_terminal_title">قراءة الأحداث</string>
     <string name="helpmod_logs_terminal_body">استخدم السجلات للتأكد مما استلمه ACK وحلّله وأرسله.</string>
+    <string name="helpmod_deck_gif_title">{{DECK}} GIF</string>
+    <string name="helpmod_deck_gif_summary">استيراد GIF محلي والفئات والتنقل والعرض.</string>
+    <string name="helpmod_deck_gif_intro_title">مكتبة GIF المحلية</string>
+    <string name="helpmod_deck_gif_intro_body">تستخدم {{DECKS}} GIF ملفات محلية. تبقى ملفات GIF المستوردة منظمة حسب الفئة ويمكن عرضها بملء الشاشة.</string>
+    <string name="helpmod_deck_gif_import_title">استيراد GIF</string>
+    <string name="helpmod_deck_gif_import_body">اختر استيراد ثم حدد ملف GIF محليًا.</string>
+    <string name="helpmod_deck_gif_commit_import_title">الاسم والفئة</string>
+    <string name="helpmod_deck_gif_commit_import_body">امنح ملف GIF عنوانًا، واختر فئة أو أنشئ واحدة، ثم أكّد الاستيراد.</string>
+    <string name="helpmod_deck_gif_category_title">فئات GIF</string>
+    <string name="helpmod_deck_gif_category_body">استخدم محدد الفئة لتصفية عجلة GIF النشطة.</string>
+    <string name="helpmod_deck_gif_landscape_title">العرض الأفقي</string>
+    <string name="helpmod_deck_gif_landscape_body">فعّل العرض الأفقي عندما يستفيد ملف GIF من عرض أوسع بملء الشاشة.</string>
 </resources>

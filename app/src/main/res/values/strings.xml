@@ -1495,4 +1495,16 @@
     <string name="helpmod_logs_intro_body">The Terminal records ACK system activity, output events, and watch-linked status messages.</string>
     <string name="helpmod_logs_terminal_title">READING EVENTS</string>
     <string name="helpmod_logs_terminal_body">Use logs to confirm what ACK received, resolved, and sent.</string>
+    <string name="helpmod_deck_gif_title">GIF {{DECK:DECK}}</string>
+    <string name="helpmod_deck_gif_summary">LOCAL GIF IMPORT, CATEGORIES, NAVIGATION, AND DISPLAY.</string>
+    <string name="helpmod_deck_gif_intro_title">LOCAL GIF LIBRARY</string>
+    <string name="helpmod_deck_gif_intro_body">GIF {{DECKS:decks}} use local files. Imported GIFs stay organized by category and can be displayed full-screen.</string>
+    <string name="helpmod_deck_gif_import_title">IMPORT A GIF</string>
+    <string name="helpmod_deck_gif_import_body">Choose IMPORT and select a local GIF file.</string>
+    <string name="helpmod_deck_gif_commit_import_title">NAME AND CATEGORIZE</string>
+    <string name="helpmod_deck_gif_commit_import_body">Give the GIF a title, select or create a category, and commit the import.</string>
+    <string name="helpmod_deck_gif_category_title">GIF CATEGORIES</string>
+    <string name="helpmod_deck_gif_category_body">Use the category selector to filter the active GIF wheel.</string>
+    <string name="helpmod_deck_gif_landscape_title">LANDSCAPE DISPLAY</string>
+    <string name="helpmod_deck_gif_landscape_body">Enable landscape display when a GIF benefits from a wider full-screen presentation.</string>
 </resources>

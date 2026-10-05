@@ -204,7 +204,9 @@ class TranslationsTest {
         val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count", "help_menu_steps_line", "help_cat_basics_manual_override_chip", "settings_label_value", "qa_pose_part", "train_diff_extreme", "train_outcome_hit", "train_outcome_penalty", "train_number") // placeholders, a name (EUROPEAN EXTREME) and signed numbers and units, which have no letters of their own
         for ((tag, script) in listOf("hi" to devanagari, "ar" to arabic)) for ((name, text) in texts.getValue(tag)) {
             if (name in latinOnlyAllowed) continue
-            assertTrue("$tag/$name has no ${if (tag == "hi") "Devanagari" else "Arabic"} letters: $text", script.containsMatchIn(text))
+            // A label placeholder ({{DECK}}) is filled with the language's own word when the text is drawn, so it counts as that word here.
+            val filled = HelpPlaceholders.substitute(text, plain = false) { key, plain -> texts.getValue(tag)[key.resourceName(plain)] }
+            assertTrue("$tag/$name has no ${if (tag == "hi") "Devanagari" else "Arabic"} letters: $text", script.containsMatchIn(filled))
         }
     }
 

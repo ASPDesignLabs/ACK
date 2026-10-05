@@ -1493,4 +1493,16 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="helpmod_logs_intro_body">LA TERMINAL REGISTRA LA ACTIVIDAD DEL SISTEMA DE ACK, LOS EVENTOS DE SALIDA Y LOS MENSAJES DE ESTADO VINCULADOS AL RELOJ.</string>
     <string name="helpmod_logs_terminal_title">LEER LOS EVENTOS</string>
     <string name="helpmod_logs_terminal_body">USA LOS REGISTROS PARA CONFIRMAR LO QUE ACK RECIBIÓ, RESOLVIÓ Y ENVIÓ.</string>
+    <string name="helpmod_deck_gif_title">{{DECK}} GIF</string>
+    <string name="helpmod_deck_gif_summary">IMPORTACIÓN LOCAL DE GIF, CATEGORÍAS, NAVEGACIÓN Y VISUALIZACIÓN.</string>
+    <string name="helpmod_deck_gif_intro_title">BIBLIOTECA LOCAL DE GIF</string>
+    <string name="helpmod_deck_gif_intro_body">{{DECKS}} GIF USAN ARCHIVOS LOCALES. LOS GIF IMPORTADOS SE MANTIENEN ORGANIZADOS POR CATEGORÍA Y SE PUEDEN MOSTRAR A PANTALLA COMPLETA.</string>
+    <string name="helpmod_deck_gif_import_title">IMPORTAR UN GIF</string>
+    <string name="helpmod_deck_gif_import_body">ELIGE IMPORTAR Y SELECCIONA UN ARCHIVO GIF LOCAL.</string>
+    <string name="helpmod_deck_gif_commit_import_title">NOMBRE Y CATEGORÍA</string>
+    <string name="helpmod_deck_gif_commit_import_body">PON UN TÍTULO AL GIF, SELECCIONA O CREA UNA CATEGORÍA Y CONFIRMA LA IMPORTACIÓN.</string>
+    <string name="helpmod_deck_gif_category_title">CATEGORÍAS DE GIF</string>
+    <string name="helpmod_deck_gif_category_body">USA EL SELECTOR DE CATEGORÍA PARA FILTRAR LA RUEDA DE GIF ACTIVA.</string>
+    <string name="helpmod_deck_gif_landscape_title">VISUALIZACIÓN HORIZONTAL</string>
+    <string name="helpmod_deck_gif_landscape_body">ACTIVA LA VISUALIZACIÓN HORIZONTAL CUANDO UN GIF SE VEA MEJOR EN UNA PRESENTACIÓN MÁS ANCHA A PANTALLA COMPLETA.</string>
 </resources>

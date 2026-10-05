@@ -1493,4 +1493,16 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="helpmod_logs_intro_body">O TERMINAL REGISTRA A ATIVIDADE DO SISTEMA DO ACK, OS EVENTOS DE SAÍDA E AS MENSAGENS DE STATUS VINCULADAS AO RELÓGIO.</string>
     <string name="helpmod_logs_terminal_title">LENDO OS EVENTOS</string>
     <string name="helpmod_logs_terminal_body">USE OS REGISTROS PARA CONFIRMAR O QUE O ACK RECEBEU, RESOLVEU E ENVIOU.</string>
+    <string name="helpmod_deck_gif_title">{{DECK}} GIF</string>
+    <string name="helpmod_deck_gif_summary">IMPORTAÇÃO LOCAL DE GIF, CATEGORIAS, NAVEGAÇÃO E EXIBIÇÃO.</string>
+    <string name="helpmod_deck_gif_intro_title">BIBLIOTECA LOCAL DE GIF</string>
+    <string name="helpmod_deck_gif_intro_body">{{DECKS}} GIF USAM ARQUIVOS LOCAIS. OS GIFS IMPORTADOS FICAM ORGANIZADOS POR CATEGORIA E PODEM SER EXIBIDOS EM TELA CHEIA.</string>
+    <string name="helpmod_deck_gif_import_title">IMPORTAR UM GIF</string>
+    <string name="helpmod_deck_gif_import_body">ESCOLHA IMPORTAR E SELECIONE UM ARQUIVO GIF LOCAL.</string>
+    <string name="helpmod_deck_gif_commit_import_title">NOME E CATEGORIA</string>
+    <string name="helpmod_deck_gif_commit_import_body">DÊ UM TÍTULO AO GIF, SELECIONE OU CRIE UMA CATEGORIA E CONFIRME A IMPORTAÇÃO.</string>
+    <string name="helpmod_deck_gif_category_title">CATEGORIAS DE GIF</string>
+    <string name="helpmod_deck_gif_category_body">USE O SELETOR DE CATEGORIA PARA FILTRAR A RODA DE GIFS ATIVA.</string>
+    <string name="helpmod_deck_gif_landscape_title">EXIBIÇÃO EM PAISAGEM</string>
+    <string name="helpmod_deck_gif_landscape_body">ATIVE A EXIBIÇÃO EM PAISAGEM QUANDO UM GIF SE BENEFICIAR DE UMA APRESENTAÇÃO MAIS LARGA EM TELA CHEIA.</string>
 </resources>

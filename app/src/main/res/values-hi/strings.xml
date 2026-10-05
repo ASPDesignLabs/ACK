@@ -1474,4 +1474,16 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="helpmod_logs_intro_body">टर्मिनल ACK की सिस्टम गतिविधि, आउटपुट इवेंट और घड़ी से जुड़े स्टेटस संदेश दर्ज करता है।</string>
     <string name="helpmod_logs_terminal_title">इवेंट पढ़ना</string>
     <string name="helpmod_logs_terminal_body">ACK ने क्या प्राप्त किया, हल किया और भेजा, यह पक्का करने के लिए लॉग का उपयोग करें।</string>
+    <string name="helpmod_deck_gif_title">GIF {{DECK}}</string>
+    <string name="helpmod_deck_gif_summary">स्थानीय GIF आयात, श्रेणियाँ, नेविगेशन और प्रदर्शन।</string>
+    <string name="helpmod_deck_gif_intro_title">स्थानीय GIF लाइब्रेरी</string>
+    <string name="helpmod_deck_gif_intro_body">GIF के {{DECKS}} स्थानीय फ़ाइलों का उपयोग करते हैं। आयात किए गए GIF श्रेणी के अनुसार व्यवस्थित रहते हैं और पूरी स्क्रीन पर दिखाए जा सकते हैं।</string>
+    <string name="helpmod_deck_gif_import_title">GIF आयात करें</string>
+    <string name="helpmod_deck_gif_import_body">आयात चुनें और कोई स्थानीय GIF फ़ाइल चुनें।</string>
+    <string name="helpmod_deck_gif_commit_import_title">नाम और श्रेणी</string>
+    <string name="helpmod_deck_gif_commit_import_body">GIF को एक शीर्षक दें, कोई श्रेणी चुनें या बनाएँ, और आयात की पुष्टि करें।</string>
+    <string name="helpmod_deck_gif_category_title">GIF श्रेणियाँ</string>
+    <string name="helpmod_deck_gif_category_body">सक्रिय GIF व्हील को फ़िल्टर करने के लिए श्रेणी चयनकर्ता का उपयोग करें।</string>
+    <string name="helpmod_deck_gif_landscape_title">लैंडस्केप डिस्प्ले</string>
+    <string name="helpmod_deck_gif_landscape_body">जब किसी GIF को चौड़े फ़ुल-स्क्रीन प्रदर्शन से लाभ हो, तब लैंडस्केप डिस्प्ले चालू करें।</string>
 </resources>
