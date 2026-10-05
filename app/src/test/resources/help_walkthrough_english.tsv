@@ -36,3 +36,31 @@ helpmod_deck_emoji_related_title	RELATED PANELS
 helpmod_deck_emoji_related_body	A configured emoji can open one related panel. This is useful for grouping similar responses or needs.
 helpmod_deck_emoji_clear_title	DISPLAY CLEARING
 helpmod_deck_emoji_clear_body	When you display an emoji, ACK may wait for its normal timeout or your configured clearing behavior.
+helpmod_deck_emergency_title	EMERGENCY {{DECK:DECK}}
+helpmod_deck_emergency_summary	HIGH-PRIORITY PROMPTS, OUTPUT OVERRIDES, AND CLEARING.
+helpmod_deck_emergency_intro_title	EMERGENCY OUTPUT
+helpmod_deck_emergency_intro_body	The Emergency {{DECK:deck}} is intended for immediate, high-priority communication with minimal interaction.
+helpmod_deck_emergency_slot_title	CONFIGURE A PROMPT
+helpmod_deck_emergency_slot_body	Hold an emergency tile to set its label, phrase, and optional local variables.
+helpmod_deck_emergency_save_title	COMMIT THE PROMPT
+helpmod_deck_emergency_save_body	Save the emergency prompt. A normal tap will execute it.
+helpmod_deck_emergency_overrides_title	EMERGENCY OVERRIDES
+helpmod_deck_emergency_overrides_body	Overrides can force device speaker output, boost audio, change clearing behavior, and add an alert tone. You can also switch on CONFIRM BEFORE SENDING: a tap on an emergency tile then shows what it will say and asks you to confirm first, so an accidental touch cannot send it.
+helpmod_deck_emergency_info_title	EMERGENCY INFO
+helpmod_deck_emergency_info_body	Below the overrides button, this opens a large, easy-to-read medical ID card -- name, conditions, allergies, medications, and emergency contacts -- for a bystander or first responder to read if you can't speak.
+helpmod_deck_emergency_info_save_title	FILL IT OUT
+helpmod_deck_emergency_info_save_body	Tap EDIT to fill in your own info. It's saved once, not per {{DECK:deck}}, so it's the same card no matter which {{DECK:deck}} you're in.
+helpmod_deck_management_title	CREATING AND MANAGING {{DECKS:DECKS}}
+helpmod_deck_management_summary	CREATE, NAME, RECOLOR, ORGANIZE, AND DELETE {{DECKS:DECKS}}.
+helpmod_deck_management_intro_title	DECKS
+helpmod_deck_management_intro_body	{{DECKS:Decks}} organize different communication workflows. The DEFAULT MATRIX {{DECK:deck}} is permanent; custom {{DECKS:decks}} can be created, renamed, recolored, and removed.
+helpmod_deck_management_open_deck_menu_title	OPEN {{DECK:DECK}} CONTROL
+helpmod_deck_management_open_deck_menu_body	Tap the current {{DECK:DECK}} label.
+helpmod_deck_management_create_title	CREATE A {{DECK:DECK}}
+helpmod_deck_management_create_body	Choose {{DECK_CREATE:CREATE DECK}} to start a new specialized {{DECK:deck}}.
+helpmod_deck_management_type_title	CHOOSE A {{DECK:DECK}} TYPE
+helpmod_deck_management_type_body	Choose the {{DECK:deck}} type that fits the workflow: Quick Actions, Emergency, Emoji, or GIF.
+helpmod_deck_management_commit_title	DEPLOY THE {{DECK:DECK}}
+helpmod_deck_management_commit_body	Name the {{DECK:deck}}, choose its color, then create it.
+helpmod_deck_management_manage_title	MANAGE EXISTING {{DECKS:DECKS}}
+helpmod_deck_management_manage_body	Use MANAGE to rename, recolor, or remove a custom {{DECK:deck}}.

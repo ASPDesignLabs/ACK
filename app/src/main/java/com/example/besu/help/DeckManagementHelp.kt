@@ -3,53 +3,51 @@ package com.example.besu.help
 
 import com.example.besu.*
 
+/** This family's words are string resources (helpmod_<module id>_..., core/HelpWalkthroughText.kt), read where a step is drawn or spoken. */
 object DeckManagementHelp {
     val module = HelpModule(
         id = "deck_management",
         category = HelpCategory.BASICS_DECKS,
-        title = "CREATING AND MANAGING {{DECKS:DECKS}}",
-        summary = "CREATE, NAME, RECOLOR, ORGANIZE, AND DELETE {{DECKS:DECKS}}.",
+        title = "helpmod_deck_management_title",
+        summary = "helpmod_deck_management_summary",
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "DECKS",
-                body = "{{DECKS:Decks}} organize different communication workflows. " +
-                    "The DEFAULT MATRIX {{DECK:deck}} is permanent; custom {{DECKS:decks}} can " +
-                    "be created, renamed, recolored, and removed."
+                title = "helpmod_deck_management_intro_title",
+                body = "helpmod_deck_management_intro_body"
             ),
             HelpStep(
                 id = "open_deck_menu",
-                title = "OPEN {{DECK:DECK}} CONTROL",
-                body = "Tap the current {{DECK:DECK}} label.",
+                title = "helpmod_deck_management_open_deck_menu_title",
+                body = "helpmod_deck_management_open_deck_menu_body",
                 action = HelpAction.Interact(AckTags.DECK_SELECTOR),
                 targetTag = AckTags.DECK_SELECTOR
             ),
             HelpStep(
                 id = "create",
-                title = "CREATE A {{DECK:DECK}}",
-                body = "Choose {{DECK_CREATE:CREATE DECK}} to start a new specialized {{DECK:deck}}.",
+                title = "helpmod_deck_management_create_title",
+                body = "helpmod_deck_management_create_body",
                 action = HelpAction.Interact(AckTags.DECK_CREATE_BUTTON),
                 targetTag = AckTags.DECK_CREATE_BUTTON
             ),
             HelpStep(
                 id = "type",
-                title = "CHOOSE A {{DECK:DECK}} TYPE",
-                body = "Choose the {{DECK:deck}} type that fits the workflow: Quick " +
-                    "Actions, Emergency, Emoji, or GIF.",
+                title = "helpmod_deck_management_type_title",
+                body = "helpmod_deck_management_type_body",
                 action = HelpAction.Interact(AckTags.DECK_CREATE_TYPE),
                 targetTag = AckTags.DECK_CREATE_TYPE
             ),
             HelpStep(
                 id = "commit",
-                title = "DEPLOY THE {{DECK:DECK}}",
-                body = "Name the {{DECK:deck}}, choose its color, then create it.",
+                title = "helpmod_deck_management_commit_title",
+                body = "helpmod_deck_management_commit_body",
                 action = HelpAction.CommitText(AckTags.DECK_CREATE_COMMIT),
                 targetTag = AckTags.DECK_CREATE_COMMIT
             ),
             HelpStep(
                 id = "manage",
-                title = "MANAGE EXISTING {{DECKS:DECKS}}",
-                body = "Use MANAGE to rename, recolor, or remove a custom {{DECK:deck}}.",
+                title = "helpmod_deck_management_manage_title",
+                body = "helpmod_deck_management_manage_body",
                 action = HelpAction.Interact(AckTags.DECK_MANAGE_BUTTON),
                 targetTag = AckTags.DECK_MANAGE_BUTTON
             )

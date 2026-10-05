@@ -24,11 +24,11 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
-        "BasicsNavigationHelp.kt", "DeckManagementHelp.kt", "EmergencyDeckHelp.kt", "FieldOpsHelp.kt", "MatrixDeckHelp.kt",
+        "BasicsNavigationHelp.kt", "FieldOpsHelp.kt", "MatrixDeckHelp.kt",
         "PersonalizationHelp.kt", "QuickActionsDeckHelp.kt", "RecordTrainingDataHelp.kt", "SettingsManagementHelp.kt", "StatementComposerHelp.kt", "TargetComputerHelp.kt", "VoiceRecordingsHelp.kt",
         // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
         "HelpRegistry.kt",
@@ -149,7 +149,7 @@ class HelpWalkthroughWordingTest {
             for ((tag, map) in translations) {
                 val t = map.getValue(name)
                 assertFalse("$tag/$name: a translation carries no English original", Regex("""\{\{[A-Z0-9_]+:""").containsMatchIn(t))
-                assertEquals("$tag/$name: the same labels as English", keys.sorted(), HelpPlaceholders.keysIn(t).sorted())
+                assertEquals("$tag/$name: the same labels as English (a translation may restructure and name one a different number of times)", keys.toSet(), HelpPlaceholders.keysIn(t).toSet())
                 for (plain in listOf(false, true)) assertFalse("$tag/$name: braces left after the labels are filled in (plain=$plain)", filled(map, t, plain).contains("{{"))
             }
             for (plain in listOf(false, true)) assertFalse("en/$name: braces left (plain=$plain)", filled(english, text, plain).contains("{{"))
@@ -173,6 +173,8 @@ class HelpWalkthroughWordingTest {
         "helpmod_geo_protocol_title" to "label_geo_protocol",
         "helpmod_geo_protocol_intro_title" to "label_geo_protocol",
         "helpmod_geo_protocol_map_data_title" to "geo_map_data",
+        "helpmod_deck_emergency_overrides_title" to "emergency_overrides_title",
+        "helpmod_deck_management_intro_title" to "label_decks",
     )
 
     /** A text that names a label in plain words (English has no placeholder there), so every language holds that label's own standard word, and it does not follow PLAIN WORDS (a known gap). */
@@ -181,6 +183,12 @@ class HelpWalkthroughWordingTest {
         "helpmod_logs_intro_body" to listOf("label_terminal"),
         // "Choose IMPORT": the word on the screen's import button (and its confirm button) in each language.
         "helpmod_deck_gif_import_body" to listOf("gif_import_confirm"),
+        // The switch the Emergency screen names, and the EDIT button (as the Emergency card words it).
+        "helpmod_deck_emergency_overrides_body" to listOf("emergency_confirm_before_sending"),
+        "helpmod_deck_emergency_info_save_body" to listOf("common_edit"),
+        // MANAGE in the deck menu, and the four kinds of deck the create dialog offers.
+        "helpmod_deck_management_manage_body" to listOf("deckmenu_manage"),
+        "helpmod_deck_management_type_body" to listOf("label_deck_type_quick", "label_deck_type_emergency", "label_deck_type_emoji", "label_deck_type_gif"),
     )
 
     @Test
