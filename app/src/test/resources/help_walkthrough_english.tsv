@@ -1,0 +1,14 @@
+helpmod_geo_protocol_title	GEO-PROTOCOL
+helpmod_geo_protocol_summary	LOCATION-BASED CONTEXT AND ZONE BEHAVIOR.
+helpmod_geo_protocol_intro_title	GEO-PROTOCOL
+helpmod_geo_protocol_intro_body	{{GEO_PROTOCOL:Geo-Protocol}} manages location-aware ACK behavior and zones.
+helpmod_geo_protocol_geo_view_title	ZONE CONTROLS
+helpmod_geo_protocol_geo_view_body	Review zone controls and configure behavior appropriate to your environment.
+helpmod_geo_protocol_map_data_title	MAP DATA
+helpmod_geo_protocol_map_data_body	No region map ships with the app. Zones still work by coordinate with nothing imported, but you can import your own Mapsforge-compatible .map file here any time to see real basemap tiles on the {{GEO_GRID:Tactical Grid}}.
+helpmod_logs_title	SYSTEM LOGS
+helpmod_logs_summary	READ OUTPUT, WATCH, AND SYSTEM EVENT HISTORY.
+helpmod_logs_intro_title	TERMINAL LOGS
+helpmod_logs_intro_body	The Terminal records ACK system activity, output events, and watch-linked status messages.
+helpmod_logs_terminal_title	READING EVENTS
+helpmod_logs_terminal_body	Use logs to confirm what ACK received, resolved, and sent.

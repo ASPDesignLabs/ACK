@@ -1468,4 +1468,10 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="helpmod_geo_protocol_geo_view_body">ज़ोन नियंत्रणों की समीक्षा करें और अपने परिवेश के अनुसार उपयुक्त व्यवहार सेट करें।</string>
     <string name="helpmod_geo_protocol_map_data_title">मैप डेटा</string>
     <string name="helpmod_geo_protocol_map_data_body">ऐप के साथ कोई क्षेत्रीय नक्शा नहीं आता। कुछ भी आयात किए बिना भी ज़ोन निर्देशांक से काम करते हैं, लेकिन असली बेसमैप टाइल देखने के लिए आप यहाँ कभी भी अपनी Mapsforge-संगत .map फ़ाइल आयात कर सकते हैं — {{GEO_GRID}} पर।</string>
+    <string name="helpmod_logs_title">सिस्टम लॉग</string>
+    <string name="helpmod_logs_summary">आउटपुट, घड़ी और सिस्टम इवेंट का इतिहास पढ़ें।</string>
+    <string name="helpmod_logs_intro_title">टर्मिनल लॉग</string>
+    <string name="helpmod_logs_intro_body">टर्मिनल ACK की सिस्टम गतिविधि, आउटपुट इवेंट और घड़ी से जुड़े स्टेटस संदेश दर्ज करता है।</string>
+    <string name="helpmod_logs_terminal_title">इवेंट पढ़ना</string>
+    <string name="helpmod_logs_terminal_body">ACK ने क्या प्राप्त किया, हल किया और भेजा, यह पक्का करने के लिए लॉग का उपयोग करें।</string>
 </resources>

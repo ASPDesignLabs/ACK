@@ -1489,4 +1489,10 @@
     <string name="helpmod_geo_protocol_geo_view_body">Review zone controls and configure behavior appropriate to your environment.</string>
     <string name="helpmod_geo_protocol_map_data_title">MAP DATA</string>
     <string name="helpmod_geo_protocol_map_data_body">No region map ships with the app. Zones still work by coordinate with nothing imported, but you can import your own Mapsforge-compatible .map file here any time to see real basemap tiles on the {{GEO_GRID:Tactical Grid}}.</string>
+    <string name="helpmod_logs_title">SYSTEM LOGS</string>
+    <string name="helpmod_logs_summary">READ OUTPUT, WATCH, AND SYSTEM EVENT HISTORY.</string>
+    <string name="helpmod_logs_intro_title">TERMINAL LOGS</string>
+    <string name="helpmod_logs_intro_body">The Terminal records ACK system activity, output events, and watch-linked status messages.</string>
+    <string name="helpmod_logs_terminal_title">READING EVENTS</string>
+    <string name="helpmod_logs_terminal_body">Use logs to confirm what ACK received, resolved, and sent.</string>
 </resources>

@@ -1487,4 +1487,10 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="helpmod_geo_protocol_geo_view_body">REVISA LOS CONTROLES DE ZONA Y CONFIGURA UN COMPORTAMIENTO ADECUADO PARA TU ENTORNO.</string>
     <string name="helpmod_geo_protocol_map_data_title">DATOS DE MAPA</string>
     <string name="helpmod_geo_protocol_map_data_body">LA APP NO INCLUYE NINGÚN MAPA DE REGIÓN. LAS ZONAS FUNCIONAN POR COORDENADAS AUNQUE NO HAYAS IMPORTADO NADA, PERO PUEDES IMPORTAR AQUÍ TU PROPIO ARCHIVO .MAP COMPATIBLE CON MAPSFORGE CUANDO QUIERAS PARA VER MAPAS BASE REALES EN {{GEO_GRID}}.</string>
+    <string name="helpmod_logs_title">REGISTROS DEL SISTEMA</string>
+    <string name="helpmod_logs_summary">LEE LA SALIDA, EL RELOJ Y EL HISTORIAL DE EVENTOS DEL SISTEMA.</string>
+    <string name="helpmod_logs_intro_title">REGISTROS DE LA TERMINAL</string>
+    <string name="helpmod_logs_intro_body">LA TERMINAL REGISTRA LA ACTIVIDAD DEL SISTEMA DE ACK, LOS EVENTOS DE SALIDA Y LOS MENSAJES DE ESTADO VINCULADOS AL RELOJ.</string>
+    <string name="helpmod_logs_terminal_title">LEER LOS EVENTOS</string>
+    <string name="helpmod_logs_terminal_body">USA LOS REGISTROS PARA CONFIRMAR LO QUE ACK RECIBIÓ, RESOLVIÓ Y ENVIÓ.</string>
 </resources>

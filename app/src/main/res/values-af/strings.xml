@@ -1468,4 +1468,10 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="helpmod_geo_protocol_geo_view_body">KYK DIE SONE-KONTROLES NA EN STEL GEDRAG IN WAT BY JOU OMGEWING PAS.</string>
     <string name="helpmod_geo_protocol_map_data_title">KAARTDATA</string>
     <string name="helpmod_geo_protocol_map_data_body">GEEN STREEKKAART WORD MET DIE PROGRAM GELEWER NIE. SONES WERK STEEDS VOLGENS KOÖRDINATE AL IS NIKS GEÏMPORTEER NIE, MAAR JY KAN ENIGE TYD JOU EIE MAPSFORGE-VERSOENBARE .MAP-LÊER HIER INVOER OM ECHTE BASISKAARTTEËLS TE SIEN OP {{GEO_GRID}}.</string>
+    <string name="helpmod_logs_title">STELSELLOGBOEKE</string>
+    <string name="helpmod_logs_summary">LEES UITSET, HOROLOSIE EN STELSELGEBEURTENISGESKIEDENIS.</string>
+    <string name="helpmod_logs_intro_title">TERMINAALLOGGE</string>
+    <string name="helpmod_logs_intro_body">DIE TERMINAAL TEKEN ACK-STELSELAKTIWITEIT, UITSETGEBEURTENISSE EN HOROLOSIE-GEKOPPELDE STATUSBOODSKAPPE AAN.</string>
+    <string name="helpmod_logs_terminal_title">LEES GEBEURTENISSE</string>
+    <string name="helpmod_logs_terminal_body">GEBRUIK DIE LOGGE OM TE BEVESTIG WAT ACK ONTVANG, OPGELOS EN GESTUUR HET.</string>
 </resources>

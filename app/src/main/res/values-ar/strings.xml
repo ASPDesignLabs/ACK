@@ -1544,4 +1544,10 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="helpmod_geo_protocol_geo_view_body">راجع عناصر تحكم المناطق واضبط السلوك المناسب لبيئتك.</string>
     <string name="helpmod_geo_protocol_map_data_title">بيانات الخريطة</string>
     <string name="helpmod_geo_protocol_map_data_body">لا تأتي أي خريطة إقليمية مع التطبيق. تعمل المناطق بالإحداثيات حتى دون استيراد أي شيء، لكن يمكنك استيراد ملف .map خاص بك متوافق مع Mapsforge هنا في أي وقت لرؤية بلاط خريطة أساسية حقيقي على {{GEO_GRID}}.</string>
+    <string name="helpmod_logs_title">سجلات النظام</string>
+    <string name="helpmod_logs_summary">اقرأ المخرجات والساعة وسجل أحداث النظام.</string>
+    <string name="helpmod_logs_intro_title">سجلات الطرفية</string>
+    <string name="helpmod_logs_intro_body">تسجّل الطرفية نشاط نظام ACK وأحداث المخرجات ورسائل الحالة المرتبطة بالساعة.</string>
+    <string name="helpmod_logs_terminal_title">قراءة الأحداث</string>
+    <string name="helpmod_logs_terminal_body">استخدم السجلات للتأكد مما استلمه ACK وحلّله وأرسله.</string>
 </resources>

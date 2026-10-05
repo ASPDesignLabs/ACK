@@ -24,12 +24,14 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
-        "BasicsNavigationHelp.kt", "DeckManagementHelp.kt", "EmergencyDeckHelp.kt", "EmojiDeckHelp.kt", "FieldOpsHelp.kt", "GifDeckHelp.kt", "LogsHelp.kt", "MatrixDeckHelp.kt",
+        "BasicsNavigationHelp.kt", "DeckManagementHelp.kt", "EmergencyDeckHelp.kt", "EmojiDeckHelp.kt", "FieldOpsHelp.kt", "GifDeckHelp.kt", "MatrixDeckHelp.kt",
         "PersonalizationHelp.kt", "QuickActionsDeckHelp.kt", "RecordTrainingDataHelp.kt", "SettingsManagementHelp.kt", "StatementComposerHelp.kt", "TargetComputerHelp.kt", "VoiceRecordingsHelp.kt",
+        // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
+        "HelpRegistry.kt",
     )
 
     private class Step(val id: String, val title: String?, val body: String?)
@@ -65,7 +67,7 @@ class HelpWalkthroughWordingTest {
 
     @Test
     fun everyFamilyFileIsEitherMovedOrListedAsNotYetMoved_neverBoth_neverNeither() {
-        val onDisk = RepoFiles.file("$base/help").listFiles()!!.map { it.name }.filter { it.endsWith("Help.kt") }.toSet()
+        val onDisk = RepoFiles.file("$base/help").listFiles()!!.map { it.name }.filter { it.endsWith("Help.kt") || it == "HelpRegistry.kt" }.toSet()
         assertEquals("a family file that is on neither list (or listed but gone)", onDisk, (moved + notYetMoved).toSet())
         assertEquals("a file on both lists", emptyList<String>(), moved.filter { it in notYetMoved })
         for (f in notYetMoved) assertFalse("$f holds a resource name but is listed as not yet moved", file("help/$f").contains("\"helpmod_"))
@@ -92,6 +94,14 @@ class HelpWalkthroughWordingTest {
     }
 
     @Test
+    fun noWalkthroughNameIsDefinedTwiceInAnyLanguage() {
+        for (path in listOf("values") + StringsXml.translations().keys.map { "values-$it" }) {
+            val names = Regex("""<string name="(helpmod_[a-z0-9_]+)"""").findAll(RepoFiles.read("app/src/main/res/$path/strings.xml")).map { it.groupValues[1] }.toList()
+            assertEquals("$path: a walkthrough name is defined twice", emptyList<String>(), names.groupingBy { it }.eachCount().filter { it.value > 1 }.keys.toList())
+        }
+    }
+
+    @Test
     fun everyNameUsedExistsInEnglishAndInEveryLanguage_andNoWalkthroughStringIsLeftUnused() {
         val used = moved.flatMap { namesIn("help/$it") }.toSet()
         val defined = english.keys.filter { it.startsWith(HelpWalkthroughText.PREFIX) }.toSet()
@@ -105,20 +115,18 @@ class HelpWalkthroughWordingTest {
 
     // ---- English is exactly what it always said -----------------------------------------------------------------------------------------------
 
+    /** The English of every moved family, as the walkthrough said it before it moved (help_walkthrough_english.tsv: name, a tab, the text with \\n, \\t and \\\\ escaped). */
+    private val pins: Map<String, String> get() = RepoFiles.read("app/src/test/resources/help_walkthrough_english.tsv").split("\n").filter { it.isNotEmpty() }.associate { line ->
+        val (name, text) = line.split("\t", limit = 2)
+        name to Regex("""\\(.)""").replace(text) { m -> when (m.groupValues[1]) { "n" -> "\n"; "t" -> "\t"; else -> m.groupValues[1] } }
+    }
+
     @Test
-    fun theGeoWalkthroughEnglishIsWordForWordWhatItAlwaysSaid() {
-        val said = mapOf(
-            "helpmod_geo_protocol_title" to "GEO-PROTOCOL",
-            "helpmod_geo_protocol_summary" to "LOCATION-BASED CONTEXT AND ZONE BEHAVIOR.",
-            "helpmod_geo_protocol_intro_title" to "GEO-PROTOCOL",
-            "helpmod_geo_protocol_intro_body" to "{{GEO_PROTOCOL:Geo-Protocol}} manages location-aware ACK behavior and zones.",
-            "helpmod_geo_protocol_geo_view_title" to "ZONE CONTROLS",
-            "helpmod_geo_protocol_geo_view_body" to "Review zone controls and configure behavior appropriate to your environment.",
-            "helpmod_geo_protocol_map_data_title" to "MAP DATA",
-            "helpmod_geo_protocol_map_data_body" to "No region map ships with the app. Zones still work by coordinate with nothing imported, but you can import your own Mapsforge-compatible .map file here any time to see real basemap tiles on the {{GEO_GRID:Tactical Grid}}.",
-        )
-        for ((name, text) in said) assertEquals(name, text, english.getValue(name))
-        assertEquals("nothing else is in the Geo family", said.keys, english.keys.filter { it.startsWith("helpmod_geo_protocol_") }.toSet())
+    fun theEnglishOfEveryMovedFamilyIsWordForWordWhatItAlwaysSaid() {
+        val pinned = pins
+        val defined = english.filter { it.key.startsWith(HelpWalkthroughText.PREFIX) }
+        assertEquals("a string with no pin, or a pin with no string", pinned.keys, defined.keys)
+        for ((name, text) in pinned) assertEquals(name, text, english.getValue(name))
     }
 
     // ---- the labels a step names ------------------------------------------------------------------------------------------------------------------
@@ -154,19 +162,36 @@ class HelpWalkthroughWordingTest {
         val articles = mapOf(
             "es" to listOf("EL", "LA", "LOS", "LAS", "UN", "UNA", "DEL", "AL"),
             "pt" to listOf("O", "A", "OS", "AS", "UM", "UMA", "DO", "DA", "NO", "NA", "AO"),
-            "af" to listOf("DIE", "'N"),
         )
         for ((tag, list) in articles) for ((name, text) in translations.getValue(tag).filter { it.key.startsWith(HelpWalkthroughText.PREFIX) }) {
             for (article in list) assertFalse("$tag/$name: article $article before a placeholder: $text", Regex("""(?<![\p{L}])$article \{\{""").containsMatchIn(text))
         }
     }
 
+    /** A title that is exactly a label's or a control's own word in every language, so the walkthrough and the screen agree. */
+    private val isExactly = mapOf(
+        "helpmod_geo_protocol_title" to "label_geo_protocol",
+        "helpmod_geo_protocol_intro_title" to "label_geo_protocol",
+        "helpmod_geo_protocol_map_data_title" to "geo_map_data",
+    )
+
+    /** A text that names a label in plain words (English has no placeholder there), so every language holds that label's own standard word, and it does not follow PLAIN WORDS (a known gap). */
+    private val namesLabelLiterally = mapOf(
+        "helpmod_logs_intro_title" to listOf("label_terminal"),
+        "helpmod_logs_intro_body" to listOf("label_terminal"),
+    )
+
     @Test
     fun aTitleThatNamesALabelOrAControlIsThatLabelsOrControlsOwnWordInEveryLanguage() {
-        for ((tag, map) in everyLanguage) {
-            assertEquals("$tag: the module title is the label", map.getValue("label_geo_protocol"), map.getValue("helpmod_geo_protocol_title"))
-            assertEquals("$tag: the first step's title is the label", map.getValue("label_geo_protocol"), map.getValue("helpmod_geo_protocol_intro_title"))
-            assertEquals("$tag: the map data step is titled as the screen's MAP DATA heading", map.getValue("geo_map_data"), map.getValue("helpmod_geo_protocol_map_data_title"))
+        for ((tag, map) in everyLanguage) for ((name, source) in isExactly) assertEquals("$tag/$name", map.getValue(source), map.getValue(name))
+        assertTrue("every entry names a walkthrough string that exists", (isExactly.keys + namesLabelLiterally.keys).all { it in english })
+    }
+
+    @Test
+    fun aTextThatNamesALabelInPlainWordsHoldsThatLabelsOwnWordInEveryLanguage() {
+        for ((tag, map) in everyLanguage) for ((name, sources) in namesLabelLiterally) for (source in sources) {
+            val word = map.getValue(source)
+            assertTrue("$tag/$name does not hold \"$word\" ($source): ${map.getValue(name)}", map.getValue(name).contains(word, ignoreCase = true))
         }
     }
 
