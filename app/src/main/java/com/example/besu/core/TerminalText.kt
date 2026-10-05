@@ -33,8 +33,12 @@ object TerminalText {
     fun helpLines(text: TextSource): List<String> =
         listOf(text.get("term_help_header")) + HELP_COMMANDS.map { (command, resource) -> command.padEnd(HELP_COMMAND_WIDTH) + text.get(resource) }
 
-    /** What /cls says before it will clear the log: the question and its warning, then how to proceed (`/cls CONFIRM`, typed as it is), on two lines. */
-    fun clearConfirmation(text: TextSource): String = text.get("term_cls_question") + "\n" + text.get("term_cls_type")
+    /**
+     * What /cls says before it will clear the log: the question and its warning that it cannot be undone (two strings joined by one space, so a test can check that every language says both), then how to proceed
+     * (`/cls CONFIRM`, typed as it is), on a second line.
+     */
+    fun clearConfirmation(text: TextSource): String =
+        listOf(text.get("term_cls_question"), text.get("term_cls_warning")).joinToString(" ") + "\n" + text.get("term_cls_type")
 
     /** The reply to a slash command that is not known. [token] is what the person typed, exactly as typed. */
     fun unknownCommand(text: TextSource, token: String): String = text.get("term_unknown_command", token)

@@ -1056,7 +1056,8 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="term_already_saved">JÁ SALVA EM: %1$s</string>
     <string name="term_resolve_v">RESOLVA /v PRIMEIRO -- TOQUE EM UMA VARIÁVEL OU APAGUE-O</string>
     <string name="term_resolve_t">RESOLVA /t PRIMEIRO -- TOQUE EM UM ALVO OU APAGUE-O</string>
-    <string name="term_cls_question">LIMPAR TODO O REGISTRO? ISSO NÃO PODE SER DESFEITO.</string>
+    <string name="term_cls_question">LIMPAR TODO O REGISTRO?</string>
+    <string name="term_cls_warning">ISSO NÃO PODE SER DESFEITO.</string>
     <string name="term_cls_type">DIGITE /cls CONFIRM PARA CONTINUAR.</string>
     <string name="term_unknown_command">COMANDO DESCONHECIDO: %1$s -- TENTE /help</string>
     <string name="term_no_phrase">NENHUMA FRASE INFORMADA</string>

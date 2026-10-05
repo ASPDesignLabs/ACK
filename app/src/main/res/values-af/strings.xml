@@ -1044,7 +1044,8 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="term_already_saved">REEDS GESTOOR IN: %1$s</string>
     <string name="term_resolve_v">LOS /v EERS OP -- TIK \'N VERANDERLIKE OF VEE DIT UIT</string>
     <string name="term_resolve_t">LOS /t EERS OP -- TIK \'N TEIKEN OF VEE DIT UIT</string>
-    <string name="term_cls_question">SKOON DIE HELE LOG? DIT KAN NIE ONGEDAAN GEMAAK WORD NIE.</string>
+    <string name="term_cls_question">SKOON DIE HELE LOG?</string>
+    <string name="term_cls_warning">DIT KAN NIE ONGEDAAN GEMAAK WORD NIE.</string>
     <string name="term_cls_type">TIK /cls CONFIRM OM VOORT TE GAAN.</string>
     <string name="term_unknown_command">ONBEKENDE OPDRAG: %1$s -- PROBEER /help</string>
     <string name="term_no_phrase">GEEN FRASE GEGEE NIE</string>

@@ -45,6 +45,8 @@ class TerminalTextTest {
     @Test
     fun theEnglishRepliesAreExactlyWhatTheTerminalAlwaysPrinted() {
         assertEquals("CLEAR ENTIRE LOG? THIS CANNOT BE UNDONE.\nTYPE /cls CONFIRM TO PROCEED.", TerminalText.clearConfirmation(t))
+        assertEquals("CLEAR ENTIRE LOG?", english.getValue("term_cls_question"))
+        assertEquals("THIS CANNOT BE UNDONE.", english.getValue("term_cls_warning"))
         assertEquals("UNKNOWN COMMAND: /zzz -- TRY /help", TerminalText.unknownCommand(t, "/zzz"))
         assertEquals("NO EMERGENCY DECK ACTIVE -- /e SENT PLAIN", TerminalText.noEmergencyDeck(t, "EMERGENCY", "DECK"))
         assertEquals("0 CHARS", TerminalText.charCount(t, 0))
@@ -116,7 +118,7 @@ class TerminalTextTest {
         for ((tag, map) in translations) {
             assertTrue("$tag: /v", map.getValue("term_resolve_v").contains("/v"))
             assertTrue("$tag: /t", map.getValue("term_resolve_t").contains("/t"))
-            assertTrue("$tag: /cls CONFIRM is typed exactly so", map.getValue("term_cls_type").contains("/cls CONFIRM"))
+            assertTrue("$tag: /cls CONFIRM is typed exactly so, not CONFIRMAR or any longer word", Regex("""/cls CONFIRM(?![A-Za-z])""").containsMatchIn(map.getValue("term_cls_type")))
             assertTrue("$tag: /help", map.getValue("term_unknown_command").contains("/help"))
             assertTrue("$tag: /e", map.getValue("term_no_emergency_deck").contains("/e"))
         }
@@ -127,10 +129,16 @@ class TerminalTextTest {
         for ((tag, map) in translations) {
             val said = TerminalText.clearConfirmation(FileText(tag))
             val lines = said.split("\n")
+            val question = map.getValue("term_cls_question")
+            val warning = map.getValue("term_cls_warning")
             assertEquals("$tag: two lines", 2, lines.size)
-            assertEquals("$tag: the question and its warning first", map.getValue("term_cls_question"), lines[0])
-            assertNotEquals("$tag: the warning is not English", "CLEAR ENTIRE LOG? THIS CANNOT BE UNDONE.", lines[0])
-            assertTrue("$tag: the typed confirmation last: ${lines[1]}", lines[1].contains("/cls CONFIRM"))
+            assertEquals("$tag: the question, then the warning that it cannot be undone, joined by one space", "$question $warning", lines[0])
+            assertNotEquals("$tag: the question is not English", english.getValue("term_cls_question"), question)
+            assertNotEquals("$tag: the warning is not English", english.getValue("term_cls_warning"), warning)
+            assertNotEquals("$tag: the question and the warning are two different sentences", question, warning)
+            assertTrue("$tag: the warning is a sentence of its own, not a fragment (${warning.length} characters)", warning.length >= 12)
+            // The typed word is exactly CONFIRM: "CONFIRMAR" would not be accepted by the parser, so it must not be what the sentence tells the person to type.
+            assertTrue("$tag: the typed confirmation, exactly, last: ${lines[1]}", Regex("""/cls CONFIRM(?![A-Za-z])""").containsMatchIn(lines[1]))
             assertNotEquals("$tag: two different lines", lines[0], lines[1])
         }
     }

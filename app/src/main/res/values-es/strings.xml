@@ -1056,7 +1056,8 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="term_already_saved">YA GUARDADA EN: %1$s</string>
     <string name="term_resolve_v">RESUELVE /v PRIMERO -- TOCA UNA VARIABLE O BÓRRALO</string>
     <string name="term_resolve_t">RESUELVE /t PRIMERO -- TOCA UN OBJETIVO O BÓRRALO</string>
-    <string name="term_cls_question">¿BORRAR TODO EL REGISTRO? NO SE PUEDE DESHACER.</string>
+    <string name="term_cls_question">¿BORRAR TODO EL REGISTRO?</string>
+    <string name="term_cls_warning">NO SE PUEDE DESHACER.</string>
     <string name="term_cls_type">ESCRIBE /cls CONFIRM PARA CONTINUAR.</string>
     <string name="term_unknown_command">COMANDO DESCONOCIDO: %1$s -- PRUEBA /help</string>
     <string name="term_no_phrase">NO SE DIO NINGUNA FRASE</string>

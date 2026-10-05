@@ -25,7 +25,7 @@ class TerminalWordingTest {
 
     private val names = listOf(
         "term_vars_hint", "term_targets_none", "term_targets_pick", "term_targets_empty", "term_info_button", "term_confirm_needed", "term_confirm_button", "term_typing", "term_awaiting", "term_prompt_hint", "term_already_saved",
-        "term_resolve_v", "term_resolve_t", "term_cls_question", "term_cls_type", "term_unknown_command", "term_no_phrase", "term_no_emergency_deck", "term_services_restarted", "term_backup_cancelled", "term_log_cleared",
+        "term_resolve_v", "term_resolve_t", "term_cls_question", "term_cls_warning", "term_cls_type", "term_unknown_command", "term_no_phrase", "term_no_emergency_deck", "term_services_restarted", "term_backup_cancelled", "term_log_cleared",
         "term_help_header", "term_help_help", "term_help_quiet", "term_help_nosave", "term_help_sticky", "term_help_emergency", "term_help_variables", "term_help_targets", "term_help_cls", "term_help_backup",
         "term_help_repair", "term_help_info", "term_help_manual",
     )
@@ -150,7 +150,7 @@ class TerminalWordingTest {
     fun theWordsThatAnswerOppositeQuestionsDifferInEveryLanguage() {
         val pairs = listOf(
             "term_info_button" to "term_confirm_button", "term_typing" to "term_awaiting", "term_vars_hint" to "term_targets_pick", "term_targets_pick" to "term_targets_empty", "term_resolve_v" to "term_resolve_t",
-            "term_cls_question" to "term_cls_type", "term_backup_cancelled" to "term_log_cleared", "term_log_cleared" to "term_services_restarted", "term_no_phrase" to "term_unknown_command",
+            "term_cls_question" to "term_cls_type", "term_cls_question" to "term_cls_warning", "term_cls_warning" to "term_cls_type", "term_backup_cancelled" to "term_log_cleared", "term_log_cleared" to "term_services_restarted", "term_no_phrase" to "term_unknown_command",
             "term_help_quiet" to "term_help_nosave", "term_help_cls" to "term_help_backup", "term_help_variables" to "term_help_targets", "term_help_info" to "term_help_manual", "term_help_help" to "term_help_header",
             "term_confirm_needed" to "term_cls_type", "term_prompt_hint" to "term_awaiting",
         )

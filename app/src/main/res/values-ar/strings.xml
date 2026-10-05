@@ -1092,7 +1092,8 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="term_already_saved">محفوظة مسبقا في: %1$s</string>
     <string name="term_resolve_v">أنهِ /v أولا -- اختر متغيرا أو احذفه</string>
     <string name="term_resolve_t">أنهِ /t أولا -- اختر هدفا أو احذفه</string>
-    <string name="term_cls_question">هل تريد مسح السجل بالكامل؟ لا يمكن التراجع عن ذلك.</string>
+    <string name="term_cls_question">هل تريد مسح السجل بالكامل؟</string>
+    <string name="term_cls_warning">لا يمكن التراجع عن ذلك.</string>
     <string name="term_cls_type">اكتب /cls CONFIRM للمتابعة.</string>
     <string name="term_unknown_command">أمر غير معروف: %1$s -- جرّب /help</string>
     <string name="term_no_phrase">لم تُدخل أي عبارة</string>

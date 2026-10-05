@@ -334,7 +334,11 @@ class PatchNotesTest {
             // The English breaks a long file name over two lines; joined, it is one token.
             val en = english.getValue(name).replace("\n", "")
             val text = map.getValue(name)
-            for (token in tokens) for (match in token.findAll(en)) assertTrue("$tag/$name keeps '${match.value}' in '$text'", text.contains(match.value))
+            // A name must come through as that name, not as the start of a longer word ("/cls CONFIRMAR" is not "/cls CONFIRM"), so it is looked for with a word boundary on each side.
+            for (token in tokens) for (match in token.findAll(en)) {
+                val whole = Regex("(?<![A-Za-z0-9_])" + Regex.escape(match.value) + "(?![A-Za-z0-9_])")
+                assertTrue("$tag/$name keeps '${match.value}' as a name in '$text'", whole.containsMatchIn(text))
+            }
         }
     }
 

@@ -1065,7 +1065,8 @@
     <string name="term_already_saved">ALREADY SAVED: %1$s</string>
     <string name="term_resolve_v">RESOLVE /v FIRST -- TAP A VARIABLE OR DELETE IT</string>
     <string name="term_resolve_t">RESOLVE /t FIRST -- TAP A TARGET OR DELETE IT</string>
-    <string name="term_cls_question">CLEAR ENTIRE LOG? THIS CANNOT BE UNDONE.</string>
+    <string name="term_cls_question">CLEAR ENTIRE LOG?</string>
+    <string name="term_cls_warning">THIS CANNOT BE UNDONE.</string>
     <string name="term_cls_type">TYPE /cls CONFIRM TO PROCEED.</string>
     <string name="term_unknown_command">UNKNOWN COMMAND: %1$s -- TRY /help</string>
     <string name="term_no_phrase">NO PHRASE GIVEN</string>

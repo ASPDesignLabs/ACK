@@ -1044,7 +1044,8 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="term_already_saved">पहले से सहेजा गया: %1$s</string>
     <string name="term_resolve_v">पहले /v पूरा करें -- कोई वेरिएबल चुनें या उसे हटाएँ</string>
     <string name="term_resolve_t">पहले /t पूरा करें -- कोई लक्ष्य चुनें या उसे हटाएँ</string>
-    <string name="term_cls_question">पूरा लॉग साफ़ करें? इसे वापस नहीं किया जा सकता।</string>
+    <string name="term_cls_question">पूरा लॉग साफ़ करें?</string>
+    <string name="term_cls_warning">इसे वापस नहीं किया जा सकता।</string>
     <string name="term_cls_type">आगे बढ़ने के लिए /cls CONFIRM लिखें।</string>
     <string name="term_unknown_command">अज्ञात कमांड: %1$s -- /help आज़माएँ</string>
     <string name="term_no_phrase">कोई वाक्य नहीं दिया गया</string>
