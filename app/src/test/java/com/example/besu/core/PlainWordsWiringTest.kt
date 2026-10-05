@@ -170,8 +170,10 @@ class PlainWordsWiringTest {
         val menu = code(source("help/HelpMenuDialog.kt"))
         assertTrue(menu.contains("text = helpText(module.title)"))
         assertTrue(menu.contains("text = helpText(module.summary)"))
-        assertTrue(menu.contains("helpText(selectedCategory.title)"))
-        assertTrue(menu.contains("helpText(selectedCategory.subtitle)"))
+        // A family's names come from string resources and may hold a placeholder, so each is read through the text source and then through helpText.
+        assertTrue(menu.contains("helpText(HelpMenuText.categoryTitle(text, selectedCategory.name))"))
+        assertTrue(menu.contains("helpText(HelpMenuText.categorySubtitle(text, selectedCategory.name))"))
+        assertTrue(menu.contains("helpText(HelpMenuText.categoryChip(text, category.name))"))
         assertFalse(Regex("""text = module\.(title|summary)\b""").containsMatchIn(menu))
     }
 

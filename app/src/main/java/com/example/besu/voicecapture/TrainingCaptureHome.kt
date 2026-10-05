@@ -24,12 +24,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.besu.AckTags
+import com.example.besu.R
 import com.example.besu.capture.CaptureConstants
 import com.example.besu.capture.CaptureSession
 import com.example.besu.capture.CaptureTime
@@ -230,8 +232,10 @@ fun TrainingCaptureHome(context: Context, primaryColor: Color, onClose: () -> Un
         )
 
         if (!hasSeenHelpOffer) {
+            // This screen's own words are still English; only the name of the header's button follows the chosen language, so the sentence still points at a button that exists.
+            val helpButton = stringResource(R.string.help_button)
             HelpOfferBanner(
-                message = "NEW: RECORD TRAINING DATA HAS A HELP WALKTHROUGH. FIND IT UNDER HELP ANYTIME.",
+                message = "NEW: RECORD TRAINING DATA HAS A $helpButton WALKTHROUGH. FIND IT UNDER $helpButton ANYTIME.",
                 primaryColor = primaryColor,
                 onDismiss = {
                     TrainingCapture.markHelpOfferSeen(context)

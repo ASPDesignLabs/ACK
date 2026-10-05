@@ -170,7 +170,7 @@ fun VoiceRecordingPanel(
             RecordingPanelPhase.IDLE -> {
                 if (!hasSeenHelpOffer) {
                     HelpOfferBanner(
-                        message = stringResource(R.string.voice_rec_help_offer),
+                        message = stringResource(R.string.voice_rec_help_offer, stringResource(R.string.help_button)),
                         primaryColor = primaryColor,
                         onDismiss = {
                             VoiceRecordingRepository.markHelpOfferSeen(context)

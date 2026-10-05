@@ -9,6 +9,9 @@ rm -rf "$STAGE"; mkdir -p "$STAGE/com/example/besu/help" "$STAGE/com/example/bes
 cp -r "$A/capture" "$A/voicecapture" "$STAGE/com/example/besu/"
 cp "$A/AckTags.kt" "$STAGE/com/example/besu/"
 for f in HelpCore HelpManager HelpTarget HelpOfferBanner RecordTrainingDataHelp; do cp "$A/help/$f.kt" "$STAGE/com/example/besu/help/"; done
+# HELP's own chrome: the menu, the coach panel and the two chooser dialogs. The walkthrough modules they list (FieldOpsHelp, VoiceRecordingsHelp) are only stubbed, for the option types
+# the choosers draw (stubs/app/HelpModules.kt); helpText() is stubbed in stubs/app/AppUi.kt.
+for f in HelpMenuDialog HelpCoachDialog PoseSelectorDialog VoiceRecordingsHelpSelectorDialog; do cp "$A/help/$f.kt" "$STAGE/com/example/besu/help/"; done
 cp "$A/ui/OverlayStyle.kt" "$STAGE/com/example/besu/ui/"
 # PLAIN WORDS' Terminal controls: the screen file plus the plain-Kotlin model it uses and the dialog text helper it calls.
 mkdir -p "$STAGE/com/example/besu/core" "$STAGE/com/example/besu/settings"

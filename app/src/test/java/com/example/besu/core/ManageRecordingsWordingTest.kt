@@ -139,10 +139,12 @@ class ManageRecordingsWordingTest {
 
     @Test
     fun theEnglishNamesStillOnScreenAreKeptInEveryLanguage() {
-        // HELP is still the English name of the header's button and REC the English text of the Quick-Access key's button, so a sentence that sends someone to them keeps them.
+        // REC is still the English text of the Quick-Access key's button, so a sentence that sends someone to it keeps it. HELP is not: the header's button is translated now (help_button), so the
+        // sentence takes its name as an argument, in the place the English says HELP (twice), and never types an English HELP of its own.
         for ((tag, map) in listOf("en" to english) + translations.toList()) {
-            // Each place the English says HELP (twice) or REC (once) says it in every language too: a sentence that keeps one and translates the other still points at a button that does not exist.
-            assertEquals("$tag: HELP as often as the English says it", Regex("""\bHELP\b""").findAll(english.getValue("voice_rec_help_offer")).count(), Regex("""\bHELP\b""").findAll(map.getValue("voice_rec_help_offer")).count())
+            assertEquals("$tag: the button's name is an argument as often as the English says it", 2, Regex(Regex.escape("%1\$s")).findAll(map.getValue("voice_rec_help_offer")).count())
+            assertFalse("$tag: a typed English HELP still points at a button that is called something else", Regex("""\bHELP\b""").containsMatchIn(map.getValue("voice_rec_help_offer")))
+            // Each place the English says REC (once) says it in every language too: a sentence that keeps one and translates the other still points at a button that does not exist.
             assertEquals("$tag: REC as often as the English says it", Regex("""\bREC\b""").findAll(english.getValue("manage_rec_empty")).count(), Regex("""\bREC\b""").findAll(map.getValue("manage_rec_empty")).count())
         }
     }
@@ -187,7 +189,9 @@ class ManageRecordingsWordingTest {
         assertEquals("VOICE RECORDING", english.getValue("voice_rec_title"))
         assertEquals("WHEN SET, THIS PLAYS INSTEAD OF THE SYNTHESIZED PHRASE ABOVE.", english.getValue("voice_rec_description"))
         assertEquals("WHEN SET, THIS PLAYS INSTEAD OF THE KEY'S TARGET PHRASE.", english.getValue("voice_rec_description_key"))
-        assertEquals("NEW: VOICE RECORDINGS HAS A HELP WALKTHROUGH -- RECORDING, MATRIX NOTES, AND MANAGING WHAT YOU'VE RECORDED. FIND IT UNDER HELP ANYTIME.", english.getValue("voice_rec_help_offer"))
+        // The name of the header's button comes in as an argument, so the sentence points at whatever the button is called in the chosen language.
+        assertEquals("NEW: VOICE RECORDINGS HAS A %1\$s WALKTHROUGH -- RECORDING, MATRIX NOTES, AND MANAGING WHAT YOU'VE RECORDED. FIND IT UNDER %1\$s ANYTIME.", english.getValue("voice_rec_help_offer"))
+        assertEquals("NEW: VOICE RECORDINGS HAS A HELP WALKTHROUGH -- RECORDING, MATRIX NOTES, AND MANAGING WHAT YOU'VE RECORDED. FIND IT UNDER HELP ANYTIME.", EnglishText.get("voice_rec_help_offer", "HELP"))
         assertEquals("REDUCING NOISE, TRIMMING SILENCE & LEVELING VOLUME...", english.getValue("voice_rec_processing"))
         assertEquals("NO RECORDINGS YET. RECORD ONE FROM A QUICK ACTIONS SLOT'S EDIT SCREEN, A QUICK-ACCESS KEY'S REC BUTTON, OR A MATRIX NODE'S EDITOR.", english.getValue("manage_rec_empty"))
         assertEquals("DISABLED -- entry text changed since this was recorded", english.getValue("manage_rec_disabled"))

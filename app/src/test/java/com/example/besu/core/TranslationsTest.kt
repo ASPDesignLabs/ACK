@@ -118,6 +118,9 @@ class TranslationsTest {
         "people_wizard_in", // "IN <name>" is Afrikaans too
         "people_day_sat", // "SAT" is Afrikaans' short Saterdag too
         "storage_amount", "storage_size_kb", "storage_size_mb", // only placeholders and a unit (KB, MB) that every one of these languages writes as it is
+        "help_menu_steps_line", // "<count> // <view>": only placeholders, the words come in as arguments
+        "help_cat_basics_manual_override_chip", // only a label placeholder: the words come from the label, in the language
+        "help_view_terminal", "help_view_audio", "help_view_geo", // TERMINAL, AUDIO and GEO are written as in English in Spanish and Portuguese (GEO also in Afrikaans)
     )
 
     @Test
@@ -180,7 +183,7 @@ class TranslationsTest {
     fun hindiAndArabicTextIsInItsOwnScript_exceptTheShortListOfPlainSymbolsAndAcronyms() {
         val devanagari = Regex("[\\u0900-\\u097F]")
         val arabic = Regex("[\\u0600-\\u06FF]")
-        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count") // placeholders and units, which have no letters of their own
+        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count", "help_menu_steps_line", "help_cat_basics_manual_override_chip") // placeholders and units, which have no letters of their own
         for ((tag, script) in listOf("hi" to devanagari, "ar" to arabic)) for ((name, text) in texts.getValue(tag)) {
             if (name in latinOnlyAllowed) continue
             assertTrue("$tag/$name has no ${if (tag == "hi") "Devanagari" else "Arabic"} letters: $text", script.containsMatchIn(text))

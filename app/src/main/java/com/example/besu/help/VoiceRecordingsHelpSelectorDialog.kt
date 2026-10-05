@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.help
 
+import com.example.besu.R
 import com.example.besu.ui.looseSpacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -68,7 +70,7 @@ fun VoiceRecordingsHelpSelectorDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "VOICE RECORDINGS",
+                            text = stringResource(R.string.help_voice_selector_title),
                             color = primaryColor,
                             fontSize = 13.sp,
                             fontFamily = FontFamily.Monospace,
@@ -77,7 +79,7 @@ fun VoiceRecordingsHelpSelectorDialog(
                         )
 
                         Text(
-                            text = "[CLOSE]",
+                            text = stringResource(R.string.help_close),
                             color = Color.Gray,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -91,7 +93,7 @@ fun VoiceRecordingsHelpSelectorDialog(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "PICK A TOPIC TO WALK THROUGH.",
+                        text = stringResource(R.string.help_voice_selector_hint),
                         color = Color.Gray,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,

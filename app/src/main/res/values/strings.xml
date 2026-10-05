@@ -208,7 +208,7 @@
     <!-- INTERFACE LANGUAGE (settings/InterfaceLanguageSection.kt). The heading is fixed text: the word for language in every language ACK has, so it can be
          found by someone who cannot read the current one. -->
     <string name="interface_language_all" translatable="false">LANGUAGE · IDIOMA · भाषा · اللغة · TAAL</string>
-    <string name="interface_language_explanation">THE LANGUAGE OF ACK\'S OWN WORDS: THE NAMES ON BUTTONS AND HEADINGS. IT DOES NOT TRANSLATE WHAT YOU TYPE OR WHAT IS SPOKEN (SPEECH LANGUAGE, IN THE AUDIO SETTINGS, DOES THAT). THE WORDING IN EVERY LANGUAGE EXCEPT ENGLISH IS A DRAFT THAT NATIVE SPEAKERS HAVE NOT CHECKED YET. HELP, THE TERMINAL AND MANY DIALOGS ARE STILL IN ENGLISH.</string>
+    <string name="interface_language_explanation">THE LANGUAGE OF ACK\'S OWN WORDS: THE NAMES ON BUTTONS AND HEADINGS. IT DOES NOT TRANSLATE WHAT YOU TYPE OR WHAT IS SPOKEN (SPEECH LANGUAGE, IN THE AUDIO SETTINGS, DOES THAT). THE WORDING IN EVERY LANGUAGE EXCEPT ENGLISH IS A DRAFT THAT NATIVE SPEAKERS HAVE NOT CHECKED YET. THE WALKTHROUGHS INSIDE HELP, THE TERMINAL AND MANY DIALOGS ARE STILL IN ENGLISH.</string>
     <string name="interface_language_device">THIS PHONE\'S LANGUAGE</string>
     <string name="interface_language_confirm_title">CHANGE LANGUAGE</string>
     <string name="interface_language_confirm_body">ACK WILL RESTART ONCE AND SHOW ITS OWN WORDS IN THIS LANGUAGE: %1$s. NOTHING IS DELETED OR CHANGED. YOU CAN CHANGE IT BACK HERE.</string>
@@ -752,7 +752,7 @@
     <string name="voice_rec_description">WHEN SET, THIS PLAYS INSTEAD OF THE SYNTHESIZED PHRASE ABOVE.</string>
     <string name="voice_rec_description_key">WHEN SET, THIS PLAYS INSTEAD OF THE KEY\'S TARGET PHRASE.</string>
     <string name="voice_rec_key_title">%1$s RECORDING</string>
-    <string name="voice_rec_help_offer">NEW: VOICE RECORDINGS HAS A HELP WALKTHROUGH -- RECORDING, MATRIX NOTES, AND MANAGING WHAT YOU\'VE RECORDED. FIND IT UNDER HELP ANYTIME.</string>
+    <string name="voice_rec_help_offer">NEW: VOICE RECORDINGS HAS A %1$s WALKTHROUGH -- RECORDING, MATRIX NOTES, AND MANAGING WHAT YOU\'VE RECORDED. FIND IT UNDER %1$s ANYTIME.</string>
     <string name="voice_rec_recorded">RECORDED (%1$s)</string>
     <string name="voice_rec_play">PLAY</string>
     <string name="voice_rec_playing">PLAYING...</string>
@@ -776,5 +776,70 @@
     <plurals name="manage_rec_count">
         <item quantity="one">%d RECORDING</item>
         <item quantity="other">%d RECORDINGS</item>
+    </plurals>
+    <string name="help_button">HELP</string>
+    <string name="help_close">[CLOSE]</string>
+    <string name="help_menu_title">ACK // HELP SYSTEM</string>
+    <string name="help_menu_subtitle">TRAINING MODULES AND REFERENCE PROTOCOLS</string>
+    <string name="help_menu_select_family">SELECT MODULE FAMILY</string>
+    <string name="help_menu_run">[RUN]</string>
+    <string name="help_menu_steps_line">%1$s // %2$s</string>
+    <string name="help_menu_current_view">CURRENT VIEW</string>
+    <string name="help_view_matrix">MATRIX</string>
+    <string name="help_view_terminal">TERMINAL</string>
+    <string name="help_view_settings">SETTINGS</string>
+    <string name="help_view_type">TYPE</string>
+    <string name="help_view_audio">AUDIO</string>
+    <string name="help_view_targets">TARGETS</string>
+    <string name="help_view_geo">GEO</string>
+    <string name="help_menu_empty_title">NO MODULES DEPLOYED</string>
+    <string name="help_menu_empty_body">THIS KNOWLEDGE FAMILY HAS NO ACTIVE HELP PROTOCOLS.</string>
+    <string name="help_cat_basics_navigation_title">BASICS // NAVIGATION</string>
+    <string name="help_cat_basics_navigation_chip">NAVIGATION</string>
+    <string name="help_cat_basics_navigation_subtitle">{{DECKS}}, PROFILES, CONTEXT, AND PROMPTS</string>
+    <string name="help_cat_basics_decks_title">BASICS // {{DECK}} MANAGEMENT</string>
+    <string name="help_cat_basics_decks_chip">{{DECK}} MANAGEMENT</string>
+    <string name="help_cat_basics_decks_subtitle">CREATE, ORGANIZE, RECOLOR, AND REMOVE {{DECKS}}</string>
+    <string name="help_cat_basics_settings_title">BASICS // SETTINGS</string>
+    <string name="help_cat_basics_settings_chip">SETTINGS</string>
+    <string name="help_cat_basics_settings_subtitle">PROTOCOL, WATCH, SENSORS, SHORTCUTS, AND DATA</string>
+    <string name="help_cat_basics_personalization_title">BASICS // PERSONALIZATION</string>
+    <string name="help_cat_basics_personalization_chip">PERSONALIZATION</string>
+    <string name="help_cat_basics_personalization_subtitle">{{AUDIO_ARCHITECT}} AND OUTPUT CUSTOMIZATION</string>
+    <string name="help_cat_basics_manual_override_title">BASICS // {{MANUAL_OVERRIDE}}</string>
+    <string name="help_cat_basics_manual_override_chip">{{MANUAL_OVERRIDE}}</string>
+    <string name="help_cat_basics_manual_override_subtitle">{{MEMORY_BANKS}} AND DIRECT TEXT INPUT</string>
+    <string name="help_cat_using_decks_title">USING {{DECKS}}</string>
+    <string name="help_cat_using_decks_chip">USING {{DECKS}}</string>
+    <string name="help_cat_using_decks_subtitle">{{DECK}}-SPECIFIC WORKFLOWS AND CONTROLS</string>
+    <string name="help_cat_contextual_systems_title">CONTEXTUAL SYSTEMS</string>
+    <string name="help_cat_contextual_systems_chip">CONTEXTUAL SYSTEMS</string>
+    <string name="help_cat_contextual_systems_subtitle">{{TARGET_COMPUTER}}, {{GEO_PROTOCOL}}, AND LOGS</string>
+    <string name="help_cat_field_ops_title">FIELD OPS // GESTURE TRAINING</string>
+    <string name="help_cat_field_ops_chip">GESTURE TRAINING</string>
+    <string name="help_cat_field_ops_subtitle">ARM, POSE, MODIFY, AND FIRE FROM THE WATCH</string>
+    <string name="help_cat_voice_recordings_title">VOICE RECORDINGS</string>
+    <string name="help_cat_voice_recordings_chip">VOICE RECORDINGS</string>
+    <string name="help_cat_voice_recordings_subtitle">RECORD, ATTACH, AND MANAGE YOUR OWN VOICE PROMPTS</string>
+    <string name="help_coach_guidance">GUIDANCE // %1$s</string>
+    <string name="help_coach_abort">[ABORT]</string>
+    <string name="help_coach_acknowledge">ACKNOWLEDGE // CONTINUE</string>
+    <string name="help_coach_awaiting">AWAITING LIVE INPUT</string>
+    <string name="help_coach_use_control">USE THE HIGHLIGHTED CONTROL TO PROCEED.</string>
+    <string name="help_coach_commit_text">COMMIT TEXT INPUT TO PROCEED.</string>
+    <string name="help_coach_commit_file">COMMIT A FILE TO PROCEED.</string>
+    <string name="help_coach_clear_overlay">CLEAR THE ACTIVE OVERLAY TO PROCEED.</string>
+    <string name="help_coach_watch_event">WAITING FOR WATCH EVENT: %1$s</string>
+    <string name="help_coach_select_deck">SELECT A MATRIX {{DECK}} TO PROCEED.</string>
+    <string name="help_coach_select_profile">SELECT A PROFILE TO PROCEED.</string>
+    <string name="help_coach_close_keyboard">TYPE IF NEEDED, THEN CLOSE THE KEYBOARD TO PROCEED.</string>
+    <string name="help_coach_read">READ AND CONTINUE.</string>
+    <string name="help_pose_title">SELECT A POSE</string>
+    <string name="help_pose_hint">THE WALKTHROUGH WILL FOCUS ON WHICHEVER POSE YOU PICK.</string>
+    <string name="help_voice_selector_title">VOICE RECORDINGS</string>
+    <string name="help_voice_selector_hint">PICK A TOPIC TO WALK THROUGH.</string>
+    <plurals name="help_menu_steps">
+        <item quantity="one">%d STEP</item>
+        <item quantity="other">%d STEPS</item>
     </plurals>
 </resources>

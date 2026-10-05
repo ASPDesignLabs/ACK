@@ -1095,7 +1095,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                             .padding(horizontal = 8.dp, vertical = 4.dp)
                                     ) {
                                         Text(
-                                            text = "HELP",
+                                            text = stringResource(R.string.help_button),
                                             color = primaryColor,
                                             fontSize = 10.sp,
                                             fontFamily = FontFamily.Monospace

@@ -21,3 +21,7 @@ fun stringFormatLabel(key: com.example.besu.core.LabelKey, vararg args: Any): St
 
 @androidx.compose.runtime.Composable
 fun poseLabel(stored: String): String = stored
+
+/** HELP text with its label placeholders filled in (the real one is in ui/PlainWords.kt, which is not staged). */
+@androidx.compose.runtime.Composable
+fun helpText(text: String): String = text

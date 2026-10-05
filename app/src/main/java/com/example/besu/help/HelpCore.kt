@@ -8,46 +8,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 
 
-enum class HelpCategory(
-    val title: String,
-    val subtitle: String
-) {
-    BASICS_NAVIGATION(
-        title = "BASICS // NAVIGATION",
-        subtitle = "{{DECKS:DECKS}}, PROFILES, CONTEXT, AND PROMPTS"
-    ),
-    BASICS_DECKS(
-        title = "BASICS // {{DECK:DECK}} MANAGEMENT",
-        subtitle = "CREATE, ORGANIZE, RECOLOR, AND REMOVE {{DECKS:DECKS}}"
-    ),
-    BASICS_SETTINGS(
-        title = "BASICS // SETTINGS",
-        subtitle = "PROTOCOL, WATCH, SENSORS, SHORTCUTS, AND DATA"
-    ),
-    BASICS_PERSONALIZATION(
-        title = "BASICS // PERSONALIZATION",
-        subtitle = "{{AUDIO_ARCHITECT:AUDIO ARCHITECT}} AND OUTPUT CUSTOMIZATION"
-    ),
-    BASICS_MANUAL_OVERRIDE(
-        title = "BASICS // {{MANUAL_OVERRIDE:MANUAL OVERRIDE}}",
-        subtitle = "{{MEMORY_BANKS:MEMORY BANKS}} AND DIRECT TEXT INPUT"
-    ),
-    USING_DECKS(
-        title = "USING {{DECKS:DECKS}}",
-        subtitle = "{{DECK:DECK}}-SPECIFIC WORKFLOWS AND CONTROLS"
-    ),
-    CONTEXTUAL_SYSTEMS(
-        title = "CONTEXTUAL SYSTEMS",
-        subtitle = "{{TARGET_COMPUTER:TARGET COMPUTER}}, {{GEO_PROTOCOL:GEO-PROTOCOL}}, AND LOGS"
-    ),
-    FIELD_OPS(
-        title = "FIELD OPS // GESTURE TRAINING",
-        subtitle = "ARM, POSE, MODIFY, AND FIRE FROM THE WATCH"
-    ),
-    VOICE_RECORDINGS(
-        title = "VOICE RECORDINGS",
-        subtitle = "RECORD, ATTACH, AND MANAGE YOUR OWN VOICE PROMPTS"
-    )
+/**
+ * A module family (a chip in the HELP menu). Its words are string resources named `help_cat_<constant name in lower case>_title`, `_chip` and `_subtitle`, read through
+ * core/HelpMenuText.kt, so adding a constant needs those three strings in every language (HelpMenuTextTest fails otherwise). A name may hold a label placeholder, which `helpText()` fills in (core/PlainLabels.kt).
+ */
+enum class HelpCategory {
+    BASICS_NAVIGATION,
+    BASICS_DECKS,
+    BASICS_SETTINGS,
+    BASICS_PERSONALIZATION,
+    BASICS_MANUAL_OVERRIDE,
+    USING_DECKS,
+    CONTEXTUAL_SYSTEMS,
+    FIELD_OPS,
+    VOICE_RECORDINGS
 }
 
 enum class HelpDestination(

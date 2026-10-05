@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.help
 
+import com.example.besu.R
 import com.example.besu.ui.looseSpacing
 import com.example.besu.ui.helpText
 import com.example.besu.ui.theme.*
@@ -21,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,7 +59,7 @@ fun HelpCoachPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "GUIDANCE // ${stepPosition(manager, module)}",
+                text = stringResource(R.string.help_coach_guidance, stepPosition(manager, module)),
                 color = primaryColor,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -66,7 +68,7 @@ fun HelpCoachPanel(
             )
 
             Text(
-                text = "[ABORT]",
+                text = stringResource(R.string.help_coach_abort),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -112,7 +114,7 @@ fun HelpCoachPanel(
 
         if (step.action == HelpAction.Read) {
             HelpCoachAction(
-                text = "ACKNOWLEDGE // CONTINUE",
+                text = stringResource(R.string.help_coach_acknowledge),
                 color = primaryColor,
                 onClick = {
                     manager.advanceReadStep()
@@ -145,7 +147,7 @@ fun HelpCoachPanel(
 
                 Column {
                     Text(
-                        text = "AWAITING LIVE INPUT",
+                        text = stringResource(R.string.help_coach_awaiting),
                         color = primaryColor,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,
@@ -234,19 +236,17 @@ private fun stepPosition(
     return "${manager.currentStepIndex + 1}/${module.steps.size}"
 }
 
+@Composable
 private fun helpActionInstruction(action: HelpAction): String {
     return when (action) {
-        is HelpAction.Interact -> "USE THE HIGHLIGHTED CONTROL TO PROCEED."
-        is HelpAction.CommitText -> "COMMIT TEXT INPUT TO PROCEED."
-        is HelpAction.CommitFile -> "COMMIT A FILE TO PROCEED."
-        is HelpAction.OverlayCleared -> "CLEAR THE ACTIVE OVERLAY TO PROCEED."
-        is HelpAction.WatchEvent -> "WAITING FOR WATCH EVENT: ${action.eventType}"
-        is HelpAction.DeckSelected -> "SELECT A MATRIX {{DECK:DECK}} TO PROCEED."
-        is HelpAction.ProfileSelected -> "SELECT A PROFILE TO PROCEED."
-        is HelpAction.KeyboardDismissed -> {
-            "TYPE IF NEEDED, THEN CLOSE THE KEYBOARD TO PROCEED."
-        }
-
-        HelpAction.Read -> "READ AND CONTINUE."
+        is HelpAction.Interact -> stringResource(R.string.help_coach_use_control)
+        is HelpAction.CommitText -> stringResource(R.string.help_coach_commit_text)
+        is HelpAction.CommitFile -> stringResource(R.string.help_coach_commit_file)
+        is HelpAction.OverlayCleared -> stringResource(R.string.help_coach_clear_overlay)
+        is HelpAction.WatchEvent -> stringResource(R.string.help_coach_watch_event, action.eventType)
+        is HelpAction.DeckSelected -> stringResource(R.string.help_coach_select_deck)
+        is HelpAction.ProfileSelected -> stringResource(R.string.help_coach_select_profile)
+        is HelpAction.KeyboardDismissed -> stringResource(R.string.help_coach_close_keyboard)
+        HelpAction.Read -> stringResource(R.string.help_coach_read)
     }
 }

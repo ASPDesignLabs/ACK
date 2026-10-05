@@ -141,7 +141,7 @@ class PlainWordsScreensWiringTest {
      * draws it raw, and a person on PLAIN WORDS (or another language) would still see the jargon.
      */
     private val stillLogic: Map<String, Set<String>> = mapOf(
-        "MATRIX" to setOf("MainActivity.kt", "decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
+        "MATRIX" to setOf("MainActivity.kt", "decks/CreateDeckDialog.kt", "data/CommandRepository.kt", "core/HelpMenuText.kt"), // the last one is a view-mode key, mapped to the words that name it
         "QUICK ACTIONS" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
         "EMERGENCY" to setOf("ui/DesignSystem.kt", "decks/CreateDeckDialog.kt", "decks/EmergencyDeck.kt", "data/CommandRepository.kt", "output/OutputService.kt"),
         "EMOJI" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
