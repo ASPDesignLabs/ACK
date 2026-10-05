@@ -63,6 +63,9 @@ Prop the phone up somewhere it will stay. Start recording.
 - [ ] Leave it silent for 25 seconds. → It pauses itself ("NOTHING HEARD FOR 20 SECONDS"); RESUME carries on.
 - [ ] After a clip is kept, tap **NOISE** under "MARK IT IF NEEDED", tap it again. → It lights, then clears.
 - [ ] Tap **END SESSION**. → A box asks first; choose KEEP RECORDING, then try again and choose END SESSION → "SESSION ENDED", with the number kept.
+  Also: **no vibration or sound** when you tap either choice, KEEP RECORDING is on top and the same size as END SESSION, neither label is cut off
+  (try the largest font size in Android's settings too), and tapping outside the box or pressing Back counts as KEEP RECORDING. After KEEP
+  RECORDING, read the next card and listen to it in section G: no buzz in it.
 
 ## E. Things that must NOT happen
 

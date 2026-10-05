@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.besu.AckTags
@@ -94,7 +95,8 @@ private fun Context.findActivity(): Activity? {
 // A recording session, from setup to the finished summary. While it is on screen the phone stays awake and does not rotate (a
 // rotation would rebuild the screen in the middle of a card), and if the app goes to the background the recording pauses itself.
 // There is deliberately no sound and no vibration anywhere in here: the microphone is open, and a buzz or a beep would end up in
-// the next card's audio. The buttons are plain boxes for the same reason (the app's usual buttons give haptic feedback).
+// the next card's audio. The buttons are plain boxes for the same reason (the app's usual buttons give haptic feedback), and that
+// includes the "end this session?" box: the shared ConfirmDialog is built from those buttons, so this screen has its own.
 @Composable
 internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptId: String?, free: Boolean, onDone: () -> Unit) {
     val store = remember { TrainingCapture.store(context) }
@@ -303,7 +305,7 @@ internal fun CaptureSessionScreen(context: Context, primaryColor: Color, scriptI
     }
 
     if (confirmEnd) {
-        ConfirmDialog(
+        CaptureConfirmDialog(
             title = "END THIS SESSION?",
             body = "EVERYTHING YOU HAVE RECORDED STAYS SAVED. THE CARD YOU WERE ABOUT TO READ IS NOT RECORDED. YOU CAN START ANOTHER SESSION AND CARRY ON.",
             confirmLabel = "END SESSION", cancelLabel = "KEEP RECORDING", primaryColor = primaryColor,
@@ -337,6 +339,32 @@ private fun CaptureButton(text: String, modifier: Modifier = Modifier, color: Co
             text.uppercase(), color = c, fontSize = if (compact) 9.sp else 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
             letterSpacing = if (compact) 0.sp else 1.sp, textAlign = TextAlign.Center, maxLines = 1,
         )
+    }
+}
+
+// The "are you sure" box for ending a session, for this screen only. The shared ConfirmDialog (library, editor, session details) is
+// built from TightPanelButton, which buzzes when tapped; here the microphone is open behind the box and KEEP RECORDING leaves the
+// recording running, so that buzz would land in the card being read. Same rules as the shared box: the safe choice comes first and
+// is exactly as big as the risky one, and tapping outside or pressing Back is KEEP RECORDING, never END SESSION. The buttons are
+// stacked, not side by side, so "KEEP RECORDING" is never cut short on a narrow box or with a large font. Text is 12 sp or more, and
+// the box adds no animation of its own (Android's usual dialog fade and the buttons' press ripple are left as they are).
+@Composable
+private fun CaptureConfirmDialog(
+    title: String,
+    body: String,
+    confirmLabel: String,
+    cancelLabel: String,
+    primaryColor: Color,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Dialog(onDismissRequest = onCancel) {
+        Column(modifier = Modifier.fillMaxWidth().background(Graphite).border(1.dp, primaryColor).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(title, color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black)
+            Text(body, color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+            CaptureButton(cancelLabel, Modifier.fillMaxWidth(), color = Color.White, onClick = onCancel)
+            CaptureButton(confirmLabel, Modifier.fillMaxWidth(), color = primaryColor, onClick = onConfirm)
+        }
     }
 }
 

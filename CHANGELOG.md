@@ -28,6 +28,9 @@ All notable changes to ACK are logged here. These same notes are available in-ap
 - **The old, unused setup screen was removed.** It could not be reached from anywhere and still carried an earlier app name.
 - **COPY in the statement composer, and the copy buttons on contact cards, are unchanged and deliberately do not mark the text as sensitive.** What you copy shows in the phone's clipboard preview so you can check it, and stays plain on the clipboard (a keyboard's clipboard history may keep it). ACK does not clear it afterwards.
 
+### Fixed
+- **Tapping KEEP RECORDING or END SESSION while recording training data no longer buzzes the phone.** The END THIS SESSION? box on the recording screen was built from the app's usual buttons, which vibrate when tapped. The microphone is open at that moment, and KEEP RECORDING leaves the recording running, so the buzz could end up in the card being read. The box now has its own buttons with no vibration or sound: KEEP RECORDING on top and END SESSION below it, both full width and the same size (stacked so neither label can be cut short), with text 12 sp or larger and no animation of its own (Android's usual dialog fade and the buttons' press highlight are unchanged). Tapping outside the box, or Back, still means KEEP RECORDING. The confirmation boxes on the other training-data screens (library, script editor, session details) are unchanged, because the microphone is not recording there. A test now fails if a view shown while recording, or its confirmation box, is built from the buzzing buttons. Not yet tried on a phone: `docs/TRAINING_CAPTURE_DEVICE_TEST.md` has the check.
+
 ## [1.0-beta.8] - 2026-10-03
 
 ### Added
