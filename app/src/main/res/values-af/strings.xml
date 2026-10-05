@@ -1202,4 +1202,24 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="deck_trainer_no_group">(geen groep aan %1$s gekoppel nie)</string>
     <string name="deck_trainer_blank">(leë plek)</string>
     <string name="deck_trainer_unmapped">(nie gekarteer nie)</string>
+    <string name="deckmenu_system_default">STELSELSTANDAARD // %1$s</string>
+    <string name="deckmenu_manage">BESTUUR</string>
+    <string name="deckmenu_manage_hint">KIES \'N %1$s OM TE HERNOEM, HERKLEUR OF SKRAP</string>
+    <string name="deckmenu_exit_manage">VERLAAT BESTUUR</string>
+    <string name="deckmenu_locked_title">STELSEL %1$s %2$s GESLUIT</string>
+    <string name="deckmenu_locked_body">DIE PERMANENTE %1$s %2$s KAN NIE GEWYSIG OF GESKRAP WORD NIE.</string>
+    <string name="deckmenu_locked_tag">[GESLUIT]</string>
+    <string name="deckmenu_edit_tag">[WYSIG]</string>
+    <string name="deckmenu_edit_title">WYSIG: %1$s</string>
+    <string name="deckmenu_ui_color">UI-KLEUR</string>
+    <string name="deckmenu_delete_title">BEVESTIG SKRAPPING VAN %1$s</string>
+    <string name="deckmenu_delete_question">MERK %1$s VIR SKRAPPING?</string>
+    <string name="deckmenu_continue">[GAAN VOORT]</string>
+    <string name="deckmenu_cancel">[KANSELLEER]</string>
+    <string name="deckmenu_final_title">FINALE BEVESTIGING</string>
+    <string name="deckmenu_final_question">SKRAP %1$s VIR ALTYD?</string>
+    <string name="deckmenu_final_removes">DIT VERWYDER DIE %1$s EN SY PLAASLIKE KONFIGURASIE.</string>
+    <string name="deckmenu_final_gif">GIF-LÊERS WAT BY HIERDIE %1$s HOU, WORD OOK VERWYDER.</string>
+    <string name="deckmenu_delete_permanently">[SKRAP VIR ALTYD]</string>
+    <string name="manual_close">[MAAK TOE]</string>
 </resources>

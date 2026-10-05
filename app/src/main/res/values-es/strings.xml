@@ -1215,4 +1215,24 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="deck_trainer_no_group">(ningún grupo asignado a %1$s)</string>
     <string name="deck_trainer_blank">(casilla vacía)</string>
     <string name="deck_trainer_unmapped">(sin asignar)</string>
+    <string name="deckmenu_system_default">PREDETERMINADO DEL SISTEMA // %1$s</string>
+    <string name="deckmenu_manage">ADMINISTRAR</string>
+    <string name="deckmenu_manage_hint">%1$s: ELIGE UNO PARA RENOMBRAR, CAMBIAR EL COLOR O ELIMINAR</string>
+    <string name="deckmenu_exit_manage">SALIR DE ADMINISTRAR</string>
+    <string name="deckmenu_locked_title">BLOQUEADO: %2$s %1$s DEL SISTEMA</string>
+    <string name="deckmenu_locked_body">%2$s %1$s PERMANENTE: NO SE PUEDE EDITAR NI ELIMINAR.</string>
+    <string name="deckmenu_locked_tag">[BLOQUEADO]</string>
+    <string name="deckmenu_edit_tag">[EDITAR]</string>
+    <string name="deckmenu_edit_title">EDITAR: %1$s</string>
+    <string name="deckmenu_ui_color">COLOR DE LA INTERFAZ</string>
+    <string name="deckmenu_delete_title">CONFIRMAR ELIMINACIÓN DE %1$s</string>
+    <string name="deckmenu_delete_question">¿MARCAR %1$s PARA SU ELIMINACIÓN?</string>
+    <string name="deckmenu_continue">[CONTINUAR]</string>
+    <string name="deckmenu_cancel">[CANCELAR]</string>
+    <string name="deckmenu_final_title">CONFIRMACIÓN FINAL</string>
+    <string name="deckmenu_final_question">¿ELIMINAR %1$s PARA SIEMPRE?</string>
+    <string name="deckmenu_final_removes">SE ELIMINAN: %1$s Y SU CONFIGURACIÓN LOCAL.</string>
+    <string name="deckmenu_final_gif">TAMBIÉN SE ELIMINARÁN LOS ARCHIVOS GIF DE %1$s.</string>
+    <string name="deckmenu_delete_permanently">[ELIMINAR PARA SIEMPRE]</string>
+    <string name="manual_close">[CERRAR]</string>
 </resources>

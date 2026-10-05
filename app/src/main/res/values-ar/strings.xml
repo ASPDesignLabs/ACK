@@ -1254,4 +1254,24 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="deck_trainer_no_group">(لا توجد مجموعة مرتبطة بـ%1$s)</string>
     <string name="deck_trainer_blank">(خانة فارغة)</string>
     <string name="deck_trainer_unmapped">(غير معيّن)</string>
+    <string name="deckmenu_system_default">افتراضي النظام // %1$s</string>
+    <string name="deckmenu_manage">إدارة</string>
+    <string name="deckmenu_manage_hint">اختر %1$s لإعادة تسميتها أو تغيير لونها أو حذفها</string>
+    <string name="deckmenu_exit_manage">الخروج من الإدارة</string>
+    <string name="deckmenu_locked_title">مقفلة: %2$s %1$s الخاصة بالنظام</string>
+    <string name="deckmenu_locked_body">لا يمكن تعديل %2$s %1$s الدائمة أو حذفها.</string>
+    <string name="deckmenu_locked_tag">[مقفل]</string>
+    <string name="deckmenu_edit_tag">[تعديل]</string>
+    <string name="deckmenu_edit_title">تعديل: %1$s</string>
+    <string name="deckmenu_ui_color">لون الواجهة</string>
+    <string name="deckmenu_delete_title">تأكيد حذف %1$s</string>
+    <string name="deckmenu_delete_question">هل تريد تحديد %1$s للحذف؟</string>
+    <string name="deckmenu_continue">[متابعة]</string>
+    <string name="deckmenu_cancel">[إلغاء]</string>
+    <string name="deckmenu_final_title">التأكيد النهائي</string>
+    <string name="deckmenu_final_question">هل تريد حذف %1$s نهائيًا؟</string>
+    <string name="deckmenu_final_removes">يؤدي هذا إلى إزالة %1$s وإعداداتها المحلية.</string>
+    <string name="deckmenu_final_gif">ستُحذف أيضًا ملفات GIF الخاصة بـ%1$s.</string>
+    <string name="deckmenu_delete_permanently">[حذف نهائي]</string>
+    <string name="manual_close">[إغلاق]</string>
 </resources>

@@ -2,6 +2,7 @@
 package com.example.besu
 
 import androidx.compose.ui.res.stringResource
+import com.example.besu.core.DeckMenuText
 import com.example.besu.core.LabelKey
 import com.example.besu.backup.BackupReminder
 import com.example.besu.core.HelpPlaceholders
@@ -1121,7 +1122,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             ) {
                                 if (!isDeckManageMode) {
                                     DeckItem(
-                                        name = "SYSTEM DEFAULT // MATRIX",
+                                        name = DeckMenuText.systemDefaultRow(rememberText(), deckTypeLabel(DeckType.MATRIX)),
                                         color = NeonPalette.DEFAULT_CYAN,
                                         isActive = currentDeckId == "DEFAULT"
                                     ) {
@@ -1130,13 +1131,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                                     decks.forEach { deck ->
                                         DeckItem(
-                                            name = buildString {
-                                                append(deck.name)
-                                                append(" // ")
-                                                append(
-                                                    deck.type.name.replace('_', ' ')
-                                                )
-                                            },
+                                            name = DeckMenuText.deckRow(deck.name, deckTypeLabel(deck.type)),
                                             color = NeonPalette.getColor(
                                                 deck.colorIndex
                                             ),
@@ -1158,7 +1153,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         )
                                     ) {
                                         DeckMenuAction(
-                                            text = "+ CREATE DECK",
+                                            text = "+ ${labelFor(LabelKey.DECK_CREATE)}",
                                             color = primaryColor,
                                             modifier = Modifier
                                                 .weight(1f)
@@ -1174,7 +1169,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         }
 
                                         DeckMenuAction(
-                                            text = "MANAGE",
+                                            text = stringResource(R.string.deckmenu_manage),
                                             color = Color.White,
                                             modifier = Modifier
                                                 .weight(1f)
@@ -1202,7 +1197,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     Text(
-                                        text = "SELECT A DECK TO RENAME, RECOLOR, OR DELETE",
+                                        text = DeckMenuText.manageHint(rememberText(), labelFor(LabelKey.DECK)),
                                         color = Color.Gray,
                                         fontSize = 9.sp,
                                         fontFamily = FontFamily.Monospace
@@ -1211,7 +1206,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     Spacer(modifier = Modifier.height(10.dp))
 
                                     DeckManageItem(
-                                        name = "SYSTEM DEFAULT // MATRIX",
+                                        name = DeckMenuText.systemDefaultRow(rememberText(), deckTypeLabel(DeckType.MATRIX)),
                                         color = NeonPalette.DEFAULT_CYAN,
                                         selected = managedDeckId == "DEFAULT",
                                         locked = true
@@ -1221,13 +1216,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                                     decks.forEach { deck ->
                                         DeckManageItem(
-                                            name = buildString {
-                                                append(deck.name)
-                                                append(" // ")
-                                                append(
-                                                    deck.type.name.replace('_', ' ')
-                                                )
-                                            },
+                                            name = DeckMenuText.deckRow(deck.name, deckTypeLabel(deck.type)),
                                             color = NeonPalette.getColor(
                                                 deck.colorIndex
                                             ),
@@ -1246,7 +1235,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         Spacer(modifier = Modifier.height(12.dp))
 
                                         Text(
-                                            text = "SYSTEM MATRIX DECK LOCKED",
+                                            text = DeckMenuText.lockedTitle(rememberText(), deckTypeLabel(DeckType.MATRIX), labelFor(LabelKey.DECK)),
                                             color = Color.Gray,
                                             fontSize = 10.sp,
                                             fontFamily = FontFamily.Monospace,
@@ -1256,8 +1245,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         Spacer(modifier = Modifier.height(4.dp))
 
                                         Text(
-                                            text = "THE PERMANENT MATRIX DECK " +
-                                                    "CANNOT BE EDITED OR DELETED.",
+                                            text = DeckMenuText.lockedBody(rememberText(), deckTypeLabel(DeckType.MATRIX), labelFor(LabelKey.DECK)),
                                             color = Color.Gray,
                                             fontSize = 9.sp,
                                             fontFamily = FontFamily.Monospace
@@ -1307,7 +1295,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     Spacer(modifier = Modifier.height(12.dp))
 
                                     DeckMenuAction(
-                                        text = "EXIT MANAGE",
+                                        text = stringResource(R.string.deckmenu_exit_manage),
                                         color = Color.Gray,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
@@ -1392,7 +1380,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     horizontalArrangement = Arrangement.End
                                 ) {
                                     Text(
-                                        text = "[CLOSE]",
+                                        text = stringResource(R.string.manual_close),
                                         color = Color.Gray,
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1759,6 +1747,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
              */
                     if (showDeleteDeckConfirm) {
                         val deck = decks.find { it.id == managedDeckId }
+                        val deckMenuWords = rememberText()
+                        val deckWord = labelFor(LabelKey.DECK)
 
                         if (deck != null) {
                             AlertDialog(
@@ -1768,7 +1758,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 containerColor = Graphite,
                                 title = {
                                     Text(
-                                        text = "CONFIRM DECK DELETION",
+                                        text = DeckMenuText.deleteTitle(deckMenuWords, deckWord),
                                         color = Color.Red,
                                         fontSize = 14.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1777,7 +1767,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 },
                                 text = {
                                     Text(
-                                        text = "MARK ${deck.name} FOR DELETION?",
+                                        text = DeckMenuText.deleteQuestion(deckMenuWords, deck.name),
                                         color = Color.White,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace
@@ -1785,7 +1775,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 },
                                 confirmButton = {
                                     Text(
-                                        text = "[CONTINUE]",
+                                        text = stringResource(R.string.deckmenu_continue),
                                         color = Color.Red,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1800,7 +1790,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 },
                                 dismissButton = {
                                     Text(
-                                        text = "[CANCEL]",
+                                        text = stringResource(R.string.deckmenu_cancel),
                                         color = Color.Gray,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1899,6 +1889,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                     if (showDeleteDeckFinalConfirm) {
                         val deck = decks.find { it.id == managedDeckId }
+                        val deckMenuWords = rememberText()
+                        val deckWord = labelFor(LabelKey.DECK)
 
                         if (deck != null) {
                             AlertDialog(
@@ -1908,7 +1900,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 containerColor = Graphite,
                                 title = {
                                     Text(
-                                        text = "FINAL CONFIRMATION",
+                                        text = stringResource(R.string.deckmenu_final_title),
                                         color = Color.Red,
                                         fontSize = 14.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1916,9 +1908,10 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     )
                                 },
                                 text = {
+                                    val confirmation = DeckMenuText.finalConfirmation(deckMenuWords, deck.name, deckWord, deck.type == DeckType.GIF)
                                     Column {
                                         Text(
-                                            text = "DELETE ${deck.name} PERMANENTLY?",
+                                            text = confirmation.question,
                                             color = Color.White,
                                             fontSize = 12.sp,
                                             fontFamily = FontFamily.Monospace
@@ -1927,19 +1920,17 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         Spacer(modifier = Modifier.height(8.dp))
 
                                         Text(
-                                            text = "THIS REMOVES THE DECK AND ITS " +
-                                                    "LOCAL CONFIGURATION.",
+                                            text = confirmation.removes,
                                             color = Color.Gray,
                                             fontSize = 10.sp,
                                             fontFamily = FontFamily.Monospace
                                         )
 
-                                        if (deck.type == DeckType.GIF) {
+                                        if (confirmation.gifWarning != null) {
                                             Spacer(modifier = Modifier.height(8.dp))
 
                                             Text(
-                                                text = "GIF FILES BELONGING TO THIS " +
-                                                        "DECK WILL ALSO BE REMOVED.",
+                                                text = confirmation.gifWarning,
                                                 color = Color.Red.copy(alpha = 0.8f),
                                                 fontSize = 10.sp,
                                                 fontFamily = FontFamily.Monospace
@@ -1949,7 +1940,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 },
                                 confirmButton = {
                                     Text(
-                                        text = "[DELETE PERMANENTLY]",
+                                        text = stringResource(R.string.deckmenu_delete_permanently),
                                         color = Color.Red,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1988,7 +1979,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 },
                                 dismissButton = {
                                     Text(
-                                        text = "[CANCEL]",
+                                        text = stringResource(R.string.deckmenu_cancel),
                                         color = Color.Gray,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -2137,7 +2128,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
             )
 
             Text(
-                text = if (locked) "[LOCKED]" else "[EDIT]",
+                text = DeckMenuText.rowTag(rememberText(), locked),
                 color = if (locked) Color.Gray else labelColor,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace
@@ -2591,7 +2582,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
                 .padding(10.dp)
         ) {
             Text(
-                text = "EDIT: ${deck.type.name.replace('_', ' ')}",
+                text = DeckMenuText.editTitle(rememberText(), deckTypeLabel(deck.type)),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -2619,7 +2610,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "UI COLOR",
+                text = stringResource(R.string.deckmenu_ui_color),
                 color = Color.Gray,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace
@@ -2667,7 +2658,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 DeckMenuAction(
-                    text = "SAVE",
+                    text = stringResource(R.string.common_save),
                     color = selectedColor,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -2678,7 +2669,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
                 }
 
                 DeckMenuAction(
-                    text = "DELETE",
+                    text = stringResource(R.string.common_delete),
                     color = Color.Red,
                     modifier = Modifier.weight(1f)
                 ) {

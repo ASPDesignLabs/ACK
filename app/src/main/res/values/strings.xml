@@ -1223,4 +1223,24 @@
     <string name="deck_trainer_no_group">(no group bound to %1$s)</string>
     <string name="deck_trainer_blank">(blank slot)</string>
     <string name="deck_trainer_unmapped">(unmapped)</string>
+    <string name="deckmenu_system_default">SYSTEM DEFAULT // %1$s</string>
+    <string name="deckmenu_manage">MANAGE</string>
+    <string name="deckmenu_manage_hint">SELECT A %1$s TO RENAME, RECOLOR, OR DELETE</string>
+    <string name="deckmenu_exit_manage">EXIT MANAGE</string>
+    <string name="deckmenu_locked_title">SYSTEM %1$s %2$s LOCKED</string>
+    <string name="deckmenu_locked_body">THE PERMANENT %1$s %2$s CANNOT BE EDITED OR DELETED.</string>
+    <string name="deckmenu_locked_tag">[LOCKED]</string>
+    <string name="deckmenu_edit_tag">[EDIT]</string>
+    <string name="deckmenu_edit_title">EDIT: %1$s</string>
+    <string name="deckmenu_ui_color">UI COLOR</string>
+    <string name="deckmenu_delete_title">CONFIRM %1$s DELETION</string>
+    <string name="deckmenu_delete_question">MARK %1$s FOR DELETION?</string>
+    <string name="deckmenu_continue">[CONTINUE]</string>
+    <string name="deckmenu_cancel">[CANCEL]</string>
+    <string name="deckmenu_final_title">FINAL CONFIRMATION</string>
+    <string name="deckmenu_final_question">DELETE %1$s PERMANENTLY?</string>
+    <string name="deckmenu_final_removes">THIS REMOVES THE %1$s AND ITS LOCAL CONFIGURATION.</string>
+    <string name="deckmenu_final_gif">GIF FILES BELONGING TO THIS %1$s WILL ALSO BE REMOVED.</string>
+    <string name="deckmenu_delete_permanently">[DELETE PERMANENTLY]</string>
+    <string name="manual_close">[CLOSE]</string>
 </resources>

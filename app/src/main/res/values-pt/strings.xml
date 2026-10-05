@@ -1215,4 +1215,24 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="deck_trainer_no_group">(nenhum grupo vinculado a %1$s)</string>
     <string name="deck_trainer_blank">(vaga vazia)</string>
     <string name="deck_trainer_unmapped">(não mapeado)</string>
+    <string name="deckmenu_system_default">PADRÃO DO SISTEMA // %1$s</string>
+    <string name="deckmenu_manage">GERENCIAR</string>
+    <string name="deckmenu_manage_hint">%1$s: ESCOLHA UM PARA RENOMEAR, MUDAR A COR OU EXCLUIR</string>
+    <string name="deckmenu_exit_manage">SAIR DE GERENCIAR</string>
+    <string name="deckmenu_locked_title">BLOQUEADO: %2$s %1$s DO SISTEMA</string>
+    <string name="deckmenu_locked_body">%2$s %1$s PERMANENTE: NÃO É POSSÍVEL EDITAR NEM EXCLUIR.</string>
+    <string name="deckmenu_locked_tag">[BLOQUEADO]</string>
+    <string name="deckmenu_edit_tag">[EDITAR]</string>
+    <string name="deckmenu_edit_title">EDITAR: %1$s</string>
+    <string name="deckmenu_ui_color">COR DA INTERFACE</string>
+    <string name="deckmenu_delete_title">CONFIRMAR EXCLUSÃO DE %1$s</string>
+    <string name="deckmenu_delete_question">MARCAR %1$s PARA EXCLUSÃO?</string>
+    <string name="deckmenu_continue">[CONTINUAR]</string>
+    <string name="deckmenu_cancel">[CANCELAR]</string>
+    <string name="deckmenu_final_title">CONFIRMAÇÃO FINAL</string>
+    <string name="deckmenu_final_question">EXCLUIR %1$s PERMANENTEMENTE?</string>
+    <string name="deckmenu_final_removes">ISTO REMOVE: %1$s E SUA CONFIGURAÇÃO LOCAL.</string>
+    <string name="deckmenu_final_gif">OS ARQUIVOS GIF DE %1$s TAMBÉM SERÃO REMOVIDOS.</string>
+    <string name="deckmenu_delete_permanently">[EXCLUIR PERMANENTEMENTE]</string>
+    <string name="manual_close">[FECHAR]</string>
 </resources>

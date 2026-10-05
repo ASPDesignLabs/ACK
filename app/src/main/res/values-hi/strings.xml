@@ -1202,4 +1202,24 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="deck_trainer_no_group">(%1$s से कोई समूह जुड़ा नहीं है)</string>
     <string name="deck_trainer_blank">(खाली स्लॉट)</string>
     <string name="deck_trainer_unmapped">(मैप नहीं किया गया)</string>
+    <string name="deckmenu_system_default">सिस्टम डिफ़ॉल्ट // %1$s</string>
+    <string name="deckmenu_manage">प्रबंधित करें</string>
+    <string name="deckmenu_manage_hint">नाम बदलने, रंग बदलने या हटाने के लिए कोई %1$s चुनें</string>
+    <string name="deckmenu_exit_manage">प्रबंधन से बाहर निकलें</string>
+    <string name="deckmenu_locked_title">सिस्टम %1$s %2$s लॉक है</string>
+    <string name="deckmenu_locked_body">स्थायी %1$s %2$s को बदला या हटाया नहीं जा सकता।</string>
+    <string name="deckmenu_locked_tag">[लॉक है]</string>
+    <string name="deckmenu_edit_tag">[बदलें]</string>
+    <string name="deckmenu_edit_title">बदलें: %1$s</string>
+    <string name="deckmenu_ui_color">यूआई का रंग</string>
+    <string name="deckmenu_delete_title">%1$s हटाने की पुष्टि करें</string>
+    <string name="deckmenu_delete_question">%1$s को हटाने के लिए चिह्नित करें?</string>
+    <string name="deckmenu_continue">[जारी रखें]</string>
+    <string name="deckmenu_cancel">[रद्द करें]</string>
+    <string name="deckmenu_final_title">अंतिम पुष्टि</string>
+    <string name="deckmenu_final_question">%1$s को हमेशा के लिए हटाएँ?</string>
+    <string name="deckmenu_final_removes">यह %1$s और उसकी स्थानीय कॉन्फ़िगरेशन को हटा देता है।</string>
+    <string name="deckmenu_final_gif">इस %1$s की GIF फ़ाइलें भी हटा दी जाएँगी।</string>
+    <string name="deckmenu_delete_permanently">[हमेशा के लिए हटाएँ]</string>
+    <string name="manual_close">[बंद करें]</string>
 </resources>
