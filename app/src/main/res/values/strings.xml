@@ -1029,4 +1029,27 @@
         <item quantity="one">IMPORTED %1$d GIF, %2$d SKIPPED -- RESTARTING</item>
         <item quantity="other">IMPORTED %1$d GIFS, %2$d SKIPPED -- RESTARTING</item>
     </plurals>
+    <string name="manual_placeholder">ENTER SEQUENCE...</string>
+    <string name="manual_encode">ENCODE</string>
+    <string name="manual_transmit">TRANSMIT</string>
+    <string name="manual_hide_browser">[HIDE TARGET BROWSER]</string>
+    <string name="manual_cache_recent">CACHE [RECENT]</string>
+    <string name="manual_banks_empty">NO SAVED PHRASES YET. %1$s ONE FROM THE TEXT FIELD ABOVE.</string>
+    <string name="manual_encode_to_bank">ENCODE TO BANK</string>
+    <string name="manual_assign_tag">ASSIGN A TAG</string>
+    <string name="manual_new_tag">NEW TAG</string>
+    <string name="manual_confirm_delete">CONFIRM DELETE</string>
+    <string name="manual_delete_question">Permanently remove the saved phrase \"%1$s\"?</string>
+    <string name="manual_delete_warning">This cannot be undone -- consider exporting a backup first.</string>
+    <string name="manual_delete_permanently">DELETE PERMANENTLY</string>
+    <string name="manual_replay">REPLAY</string>
+    <string name="manual_guide_header">// TACTICAL GUIDE: %1$s</string>
+    <string name="manual_guide_identity_title">%1$s: ARM RAISED UP</string>
+    <string name="manual_guide_identity_body">Use for: Status reporting.</string>
+    <string name="manual_guide_defend_title">%1$s: ARM FLAT / PALM DOWN</string>
+    <string name="manual_guide_defend_body">Use for: Boundaries, stops.</string>
+    <string name="manual_guide_connect_title">%1$s: HANDSHAKE / SIDEWAYS</string>
+    <string name="manual_guide_connect_body">Use for: Social protocols.</string>
+    <string name="manual_guide_unknown_title">UNKNOWN</string>
+    <string name="manual_guide_unknown_body">No data available.</string>
 </resources>

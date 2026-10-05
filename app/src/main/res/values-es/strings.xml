@@ -1020,4 +1020,27 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
         <item quantity="many">IMPORTADOS %1$d GIF, OMITIDOS: %2$d -- REINICIANDO</item>
         <item quantity="other">IMPORTADOS %1$d GIF, OMITIDOS: %2$d -- REINICIANDO</item>
     </plurals>
+    <string name="manual_placeholder">ESCRIBE UNA SECUENCIA...</string>
+    <string name="manual_encode">CODIFICAR</string>
+    <string name="manual_transmit">TRANSMITIR</string>
+    <string name="manual_hide_browser">[OCULTAR EXPLORADOR DE OBJETIVOS]</string>
+    <string name="manual_cache_recent">CACHÉ [RECIENTES]</string>
+    <string name="manual_banks_empty">AÚN NO HAY FRASES GUARDADAS. USA %1$s CON EL TEXTO DEL CAMPO DE ARRIBA.</string>
+    <string name="manual_encode_to_bank">CODIFICAR EN EL BANCO</string>
+    <string name="manual_assign_tag">ASIGNA UNA ETIQUETA</string>
+    <string name="manual_new_tag">NUEVA ETIQUETA</string>
+    <string name="manual_confirm_delete">CONFIRMAR ELIMINACIÓN</string>
+    <string name="manual_delete_question">¿Eliminar para siempre la frase guardada \"%1$s\"?</string>
+    <string name="manual_delete_warning">Esto no se puede deshacer -- considera exportar antes una copia de seguridad.</string>
+    <string name="manual_delete_permanently">ELIMINAR PARA SIEMPRE</string>
+    <string name="manual_replay">REPETIR</string>
+    <string name="manual_guide_header">// GUÍA TÁCTICA: %1$s</string>
+    <string name="manual_guide_identity_title">%1$s: BRAZO LEVANTADO</string>
+    <string name="manual_guide_identity_body">Úsalo para: informar del estado.</string>
+    <string name="manual_guide_defend_title">%1$s: BRAZO PLANO / PALMA HACIA ABAJO</string>
+    <string name="manual_guide_defend_body">Úsalo para: límites y pausas.</string>
+    <string name="manual_guide_connect_title">%1$s: APRETÓN DE MANOS / DE LADO</string>
+    <string name="manual_guide_connect_body">Úsalo para: protocolos sociales.</string>
+    <string name="manual_guide_unknown_title">DESCONOCIDO</string>
+    <string name="manual_guide_unknown_body">No hay datos disponibles.</string>
 </resources>

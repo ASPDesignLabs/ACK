@@ -1008,4 +1008,27 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
         <item quantity="one">%1$d जीआईएफ आयात हुआ, छोड़े गए: %2$d -- फिर से शुरू हो रहा है</item>
         <item quantity="other">%1$d जीआईएफ आयात हुए, छोड़े गए: %2$d -- फिर से शुरू हो रहा है</item>
     </plurals>
+    <string name="manual_placeholder">क्रम लिखें...</string>
+    <string name="manual_encode">एन्कोड</string>
+    <string name="manual_transmit">प्रसारित करें</string>
+    <string name="manual_hide_browser">[लक्ष्य ब्राउज़र छिपाएँ]</string>
+    <string name="manual_cache_recent">कैश [हाल के]</string>
+    <string name="manual_banks_empty">अभी कोई सहेजा हुआ वाक्य नहीं है। ऊपर के फ़ील्ड के पाठ पर %1$s इस्तेमाल करें।</string>
+    <string name="manual_encode_to_bank">बैंक में एन्कोड करें</string>
+    <string name="manual_assign_tag">एक टैग चुनें</string>
+    <string name="manual_new_tag">नया टैग</string>
+    <string name="manual_confirm_delete">हटाने की पुष्टि करें</string>
+    <string name="manual_delete_question">सहेजा हुआ वाक्य \"%1$s\" हमेशा के लिए हटाएँ?</string>
+    <string name="manual_delete_warning">इसे वापस नहीं किया जा सकता -- पहले बैकअप निर्यात करने पर विचार करें।</string>
+    <string name="manual_delete_permanently">हमेशा के लिए हटाएँ</string>
+    <string name="manual_replay">दोहराएँ</string>
+    <string name="manual_guide_header">// रणनीतिक गाइड: %1$s</string>
+    <string name="manual_guide_identity_title">%1$s: हाथ ऊपर उठा हुआ</string>
+    <string name="manual_guide_identity_body">इसका उपयोग: स्थिति बताने के लिए।</string>
+    <string name="manual_guide_defend_title">%1$s: हाथ सीधा / हथेली नीचे</string>
+    <string name="manual_guide_defend_body">इसका उपयोग: सीमाएँ और रुकना।</string>
+    <string name="manual_guide_connect_title">%1$s: हाथ मिलाना / बग़ल की ओर</string>
+    <string name="manual_guide_connect_body">इसका उपयोग: सामाजिक प्रोटोकॉल।</string>
+    <string name="manual_guide_unknown_title">अज्ञात</string>
+    <string name="manual_guide_unknown_body">कोई डेटा उपलब्ध नहीं है।</string>
 </resources>

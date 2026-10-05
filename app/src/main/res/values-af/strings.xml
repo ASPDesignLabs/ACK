@@ -1008,4 +1008,27 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
         <item quantity="one">%1$d GIF INGEVOER, OORGESLAAN: %2$d -- HERBEGIN</item>
         <item quantity="other">%1$d GIFS INGEVOER, OORGESLAAN: %2$d -- HERBEGIN</item>
     </plurals>
+    <string name="manual_placeholder">TIK \'N REEKS IN...</string>
+    <string name="manual_encode">KODEER</string>
+    <string name="manual_transmit">SEND UIT</string>
+    <string name="manual_hide_browser">[VERSTEEK TEIKENBLAAIER]</string>
+    <string name="manual_cache_recent">KASGEHEUE [ONLANGS]</string>
+    <string name="manual_banks_empty">NOG GEEN GESTOORDE FRASES NIE. GEBRUIK %1$s MET DIE TEKS IN DIE VELD HIERBO.</string>
+    <string name="manual_encode_to_bank">KODEER IN BANK</string>
+    <string name="manual_assign_tag">KIES \'N ETIKET</string>
+    <string name="manual_new_tag">NUWE ETIKET</string>
+    <string name="manual_confirm_delete">BEVESTIG SKRAPPING</string>
+    <string name="manual_delete_question">Verwyder die gestoorde frase \"%1$s\" vir altyd?</string>
+    <string name="manual_delete_warning">Dit kan nie ongedaan gemaak word nie -- oorweeg dit om eers \'n rugsteun uit te voer.</string>
+    <string name="manual_delete_permanently">SKRAP VIR ALTYD</string>
+    <string name="manual_replay">HERSPEEL</string>
+    <string name="manual_guide_header">// TAKTIESE GIDS: %1$s</string>
+    <string name="manual_guide_identity_title">%1$s: ARM OMHOOG</string>
+    <string name="manual_guide_identity_body">Gebruik vir: statusverslagdoening.</string>
+    <string name="manual_guide_defend_title">%1$s: ARM PLAT / PALM AFWAARTS</string>
+    <string name="manual_guide_defend_body">Gebruik vir: grense en stop.</string>
+    <string name="manual_guide_connect_title">%1$s: HANDDRUK / SYWAARTS</string>
+    <string name="manual_guide_connect_body">Gebruik vir: sosiale protokolle.</string>
+    <string name="manual_guide_unknown_title">ONBEKEND</string>
+    <string name="manual_guide_unknown_body">Geen data beskikbaar nie.</string>
 </resources>

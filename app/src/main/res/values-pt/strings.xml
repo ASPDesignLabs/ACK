@@ -1020,4 +1020,27 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
         <item quantity="many">IMPORTADOS %1$d GIFS, IGNORADOS: %2$d -- REINICIANDO</item>
         <item quantity="other">IMPORTADOS %1$d GIFS, IGNORADOS: %2$d -- REINICIANDO</item>
     </plurals>
+    <string name="manual_placeholder">DIGITE UMA SEQUÊNCIA...</string>
+    <string name="manual_encode">CODIFICAR</string>
+    <string name="manual_transmit">TRANSMITIR</string>
+    <string name="manual_hide_browser">[OCULTAR EXPLORADOR DE ALVOS]</string>
+    <string name="manual_cache_recent">CACHE [RECENTES]</string>
+    <string name="manual_banks_empty">AINDA NÃO HÁ FRASES SALVAS. USE %1$s COM O TEXTO DO CAMPO ACIMA.</string>
+    <string name="manual_encode_to_bank">CODIFICAR NO BANCO</string>
+    <string name="manual_assign_tag">ATRIBUA UMA ETIQUETA</string>
+    <string name="manual_new_tag">NOVA ETIQUETA</string>
+    <string name="manual_confirm_delete">CONFIRMAR EXCLUSÃO</string>
+    <string name="manual_delete_question">Excluir permanentemente a frase salva \"%1$s\"?</string>
+    <string name="manual_delete_warning">Isto não pode ser desfeito -- considere exportar antes uma cópia de segurança.</string>
+    <string name="manual_delete_permanently">EXCLUIR PERMANENTEMENTE</string>
+    <string name="manual_replay">REPETIR</string>
+    <string name="manual_guide_header">// GUIA TÁTICO: %1$s</string>
+    <string name="manual_guide_identity_title">%1$s: BRAÇO LEVANTADO</string>
+    <string name="manual_guide_identity_body">Use para: relatar o estado.</string>
+    <string name="manual_guide_defend_title">%1$s: BRAÇO RETO / PALMA PARA BAIXO</string>
+    <string name="manual_guide_defend_body">Use para: limites e paradas.</string>
+    <string name="manual_guide_connect_title">%1$s: APERTO DE MÃO / DE LADO</string>
+    <string name="manual_guide_connect_body">Use para: protocolos sociais.</string>
+    <string name="manual_guide_unknown_title">DESCONHECIDO</string>
+    <string name="manual_guide_unknown_body">Não há dados disponíveis.</string>
 </resources>

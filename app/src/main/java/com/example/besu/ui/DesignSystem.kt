@@ -4,6 +4,7 @@ package com.example.besu.ui
 import androidx.compose.ui.res.stringResource
 import com.example.besu.R
 import com.example.besu.core.LabelKey
+import com.example.besu.core.ManualOverrideText
 import com.example.besu.core.SendFlags
 import com.example.besu.core.SendSwitchPolicy
 import com.example.besu.*
@@ -1694,6 +1695,7 @@ fun TypeView(
     onInsertAtCursor: (categoryId: String, label: String) -> Unit
 ) {
     val primaryColor = NeonPalette.getColor(CommandRepository.getActiveColorIndex(context))
+    val words = rememberText()
 
     var refreshKey by remember { mutableIntStateOf(0) }
     var savedPhrases by remember(refreshKey) { mutableStateOf(CommandRepository.getQuickPhrases(context)) }
@@ -1752,7 +1754,7 @@ fun TypeView(
                 cursorColor = primaryColor
             ),
             textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 16.sp),
-            placeholder = { Text("ENTER SEQUENCE...", color = Color.Gray, fontFamily = FontFamily.Monospace) },
+            placeholder = { Text(stringResource(R.string.manual_placeholder), color = Color.Gray, fontFamily = FontFamily.Monospace) },
             maxLines = 3
         )
 
@@ -1760,10 +1762,10 @@ fun TypeView(
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             // Encode button relies on isActive for dimming, but logic check inside lambda protects it
-            NeonButton("ENCODE", Modifier.weight(0.4f), isActive = textFieldValue.text.isNotBlank(), mainColor = primaryColor) {
+            NeonButton(stringResource(R.string.manual_encode), Modifier.weight(0.4f), isActive = textFieldValue.text.isNotBlank(), mainColor = primaryColor) {
                 if (textFieldValue.text.isNotBlank()) showSaveDialog = true
             }
-            HeroButton("TRANSMIT", Modifier.weight(0.6f), mainColor = primaryColor) {
+            HeroButton(stringResource(R.string.manual_transmit), Modifier.weight(0.6f), mainColor = primaryColor) {
                 speak(textFieldValue.text, "TERM/INPUT")
             }
         }
@@ -1781,7 +1783,7 @@ fun TypeView(
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
-                text = if (showBrowsePanel) "[HIDE TARGET BROWSER]" else "[${labelFor(LabelKey.BROWSE_TARGETS)}]",
+                text = if (showBrowsePanel) stringResource(R.string.manual_hide_browser) else "[${labelFor(LabelKey.BROWSE_TARGETS)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -1826,7 +1828,7 @@ fun TypeView(
         // behind its own popup -- previously a single saved phrase would
         // permanently hide recents from this screen.
         if (recentPhrases.isNotEmpty()) {
-            Text("CACHE [RECENT]", color = primaryColor.copy(alpha=0.7f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
+            Text(stringResource(R.string.manual_cache_recent), color = primaryColor.copy(alpha=0.7f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
             Spacer(modifier = Modifier.height(8.dp))
             // Bounded height, not weight(1f) -- the outer Column now scrolls
             // (see below), and weight() only makes sense against a parent
@@ -1845,12 +1847,11 @@ fun TypeView(
         TightDialogSurface(
             onDismiss = { showMemoryBanks = false },
             primaryColor = primaryColor,
-            title = labelFor(LabelKey.MEMORY_BANKS),
-            dismissLabel = "CLOSE"
+            title = labelFor(LabelKey.MEMORY_BANKS)
         ) {
             if (savedPhrases.isEmpty()) {
                 Text(
-                    text = "NO SAVED PHRASES YET. ENCODE ONE FROM THE TEXT FIELD ABOVE.",
+                    text = ManualOverrideText.emptyBanks(words, stringResource(R.string.manual_encode)),
                     color = Color.DarkGray,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
@@ -1872,9 +1873,9 @@ fun TypeView(
         TightDialogSurface(
             onDismiss = { showSaveDialog = false },
             primaryColor = primaryColor,
-            title = "ENCODE TO BANK"
+            title = stringResource(R.string.manual_encode_to_bank)
         ) {
-                TightSectionLabel("ASSIGN A TAG")
+                TightSectionLabel(stringResource(R.string.manual_assign_tag))
                 Spacer(modifier = Modifier.height(12.dp))
                 if (existingTags.isNotEmpty()) {
                     Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -1888,7 +1889,7 @@ fun TypeView(
                 }
                 OutlinedTextField(
                     value = newTagInput, onValueChange = { newTagInput = it.uppercase() },
-                    placeholder = { Text("NEW TAG") },
+                    placeholder = { Text(stringResource(R.string.manual_new_tag)) },
                     shape = AckHelpShape,
                     colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor)
                 )
@@ -1899,7 +1900,7 @@ fun TypeView(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TightPanelButton("SAVE", modifier = Modifier.weight(1f), mainColor = primaryColor) {
+                    TightPanelButton(stringResource(R.string.common_save), modifier = Modifier.weight(1f), mainColor = primaryColor) {
                         if (newTagInput.isNotEmpty()) {
                             CommandRepository.saveQuickPhrase(context, textFieldValue.text, newTagInput)
                             refreshKey++
@@ -1907,7 +1908,7 @@ fun TypeView(
                             newTagInput = ""
                         }
                     }
-                    TightPanelButton("CANCEL", modifier = Modifier.weight(1f), isActive = false, mainColor = primaryColor) { showSaveDialog = false }
+                    TightPanelButton(stringResource(R.string.common_cancel), modifier = Modifier.weight(1f), isActive = false, mainColor = primaryColor) { showSaveDialog = false }
                 }
         }
     }
@@ -1968,13 +1969,11 @@ fun QuickAccessAccordion(
         TightDialogSurface(
             onDismiss = { deletingPhrase = null },
             primaryColor = RadicalRed,
-            title = "CONFIRM DELETE",
-            dismissLabel = "ABORT"
+            title = stringResource(R.string.manual_confirm_delete),
+            dismissLabel = stringResource(R.string.common_abort)
         ) {
             Text(
-                text = "Permanently remove the saved phrase " +
-                        "\"${deleting.text}\"? This cannot be undone -- " +
-                        "consider exporting a backup first.",
+                text = ManualOverrideText.deleteQuestion(rememberText(), deleting.text),
                 color = Color.White,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -1984,7 +1983,7 @@ fun QuickAccessAccordion(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TightPanelButton(
-                    text = "DELETE PERMANENTLY",
+                    text = stringResource(R.string.manual_delete_permanently),
                     modifier = Modifier.fillMaxWidth(),
                     mainColor = RadicalRed
                 ) {
@@ -1993,7 +1992,7 @@ fun QuickAccessAccordion(
                 }
 
                 TightPanelButton(
-                    text = "CANCEL",
+                    text = stringResource(R.string.common_cancel),
                     modifier = Modifier.fillMaxWidth(),
                     isActive = false,
                     mainColor = primaryColor
@@ -2013,7 +2012,7 @@ fun RecentHistoryItem(phrase: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = if (phrase.length > 25) phrase.take(22) + "..." else phrase, color = Color.Gray, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-        Text("REPLAY", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Text(stringResource(R.string.manual_replay), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
     }
 }
 
@@ -2443,7 +2442,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             ) {
                                 computerCategories.forEach { computerCategory ->
                                     TightPanelButton(
-                                        text = "+ ${computerCategory.label}",
+                                        text = "+ ${categoryName(computerCategory)}",
                                         mainColor = primaryColor
                                     ) {
                                         insertTokenAtCursor("[COMPUTER:${computerCategory.id}]")
@@ -3318,7 +3317,7 @@ fun MatrixCategory(
                     val computerFallbacks = CommandRepository.getComputerFallbackValues(context, node.path)
 
                     val computerTagChips = computerTagsInOrder.mapIndexed { index, categoryId ->
-                        val categoryLabel = computerCategories.find { it.id == categoryId }?.label ?: categoryId
+                        val categoryLabel = computerCategories.find { it.id == categoryId }?.let { categoryName(it) } ?: categoryId
                         val activeValue = ComputerRepository.resolveTag(context, categoryId)
                         val displayValue = activeValue
                             .ifBlank { computerFallbacks.getOrNull(index).orEmpty() }
@@ -4069,14 +4068,10 @@ fun MatrixNodeItem(
 
 @Composable
 fun BuilderGuideCard(category: String, primaryColor: Color) {
-    val (title, body) = when(category) {
-        "IDENTITY" -> "POSE: ARM RAISED UP" to "Use for: Status reporting."
-        "DEFEND" -> "POSE: ARM FLAT / PALM DOWN" to "Use for: Boundaries, stops."
-        "CONNECT" -> "POSE: HANDSHAKE / SIDEWAYS" to "Use for: Social protocols."
-        else -> "UNKNOWN" to "No data available."
-    }
+    val words = rememberText()
+    val (title, body) = ManualOverrideText.guide(words, labelFor(LabelKey.POSE), category)
     Column(modifier = Modifier.fillMaxWidth().border(1.dp, primaryColor, CutCornerShape(8.dp)).background(primaryColor.copy(alpha = 0.05f)).padding(12.dp)) {
-        Text("// TACTICAL GUIDE: $title", color = primaryColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(1.sp))
+        Text(ManualOverrideText.guideHeader(words, title), color = primaryColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(1.sp))
         Spacer(modifier = Modifier.height(4.dp))
         Text(body, color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
     }

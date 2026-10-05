@@ -1056,4 +1056,27 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
         <item quantity="many">تم استيراد %1$d ملف جيف، المتخطى: %2$d -- جار إعادة التشغيل</item>
         <item quantity="other">تم استيراد %1$d ملف جيف، المتخطى: %2$d -- جار إعادة التشغيل</item>
     </plurals>
+    <string name="manual_placeholder">اكتب تسلسلا...</string>
+    <string name="manual_encode">ترميز</string>
+    <string name="manual_transmit">إرسال</string>
+    <string name="manual_hide_browser">[إخفاء متصفح الأهداف]</string>
+    <string name="manual_cache_recent">ذاكرة مؤقتة [الأحدث]</string>
+    <string name="manual_banks_empty">لا توجد عبارات محفوظة بعد. استخدم %1$s مع النص في الحقل أعلاه.</string>
+    <string name="manual_encode_to_bank">ترميز إلى البنك</string>
+    <string name="manual_assign_tag">عيّن وسما</string>
+    <string name="manual_new_tag">وسم جديد</string>
+    <string name="manual_confirm_delete">تأكيد الحذف</string>
+    <string name="manual_delete_question">هل تريد حذف العبارة المحفوظة \"%1$s\" نهائيا؟</string>
+    <string name="manual_delete_warning">لا يمكن التراجع عن هذا -- فكّر في تصدير نسخة احتياطية أولا.</string>
+    <string name="manual_delete_permanently">حذف نهائي</string>
+    <string name="manual_replay">إعادة</string>
+    <string name="manual_guide_header">// دليل تكتيكي: %1$s</string>
+    <string name="manual_guide_identity_title">%1$s: الذراع مرفوعة للأعلى</string>
+    <string name="manual_guide_identity_body">للاستخدام في: الإبلاغ عن الحالة.</string>
+    <string name="manual_guide_defend_title">%1$s: الذراع مستقيمة / الكف للأسفل</string>
+    <string name="manual_guide_defend_body">للاستخدام في: الحدود والإيقاف.</string>
+    <string name="manual_guide_connect_title">%1$s: مصافحة / جانبا</string>
+    <string name="manual_guide_connect_body">للاستخدام في: البروتوكولات الاجتماعية.</string>
+    <string name="manual_guide_unknown_title">غير معروف</string>
+    <string name="manual_guide_unknown_body">لا توجد بيانات متاحة.</string>
 </resources>
