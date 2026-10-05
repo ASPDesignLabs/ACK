@@ -184,6 +184,16 @@ class GeoTextTest {
     }
 
     @Test
+    fun aSavedNameKeepsItsSpacesAndItsCase_inTheNotification_inEveryLanguage() {
+        val spaced = "  Home Deck  "
+        for ((tag, f) in everyone) {
+            assertTrue("$tag: the deck's name keeps its spaces inside the brackets", GeoText.notificationText(f, spaced).contains("[$spaced]"))
+            assertTrue("$tag: the zone's name keeps its spaces at the end of the title", GeoText.notificationTitle(f, spaced).endsWith(spaced))
+            assertEquals("$tag: a deleted deck is not given the saved name", "Home Deck", GeoText.notificationDeckName(f, "d-1", "Home Deck"))
+        }
+    }
+
+    @Test
     fun theTwoEngineNamesAreNamesHandedInAsArguments_inEveryLanguage() {
         for ((tag, f) in everyone) {
             val text = GeoText.privacyNotice(f, "AAA", "BBB")

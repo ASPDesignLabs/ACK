@@ -154,4 +154,64 @@ class GeoWordingTest {
         assertTrue(r.contains("NotificationCompat.PRIORITY_HIGH") && r.contains("NotificationManager.IMPORTANCE_HIGH"))
         assertTrue(r.contains("val notifId = zone.id.hashCode()"))
     }
+
+    @Test
+    fun eachMapDialogIsWiredToItsOwnTitleBodyAndButton_andTheFailureShowsItsReason() {
+        val v = view
+        assertTrue(
+            "import: its own title, body and IMPORT button, then the import",
+            Regex(
+                """title = GeoText\.mapActionTitle\(words, GeoText\.importAction\(userMapFile != null\)\),\s*""" +
+                    """body = GeoText\.mapActionBody\(words, GeoText\.importAction\(userMapFile != null\)\),\s*""" +
+                    """confirmLabel = stringResource\(R\.string\.geo_import\),\s*""" +
+                    """onDismiss = \{ pendingMapImportUri = null \},\s*onConfirm = \{\s*val result = GeoRepository\.importUserMapFile"""
+            ).containsMatchIn(v)
+        )
+        assertTrue(
+            "remove: its own title, body and REMOVE button, then the removal",
+            Regex(
+                """title = GeoText\.mapActionTitle\(words, GeoText\.MapAction\.REMOVE\),\s*""" +
+                    """body = GeoText\.mapActionBody\(words, GeoText\.MapAction\.REMOVE\),\s*""" +
+                    """confirmLabel = stringResource\(R\.string\.geo_remove\),\s*""" +
+                    """onDismiss = \{ showMapRemoveConfirm = false \},\s*onConfirm = \{\s*GeoRepository\.clearUserMapFile"""
+            ).containsMatchIn(v)
+        )
+        assertTrue(
+            "the reason an import failed is drawn under the status, only when there is one",
+            Regex("""if \(mapImportError != null\) \{[\s\S]{0,200}?Text\(GeoText\.importFailed\(words, mapImportError\), color = Color\.Red""").containsMatchIn(v)
+        )
+    }
+
+    @Test
+    fun eachZoneCardColumnShowsItsOwnLabelAndItsOwnChoices_andTheRadiusIsTheZonesRadius() {
+        val v = view
+        assertTrue("one enter list and one exit list, each from its own function",
+            v.contains("val enterOptions = GeoText.enterOptions(words, availableDecks.map { it.id to it.name })") &&
+                v.contains("val exitOptions = GeoText.exitOptions(words, availableDecks.map { it.id to it.name })"))
+        assertTrue(
+            "ENTER column: its heading, then the word for the saved enter id, and a menu of the enter choices that saves the enter id",
+            Regex(
+                """enterExpanded = true \}\) \{ Text\(GeoText\.enterDeckLabel\(words, labelFor\(LabelKey\.DECK\)\)[^;]*;\s*Text\(enterLabel,""" +
+                    """[\s\S]{0,400}?DropdownMenu\(expanded = enterExpanded[\s\S]{0,200}?enterOptions\.forEach[\s\S]{0,300}?onUpdate\(zone\.copy\(enterDeckId = id\)\)"""
+            ).containsMatchIn(v)
+        )
+        assertTrue(
+            "EXIT column: its heading, then the word for the saved exit id, and a menu of the exit choices that saves the exit id",
+            Regex(
+                """exitExpanded = true \}\) \{ Text\(GeoText\.exitDeckLabel\(words, labelFor\(LabelKey\.DECK\)\)[^;]*;\s*Text\(exitLabel,""" +
+                    """[\s\S]{0,400}?DropdownMenu\(expanded = exitExpanded[\s\S]{0,200}?exitOptions\.forEach[\s\S]{0,300}?onUpdate\(zone\.copy\(exitDeckId = id\)\)"""
+            ).containsMatchIn(v)
+        )
+        assertTrue("the card shows the zone's own radius, as the slider sets it", v.contains("Text(GeoText.radius(words, zone.radiusMeters.toInt()), "))
+        assertTrue("the engine chips are in the enum's order", v.contains("GeoEngineMode.entries.forEachIndexed { index, mode ->"))
+        assertFalse("nothing reverses or re-sorts the chips", v.contains("GeoEngineMode.entries.reversed") || v.contains("GeoEngineMode.entries.sorted"))
+    }
+
+    @Test
+    fun theLogLineSaysEnteringWhenEnteringAndExitingWhenExiting() {
+        val r = receiver
+        assertTrue(r.contains("val actionText = if (isEntering) \"Entering\" else \"Exiting\""))
+        assertTrue(r.contains("broadcastLog(context, \"\$actionText \${zone.name}. Awaiting User Ack.\", \"GEO\")"))
+        assertTrue("the deck a transition names is the one for entering or for exiting", r.contains("val targetDeckId = if (isEntering) zone.enterDeckId else zone.exitDeckId"))
+    }
 }
