@@ -3,6 +3,9 @@ package com.example.besu.decks
 
 import android.content.Context
 import android.net.Uri
+import com.example.besu.core.GifImportException
+import com.example.besu.core.GifImportFailure
+import com.example.besu.core.GifLabels
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -133,7 +136,7 @@ object GifRepository {
             .trim()
             .uppercase()
             .take(30)
-            .ifBlank { "UNCATEGORIZED" }
+            .ifBlank { GifLabels.STORED_DEFAULT_CATEGORY }
 
         val existing = readCategories(context).firstOrNull { category ->
             category.name.equals(cleanName, ignoreCase = true)
@@ -172,7 +175,7 @@ object GifRepository {
                 mimeType != null &&
                 mimeType != "image/gif"
             ) {
-                error("Selected file is not a GIF.")
+                throw GifImportException(GifImportFailure.NOT_A_GIF)
             }
 
             val destinationDirectory = getGifDirectory(context)
@@ -200,17 +203,17 @@ object GifRepository {
                         copiedBytes += read
 
                         if (copiedBytes > MAX_GIF_SIZE_BYTES) {
-                            error("GIF exceeds the 20 MB safety limit.")
+                            throw GifImportException(GifImportFailure.TOO_BIG)
                         }
 
                         output.write(buffer, 0, read)
                     }
                 }
-            } ?: error("Unable to read selected file.")
+            } ?: throw GifImportException(GifImportFailure.UNREADABLE)
 
             if (!isGifFile(destinationFile)) {
                 destinationFile.delete()
-                error("Selected file is not a valid GIF.")
+                throw GifImportException(GifImportFailure.INVALID)
             }
 
             val entry = GifEntry(

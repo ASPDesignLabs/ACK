@@ -981,4 +981,43 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="emoji_pages">PÁGINAS // %1$d</string>
     <string name="emoji_add_page">+ ADICIONAR PÁGINA</string>
     <string name="emoji_save_config">SALVAR CONFIGURAÇÃO</string>
+    <string name="gif_title">%1$s // BIBLIOTECA LOCAL</string>
+    <string name="gif_backup">CÓPIA DE SEGURANÇA</string>
+    <string name="gif_export_deck">EXPORTAR %1$s (.ZIP)</string>
+    <string name="gif_import_deck">IMPORTAR %1$s (.ZIP)</string>
+    <string name="gif_import_button">+ IMPORTAR</string>
+    <string name="gif_category_line">CATEGORIA: %1$s</string>
+    <string name="gif_no_gifs">SEM GIFS</string>
+    <string name="gif_empty_title">NÃO HÁ GIFS NESTA CATEGORIA</string>
+    <string name="gif_empty_hint">IMPORTE UM GIF LOCAL PARA COMEÇAR</string>
+    <string name="gif_overlay_landscape">SOBREPOSIÇÃO: PAISAGEM [%1$s]</string>
+    <string name="gif_prev">◀ ANTERIOR</string>
+    <string name="gif_next">PRÓXIMO ▶</string>
+    <string name="gif_display_full">EXIBIR EM TELA CHEIA</string>
+    <string name="gif_share">COMPARTILHAR</string>
+    <string name="gif_share_chooser">COMPARTILHAR GIF</string>
+    <string name="gif_import_title">IMPORTAR GIF</string>
+    <string name="gif_field_title">TÍTULO</string>
+    <string name="gif_field_category">CATEGORIA</string>
+    <string name="gif_category_example">REAÇÕES</string>
+    <string name="gif_import_confirm">IMPORTAR</string>
+    <string name="gif_exported">EXPORTAÇÃO DE %2$s DE %1$s CONCLUÍDA</string>
+    <string name="gif_export_failed">A EXPORTAÇÃO FALHOU</string>
+    <string name="gif_import_failed_check">FALHA NA IMPORTAÇÃO -- VERIFICAÇÃO DE INTEGRIDADE</string>
+    <string name="gif_import_failed">FALHA AO IMPORTAR O GIF</string>
+    <string name="gif_err_not_gif">O arquivo selecionado não é um GIF.</string>
+    <string name="gif_err_too_big">O GIF excede o limite de segurança de 20 MB.</string>
+    <string name="gif_err_unreadable">Não foi possível ler o arquivo selecionado.</string>
+    <string name="gif_err_invalid">O arquivo selecionado não é um GIF válido.</string>
+    <string name="gif_category_default">SEM CATEGORIA</string>
+    <plurals name="gif_imported_toast">
+        <item quantity="one">IMPORTADO %d GIF -- REINICIANDO</item>
+        <item quantity="many">IMPORTADOS %d GIFS -- REINICIANDO</item>
+        <item quantity="other">IMPORTADOS %d GIFS -- REINICIANDO</item>
+    </plurals>
+    <plurals name="gif_imported_skipped_toast">
+        <item quantity="one">IMPORTADO %1$d GIF, IGNORADOS: %2$d -- REINICIANDO</item>
+        <item quantity="many">IMPORTADOS %1$d GIFS, IGNORADOS: %2$d -- REINICIANDO</item>
+        <item quantity="other">IMPORTADOS %1$d GIFS, IGNORADOS: %2$d -- REINICIANDO</item>
+    </plurals>
 </resources>

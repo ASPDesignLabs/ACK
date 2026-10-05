@@ -971,4 +971,41 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="emoji_pages">पेज // %1$d</string>
     <string name="emoji_add_page">+ पेज जोड़ें</string>
     <string name="emoji_save_config">कॉन्फ़िग सहेजें</string>
+    <string name="gif_title">%1$s // स्थानीय लाइब्रेरी</string>
+    <string name="gif_backup">बैकअप</string>
+    <string name="gif_export_deck">%1$s निर्यात करें (.ZIP)</string>
+    <string name="gif_import_deck">%1$s आयात करें (.ZIP)</string>
+    <string name="gif_import_button">+ आयात</string>
+    <string name="gif_category_line">श्रेणी: %1$s</string>
+    <string name="gif_no_gifs">कोई जीआईएफ नहीं</string>
+    <string name="gif_empty_title">इस श्रेणी में कोई जीआईएफ नहीं</string>
+    <string name="gif_empty_hint">शुरू करने के लिए एक स्थानीय जीआईएफ आयात करें</string>
+    <string name="gif_overlay_landscape">ओवरले: लैंडस्केप [%1$s]</string>
+    <string name="gif_prev">◀ पिछला</string>
+    <string name="gif_next">अगला ▶</string>
+    <string name="gif_display_full">पूरी स्क्रीन पर दिखाएँ</string>
+    <string name="gif_share">साझा करें</string>
+    <string name="gif_share_chooser">जीआईएफ साझा करें</string>
+    <string name="gif_import_title">जीआईएफ आयात करें</string>
+    <string name="gif_field_title">शीर्षक</string>
+    <string name="gif_field_category">श्रेणी</string>
+    <string name="gif_category_example">प्रतिक्रियाएँ</string>
+    <string name="gif_import_confirm">आयात</string>
+    <string name="gif_exported">%1$s %2$s का निर्यात पूरा हुआ</string>
+    <string name="gif_export_failed">निर्यात विफल</string>
+    <string name="gif_import_failed_check">आयात नहीं हुआ -- अखंडता जाँच</string>
+    <string name="gif_import_failed">जीआईएफ आयात विफल</string>
+    <string name="gif_err_not_gif">चुनी गई फ़ाइल जीआईएफ नहीं है।</string>
+    <string name="gif_err_too_big">जीआईएफ 20 MB की सुरक्षा सीमा से बड़ा है।</string>
+    <string name="gif_err_unreadable">चुनी गई फ़ाइल पढ़ी नहीं जा सकी।</string>
+    <string name="gif_err_invalid">चुनी गई फ़ाइल मान्य जीआईएफ नहीं है।</string>
+    <string name="gif_category_default">अवर्गीकृत</string>
+    <plurals name="gif_imported_toast">
+        <item quantity="one">%d जीआईएफ आयात हुआ -- फिर से शुरू हो रहा है</item>
+        <item quantity="other">%d जीआईएफ आयात हुए -- फिर से शुरू हो रहा है</item>
+    </plurals>
+    <plurals name="gif_imported_skipped_toast">
+        <item quantity="one">%1$d जीआईएफ आयात हुआ, छोड़े गए: %2$d -- फिर से शुरू हो रहा है</item>
+        <item quantity="other">%1$d जीआईएफ आयात हुए, छोड़े गए: %2$d -- फिर से शुरू हो रहा है</item>
+    </plurals>
 </resources>

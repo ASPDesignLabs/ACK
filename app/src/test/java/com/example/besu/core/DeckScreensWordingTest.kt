@@ -13,7 +13,7 @@ import org.junit.Test
  * the stored pose names, ids) were not translated. The words that name a deck type come from the label table (`label_deck_type_*`).
  *
  * Part 1: the CREATE DECK dialog. Part 2: the QUICK ACTIONS deck and its two editors (QuickActionLabelsTest holds the decisions). Part 3: the EMOJI deck, its editors, its library's headings
- * and its configuration dialog (EmojiLabelsTest holds the decisions).
+ * and its configuration dialog (EmojiLabelsTest holds the decisions). Part 4: the GIF deck, its backup menu, its import dialog and the messages after an import or an export (GifLabelsTest holds the decisions).
  */
 class DeckScreensWordingTest {
 
@@ -42,18 +42,31 @@ class DeckScreensWordingTest {
         "emoji_config_title", "emoji_grid_size", "emoji_overlay_timeout", "emoji_timeout_standard", "emoji_timeout_extended", "emoji_timeout_none",
         "emoji_pages", "emoji_add_page", "emoji_save_config",
     )
-    private val allNames get() = createNames + qaNames + emojiNames
+    private val gifNames = listOf(
+        "gif_title", "gif_backup", "gif_export_deck", "gif_import_deck", "gif_import_button", "gif_category_line", "gif_no_gifs", "gif_empty_title", "gif_empty_hint",
+        "gif_overlay_landscape", "gif_prev", "gif_next", "gif_display_full", "gif_share", "gif_share_chooser",
+        "gif_import_title", "gif_field_title", "gif_field_category", "gif_category_example", "gif_import_confirm",
+        "gif_exported", "gif_export_failed", "gif_import_failed_check", "gif_import_failed",
+        "gif_err_not_gif", "gif_err_too_big", "gif_err_unreadable", "gif_err_invalid", "gif_category_default",
+    )
+    private val gifPluralNames = listOf("gif_imported_toast", "gif_imported_skipped_toast")
+    private val allNames get() = createNames + qaNames + emojiNames + gifNames
     private val emoji get() = file("decks/EmojiDeck.kt")
+    private val gif get() = file("decks/GifDeck.kt")
+    private val gifRepo get() = file("decks/GifRepository.kt")
     private val quick get() = file("decks/QuickActionsDeck.kt")
 
     // ---- the strings and the old literals --------------------------------------------------------------------------------------------------
 
     @Test
     fun everyStringTheDeckScreensNameExists_inEveryLanguage_andNoneIsLeftUnused() {
-        val sources = create + "\n" + quick + "\n" + emoji
-        val screenRefs = Regex("""R\.string\.((?:deck|qa|emoji)_[a-z_]+)""").findAll(sources).map { it.groupValues[1] }.toSet()
-        // The words core/QuickActionLabels.kt and core/EmojiLabels.kt name themselves (a screen asks them for the words), plus every other string a screen reads.
-        val named = Regex(""""((?:qa|emoji)_[a-z_]+)"""").findAll(file("core/QuickActionLabels.kt") + "\n" + file("core/EmojiLabels.kt")).map { it.groupValues[1] }.toSet()
+        val sources = create + "\n" + quick + "\n" + emoji + "\n" + gif
+        val screenRefs = Regex("""R\.string\.((?:deck|qa|emoji|gif)_[a-z_]+)""").findAll(sources).map { it.groupValues[1] }.toSet()
+        // The words core/QuickActionLabels.kt, EmojiLabels.kt, GifLabels.kt and GifImportFailure.kt name themselves (a screen asks them for the words), plus every other string a screen reads.
+        // (The two plurals are named there too but are not strings: part 4 checks them in every language.)
+        val named = Regex(""""((?:qa|emoji|gif)_[a-z_]+)"""").findAll(
+            file("core/QuickActionLabels.kt") + "\n" + file("core/EmojiLabels.kt") + "\n" + file("core/GifLabels.kt") + "\n" + file("core/GifImportFailure.kt")
+        ).map { it.groupValues[1] }.toSet() - gifPluralNames.toSet()
         val referenced = screenRefs + named
         for ((tag, map) in listOf("en" to english) + translations.toList()) {
             val missing = (referenced + Regex("""R\.string\.([a-z_]+)""").findAll(sources).map { it.groupValues[1] }).filter { it !in map }
@@ -386,6 +399,176 @@ class DeckScreensWordingTest {
             val title = FileText(tag).get("emoji_title", map.getValue("label_deck_type_emoji"))
             assertTrue("$tag: the title names EMOJI: $title", title.contains(map.getValue("label_deck_type_emoji")))
         }
+    }
+
+    // ---- part 4: the GIF deck ---------------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun theOldGifLiteralsAreGone() {
+        for (literal in listOf(
+            "\"GIF DECK EXPORTED\"", "\"EXPORT FAILED\"", "\"IMPORTED \${", "\"IMPORT FAILED -- INTEGRITY CHECK\"", "\"GIF // LOCAL LIBRARY\"", "\"BACKUP ▲\"", "\"BACKUP ▼\"", "\"EXPORT DECK (.ZIP)\"",
+            "\"IMPORT DECK (.ZIP)\"", "\"+ IMPORT\"", "append(\"CATEGORY: \")", "\"NO GIFS\"", "\"NO GIFS IN THIS CATEGORY\"", "\"IMPORT A LOCAL GIF TO BEGIN\"", "\"OVERLAY: LANDSCAPE [ON]\"",
+            "\"OVERLAY: LANDSCAPE [OFF]\"", "\"◀ PREV\"", "\"NEXT ▶\"", "\"DISPLAY FULL SCREEN\"", "text = \"SHARE\"", "\"IMPORT GIF\"", "text = \"TITLE\"", "text = \"CATEGORY\"", "\"REACTIONS\"",
+            "text = \"IMPORT\"", "text = \"CANCEL\"", "\"GIF IMPORT FAILED\"", "\"SHARE GIF\"", "text = category.name",
+        )) assertFalse("GifDeck.kt still holds $literal", gif.contains(literal))
+        assertTrue(gif.contains("import com.example.besu.R\n"))
+        assertTrue(gif.contains("import androidx.compose.ui.res.stringResource"))
+        // The repository no longer throws the four sentences itself: it throws the reason, and the screen says it.
+        val importGif = gifRepo.substring(gifRepo.indexOf("fun importGif("), gifRepo.indexOf("fun upsertCategory("))
+        assertFalse("importGif still throws a sentence", importGif.contains("error(\""))
+        for (reason in listOf("NOT_A_GIF", "TOO_BIG", "UNREADABLE", "INVALID")) assertEquals("importGif throws $reason once", 1, Regex("""throw GifImportException\(GifImportFailure\.$reason\)""").findAll(importGif).count())
+    }
+
+    @Test
+    fun theSavedGifNamesWereNotTranslated() {
+        // A category left blank is SAVED as UNCATEGORIZED (one constant, shared with the screen's decision), and a GIF with no usable title is SAVED as UNTITLED GIF; both stay English whatever the language.
+        assertTrue(gifRepo.contains(".ifBlank { GifLabels.STORED_DEFAULT_CATEGORY }"))
+        assertFalse(gifRepo.contains(".ifBlank { \"UNCATEGORIZED\" }"))
+        assertTrue(gifRepo.contains(".ifBlank { \"UNTITLED GIF\" }"))
+        // The title the dialog starts with is what gets saved if the person imports without changing it, so it is the English text too.
+        assertTrue(gif.contains("return \"UNTITLED GIF\""))
+        // The category list shows the shown name but selects, and saves, by id; the dialog saves what was typed.
+        assertTrue(Regex("""shownCategoryName\(words, category\.name\)[\s\S]{0,600}?selectedCategoryId = category\.id""").containsMatchIn(gif))
+        assertTrue(gif.contains("name = categoryName"))
+        // The zip's folder name for an uncategorised GIF is a path in a file meant for browsing without ACK, and is a stored name: it stays English.
+        assertTrue(file("decks/GifBackupManager.kt").contains("categoryName ?: \"UNCATEGORIZED\", \"UNCATEGORIZED\""))
+    }
+
+    @Test
+    fun theTitleAndTheExportToastTakeTheDeckTypeAndDeckLabels_soTheyFollowPlainWords() {
+        assertTrue(gif.contains("val gifTypeLabel = labelFor(LabelKey.DECK_TYPE_GIF)"))
+        assertTrue(gif.contains("val deckLabel = labelFor(LabelKey.DECK)"))
+        assertTrue(gif.contains("text = stringResource(R.string.gif_title, gifTypeLabel),"))
+        assertTrue(gif.contains("GifLabels.exportToast(words, success, gifTypeLabel, deckLabel)"))
+        assertTrue(gif.contains("text = stringResource(R.string.gif_export_deck, deckLabel),"))
+        assertTrue(gif.contains("text = stringResource(R.string.gif_import_deck, deckLabel),"))
+    }
+
+    @Test
+    fun eachGifWordSitsOnTheControlThatDoesWhatItSays() {
+        assertTrue("BACKUP opens the menu, the arrow follows the state", Regex("""stringResource\(R\.string\.gif_backup\) \+ if \(showBackupMenu\) " ▲" else " ▼",[\s\S]{0,300}?GIF_BACKUP_BTN[\s\S]{0,300}?showBackupMenu = !showBackupMenu""").containsMatchIn(gif))
+        assertTrue("EXPORT writes a file", Regex("""gif_export_deck, deckLabel\),[\s\S]{0,700}?GIF_BACKUP_EXPORT_BTN[\s\S]{0,1200}?exportBackupLauncher\.launch""").containsMatchIn(gif))
+        assertTrue("IMPORT reads a file", Regex("""gif_import_deck, deckLabel\),[\s\S]{0,700}?GIF_BACKUP_IMPORT_BTN[\s\S]{0,1200}?importBackupLauncher\.launch""").containsMatchIn(gif))
+        assertTrue("+ IMPORT picks one GIF", Regex("""R\.string\.gif_import_button\),[\s\S]{0,300}?GIF_IMPORT\)[\s\S]{0,400}?importLauncher\.launch\(arrayOf\("image/gif"\)\)""").containsMatchIn(gif))
+        assertTrue("the category button opens the category list, the arrow follows the state", Regex("""GifLabels\.categoryLine\(words, activeCategory\?\.name\) \+ if \(showCategoryMenu\) " ▲" else " ▼",[\s\S]{0,400}?GIF_CATEGORY[\s\S]{0,300}?showCategoryMenu = !showCategoryMenu""").containsMatchIn(gif))
+        assertTrue("the empty state says there is nothing, then how to begin", Regex("""if \(selectedGif == null\) \{[\s\S]{0,400}?gif_empty_title[\s\S]{0,500}?gif_empty_hint""").containsMatchIn(gif))
+        assertTrue("the overlay button flips and saves the setting", Regex("""GifLabels\.landscapeButton\(words, forceLandscapeOverlay\),[\s\S]{0,600}?GIF_LANDSCAPE_TOGGLE[\s\S]{0,400}?forceLandscapeOverlay = !forceLandscapeOverlay""").containsMatchIn(gif))
+        assertTrue("PREV goes back", Regex("""R\.string\.gif_prev\),[\s\S]{0,200}?enabled = gifs\.size > 1[\s\S]{0,300}?pagerState\.currentPage - 1""").containsMatchIn(gif))
+        assertTrue("NEXT goes forward", Regex("""R\.string\.gif_next\),[\s\S]{0,200}?enabled = gifs\.size > 1[\s\S]{0,300}?pagerState\.currentPage \+ 1""").containsMatchIn(gif))
+        assertTrue("DISPLAY FULL SCREEN shows the overlay", Regex("""R\.string\.gif_display_full\),[\s\S]{0,300}?showGifOverlay\(""").containsMatchIn(gif))
+        assertTrue("SHARE shares", Regex("""R\.string\.gif_share\),[\s\S]{0,400}?GIF_SHARE_BTN[\s\S]{0,300}?shareGif\(""").containsMatchIn(gif))
+        assertTrue("the chooser's title is read from resources outside a composable", gif.contains("Intent.createChooser(shareIntent, context.getString(R.string.gif_share_chooser))"))
+    }
+
+    @Test
+    fun theImportDialogsWordsSitOnTheirOwnFieldsAndButtons() {
+        assertTrue("the title field", Regex("""value = title,[\s\S]{0,300}?R\.string\.gif_field_title""").containsMatchIn(gif))
+        assertTrue("the category field with its example", Regex("""value = categoryName,[\s\S]{0,400}?R\.string\.gif_field_category[\s\S]{0,400}?R\.string\.gif_category_example""").containsMatchIn(gif))
+        assertTrue("IMPORT imports", Regex("""R\.string\.gif_import_confirm\),[\s\S]{0,300}?GIF_IMPORT_COMMIT[\s\S]{0,700}?GifRepository\.importGif\(""").containsMatchIn(gif))
+        assertTrue("the failure is shown in the language", Regex("""\.onFailure \{ error ->\s*errorMessage = GifLabels\.importError\(words, error\)""").containsMatchIn(gif))
+        assertTrue("CANCEL closes", Regex("""R\.string\.common_cancel\),[\s\S]{0,200}?onDismiss\(\)""").containsMatchIn(gif))
+        assertTrue("the dialog's title is the first word on it", Regex("""title = \{[\s\S]{0,200}?R\.string\.gif_import_title""").containsMatchIn(gif))
+    }
+
+    @Test
+    fun theBackupToastsAreWrittenOutsideAComposable_andTheRestartPatternIsKept() {
+        assertTrue(Regex("""GifBackupManager\.exportDeck\(context, deckId, uri\)[\s\S]{0,200}?GifLabels\.exportToast\(words, success, gifTypeLabel, deckLabel\)[\s\S]{0,100}?Toast\.LENGTH_SHORT""").containsMatchIn(gif))
+        // The imported toast stays on screen long enough to read, then the delayed restart runs, exactly as before.
+        assertTrue(Regex("""GifLabels\.importedToast\(words, result\.importedCount, result\.skippedCount\),[\s\S]{0,100}?Toast\.LENGTH_LONG[\s\S]{0,100}?\)\.show\(\)\s*pendingBackupRestart = true""").containsMatchIn(gif))
+        assertTrue(Regex("""if \(pendingBackupRestart\) \{\s*delay\(1500\)\s*restartApp\(context\)""").containsMatchIn(gif))
+        assertTrue(gif.contains("context.getString(R.string.gif_import_failed_check)"))
+    }
+
+    @Test
+    fun theGifEnglishIsHeldExactly() {
+        val expected = mapOf(
+            "gif_backup" to "BACKUP", "gif_import_button" to "+ IMPORT", "gif_no_gifs" to "NO GIFS", "gif_empty_title" to "NO GIFS IN THIS CATEGORY", "gif_empty_hint" to "IMPORT A LOCAL GIF TO BEGIN",
+            "gif_prev" to "◀ PREV", "gif_next" to "NEXT ▶", "gif_display_full" to "DISPLAY FULL SCREEN", "gif_share" to "SHARE", "gif_share_chooser" to "SHARE GIF", "gif_import_title" to "IMPORT GIF",
+            "gif_field_title" to "TITLE", "gif_field_category" to "CATEGORY", "gif_category_example" to "REACTIONS", "gif_import_confirm" to "IMPORT", "gif_export_failed" to "EXPORT FAILED",
+            "gif_import_failed_check" to "IMPORT FAILED -- INTEGRITY CHECK", "gif_import_failed" to "GIF IMPORT FAILED", "gif_category_default" to "UNCATEGORIZED",
+        )
+        for ((name, text) in expected) assertEquals(name, text, english.getValue(name))
+        assertEquals("GIF // LOCAL LIBRARY", EnglishText.get("gif_title", english.getValue("label_deck_type_gif")))
+        assertEquals("EXPORT DECK (.ZIP)", EnglishText.get("gif_export_deck", english.getValue("label_deck")))
+        assertEquals("IMPORT DECK (.ZIP)", EnglishText.get("gif_import_deck", english.getValue("label_deck")))
+        assertEquals("CATEGORY: X", EnglishText.get("gif_category_line", "X"))
+        assertEquals("OVERLAY: LANDSCAPE [ON]", EnglishText.get("gif_overlay_landscape", "ON"))
+        assertEquals("GIF DECK EXPORTED", EnglishText.get("gif_exported", english.getValue("label_deck_type_gif"), english.getValue("label_deck")))
+    }
+
+    @Test
+    fun theGifArgumentsAreWhereTheCodePutsThem() {
+        val oneArgument = setOf("gif_title", "gif_export_deck", "gif_import_deck", "gif_category_line", "gif_overlay_landscape")
+        for ((tag, map) in listOf("en" to english) + translations.toList()) {
+            for (name in oneArgument) {
+                assertTrue("$tag/$name takes its argument", map.getValue(name).contains("%1\$s"))
+                assertFalse("$tag/$name takes only one", map.getValue(name).contains("%2"))
+            }
+            val exported = map.getValue("gif_exported")
+            assertTrue("$tag: the export toast takes the GIF label then the DECK label (in either order on screen)", exported.contains("%1\$s") && exported.contains("%2\$s"))
+            for (name in gifNames - oneArgument - "gif_exported") assertFalse("$tag/$name takes an argument nothing passes", Regex("""%\d""").containsMatchIn(map.getValue(name)))
+        }
+    }
+
+    @Test
+    fun theTwoImportedPluralsExistInEveryLanguage_andEachFormHoldsItsNumbers() {
+        val files = listOf("en" to StringsXml.default) + StringsXml.translations().toList()
+        for ((tag, file) in files) {
+            val plurals = StringsXml.plurals(file)
+            for (name in gifPluralNames) assertTrue("$tag: $name is defined", plurals.containsKey(name))
+            val toast = plurals.getValue("gif_imported_toast")
+            val skipped = plurals.getValue("gif_imported_skipped_toast")
+            assertTrue("$tag: an 'other' form each", "other" in toast && "other" in skipped)
+            assertEquals("$tag: both plurals have the same forms", toast.keys, skipped.keys)
+            for ((q, text) in skipped) assertTrue("$tag/$q: the skipped count is in '$text'", text.contains("%2\$d"))
+            // Every form for a quantity that is not spelled out in words holds the imported count (Arabic spells out one and two).
+            for ((q, text) in toast) if (!(tag == "ar" && (q == "one" || q == "two"))) assertTrue("$tag/$q: the imported count is in '$text'", text.contains("%d"))
+            for ((q, text) in skipped) if (!(tag == "ar" && (q == "one" || q == "two"))) assertTrue("$tag/$q: the imported count is in '$text'", text.contains("%1\$d"))
+            for ((q, text) in toast + skipped) assertTrue("$tag/$q says ACK restarts", text.contains("--"))
+        }
+    }
+
+    @Test
+    fun theGifWordsThatAnswerOppositeQuestionsDifferInEveryLanguage() {
+        val pairs = listOf(
+            "gif_export_deck" to "gif_import_deck", "gif_prev" to "gif_next", "gif_empty_title" to "gif_empty_hint", "gif_field_title" to "gif_field_category", "gif_share" to "gif_share_chooser",
+            "gif_export_failed" to "gif_import_failed_check", "gif_import_failed" to "gif_import_failed_check", "gif_import_button" to "gif_import_confirm", "gif_import_title" to "gif_import_confirm",
+            "gif_err_not_gif" to "gif_err_invalid", "gif_err_too_big" to "gif_err_unreadable", "gif_err_not_gif" to "gif_err_too_big", "gif_err_invalid" to "gif_err_unreadable",
+            "gif_err_not_gif" to "gif_err_unreadable", "gif_err_invalid" to "gif_err_too_big", "gif_no_gifs" to "gif_empty_title", "gif_backup" to "gif_share",
+        )
+        for ((tag, map) in listOf("en" to english) + translations.toList()) for ((a, b) in pairs) assertNotEquals("$tag: $a and $b read the same", map.getValue(a), map.getValue(b))
+    }
+
+    @Test
+    fun theArrowsPointOutwardAtEachEdge_andArabicsAreMirroredWithItsLayout() {
+        for ((tag, map) in listOf("en" to english) + translations.toList()) {
+            val prev = map.getValue("gif_prev")
+            val next = map.getValue("gif_next")
+            if (tag == "ar") {
+                // The Arabic layout is mirrored: PREV is the first control, on the right, so its arrow points right and sits first; NEXT is on the left and points left.
+                assertTrue("$tag: $prev", prev.startsWith("▶") && !prev.contains("◀"))
+                assertTrue("$tag: $next", next.endsWith("◀") && !next.contains("▶"))
+            } else {
+                assertTrue("$tag: $prev", prev.startsWith("◀") && !prev.contains("▶"))
+                assertTrue("$tag: $next", next.endsWith("▶") && !next.contains("◀"))
+            }
+        }
+    }
+
+    @Test
+    fun theWordGifInASentenceNamesTheFileKind_soItIsLatinInTheLatinLanguagesAndTheLabelsOwnWordInHindiAndArabic() {
+        val sentences = listOf("gif_empty_title", "gif_empty_hint", "gif_share_chooser", "gif_import_title", "gif_import_failed", "gif_err_not_gif", "gif_err_too_big", "gif_err_invalid")
+        for ((tag, map) in translations) {
+            val word = if (tag == "hi" || tag == "ar") map.getValue("label_deck_type_gif") else "GIF"
+            // gif_empty_title in Spanish says "NO HAY GIF", in Portuguese and Afrikaans "GIFS": the word is inside it either way.
+            for (name in sentences) assertTrue("$tag/$name names the file kind ($word)", map.getValue(name).contains(word) || map.getValue(name).contains(word + "S"))
+        }
+    }
+
+    @Test
+    fun theSizeLimitStaysAsASymbolInEveryLanguage_andTheFourSentencesAreMixedCaseWhereEnglishIs() {
+        for ((tag, map) in listOf("en" to english) + translations.toList()) assertTrue("$tag: 20 MB", map.getValue("gif_err_too_big").contains("20 MB"))
+        for (name in listOf("gif_err_not_gif", "gif_err_too_big", "gif_err_unreadable", "gif_err_invalid")) assertNotEquals("the English $name is a sentence, not capitals", english.getValue(name).uppercase(), english.getValue(name))
     }
 
     // ---- every language -------------------------------------------------------------------------------------------------------------------

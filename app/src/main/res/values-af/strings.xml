@@ -971,4 +971,41 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="emoji_pages">BLAAIE // %1$d</string>
     <string name="emoji_add_page">+ VOEG BLADSY BY</string>
     <string name="emoji_save_config">BERG INSTELLINGS OP</string>
+    <string name="gif_title">%1$s // PLAASLIKE BIBLIOTEEK</string>
+    <string name="gif_backup">RUGSTEUN</string>
+    <string name="gif_export_deck">VOER %1$s UIT (.ZIP)</string>
+    <string name="gif_import_deck">VOER %1$s IN (.ZIP)</string>
+    <string name="gif_import_button">+ VOER IN</string>
+    <string name="gif_category_line">KATEGORIE: %1$s</string>
+    <string name="gif_no_gifs">GEEN GIFS</string>
+    <string name="gif_empty_title">GEEN GIFS IN HIERDIE KATEGORIE</string>
+    <string name="gif_empty_hint">VOER \'N PLAASLIKE GIF IN OM TE BEGIN</string>
+    <string name="gif_overlay_landscape">OORLEGGING: LANDSKAP [%1$s]</string>
+    <string name="gif_prev">◀ VORIGE</string>
+    <string name="gif_next">VOLGENDE ▶</string>
+    <string name="gif_display_full">WYS OP VOLSKERM</string>
+    <string name="gif_share">DEEL</string>
+    <string name="gif_share_chooser">DEEL GIF</string>
+    <string name="gif_import_title">VOER GIF IN</string>
+    <string name="gif_field_title">TITEL</string>
+    <string name="gif_field_category">KATEGORIE</string>
+    <string name="gif_category_example">REAKSIES</string>
+    <string name="gif_import_confirm">VOER IN</string>
+    <string name="gif_exported">%1$s-%2$s UITGEVOER</string>
+    <string name="gif_export_failed">UITVOER MISLUK</string>
+    <string name="gif_import_failed_check">INVOER MISLUK -- INTEGRITEITSKONTROLE</string>
+    <string name="gif_import_failed">GIF-INVOER MISLUK</string>
+    <string name="gif_err_not_gif">Die gekose lêer is nie \'n GIF nie.</string>
+    <string name="gif_err_too_big">Die GIF oorskry die veiligheidsperk van 20 MB.</string>
+    <string name="gif_err_unreadable">Kan nie die gekose lêer lees nie.</string>
+    <string name="gif_err_invalid">Die gekose lêer is nie \'n geldige GIF nie.</string>
+    <string name="gif_category_default">ONGEKATEGORISEER</string>
+    <plurals name="gif_imported_toast">
+        <item quantity="one">%d GIF INGEVOER -- HERBEGIN</item>
+        <item quantity="other">%d GIFS INGEVOER -- HERBEGIN</item>
+    </plurals>
+    <plurals name="gif_imported_skipped_toast">
+        <item quantity="one">%1$d GIF INGEVOER, OORGESLAAN: %2$d -- HERBEGIN</item>
+        <item quantity="other">%1$d GIFS INGEVOER, OORGESLAAN: %2$d -- HERBEGIN</item>
+    </plurals>
 </resources>

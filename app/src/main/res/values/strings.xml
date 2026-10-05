@@ -992,4 +992,41 @@
     <string name="emoji_pages">PAGES // %1$d</string>
     <string name="emoji_add_page">+ ADD PAGE</string>
     <string name="emoji_save_config">SAVE CONFIG</string>
+    <string name="gif_title">%1$s // LOCAL LIBRARY</string>
+    <string name="gif_backup">BACKUP</string>
+    <string name="gif_export_deck">EXPORT %1$s (.ZIP)</string>
+    <string name="gif_import_deck">IMPORT %1$s (.ZIP)</string>
+    <string name="gif_import_button">+ IMPORT</string>
+    <string name="gif_category_line">CATEGORY: %1$s</string>
+    <string name="gif_no_gifs">NO GIFS</string>
+    <string name="gif_empty_title">NO GIFS IN THIS CATEGORY</string>
+    <string name="gif_empty_hint">IMPORT A LOCAL GIF TO BEGIN</string>
+    <string name="gif_overlay_landscape">OVERLAY: LANDSCAPE [%1$s]</string>
+    <string name="gif_prev">◀ PREV</string>
+    <string name="gif_next">NEXT ▶</string>
+    <string name="gif_display_full">DISPLAY FULL SCREEN</string>
+    <string name="gif_share">SHARE</string>
+    <string name="gif_share_chooser">SHARE GIF</string>
+    <string name="gif_import_title">IMPORT GIF</string>
+    <string name="gif_field_title">TITLE</string>
+    <string name="gif_field_category">CATEGORY</string>
+    <string name="gif_category_example">REACTIONS</string>
+    <string name="gif_import_confirm">IMPORT</string>
+    <string name="gif_exported">%1$s %2$s EXPORTED</string>
+    <string name="gif_export_failed">EXPORT FAILED</string>
+    <string name="gif_import_failed_check">IMPORT FAILED -- INTEGRITY CHECK</string>
+    <string name="gif_import_failed">GIF IMPORT FAILED</string>
+    <string name="gif_err_not_gif">Selected file is not a GIF.</string>
+    <string name="gif_err_too_big">GIF exceeds the 20 MB safety limit.</string>
+    <string name="gif_err_unreadable">Unable to read selected file.</string>
+    <string name="gif_err_invalid">Selected file is not a valid GIF.</string>
+    <string name="gif_category_default">UNCATEGORIZED</string>
+    <plurals name="gif_imported_toast">
+        <item quantity="one">IMPORTED %d GIF -- RESTARTING</item>
+        <item quantity="other">IMPORTED %d GIFS -- RESTARTING</item>
+    </plurals>
+    <plurals name="gif_imported_skipped_toast">
+        <item quantity="one">IMPORTED %1$d GIF, %2$d SKIPPED -- RESTARTING</item>
+        <item quantity="other">IMPORTED %1$d GIFS, %2$d SKIPPED -- RESTARTING</item>
+    </plurals>
 </resources>

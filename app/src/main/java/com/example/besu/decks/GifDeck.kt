@@ -2,6 +2,9 @@
 package com.example.besu.decks
 
 import com.example.besu.*
+import com.example.besu.R
+import com.example.besu.core.GifLabels
+import com.example.besu.core.LabelKey
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.output.*
@@ -47,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -121,6 +125,10 @@ fun GifDeck(
     fun reportHelpInteraction(tag: String) {
         helpManager?.onEvent(HelpEvent.Interacted(tag))
     }
+
+    val words = rememberText()
+    val gifTypeLabel = labelFor(LabelKey.DECK_TYPE_GIF)
+    val deckLabel = labelFor(LabelKey.DECK)
 
     val categories = remember(deckId, refreshToken) {
         GifRepository.getCategories(context, deckId)
@@ -211,7 +219,7 @@ fun GifDeck(
             val success = GifBackupManager.exportDeck(context, deckId, uri)
             Toast.makeText(
                 context,
-                if (success) "GIF DECK EXPORTED" else "EXPORT FAILED",
+                GifLabels.exportToast(words, success, gifTypeLabel, deckLabel),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -225,14 +233,12 @@ fun GifDeck(
             if (result.success) {
                 Toast.makeText(
                     context,
-                    "IMPORTED ${result.importedCount} GIF${if (result.importedCount == 1) "" else "S"}" +
-                        (if (result.skippedCount > 0) ", ${result.skippedCount} SKIPPED" else "") +
-                        " -- RESTARTING",
+                    GifLabels.importedToast(words, result.importedCount, result.skippedCount),
                     Toast.LENGTH_LONG
                 ).show()
                 pendingBackupRestart = true
             } else {
-                Toast.makeText(context, "IMPORT FAILED -- INTEGRITY CHECK", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.gif_import_failed_check), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -248,7 +254,7 @@ fun GifDeck(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "GIF // LOCAL LIBRARY",
+                text = stringResource(R.string.gif_title, gifTypeLabel),
                 color = primaryColor,
                 fontSize = 15.sp,
                 fontFamily = FontFamily.Monospace,
@@ -259,7 +265,7 @@ fun GifDeck(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box {
                     NeonOutlineAction(
-                        text = if (showBackupMenu) "BACKUP ▲" else "BACKUP ▼",
+                        text = stringResource(R.string.gif_backup) + if (showBackupMenu) " ▲" else " ▼",
                         color = primaryColor,
                         modifier = Modifier
                             .testTag(AckTags.GIF_BACKUP_BTN)
@@ -282,7 +288,7 @@ fun GifDeck(
                                 .padding(8.dp)
                         ) {
                             Text(
-                                text = "EXPORT DECK (.ZIP)",
+                                text = stringResource(R.string.gif_export_deck, deckLabel),
                                 color = primaryColor,
                                 fontSize = 12.sp,
                                 fontFamily = FontFamily.Monospace,
@@ -303,7 +309,7 @@ fun GifDeck(
                             )
 
                             Text(
-                                text = "IMPORT DECK (.ZIP)",
+                                text = stringResource(R.string.gif_import_deck, deckLabel),
                                 color = primaryColor,
                                 fontSize = 12.sp,
                                 fontFamily = FontFamily.Monospace,
@@ -323,7 +329,7 @@ fun GifDeck(
                 }
 
                 NeonOutlineAction(
-                    text = "+ IMPORT",
+                    text = stringResource(R.string.gif_import_button),
                     color = primaryColor,
                     modifier = Modifier
                         .testTag(AckTags.GIF_IMPORT)
@@ -339,11 +345,7 @@ fun GifDeck(
 
         Box {
             NeonOutlineAction(
-                text = buildString {
-                    append("CATEGORY: ")
-                    append(activeCategory?.name ?: "NO GIFS")
-                    append(if (showCategoryMenu) " ▲" else " ▼")
-                },
+                text = GifLabels.categoryLine(words, activeCategory?.name) + if (showCategoryMenu) " ▲" else " ▼",
                 color = primaryColor,
                 enabled = categories.isNotEmpty(),
                 modifier = Modifier
@@ -369,7 +371,7 @@ fun GifDeck(
                 ) {
                     categories.forEach { category ->
                         Text(
-                            text = category.name,
+                            text = GifLabels.shownCategoryName(words, category.name),
                             color = if (category.id == activeCategory?.id) {
                                 Color.White
                             } else {
@@ -410,7 +412,7 @@ fun GifDeck(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "NO GIFS IN THIS CATEGORY",
+                        text = stringResource(R.string.gif_empty_title),
                         color = Color.Gray,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
@@ -420,7 +422,7 @@ fun GifDeck(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "IMPORT A LOCAL GIF TO BEGIN",
+                        text = stringResource(R.string.gif_empty_hint),
                         color = primaryColor.copy(alpha = 0.7f),
                         fontFamily = FontFamily.Monospace,
                         fontSize = 10.sp
@@ -450,11 +452,7 @@ fun GifDeck(
         Spacer(modifier = Modifier.height(8.dp))
 
         NeonOutlineAction(
-            text = if (forceLandscapeOverlay) {
-                "OVERLAY: LANDSCAPE [ON]"
-            } else {
-                "OVERLAY: LANDSCAPE [OFF]"
-            },
+            text = GifLabels.landscapeButton(words, forceLandscapeOverlay),
             color = if (forceLandscapeOverlay) {
                 primaryColor
             } else {
@@ -484,7 +482,7 @@ fun GifDeck(
             verticalAlignment = Alignment.CenterVertically
         ) {
             NeonOutlineAction(
-                text = "◀ PREV",
+                text = stringResource(R.string.gif_prev),
                 color = primaryColor,
                 enabled = gifs.size > 1
             ) {
@@ -508,7 +506,7 @@ fun GifDeck(
             )
 
             NeonOutlineAction(
-                text = "NEXT ▶",
+                text = stringResource(R.string.gif_next),
                 color = primaryColor,
                 enabled = gifs.size > 1
             ) {
@@ -524,7 +522,7 @@ fun GifDeck(
             Spacer(modifier = Modifier.height(8.dp))
 
             NeonOutlineAction(
-                text = "DISPLAY FULL SCREEN",
+                text = stringResource(R.string.gif_display_full),
                 color = primaryColor,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -538,7 +536,7 @@ fun GifDeck(
             Spacer(modifier = Modifier.height(8.dp))
 
             NeonOutlineAction(
-                text = "SHARE",
+                text = stringResource(R.string.gif_share),
                 color = primaryColor,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -692,12 +690,14 @@ private fun GifImportDialog(
         mutableStateOf("")
     }
 
+    val words = rememberText()
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Graphite,
         title = {
             Text(
-                text = "IMPORT GIF",
+                text = stringResource(R.string.gif_import_title),
                 color = primaryColor,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Black
@@ -710,7 +710,7 @@ private fun GifImportDialog(
                     onValueChange = { title = it },
                     label = {
                         Text(
-                            text = "TITLE",
+                            text = stringResource(R.string.gif_field_title),
                             fontFamily = FontFamily.Monospace
                         )
                     },
@@ -725,13 +725,13 @@ private fun GifImportDialog(
                     onValueChange = { categoryName = it },
                     label = {
                         Text(
-                            text = "CATEGORY",
+                            text = stringResource(R.string.gif_field_category),
                             fontFamily = FontFamily.Monospace
                         )
                     },
                     placeholder = {
                         Text(
-                            text = "REACTIONS",
+                            text = stringResource(R.string.gif_category_example),
                             fontFamily = FontFamily.Monospace
                         )
                     },
@@ -755,7 +755,7 @@ private fun GifImportDialog(
             val helpManager = LocalHelpManager.current
 
             NeonOutlineAction(
-                text = "IMPORT",
+                text = stringResource(R.string.gif_import_confirm),
                 color = primaryColor,
                 modifier = Modifier
                     .testTag(AckTags.GIF_IMPORT_COMMIT)
@@ -778,13 +778,13 @@ private fun GifImportDialog(
                         HelpEvent.FileCommitted(AckTags.GIF_IMPORT_COMMIT)
                     )
                 }.onFailure { error ->
-                    errorMessage = error.message ?: "GIF IMPORT FAILED"
+                    errorMessage = GifLabels.importError(words, error)
                 }
             }
         },
         dismissButton = {
             NeonOutlineAction(
-                text = "CANCEL",
+                text = stringResource(R.string.common_cancel),
                 color = Color.Red
             ) {
                 onDismiss()
@@ -862,7 +862,7 @@ private fun shareGif(
     }
 
     context.startActivity(
-        Intent.createChooser(shareIntent, "SHARE GIF").apply {
+        Intent.createChooser(shareIntent, context.getString(R.string.gif_share_chooser)).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     )
