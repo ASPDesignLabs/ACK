@@ -593,4 +593,17 @@ class CaptureTextTest {
             assertEquals("$tag: every kind of notice has its own sentence", notices.size, notices.toSet().size)
         }
     }
+
+    @Test
+    fun aNoticeSaysTheNumberItWasGiven_notTheOneTheEnginesUseToday_inEveryLanguage() {
+        // The engines pass their own constants (20 s, 90 min); the wording must print what it is given, so a different limit later is said as it is.
+        for ((tag, f) in listOf("en" to t as TextSource) + languages) {
+            val idle = CaptureText.notice(f, CaptureNotice.NothingHeard(7))
+            assertTrue("$tag idle: $idle", idle.contains("7") && !idle.contains("20"))
+            val longest = CaptureText.notice(f, CaptureNotice.LongestRecording(45))
+            assertTrue("$tag longest: $longest", longest.contains("45") && !longest.contains("90"))
+            val stopped = CaptureText.notice(f, CaptureNotice.MicStopped(-9))
+            assertTrue("$tag stopped: $stopped", stopped.contains("-9") && !stopped.contains("-3"))
+        }
+    }
 }
