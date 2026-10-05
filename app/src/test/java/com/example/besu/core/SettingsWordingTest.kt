@@ -13,6 +13,7 @@ import org.junit.Test
  * sits on the control that does what it says, and the logic strings that stay as they were (the stored route names, the view modes) were not touched. OutputRouteTextTest holds the decisions.
  *
  * Part A: AUDIO OUTPUT ROUTING, WATCH AUDIO FEEDBACK, VISUAL PROMPT DISPLAY and the display-permission warnings (the banner and the line under SILENT MODE).
+ * Part B: the HARDWARE CONFIG sliders, the SHAKE KILL SWITCH and its test, the ENVIRONMENT SENSOR and the QUICK-ACCESS KEYS' field hints.
  */
 class SettingsWordingTest {
 
@@ -34,11 +35,19 @@ class SettingsWordingTest {
         "settings_watch_audio_heading", "settings_tone_sharp", "settings_tone_clean", "settings_tone_soft", "settings_watch_volume",
         "settings_visual_heading", "settings_visual_desc", "settings_force_rotation", "settings_force_rotation_desc",
     )
+    private val partB = listOf(
+        "settings_hw_crown", "settings_label_value", "settings_hw_gravity_lock", "settings_hw_fire_grace", "settings_hw_fire_grace_desc", "settings_hw_wake_window", "settings_hw_wake_window_desc",
+        "settings_hw_flyout", "settings_hw_flyout_desc", "settings_cryo_line",
+        "settings_shake_desc", "settings_shake_sensitivity", "settings_btn_stop", "settings_btn_test", "settings_btn_scan", "settings_shake_detected", "settings_shake_armed", "settings_shake_test_note",
+        "settings_env_authorize", "settings_open_settings", "settings_env_critical", "settings_env_warning", "settings_env_optimal", "settings_env_offline",
+        "settings_qk_label_hint", "settings_qk_phrase_hint",
+    )
+    private val allNames get() = partA + partB
 
     // ---- the strings and the old literals --------------------------------------------------------------------------------------------------
 
     @Test
-    fun everyStringPartANamesExists_inEveryLanguage_andNoneIsLeftUnused() {
+    fun everyStringTheScreenNamesExists_inEveryLanguage_andNoneIsLeftUnused() {
         val sources = settings + "\n" + banner + "\n" + file("core/OutputRouteText.kt")
         val referenced = Regex("""R\.string\.((?:settings|overlay_banner)_[a-z_]+)""").findAll(settings + "\n" + banner).map { it.groupValues[1] }.toSet()
         val named = Regex(""""((?:settings|overlay_banner)_[a-z_]+)"""").findAll(sources).map { it.groupValues[1] }.toSet()
@@ -47,7 +56,7 @@ class SettingsWordingTest {
             val missing = used.filter { it !in map }
             assertEquals("$tag: named but not defined: $missing", emptyList<String>(), missing)
         }
-        val unused = partA.filter { it !in used }
+        val unused = allNames.filter { it !in used }
         assertTrue("defined but never used: $unused", unused.isEmpty())
     }
 
@@ -59,7 +68,13 @@ class SettingsWordingTest {
             "Controls whether tutorial and guide narration", "Shows prompts as normal but never speaks them", "SILENT MODE IS ON AND DISPLAY PERMISSION IS OFF", "\"WATCH AUDIO FEEDBACK\"",
             "\"SHARP\"", "\"CLEAN\"", "\"SOFT\"", "\"WATCH VOLUME:", "\"VISUAL PROMPT DISPLAY\"", "Text/emoji/GIF prompts fill the screen", "\"FORCE DEVICE ROTATION\"", "OFF: rotate the prompt only",
         )
-        for (literal in goneFromSettings) assertFalse("SettingsView.kt still holds $literal", settings.contains(literal))
+        val goneB = listOf(
+            "\"CROWN RESISTANCE:", "\"GRAVITY LOCK:", "\"FIRE GRACE WINDOW:", "Extra time after a pose locks", "\"WAKE GESTURE WINDOW:", "How much time is allowed between each of the 3 wake twists",
+            "\"TARGET FLYOUT TIMEOUT:", "How long the watch's Target Computer flyout", "} MIN\"", "Shake the phone to immediately stop", "\"SENSITIVITY:", "\"[STOP]\"", "\"[TEST]\"", "\"[SCAN]\"",
+            "\"DETECTED ✓", "\"ARMED -- SHAKE THE PHONE\"", "This uses the real detector at the sensitivity above", "\"AUTHORIZE MIC SCAN\"", "\"OPEN SETTINGS\"", "\"CRITICAL: A.S.R.", "\"WARNING: MODERATE NOISE LEVEL\"",
+            "\"OPTIMAL: ENVIRONMENT CLEAR\"", "\"MONITOR OFFLINE\"", "Text(\"LBL\")", "Text(\"TARGET PHRASE\")",
+        )
+        for (literal in goneFromSettings + goneB) assertFalse("SettingsView.kt still holds $literal", settings.contains(literal))
         for (literal in listOf("DISPLAY PERMISSION IS OFF. MESSAGES ARE SPOKEN", "\"ALLOW\"")) assertFalse("OverlayPermissionBanner.kt still holds $literal", banner.contains(literal))
         assertTrue(settings.contains("import com.example.besu.core.OutputRouteText"))
         assertTrue(banner.contains("import com.example.besu.R"))
@@ -154,6 +169,49 @@ class SettingsWordingTest {
         assertFalse("no fixed 60 dp width", option.contains(".width(60.dp)"))
     }
 
+    @Test
+    fun eachSliderLabelSitsOnItsOwnSlider_andTheNumbersAreFormattedAsBefore() {
+        fun label(call: String, state: String, within: Int = 260) = Regex("""$call\)[\s\S]{0,$within}?Slider\(value = $state,""").containsMatchIn(settings)
+        assertTrue("CROWN RESISTANCE", label("""settings_hw_crown, crownSens\.toInt\(\)""", "crownSens"))
+        assertTrue("TWIST SENSITIVITY", label("""settings_label_value, labelFor\(LabelKey\.TWIST_SENS\), String\.format\("%\.1f", motTwist\)""", "motTwist"))
+        assertTrue("GRAVITY LOCK", label("""settings_hw_gravity_lock, String\.format\("%\.1f", motPose\)""", "motPose"))
+        assertTrue("FIRE GRACE WINDOW, its sentence in between", label("""settings_hw_fire_grace, fireGraceMs\.toInt\(\)\), color = Color\.Gray, fontSize = 10\.sp, fontFamily = FontFamily\.Monospace\)\s*Text\(\s*stringResource\(R\.string\.settings_hw_fire_grace_desc""", "fireGraceMs", 400))
+        assertTrue("WAKE GESTURE WINDOW, its sentence in between", label("""settings_hw_wake_window, wakeWindowMs\.toInt\(\)\), color = Color\.Gray, fontSize = 10\.sp, fontFamily = FontFamily\.Monospace\)\s*Text\(\s*stringResource\(R\.string\.settings_hw_wake_window_desc""", "wakeWindowMs", 400))
+        assertTrue("TARGET FLYOUT TIMEOUT, its sentence in between", label("""settings_hw_flyout, computerFlyoutTimeoutSec\.toInt\(\)\), color = Color\.Gray, fontSize = 10\.sp, fontFamily = FontFamily\.Monospace\)\s*Text\(\s*stringResource\(R\.string\.settings_hw_flyout_desc""", "computerFlyoutTimeoutSec", 400))
+        assertTrue("AUTO-CRYO", label("""settings_cryo_line, labelFor\(LabelKey\.CRYO\), autoCryo\.toInt\(\)""", "autoCryo"))
+        assertTrue("SENSITIVITY", label("""settings_shake_sensitivity, String\.format\("%\.1f", shakeThreshold\)""", "shakeThreshold"))
+        // The decimals are formatted exactly as before (one place, the phone's own number format), not by the string.
+        assertEquals(3, Regex("""String\.format\("%\.1f",""").findAll(settings).count())
+        // The units stay in the strings as symbols, so the number is the only thing the code passes.
+        assertFalse(Regex("""toInt\(\)\}ms|toInt\(\)\}s"|\} MIN""").containsMatchIn(settings))
+    }
+
+    @Test
+    fun theShakeTestButtonsAndMessagesBelongToTheirState() {
+        assertTrue("[STOP] or [TEST] flips the test", Regex("""stringResource\(if \(isShakeTestActive\) R\.string\.settings_btn_stop else R\.string\.settings_btn_test\),[\s\S]{0,700}?isShakeTestActive = !isShakeTestActive""").containsMatchIn(settings))
+        assertTrue("DETECTED when the detector fired, ARMED while it waits", settings.contains("text = if (isShakeDetectedFlash) stringResource(R.string.settings_shake_detected, shakeDetectedCount) else stringResource(R.string.settings_shake_armed),"))
+        assertTrue("the note is under the test box", Regex("""if \(isShakeTestActive\) \{[\s\S]{0,1800}?stringResource\(R\.string\.settings_shake_test_note\)""").containsMatchIn(settings))
+        assertTrue("the description is under the heading", Regex("""labelFor\(LabelKey\.SHAKE_KILL\)[\s\S]{0,300}?stringResource\(R\.string\.settings_shake_desc\)""").containsMatchIn(settings))
+    }
+
+    @Test
+    fun theEnvironmentSensorsButtonsAndStatusLinesBelongToTheirState() {
+        assertTrue("[STOP] or [SCAN] flips the scan", Regex("""stringResource\(if \(isMonitoringActive\) R\.string\.settings_btn_stop else R\.string\.settings_btn_scan\),[\s\S]{0,500}?isMonitoringActive = !isMonitoringActive""").containsMatchIn(settings))
+        assertTrue("AUTHORIZE asks for the microphone", Regex("""stringResource\(R\.string\.settings_env_authorize\),[\s\S]{0,700}?micPermissionLauncher\.launch\(Manifest\.permission\.RECORD_AUDIO\)""").containsMatchIn(settings))
+        assertTrue("OPEN SETTINGS opens the app's settings page", Regex("""stringResource\(R\.string\.settings_open_settings\), Modifier\.weight\(1f\), mainColor = Color\.DarkGray\) \{\s*val intent = Intent\(android\.provider\.Settings\.ACTION_APPLICATION_DETAILS_SETTINGS\)""").containsMatchIn(settings))
+        assertTrue("the three status lines keep their thresholds (80 and 65 dB)", Regex("""currentDb > 80f -> R\.string\.settings_env_critical\s*currentDb > 65f -> R\.string\.settings_env_warning\s*else -> R\.string\.settings_env_optimal""").containsMatchIn(settings))
+        assertTrue("offline is what shows when the monitor is off", Regex("""\} else \{\s*Text\(stringResource\(R\.string\.settings_env_offline\)""").containsMatchIn(settings))
+        // The colours chosen by the same thresholds were not touched.
+        assertTrue(settings.contains("currentDb > 80f -> Color(0xFFFF0055)") && settings.contains("currentDb > 65f -> Color(0xFFFF9900)"))
+    }
+
+    @Test
+    fun theQuickAccessKeyFieldHintsAreOnTheirOwnFields_andRecStaysTheEnglishAbbreviation() {
+        assertTrue("the label field", Regex("""value = shortcut\.label,[\s\S]{0,1800}?placeholder = \{ Text\(stringResource\(R\.string\.settings_qk_label_hint\)\) \}""").containsMatchIn(settings))
+        assertTrue("the phrase field", Regex("""value = shortcut\.phrase,[\s\S]{0,1500}?placeholder = \{ Text\(stringResource\(R\.string\.settings_qk_phrase_hint\)\) \}""").containsMatchIn(settings))
+        assertTrue("REC and +REC are the button's text in every language (a narrow button, and manage_rec_empty names it REC)", settings.contains("""text = if (hasRecording) "REC" else "+REC","""))
+    }
+
     // ---- every language -------------------------------------------------------------------------------------------------------------------------
 
     @Test
@@ -211,6 +269,86 @@ class SettingsWordingTest {
             val said = FileText(tag).get("settings_force_rotation_desc", map.getValue("common_off"), map.getValue("common_on"))
             assertTrue("$tag: OFF ($said)", said.contains(map.getValue("common_off")))
             assertTrue("$tag: ON ($said)", said.contains(map.getValue("common_on")))
+        }
+    }
+
+    @Test
+    fun theEnglishOfPartBIsHeldExactly() {
+        val expected = mapOf(
+            "settings_hw_fire_grace_desc" to "Extra time after a pose locks and goes quiet before it fires. Tap the watch face anytime before then to cancel instead.",
+            "settings_hw_wake_window_desc" to "How much time is allowed between each of the 3 wake twists. Higher gives more room if your hand isn't perfectly steady.",
+            "settings_hw_flyout_desc" to "How long the watch's Target Computer flyout (tap-tap-hold on a Quick Actions deck) waits with no interaction before closing itself.",
+            "settings_shake_desc" to "Shake the phone to immediately stop whatever it's currently saying or showing -- a backstop for a mistaken watch fire or a wrong tap.",
+            "settings_btn_stop" to "[STOP]", "settings_btn_test" to "[TEST]", "settings_btn_scan" to "[SCAN]", "settings_shake_armed" to "ARMED -- SHAKE THE PHONE",
+            "settings_shake_test_note" to "This uses the real detector at the sensitivity above -- shake exactly as hard as you would to actually cut off output, and adjust the slider until that feels right.",
+            "settings_env_authorize" to "AUTHORIZE MIC SCAN", "settings_open_settings" to "OPEN SETTINGS", "settings_env_critical" to "CRITICAL: A.S.R. INTERFERENCE HIGH",
+            "settings_env_warning" to "WARNING: MODERATE NOISE LEVEL", "settings_env_optimal" to "OPTIMAL: ENVIRONMENT CLEAR", "settings_env_offline" to "MONITOR OFFLINE",
+            "settings_qk_label_hint" to "LBL", "settings_qk_phrase_hint" to "TARGET PHRASE",
+        )
+        for ((name, text) in expected) assertEquals(name, text, english.getValue(name))
+        assertEquals("CROWN RESISTANCE: LEVEL 3", EnglishText.get("settings_hw_crown", 3))
+        assertEquals("TWIST SENSITIVITY: 7.0", EnglishText.get("settings_label_value", "TWIST SENSITIVITY", "7.0"))
+        assertEquals("GRAVITY LOCK: 6.0", EnglishText.get("settings_hw_gravity_lock", "6.0"))
+        assertEquals("FIRE GRACE WINDOW: 500ms", EnglishText.get("settings_hw_fire_grace", 500))
+        assertEquals("WAKE GESTURE WINDOW: 1800ms", EnglishText.get("settings_hw_wake_window", 1800))
+        assertEquals("TARGET FLYOUT TIMEOUT: 10s", EnglishText.get("settings_hw_flyout", 10))
+        assertEquals("AUTO-CRYO: 10 MIN", EnglishText.get("settings_cryo_line", "AUTO-CRYO", 10))
+        assertEquals("SENSITIVITY: 15.0 (lower = easier to trigger)", EnglishText.get("settings_shake_sensitivity", "15.0"))
+        assertEquals("DETECTED ✓  (4)", EnglishText.get("settings_shake_detected", 4))
+    }
+
+    @Test
+    fun partBArgumentsAreWhereTheCodePutsThem() {
+        val numbers = listOf("settings_hw_crown", "settings_hw_fire_grace", "settings_hw_wake_window", "settings_hw_flyout", "settings_shake_detected")
+        val strings = listOf("settings_hw_gravity_lock", "settings_shake_sensitivity")
+        for ((tag, map) in listOf("en" to english) + translations.toList()) {
+            for (name in numbers) assertTrue("$tag/$name takes a whole number", map.getValue(name).contains("%1\$d"))
+            for (name in strings) assertTrue("$tag/$name takes a formatted number", map.getValue(name).contains("%1\$s"))
+            assertTrue("$tag: label then value", map.getValue("settings_label_value").let { it.contains("%1\$s") && it.contains("%2\$s") && it.indexOf("%1\$s") < it.indexOf("%2\$s") })
+            assertTrue("$tag: the cryo line takes a label then minutes", map.getValue("settings_cryo_line").let { it.contains("%1\$s") && it.contains("%2\$d") })
+            // The units are symbols that stay as they are in every language, so a number is never read with a translated unit stuck on it.
+            assertTrue("$tag: ms", map.getValue("settings_hw_fire_grace").contains("%1\$dms") && map.getValue("settings_hw_wake_window").contains("%1\$dms"))
+            assertTrue("$tag: s", map.getValue("settings_hw_flyout").contains("%1\$ds"))
+            for (name in partB - numbers - strings - setOf("settings_label_value", "settings_cryo_line")) {
+                assertFalse("$tag/$name takes an argument nothing passes", Regex("""%\d""").containsMatchIn(map.getValue(name)))
+            }
+        }
+    }
+
+    @Test
+    fun theThreeBracketedButtonsKeepTheirBrackets_andDifferInEveryLanguage() {
+        for ((tag, map) in listOf("en" to english) + translations.toList()) {
+            val words = listOf("settings_btn_stop", "settings_btn_test", "settings_btn_scan").map { map.getValue(it) }
+            for (w in words) assertTrue("$tag: $w keeps its brackets", w.startsWith("[") && w.endsWith("]"))
+            assertEquals("$tag: three buttons, three words: $words", 3, words.toSet().size)
+        }
+    }
+
+    @Test
+    fun partBWordsThatAnswerOppositeQuestionsDifferInEveryLanguage() {
+        val pairs = listOf(
+            "settings_shake_detected" to "settings_shake_armed", "settings_env_authorize" to "settings_open_settings", "settings_qk_label_hint" to "settings_qk_phrase_hint",
+            "settings_env_critical" to "settings_env_warning", "settings_env_warning" to "settings_env_optimal", "settings_env_critical" to "settings_env_optimal",
+            "settings_env_offline" to "settings_env_optimal", "settings_hw_fire_grace_desc" to "settings_hw_wake_window_desc", "settings_hw_wake_window_desc" to "settings_hw_flyout_desc",
+            "settings_hw_fire_grace" to "settings_hw_wake_window", "settings_hw_wake_window" to "settings_hw_flyout", "settings_shake_desc" to "settings_shake_test_note",
+        )
+        for ((tag, map) in listOf("en" to english) + translations.toList()) for ((a, b) in pairs) assertNotEquals("$tag: $a and $b read the same", map.getValue(a), map.getValue(b))
+    }
+
+    @Test
+    fun theFlyoutSentenceNamesTargetComputerAndQuickActionsTheWayTheLanguagesOwnLabelsDo() {
+        for ((tag, map) in translations) {
+            val said = map.getValue("settings_hw_flyout_desc")
+            assertTrue("$tag: ${map.getValue("label_target_computer")} is in '$said'", said.contains(map.getValue("label_target_computer")))
+            assertTrue("$tag: ${map.getValue("label_deck_type_quick")} is in '$said'", said.contains(map.getValue("label_deck_type_quick")))
+        }
+    }
+
+    @Test
+    fun theThreeStatusLinesNameTheirLevelFirst_asTheEnglishDoes() {
+        // CRITICAL, WARNING and OPTIMAL come first, followed by a colon, in every language: the level is read before the explanation.
+        for ((tag, map) in listOf("en" to english) + translations.toList()) for (name in listOf("settings_env_critical", "settings_env_warning", "settings_env_optimal")) {
+            assertTrue("$tag/$name: a level, then a colon: ${map.getValue(name)}", Regex("""^[^:]{2,20}:""").containsMatchIn(map.getValue(name)))
         }
     }
 }

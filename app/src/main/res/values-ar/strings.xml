@@ -878,4 +878,30 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="settings_visual_desc">تملأ رسائل النص والإيموجي وGIF الشاشة وتدوّر محتواها في مكانه لتظهر الكلمات كبيرة دون التفاف.</string>
     <string name="settings_force_rotation">فرض تدوير الجهاز</string>
     <string name="settings_force_rotation_desc">%1$s: تدوير الرسالة فقط. %2$s: تدوير الشاشة كلها (السلوك القديم).</string>
+    <string name="settings_hw_crown">مقاومة التاج: المستوى %1$d</string>
+    <string name="settings_label_value">%1$s: %2$s</string>
+    <string name="settings_hw_gravity_lock">قفل الجاذبية: %1$s</string>
+    <string name="settings_hw_fire_grace">نافذة مهلة الإطلاق: %1$dms</string>
+    <string name="settings_hw_fire_grace_desc">وقت إضافي بعد أن تثبت الوضعية وتهدأ وقبل أن تُطلق. المس وجه الساعة في أي وقت قبل ذلك للإلغاء بدلًا منه.</string>
+    <string name="settings_hw_wake_window">نافذة إيماءة الإيقاظ: %1$dms</string>
+    <string name="settings_hw_wake_window_desc">مقدار الوقت المسموح بين كل التفاتة من التفاتات الإيقاظ الثلاث. القيمة الأعلى تمنح مجالًا أكبر إذا لم تكن يدك ثابتة تمامًا.</string>
+    <string name="settings_hw_flyout">مهلة لوحة الهدف: %1$ds</string>
+    <string name="settings_hw_flyout_desc">المدة التي تنتظرها لوحة حاسوب الهدف في الساعة (نقرتان ثم ضغط مطوّل على حزمة إجراءات سريعة) دون أي تفاعل قبل أن تُغلق من تلقاء نفسها.</string>
+    <string name="settings_cryo_line">%1$s: %2$d دقيقة</string>
+    <string name="settings_shake_desc">هزّ الهاتف لإيقاف ما ينطقه أو يعرضه فورًا -- وسيلة احتياطية لإطلاق خاطئ من الساعة أو نقرة خاطئة.</string>
+    <string name="settings_shake_sensitivity">الحساسية: %1$s (الأقل = أسهل في التفعيل)</string>
+    <string name="settings_btn_stop">[إيقاف]</string>
+    <string name="settings_btn_test">[اختبار]</string>
+    <string name="settings_btn_scan">[فحص]</string>
+    <string name="settings_shake_detected">تم الكشف ✓  (%1$d)</string>
+    <string name="settings_shake_armed">جاهز -- هزّ الهاتف</string>
+    <string name="settings_shake_test_note">يستخدم هذا الكاشف الحقيقي بالحساسية أعلاه -- هزّ بالقوة نفسها التي ستستخدمها فعلًا لقطع الإخراج، واضبط المنزلق حتى يبدو الأمر مناسبًا.</string>
+    <string name="settings_env_authorize">السماح بفحص الميكروفون</string>
+    <string name="settings_open_settings">فتح الإعدادات</string>
+    <string name="settings_env_critical">حرج: تداخل مرتفع مع التعرف على الكلام</string>
+    <string name="settings_env_warning">تحذير: مستوى ضوضاء متوسط</string>
+    <string name="settings_env_optimal">مثالي: البيئة صافية</string>
+    <string name="settings_env_offline">المراقب متوقف</string>
+    <string name="settings_qk_label_hint">تسمية</string>
+    <string name="settings_qk_phrase_hint">عبارة الهدف</string>
 </resources>

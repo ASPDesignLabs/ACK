@@ -846,4 +846,30 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="settings_visual_desc">TEKS-, EMOJI- EN GIF-BOODSKAPPE VUL DIE SKERM EN DRAAI HUL INHOUD ONDERWYL DIT DAAR IS SODAT WOORDE GROOT VERSKYN SONDER OM TE BREEK.</string>
     <string name="settings_force_rotation">FORSEER TOESTELDRAAIING</string>
     <string name="settings_force_rotation_desc">%1$s: DRAAI SLEGS DIE BOODSKAP. %2$s: DRAAI DIE HELE SKERM (OU GEDRAG).</string>
+    <string name="settings_hw_crown">KROONWEERSTAND: VLAK %1$d</string>
+    <string name="settings_label_value">%1$s: %2$s</string>
+    <string name="settings_hw_gravity_lock">SWAARTEKRAGSLUITING: %1$s</string>
+    <string name="settings_hw_fire_grace">VUUR-GENADEVENSTER: %1$dms</string>
+    <string name="settings_hw_fire_grace_desc">EKSTRA TYD NADAT \'N POSE VASSLUIT EN STIL WORD VOORDAT DIT VUUR. TIK ENIGTYD DAARVOOR OP DIE HOROLOSIEWYSERPLAAT OM DIT TE KANSELLEER.</string>
+    <string name="settings_hw_wake_window">WEKGEBAAR-VENSTER: %1$dms</string>
+    <string name="settings_hw_wake_window_desc">HOEVEEL TYD TOEGESTAAN WORD TUSSEN ELKE VAN DIE 3 WEKDRAAIE. \'N HOËR WAARDE GEE MEER RUIMTE AS JOU HAND NIE HEELTEMAL STABIEL IS NIE.</string>
+    <string name="settings_hw_flyout">TEIKENPANEEL-TYDVERLOOP: %1$ds</string>
+    <string name="settings_hw_flyout_desc">HOE LANK DIE HOROLOSIE SE TEIKENREKENAAR-PANEEL (\'N TIK-TIK-HOU OP \'N VINNIGE AKSIES-DEK) WAG SONDER INTERAKSIE VOORDAT DIT SELF TOEMAAK.</string>
+    <string name="settings_cryo_line">%1$s: %2$d MIN</string>
+    <string name="settings_shake_desc">SKUD DIE FOON OM DADELIK TE STOP WAT DIT OOK SÊ OF WYS -- \'N TERUGVAL VIR \'N VERKEERDE HOROLOSIEVUUR OF \'N VERKEERDE TIK.</string>
+    <string name="settings_shake_sensitivity">SENSITIWITEIT: %1$s (LAER = MAKLIKER OM AF TE SIT)</string>
+    <string name="settings_btn_stop">[STOP]</string>
+    <string name="settings_btn_test">[TOETS]</string>
+    <string name="settings_btn_scan">[SKAN]</string>
+    <string name="settings_shake_detected">OPGESPOOR ✓  (%1$d)</string>
+    <string name="settings_shake_armed">GEARMEER -- SKUD DIE FOON</string>
+    <string name="settings_shake_test_note">DIT GEBRUIK DIE WERKLIKE OPSPOORDER BY DIE SENSITIWITEIT HIERBO -- SKUD PRESIES SO HARD AS WAT JY SOU OM DIE UITVOER WERKLIK AF TE SNY, EN PAS DIE SKUIFBALK AAN TOT DIT REG VOEL.</string>
+    <string name="settings_env_authorize">MAGTIG MIKROFOONSKANNING</string>
+    <string name="settings_open_settings">MAAK INSTELLINGS OOP</string>
+    <string name="settings_env_critical">KRITIEK: HOË INTERFERENSIE VIR SPRAAKHERKENNING</string>
+    <string name="settings_env_warning">WAARSKUWING: MATIGE GERAASVLAK</string>
+    <string name="settings_env_optimal">OPTIMAAL: OMGEWING HELDER</string>
+    <string name="settings_env_offline">MONITOR AF-LYN</string>
+    <string name="settings_qk_label_hint">ETI</string>
+    <string name="settings_qk_phrase_hint">TEIKENFRASE</string>
 </resources>

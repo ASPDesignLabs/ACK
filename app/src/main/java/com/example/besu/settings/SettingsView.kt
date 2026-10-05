@@ -795,7 +795,7 @@ fun SettingsView(
                 Text(labelFor(LabelKey.HARDWARE_CONFIG), color = NeonPalette.SWATCHES[5], fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text("CROWN RESISTANCE: LEVEL ${crownSens.toInt()}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_hw_crown, crownSens.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = crownSens, onValueChange = { crownSens = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 1f..5f, steps = 3, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
@@ -803,7 +803,7 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("${labelFor(LabelKey.TWIST_SENS)}: ${String.format("%.1f", motTwist)}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_label_value, labelFor(LabelKey.TWIST_SENS), String.format("%.1f", motTwist)), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = motTwist, onValueChange = { motTwist = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 2.0f..12.0f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
@@ -811,7 +811,7 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("GRAVITY LOCK: ${String.format("%.1f", motPose)}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_hw_gravity_lock, String.format("%.1f", motPose)), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = motPose, onValueChange = { motPose = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 2.0f..9.0f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
@@ -819,9 +819,9 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("FIRE GRACE WINDOW: ${fireGraceMs.toInt()}ms", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_hw_fire_grace, fireGraceMs.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Text(
-                    "Extra time after a pose locks and goes quiet before it fires. Tap the watch face anytime before then to cancel instead.",
+                    stringResource(R.string.settings_hw_fire_grace_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -833,9 +833,9 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("WAKE GESTURE WINDOW: ${wakeWindowMs.toInt()}ms", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_hw_wake_window, wakeWindowMs.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Text(
-                    "How much time is allowed between each of the 3 wake twists. Higher gives more room if your hand isn't perfectly steady.",
+                    stringResource(R.string.settings_hw_wake_window_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -847,9 +847,9 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("TARGET FLYOUT TIMEOUT: ${computerFlyoutTimeoutSec.toInt()}s", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_hw_flyout, computerFlyoutTimeoutSec.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Text(
-                    "How long the watch's Target Computer flyout (tap-tap-hold on a Quick Actions deck) waits with no interaction before closing itself.",
+                    stringResource(R.string.settings_hw_flyout_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -861,7 +861,7 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("${labelFor(LabelKey.CRYO)}: ${autoCryo.toInt()} MIN", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_cryo_line, labelFor(LabelKey.CRYO), autoCryo.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = autoCryo, onValueChange = { autoCryo = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 1f..10f, steps = 8, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[3], activeTrackColor = NeonPalette.SWATCHES[3], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
@@ -877,14 +877,14 @@ fun SettingsView(
                 Text(labelFor(LabelKey.SHAKE_KILL), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    "Shake the phone to immediately stop whatever it's currently saying or showing -- a backstop for a mistaken watch fire or a wrong tap.",
+                    stringResource(R.string.settings_shake_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text("SENSITIVITY: ${String.format("%.1f", shakeThreshold)} (lower = easier to trigger)", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_shake_sensitivity, String.format("%.1f", shakeThreshold)), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = shakeThreshold, onValueChange = { shakeThreshold = it }, onValueChangeFinished = { updateShakeThreshold() },
                     valueRange = 8f..25f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[3], activeTrackColor = NeonPalette.SWATCHES[3], inactiveTrackColor = Color.DarkGray))
 
@@ -897,7 +897,7 @@ fun SettingsView(
                 ) {
                     Text(labelFor(LabelKey.TRAIN_TEST), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(1.sp))
                     Text(
-                        text = if (isShakeTestActive) "[STOP]" else "[TEST]",
+                        text = stringResource(if (isShakeTestActive) R.string.settings_btn_stop else R.string.settings_btn_test),
                         color = if (isShakeTestActive) Color.Red else primaryColor,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -917,7 +917,7 @@ fun SettingsView(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (isShakeDetectedFlash) "DETECTED ✓  ($shakeDetectedCount)" else "ARMED -- SHAKE THE PHONE",
+                            text = if (isShakeDetectedFlash) stringResource(R.string.settings_shake_detected, shakeDetectedCount) else stringResource(R.string.settings_shake_armed),
                             color = if (isShakeDetectedFlash) BioGreen else Color.Gray,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
@@ -925,7 +925,7 @@ fun SettingsView(
                         )
                     }
                     Text(
-                        "This uses the real detector at the sensitivity above -- shake exactly as hard as you would to actually cut off output, and adjust the slider until that feels right.",
+                        stringResource(R.string.settings_shake_test_note),
                         color = Color.Gray,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace
@@ -945,7 +945,7 @@ fun SettingsView(
                     Text(labelFor(LabelKey.ENV_SENSOR), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                     if (hasMicPermission) {
                         Text(
-                            text = if (isMonitoringActive) "[STOP]" else "[SCAN]",
+                            text = stringResource(if (isMonitoringActive) R.string.settings_btn_stop else R.string.settings_btn_scan),
                             color = if (isMonitoringActive) Color.Red else primaryColor,
 
                             fontSize = 10.sp,
@@ -964,7 +964,7 @@ fun SettingsView(
                 if (!hasMicPermission) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         NeonButton(
-                            "AUTHORIZE MIC SCAN",
+                            stringResource(R.string.settings_env_authorize),
                             Modifier
                                 .weight(1f)
                                 .helpTarget(AckTags.SETTINGS_ENV_SENSOR, primaryColor),
@@ -974,7 +974,7 @@ fun SettingsView(
                             reportHelpInteraction(AckTags.SETTINGS_ENV_SENSOR)
                         }
                         // Fallback button to manually open App Settings if the system prompt is blocked
-                        NeonButton("OPEN SETTINGS", Modifier.weight(1f), mainColor = Color.DarkGray) {
+                        NeonButton(stringResource(R.string.settings_open_settings), Modifier.weight(1f), mainColor = Color.DarkGray) {
                             val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                 data = android.net.Uri.fromParts("package", context.packageName, null)
                             }
@@ -1008,15 +1008,17 @@ fun SettingsView(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    val statusText = when {
-                        currentDb > 80f -> "CRITICAL: A.S.R. INTERFERENCE HIGH"
-                        currentDb > 65f -> "WARNING: MODERATE NOISE LEVEL"
-                        else -> "OPTIMAL: ENVIRONMENT CLEAR"
-                    }
+                    val statusText = stringResource(
+                        when {
+                            currentDb > 80f -> R.string.settings_env_critical
+                            currentDb > 65f -> R.string.settings_env_warning
+                            else -> R.string.settings_env_optimal
+                        }
+                    )
 
                     Text(text = statusText, color = levelColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 } else {
-                    Text("MONITOR OFFLINE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                    Text(stringResource(R.string.settings_env_offline), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 }
             }
 
@@ -1040,7 +1042,7 @@ fun SettingsView(
                             modifier = Modifier.weight(0.25f).helpTarget(AckTags.SETTINGS_SHORTCUTS, primaryColor),
                             colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.DarkGray),
                             textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 10.sp),
-                            placeholder = { Text("LBL") }
+                            placeholder = { Text(stringResource(R.string.settings_qk_label_hint)) }
                         )
                         OutlinedTextField(
                             value = shortcut.phrase,
@@ -1051,7 +1053,7 @@ fun SettingsView(
                             modifier = Modifier.weight(0.6f),
                             colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.DarkGray),
                             textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 10.sp),
-                            placeholder = { Text("TARGET PHRASE") }
+                            placeholder = { Text(stringResource(R.string.settings_qk_phrase_hint)) }
                         )
                         Box(
                             modifier = Modifier

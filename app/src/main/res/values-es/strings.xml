@@ -854,4 +854,30 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="settings_visual_desc">LOS MENSAJES DE TEXTO, EMOJI Y GIF LLENAN LA PANTALLA Y GIRAN SU CONTENIDO EN SU LUGAR PARA QUE LAS PALABRAS SE VEAN GRANDES SIN PARTIRSE.</string>
     <string name="settings_force_rotation">FORZAR ROTACIÓN DEL DISPOSITIVO</string>
     <string name="settings_force_rotation_desc">%1$s: GIRA SOLO EL MENSAJE. %2$s: GIRA TODA LA PANTALLA (COMPORTAMIENTO ANTERIOR).</string>
+    <string name="settings_hw_crown">RESISTENCIA DE LA CORONA: NIVEL %1$d</string>
+    <string name="settings_label_value">%1$s: %2$s</string>
+    <string name="settings_hw_gravity_lock">BLOQUEO DE GRAVEDAD: %1$s</string>
+    <string name="settings_hw_fire_grace">VENTANA DE GRACIA DE DISPARO: %1$dms</string>
+    <string name="settings_hw_fire_grace_desc">TIEMPO EXTRA DESPUÉS DE QUE UNA POSE SE FIJA Y QUEDA EN SILENCIO ANTES DE DISPARAR. TOCA LA ESFERA DEL RELOJ EN CUALQUIER MOMENTO ANTES PARA CANCELAR.</string>
+    <string name="settings_hw_wake_window">VENTANA DEL GESTO DE ACTIVACIÓN: %1$dms</string>
+    <string name="settings_hw_wake_window_desc">CUÁNTO TIEMPO SE PERMITE ENTRE CADA UNO DE LOS 3 GIROS DE ACTIVACIÓN. UN VALOR MÁS ALTO DA MÁS MARGEN SI TU MANO NO ESTÁ PERFECTAMENTE FIRME.</string>
+    <string name="settings_hw_flyout">TIEMPO LÍMITE DEL PANEL DE OBJETIVO: %1$ds</string>
+    <string name="settings_hw_flyout_desc">CUÁNTO ESPERA EL PANEL DE COMPUTADORA OBJETIVO DEL RELOJ (TOCAR-TOCAR-MANTENER EN UN MAZO DE ACCIONES RÁPIDAS) SIN INTERACCIÓN ANTES DE CERRARSE SOLO.</string>
+    <string name="settings_cryo_line">%1$s: %2$d MIN</string>
+    <string name="settings_shake_desc">SACUDE EL TELÉFONO PARA DETENER AL INSTANTE LO QUE ESTÉ DICIENDO O MOSTRANDO -- UN RESPALDO PARA UN DISPARO EQUIVOCADO DEL RELOJ O UN TOQUE ERRÓNEO.</string>
+    <string name="settings_shake_sensitivity">SENSIBILIDAD: %1$s (MÁS BAJO = MÁS FÁCIL DE ACTIVAR)</string>
+    <string name="settings_btn_stop">[DETENER]</string>
+    <string name="settings_btn_test">[PROBAR]</string>
+    <string name="settings_btn_scan">[ESCANEAR]</string>
+    <string name="settings_shake_detected">DETECTADO ✓  (%1$d)</string>
+    <string name="settings_shake_armed">ARMADO -- SACUDE EL TELÉFONO</string>
+    <string name="settings_shake_test_note">ESTO USA EL DETECTOR REAL CON LA SENSIBILIDAD DE ARRIBA -- SACUDE EXACTAMENTE TAN FUERTE COMO LO HARÍAS PARA CORTAR LA SALIDA DE VERDAD Y AJUSTA EL DESLIZADOR HASTA QUE SE SIENTA BIEN.</string>
+    <string name="settings_env_authorize">AUTORIZAR ESCANEO CON MICRÓFONO</string>
+    <string name="settings_open_settings">ABRIR AJUSTES</string>
+    <string name="settings_env_critical">CRÍTICO: INTERFERENCIA ALTA PARA EL RECONOCIMIENTO DE VOZ</string>
+    <string name="settings_env_warning">ADVERTENCIA: NIVEL DE RUIDO MODERADO</string>
+    <string name="settings_env_optimal">ÓPTIMO: ENTORNO DESPEJADO</string>
+    <string name="settings_env_offline">MONITOR APAGADO</string>
+    <string name="settings_qk_label_hint">ETQ</string>
+    <string name="settings_qk_phrase_hint">FRASE DE DESTINO</string>
 </resources>

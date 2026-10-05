@@ -121,6 +121,9 @@ class TranslationsTest {
         "help_menu_steps_line", // "<count> // <view>": only placeholders, the words come in as arguments
         "help_cat_basics_manual_override_chip", // only a label placeholder: the words come from the label, in the language
         "help_view_terminal", "help_view_audio", "help_view_geo", // TERMINAL, AUDIO and GEO are written as in English in Spanish and Portuguese (GEO also in Afrikaans)
+        "settings_label_value", // "<label>: <value>": only placeholders, the words come in as arguments
+        "settings_cryo_line", // "<label>: <minutes> MIN": MIN is how Spanish, Portuguese and Afrikaans abbreviate minutes too
+        "settings_btn_stop", // [STOP] is how Afrikaans writes it too
     )
 
     @Test
@@ -183,7 +186,7 @@ class TranslationsTest {
     fun hindiAndArabicTextIsInItsOwnScript_exceptTheShortListOfPlainSymbolsAndAcronyms() {
         val devanagari = Regex("[\\u0900-\\u097F]")
         val arabic = Regex("[\\u0600-\\u06FF]")
-        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count", "help_menu_steps_line", "help_cat_basics_manual_override_chip") // placeholders and units, which have no letters of their own
+        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count", "help_menu_steps_line", "help_cat_basics_manual_override_chip", "settings_label_value") // placeholders and units, which have no letters of their own
         for ((tag, script) in listOf("hi" to devanagari, "ar" to arabic)) for ((name, text) in texts.getValue(tag)) {
             if (name in latinOnlyAllowed) continue
             assertTrue("$tag/$name has no ${if (tag == "hi") "Devanagari" else "Arabic"} letters: $text", script.containsMatchIn(text))

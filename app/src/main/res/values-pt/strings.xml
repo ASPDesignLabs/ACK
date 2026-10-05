@@ -854,4 +854,30 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="settings_visual_desc">MENSAGENS DE TEXTO, EMOJI E GIF PREENCHEM A TELA E GIRAM O CONTEÚDO NO LUGAR PARA QUE AS PALAVRAS APAREÇAM GRANDES SEM QUEBRAR.</string>
     <string name="settings_force_rotation">FORÇAR ROTAÇÃO DO DISPOSITIVO</string>
     <string name="settings_force_rotation_desc">%1$s: GIRA SÓ A MENSAGEM. %2$s: GIRA A TELA INTEIRA (COMPORTAMENTO ANTIGO).</string>
+    <string name="settings_hw_crown">RESISTÊNCIA DA COROA: NÍVEL %1$d</string>
+    <string name="settings_label_value">%1$s: %2$s</string>
+    <string name="settings_hw_gravity_lock">TRAVA DE GRAVIDADE: %1$s</string>
+    <string name="settings_hw_fire_grace">JANELA DE TOLERÂNCIA DO DISPARO: %1$dms</string>
+    <string name="settings_hw_fire_grace_desc">TEMPO EXTRA DEPOIS QUE UMA POSE TRAVA E FICA EM SILÊNCIO ANTES DE DISPARAR. TOQUE NO MOSTRADOR DO RELÓGIO A QUALQUER MOMENTO ANTES PARA CANCELAR.</string>
+    <string name="settings_hw_wake_window">JANELA DO GESTO DE ATIVAÇÃO: %1$dms</string>
+    <string name="settings_hw_wake_window_desc">QUANTO TEMPO É PERMITIDO ENTRE CADA UM DOS 3 GIROS DE ATIVAÇÃO. UM VALOR MAIOR DÁ MAIS FOLGA SE SUA MÃO NÃO ESTIVER PERFEITAMENTE FIRME.</string>
+    <string name="settings_hw_flyout">TEMPO LIMITE DO PAINEL DE ALVO: %1$ds</string>
+    <string name="settings_hw_flyout_desc">QUANTO TEMPO O PAINEL DE COMPUTADOR ALVO DO RELÓGIO (TOCAR-TOCAR-SEGURAR EM UM BARALHO DE AÇÕES RÁPIDAS) ESPERA SEM INTERAÇÃO ANTES DE SE FECHAR SOZINHO.</string>
+    <string name="settings_cryo_line">%1$s: %2$d MIN</string>
+    <string name="settings_shake_desc">SACUDA O CELULAR PARA PARAR NA HORA O QUE ELE ESTIVER FALANDO OU MOSTRANDO -- UMA PROTEÇÃO PARA UM DISPARO ERRADO DO RELÓGIO OU UM TOQUE ERRADO.</string>
+    <string name="settings_shake_sensitivity">SENSIBILIDADE: %1$s (MENOR = MAIS FÁCIL DE ACIONAR)</string>
+    <string name="settings_btn_stop">[PARAR]</string>
+    <string name="settings_btn_test">[TESTAR]</string>
+    <string name="settings_btn_scan">[ESCANEAR]</string>
+    <string name="settings_shake_detected">DETECTADO ✓  (%1$d)</string>
+    <string name="settings_shake_armed">ARMADO -- SACUDA O CELULAR</string>
+    <string name="settings_shake_test_note">ISSO USA O DETECTOR REAL NA SENSIBILIDADE ACIMA -- SACUDA EXATAMENTE TÃO FORTE QUANTO FARIA PARA CORTAR A SAÍDA DE VERDADE E AJUSTE O DESLIZANTE ATÉ ISSO PARECER CERTO.</string>
+    <string name="settings_env_authorize">AUTORIZAR VARREDURA DO MICROFONE</string>
+    <string name="settings_open_settings">ABRIR CONFIGURAÇÕES</string>
+    <string name="settings_env_critical">CRÍTICO: INTERFERÊNCIA ALTA PARA O RECONHECIMENTO DE VOZ</string>
+    <string name="settings_env_warning">ATENÇÃO: NÍVEL DE RUÍDO MODERADO</string>
+    <string name="settings_env_optimal">ÓTIMO: AMBIENTE LIVRE</string>
+    <string name="settings_env_offline">MONITOR DESLIGADO</string>
+    <string name="settings_qk_label_hint">ROT</string>
+    <string name="settings_qk_phrase_hint">FRASE DE DESTINO</string>
 </resources>

@@ -867,4 +867,30 @@
     <string name="settings_visual_desc">Text/emoji/GIF prompts fill the screen and rotate their content in place so words display large without wrapping.</string>
     <string name="settings_force_rotation">FORCE DEVICE ROTATION</string>
     <string name="settings_force_rotation_desc">%1$s: rotate the prompt only. %2$s: rotate the whole screen (old behavior).</string>
+    <string name="settings_hw_crown">CROWN RESISTANCE: LEVEL %1$d</string>
+    <string name="settings_label_value">%1$s: %2$s</string>
+    <string name="settings_hw_gravity_lock">GRAVITY LOCK: %1$s</string>
+    <string name="settings_hw_fire_grace">FIRE GRACE WINDOW: %1$dms</string>
+    <string name="settings_hw_fire_grace_desc">Extra time after a pose locks and goes quiet before it fires. Tap the watch face anytime before then to cancel instead.</string>
+    <string name="settings_hw_wake_window">WAKE GESTURE WINDOW: %1$dms</string>
+    <string name="settings_hw_wake_window_desc">How much time is allowed between each of the 3 wake twists. Higher gives more room if your hand isn\'t perfectly steady.</string>
+    <string name="settings_hw_flyout">TARGET FLYOUT TIMEOUT: %1$ds</string>
+    <string name="settings_hw_flyout_desc">How long the watch\'s Target Computer flyout (tap-tap-hold on a Quick Actions deck) waits with no interaction before closing itself.</string>
+    <string name="settings_cryo_line">%1$s: %2$d MIN</string>
+    <string name="settings_shake_desc">Shake the phone to immediately stop whatever it\'s currently saying or showing -- a backstop for a mistaken watch fire or a wrong tap.</string>
+    <string name="settings_shake_sensitivity">SENSITIVITY: %1$s (lower = easier to trigger)</string>
+    <string name="settings_btn_stop">[STOP]</string>
+    <string name="settings_btn_test">[TEST]</string>
+    <string name="settings_btn_scan">[SCAN]</string>
+    <string name="settings_shake_detected">DETECTED ✓  (%1$d)</string>
+    <string name="settings_shake_armed">ARMED -- SHAKE THE PHONE</string>
+    <string name="settings_shake_test_note">This uses the real detector at the sensitivity above -- shake exactly as hard as you would to actually cut off output, and adjust the slider until that feels right.</string>
+    <string name="settings_env_authorize">AUTHORIZE MIC SCAN</string>
+    <string name="settings_open_settings">OPEN SETTINGS</string>
+    <string name="settings_env_critical">CRITICAL: A.S.R. INTERFERENCE HIGH</string>
+    <string name="settings_env_warning">WARNING: MODERATE NOISE LEVEL</string>
+    <string name="settings_env_optimal">OPTIMAL: ENVIRONMENT CLEAR</string>
+    <string name="settings_env_offline">MONITOR OFFLINE</string>
+    <string name="settings_qk_label_hint">LBL</string>
+    <string name="settings_qk_phrase_hint">TARGET PHRASE</string>
 </resources>
