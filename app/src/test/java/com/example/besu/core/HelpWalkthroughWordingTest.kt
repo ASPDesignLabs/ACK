@@ -24,12 +24,11 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt", "RecordTrainingDataHelp.kt", "MatrixDeckHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt", "RecordTrainingDataHelp.kt", "MatrixDeckHelp.kt", "VoiceRecordingsHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
         "FieldOpsHelp.kt",
-        "VoiceRecordingsHelp.kt",
         // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
         "HelpRegistry.kt",
     )
@@ -187,6 +186,16 @@ class HelpWalkthroughWordingTest {
         "helpmod_statement_composer_speak_title" to "common_speak",
         "helpmod_ack_command_bar_header_protocol_title" to "label_settings_entry",
         "helpmod_matrix_prompt_creation_macro_template_title" to "matrix_edit_subtitle",
+        "helpmod_voice_rec_recording_intro_title" to "settings_voice_heading",
+        "helpmod_voice_recordings_training_title" to "settings_voice_heading",
+        "helpmod_voice_recordings_training_select_title" to "settings_voice_heading",
+        "helpmod_voice_rec_recording_record_title" to "voice_rec_record",
+        "helpmod_voice_rec_matrix_record_title" to "voice_rec_record",
+        "helpmod_voice_rec_recording_stop_title" to "voice_rec_stop",
+        "helpmod_voice_rec_matrix_stop_title" to "voice_rec_stop",
+        "helpmod_voice_rec_recording_accept_title" to "voice_rec_accept",
+        "helpmod_voice_rec_matrix_accept_title" to "voice_rec_accept",
+        "helpmod_voice_rec_manage_intro_title" to "manage_rec_title",
     )
 
     /** A text that names a label in plain words (English has no placeholder there), so every language holds that label's own standard word, and it does not follow PLAIN WORDS (a known gap). */
@@ -246,6 +255,22 @@ class HelpWalkthroughWordingTest {
         "helpmod_deck_profile_selection_select_profile_body" to listOf("profile_warn_change"),
         "helpmod_matrix_prompt_creation_macro_template_body" to listOf("matrix_edit_subtitle", "matrix_edit_template"),
         "helpmod_matrix_prompt_creation_commit_prompt_body" to listOf("matrix_edit_destructive", "common_commit"),
+        // VOICE RECORDINGS: the recording panel's buttons and section heading, the Matrix editor's attach and override controls, and MANAGE RECORDINGS.
+        "helpmod_voice_rec_recording_find_section_body" to listOf("voice_rec_title"),
+        "helpmod_voice_rec_recording_record_body" to listOf("voice_rec_record"),
+        "helpmod_voice_rec_recording_stop_body" to listOf("voice_rec_stop"),
+        "helpmod_voice_rec_recording_preview_body" to listOf("voice_rec_play", "common_discard"),
+        "helpmod_voice_rec_recording_accept_body" to listOf("voice_rec_accept"),
+        "helpmod_voice_rec_recording_complete_body" to listOf("voice_rec_title", "voice_rec_remove", "voice_rec_rerecord", "manage_rec_title"),
+        "helpmod_voice_rec_matrix_variables_caveat_body" to listOf("matrix_edit_attach_recording"),
+        "helpmod_voice_rec_matrix_record_body" to listOf("voice_rec_record", "matrix_edit_attach_recording"),
+        "helpmod_voice_rec_matrix_stop_body" to listOf("voice_rec_stop"),
+        "helpmod_voice_rec_matrix_accept_body" to listOf("voice_rec_play", "voice_rec_accept"),
+        "helpmod_voice_rec_matrix_visual_override_title" to listOf("matrix_edit_visual_override"),
+        "helpmod_voice_rec_matrix_visual_override_body" to listOf("matrix_edit_visual_override"),
+        "helpmod_voice_rec_manage_intro_body" to listOf("label_settings_entry"),
+        "helpmod_voice_rec_manage_open_body" to listOf("manage_rec_title"),
+        "helpmod_voice_rec_manage_actions_body" to listOf("voice_rec_play", "voice_rec_rerecord", "common_delete"),
     )
 
     @Test
@@ -316,8 +341,8 @@ class HelpWalkthroughWordingTest {
 
     @Test
     fun aStoredTagInEnglishIsKeptExactlyInEveryLanguage() {
-        // [COMPUTER:PEOPLE] is the token the phrase editor really inserts; it is never translated.
-        val tag = Regex("""\[[A-Z]+:[A-Z_]+\]""")
+        // [COMPUTER:PEOPLE], [COMPUTER:] and {VAR} are the tokens the phrase editor really inserts; they are never translated.
+        val tag = Regex("""\[[A-Z]+:[A-Z_]*\]|(?<!\{)\{VAR(?::[A-C])?\}(?!\})""")
         var checked = 0
         for ((name, text) in english.filter { it.key.startsWith(HelpWalkthroughText.PREFIX) }) {
             for (token in tag.findAll(text).map { it.value }) {

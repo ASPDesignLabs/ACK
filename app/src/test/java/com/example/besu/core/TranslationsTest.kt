@@ -117,6 +117,7 @@ class TranslationsTest {
         "common_no", // "NO" is Spanish for no
         "label_pose_connect_plain", "label_variable", // real words in Spanish and Portuguese that are spelled as in English (SOCIAL, VARIABLE)
         "voice_rec_stop", // STOP is how Afrikaans says it too
+        "helpmod_voice_rec_recording_stop_title", "helpmod_voice_rec_matrix_stop_title", // the walkthrough titles that are the same word (HelpWalkthroughWordingTest holds them to the screen's button)
         "tree_kind_count", // "<name> (<count>)": only placeholders, the words come in as arguments
         "autocomplete_variable", "autocomplete_var_n", // VARIABLE is how Spanish writes it, VAR is how Spanish and Portuguese abbreviate it
         "people_wizard_in", // "IN <name>" is Afrikaans too

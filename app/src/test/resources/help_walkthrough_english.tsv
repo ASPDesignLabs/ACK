@@ -268,3 +268,61 @@ helpmod_matrix_prompt_creation_play_prompt_title	PLAY BACK YOUR PROMPT
 helpmod_matrix_prompt_creation_play_prompt_body	Your prompt is now ready for manual playback. Tap the highlighted play control beside Twist 0 to transmit the phrase you created.
 helpmod_matrix_prompt_creation_prompt_complete_title	PROMPT COMPLETE
 helpmod_matrix_prompt_creation_prompt_complete_body	Prompt creation complete. You edited a Matrix node, saved its template, and played it back from the Matrix.
+helpmod_voice_rec_recording_title	RECORDING A VOICE PROMPT
+helpmod_voice_rec_recording_summary	RECORD, PREVIEW, AND ACCEPT YOUR OWN VOICE FOR ANY PROMPT.
+helpmod_voice_rec_recording_intro_title	VOICE RECORDINGS
+helpmod_voice_rec_recording_intro_body	Any {{DECK_TYPE_QUICK:Quick Actions}} slot, Quick-Access key, or Matrix node can play your own recorded voice instead of synthesized speech. The record, preview, and accept flow is identical everywhere it shows up -- this walkthrough uses a {{DECK_TYPE_QUICK:Quick Actions}} slot as the example.
+helpmod_voice_rec_recording_open_slot_title	OPEN A SLOT
+helpmod_voice_rec_recording_open_slot_body	Hold a {{DECK_TYPE_QUICK:Quick Actions}} slot to open its editor.
+helpmod_voice_rec_recording_find_section_title	VOICE RECORDING SECTION
+helpmod_voice_rec_recording_find_section_body	Scroll down past the phrase template to the VOICE RECORDING section.
+helpmod_voice_rec_recording_record_title	RECORD
+helpmod_voice_rec_recording_record_body	Tap RECORD. The first time, you'll be asked to allow microphone access.
+helpmod_voice_rec_recording_stop_title	STOP
+helpmod_voice_rec_recording_stop_body	Tap STOP when you're done talking. ACK automatically reduces background noise and trims dead air from both ends -- you don't need to leave silence around your words.
+helpmod_voice_rec_recording_preview_title	PREVIEW IT
+helpmod_voice_rec_recording_preview_body	Tap PLAY to hear exactly what will play back. Not happy with it? DISCARD and record again -- nothing is saved yet.
+helpmod_voice_rec_recording_accept_title	ACCEPT
+helpmod_voice_rec_recording_accept_body	Tap ACCEPT to save it. This slot now plays your recording instead of synthesized speech.
+helpmod_voice_rec_recording_complete_title	RECORDING COMPLETE
+helpmod_voice_rec_recording_complete_body	That's the whole flow, and it's the same wherever you see a VOICE RECORDING section. REMOVE clears a saved recording and falls back to synthesized speech; RE-RECORD (in MANAGE RECORDINGS) replaces one without deleting it first.
+helpmod_voice_rec_matrix_title	MATRIX VOICE ENTRIES
+helpmod_voice_rec_matrix_summary	RECORD OVER A TEMPLATE, SET A VISUAL OVERRIDE, AND HANDLE LATER EDITS.
+helpmod_voice_rec_matrix_intro_title	MATRIX VOICE ENTRIES
+helpmod_voice_rec_matrix_intro_body	A Matrix node can play a recording instead of resolving its template. Nothing about the template or its variables is touched -- remove the recording and the node goes right back to normal.
+helpmod_voice_rec_matrix_open_node_title	OPEN A NODE
+helpmod_voice_rec_matrix_open_node_body	Tap any node's row to open its Live-Save Editor.
+helpmod_voice_rec_matrix_variables_caveat_title	VARIABLES GO QUIET
+helpmod_voice_rec_matrix_variables_caveat_body	If this node's template has {VAR} tokens or [COMPUTER:] tags, attaching a recording plays it back exactly as recorded and ignores them while it's active. Their values are kept, not deleted -- remove the recording later and they're right where you left them. You'll see an ATTACH VOICE RECORDING button and a one-time confirmation first if this applies.
+helpmod_voice_rec_matrix_record_title	RECORD
+helpmod_voice_rec_matrix_record_body	Tap RECORD (or ATTACH VOICE RECORDING first, then RECORD, if this node has variables).
+helpmod_voice_rec_matrix_stop_title	STOP
+helpmod_voice_rec_matrix_stop_body	Tap STOP when you're done.
+helpmod_voice_rec_matrix_accept_title	ACCEPT
+helpmod_voice_rec_matrix_accept_body	Preview it with PLAY if you'd like, then tap ACCEPT.
+helpmod_voice_rec_matrix_visual_override_title	VISUAL PROMPT OVERRIDE
+helpmod_voice_rec_matrix_visual_override_body	With a recording active, VISUAL PROMPT OVERRIDE controls what shows on the overlay and in the log while it plays -- handy since the raw template can carry unresolved {VAR} tokens once a recording takes over. Leave it blank to show the raw template as-is.
+helpmod_voice_rec_matrix_re_enable_title	IF THE TEMPLATE CHANGES LATER
+helpmod_voice_rec_matrix_re_enable_body	Editing this node's text after a recording is attached disables the recording (not deletes it) so old audio can't play against new text. A RE-ENABLE button appears the next time you open this node -- tap it once the recording still matches, or record fresh audio instead.
+helpmod_voice_rec_matrix_complete_title	MATRIX RECORDING COMPLETE
+helpmod_voice_rec_matrix_complete_body	Template, variables, and the recording all coexist -- removing the recording is always enough to get back to today's normal resolved behavior.
+helpmod_voice_rec_manage_title	MANAGING RECORDINGS
+helpmod_voice_rec_manage_summary	BROWSE, PLAY, RE-RECORD, AND DELETE EVERY RECORDING IN ONE PLACE.
+helpmod_voice_rec_manage_intro_title	MANAGE RECORDINGS
+helpmod_voice_rec_manage_intro_body	Every recording you've made -- {{DECK_TYPE_QUICK:Quick Actions}}, {{QUICK_ACCESS_KEYS:Quick-Access keys}}, and Matrix nodes alike -- lives in one browsable tree under PROTOCOL.
+helpmod_voice_rec_manage_open_title	OPEN IT
+helpmod_voice_rec_manage_open_body	Tap MANAGE RECORDINGS.
+helpmod_voice_rec_manage_tree_title	DRILL DOWN
+helpmod_voice_rec_manage_tree_body	Recordings are grouped by how they're used: {{DECK:Deck}} > Group > Slot for {{DECK_TYPE_QUICK:Quick Actions}}, a flat list for {{QUICK_ACCESS_KEYS:Quick-Access keys}}, and {{DECK:Deck}} > Profile > Pose > Slot for Matrix. Tap a branch row to expand or collapse it.
+helpmod_voice_rec_manage_leaf_title	WHAT A RECORDING SHOWS
+helpmod_voice_rec_manage_leaf_body	Each recording shows the text that would actually reach the overlay if it played right now, its play time, and its file size on disk.
+helpmod_voice_rec_manage_actions_title	PLAY, RE-RECORD, DELETE
+helpmod_voice_rec_manage_actions_body	PLAY previews it in place. RE-RECORD replaces the audio without touching whatever it's bound to. DELETE removes it -- whatever it was bound to falls back to synthesized speech (or, for Matrix, its normal resolved text).
+helpmod_voice_rec_manage_overlay_toggle_title	OVERLAY ON PLAY
+helpmod_voice_rec_manage_overlay_toggle_body	Tap the OVERLAY toggle in the top corner. When on, tapping PLAY also shows that recording's own text on screen -- a second way to confirm you found the right one.
+helpmod_voice_rec_manage_complete_title	MANAGE RECORDINGS COMPLETE
+helpmod_voice_rec_manage_complete_body	One tree, every recording, no need to remember where each one lives.
+helpmod_voice_recordings_training_title	VOICE RECORDINGS
+helpmod_voice_recordings_training_summary	PICK A TOPIC: RECORDING, MATRIX ENTRIES, OR MANAGING WHAT YOU'VE SAVED.
+helpmod_voice_recordings_training_select_title	VOICE RECORDINGS
+helpmod_voice_recordings_training_select_body	Choose a topic.
