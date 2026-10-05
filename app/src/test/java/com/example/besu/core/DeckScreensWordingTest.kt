@@ -12,7 +12,8 @@ import org.junit.Test
  * English literals are gone, every string they name exists and none is unused, each word sits on the control that does what it says, and the values that are SAVED (a new deck's default name,
  * the stored pose names, ids) were not translated. The words that name a deck type come from the label table (`label_deck_type_*`).
  *
- * Part 1: the CREATE DECK dialog. Part 2: the QUICK ACTIONS deck and its two editors (QuickActionLabelsTest holds the decisions).
+ * Part 1: the CREATE DECK dialog. Part 2: the QUICK ACTIONS deck and its two editors (QuickActionLabelsTest holds the decisions). Part 3: the EMOJI deck, its editors, its library's headings
+ * and its configuration dialog (EmojiLabelsTest holds the decisions).
  */
 class DeckScreensWordingTest {
 
@@ -33,17 +34,26 @@ class DeckScreensWordingTest {
         "qa_hold_configure", "qa_slot_default", "qa_group_default",
         "qa_edit_title", "qa_phrase_template", "qa_edit_group", "qa_group_label", "qa_group_pose_desc", "qa_group_root_title", "qa_group_root_desc",
     )
-    private val allNames get() = createNames + qaNames
+    private val emojiNames = listOf(
+        "emoji_title", "emoji_hint_tap", "emoji_hint_hold", "emoji_config_button", "emoji_txt", "emoji_hold_to_set", "emoji_page_default",
+        "emoji_configure_title", "emoji_related_edit_title", "emoji_custom", "emoji_hide_library", "emoji_pick_library", "emoji_label_optional", "emoji_overlay_text_optional",
+        "emoji_open_related", "emoji_configure_related", "emoji_related_note", "emoji_related_title", "emoji_panel_default", "emoji_related_hold", "emoji_related_tap",
+        "emoji_cat_responses", "emoji_cat_boundaries", "emoji_cat_needs", "emoji_cat_feelings", "emoji_cat_regulation", "emoji_cat_people_places",
+        "emoji_config_title", "emoji_grid_size", "emoji_overlay_timeout", "emoji_timeout_standard", "emoji_timeout_extended", "emoji_timeout_none",
+        "emoji_pages", "emoji_add_page", "emoji_save_config",
+    )
+    private val allNames get() = createNames + qaNames + emojiNames
+    private val emoji get() = file("decks/EmojiDeck.kt")
     private val quick get() = file("decks/QuickActionsDeck.kt")
 
     // ---- the strings and the old literals --------------------------------------------------------------------------------------------------
 
     @Test
     fun everyStringTheDeckScreensNameExists_inEveryLanguage_andNoneIsLeftUnused() {
-        val sources = create + "\n" + quick
-        val screenRefs = Regex("""R\.string\.((?:deck|qa)_[a-z_]+)""").findAll(sources).map { it.groupValues[1] }.toSet()
-        // The words core/QuickActionLabels.kt names itself (a screen asks it for them), plus every other string either screen reads.
-        val named = Regex(""""(qa_[a-z_]+)"""").findAll(file("core/QuickActionLabels.kt")).map { it.groupValues[1] }.toSet()
+        val sources = create + "\n" + quick + "\n" + emoji
+        val screenRefs = Regex("""R\.string\.((?:deck|qa|emoji)_[a-z_]+)""").findAll(sources).map { it.groupValues[1] }.toSet()
+        // The words core/QuickActionLabels.kt and core/EmojiLabels.kt name themselves (a screen asks them for the words), plus every other string a screen reads.
+        val named = Regex(""""((?:qa|emoji)_[a-z_]+)"""").findAll(file("core/QuickActionLabels.kt") + "\n" + file("core/EmojiLabels.kt")).map { it.groupValues[1] }.toSet()
         val referenced = screenRefs + named
         for ((tag, map) in listOf("en" to english) + translations.toList()) {
             val missing = (referenced + Regex("""R\.string\.([a-z_]+)""").findAll(sources).map { it.groupValues[1] }).filter { it !in map }
@@ -232,6 +242,150 @@ class DeckScreensWordingTest {
     fun theHintsWordsMatchTheEmergencyDecksHint_soTheTwoDecksSayTheSameThing() {
         // The Emergency deck's hint says "TAP: EXECUTE  //  HOLD: CONFIGURE"; this deck's first half is the same words in every language.
         for ((tag, map) in listOf("en" to english) + translations.toList()) assertEquals("$tag", map.getValue("emergency_hint_tap"), map.getValue("qa_hint_tap"))
+    }
+
+    // ---- part 3: the EMOJI deck -------------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun theOldEmojiLiteralsAreGone() {
+        for (literal in listOf(
+            "text = \"EMOJI // EXPRESS\"", "\"TAP: DISPLAY  //  HOLD: CONFIGURE\"", "text = \"CONFIG\"", "text = \"TXT\"", "\"HOLD\\nTO SET\"", "title = \"CONFIGURE EMOJI", "title = \"RELATED EMOJI", "label = \"CUSTOM EMOJI\"",
+            "\"HIDE EMOJI LIBRARY\"", "\"PICK FROM LIBRARY\"", "\"LABEL // OPTIONAL\"", "\"OVERLAY TEXT // OPTIONAL\"", "\"OPEN RELATED EMOJI PANEL\"", "\"CONFIGURE RELATED PANEL\"",
+            "THIS SLOT OPENS A SINGLE-PAGE EMOJI PANEL", "text = \"CLEAR\"", "text = \"SAVE\"", "text = \"DONE\"", "title = \"RELATED // ", "{ \"PANEL\" }", "HOLD A TILE TO CONFIGURE IT", "TAP AN EMOJI TO DISPLAY IT",
+            "\"RESPONSES\" to", "\"BOUNDARIES\" to", "\"NEEDS\" to", "\"FEELINGS\" to", "\"REGULATION\" to", "\"PEOPLE / PLACES\" to", "title = \"EMOJI DECK CONFIG\"", "text = \"GRID SIZE\"",
+            "text = \"OVERLAY TIMEOUT\"", "option.name.replace", "text = \"PAGES // ", "text = \"+ ADD PAGE\"", "text = \"SAVE CONFIG\"",
+        )) assertFalse("EmojiDeck.kt still holds $literal", emoji.contains(literal))
+        assertTrue(emoji.contains("import com.example.besu.R\n"))
+        assertTrue(emoji.contains("import androidx.compose.ui.res.stringResource"))
+    }
+
+    @Test
+    fun theDecksOwnWordsComeFromTheDecisionsInCore_andTheTitleNamesTheDeckTypeByItsLabel() {
+        assertTrue(emoji.contains("text = stringResource(R.string.emoji_title, labelFor(LabelKey.DECK_TYPE_EMOJI)),"))
+        assertTrue(emoji.contains("text = EmojiLabels.hint(words),"))
+        assertTrue(emoji.contains("pageName = EmojiLabels.shownPageName(words, activePage.name, activePageIndex),"))
+        assertEquals("both related dialogs title themselves the same way", 2, Regex("""title = EmojiLabels\.relatedTitle\(rememberText\(\), parentSlot\.label, parentSlot\.emoji\),""").findAll(emoji).count())
+        assertTrue(emoji.contains("title = stringResource(R.string.emoji_config_title, labelFor(LabelKey.DECK_TYPE_EMOJI), labelFor(LabelKey.DECK)),"))
+    }
+
+    @Test
+    fun theSavedPageNamesWereNotTranslated() {
+        // A new page is SAVED as PAGE <n> (and the deck starts with PAGE 1), whatever the language: the screen shows them in the language, it never stores that.
+        assertTrue(emoji.contains("""name = "PAGE 1""""))
+        assertTrue(emoji.contains("""name = "PAGE ${'$'}nextNumber""""))
+        assertTrue(emoji.contains("""pageId = "page_1","""))
+        assertTrue(emoji.contains("""pageId = "page_${'$'}{UUID.randomUUID()}","""))
+        // The emoji sent to the visual prompt and the tile's own text are the person's, passed along untouched.
+        assertTrue(emoji.contains("""putExtra("emoji", slot.emoji)""") && emoji.contains("""putExtra("display_text", slot.displayText)"""))
+    }
+
+    @Test
+    fun theLibraryHeadingsSitOverTheirOwnEmoji() {
+        for ((name, first) in listOf("responses" to "✅", "boundaries" to "🛑", "needs" to "⏳", "feelings" to "😀", "regulation" to "🧠", "people_places" to "👤")) {
+            assertTrue("emoji_cat_$name is over $first", emoji.contains("R.string.emoji_cat_$name to listOf(\"$first\""))
+        }
+        assertTrue(Regex("""stringResource\(titleRes\),[\s\S]{0,900}?emojiList\.forEach""").containsMatchIn(emoji))
+    }
+
+    @Test
+    fun eachEmojiWordSitsOnTheControlThatDoesWhatItSays() {
+        assertTrue("the library button flips the picker", Regex("""stringResource\(R\.string\.emoji_hide_library\)[\s\S]{0,300}?stringResource\(R\.string\.emoji_pick_library\)[\s\S]{0,700}?pickerOpen = !pickerOpen""").containsMatchIn(emoji))
+        assertTrue("OPEN RELATED EMOJI PANEL is the switch for opensRelatedPanel", Regex("""label = stringResource\(R\.string\.emoji_open_related\),\s*enabled = opensRelatedPanel,[\s\S]{0,400}?opensRelatedPanel = !opensRelatedPanel""").containsMatchIn(emoji))
+        assertTrue("CONFIGURE RELATED PANEL saves the parent and opens the child editor", Regex("""text = stringResource\(R\.string\.emoji_configure_related\),[\s\S]{0,900}?onSaveParentForRelated\([\s\S]{0,300}?showRelatedPanelEditor = true""").containsMatchIn(emoji))
+        assertTrue("the note is under the related switch's button", Regex("""emoji_configure_related[\s\S]{0,1500}?text = stringResource\(R\.string\.emoji_related_note\)""").containsMatchIn(emoji))
+        assertTrue("CLEAR empties the tile and SAVE saves it", Regex("""text = stringResource\(R\.string\.common_clear\),[\s\S]{0,400}?emoji = ""\s*label = ""\s*displayText = ""\s*opensRelatedPanel = false[\s\S]{0,300}?text = stringResource\(R\.string\.common_save\),[\s\S]{0,400}?onSave\(""").containsMatchIn(emoji))
+        assertTrue("the three fields are the emoji, the label and the overlay text", Regex("""emoji_custom\),\s*value = emoji,[\s\S]{0,1500}?emoji_label_optional\),\s*value = label,[\s\S]{0,500}?emoji_overlay_text_optional\),\s*value = displayText,""").containsMatchIn(emoji))
+        assertTrue("both viewers end with DONE closing them", Regex("""text = stringResource\(R\.string\.common_done\),[\s\S]{0,300}?onDismiss\(\)""").findAll(emoji).count() >= 2)
+        assertTrue("the viewer's sentence is over tiles that only pass the chosen emoji on", Regex("""emoji_related_tap\)[\s\S]{0,1500}?onSelect\(childSlot\)""").containsMatchIn(emoji))
+        assertTrue("the editor's sentence is over tiles that open the child editor", Regex("""emoji_related_hold\)[\s\S]{0,1500}?editingChildSlot = childSlot""").containsMatchIn(emoji))
+    }
+
+    @Test
+    fun theConfigDialogsWordsSitOnTheirOwnControls() {
+        val order = listOf(
+            "R.string.emoji_config_title", "R.string.emoji_grid_size", "gridSize = option", "R.string.emoji_overlay_timeout", "R.string.emoji_timeout_standard", "timeout = option",
+            "R.string.emoji_pages", "R.string.emoji_add_page", "R.string.emoji_save_config", "overlayTimeout = timeout",
+        )
+        val at = order.map { emoji.indexOf(it) }
+        assertTrue("every part of the config dialog is there: $at", at.all { it >= 0 })
+        assertEquals("in this order", at.sorted(), at)
+        assertTrue(emoji.contains("EmojiOverlayTimeout.STANDARD -> R.string.emoji_timeout_standard"))
+        assertTrue(emoji.contains("EmojiOverlayTimeout.EXTENDED -> R.string.emoji_timeout_extended"))
+        assertTrue(emoji.contains("EmojiOverlayTimeout.NO_AUTO_CLEAR -> R.string.emoji_timeout_none"))
+        assertTrue("the grid sizes are still numbers", emoji.contains("""text = "${'$'}{option.columns} X ${'$'}{option.rows}","""))
+    }
+
+    @Test
+    fun theEmojiEnglishIsHeldExactly() {
+        val expected = mapOf(
+            "emoji_hint_tap" to "TAP: DISPLAY", "emoji_hint_hold" to "HOLD: CONFIGURE", "emoji_config_button" to "CONFIG", "emoji_txt" to "TXT", "emoji_hold_to_set" to "HOLD\nTO SET",
+            "emoji_custom" to "CUSTOM EMOJI", "emoji_hide_library" to "HIDE EMOJI LIBRARY", "emoji_pick_library" to "PICK FROM LIBRARY", "emoji_label_optional" to "LABEL // OPTIONAL",
+            "emoji_overlay_text_optional" to "OVERLAY TEXT // OPTIONAL", "emoji_open_related" to "OPEN RELATED EMOJI PANEL", "emoji_configure_related" to "CONFIGURE RELATED PANEL",
+            "emoji_related_note" to "THIS SLOT OPENS A SINGLE-PAGE EMOJI PANEL.", "emoji_panel_default" to "PANEL", "emoji_related_hold" to "HOLD A TILE TO CONFIGURE IT.",
+            "emoji_related_tap" to "TAP AN EMOJI TO DISPLAY IT.", "emoji_cat_responses" to "RESPONSES", "emoji_cat_boundaries" to "BOUNDARIES", "emoji_cat_needs" to "NEEDS",
+            "emoji_cat_feelings" to "FEELINGS", "emoji_cat_regulation" to "REGULATION", "emoji_cat_people_places" to "PEOPLE / PLACES", "emoji_grid_size" to "GRID SIZE",
+            "emoji_overlay_timeout" to "OVERLAY TIMEOUT", "emoji_timeout_standard" to "STANDARD", "emoji_timeout_extended" to "EXTENDED", "emoji_timeout_none" to "NO AUTO CLEAR",
+            "emoji_add_page" to "+ ADD PAGE", "emoji_save_config" to "SAVE CONFIG",
+        )
+        for ((name, text) in expected) assertEquals(name, text, english.getValue(name))
+        assertEquals("EMOJI // EXPRESS", EnglishText.get("emoji_title", english.getValue("label_deck_type_emoji")))
+        assertEquals("EMOJI DECK CONFIG", EnglishText.get("emoji_config_title", english.getValue("label_deck_type_emoji"), english.getValue("label_deck")))
+        assertEquals("CONFIGURE EMOJI 3", EnglishText.get("emoji_configure_title", 3))
+        assertEquals("RELATED EMOJI 3", EnglishText.get("emoji_related_edit_title", 3))
+        assertEquals("PAGES // 2", EnglishText.get("emoji_pages", 2))
+        assertEquals("PAGE 2", EnglishText.get("emoji_page_default", 2))
+        assertEquals("RELATED // FOOD", EnglishText.get("emoji_related_title", "FOOD"))
+        assertEquals("CLEAR", english.getValue("common_clear"))
+        assertEquals("DONE", english.getValue("common_done"))
+    }
+
+    @Test
+    fun theEmojiArgumentsAreWhereTheCodePutsThem() {
+        val numbered = listOf("emoji_page_default", "emoji_configure_title", "emoji_related_edit_title", "emoji_pages")
+        for ((tag, map) in listOf("en" to english) + translations.toList()) {
+            for (name in numbered) assertTrue("$tag/$name takes a number", map.getValue(name).contains("%1\$d"))
+            assertTrue("$tag: the title takes the EMOJI label", map.getValue("emoji_title").contains("%1\$s"))
+            assertTrue("$tag: the related title takes the name", map.getValue("emoji_related_title").contains("%1\$s"))
+            val config = map.getValue("emoji_config_title")
+            assertTrue("$tag: the config title takes the EMOJI label then the DECK label (in either order on screen)", config.contains("%1\$s") && config.contains("%2\$s"))
+            for (name in emojiNames - numbered.toSet() - setOf("emoji_title", "emoji_related_title", "emoji_config_title")) {
+                assertFalse("$tag/$name takes an argument nothing passes", Regex("""%\d""").containsMatchIn(map.getValue(name)))
+            }
+        }
+    }
+
+    @Test
+    fun theTileHintKeepsItsLineBreak_inEveryLanguage() {
+        // The tile is narrow, so its words are on two lines: the resource holds a line-break escape in every language (read back here as a real break), and the screen draws it as one.
+        for ((tag, map) in listOf("en" to english) + translations.toList()) assertTrue("$tag: ${map.getValue("emoji_hold_to_set")}", map.getValue("emoji_hold_to_set").contains("\n"))
+    }
+
+    @Test
+    fun theEmojiWordsThatAnswerOppositeQuestionsDifferInEveryLanguage() {
+        val pairs = listOf(
+            "emoji_hide_library" to "emoji_pick_library", "emoji_label_optional" to "emoji_overlay_text_optional", "emoji_open_related" to "emoji_configure_related",
+            "emoji_related_hold" to "emoji_related_tap", "emoji_configure_title" to "emoji_related_edit_title", "emoji_timeout_standard" to "emoji_timeout_extended",
+            "emoji_timeout_extended" to "emoji_timeout_none", "emoji_timeout_standard" to "emoji_timeout_none", "emoji_grid_size" to "emoji_overlay_timeout", "emoji_add_page" to "emoji_save_config",
+            "emoji_hint_tap" to "emoji_hint_hold", "emoji_cat_responses" to "emoji_cat_boundaries", "emoji_cat_needs" to "emoji_cat_feelings", "emoji_cat_feelings" to "emoji_cat_regulation",
+            "emoji_cat_regulation" to "emoji_cat_people_places", "emoji_cat_boundaries" to "emoji_cat_needs", "emoji_related_note" to "emoji_related_hold",
+        )
+        for ((tag, map) in listOf("en" to english) + translations.toList()) for ((a, b) in pairs) assertNotEquals("$tag: $a and $b read the same", map.getValue(a), map.getValue(b))
+        for ((tag, map) in listOf("en" to english) + translations.toList()) {
+            val cats = listOf("responses", "boundaries", "needs", "feelings", "regulation", "people_places").map { map.getValue("emoji_cat_$it") }
+            assertEquals("$tag: six different headings", 6, cats.toSet().size)
+        }
+    }
+
+    @Test
+    fun theConfigTitleNamesEmojiAndDeckInTheLanguage_withTheLabelsItWasGiven() {
+        for ((tag, map) in translations) {
+            val said = FileText(tag).get("emoji_config_title", map.getValue("label_deck_type_emoji"), map.getValue("label_deck"))
+            assertTrue("$tag: EMOJI in '$said'", said.contains(map.getValue("label_deck_type_emoji")))
+            assertTrue("$tag: DECK in '$said'", said.contains(map.getValue("label_deck")))
+            assertFalse("$tag: a placeholder leaked: $said", said.contains("%"))
+            val title = FileText(tag).get("emoji_title", map.getValue("label_deck_type_emoji"))
+            assertTrue("$tag: the title names EMOJI: $title", title.contains(map.getValue("label_deck_type_emoji")))
+        }
     }
 
     // ---- every language -------------------------------------------------------------------------------------------------------------------

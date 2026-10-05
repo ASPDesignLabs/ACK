@@ -128,6 +128,8 @@ class TranslationsTest {
         "qa_pose_part", // "<label>: <name>": only placeholders, the words come in as arguments
         "qa_group_short", // G1 is how Spanish, Portuguese and Afrikaans abbreviate a group too (Grupo, Grupo, Groep)
         "qa_pose_short_identity", "qa_pose_short_defend", "qa_pose_short_connect", // IDE, DEF and CON abbreviate the pose names in Spanish and Portuguese, IDE in Afrikaans too
+        "emoji_txt", // TXT abbreviates "text" in Spanish and Portuguese too
+        "emoji_panel_default", // PANEL is Spanish for panel
     )
 
     @Test
