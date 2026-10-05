@@ -324,10 +324,24 @@ class PatchNotesTest {
     }
 
     @Test
+    fun theNotesThatNameTheCaptureButtonsUseTheWordsThoseButtonsCarry_inEveryLanguage() {
+        // RECORD FREE SPEECH and SAVE ALL TO A FILE are translated buttons now (the capture screens moved to string resources), so a note that names one must say
+        // the word the button says in that language, not the English it used to keep. REDO LAST and PAUSE move with the session screen.
+        val names = mapOf("info_nr_privacy_7" to "capture_record_free", "info_b8_train_3" to "capture_record_free", "info_b8_train_9" to "capture_save_all")
+        for ((tag, map) in mapOf("en" to english) + translations) for ((note, button) in names) {
+            assertTrue("$tag/$note names '${map.getValue(button)}'", map.getValue(note).contains(map.getValue(button)))
+        }
+        for ((tag, map) in translations) {
+            assertFalse("$tag/info_b8_train_9 still types the English button", map.getValue("info_b8_train_9").contains("SAVE ALL TO A FILE"))
+            for (note in listOf("info_nr_privacy_7", "info_b8_train_3")) assertFalse("$tag/$note still types the English button", map.getValue(note).contains("RECORD FREE SPEECH"))
+        }
+    }
+
+    @Test
     fun thingsThatAreNotWordsComeThroughEveryTranslationExactly() {
         val tokens = listOf(
             Regex("""(?<![A-Za-z])/[a-z]+"""), Regex("""[A-Z][A-Z_0-9]*\.MD"""), Regex("""\.ONNX(\.JSON)?"""), Regex("""\.ZIP"""), Regex("""ACK_IMPORT"""), Regex("""GPL-3\.0-OR-LATER"""),
-            Regex("""ADD RECORDINGS FROM ACK"""), Regex("""RECORD FREE SPEECH"""), Regex("""SAVE ALL TO A FILE"""), Regex("""REDO LAST"""), Regex("""STARTERS"""), Regex("""FREEFORM STUDIO"""), Regex("""ACK WEAR"""),
+            Regex("""ADD RECORDINGS FROM ACK"""), Regex("""REDO LAST"""), Regex("""STARTERS"""), Regex("""FREEFORM STUDIO"""), Regex("""ACK WEAR"""),
             Regex("""OVERSEER"""), Regex("""MY VOICE"""), Regex("""v1\.0-BETA\.8"""), Regex("""TOOLS/FREEFORM_STUDIO/INSTALL\.SH"""), Regex("""DOCS/[A-Z_]+\.MD"""),
         )
         for ((tag, map) in translations) for (name in PatchNotes.ENTRIES) {

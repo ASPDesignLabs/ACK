@@ -116,8 +116,11 @@ class HelpWordingTest {
         assertEquals(1, Regex("""stringResource\(R\.string\.voice_rec_help_offer, stringResource\(R\.string\.help_button\)\)""").findAll(file("settings/ManageRecordingsDialog.kt")).count())
         assertEquals(1, Regex("""stringResource\(R\.string\.voice_rec_help_offer, stringResource\(R\.string\.help_button\)\)""").findAll(file("output/VoiceRecordingPanel.kt")).count())
         val capture = file("voicecapture/TrainingCaptureHome.kt")
-        assertTrue(capture.contains("val helpButton = stringResource(R.string.help_button)"))
-        assertTrue(capture.contains("HAS A \$helpButton WALKTHROUGH. FIND IT UNDER \$helpButton ANYTIME."))
+        // The library's tip moved to string resources with the capture screens: the HELP button's name and the screen's name go in as arguments, in the sentence's own order.
+        assertTrue(capture.contains("CaptureText.helpOffer(words, stringResource(R.string.help_button), labelFor(LabelKey.RECORD_TRAINING))"))
+        assertFalse("the tip no longer types the English button", capture.contains("WALKTHROUGH. FIND IT UNDER"))
+        assertEquals("NEW: %2\$s HAS A %1\$s WALKTHROUGH. FIND IT UNDER %1\$s ANYTIME.", english.getValue("capture_help_offer"))
+        for ((tag, map) in translations) assertEquals("$tag: the HELP button's name twice, the screen's once", listOf("%1\$s", "%1\$s", "%2\$s").sorted(), StringsXml.placeholders(map.getValue("capture_help_offer")).sorted())
         // The language notice says what is still English now: the walkthroughs (no longer HELP as a whole) and, since the Terminal's own words moved, only the lines other parts of ACK write into it.
         assertTrue(english.getValue("interface_language_explanation").contains("THE WALKTHROUGHS INSIDE HELP, THE LINES OTHER PARTS OF ACK WRITE INTO THE TERMINAL AND MANY DIALOGS ARE STILL IN ENGLISH."))
         assertFalse("the old claim that all of HELP is English", english.getValue("interface_language_explanation").contains(". HELP, THE TERMINAL"))

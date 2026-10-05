@@ -58,6 +58,8 @@ object StorageCatalogue {
     const val EXPORT_JSON_LABEL = "label_export_json"
     const val AUDIO_ARCHITECT_LABEL = "label_audio_architect"
     const val EXPORT_VOICE_BACKUP_LABEL = "audio_export_voice_backup"
+    const val SAVE_ALL_LABEL = "capture_save_all"
+    const val RECORD_TRAINING_LABEL = "label_record_training"
 
     // Area ids. data/DataWipe.kt gives the areas that need more than "delete the files" their extra steps by these.
     const val ID_MESSAGES_AND_DECKS = "MESSAGES_AND_DECKS"
@@ -244,11 +246,11 @@ object StorageCatalogue {
         if (id == EVERYTHING_ID) text.get(EVERYTHING_LABEL) else label(text, area(id))
 
     /** What the area holds, in plain words. */
-    fun holds(text: TextSource, area: Area): String = text.get(area.holdsResource)
+    fun holds(text: TextSource, area: Area): String = text.get(area.holdsResource, text.get(RECORD_TRAINING_LABEL))
 
     /** How to save it first, or that it is not backed up. The names it mentions are the buttons' own, in the chosen language. */
     fun backupNote(text: TextSource, area: Area): String =
-        text.get(area.backupResource, text.get(EXPORT_JSON_LABEL), text.get(AUDIO_ARCHITECT_LABEL), text.get(EXPORT_VOICE_BACKUP_LABEL))
+        text.get(area.backupResource, text.get(EXPORT_JSON_LABEL), text.get(AUDIO_ARCHITECT_LABEL), text.get(EXPORT_VOICE_BACKUP_LABEL), text.get(SAVE_ALL_LABEL), text.get(RECORD_TRAINING_LABEL))
 
     /** The areas' names by id, in the order given, for a message. Never any content. */
     fun names(text: TextSource, ids: List<String>): String = ids.joinToString(", ") { label(text, area(it)) }

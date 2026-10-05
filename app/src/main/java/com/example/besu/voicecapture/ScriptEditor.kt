@@ -22,7 +22,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import com.example.besu.AckTags
+import com.example.besu.R
+import com.example.besu.core.CaptureText
+import com.example.besu.ui.rememberText
 import com.example.besu.capture.CaptureConstants
 import com.example.besu.capture.Card
 import com.example.besu.capture.CardSplitter
@@ -50,6 +54,7 @@ private val LANGUAGE_CODE = Regex("^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,8})?$")
 internal fun ScriptEditorScreen(context: Context, primaryColor: Color, scriptId: String?, onDone: (changed: Boolean) -> Unit) {
     val store: TrainingStore = remember { TrainingCapture.store(context) }
     val helpManager = LocalHelpManager.current
+    val words = rememberText()
     val loadError = remember(scriptId) { mutableStateOf<String?>(null) }
     val existing: TrainingScript? = remember(scriptId) {
         if (scriptId == null) null else try { store.getScript(scriptId) } catch (e: StoreException) { loadError.value = e.message; null }
@@ -75,13 +80,13 @@ internal fun ScriptEditorScreen(context: Context, primaryColor: Color, scriptId:
     }
 
     fun save() {
-        if (!LANGUAGE_CODE.matches(language)) { message = "THE LANGUAGE CODE SHOULD LOOK LIKE EN-US."; return }
+        if (!LANGUAGE_CODE.matches(language)) { message = CaptureText.languageCodeBad(words, "EN-US"); return }
         try {
             val base = existing ?: store.newScript(title, text, lines, language, System.currentTimeMillis())
             store.saveScript(base.copy(title = title, text = text, lines = lines, language = language), System.currentTimeMillis())
             onDone(true)
         } catch (e: StoreException) {
-            message = e.message ?: "THE SCRIPT COULD NOT BE SAVED."
+            message = e.message ?: words.get("capture_script_save_failed")
         }
     }
 
@@ -90,111 +95,110 @@ internal fun ScriptEditorScreen(context: Context, primaryColor: Color, scriptId:
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(if (existing == null) "NEW SCRIPT" else "EDIT SCRIPT", color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
+            Text(stringResource(if (existing == null) R.string.capture_editor_new else R.string.capture_editor_edit), color = primaryColor, fontSize = 14.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
             Text(
-                "[BACK]", color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
+                stringResource(R.string.capture_back), color = Color.Gray, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
                 modifier = Modifier.heightIn(min = 48.dp).clickable { if (dirty) confirmLeave = true else onDone(false) }.padding(horizontal = 8.dp, vertical = 12.dp),
             )
         }
 
         if (message.isNotEmpty()) Notice(message, RadicalRed, onDismiss = { message = "" })
 
-        TightSectionLabel("TITLE", color = primaryColor)
+        TightSectionLabel(stringResource(R.string.capture_title), color = primaryColor)
         EditorField(title, primaryColor, singleLine = true, modifier = Modifier.testTag(AckTags.TRAIN_SCRIPT_TITLE).helpTarget(AckTags.TRAIN_SCRIPT_TITLE, primaryColor)) {
             title = it.take(TrainingStore.MAX_TITLE_CHARS)
         }
 
-        TightSectionLabel("TEXT TO READ", color = primaryColor)
+        TightSectionLabel(stringResource(R.string.capture_text_to_read), color = primaryColor)
         Text(
-            "TYPE OR PASTE ANYTHING. WRITE NUMBERS AND SYMBOLS THE WAY YOU WILL SAY THEM (\"TWENTY TWENTY-SIX\", \"PERCENT\"): WHAT YOU READ IS WHAT YOUR VOICE MODEL LEARNS.",
+            stringResource(R.string.capture_text_hint),
             color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace,
         )
         EditorField(
             text, primaryColor, singleLine = false, minHeight = 200.dp,
             modifier = Modifier.testTag(AckTags.TRAIN_SCRIPT_TEXT).helpTarget(AckTags.TRAIN_SCRIPT_TEXT, primaryColor),
         ) { text = it.take(TrainingStore.MAX_SCRIPT_CHARS) }
-        Text("${text.length} OF ${TrainingStore.MAX_SCRIPT_CHARS} CHARACTERS", color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+        Text(CaptureText.charsLine(words, text.length, TrainingStore.MAX_SCRIPT_CHARS), color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
 
-        TightSectionLabel("LINE BREAKS", color = primaryColor)
+        TightSectionLabel(stringResource(R.string.capture_line_breaks), color = primaryColor)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TightPanelButton("JOIN LINES", Modifier.weight(1f), isActive = lines == "join", mainColor = primaryColor) { lines = "join" }
-            TightPanelButton("ONE CARD PER LINE", Modifier.weight(1f), isActive = lines == "keep", mainColor = primaryColor) { lines = "keep" }
+            TightPanelButton(stringResource(R.string.capture_join_lines), Modifier.weight(1f), isActive = lines == "join", mainColor = primaryColor) { lines = "join" }
+            TightPanelButton(stringResource(R.string.capture_one_per_line), Modifier.weight(1f), isActive = lines == "keep", mainColor = primaryColor) { lines = "keep" }
         }
         Text(
-            if (lines == "join") "A LINE BREAK IS JUST A SPACE; A BLANK LINE STARTS A NEW PARAGRAPH." else "EVERY LINE IS ITS OWN PARAGRAPH, SO NO CARD RUNS ACROSS TWO LINES.",
+            CaptureText.lineBreakNote(words, lines),
             color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace,
         )
 
-        TightSectionLabel("LANGUAGE CODE", color = primaryColor)
+        TightSectionLabel(stringResource(R.string.capture_language_code), color = primaryColor)
         EditorField(language, primaryColor, singleLine = true) { language = it.take(12) }
 
-        TightSectionLabel("CARDS", color = primaryColor)
+        TightSectionLabel(stringResource(R.string.capture_cards), color = primaryColor)
         val minutes = cards.sumOf { it.estS } / 60.0
         Text(
-            if (text.isBlank()) "NOTHING TO READ YET."
-            else "${cards.size} CARDS, ABOUT ${java.lang.String.format(java.util.Locale.ROOT, "%.0f", minutes)} MINUTES AT ${java.lang.String.format(java.util.Locale.ROOT, "%.1f", pace)} WORDS A SECOND" +
-                if (TrainingCapture.measuredPace(store) == null) " (A TYPICAL PACE; THE PHONE LEARNS YOURS)" else " (YOUR PACE)",
+            if (text.isBlank()) stringResource(R.string.capture_nothing_to_read)
+            else CaptureText.cardsSummary(words, cards.size, minutes, pace, measured = TrainingCapture.measuredPace(store) != null),
             color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
         )
         val symbolCards = cards.count { "digits" in it.warnings || "symbols" in it.warnings }
         if (symbolCards > 0) {
             Text(
-                "$symbolCards CARD(S) HAVE DIGITS OR SYMBOLS. IF YOU WOULD SAY THEM DIFFERENTLY, REWRITE THEM AS WORDS.",
+                CaptureText.symbolCards(words, symbolCards),
                 color = RadicalRed, fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
             )
         }
         for ((i, card) in cards.take(3).withIndex()) {
             Text("${i + 1}. ${card.text}", color = Color.White, fontSize = 10.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.border(1.dp, Color.DarkGray).background(Graphite).padding(8.dp).fillMaxWidth())
         }
-        if (cards.size > 3) Text("...AND ${cards.size - 3} MORE", color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+        if (cards.size > 3) Text(CaptureText.andMore(words, cards.size - 3), color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             TightPanelButton(
-                "SAVE", Modifier.weight(1f).testTag(AckTags.TRAIN_SCRIPT_SAVE_BTN).helpTarget(AckTags.TRAIN_SCRIPT_SAVE_BTN, primaryColor),
+                stringResource(R.string.common_save), Modifier.weight(1f).testTag(AckTags.TRAIN_SCRIPT_SAVE_BTN).helpTarget(AckTags.TRAIN_SCRIPT_SAVE_BTN, primaryColor),
                 isActive = dirty, mainColor = primaryColor,
             ) {
                 helpManager?.onEvent(HelpEvent.Interacted(AckTags.TRAIN_SCRIPT_SAVE_BTN))
                 if (!dirty) return@TightPanelButton
                 if (existing == null) save() else confirmSave = true
             }
-            TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) { if (dirty) confirmLeave = true else onDone(false) }
+            TightPanelButton(stringResource(R.string.common_cancel), Modifier.weight(1f), isActive = false, mainColor = primaryColor) { if (dirty) confirmLeave = true else onDone(false) }
         }
         if (existing != null) {
-            TightPanelButton("DELETE THIS SCRIPT", Modifier.fillMaxWidth(), mainColor = RadicalRed) { deleteStep = 1 }
-            Text("DELETING A SCRIPT REMOVES ONLY ITS TEXT. RECORDINGS MADE FROM IT ARE KEPT.", color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+            TightPanelButton(stringResource(R.string.capture_delete_script), Modifier.fillMaxWidth(), mainColor = RadicalRed) { deleteStep = 1 }
+            Text(stringResource(R.string.capture_delete_script_note), color = Color.Gray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
         }
         Spacer(modifier = Modifier.height(24.dp))
     }
 
     if (confirmSave) {
         ConfirmDialog(
-            title = "SAVE THESE CHANGES?",
-            body = "THE SCRIPT \"${existing?.title}\" WILL BE REPLACED BY WHAT IS ON THIS SCREEN. RECORDINGS ALREADY MADE FROM IT ARE NOT CHANGED.",
-            confirmLabel = "SAVE", cancelLabel = "KEEP EDITING", primaryColor = primaryColor,
+            title = stringResource(R.string.capture_save_changes_title),
+            body = CaptureText.saveChangesBody(words, existing?.title),
+            confirmLabel = stringResource(R.string.common_save), cancelLabel = stringResource(R.string.capture_keep_editing), primaryColor = primaryColor,
             onConfirm = { confirmSave = false; save() }, onCancel = { confirmSave = false },
         )
     }
     if (confirmLeave) {
         ConfirmDialog(
-            title = "LEAVE WITHOUT SAVING?",
-            body = "WHAT YOU TYPED HERE WILL BE LOST.",
-            confirmLabel = "LEAVE", cancelLabel = "KEEP EDITING", primaryColor = RadicalRed, destructive = true,
+            title = stringResource(R.string.capture_leave_title),
+            body = stringResource(R.string.capture_leave_body),
+            confirmLabel = stringResource(R.string.capture_leave), cancelLabel = stringResource(R.string.capture_keep_editing), primaryColor = RadicalRed, destructive = true,
             onConfirm = { confirmLeave = false; onDone(false) }, onCancel = { confirmLeave = false },
         )
     }
     if (deleteStep == 1) {
         ConfirmDialog(
-            title = "DELETE THIS SCRIPT?",
-            body = "ITS TEXT WILL BE REMOVED FROM THIS PHONE. IF YOU WANT TO KEEP IT, COPY IT SOMEWHERE FIRST.",
-            confirmLabel = "CONTINUE", cancelLabel = "KEEP IT", primaryColor = primaryColor,
+            title = stringResource(R.string.capture_delete_script_title),
+            body = stringResource(R.string.capture_delete_script_body),
+            confirmLabel = stringResource(R.string.common_continue), cancelLabel = stringResource(R.string.capture_keep_it), primaryColor = primaryColor,
             onConfirm = { deleteStep = 2 }, onCancel = { deleteStep = 0 },
         )
     }
     if (deleteStep == 2 && existing != null) {
         ConfirmDialog(
-            title = "REALLY DELETE?",
-            body = "LAST CHANCE. THIS CANNOT BE UNDONE.",
-            confirmLabel = "DELETE FOREVER", cancelLabel = "KEEP IT", primaryColor = RadicalRed, destructive = true,
+            title = stringResource(R.string.capture_really_delete),
+            body = stringResource(R.string.capture_last_chance),
+            confirmLabel = stringResource(R.string.capture_delete_forever), cancelLabel = stringResource(R.string.capture_keep_it), primaryColor = RadicalRed, destructive = true,
             onConfirm = { deleteStep = 0; store.deleteScript(existing.id); onDone(true) }, onCancel = { deleteStep = 0 },
         )
     }

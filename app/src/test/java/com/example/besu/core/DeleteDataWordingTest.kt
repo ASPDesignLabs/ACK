@@ -137,15 +137,19 @@ class DeleteDataWordingTest {
 
     @Test
     fun aBackupNoteNamesTheExportButtonsThroughTheLabelTable_notAsALiteral() {
-        // "EXPORT .JSON", "AUDIO ARCHITECT" and "EXPORT VOICE BACKUP" are the names of buttons and screens that are translated; the notes take them as arguments
-        // so a note and the button it points to cannot read differently in any language.
+        // "EXPORT .JSON", "AUDIO ARCHITECT", "EXPORT VOICE BACKUP", "SAVE ALL TO A FILE" and "RECORD TRAINING DATA" are the names of buttons and screens that are
+        // translated; the notes take them as arguments so a note and the button it points to cannot read differently in any language.
         for (name in english.keys.filter { it.startsWith("area_") && it.endsWith("_backup") } + "storage_everything_not_covered") {
             val text = english.getValue(name)
             assertFalse("$name holds the literal EXPORT .JSON", text.contains("EXPORT .JSON"))
             assertFalse("$name holds the literal AUDIO ARCHITECT", text.contains("AUDIO ARCHITECT"))
             assertFalse("$name holds the literal EXPORT VOICE BACKUP", text.contains("EXPORT VOICE BACKUP"))
+            assertFalse("$name holds the literal SAVE ALL TO A FILE", text.contains("SAVE ALL TO A FILE"))
+            assertFalse("$name holds the literal RECORD TRAINING DATA", text.contains("RECORD TRAINING DATA"))
         }
-        assertEquals(listOf("%1\$s", "%1\$s"), StringsXml.placeholders(english.getValue("area_training_data_backup")))
+        assertFalse("the training-data area's holds line types the screen's name", english.getValue("area_training_data_holds").contains("RECORD TRAINING DATA"))
+        assertEquals(listOf("%1\$s", "%4\$s", "%5\$s", "%1\$s"), StringsXml.placeholders(english.getValue("area_training_data_backup")))
+        assertEquals(listOf("%1\$s"), StringsXml.placeholders(english.getValue("area_training_data_holds")))
         assertEquals(listOf("%1\$s", "%3\$s", "%2\$s"), StringsXml.placeholders(english.getValue("area_trained_voice_backup")))
         assertEquals("IT IS NOT IN EXPORT .JSON. SAVE IT FIRST WITH EXPORT VOICE BACKUP (AUDIO ARCHITECT).",
             StorageCatalogue.backupNote(EnglishText, StorageCatalogue.area(StorageCatalogue.ID_TRAINED_VOICE)))
@@ -265,16 +269,31 @@ class DeleteDataWordingTest {
 
     @Test
     fun theButtonNamesStillEnglishOnTheirOwnScreensAreNotTranslatedAwayInTheNotes() {
-        // SAVE ALL TO A FILE and RECORD TRAINING DATA (record training data) and EXPORT DECK (.ZIP) (GIF decks) are literal English buttons until their screens are
-        // migrated; a note that translated them would send the person looking for a button that does not exist. When one of those screens is migrated, change this
-        // list and the notes together. (EXPORT VOICE BACKUP moved with the AUDIO ARCHITECT screen: its note takes the button's name as an argument.)
+        // EXPORT DECK (.ZIP) (GIF decks) is still a literal English button on its own screen until that menu is migrated; a note that translated it would send
+        // the person looking for a button that does not exist. When it moves, change this list and the note together. (EXPORT VOICE BACKUP moved with the AUDIO
+        // ARCHITECT screen and SAVE ALL TO A FILE / RECORD TRAINING DATA with the capture screens: those notes take the buttons' names as arguments.)
         val stillEnglish = mapOf(
-            "area_training_data_backup" to listOf("SAVE ALL TO A FILE (RECORD TRAINING DATA)"),
             "area_gif_library_backup" to listOf("EXPORT DECK (.ZIP)"),
-            "area_training_data_holds" to listOf("RECORD TRAINING DATA"),
         )
         for ((tag, map) in translations) for ((name, names) in stillEnglish) for (button in names) {
             assertTrue("$tag/$name must keep \"$button\" exactly", map.getValue(name).contains(button))
+        }
+    }
+
+    @Test
+    fun theTrainingDataNotesNameTheCaptureButtonsAsTheScreenWritesThem_inEveryLanguage() {
+        // The note points at SAVE ALL TO A FILE on the RECORD TRAINING DATA screen; read in each language with that language's own file, it must hold exactly the words
+        // the button and the screen carry there (a note that said another word would send the person looking for a button that does not exist).
+        val area = StorageCatalogue.area(StorageCatalogue.ID_TRAINING_DATA)
+        for (tag in listOf("en") + translations.keys) {
+            val text = if (tag == "en") EnglishText else FileText(tag)
+            val note = StorageCatalogue.backupNote(text, area)
+            val holds = StorageCatalogue.holds(text, area)
+            val map = if (tag == "en") english else translations.getValue(tag)
+            assertTrue("$tag: $note", note.contains(map.getValue("capture_save_all") + " (" + map.getValue("label_record_training") + ")"))
+            assertTrue("$tag: $holds", holds.contains(map.getValue("label_record_training")))
+            assertFalse("$tag: no unfilled placeholder in $note", note.contains("%"))
+            assertFalse("$tag: no unfilled placeholder in $holds", holds.contains("%"))
         }
     }
 
