@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.training
 
+import com.example.besu.R
+import com.example.besu.core.LabelKey
+import com.example.besu.core.TrainingOutcome
+import com.example.besu.core.TrainingText
+import com.example.besu.ui.labelFor
 import com.example.besu.ui.looseSpacing
+import com.example.besu.ui.rememberText
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.ui.theme.*
@@ -35,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,6 +67,8 @@ fun DeckTrainerPanel(
 ) {
     val context = LocalContext.current
     val game = rememberDeckTrainerController(context)
+    val text = rememberText()
+    val poseWords = rememberTrainingPoseWords()
 
     // A "fire" is the edge where state just became COOLDOWN -- see
     // TrainingGroundPanel for why that instant (rather than the eventual
@@ -116,7 +125,7 @@ fun DeckTrainerPanel(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "DECK TRAINER",
+                            text = stringResource(R.string.deck_trainer_title, labelFor(LabelKey.DECK)),
                             color = primaryColor,
                             fontSize = 13.sp,
                             fontFamily = FontFamily.Monospace,
@@ -125,7 +134,7 @@ fun DeckTrainerPanel(
                         )
 
                         Text(
-                            text = "[EXIT]",
+                            text = stringResource(R.string.train_exit),
                             color = Color.Gray,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -164,9 +173,10 @@ fun DeckTrainerPanel(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        DeckTelemetryReadout(label = "STATE", value = stateLabel, primaryColor = primaryColor)
-                        DeckTelemetryReadout(label = "POSE", value = deckFullPoseName(poseLabel), primaryColor = primaryColor)
-                        DeckTelemetryReadout(label = "MOD", value = twistLevel.toString(), primaryColor = primaryColor)
+                        // The state is what the watch sent (and the header and the watch's own screen show it in English), so only its label is translated.
+                        DeckTelemetryReadout(label = stringResource(R.string.train_state), value = stateLabel, primaryColor = primaryColor)
+                        DeckTelemetryReadout(label = labelFor(LabelKey.POSE), value = TrainingText.poseValue(text, poseLabel, poseWords), primaryColor = primaryColor)
+                        DeckTelemetryReadout(label = stringResource(R.string.train_mod), value = twistLevel.toString(), primaryColor = primaryColor)
                     }
                 }
             }
@@ -195,10 +205,14 @@ private fun DeckConfigScreen(
     var isDeckExpanded by remember { mutableStateOf(false) }
     var isProfileExpanded by remember { mutableStateOf(false) }
     var isDurationExpanded by remember { mutableStateOf(false) }
+    val text = rememberText()
+    val deckWord = labelFor(LabelKey.DECK)
+    val matrixWord = labelFor(LabelKey.DECK_TYPE_MATRIX)
+    val quickWord = labelFor(LabelKey.DECK_TYPE_QUICK)
 
     Column {
         ExpandableHeaderRow(
-            label = "DECK: ${selectedDeck.name}",
+            label = TrainingText.deckLine(deckWord, selectedDeck.name),
             isExpanded = isDeckExpanded,
             primaryColor = primaryColor,
             onToggle = { isDeckExpanded = !isDeckExpanded }
@@ -209,7 +223,7 @@ private fun DeckConfigScreen(
 
             eligibleDecks.forEach { deckMeta ->
                 PickRow(
-                    label = "${deckMeta.name} // ${deckMeta.type.name.replace('_', ' ')}",
+                    label = TrainingText.deckPickLine(deckMeta.name, TrainingText.deckTypeWord(deckMeta.type.name, matrixWord, quickWord)),
                     isSelected = deckMeta.id == selectedDeck.id,
                     primaryColor = primaryColor,
                     onClick = { selectedDeck = deckMeta }
@@ -222,7 +236,7 @@ private fun DeckConfigScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             ExpandableHeaderRow(
-                label = "PROFILE: $selectedProfile",
+                label = TrainingText.profileLine(text, selectedProfile),
                 isExpanded = isProfileExpanded,
                 primaryColor = primaryColor,
                 onToggle = { isProfileExpanded = !isProfileExpanded }
@@ -246,7 +260,7 @@ private fun DeckConfigScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "DIFFICULTY",
+            text = stringResource(R.string.train_difficulty),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
@@ -257,8 +271,8 @@ private fun DeckConfigScreen(
 
         GameDifficulty.entries.forEach { difficulty ->
             PickRow(
-                label = difficulty.label,
-                description = describeDeckDifficulty(difficulty),
+                label = TrainingText.difficultyName(text, difficulty.name),
+                description = TrainingText.deckDescription(text, difficulty.name, labelFor(LabelKey.POSE), difficulty.penaltyPoints),
                 isSelected = difficulty == selectedDifficulty,
                 primaryColor = primaryColor,
                 onClick = { selectedDifficulty = difficulty }
@@ -277,7 +291,8 @@ private fun DeckConfigScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "DURATION: ${formatClock(selectedDuration)}",
+                text = TrainingText.duration(text, formatClock(selectedDuration)),
+                modifier = Modifier.weight(1f),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -286,7 +301,7 @@ private fun DeckConfigScreen(
             )
 
             Text(
-                text = if (isDurationExpanded) "[COLLAPSE]" else "[EXPAND]",
+                text = stringResource(if (isDurationExpanded) R.string.train_collapse else R.string.train_expand),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace
@@ -319,7 +334,7 @@ private fun DeckConfigScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         DeckActionButton(
-            text = "[START ROUND]",
+            text = stringResource(R.string.train_start),
             primaryColor = primaryColor,
             onClick = {
                 game.configure(selectedDeck, selectedProfile, selectedDifficulty, selectedDuration)
@@ -331,7 +346,7 @@ private fun DeckConfigScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "PREVIOUS SCORES",
+                text = stringResource(R.string.train_previous_scores),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -350,18 +365,22 @@ private fun DeckPlayingScreen(
     game: DeckTrainerController,
     primaryColor: Color
 ) {
+    val text = rememberText()
+    val poseWords = rememberTrainingPoseWords()
+    // The target's pose is the stored name (IDENTITY...); only the word drawn for it follows the language and PLAIN WORDS.
+    val poseWord = poseWords[game.target.poseLabel] ?: game.target.poseLabel
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             LabeledStat(
-                label = "SCORE",
-                value = game.score.toString(),
+                label = stringResource(R.string.train_score),
+                value = TrainingText.number(text, game.score),
                 color = if (game.score < 0) Color.Red else primaryColor
             )
             LabeledStat(
-                label = "TIME",
+                label = stringResource(R.string.train_time),
                 value = formatClock(game.timeRemainingSeconds),
                 color = primaryColor
             )
@@ -378,7 +397,7 @@ private fun DeckPlayingScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "SAY THIS",
+                text = stringResource(R.string.deck_trainer_say),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -388,7 +407,7 @@ private fun DeckPlayingScreen(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = game.target.statement,
+                text = TrainingText.statement(text, game.target.statement, poseWords),
                 color = primaryColor,
                 fontSize = 15.sp,
                 fontFamily = FontFamily.Monospace,
@@ -401,8 +420,11 @@ private fun DeckPlayingScreen(
             if (game.difficulty != GameDifficulty.EUROPEAN_EXTREME) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val gestureText = game.target.poseLabel +
-                    if (game.difficulty.usesMod) " + MOD ${game.target.twist}" else ""
+                val gestureText = TrainingText.requested(
+                    text,
+                    poseWord,
+                    if (game.difficulty.usesMod) game.target.twist else null
+                )
                 Text(
                     text = gestureText,
                     color = primaryColor.copy(alpha = 0.7f),
@@ -416,7 +438,7 @@ private fun DeckPlayingScreen(
             if (!game.difficulty.usesMod) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "ANY MODIFIER UNDER ${game.target.poseLabel} COUNTS",
+                    text = TrainingText.anyModifier(text, poseWord),
                     color = Color.Gray,
                     fontSize = 8.sp,
                     fontFamily = FontFamily.Monospace
@@ -428,11 +450,11 @@ private fun DeckPlayingScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = outcome,
-                color = when {
-                    outcome.startsWith("-") -> Color.Red
-                    outcome == "MISS" -> Color.Gray
-                    else -> primaryColor
+                text = TrainingText.outcome(text, outcome),
+                color = when (outcome.kind) {
+                    TrainingOutcome.Kind.PENALTY -> Color.Red
+                    TrainingOutcome.Kind.MISS -> Color.Gray
+                    TrainingOutcome.Kind.HIT -> primaryColor
                 },
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -443,7 +465,7 @@ private fun DeckPlayingScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         DeckActionButton(
-            text = "[END ROUND]",
+            text = stringResource(R.string.train_end),
             primaryColor = Color.Gray,
             onClick = { game.abort() }
         )
@@ -456,9 +478,10 @@ private fun DeckResultsScreen(
     primaryColor: Color,
     onDone: () -> Unit
 ) {
+    val text = rememberText()
     Column {
         Text(
-            text = "ROUND COMPLETE",
+            text = stringResource(R.string.train_round_complete),
             color = primaryColor,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
@@ -469,7 +492,7 @@ private fun DeckResultsScreen(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "FINAL SCORE: ${game.score}",
+            text = TrainingText.finalScore(text, game.score),
             color = if (game.score < 0) Color.Red else primaryColor,
             fontSize = 16.sp,
             fontFamily = FontFamily.Monospace,
@@ -484,14 +507,14 @@ private fun DeckResultsScreen(
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 DeckActionButton(
-                    text = "[PLAY AGAIN]",
+                    text = stringResource(R.string.train_play_again),
                     primaryColor = primaryColor,
                     onClick = { game.dismissResults() }
                 )
             }
             Box(modifier = Modifier.weight(1f)) {
                 DeckActionButton(
-                    text = "[DONE]",
+                    text = stringResource(R.string.train_done),
                     primaryColor = Color.Gray,
                     onClick = onDone
                 )
@@ -502,7 +525,7 @@ private fun DeckResultsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "PREVIOUS SCORES",
+                text = stringResource(R.string.train_previous_scores),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -536,6 +559,7 @@ private fun ExpandableHeaderRow(
     ) {
         Text(
             text = label,
+            modifier = Modifier.weight(1f),
             color = primaryColor,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
@@ -544,7 +568,7 @@ private fun ExpandableHeaderRow(
         )
 
         Text(
-            text = if (isExpanded) "[COLLAPSE]" else "[EXPAND]",
+            text = stringResource(if (isExpanded) R.string.train_collapse else R.string.train_expand),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace
@@ -654,23 +678,24 @@ private fun DeckHistoryList(
     results: List<DeckTrainerResult>,
     primaryColor: Color
 ) {
+    val text = rememberText()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         results.forEach { result ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                val profileSuffix = result.profile?.let { " // $it" }.orEmpty()
+                // The deck's saved name and the profile are shown as saved; a saved difficulty is its enum name, shown through the language's word and never rewritten.
                 Text(
-                    text = "${result.deckName}$profileSuffix // " +
-                        result.difficulty.replace("_", " "),
+                    text = TrainingText.deckHistoryLine(text, result.deckName, result.profile, result.difficulty),
+                    modifier = Modifier.weight(1f),
                     color = Color.Gray,
                     fontSize = 8.sp,
                     fontFamily = FontFamily.Monospace
                 )
 
                 Text(
-                    text = "${result.score} PTS",
+                    text = TrainingText.points(text, result.score),
                     color = if (result.score < 0) Color.Red else primaryColor,
                     fontSize = 8.sp,
                     fontFamily = FontFamily.Monospace,
@@ -679,14 +704,6 @@ private fun DeckHistoryList(
             }
         }
     }
-}
-
-private fun describeDeckDifficulty(difficulty: GameDifficulty): String = when (difficulty) {
-    GameDifficulty.EASY -> "ANY MODIFIER UNDER THE RIGHT POSE COUNTS. NO PENALTY FOR A MISS."
-    GameDifficulty.NORMAL -> "MUST MATCH THE EXACT STATEMENT SHOWN. NO PENALTY FOR A MISS."
-    GameDifficulty.HARD -> "ANY MODIFIER UNDER THE RIGHT POSE COUNTS. -${difficulty.penaltyPoints} FOR A MISS."
-    GameDifficulty.EUROPEAN_EXTREME -> "PHRASE ONLY -- NO POSE/MOD HINT SHOWN. " +
-        "-${difficulty.penaltyPoints} FOR A MISS."
 }
 
 private fun formatClock(totalSeconds: Int): String {
@@ -720,14 +737,4 @@ private fun DeckTelemetryReadout(
             fontWeight = FontWeight.Black
         )
     }
-}
-
-// Same wire-code expansion as TrainingGroundPanel's private fullPoseName --
-// duplicated here so that file can stay exactly as it is.
-private fun deckFullPoseName(poseLabel: String): String = when (poseLabel) {
-    "ID" -> "IDENTITY"
-    "DEF" -> "DEFEND"
-    "CON" -> "CONNECT"
-    "---" -> "NONE"
-    else -> poseLabel
 }

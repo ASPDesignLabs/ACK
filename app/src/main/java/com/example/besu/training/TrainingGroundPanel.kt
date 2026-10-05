@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.training
 
+import com.example.besu.R
+import com.example.besu.core.LabelKey
+import com.example.besu.core.TrainingOutcome
+import com.example.besu.core.TrainingText
 import com.example.besu.help.*
 import com.example.besu.ui.*
 import com.example.besu.ui.theme.*
@@ -34,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,6 +62,8 @@ fun TrainingGroundPanel(
     val context = LocalContext.current
     val game = rememberTrainingGameController(context)
     var gameModeEnabled by remember { mutableStateOf(false) }
+    val text = rememberText()
+    val poseWords = rememberTrainingPoseWords()
 
     // A "fire" is the edge where state just became COOLDOWN -- poseLabel/
     // twistLevel at that instant are what the watch actually just fired, since
@@ -113,7 +120,7 @@ fun TrainingGroundPanel(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "TRAINING GROUND",
+                            text = stringResource(R.string.train_title),
                             color = primaryColor,
                             fontSize = 13.sp,
                             fontFamily = FontFamily.Monospace,
@@ -122,7 +129,7 @@ fun TrainingGroundPanel(
                         )
 
                         Text(
-                            text = "[EXIT]",
+                            text = stringResource(R.string.train_exit),
                             color = Color.Gray,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -144,7 +151,7 @@ fun TrainingGroundPanel(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "GAME MODE",
+                            text = stringResource(R.string.train_game_mode),
                             color = Color.White.copy(alpha = 0.8f),
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -190,7 +197,7 @@ fun TrainingGroundPanel(
                         Spacer(modifier = Modifier.height(14.dp))
                     } else {
                         Text(
-                            text = "GESTURE FREELY. TELEMETRY ONLY -- NO COMMANDS FIRE.",
+                            text = stringResource(R.string.train_free_note),
                             color = Color.White.copy(alpha = 0.7f),
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace,
@@ -204,9 +211,10 @@ fun TrainingGroundPanel(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        TelemetryReadout(label = "STATE", value = stateLabel, primaryColor = primaryColor)
-                        TelemetryReadout(label = "POSE", value = fullPoseName(poseLabel), primaryColor = primaryColor)
-                        TelemetryReadout(label = "MOD", value = twistLevel.toString(), primaryColor = primaryColor)
+                        // The state is what the watch sent (and the header and the watch's own screen show it in English), so only its label is translated.
+                        TelemetryReadout(label = stringResource(R.string.train_state), value = stateLabel, primaryColor = primaryColor)
+                        TelemetryReadout(label = labelFor(LabelKey.POSE), value = TrainingText.poseValue(text, poseLabel, poseWords), primaryColor = primaryColor)
+                        TelemetryReadout(label = stringResource(R.string.train_mod), value = twistLevel.toString(), primaryColor = primaryColor)
                     }
                 }
             }
@@ -222,10 +230,11 @@ private fun ConfigScreen(
     var selectedDifficulty by remember { mutableStateOf(game.difficulty) }
     var selectedDuration by remember { mutableIntStateOf(game.durationSeconds) }
     var isDurationExpanded by remember { mutableStateOf(false) }
+    val text = rememberText()
 
     Column {
         Text(
-            text = "DIFFICULTY",
+            text = stringResource(R.string.train_difficulty),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
@@ -255,7 +264,8 @@ private fun ConfigScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "DURATION: ${formatClock(selectedDuration)}",
+                text = TrainingText.duration(text, formatClock(selectedDuration)),
+                modifier = Modifier.weight(1f),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -264,7 +274,7 @@ private fun ConfigScreen(
             )
 
             Text(
-                text = if (isDurationExpanded) "[COLLAPSE]" else "[EXPAND]",
+                text = stringResource(if (isDurationExpanded) R.string.train_collapse else R.string.train_expand),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace
@@ -297,7 +307,7 @@ private fun ConfigScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         GameActionButton(
-            text = "[START ROUND]",
+            text = stringResource(R.string.train_start),
             primaryColor = primaryColor,
             onClick = {
                 game.configure(selectedDifficulty, selectedDuration)
@@ -309,7 +319,7 @@ private fun ConfigScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "PREVIOUS SCORES",
+                text = stringResource(R.string.train_previous_scores),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -328,18 +338,20 @@ private fun PlayingScreen(
     game: TrainingGameController,
     primaryColor: Color
 ) {
+    val text = rememberText()
+    val poseWords = rememberTrainingPoseWords()
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             LabeledStat(
-                label = "SCORE",
-                value = game.score.toString(),
+                label = stringResource(R.string.train_score),
+                value = TrainingText.number(text, game.score),
                 color = if (game.score < 0) Color.Red else primaryColor
             )
             LabeledStat(
-                label = "TIME",
+                label = stringResource(R.string.train_time),
                 value = formatClock(game.timeRemainingSeconds),
                 color = primaryColor
             )
@@ -356,7 +368,7 @@ private fun PlayingScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "REQUESTED",
+                text = stringResource(R.string.train_requested),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -365,7 +377,7 @@ private fun PlayingScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            val targetText = game.targetPoseLabel + (game.targetMod?.let { " + MOD $it" } ?: "")
+            val targetText = TrainingText.requested(text, poseWords[game.targetPoseLabel] ?: game.targetPoseLabel, game.targetMod)
             Text(
                 text = targetText,
                 color = primaryColor,
@@ -380,11 +392,11 @@ private fun PlayingScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = outcome,
-                color = when {
-                    outcome.startsWith("-") -> Color.Red
-                    outcome == "MISS" -> Color.Gray
-                    else -> primaryColor
+                text = TrainingText.outcome(text, outcome),
+                color = when (outcome.kind) {
+                    TrainingOutcome.Kind.PENALTY -> Color.Red
+                    TrainingOutcome.Kind.MISS -> Color.Gray
+                    TrainingOutcome.Kind.HIT -> primaryColor
                 },
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -395,7 +407,7 @@ private fun PlayingScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         GameActionButton(
-            text = "[END ROUND]",
+            text = stringResource(R.string.train_end),
             primaryColor = Color.Gray,
             onClick = { game.abort() }
         )
@@ -408,9 +420,10 @@ private fun ResultsScreen(
     primaryColor: Color,
     onDone: () -> Unit
 ) {
+    val text = rememberText()
     Column {
         Text(
-            text = "ROUND COMPLETE",
+            text = stringResource(R.string.train_round_complete),
             color = primaryColor,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
@@ -421,7 +434,7 @@ private fun ResultsScreen(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "FINAL SCORE: ${game.score}",
+            text = TrainingText.finalScore(text, game.score),
             color = if (game.score < 0) Color.Red else primaryColor,
             fontSize = 16.sp,
             fontFamily = FontFamily.Monospace,
@@ -436,14 +449,14 @@ private fun ResultsScreen(
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 GameActionButton(
-                    text = "[PLAY AGAIN]",
+                    text = stringResource(R.string.train_play_again),
                     primaryColor = primaryColor,
                     onClick = { game.dismissResults() }
                 )
             }
             Box(modifier = Modifier.weight(1f)) {
                 GameActionButton(
-                    text = "[DONE]",
+                    text = stringResource(R.string.train_done),
                     primaryColor = Color.Gray,
                     onClick = onDone
                 )
@@ -454,7 +467,7 @@ private fun ResultsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "PREVIOUS SCORES",
+                text = stringResource(R.string.train_previous_scores),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -475,6 +488,8 @@ private fun DifficultyRow(
     primaryColor: Color,
     onClick: () -> Unit
 ) {
+    val text = rememberText()
+    val poseWord = labelFor(LabelKey.POSE)
     val borderColor = if (isSelected) Color.White else primaryColor.copy(alpha = 0.5f)
     val textColor = if (isSelected) Color.White else primaryColor
 
@@ -490,7 +505,7 @@ private fun DifficultyRow(
             .padding(10.dp)
     ) {
         Text(
-            text = difficulty.label,
+            text = TrainingText.difficultyName(text, difficulty.name),
             color = textColor,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
@@ -501,7 +516,7 @@ private fun DifficultyRow(
         Spacer(modifier = Modifier.height(3.dp))
 
         Text(
-            text = describeDifficulty(difficulty),
+            text = TrainingText.groundDescription(text, difficulty.name, poseWord, difficulty.penaltyPoints),
             color = Color.Gray,
             fontSize = 8.sp,
             fontFamily = FontFamily.Monospace
@@ -567,21 +582,24 @@ private fun HistoryList(
     results: List<TrainingGameResult>,
     primaryColor: Color
 ) {
+    val text = rememberText()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         results.forEach { result ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // A saved difficulty is its enum name; it is shown through the language's word and never rewritten.
                 Text(
-                    text = result.difficulty.replace("_", " ") + " // " + formatClock(result.durationSeconds),
+                    text = TrainingText.groundHistoryLine(text, result.difficulty, formatClock(result.durationSeconds)),
+                    modifier = Modifier.weight(1f),
                     color = Color.Gray,
                     fontSize = 8.sp,
                     fontFamily = FontFamily.Monospace
                 )
 
                 Text(
-                    text = "${result.score} PTS",
+                    text = TrainingText.points(text, result.score),
                     color = if (result.score < 0) Color.Red else primaryColor,
                     fontSize = 8.sp,
                     fontFamily = FontFamily.Monospace,
@@ -590,13 +608,6 @@ private fun HistoryList(
             }
         }
     }
-}
-
-private fun describeDifficulty(difficulty: GameDifficulty): String = when (difficulty) {
-    GameDifficulty.EASY -> "ROOT POSES ONLY. NO PENALTY FOR A MISS."
-    GameDifficulty.NORMAL -> "POSE PLUS A SPECIFIC MODIFIER. NO PENALTY FOR A MISS."
-    GameDifficulty.HARD -> "ROOT POSES ONLY. -${difficulty.penaltyPoints} FOR A MISS."
-    GameDifficulty.EUROPEAN_EXTREME -> "POSE PLUS A SPECIFIC MODIFIER. -${difficulty.penaltyPoints} FOR A MISS."
 }
 
 private fun formatClock(totalSeconds: Int): String {
@@ -632,13 +643,14 @@ private fun TelemetryReadout(
     }
 }
 
-// Training Ground has room to spell poses out in full, unlike the compact header
-// readout -- these are the same wire codes BackgroundSensorService.Pose.wireLabel()
-// sends (ID/DEF/CON/---), just expanded for display here.
-private fun fullPoseName(poseLabel: String): String = when (poseLabel) {
-    "ID" -> "IDENTITY"
-    "DEF" -> "DEFEND"
-    "CON" -> "CONNECT"
-    "---" -> "NONE"
-    else -> poseLabel
+// The words for the three poses (IDENTITY, DEFEND, CONNECT), keyed by the stored pose name: the label table's word, so PLAIN WORDS and the chosen language apply.
+// Shared with the Deck Trainer; a pose's stored name is logic and never changes, only the word drawn for it.
+@Composable
+internal fun rememberTrainingPoseWords(): Map<String, String> {
+    val identity = poseLabel("IDENTITY")
+    val defend = poseLabel("DEFEND")
+    val connect = poseLabel("CONNECT")
+    return remember(identity, defend, connect) {
+        mapOf("IDENTITY" to identity, "DEFEND" to defend, "CONNECT" to connect)
+    }
 }

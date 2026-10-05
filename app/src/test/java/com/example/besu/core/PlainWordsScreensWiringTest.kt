@@ -90,7 +90,8 @@ class PlainWordsScreensWiringTest {
 
     @Test
     fun labelsAreOnlyUsedByScreens_neverByStorageBackupSpeechOrTheRules() {
-        val screens = listOf("data/", "backup/", "output/", "core/", "capture/", "training/", "wear/")
+        // training/ holds the two drill panels (screens, which read labels) and the two controllers (rules, which must not): the controllers are named by prefix.
+        val screens = listOf("data/", "backup/", "output/", "core/", "capture/", "training/TrainingGame", "training/DeckTrainerGame", "wear/")
         val offenders = sources()
             .filter { s -> screens.any { s.path.startsWith(it) } && s.path != "core/PlainLabels.kt" }
             .filter { labelCall.containsMatchIn(noComments(it.text)) || it.text.contains("LocalPlainWords") || it.text.contains("PlainWordsState") }
@@ -140,15 +141,15 @@ class PlainWordsScreensWiringTest {
      * draws it raw, and a person on PLAIN WORDS (or another language) would still see the jargon.
      */
     private val stillLogic: Map<String, Set<String>> = mapOf(
-        "MATRIX" to setOf("MainActivity.kt", "decks/CreateDeckDialog.kt", "data/CommandRepository.kt", "core/HelpMenuText.kt"), // the last one is a view-mode key, mapped to the words that name it
+        "MATRIX" to setOf("MainActivity.kt", "decks/CreateDeckDialog.kt", "data/CommandRepository.kt", "core/HelpMenuText.kt", "core/TrainingText.kt"), // the last two are a view-mode key and a deck type's enum name, each mapped to the words that name it
         "QUICK ACTIONS" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
         "EMERGENCY" to setOf("ui/DesignSystem.kt", "decks/CreateDeckDialog.kt", "decks/EmergencyDeck.kt", "data/CommandRepository.kt", "output/OutputService.kt"),
         "EMOJI" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
         "GIF" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
         "VARIABLE" to setOf("ui/DesignSystem.kt"),
-        // The QUICK ACTIONS deck draws the POSE word through labelFor(LabelKey.POSE). These three still hold the bare word: MainActivity's is the logic string sent to the watch
-        // ("POSE" in sendTrainingResetListen), and the two Training Ground panels' telemetry readouts are not migrated yet (they are wired when those screens are).
-        "POSE" to setOf("MainActivity.kt", "training/TrainingGroundPanel.kt", "training/DeckTrainerPanel.kt")
+        // The QUICK ACTIONS deck and the two drill panels' telemetry readouts draw the POSE word through labelFor(LabelKey.POSE). MainActivity still holds the bare word:
+        // it is the logic string sent to the watch ("POSE" in sendTrainingResetListen).
+        "POSE" to setOf("MainActivity.kt")
     )
 
     @Test

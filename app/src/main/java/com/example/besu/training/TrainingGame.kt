@@ -2,6 +2,7 @@
 package com.example.besu.training
 
 import android.content.Context
+import com.example.besu.core.TrainingOutcome
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -15,6 +16,9 @@ import kotlinx.serialization.json.Json
 // Root difficulty splits along two independent axes the user asked for:
 // usesMod (root pose only vs. a specific modifier twist within it) and
 // hasPenalty (failures ignored vs. costing half the reward).
+// `label` is the English name and what the enum's name is saved as in history;
+// the panels draw the chosen language's name (core/TrainingText.difficultyName),
+// never this field.
 enum class GameDifficulty(
     val label: String,
     val usesMod: Boolean,
@@ -114,7 +118,7 @@ class TrainingGameController(private val context: Context) {
     var targetMod by mutableStateOf<Int?>(null)
         private set
 
-    var lastOutcome by mutableStateOf<String?>(null)
+    var lastOutcome by mutableStateOf<TrainingOutcome?>(null)
         private set
 
     var history by mutableStateOf(TrainingGameHistory.load(context))
@@ -164,13 +168,13 @@ class TrainingGameController(private val context: Context) {
         lastOutcome = when {
             correct -> {
                 score += difficulty.rewardPoints
-                "+${difficulty.rewardPoints}"
+                TrainingOutcome.hit(difficulty.rewardPoints)
             }
             difficulty.hasPenalty -> {
                 score -= difficulty.penaltyPoints
-                "-${difficulty.penaltyPoints}"
+                TrainingOutcome.penalty(difficulty.penaltyPoints)
             }
-            else -> "MISS"
+            else -> TrainingOutcome.MISS
         }
 
         rollTarget()

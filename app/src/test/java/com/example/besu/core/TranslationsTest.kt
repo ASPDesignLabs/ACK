@@ -132,6 +132,11 @@ class TranslationsTest {
         "emoji_txt", // TXT abbreviates "text" in Spanish and Portuguese too
         "term_info_button", // INFO is the same abbreviation in Spanish and Portuguese
         "emoji_panel_default", // PANEL is Spanish for panel
+        "train_diff_extreme", // EUROPEAN EXTREME is the developer's own name for the hardest level: a name, like CYBER and MECH, so it is the same in every language
+        "train_diff_normal", // NORMAL is the same word in Spanish and Portuguese
+        "train_mod", "train_requested_mod", // MOD abbreviates "modifier" (modificador, modifiseerder) in Spanish, Portuguese and Afrikaans; the second is "<pose> + MOD <n>"
+        "train_outcome_hit", "train_outcome_penalty", "train_number", // a sign and a number only: Arabic puts a left-to-right mark in front, the others read the same
+        "train_points", // "<n> PTS" abbreviates puntos and pontos too
     )
 
     @Test
@@ -194,7 +199,7 @@ class TranslationsTest {
     fun hindiAndArabicTextIsInItsOwnScript_exceptTheShortListOfPlainSymbolsAndAcronyms() {
         val devanagari = Regex("[\\u0900-\\u097F]")
         val arabic = Regex("[\\u0600-\\u06FF]")
-        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count", "help_menu_steps_line", "help_cat_basics_manual_override_chip", "settings_label_value", "qa_pose_part") // placeholders and units, which have no letters of their own
+        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count", "help_menu_steps_line", "help_cat_basics_manual_override_chip", "settings_label_value", "qa_pose_part", "train_diff_extreme", "train_outcome_hit", "train_outcome_penalty", "train_number") // placeholders, a name (EUROPEAN EXTREME) and signed numbers and units, which have no letters of their own
         for ((tag, script) in listOf("hi" to devanagari, "ar" to arabic)) for ((name, text) in texts.getValue(tag)) {
             if (name in latinOnlyAllowed) continue
             assertTrue("$tag/$name has no ${if (tag == "hi") "Devanagari" else "Arabic"} letters: $text", script.containsMatchIn(text))
