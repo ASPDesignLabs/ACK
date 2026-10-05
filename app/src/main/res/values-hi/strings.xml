@@ -917,4 +917,22 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="deck_create_desc_emergency">चार तुरंत वाले संदेश स्लॉट, वैकल्पिक आपातकालीन ओवरराइड के साथ।</string>
     <string name="deck_create_desc_emoji">केवल दृश्य इमोजी पेज, कॉन्फ़िगर करने योग्य ग्रिड और वैकल्पिक टेक्स्ट के साथ।</string>
     <string name="deck_create_desc_gif">श्रेणियों, पूर्वावलोकन और फ़ुलस्क्रीन प्लेबैक वाली स्थानीय GIF लाइब्रेरी।</string>
+    <string name="qa_hint_tap">टैप: चलाएँ</string>
+    <string name="qa_hint_hold">होल्ड: बदलें</string>
+    <string name="qa_group_short">स%1$d</string>
+    <string name="qa_pose_short_identity">पहचान</string>
+    <string name="qa_pose_short_defend">बचाव</string>
+    <string name="qa_pose_short_connect">जुड़ाव</string>
+    <string name="qa_pose_part">%1$s: %2$s</string>
+    <string name="qa_root_part">मूल: %1$s</string>
+    <string name="qa_hold_configure">[कॉन्फ़िगर करने के लिए दबाए रखें]</string>
+    <string name="qa_slot_default">क्रिया %1$d</string>
+    <string name="qa_group_default">समूह %1$d</string>
+    <string name="qa_edit_title">त्वरित क्रिया संपादित करें</string>
+    <string name="qa_phrase_template">वाक्य टेम्पलेट</string>
+    <string name="qa_edit_group">समूह संपादित करें</string>
+    <string name="qa_group_label">समूह का नाम</string>
+    <string name="qa_group_pose_desc">घड़ी का कौन-सा जेस्चर इस समूह को चलाता है।</string>
+    <string name="qa_group_root_title">मूल ओवरराइड स्रोत</string>
+    <string name="qa_group_root_desc">कौन-सा A/B/C वेरिएबल बैंक इस समूह के {{TAGS}} भरता है।</string>
 </resources>

@@ -957,4 +957,22 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="deck_create_desc_emergency">أربع خانات رسائل فورية مع تجاوزات طوارئ اختيارية.</string>
     <string name="deck_create_desc_emoji">صفحات إيموجي مرئية فقط بشبكات قابلة للضبط ونص اختياري.</string>
     <string name="deck_create_desc_gif">مكتبة GIF محلية بفئات ومعاينات وتشغيل بملء الشاشة.</string>
+    <string name="qa_hint_tap">اضغط: تنفيذ</string>
+    <string name="qa_hint_hold">استمر بالضغط: تعديل</string>
+    <string name="qa_group_short">م%1$d</string>
+    <string name="qa_pose_short_identity">الهوية</string>
+    <string name="qa_pose_short_defend">الدفاع</string>
+    <string name="qa_pose_short_connect">التواصل</string>
+    <string name="qa_pose_part">%1$s: %2$s</string>
+    <string name="qa_root_part">الجذر: %1$s</string>
+    <string name="qa_hold_configure">[استمر بالضغط للإعداد]</string>
+    <string name="qa_slot_default">إجراء %1$d</string>
+    <string name="qa_group_default">مجموعة %1$d</string>
+    <string name="qa_edit_title">تعديل الإجراء السريع</string>
+    <string name="qa_phrase_template">قالب العبارة</string>
+    <string name="qa_edit_group">تعديل المجموعة</string>
+    <string name="qa_group_label">تسمية المجموعة</string>
+    <string name="qa_group_pose_desc">أي إيماءة على الساعة تُطلق هذه المجموعة.</string>
+    <string name="qa_group_root_title">مصدر تجاوز الجذر</string>
+    <string name="qa_group_root_desc">أي بنك متغيرات A/B/C يملأ {{TAGS}} هذه المجموعة.</string>
 </resources>

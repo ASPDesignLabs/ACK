@@ -125,6 +125,9 @@ class TranslationsTest {
         "settings_label_value", // "<label>: <value>": only placeholders, the words come in as arguments
         "settings_cryo_line", // "<label>: <minutes> MIN": MIN is how Spanish, Portuguese and Afrikaans abbreviate minutes too
         "settings_btn_stop", // [STOP] is how Afrikaans writes it too
+        "qa_pose_part", // "<label>: <name>": only placeholders, the words come in as arguments
+        "qa_group_short", // G1 is how Spanish, Portuguese and Afrikaans abbreviate a group too (Grupo, Grupo, Groep)
+        "qa_pose_short_identity", "qa_pose_short_defend", "qa_pose_short_connect", // IDE, DEF and CON abbreviate the pose names in Spanish and Portuguese, IDE in Afrikaans too
     )
 
     @Test
@@ -187,7 +190,7 @@ class TranslationsTest {
     fun hindiAndArabicTextIsInItsOwnScript_exceptTheShortListOfPlainSymbolsAndAcronyms() {
         val devanagari = Regex("[\\u0900-\\u097F]")
         val arabic = Regex("[\\u0600-\\u06FF]")
-        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count", "help_menu_steps_line", "help_cat_basics_manual_override_chip", "settings_label_value") // placeholders and units, which have no letters of their own
+        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count", "help_menu_steps_line", "help_cat_basics_manual_override_chip", "settings_label_value", "qa_pose_part") // placeholders and units, which have no letters of their own
         for ((tag, script) in listOf("hi" to devanagari, "ar" to arabic)) for ((name, text) in texts.getValue(tag)) {
             if (name in latinOnlyAllowed) continue
             assertTrue("$tag/$name has no ${if (tag == "hi") "Devanagari" else "Arabic"} letters: $text", script.containsMatchIn(text))

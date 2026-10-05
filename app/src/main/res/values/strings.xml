@@ -938,4 +938,22 @@
     <string name="deck_create_desc_emergency">Four immediate prompt slots with optional emergency overrides.</string>
     <string name="deck_create_desc_emoji">Visual-only emoji pages with configurable grids and optional text.</string>
     <string name="deck_create_desc_gif">Local GIF library with categories, previews, and fullscreen playback.</string>
+    <string name="qa_hint_tap">TAP: EXECUTE</string>
+    <string name="qa_hint_hold">HOLD: EDIT</string>
+    <string name="qa_group_short">G%1$d</string>
+    <string name="qa_pose_short_identity">IDE</string>
+    <string name="qa_pose_short_defend">DEF</string>
+    <string name="qa_pose_short_connect">CON</string>
+    <string name="qa_pose_part">%1$s: %2$s</string>
+    <string name="qa_root_part">ROOT: %1$s</string>
+    <string name="qa_hold_configure">[HOLD TO CONFIGURE]</string>
+    <string name="qa_slot_default">ACTION %1$d</string>
+    <string name="qa_group_default">GROUP %1$d</string>
+    <string name="qa_edit_title">EDIT QUICK ACTION</string>
+    <string name="qa_phrase_template">PHRASE TEMPLATE</string>
+    <string name="qa_edit_group">EDIT GROUP</string>
+    <string name="qa_group_label">GROUP LABEL</string>
+    <string name="qa_group_pose_desc">WHICH GESTURE ON THE WATCH FIRES THIS GROUP.</string>
+    <string name="qa_group_root_title">ROOT OVERRIDE SOURCE</string>
+    <string name="qa_group_root_desc">WHICH A/B/C VARIABLE BANK FILLS THIS GROUP\'S {{TAGS}}.</string>
 </resources>

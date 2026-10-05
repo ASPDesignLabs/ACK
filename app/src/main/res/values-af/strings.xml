@@ -917,4 +917,22 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="deck_create_desc_emergency">VIER DADELIKE BOODSKAPPLEKKE MET OPSIONELE NOODOORSKRYWINGS.</string>
     <string name="deck_create_desc_emoji">SLEGS-VISUELE EMOJI-BLAAIE MET INSTELBARE RASTERS EN OPSIONELE TEKS.</string>
     <string name="deck_create_desc_gif">PLAASLIKE GIF-BIBLIOTEEK MET KATEGORIEË, VOORSKOUE EN VOLSKERMAFSPEEL.</string>
+    <string name="qa_hint_tap">TIK: VOER UIT</string>
+    <string name="qa_hint_hold">HOU: WYSIG</string>
+    <string name="qa_group_short">G%1$d</string>
+    <string name="qa_pose_short_identity">IDE</string>
+    <string name="qa_pose_short_defend">VRD</string>
+    <string name="qa_pose_short_connect">VRB</string>
+    <string name="qa_pose_part">%1$s: %2$s</string>
+    <string name="qa_root_part">WORTEL: %1$s</string>
+    <string name="qa_hold_configure">[HOU VASGEDRUK OM IN TE STEL]</string>
+    <string name="qa_slot_default">AKSIE %1$d</string>
+    <string name="qa_group_default">GROEP %1$d</string>
+    <string name="qa_edit_title">WYSIG VINNIGE AKSIE</string>
+    <string name="qa_phrase_template">FRASESJABLOON</string>
+    <string name="qa_edit_group">WYSIG GROEP</string>
+    <string name="qa_group_label">GROEPETIKET</string>
+    <string name="qa_group_pose_desc">WATTER GEBAAR OP DIE HOROLOSIE DIE GROEP AFVUUR.</string>
+    <string name="qa_group_root_title">WORTELOORSKRYWING-BRON</string>
+    <string name="qa_group_root_desc">WATTER A/B/C-VERANDERLIKE-BANK DIE GROEP SE {{TAGS}} VUL.</string>
 </resources>

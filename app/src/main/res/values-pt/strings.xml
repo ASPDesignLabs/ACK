@@ -927,4 +927,22 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="deck_create_desc_emergency">QUATRO VAGAS DE MENSAGENS IMEDIATAS COM SUBSTITUIÇÕES DE EMERGÊNCIA OPCIONAIS.</string>
     <string name="deck_create_desc_emoji">PÁGINAS SÓ VISUAIS DE EMOJI COM GRADES CONFIGURÁVEIS E TEXTO OPCIONAL.</string>
     <string name="deck_create_desc_gif">BIBLIOTECA LOCAL DE GIF COM CATEGORIAS, PRÉVIAS E REPRODUÇÃO EM TELA CHEIA.</string>
+    <string name="qa_hint_tap">TOCAR: EXECUTAR</string>
+    <string name="qa_hint_hold">SEGURAR: EDITAR</string>
+    <string name="qa_group_short">G%1$d</string>
+    <string name="qa_pose_short_identity">IDE</string>
+    <string name="qa_pose_short_defend">DEF</string>
+    <string name="qa_pose_short_connect">CON</string>
+    <string name="qa_pose_part">%1$s: %2$s</string>
+    <string name="qa_root_part">RAIZ: %1$s</string>
+    <string name="qa_hold_configure">[SEGURE PARA CONFIGURAR]</string>
+    <string name="qa_slot_default">AÇÃO %1$d</string>
+    <string name="qa_group_default">GRUPO %1$d</string>
+    <string name="qa_edit_title">EDITAR AÇÃO RÁPIDA</string>
+    <string name="qa_phrase_template">MODELO DE FRASE</string>
+    <string name="qa_edit_group">EDITAR GRUPO</string>
+    <string name="qa_group_label">RÓTULO DO GRUPO</string>
+    <string name="qa_group_pose_desc">QUAL GESTO DO RELÓGIO DISPARA ESTE GRUPO.</string>
+    <string name="qa_group_root_title">ORIGEM DA SUBSTITUIÇÃO DE RAIZ</string>
+    <string name="qa_group_root_desc">QUAL BANCO DE VARIÁVEIS A/B/C PREENCHE AS {{TAGS}} DESTE GRUPO.</string>
 </resources>

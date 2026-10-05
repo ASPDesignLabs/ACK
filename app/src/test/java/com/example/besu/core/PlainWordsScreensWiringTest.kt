@@ -50,7 +50,6 @@ class PlainWordsScreensWiringTest {
     /** Keys not drawn by any screen yet. A key leaves this list the day a screen draws it, and the test says so. */
     private val notYetWired = setOf(
         "DECKS",
-        "POSE",              // the group heading is drawn through poseLabel(); the bare word has no screen of its own yet
         "TARGET_ENTRY",      // ENTRY rows are named by the person
         "TARGET_CATEGORY",
         "GEO_GRID",          // the screen uses GEO_OPEN_GRID
@@ -146,7 +145,10 @@ class PlainWordsScreensWiringTest {
         "EMERGENCY" to setOf("ui/DesignSystem.kt", "decks/CreateDeckDialog.kt", "decks/EmergencyDeck.kt", "data/CommandRepository.kt", "output/OutputService.kt"),
         "EMOJI" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
         "GIF" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
-        "VARIABLE" to setOf("ui/DesignSystem.kt")
+        "VARIABLE" to setOf("ui/DesignSystem.kt"),
+        // The QUICK ACTIONS deck draws the POSE word through labelFor(LabelKey.POSE). These three still hold the bare word: MainActivity's is the logic string sent to the watch
+        // ("POSE" in sendTrainingResetListen), and the two Training Ground panels' telemetry readouts are not migrated yet (they are wired when those screens are).
+        "POSE" to setOf("MainActivity.kt", "training/TrainingGroundPanel.kt", "training/DeckTrainerPanel.kt")
     )
 
     @Test

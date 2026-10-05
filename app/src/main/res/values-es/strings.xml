@@ -927,4 +927,22 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="deck_create_desc_emergency">CUATRO CASILLAS DE MENSAJES INMEDIATOS CON ANULACIONES DE EMERGENCIA OPCIONALES.</string>
     <string name="deck_create_desc_emoji">PÁGINAS SOLO VISUALES DE EMOJI CON CUADRÍCULAS CONFIGURABLES Y TEXTO OPCIONAL.</string>
     <string name="deck_create_desc_gif">BIBLIOTECA LOCAL DE GIF CON CATEGORÍAS, VISTAS PREVIAS Y REPRODUCCIÓN A PANTALLA COMPLETA.</string>
+    <string name="qa_hint_tap">TOCAR: EJECUTAR</string>
+    <string name="qa_hint_hold">MANTENER: EDITAR</string>
+    <string name="qa_group_short">G%1$d</string>
+    <string name="qa_pose_short_identity">IDE</string>
+    <string name="qa_pose_short_defend">DEF</string>
+    <string name="qa_pose_short_connect">CON</string>
+    <string name="qa_pose_part">%1$s: %2$s</string>
+    <string name="qa_root_part">RAÍZ: %1$s</string>
+    <string name="qa_hold_configure">[MANTÉN PARA CONFIGURAR]</string>
+    <string name="qa_slot_default">ACCIÓN %1$d</string>
+    <string name="qa_group_default">GRUPO %1$d</string>
+    <string name="qa_edit_title">EDITAR ACCIÓN RÁPIDA</string>
+    <string name="qa_phrase_template">PLANTILLA DE FRASE</string>
+    <string name="qa_edit_group">EDITAR GRUPO</string>
+    <string name="qa_group_label">ETIQUETA DEL GRUPO</string>
+    <string name="qa_group_pose_desc">QUÉ GESTO DEL RELOJ DISPARA ESTE GRUPO.</string>
+    <string name="qa_group_root_title">ORIGEN DE LA ANULACIÓN DE RAÍZ</string>
+    <string name="qa_group_root_desc">QUÉ BANCO DE VARIABLES A/B/C RELLENA LAS {{TAGS}} DE ESTE GRUPO.</string>
 </resources>
