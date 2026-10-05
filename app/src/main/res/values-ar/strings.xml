@@ -1536,4 +1536,12 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="geo_notif_engage">تفعيل</string>
     <string name="geo_notif_previous">الحزمة السابقة</string>
     <string name="geo_notif_unknown">غير معروف</string>
+    <string name="helpmod_geo_protocol_title">بروتوكول الموقع</string>
+    <string name="helpmod_geo_protocol_summary">السياق المعتمد على الموقع وسلوك المناطق.</string>
+    <string name="helpmod_geo_protocol_intro_title">بروتوكول الموقع</string>
+    <string name="helpmod_geo_protocol_intro_body">يدير {{GEO_PROTOCOL}} سلوك ACK المرتبط بالموقع والمناطق.</string>
+    <string name="helpmod_geo_protocol_geo_view_title">عناصر تحكم المناطق</string>
+    <string name="helpmod_geo_protocol_geo_view_body">راجع عناصر تحكم المناطق واضبط السلوك المناسب لبيئتك.</string>
+    <string name="helpmod_geo_protocol_map_data_title">بيانات الخريطة</string>
+    <string name="helpmod_geo_protocol_map_data_body">لا تأتي أي خريطة إقليمية مع التطبيق. تعمل المناطق بالإحداثيات حتى دون استيراد أي شيء، لكن يمكنك استيراد ملف .map خاص بك متوافق مع Mapsforge هنا في أي وقت لرؤية بلاط خريطة أساسية حقيقي على {{GEO_GRID}}.</string>
 </resources>

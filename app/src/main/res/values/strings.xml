@@ -1481,4 +1481,12 @@
     <string name="geo_notif_engage">ENGAGE</string>
     <string name="geo_notif_previous">PREVIOUS DECK</string>
     <string name="geo_notif_unknown">UNKNOWN</string>
+    <string name="helpmod_geo_protocol_title">GEO-PROTOCOL</string>
+    <string name="helpmod_geo_protocol_summary">LOCATION-BASED CONTEXT AND ZONE BEHAVIOR.</string>
+    <string name="helpmod_geo_protocol_intro_title">GEO-PROTOCOL</string>
+    <string name="helpmod_geo_protocol_intro_body">{{GEO_PROTOCOL:Geo-Protocol}} manages location-aware ACK behavior and zones.</string>
+    <string name="helpmod_geo_protocol_geo_view_title">ZONE CONTROLS</string>
+    <string name="helpmod_geo_protocol_geo_view_body">Review zone controls and configure behavior appropriate to your environment.</string>
+    <string name="helpmod_geo_protocol_map_data_title">MAP DATA</string>
+    <string name="helpmod_geo_protocol_map_data_body">No region map ships with the app. Zones still work by coordinate with nothing imported, but you can import your own Mapsforge-compatible .map file here any time to see real basemap tiles on the {{GEO_GRID:Tactical Grid}}.</string>
 </resources>

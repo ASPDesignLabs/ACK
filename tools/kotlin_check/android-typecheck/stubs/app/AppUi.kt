@@ -26,6 +26,10 @@ fun poseLabel(stored: String): String = stored
 @androidx.compose.runtime.Composable
 fun helpText(text: String): String = text
 
+/** A HELP walkthrough's own words, a resource name read in the chosen language and filled in (the real one is in ui/PlainWords.kt, which is not staged). */
+@androidx.compose.runtime.Composable
+fun helpWords(nameOrText: String): String = nameOrText
+
 /** The label for a Matrix slot's stored name (the real one is in ui/PlainWords.kt, which is not staged). */
 @androidx.compose.runtime.Composable
 fun slotLabel(stored: String): String = stored

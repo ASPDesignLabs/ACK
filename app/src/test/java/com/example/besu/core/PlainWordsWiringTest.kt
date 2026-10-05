@@ -162,14 +162,16 @@ class PlainWordsWiringTest {
     @Test
     fun everyPlaceHelpTextIsDrawnGoesThroughHelpText() {
         val coach = code(source("help/HelpCoachDialog.kt"))
-        assertTrue(coach.contains("text = helpText(step.title)"))
-        assertTrue(coach.contains("text = helpText(step.body)"))
+        assertTrue(coach.contains("text = helpWords(step.title)"))
+        assertTrue(coach.contains("text = helpWords(step.body)"))
+        assertFalse("a step's words are a resource name: helpText alone would draw the name", Regex("""helpText\(step\.(title|body)\)""").containsMatchIn(coach))
         assertFalse("raw step text must not be drawn", Regex("""text = step\.(title|body)\b""").containsMatchIn(coach))
         // The "awaiting input" line holds a placeholder too.
         assertTrue(coach.contains("text = helpText(helpActionInstruction(step.action))"))
         val menu = code(source("help/HelpMenuDialog.kt"))
-        assertTrue(menu.contains("text = helpText(module.title)"))
-        assertTrue(menu.contains("text = helpText(module.summary)"))
+        assertTrue(menu.contains("text = helpWords(module.title)"))
+        assertTrue(menu.contains("text = helpWords(module.summary)"))
+        assertFalse("a module's words are a resource name: helpText alone would draw the name", Regex("""helpText\(module\.(title|summary)\)""").containsMatchIn(menu))
         // A family's names come from string resources and may hold a placeholder, so each is read through the text source and then through helpText.
         assertTrue(menu.contains("helpText(HelpMenuText.categoryTitle(text, selectedCategory.name))"))
         assertTrue(menu.contains("helpText(HelpMenuText.categorySubtitle(text, selectedCategory.name))"))

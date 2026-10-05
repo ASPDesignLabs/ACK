@@ -1460,4 +1460,12 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="geo_notif_engage">SKAKEL AAN</string>
     <string name="geo_notif_previous">VORIGE DEK</string>
     <string name="geo_notif_unknown">ONBEKEND</string>
+    <string name="helpmod_geo_protocol_title">GEO-PROTOKOL</string>
+    <string name="helpmod_geo_protocol_summary">LIGGINGGEBASEERDE KONTEKS EN SONEGEDRAG.</string>
+    <string name="helpmod_geo_protocol_intro_title">GEO-PROTOKOL</string>
+    <string name="helpmod_geo_protocol_intro_body">{{GEO_PROTOCOL}} BESTUUR LIGGINGBEWUSTE ACK-GEDRAG EN SONES.</string>
+    <string name="helpmod_geo_protocol_geo_view_title">SONE-KONTROLES</string>
+    <string name="helpmod_geo_protocol_geo_view_body">KYK DIE SONE-KONTROLES NA EN STEL GEDRAG IN WAT BY JOU OMGEWING PAS.</string>
+    <string name="helpmod_geo_protocol_map_data_title">KAARTDATA</string>
+    <string name="helpmod_geo_protocol_map_data_body">GEEN STREEKKAART WORD MET DIE PROGRAM GELEWER NIE. SONES WERK STEEDS VOLGENS KOÖRDINATE AL IS NIKS GEÏMPORTEER NIE, MAAR JY KAN ENIGE TYD JOU EIE MAPSFORGE-VERSOENBARE .MAP-LÊER HIER INVOER OM ECHTE BASISKAARTTEËLS TE SIEN OP {{GEO_GRID}}.</string>
 </resources>

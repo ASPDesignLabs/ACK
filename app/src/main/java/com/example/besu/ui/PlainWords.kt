@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import com.example.besu.core.HelpPlaceholders
+import com.example.besu.core.HelpWalkthroughText
 import com.example.besu.core.LabelKey
 import com.example.besu.data.AssistPrefs
 
@@ -96,4 +97,14 @@ fun helpText(text: String): String {
     return remember(text, plain, configuration) {
         HelpPlaceholders.substitute(text, plain) { key, usePlain -> LabelText.resolveOrNull(context, key, usePlain) }
     }
+}
+
+/**
+ * A HELP walkthrough's own words: a module's title or summary, or a step's title or body. It is a string resource's name (core/HelpWalkthroughText.kt), read in the chosen language
+ * and then filled in like any HELP text; a family that has not moved yet still holds its English, which reads as itself.
+ */
+@Composable
+fun helpWords(nameOrText: String): String {
+    val words = rememberText()
+    return helpText(remember(nameOrText, words) { HelpWalkthroughText.read(words, nameOrText) })
 }

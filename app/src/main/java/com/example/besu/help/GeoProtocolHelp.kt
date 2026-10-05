@@ -2,33 +2,35 @@
 package com.example.besu.help
 
 import com.example.besu.*
+
+/**
+ * The GEO-PROTOCOL walkthrough. Its words are string resources, read where the step is drawn or spoken (core/HelpWalkthroughText.kt): a module's title and summary are
+ * `helpmod_<module id>_title` / `_summary`, a step's `helpmod_<module id>_<step id>_title` / `_body`.
+ */
 object GeoProtocolHelp {
     val module = HelpModule(
         id = "geo_protocol",
         category = HelpCategory.CONTEXTUAL_SYSTEMS,
-        title = "GEO-PROTOCOL",
-        summary = "LOCATION-BASED CONTEXT AND ZONE BEHAVIOR.",
+        title = "helpmod_geo_protocol_title",
+        summary = "helpmod_geo_protocol_summary",
         destination = HelpDestination.GEO,
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "GEO-PROTOCOL",
-                body = "{{GEO_PROTOCOL:Geo-Protocol}} manages location-aware ACK behavior and zones."
+                title = "helpmod_geo_protocol_intro_title",
+                body = "helpmod_geo_protocol_intro_body"
             ),
             HelpStep(
                 id = "geo_view",
-                title = "ZONE CONTROLS",
-                body = "Review zone controls and configure behavior appropriate " +
-                    "to your environment.",
+                title = "helpmod_geo_protocol_geo_view_title",
+                body = "helpmod_geo_protocol_geo_view_body",
                 action = HelpAction.Interact(AckTags.GEO_VIEW),
                 targetTag = AckTags.GEO_VIEW
             ),
             HelpStep(
                 id = "map_data",
-                title = "MAP DATA",
-                body = "No region map ships with the app. Zones still work by coordinate " +
-                    "with nothing imported, but you can import your own Mapsforge-compatible " +
-                    ".map file here any time to see real basemap tiles on the {{GEO_GRID:Tactical Grid}}.",
+                title = "helpmod_geo_protocol_map_data_title",
+                body = "helpmod_geo_protocol_map_data_body",
                 action = HelpAction.Interact(AckTags.GEO_MAP_IMPORT),
                 targetTag = AckTags.GEO_MAP_IMPORT
             )

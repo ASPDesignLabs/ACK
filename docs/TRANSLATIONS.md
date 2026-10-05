@@ -38,7 +38,7 @@ Only the **label table** and the words around PLAIN WORDS and INTERFACE LANGUAGE
 
 ## What is NOT translated (it stays English in every language, and the control says so)
 
-the text inside HELP walkthroughs (module titles and summaries, step titles and bodies, and the options on the two chooser dialogs; the HELP menu, coach panel and buttons are translated); every screen not listed above (and the deck manager); **the lines other parts of ACK write into the Terminal** (the output service, the watch, Geo and the path trace send English text through the `ACK_LOG` broadcast; the Terminal's own words, `/help` and `/info` are translated); most dialogs, toasts and settings captions;
+the text inside HELP walkthroughs **except the families listed under "HELP walkthroughs, one family at a time" below** (module titles and summaries, step titles and bodies, and the options on the two chooser dialogs; the HELP menu, coach panel and buttons are translated); every screen not listed above (and the deck manager); **the lines other parts of ACK write into the Terminal** (the output service, the watch, Geo and the path trace send English text through the `ACK_LOG` broadcast; the Terminal's own words, `/help` and `/info` are translated); most dialogs, toasts and settings captions;
 the watch's state words in the Training Ground and the Deck Trainer, the profile names (DEFAULT, WORK, HIGH_STRESS, SOCIAL and BUILDER are names, as the widget and the watch show them), the deck called DEFAULT, the boot line MainActivity writes to the Terminal log, and the HELP walkthroughs' step text that names their buttons; the visual overlay and anything spoken (that is SPEECH LANGUAGE's job); starter phrases; anything a person typed.
 A Spanish screen is therefore mixed: translated names on the main screens, English in the long tail. That is the stated limit of this pass.
 
@@ -72,3 +72,14 @@ To **add a language**: add it to `InterfaceLanguage` (`core/InterfaceLanguage.kt
 The restart and the locale applied through `createConfigurationContext`; every translated screen's layout (longer words wrapping in 48 dp buttons); the
 mirrored layout in Arabic; which digits appear (most numbers are built by the app with Kotlin templates and show 0 to 9, but a value written with `String.format`, such as the twist-sensitivity slider, follows the phone's own number format); how the monospace font falls back for Devanagari and Arabic glyphs; TalkBack in each language; Android's own lint for resources.
 `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md` section K is the do-this-expect-that list.
+
+## HELP walkthroughs, one family at a time
+
+The text of the HELP walkthroughs (about 26 modules and 157 steps) is moved to string resources one family (one file in `help/`) per commit. A family that has moved holds only resource names, and its
+words are `helpmod_<module id>_title` / `_summary` and `helpmod_<module id>_<step id>_title` / `_body` in every language; a family that has not moved still holds its English, which is shown as it is.
+**Moved so far: GEO-PROTOCOL.** The note in the language control and in `/info` that says HELP's walkthroughs stay English is changed when the last family has moved, not before.
+
+- **English is word for word what it always said**, including `{{KEY:Original}}` placeholders. A translation uses the bare `{{KEY}}`, which fills in the language's own word for that label (or the everyday one under PLAIN WORDS), and never carries an English original.
+- **A step title that names a label or a control is that label's or control's own word** in each language ("GEO-PROTOCOL" is the label, "MAP DATA" is the Geo screen's heading), so the walkthrough and the screen agree.
+- **What is spoken.** The coach panel speaks each step. The **translated** step is spoken only when SPEECH LANGUAGE is set to follow the phone **and** the screens are in the phone's own language; every other case speaks the **English** step, so an English voice is never handed Spanish or Hindi. An install that already existed (SPEECH LANGUAGE English (US), the default) hears exactly what it heard before. Known limit: a phone whose speech engine has no voice for its own language keeps its own default voice, as everything else spoken does.
+- Like every other translation here these are **drafts without a native speaker**; a wrong button name in an instruction would mislead, so check each family against the screen it points at.

@@ -5,7 +5,9 @@ import androidx.compose.ui.res.stringResource
 import com.example.besu.core.DeckMenuText
 import com.example.besu.core.LabelKey
 import com.example.besu.backup.BackupReminder
+import com.example.besu.core.ActiveScript
 import com.example.besu.core.HelpPlaceholders
+import com.example.besu.core.HelpWalkthroughText
 import com.example.besu.core.ProfileSwapDiff
 import com.example.besu.core.SlotChange
 import com.example.besu.core.TextInsertion
@@ -607,8 +609,12 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         val module = helpManager.activeModule ?: return@LaunchedEffect
         val step = helpManager.currentStep ?: return@LaunchedEffect
 
-        // The step's own text, in the wording the person sees (PLAIN WORDS): a placeholder must never be read aloud as braces.
-        fun spoken(text: String) = HelpPlaceholders.substitute(text, PlainWordsState.on) { key, plain -> LabelText.resolveOrNull(context, key, plain) }
+        // The step's own text, in the wording the person sees (PLAIN WORDS): a placeholder must never be read aloud as braces. The translated step is spoken only when the voice speaks
+        // that language (SPEECH LANGUAGE follows the phone and the screens are in the phone's language); every other case speaks the English step, as before (core/HelpWalkthroughText.kt).
+        val speakTranslated = HelpWalkthroughText.speaksInterfaceLanguage(AssistPrefs.speechLanguage(context), ActiveScript.tag, Locale.getDefault().language)
+        val spokenContext = if (speakTranslated) context else EnglishResources.context(context)
+        val spokenWords = ResourceText(spokenContext)
+        fun spoken(nameOrText: String) = HelpPlaceholders.substitute(HelpWalkthroughText.read(spokenWords, nameOrText), PlainWordsState.on) { key, plain -> LabelText.resolveOrNull(spokenContext, key, plain) }
         val spokenText = buildString {
             append(spoken(step.title))
             append(". ")

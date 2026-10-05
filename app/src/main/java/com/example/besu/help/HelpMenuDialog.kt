@@ -6,6 +6,7 @@ import com.example.besu.core.HelpMenuText
 import com.example.besu.ui.looseSpacing
 import com.example.besu.data.*
 import com.example.besu.ui.helpText
+import com.example.besu.ui.helpWords
 import com.example.besu.ui.rememberText
 import com.example.besu.ui.theme.*
 import androidx.compose.foundation.background
@@ -320,7 +321,7 @@ private fun HelpModuleMenuItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = helpText(module.title),
+                text = helpWords(module.title),
                 color = primaryColor,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
@@ -343,7 +344,7 @@ private fun HelpModuleMenuItem(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = helpText(module.summary),
+            text = helpWords(module.summary),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace

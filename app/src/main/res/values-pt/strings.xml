@@ -1479,4 +1479,12 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="geo_notif_engage">ATIVAR</string>
     <string name="geo_notif_previous">BARALHO ANTERIOR</string>
     <string name="geo_notif_unknown">DESCONHECIDO</string>
+    <string name="helpmod_geo_protocol_title">PROTOCOLO GEO</string>
+    <string name="helpmod_geo_protocol_summary">CONTEXTO BASEADO NA LOCALIZAÇÃO E COMPORTAMENTO DAS ZONAS.</string>
+    <string name="helpmod_geo_protocol_intro_title">PROTOCOLO GEO</string>
+    <string name="helpmod_geo_protocol_intro_body">{{GEO_PROTOCOL}} GERENCIA O COMPORTAMENTO DO ACK COM BASE NA LOCALIZAÇÃO E NAS ZONAS.</string>
+    <string name="helpmod_geo_protocol_geo_view_title">CONTROLES DE ZONA</string>
+    <string name="helpmod_geo_protocol_geo_view_body">REVISE OS CONTROLES DE ZONA E CONFIGURE UM COMPORTAMENTO ADEQUADO AO SEU AMBIENTE.</string>
+    <string name="helpmod_geo_protocol_map_data_title">DADOS DO MAPA</string>
+    <string name="helpmod_geo_protocol_map_data_body">O APP NÃO TRAZ NENHUM MAPA DE REGIÃO. AS ZONAS FUNCIONAM POR COORDENADAS MESMO SEM NADA IMPORTADO, MAS VOCÊ PODE IMPORTAR AQUI SEU PRÓPRIO ARQUIVO .MAP COMPATÍVEL COM MAPSFORGE A QUALQUER MOMENTO PARA VER MAPAS BASE REAIS EM {{GEO_GRID}}.</string>
 </resources>

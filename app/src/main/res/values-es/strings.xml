@@ -1479,4 +1479,12 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="geo_notif_engage">ACTIVAR</string>
     <string name="geo_notif_previous">MAZO ANTERIOR</string>
     <string name="geo_notif_unknown">DESCONOCIDO</string>
+    <string name="helpmod_geo_protocol_title">PROTOCOLO GEO</string>
+    <string name="helpmod_geo_protocol_summary">CONTEXTO BASADO EN LA UBICACIÓN Y COMPORTAMIENTO DE LAS ZONAS.</string>
+    <string name="helpmod_geo_protocol_intro_title">PROTOCOLO GEO</string>
+    <string name="helpmod_geo_protocol_intro_body">{{GEO_PROTOCOL}} ADMINISTRA EL COMPORTAMIENTO DE ACK SEGÚN LA UBICACIÓN Y LAS ZONAS.</string>
+    <string name="helpmod_geo_protocol_geo_view_title">CONTROLES DE ZONA</string>
+    <string name="helpmod_geo_protocol_geo_view_body">REVISA LOS CONTROLES DE ZONA Y CONFIGURA UN COMPORTAMIENTO ADECUADO PARA TU ENTORNO.</string>
+    <string name="helpmod_geo_protocol_map_data_title">DATOS DE MAPA</string>
+    <string name="helpmod_geo_protocol_map_data_body">LA APP NO INCLUYE NINGÚN MAPA DE REGIÓN. LAS ZONAS FUNCIONAN POR COORDENADAS AUNQUE NO HAYAS IMPORTADO NADA, PERO PUEDES IMPORTAR AQUÍ TU PROPIO ARCHIVO .MAP COMPATIBLE CON MAPSFORGE CUANDO QUIERAS PARA VER MAPAS BASE REALES EN {{GEO_GRID}}.</string>
 </resources>

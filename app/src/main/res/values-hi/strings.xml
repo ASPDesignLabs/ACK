@@ -1460,4 +1460,12 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="geo_notif_engage">लागू करें</string>
     <string name="geo_notif_previous">पिछला डेक</string>
     <string name="geo_notif_unknown">अज्ञात</string>
+    <string name="helpmod_geo_protocol_title">जियो-प्रोटोकॉल</string>
+    <string name="helpmod_geo_protocol_summary">स्थान-आधारित संदर्भ और ज़ोन का व्यवहार।</string>
+    <string name="helpmod_geo_protocol_intro_title">जियो-प्रोटोकॉल</string>
+    <string name="helpmod_geo_protocol_intro_body">{{GEO_PROTOCOL}} स्थान-जागरूक ACK व्यवहार और ज़ोन को संभालता है।</string>
+    <string name="helpmod_geo_protocol_geo_view_title">ज़ोन नियंत्रण</string>
+    <string name="helpmod_geo_protocol_geo_view_body">ज़ोन नियंत्रणों की समीक्षा करें और अपने परिवेश के अनुसार उपयुक्त व्यवहार सेट करें।</string>
+    <string name="helpmod_geo_protocol_map_data_title">मैप डेटा</string>
+    <string name="helpmod_geo_protocol_map_data_body">ऐप के साथ कोई क्षेत्रीय नक्शा नहीं आता। कुछ भी आयात किए बिना भी ज़ोन निर्देशांक से काम करते हैं, लेकिन असली बेसमैप टाइल देखने के लिए आप यहाँ कभी भी अपनी Mapsforge-संगत .map फ़ाइल आयात कर सकते हैं — {{GEO_GRID}} पर।</string>
 </resources>

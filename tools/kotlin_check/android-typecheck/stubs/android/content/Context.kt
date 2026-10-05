@@ -17,6 +17,8 @@ abstract class Context {
     abstract fun startService(intent: Intent): Any?
     abstract fun startActivity(intent: Intent)
     abstract fun getSystemService(name: String): Any?
+    /** The real one is abstract (`Context.createConfigurationContext(Configuration)`); a default keeps the other stubs compiling. */
+    open fun createConfigurationContext(overrideConfiguration: android.content.res.Configuration): Context = this
     companion object { const val MODE_PRIVATE = 0; const val CLIPBOARD_SERVICE = "clipboard" }
 }
 open class ContextWrapper(base: Context?) : Context() {

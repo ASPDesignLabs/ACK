@@ -4,6 +4,7 @@ package com.example.besu.help
 import com.example.besu.R
 import com.example.besu.ui.looseSpacing
 import com.example.besu.ui.helpText
+import com.example.besu.ui.helpWords
 import com.example.besu.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -92,7 +93,7 @@ fun HelpCoachPanel(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = helpText(step.title),
+            text = helpWords(step.title),
             color = Color.White,
             fontSize = 13.sp,
             fontFamily = FontFamily.Monospace,
@@ -103,7 +104,7 @@ fun HelpCoachPanel(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = helpText(step.body),
+            text = helpWords(step.body),
             color = Color.White.copy(alpha = 0.84f),
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
