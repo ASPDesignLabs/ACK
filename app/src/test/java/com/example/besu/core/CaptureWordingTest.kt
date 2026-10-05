@@ -367,4 +367,29 @@ class CaptureWordingTest {
         for (forbidden in listOf("NeonButton(", "NeonToggle(", "Toast", "performHapticFeedback", "LocalHapticFeedback", "Vibrator", "VibrationEffect", "ToneGenerator", "MediaPlayer", "SoundPool")) assertFalse("CaptureSessionScreen uses $forbidden", r.contains(forbidden))
         assertFalse(Regex("""animate[A-Za-z]*AsState|AnimatedVisibility|Crossfade|infiniteRepeatable""").containsMatchIn(r))
     }
+
+    // ---- gaps found by breaking the code on purpose ---------------------------------------------------------------------------------------
+
+    @Test
+    fun theLogicAroundTheWordsIsStillWhatItWas() {
+        val e = editor
+        val d = detail
+        val r = session
+        assertTrue("a storage message is shown as it came", e.contains("message = e.message ?: words.get(\"capture_script_save_failed\")"))
+        assertTrue("the join button shows its state", e.contains("isActive = lines == \"join\", mainColor"))
+        assertTrue("the keep button shows its state", e.contains("isActive = lines == \"keep\", mainColor"))
+        assertTrue("a mark shows as set when the clip has it", d.contains("isActive = flag in clip.flags,"))
+        assertTrue("kept and the rest are counted the way they were", d.contains("CaptureText.keptAside(words, shown.count { it.state == ClipState.DONE }, shown.count { it.state != ClipState.DONE })"))
+        assertTrue("the free view is for free speech", d.contains("if (s.mode == \"free\") {"))
+        assertTrue("an open session cannot be saved", d.contains("{ if (s.closed) onSave(s) }") && d.contains("isActive = s.closed,"))
+        assertTrue("marks are offered on kept clips only", d.contains("        if (clip.state == ClipState.DONE) {"))
+        assertTrue("play is offered when there is audio", d.contains("if (hasAudio) TightPanelButton(stringResource(R.string.capture_play)"))
+        assertTrue("the quiet check can start when there is something to record", r.contains("isActive = free || pendingCount > 0 || includeDone, mainColor = primaryColor, onClick = onCheck"))
+        assertTrue("a covered microphone or an interruption means check again", r.contains("val bad = verdict == NoiseVerdict.NO_SIGNAL || verdict == NoiseVerdict.INTERRUPTED"))
+        assertTrue("only a good room is drawn in the screen's own colour", r.contains("color = if (verdict == NoiseVerdict.GOOD) primaryColor else RadicalRed"))
+        assertTrue("CHECK AGAIN is the active button when the check failed", r.contains("isActive = bad, mainColor = primaryColor, onClick = onCheck"))
+        assertTrue("the heading follows the kind of session", r.contains("stringResource(if (free) R.string.capture_free_speech else R.string.capture_record_script_title)"))
+        assertTrue("a resume clears an old notice", runners.contains("notice = null\n        state = RunState.LISTENING\n        engine.resume()"))
+        assertTrue("the microphone's own detail is kept", microphone.contains("CaptureNotice.MicTrouble(e.message ?: e.javaClass.simpleName)"))
+    }
 }

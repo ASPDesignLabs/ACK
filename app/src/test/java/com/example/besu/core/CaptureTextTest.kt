@@ -518,4 +518,79 @@ class CaptureTextTest {
             assertTrue("$tag: cards left in the one that has some: $left", left.contains("1"))
         }
     }
+
+    // ---- gaps found by breaking the code on purpose --------------------------------------------------------------------------------------
+
+    @Test
+    fun aNameWithOnlySpacesIsStillShown_aSizeOfZeroIsStillASize_andAnUnknownModeReadsAsFree() {
+        assertEquals("FREE SPEECH //  ", CaptureText.sessionTitle(t, "free", null, " "))
+        assertEquals("a name is shown as typed, spaces and all", "SCRIPT //  x ", CaptureText.sessionTitle(t, "script", null, " x "))
+        assertEquals(
+            "THIS REMOVES 0.0 MB OF RECORDINGS FROM THIS PHONE. IF YOU HAVE NOT SAVED A PACKAGE AND CHECKED IT ON YOUR COMPUTER, THEY ARE GONE FOR GOOD.",
+            CaptureText.deleteSessionBody(t, 0L),
+        )
+        // A mode this build does not know is listed the way free speech is (how long, not how many were kept).
+        assertEquals("2026-01-02 03:04:05 UTC  //  1:05  //  0.0 MB", CaptureText.sessionLine(t, "2026-01-02T03:04:05Z", "other", 3, 65.0, 0L, closed = true))
+        assertEquals("2026-01-02 03:04:05 UTC  //  NO RECORDING  //  0.0 MB", CaptureText.sessionLine(t, "2026-01-02T03:04:05Z", "other", 3, null, 0L, closed = true))
+    }
+
+    @Test
+    fun aSentenceWithTwoOrThreeNumbersKeepsThemInTheOrderTheEnglishHasThem_inEveryLanguage() {
+        // Distinct numbers, so a swapped argument shows: in every language here the first number the English names comes first in the text (logical order, which is also the order in Arabic).
+        // One sentence is reordered on purpose: Hindi says "X out of Y" as "Y में से X", so its two numbers are in the other order. Any other reorder is a swapped argument.
+        val reordered = setOf("hi/saving bytes", "hi/characters")
+        fun inOrder(tag: String, what: String, text: String, vararg numbers: String) {
+            val at = numbers.map { text.indexOf(it) }
+            assertTrue("$tag/$what holds every number: $text", at.all { it >= 0 })
+            if ("$tag/$what" in reordered) assertEquals("$tag/$what is reordered on purpose: $text", at.sortedDescending(), at)
+            else assertEquals("$tag/$what keeps its numbers in order: $text", at.sorted(), at)
+        }
+        for ((tag, f) in listOf("en" to t as TextSource) + languages) {
+            inOrder(tag, "phone line", CaptureText.phoneLine(f, 11, "22.0 MB", "33.0 MB"), "11", "22.0 MB", "33.0 MB")
+            inOrder(tag, "recovery", CaptureText.recoveryNotice(f, 11, 22, emptyList()), "11", "22")
+            inOrder(tag, "script cards", CaptureText.scriptCardsLine(f, 11, 2), "11", "2")
+            inOrder(tag, "saving", CaptureText.savingLine(f, 11, 22), "11", "22")
+            inOrder(tag, "saving bytes", CaptureText.savingBytes(f, 1_048_576L, 2_097_152L), "1.0 MB", "2.0 MB")
+            inOrder(tag, "characters", CaptureText.charsLine(f, 111, 20000), "111", "20000")
+            inOrder(tag, "cards summary", CaptureText.cardsSummary(f, 11, 7.0, 2.5, false), "11", "7", "2.5")
+            inOrder(tag, "recorded pieces", CaptureText.recordingLine(f, 3661.0, 7, ClipState.DONE), "1:01:01", "7")
+            inOrder(tag, "clip line", CaptureText.clipLine(f, 12, 34, 5.6, ClipState.DONE), "12", "34", "5.6")
+            inOrder(tag, "kept and aside", CaptureText.keptAside(f, 21, 34), "21", "34")
+            inOrder(tag, "setup cards", CaptureText.setupCardsLine(f, 41, 13, false), "41", "28")
+            inOrder(tag, "card heading", CaptureText.cardHeading(f, 3, 10, 1), "3", "10")
+            inOrder(tag, "card heading try", CaptureText.cardHeading(f, 3, 10, 7), "3", "10", "7")
+            inOrder(tag, "kept and left", CaptureText.keptLeft(f, 21, 34), "21", "34")
+            inOrder(tag, "last saved", CaptureText.lastSaved(f, 14, 3.2), "14", "3.2")
+            inOrder(tag, "script summary", CaptureText.summary(f, CaptureText.SessionSummary.Script(17, 29)), "17", "29")
+            inOrder(tag, "free summary", CaptureText.summary(f, CaptureText.SessionSummary.Free(3661.0, 29)), "1:01:01", "29")
+            inOrder(tag, "room", CaptureText.roomLeft(f, DiskRoom(1234, 56)), "1234", "56")
+            inOrder(tag, "no room", CaptureText.notice(f, CaptureNotice.NotEnoughRoomToStart(DiskRoom(1234, 56), 300)), "1234", "56", "300")
+        }
+    }
+
+    @Test
+    fun theQuietChecksVerdictShowsTheRoomLevelAsMeasured_inEveryLanguage() {
+        for ((tag, f) in listOf("en" to t as TextSource) + languages) {
+            for (verdict in listOf(NoiseVerdict.GOOD, NoiseVerdict.LOUD_ROOM)) {
+                val text = CaptureText.noiseVerdict(f, verdict, -52.5)
+                assertEquals("$tag/$verdict: the level once in $text", 1, count(text, "-52.5"))
+                assertTrue("$tag/$verdict: its unit stays Latin: $text", text.contains("dB"))
+            }
+            for (verdict in listOf(NoiseVerdict.NO_SIGNAL, NoiseVerdict.INTERRUPTED)) assertFalse("$tag/$verdict has no number", CaptureText.noiseVerdict(f, verdict, -52.5).contains("52"))
+        }
+    }
+
+    @Test
+    fun theFourQuietCheckAndPauseNoticesAreAllDifferentFromEachOther_inEveryLanguage() {
+        for ((tag, f) in listOf("en" to t as TextSource) + languages) {
+            val verdicts = NoiseVerdict.values().map { CaptureText.noiseVerdict(f, it, -52.5) }
+            assertEquals("$tag: four verdicts, four sentences", 4, verdicts.toSet().size)
+            val notices = listOf(
+                CaptureNotice.CouldNotSave("x"), CaptureNotice.OutOfRoomKeptClipsSafe(DiskRoom(1, 2)), CaptureNotice.OutOfRoomRecordingSaved(DiskRoom(1, 2)), CaptureNotice.NothingHeard(20),
+                CaptureNotice.LongestRecording(90), CaptureNotice.MicNotAllowed, CaptureNotice.MicDenied, CaptureNotice.MicCouldNotOpen, CaptureNotice.MicTrouble("x"), CaptureNotice.MicStopped(-3),
+                CaptureNotice.NotEnoughRoomToStart(DiskRoom(1, 2), 300), CaptureNotice.ScriptGone, CaptureNotice.ScriptUnreadable(null), CaptureNotice.CouldNotStart(null),
+            ).map { CaptureText.notice(f, it) }
+            assertEquals("$tag: every kind of notice has its own sentence", notices.size, notices.toSet().size)
+        }
+    }
 }
