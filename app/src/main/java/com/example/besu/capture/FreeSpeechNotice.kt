@@ -12,6 +12,9 @@ package com.example.besu.capture
  * Only the HELP walkthrough's sentence is still a constant here, because the walkthroughs' own text is English (and written in sentence case).
  */
 object FreeSpeechNotice {
-    /** In the HELP walkthrough's free-speech step (which is written in sentence case). */
+    /**
+     * The English of the last sentence of the HELP walkthrough's free-speech step (written in sentence case). The step itself is a string resource now (`helpmod_record_training_data_free_body`);
+     * FreeSpeechNoticeTest holds the English step to end with this sentence and every translation to end with the home screen's own notice.
+     */
     const val HELP = "It also records anyone nearby."
 }

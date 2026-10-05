@@ -24,12 +24,12 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt", "RecordTrainingDataHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
         "FieldOpsHelp.kt", "MatrixDeckHelp.kt",
-        "RecordTrainingDataHelp.kt", "VoiceRecordingsHelp.kt",
+        "VoiceRecordingsHelp.kt",
         // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
         "HelpRegistry.kt",
     )
@@ -228,6 +228,14 @@ class HelpWalkthroughWordingTest {
         "helpmod_statement_composer_speak_body" to listOf("common_speak"),
         "helpmod_statement_composer_insert_variable_body" to listOf("label_shared_variables"),
         "helpmod_statement_composer_word_suggestions_title" to listOf("words_title"),
+        // RECORD TRAINING DATA: the capture screens' own buttons and marks, and the free-speech notice (the same sentence the home screen shows).
+        "helpmod_record_training_data_new_script_body" to listOf("capture_new_script"),
+        "helpmod_record_training_data_save_body" to listOf("common_save", "common_back"),
+        "helpmod_record_training_data_record_body" to listOf("capture_record"),
+        "helpmod_record_training_data_redo_body" to listOf("capture_redo_last", "capture_pause", "capture_resume", "capture_mark_noise", "capture_mark_unclear", "capture_mark_laugh", "capture_mark_cough", "capture_mark_stumble"),
+        "helpmod_record_training_data_end_body" to listOf("capture_end_session"),
+        "helpmod_record_training_data_free_body" to listOf("capture_record_free", "capture_free_notice_home"),
+        "helpmod_record_training_data_save_file_body" to listOf("capture_save_all"),
     )
 
     @Test

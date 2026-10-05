@@ -98,7 +98,16 @@ class FreeSpeechNoticeTest {
     @Test
     fun theHomeAndHelpTextsUseTheSameWords() {
         assertTrue(RepoFiles.read(home).contains(homeToken))
-        assertTrue(RepoFiles.read(help).contains("FreeSpeechNotice.HELP"))
+        // The walkthrough's step is a string resource now. English ends with the approved sentence (the constant), and every translation ends with the very sentence the home screen
+        // shows in that language, so the walkthrough and the screen can never say different things about recording anyone nearby.
+        val step = "helpmod_record_training_data_free_body"
+        assertTrue(RepoFiles.read(help).contains("\"$step\""))
+        assertTrue(english.getValue(step).endsWith(FreeSpeechNotice.HELP))
+        for ((tag, map) in translations) {
+            assertTrue("$tag: the free-speech step ends with the home screen's notice", map.getValue(step).endsWith(map.getValue("capture_free_notice_home")))
+            assertEquals("$tag: the limit once in the step", 1, Regex("90").findAll(map.getValue(step)).count())
+        }
+        assertEquals("en: the limit once in the step", 1, Regex("90").findAll(english.getValue(step)).count())
     }
 
     @Test

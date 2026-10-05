@@ -194,3 +194,35 @@ helpmod_statement_composer_speak_title	SPEAK
 helpmod_statement_composer_speak_body	SPEAK resolves the statement and sends it straight to output.
 helpmod_statement_composer_statements_list_title	{{MY_STATEMENTS:MY STATEMENTS}}
 helpmod_statement_composer_statements_list_body	{{MY_STATEMENTS:MY STATEMENTS}} organizes everything you've saved into folders, tree-and-leaf, the same shape as {{TARGET_COMPUTER:Target Computer}} entries. Tap a folder to expand it, or a statement to reload it for editing, copy, speak, or delete it right from the list.
+helpmod_record_training_data_title	{{RECORD_TRAINING:RECORD TRAINING DATA}}
+helpmod_record_training_data_summary	RECORD YOUR VOICE FOR A VOICE MODEL, WITHOUT YOUR COMPUTER.
+helpmod_record_training_data_intro_title	{{RECORD_TRAINING:RECORD TRAINING DATA}}
+helpmod_record_training_data_intro_body	This gathers recordings of your voice on this phone, so you can collect them wherever you are and train a voice model later. You read text aloud. The phone records it, cuts it into clips, notes how each one went, and keeps them. Nothing is sent anywhere: the recordings stay on this phone until you save them to a file and move that file yourself.
+helpmod_record_training_data_open_title	OPEN IT
+helpmod_record_training_data_open_body	Tap {{RECORD_TRAINING:RECORD TRAINING DATA}}, under {{CUSTOM_VOICE:CUSTOM VOICE}}.
+helpmod_record_training_data_scripts_title	SCRIPTS
+helpmod_record_training_data_scripts_body	A script is any text you want to read aloud: a book chapter, something you wrote, a list of sentences. ACK splits it into cards sized to read in one go, about ten seconds each, so every card becomes one clip.
+helpmod_record_training_data_new_script_title	WRITE OR PASTE A SCRIPT
+helpmod_record_training_data_new_script_body	Tap + NEW SCRIPT to see where a script is written.
+helpmod_record_training_data_title_title	GIVE IT A TITLE
+helpmod_record_training_data_title_body	A short name so you can find it again.
+helpmod_record_training_data_text_title	THE TEXT
+helpmod_record_training_data_text_body	Type or paste the text. Write numbers and symbols the way you will say them ("twenty twenty-six", "percent"): what you read is what your voice model learns. Below it you can see how many cards it becomes and a warning for any card with digits or symbols.
+helpmod_record_training_data_save_title	SAVE IT
+helpmod_record_training_data_save_body	SAVE keeps the script. Changing a saved script always asks you first, and leaving with unsaved changes asks too. Save the script (or go BACK), then continue here.
+helpmod_record_training_data_record_title	RECORD A SCRIPT
+helpmod_record_training_data_record_body	RECORD on a script starts a session. It starts at the first card you have not recorded yet, so you can read a long script over many days. The list shows how many cards are done.
+helpmod_record_training_data_quiet_check_title	THE QUIET CHECK
+helpmod_record_training_data_quiet_check_body	Put the phone where it will stay, such as a stand or propped on books, and keep your mouth the same distance from it all the time. Then run the two-second quiet check: stay silent and the phone measures the room. It tells you in words if the room is loud, the microphone is covered, or something interrupted it.
+helpmod_record_training_data_hands_free_title	HANDS-FREE RECORDING
+helpmod_record_training_data_hands_free_body	One card shows at a time, in large text. Read it when you are ready. The phone hears when you finish, keeps the clip, and shows the next card by itself. You do not touch the phone. While it listens it makes no sound and no vibration, so nothing ends up in your recordings but your voice.
+helpmod_record_training_data_redo_title	IF YOU STUMBLE
+helpmod_record_training_data_redo_body	REDO LAST sets the clip you just recorded aside (it is kept on the phone, but not saved to a file) and shows that card again. PAUSE stops listening until you tap RESUME. After a clip is kept you can mark it as noise, unclear, laugh, cough or stumble; a mark keeps it out of training until you review it on the computer.
+helpmod_record_training_data_end_title	ENDING A SESSION
+helpmod_record_training_data_end_body	END SESSION asks first, and everything already kept stays kept. If the app closes unexpectedly, the next time you open {{RECORD_TRAINING:RECORD TRAINING DATA}} it repairs what it can, and holds a repaired recording back until you listen to it and decide.
+helpmod_record_training_data_free_title	FREE SPEECH
+helpmod_record_training_data_free_body	To talk about anything with no script, use RECORD FREE SPEECH. The audio is kept whole, for as long as 90 minutes. The phone only suggests where it could be cut; the computer decides. It also records anyone nearby.
+helpmod_record_training_data_save_file_title	SAVING TO A FILE
+helpmod_record_training_data_save_file_body	SAVE ALL TO A FILE makes a package you choose where to put. The phone then reads it back and checks every recording in it; if anything is wrong it removes the file and tells you nothing was lost. Move the file to your computer yourself, check it there, and only then delete a session from the phone. The phone never deletes one because you saved it.
+helpmod_record_training_data_complete_title	THAT IS THE PHONE'S PART
+helpmod_record_training_data_complete_body	On the computer, Freeform Studio imports the package and does the rest: it listens again, lines the words up with the text you read, and lets you review every piece before anything is used for training.
