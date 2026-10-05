@@ -1456,3 +1456,23 @@ Wording and checklist: `docs/TRANSLATIONS.md`, `docs/LANGUAGE_VOCABULARY_DEVICE_
 - **`[CLOSE]`, `[RUN]`, `[ABORT]` and `[GOT IT]` keep their brackets inside the resource** (HELP's house style; the shared dialog frame's `common_close` has none). `HelpWordingTest` holds it in every language.
 - **Type-check:** `HelpMenuDialog`, `HelpCoachDialog`, `PoseSelectorDialog` and `VoiceRecordingsHelpSelectorDialog` are staged; `stubs/app/HelpModules.kt` gives the two option types they draw and `helpText` is stubbed in `stubs/app/AppUi.kt`. Proved by breaking three names on purpose.
 - **A Kotlin KDoc that writes `help/*Help.kt` opens a nested comment** (`/*`) and the whole file fails with "Unclosed comment"; write "the per-feature files in help/".
+
+### SETTINGS wording, plurals with arguments, and the syntax check — rules that must stay true
+Tests: `SettingsWordingTest` (the screen's words, parts A to C), `OutputRouteTextTest`, `ProfileWarningTextTest`. Checklist: `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md` section K.
+
+- **`TextSource.count(name, quantity, vararg args)`** is for a plural sentence that also names something ("2 GESTURES WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO WORK:"). `%1$d` is the
+  quantity and `%2$s` the first of `args`, so the verb can agree with the number in each language. `ResourceText`, `EnglishText` and `FileText` override it; a source that does not
+  reads as `count(name, quantity)` and drops the arguments, so a new `TextSource` that carries plurals must override it. `TranslationsTest` accepts `%d` or `%1$d` as the number.
+- **`tools/kotlin_check/run_syntax_check.sh File.kt ...` for an Android-only file.** `SettingsView.kt`, `OverlayPermissionBanner.kt` and `SharedComponents.kt` use the SDK and cannot be
+  type-checked here; after a wording edit to one of them it must print `syntax errors: 0`. It finds a missing bracket and nothing else (a wrong string name is `SettingsWordingTest`'s job).
+- **A stored value is logic and never translated, and a unit is a symbol.** `AUTO`, `BLUETOOTH` and `WATCH` (the output route, read by `OutputService` and checked by the backup),
+  `ms`, `s` and `dB` stay as they are; `String.format("%.1f", x)` is left to the phone's own number format and passed in as an argument. A Bluetooth device's own name is shown exactly as the phone gives it.
+- **A sentence names a screen or a button as an argument only where its English is already all capitals.** A mixed-case English description that names "Target Computer" or "Quick Actions"
+  keeps the standard names (the translation uses the language's own label, checked by a test) and does not follow PLAIN WORDS: a known gap. `REC` and `+REC` on the Quick-Access key
+  buttons stay the English abbreviation (the buttons are narrow, and MANAGE RECORDINGS' empty-state sentence names them as REC). `RESOLVE` and `TYPING` stay English inside the
+  sentences that mention them, because the Terminal prints them in English.
+- **A gesture is named the way the Matrix screen names it** in the profile-change dialog (`slotLabel`, handed to `ProfileSwapText.lines` as `names`); a profile's own name and the person's
+  phrases are shown as typed, and the connector "becomes:" stays lower case in every language because it sits between two phrases the person typed.
+- **A fixed width clips a longer word** (again): `ThemeOption` (SHARP / CLEAN / SOFT) is `widthIn(min = 60.dp)` with a little side padding.
+- **Source-reading tests measure "word then control" in characters, indentation included.** A regex like `R\.string\.x\)[\s\S]{0,260}?Slider\(` fails quietly when the code is indented
+  more deeply than the test's author imagined; give a distance with room, and break the code on purpose once to see the test fail.
