@@ -157,12 +157,17 @@ object GifRepository {
         return category
     }
 
+    // The category is created here, not by the caller, and only once the
+    // file has passed every check: a failed import (too big, unreadable,
+    // not a GIF) must not leave an empty category behind in the list.
+    // categoryName goes through createCategory unchanged, so it still
+    // dedupes by name and a blank name still becomes UNCATEGORIZED.
     fun importGif(
         context: Context,
         deckId: String,
         sourceUri: Uri,
         title: String,
-        categoryId: String
+        categoryName: String
     ): Result<GifEntry> {
         return runCatching {
             val resolver = context.contentResolver
@@ -185,52 +190,68 @@ object GifRepository {
             val fileName = "$entryId.gif"
             val destinationFile = File(destinationDirectory, fileName)
 
-            resolver.openInputStream(sourceUri)?.use { input ->
-                destinationFile.outputStream().use { output ->
-                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                    var copiedBytes = 0L
+            // destinationFile is named after a brand-new id, so no saved
+            // entry can point at it until saveEntries has run below. Every
+            // failure before that point (over the size limit, unreadable,
+            // not a real GIF, a write error) lands in the finally and
+            // removes it; the exception itself still propagates untouched.
+            // Once the entry is saved the file is referenced and is kept.
+            var entrySaved = false
 
-                    while (true) {
-                        val read = input.read(buffer)
+            try {
+                resolver.openInputStream(sourceUri)?.use { input ->
+                    destinationFile.outputStream().use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        var copiedBytes = 0L
 
-                        if (read <= 0) {
-                            break
+                        while (true) {
+                            val read = input.read(buffer)
+
+                            if (read <= 0) {
+                                break
+                            }
+
+                            copiedBytes += read
+
+                            if (copiedBytes > MAX_GIF_SIZE_BYTES) {
+                                error("GIF exceeds the 20 MB safety limit.")
+                            }
+
+                            output.write(buffer, 0, read)
                         }
-
-                        copiedBytes += read
-
-                        if (copiedBytes > MAX_GIF_SIZE_BYTES) {
-                            error("GIF exceeds the 20 MB safety limit.")
-                        }
-
-                        output.write(buffer, 0, read)
                     }
+                } ?: error("Unable to read selected file.")
+
+                if (!isGifFile(destinationFile)) {
+                    error("Selected file is not a valid GIF.")
                 }
-            } ?: error("Unable to read selected file.")
 
-            if (!isGifFile(destinationFile)) {
-                destinationFile.delete()
-                error("Selected file is not a valid GIF.")
+                val category = createCategory(context, categoryName)
+
+                val entry = GifEntry(
+                    id = entryId,
+                    deckId = deckId,
+                    title = title
+                        .trim()
+                        .take(50)
+                        .ifBlank { "UNTITLED GIF" },
+                    categoryId = category.id,
+                    fileName = fileName
+                )
+
+                val updatedEntries = readEntries(context).toMutableList().apply {
+                    add(entry)
+                }
+
+                saveEntries(context, updatedEntries)
+                entrySaved = true
+
+                entry
+            } finally {
+                if (!entrySaved) {
+                    destinationFile.delete()
+                }
             }
-
-            val entry = GifEntry(
-                id = entryId,
-                deckId = deckId,
-                title = title
-                    .trim()
-                    .take(50)
-                    .ifBlank { "UNTITLED GIF" },
-                categoryId = categoryId,
-                fileName = fileName
-            )
-
-            val updatedEntries = readEntries(context).toMutableList().apply {
-                add(entry)
-            }
-
-            saveEntries(context, updatedEntries)
-
-            entry
         }
     }
 

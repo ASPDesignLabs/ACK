@@ -28,6 +28,9 @@ All notable changes to ACK are logged here. These same notes are available in-ap
 - **The old, unused setup screen was removed.** It could not be reached from anywhere and still carried an earlier app name.
 - **COPY in the statement composer, and the copy buttons on contact cards, are unchanged and deliberately do not mark the text as sensitive.** What you copy shows in the phone's clipboard preview so you can check it, and stays plain on the clipboard (a keyboard's clipboard history may keep it). ACK does not clear it afterwards.
 
+### Fixed
+- **A GIF import that fails no longer leaves a half-copied file or an empty category behind.** A file over the 20 MB limit (or unreadable, or not really a GIF) was left in the GIF folder, up to 20 MB each time, and the category you had typed was stored before ACK knew the import would work. Now a failed import removes the file it was writing (a GIF already saved is never touched) and the category is only created once the file has passed its checks. The red message in the import dialog is unchanged. `docs/GIF_DEVICE_TEST.md` is the do-this-expect-that checklist, since the Android part was not run on a phone.
+
 ## [1.0-beta.8] - 2026-10-03
 
 ### Added

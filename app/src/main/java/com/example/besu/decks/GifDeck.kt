@@ -761,17 +761,15 @@ private fun GifImportDialog(
                     .testTag(AckTags.GIF_IMPORT_COMMIT)
                     .helpTarget(AckTags.GIF_IMPORT_COMMIT, primaryColor)
             ) {
-                val category = GifRepository.createCategory(
-                    context = context,
-                    name = categoryName
-                )
-
+                // The category is created inside importGif, only after the
+                // file has passed its checks, so a failed import leaves no
+                // empty category behind.
                 GifRepository.importGif(
                     context = context,
                     deckId = deckId,
                     sourceUri = uri,
                     title = title,
-                    categoryId = category.id
+                    categoryName = categoryName
                 ).onSuccess { entry ->
                     onImported(entry)
                     helpManager?.onEvent(
