@@ -118,9 +118,10 @@ class HelpWordingTest {
         val capture = file("voicecapture/TrainingCaptureHome.kt")
         assertTrue(capture.contains("val helpButton = stringResource(R.string.help_button)"))
         assertTrue(capture.contains("HAS A \$helpButton WALKTHROUGH. FIND IT UNDER \$helpButton ANYTIME."))
-        // The language notice says what is still English now: the walkthroughs, no longer HELP as a whole.
-        assertTrue(english.getValue("interface_language_explanation").contains("THE WALKTHROUGHS INSIDE HELP, THE TERMINAL AND MANY DIALOGS ARE STILL IN ENGLISH."))
+        // The language notice says what is still English now: the walkthroughs (no longer HELP as a whole) and, since the Terminal's own words moved, only the lines other parts of ACK write into it.
+        assertTrue(english.getValue("interface_language_explanation").contains("THE WALKTHROUGHS INSIDE HELP, THE LINES OTHER PARTS OF ACK WRITE INTO THE TERMINAL AND MANY DIALOGS ARE STILL IN ENGLISH."))
         assertFalse("the old claim that all of HELP is English", english.getValue("interface_language_explanation").contains(". HELP, THE TERMINAL"))
+        assertFalse("the old claim that all of the Terminal is English", english.getValue("interface_language_explanation").contains("INSIDE HELP, THE TERMINAL AND"))
     }
 
     // ---- English is exactly what the screens always said --------------------------------------------------------------------------------

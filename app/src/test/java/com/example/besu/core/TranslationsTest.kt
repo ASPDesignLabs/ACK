@@ -35,7 +35,8 @@ class TranslationsTest {
     @Test
     fun everyTranslationHasEveryTranslatableStringAndNothingElse() {
         for ((tag, map) in texts) {
-            val missing = translatableNames - map.keys
+            // The /info patch notes (info_*) may lack a translation: a release's new notes are written in English first and Android shows the English string until a translation is added (core/PatchNotes.kt).
+            val missing = (translatableNames - map.keys).filterNot { it.startsWith("info_") }
             val extra = map.keys - translatableNames
             assertTrue("$tag is missing: $missing", missing.isEmpty())
             assertTrue("$tag has strings English does not (or that are not translatable): $extra", extra.isEmpty())
