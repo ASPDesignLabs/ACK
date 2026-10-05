@@ -1240,7 +1240,11 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="capture_close">[CERRAR]</string>
     <string name="capture_intro">LEE UN TEXTO EN VOZ ALTA Y EL TELÉFONO LO GRABA, CORTA CADA TARJETA EN SU PROPIO CLIP Y LOS CONSERVA. LUEGO GUARDA UN PAQUETE EN UN ARCHIVO Y LLÉVALO TÚ MISMO A TU COMPUTADORA. NO SE ENVÍA NADA A NINGÚN LADO; NO HAY CÓDIGO DE RED EN ESTA PARTE DE LA APP.</string>
     <string name="capture_help_offer">NUEVO: %2$s TIENE UN TUTORIAL EN %1$s. LO ENCUENTRAS EN %1$s CUANDO QUIERAS.</string>
-    <string name="capture_on_phone">EN ESTE TELÉFONO -- SESIONES: %1$d, USADO: %2$s, LIBRE: %3$s</string>
+    <plurals name="capture_on_phone">
+        <item quantity="one">EN ESTE TELÉFONO -- SESIONES: %1$d, USADO: %2$s, LIBRE: %3$s</item>
+        <item quantity="many">EN ESTE TELÉFONO -- SESIONES: %1$d, USADO: %2$s, LIBRE: %3$s</item>
+        <item quantity="other">EN ESTE TELÉFONO -- SESIONES: %1$d, USADO: %2$s, LIBRE: %3$s</item>
+    </plurals>
     <string name="capture_recovered">LA APP SE CERRÓ ANTES DE TERMINAR %1$d SESIÓN(ES). SE REPARARON %2$d GRABACIÓN(ES) SIN TERMINAR Y QUEDAN RETENIDAS HASTA QUE LAS ESCUCHES Y LAS CONSERVES (ABRE LA SESIÓN).</string>
     <string name="capture_recovery_problem">NO SE PUDIERON REPARAR ALGUNAS GRABACIONES: %1$s</string>
     <string name="capture_damaged">NO SE PUDO LEER: %1$s. SUS ARCHIVOS SE DEJARON COMO ESTÁN.</string>
@@ -1248,7 +1252,11 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="capture_damaged_session">sesión %1$s</string>
     <string name="capture_scripts">GUIONES</string>
     <string name="capture_no_scripts">TODAVÍA NO HAY GUIONES. UN GUION ES CUALQUIER TEXTO QUE QUIERAS LEER: PÉGALO AQUÍ.</string>
-    <string name="capture_script_cards">TARJETAS: %1$d, GRABADAS: %2$d</string>
+    <plurals name="capture_script_cards">
+        <item quantity="one">TARJETAS: %1$d, GRABADAS: %2$d</item>
+        <item quantity="many">TARJETAS: %1$d, GRABADAS: %2$d</item>
+        <item quantity="other">TARJETAS: %1$d, GRABADAS: %2$d</item>
+    </plurals>
     <string name="capture_all_done">(TODO LISTO)</string>
     <string name="capture_record">GRABAR</string>
     <string name="capture_new_script">+ NUEVO GUION</string>
@@ -1298,8 +1306,16 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="capture_language_code">CÓDIGO DE IDIOMA</string>
     <string name="capture_cards">TARJETAS</string>
     <string name="capture_nothing_to_read">TODAVÍA NO HAY NADA QUE LEER.</string>
-    <string name="capture_cards_typical">TARJETAS: %1$d, UNOS %2$s MINUTOS A %3$s PALABRAS POR SEGUNDO (UN RITMO TÍPICO; EL TELÉFONO APRENDE EL TUYO)</string>
-    <string name="capture_cards_own">TARJETAS: %1$d, UNOS %2$s MINUTOS A %3$s PALABRAS POR SEGUNDO (TU RITMO)</string>
+    <plurals name="capture_cards_typical">
+        <item quantity="one">TARJETAS: %1$d, UNOS %2$s MINUTOS A %3$s PALABRAS POR SEGUNDO (UN RITMO TÍPICO; EL TELÉFONO APRENDE EL TUYO)</item>
+        <item quantity="many">TARJETAS: %1$d, UNOS %2$s MINUTOS A %3$s PALABRAS POR SEGUNDO (UN RITMO TÍPICO; EL TELÉFONO APRENDE EL TUYO)</item>
+        <item quantity="other">TARJETAS: %1$d, UNOS %2$s MINUTOS A %3$s PALABRAS POR SEGUNDO (UN RITMO TÍPICO; EL TELÉFONO APRENDE EL TUYO)</item>
+    </plurals>
+    <plurals name="capture_cards_own">
+        <item quantity="one">TARJETAS: %1$d, UNOS %2$s MINUTOS A %3$s PALABRAS POR SEGUNDO (TU RITMO)</item>
+        <item quantity="many">TARJETAS: %1$d, UNOS %2$s MINUTOS A %3$s PALABRAS POR SEGUNDO (TU RITMO)</item>
+        <item quantity="other">TARJETAS: %1$d, UNOS %2$s MINUTOS A %3$s PALABRAS POR SEGUNDO (TU RITMO)</item>
+    </plurals>
     <string name="capture_symbol_cards">TARJETAS CON DÍGITOS O SÍMBOLOS: %1$d. SI LAS DIRÍAS DE OTRA FORMA, REESCRÍBELAS CON PALABRAS.</string>
     <string name="capture_and_more">...Y %1$d MÁS</string>
     <string name="capture_delete_script">ELIMINAR ESTE GUION</string>
@@ -1348,8 +1364,16 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="capture_set_aside">APARTAR</string>
     <string name="capture_mark_hint">MARCA ESTE CLIP (UNA MARCA LO MANTIENE FUERA DEL ENTRENAMIENTO HASTA QUE LO REVISES EN LA COMPUTADORA):</string>
     <string name="capture_record_script_title">GRABAR UN GUION</string>
-    <string name="capture_setup_cards">TARJETAS: %1$d</string>
-    <string name="capture_setup_cards_skipping">TARJETAS: %1$d, YA GRABADAS: %2$d. ESTA SESIÓN EMPIEZA EN LA PRIMERA QUE NO LO ESTÁ.</string>
+    <plurals name="capture_setup_cards">
+        <item quantity="one">TARJETAS: %1$d</item>
+        <item quantity="many">TARJETAS: %1$d</item>
+        <item quantity="other">TARJETAS: %1$d</item>
+    </plurals>
+    <plurals name="capture_setup_cards_skipping">
+        <item quantity="one">TARJETAS: %1$d, YA GRABADAS: %2$d. ESTA SESIÓN EMPIEZA EN LA PRIMERA QUE NO LO ESTÁ.</item>
+        <item quantity="many">TARJETAS: %1$d, YA GRABADAS: %2$d. ESTA SESIÓN EMPIEZA EN LA PRIMERA QUE NO LO ESTÁ.</item>
+        <item quantity="other">TARJETAS: %1$d, YA GRABADAS: %2$d. ESTA SESIÓN EMPIEZA EN LA PRIMERA QUE NO LO ESTÁ.</item>
+    </plurals>
     <string name="capture_pace_own">LAS TARJETAS SE AJUSTAN A %1$s PALABRAS POR SEGUNDO (TU RITMO).</string>
     <string name="capture_pace_typical">LAS TARJETAS SE AJUSTAN A %1$s PALABRAS POR SEGUNDO (UN RITMO TÍPICO; EL TELÉFONO APRENDE EL TUYO A PARTIR DE LO QUE CONSERVAS).</string>
     <string name="capture_including_done">INCLUYENDO TARJETAS YA GRABADAS</string>

@@ -1227,7 +1227,10 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="capture_close">[बंद करें]</string>
     <string name="capture_intro">पाठ को ज़ोर से पढ़ें, फ़ोन उसे रिकॉर्ड करता है, हर कार्ड को उसकी अपनी क्लिप में काटता है और उन्हें रखता है। फिर एक पैकेज को फ़ाइल में सहेजें और उसे खुद अपने कंप्यूटर पर ले जाएँ। कुछ भी कहीं नहीं भेजा जाता; ऐप के इस हिस्से में नेटवर्क कोड है ही नहीं।</string>
     <string name="capture_help_offer">नया: %2$s के लिए %1$s में एक वॉकथ्रू है। इसे कभी भी %1$s में पाएँ।</string>
-    <string name="capture_on_phone">इस फ़ोन पर -- सत्र: %1$d, उपयोग: %2$s, खाली: %3$s</string>
+    <plurals name="capture_on_phone">
+        <item quantity="one">इस फ़ोन पर -- सत्र: %1$d, उपयोग: %2$s, खाली: %3$s</item>
+        <item quantity="other">इस फ़ोन पर -- सत्र: %1$d, उपयोग: %2$s, खाली: %3$s</item>
+    </plurals>
     <string name="capture_recovered">ऐप %1$d सत्र समाप्त होने से पहले बंद हो गया। %2$d अधूरी रिकॉर्डिंग ठीक की गईं और जब तक आप उन्हें सुनकर रख नहीं लेते, वे रोककर रखी गई हैं (सत्र खोलें)।</string>
     <string name="capture_recovery_problem">कुछ रिकॉर्डिंग ठीक नहीं की जा सकीं: %1$s</string>
     <string name="capture_damaged">पढ़ा नहीं जा सका: %1$s। उनकी फ़ाइलें जैसी हैं वैसी ही छोड़ दी गईं।</string>
@@ -1235,7 +1238,10 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="capture_damaged_session">सत्र %1$s</string>
     <string name="capture_scripts">स्क्रिप्ट</string>
     <string name="capture_no_scripts">अभी कोई स्क्रिप्ट नहीं है। स्क्रिप्ट वह कोई भी पाठ है जिसे आप पढ़ना चाहते हैं: उसे यहाँ चिपकाएँ।</string>
-    <string name="capture_script_cards">कार्ड: %1$d, रिकॉर्ड किए गए: %2$d</string>
+    <plurals name="capture_script_cards">
+        <item quantity="one">कार्ड: %1$d, रिकॉर्ड किए गए: %2$d</item>
+        <item quantity="other">कार्ड: %1$d, रिकॉर्ड किए गए: %2$d</item>
+    </plurals>
     <string name="capture_all_done">(सब हो गया)</string>
     <string name="capture_record">रिकॉर्ड करें</string>
     <string name="capture_new_script">+ नई स्क्रिप्ट</string>
@@ -1285,8 +1291,14 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="capture_language_code">भाषा कोड</string>
     <string name="capture_cards">कार्ड</string>
     <string name="capture_nothing_to_read">अभी पढ़ने के लिए कुछ नहीं है।</string>
-    <string name="capture_cards_typical">कार्ड: %1$d, लगभग %2$s मिनट, %3$s शब्द प्रति सेकंड (एक सामान्य गति; फ़ोन आपकी गति सीख लेता है)</string>
-    <string name="capture_cards_own">कार्ड: %1$d, लगभग %2$s मिनट, %3$s शब्द प्रति सेकंड (आपकी गति)</string>
+    <plurals name="capture_cards_typical">
+        <item quantity="one">कार्ड: %1$d, लगभग %2$s मिनट, %3$s शब्द प्रति सेकंड (एक सामान्य गति; फ़ोन आपकी गति सीख लेता है)</item>
+        <item quantity="other">कार्ड: %1$d, लगभग %2$s मिनट, %3$s शब्द प्रति सेकंड (एक सामान्य गति; फ़ोन आपकी गति सीख लेता है)</item>
+    </plurals>
+    <plurals name="capture_cards_own">
+        <item quantity="one">कार्ड: %1$d, लगभग %2$s मिनट, %3$s शब्द प्रति सेकंड (आपकी गति)</item>
+        <item quantity="other">कार्ड: %1$d, लगभग %2$s मिनट, %3$s शब्द प्रति सेकंड (आपकी गति)</item>
+    </plurals>
     <string name="capture_symbol_cards">अंकों या चिह्नों वाले कार्ड: %1$d। अगर आप उन्हें अलग तरह से बोलेंगे, तो उन्हें शब्दों में दोबारा लिखें।</string>
     <string name="capture_and_more">...और %1$d</string>
     <string name="capture_delete_script">यह स्क्रिप्ट हटाएँ</string>
@@ -1335,8 +1347,14 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="capture_set_aside">अलग रखें</string>
     <string name="capture_mark_hint">इस क्लिप को चिह्नित करें (चिह्न लगने पर यह तब तक प्रशिक्षण से बाहर रहती है जब तक आप कंप्यूटर पर उसकी समीक्षा न कर लें):</string>
     <string name="capture_record_script_title">स्क्रिप्ट रिकॉर्ड करें</string>
-    <string name="capture_setup_cards">कार्ड: %1$d</string>
-    <string name="capture_setup_cards_skipping">कार्ड: %1$d, पहले से रिकॉर्ड किए गए: %2$d। यह सत्र पहले ऐसे कार्ड से शुरू होता है जो अभी रिकॉर्ड नहीं हुआ है।</string>
+    <plurals name="capture_setup_cards">
+        <item quantity="one">कार्ड: %1$d</item>
+        <item quantity="other">कार्ड: %1$d</item>
+    </plurals>
+    <plurals name="capture_setup_cards_skipping">
+        <item quantity="one">कार्ड: %1$d, पहले से रिकॉर्ड किए गए: %2$d। यह सत्र पहले ऐसे कार्ड से शुरू होता है जो अभी रिकॉर्ड नहीं हुआ है।</item>
+        <item quantity="other">कार्ड: %1$d, पहले से रिकॉर्ड किए गए: %2$d। यह सत्र पहले ऐसे कार्ड से शुरू होता है जो अभी रिकॉर्ड नहीं हुआ है।</item>
+    </plurals>
     <string name="capture_pace_own">कार्ड %1$s शब्द प्रति सेकंड के हिसाब से बनाए गए हैं (आपकी गति)।</string>
     <string name="capture_pace_typical">कार्ड %1$s शब्द प्रति सेकंड के हिसाब से बनाए गए हैं (एक सामान्य गति; आप जो रखते हैं उससे फ़ोन आपकी गति सीख लेता है)।</string>
     <string name="capture_including_done">पहले से रिकॉर्ड किए गए कार्ड शामिल हैं</string>

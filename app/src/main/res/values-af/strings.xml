@@ -1227,7 +1227,10 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="capture_close">[MAAK TOE]</string>
     <string name="capture_intro">LEES TEKS HARDOP EN DIE FOON NEEM DIT OP, SNY ELKE KAARTJIE IN SY EIE KLIP EN BEWAAR DIE KLIPPE. STOOR DAN \'N PAKKET IN \'N LÊER EN VERPLAAS DIT SELF NA JOU REKENAAR. NIKS WORD ERGENS HEEN GESTUUR NIE; DAAR IS GEEN NETWERKKODE IN HIERDIE DEEL VAN DIE APP NIE.</string>
     <string name="capture_help_offer">NUUT: %2$s HET \'N LEIDRAAD IN %1$s. VIND DIT ENIGTYD ONDER %1$s.</string>
-    <string name="capture_on_phone">OP HIERDIE FOON -- SESSIES: %1$d, GEBRUIK: %2$s, VRY: %3$s</string>
+    <plurals name="capture_on_phone">
+        <item quantity="one">OP HIERDIE FOON -- SESSIES: %1$d, GEBRUIK: %2$s, VRY: %3$s</item>
+        <item quantity="other">OP HIERDIE FOON -- SESSIES: %1$d, GEBRUIK: %2$s, VRY: %3$s</item>
+    </plurals>
     <string name="capture_recovered">DIE APP HET GESLUIT VOORDAT %1$d SESSIE(S) GEËINDIG IS. %2$d ONVOLTOOIDE OPNAME(S) IS HERSTEL EN WORD TERUGGEHOU TOT JY LUISTER EN BEWAAR (MAAK DIE SESSIE OOP).</string>
     <string name="capture_recovery_problem">SOMMIGE OPNAMES KON NIE HERSTEL WORD NIE: %1$s</string>
     <string name="capture_damaged">KON NIE LEES NIE: %1$s. HULLE LÊERS IS GELAAT SOOS DIT IS.</string>
@@ -1235,7 +1238,10 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="capture_damaged_session">sessie %1$s</string>
     <string name="capture_scripts">SKRIPTE</string>
     <string name="capture_no_scripts">NOG GEEN SKRIPTE NIE. \'N SKRIP IS ENIGE TEKS WAT JY WIL LEES: PLAK DIT HIER.</string>
-    <string name="capture_script_cards">KAARTJIES: %1$d, OPGENEEM: %2$d</string>
+    <plurals name="capture_script_cards">
+        <item quantity="one">KAARTJIES: %1$d, OPGENEEM: %2$d</item>
+        <item quantity="other">KAARTJIES: %1$d, OPGENEEM: %2$d</item>
+    </plurals>
     <string name="capture_all_done">(ALLES KLAAR)</string>
     <string name="capture_record">NEEM OP</string>
     <string name="capture_new_script">+ NUWE SKRIP</string>
@@ -1285,8 +1291,14 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="capture_language_code">TAALKODE</string>
     <string name="capture_cards">KAARTJIES</string>
     <string name="capture_nothing_to_read">NOG NIKS OM TE LEES NIE.</string>
-    <string name="capture_cards_typical">KAARTJIES: %1$d, ONGEVEER %2$s MINUTE TEEN %3$s WOORDE PER SEKONDE (\'N TIPIESE TEMPO; DIE FOON LEER JOU TEMPO)</string>
-    <string name="capture_cards_own">KAARTJIES: %1$d, ONGEVEER %2$s MINUTE TEEN %3$s WOORDE PER SEKONDE (JOU TEMPO)</string>
+    <plurals name="capture_cards_typical">
+        <item quantity="one">KAARTJIES: %1$d, ONGEVEER %2$s MINUTE TEEN %3$s WOORDE PER SEKONDE (\'N TIPIESE TEMPO; DIE FOON LEER JOU TEMPO)</item>
+        <item quantity="other">KAARTJIES: %1$d, ONGEVEER %2$s MINUTE TEEN %3$s WOORDE PER SEKONDE (\'N TIPIESE TEMPO; DIE FOON LEER JOU TEMPO)</item>
+    </plurals>
+    <plurals name="capture_cards_own">
+        <item quantity="one">KAARTJIES: %1$d, ONGEVEER %2$s MINUTE TEEN %3$s WOORDE PER SEKONDE (JOU TEMPO)</item>
+        <item quantity="other">KAARTJIES: %1$d, ONGEVEER %2$s MINUTE TEEN %3$s WOORDE PER SEKONDE (JOU TEMPO)</item>
+    </plurals>
     <string name="capture_symbol_cards">KAARTJIES MET SYFERS OF SIMBOLE: %1$d. AS JY HULLE ANDERS SOU SÊ, SKRYF HULLE OOR AS WOORDE.</string>
     <string name="capture_and_more">...EN NOG %1$d</string>
     <string name="capture_delete_script">SKRAP HIERDIE SKRIP</string>
@@ -1335,8 +1347,14 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="capture_set_aside">SIT WEG</string>
     <string name="capture_mark_hint">MERK HIERDIE KLIP (\'N MERK HOU DIT UIT DIE AFRIGTING TOT JY DIT OP DIE REKENAAR NAKYK):</string>
     <string name="capture_record_script_title">NEEM \'N SKRIP OP</string>
-    <string name="capture_setup_cards">KAARTJIES: %1$d</string>
-    <string name="capture_setup_cards_skipping">KAARTJIES: %1$d, REEDS OPGENEEM: %2$d. HIERDIE SESSIE BEGIN BY DIE EERSTE EEN WAT NOG NIE OPGENEEM IS NIE.</string>
+    <plurals name="capture_setup_cards">
+        <item quantity="one">KAARTJIES: %1$d</item>
+        <item quantity="other">KAARTJIES: %1$d</item>
+    </plurals>
+    <plurals name="capture_setup_cards_skipping">
+        <item quantity="one">KAARTJIES: %1$d, REEDS OPGENEEM: %2$d. HIERDIE SESSIE BEGIN BY DIE EERSTE EEN WAT NOG NIE OPGENEEM IS NIE.</item>
+        <item quantity="other">KAARTJIES: %1$d, REEDS OPGENEEM: %2$d. HIERDIE SESSIE BEGIN BY DIE EERSTE EEN WAT NOG NIE OPGENEEM IS NIE.</item>
+    </plurals>
     <string name="capture_pace_own">DIE KAARTJIES IS GEMAAK VIR %1$s WOORDE PER SEKONDE (JOU TEMPO).</string>
     <string name="capture_pace_typical">DIE KAARTJIES IS GEMAAK VIR %1$s WOORDE PER SEKONDE (\'N TIPIESE TEMPO; DIE FOON LEER JOU TEMPO UIT WAT JY BEWAAR).</string>
     <string name="capture_including_done">SLUIT KAARTJIES IN WAT REEDS OPGENEEM IS</string>

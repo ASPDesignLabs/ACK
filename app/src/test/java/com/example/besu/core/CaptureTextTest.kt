@@ -45,7 +45,10 @@ class CaptureTextTest {
         assertEquals("5 CARDS, 2 RECORDED", CaptureText.scriptCardsLine(t, 5, 2))
         assertEquals("5 CARDS, 5 RECORDED (ALL DONE)", CaptureText.scriptCardsLine(t, 5, 5))
         assertEquals("0 CARDS, 0 RECORDED", CaptureText.scriptCardsLine(t, 0, 0))
-        assertEquals("1 CARDS, 0 RECORDED", CaptureText.scriptCardsLine(t, 1, 0))
+        assertEquals("one card is a card, not a plural", "1 CARD, 0 RECORDED", CaptureText.scriptCardsLine(t, 1, 0))
+        assertEquals("1 CARD, 1 RECORDED (ALL DONE)", CaptureText.scriptCardsLine(t, 1, 1))
+        assertEquals("ON THIS PHONE: 1 SESSION, 1.0 MB USED, 4000.0 MB FREE", CaptureText.phoneLine(t, 1, "1.0 MB", "4000.0 MB"))
+        assertEquals("ON THIS PHONE: 0 SESSIONS, 0.0 MB USED, 4000.0 MB FREE", CaptureText.phoneLine(t, 0, "0.0 MB", "4000.0 MB"))
         assertEquals("TALK ABOUT ANYTHING FOR AS LONG AS YOU LIKE (UP TO 90 MINUTES). THE AUDIO IS KEPT WHOLE; THE PHONE ONLY SUGGESTS WHERE IT COULD BE CUT, AND THE COMPUTER DECIDES.", CaptureText.freeIntro(t, 90))
         assertEquals("2026-01-02 03:04:05 UTC  //  3 KEPT  //  1.0 MB", CaptureText.sessionLine(t, "2026-01-02T03:04:05Z", "script", 3, null, 1_048_576L, closed = true))
         assertEquals("2026-01-02 03:04:05 UTC  //  1:05  //  2.0 MB", CaptureText.sessionLine(t, "2026-01-02T03:04:05Z", "free", 0, 65.0, 2_097_152L, closed = true))
@@ -97,6 +100,8 @@ class CaptureTextTest {
         assertEquals("EVERY LINE IS ITS OWN PARAGRAPH, SO NO CARD RUNS ACROSS TWO LINES.", CaptureText.lineBreakNote(t, "keep"))
         assertEquals("10 CARDS, ABOUT 2 MINUTES AT 2.5 WORDS A SECOND (A TYPICAL PACE; THE PHONE LEARNS YOURS)", CaptureText.cardsSummary(t, 10, 2.4, 2.5, measured = false))
         assertEquals("10 CARDS, ABOUT 3 MINUTES AT 2.5 WORDS A SECOND (YOUR PACE)", CaptureText.cardsSummary(t, 10, 2.5, 2.5, measured = true))
+        assertEquals("1 CARD, ABOUT 0 MINUTES AT 2.5 WORDS A SECOND (A TYPICAL PACE; THE PHONE LEARNS YOURS)", CaptureText.cardsSummary(t, 1, 0.4, 2.5, measured = false))
+        assertEquals("1 CARD, ABOUT 3 MINUTES AT 2.5 WORDS A SECOND (YOUR PACE)", CaptureText.cardsSummary(t, 1, 2.5, 2.5, measured = true))
         assertEquals("3 CARD(S) HAVE DIGITS OR SYMBOLS. IF YOU WOULD SAY THEM DIFFERENTLY, REWRITE THEM AS WORDS.", CaptureText.symbolCards(t, 3))
         assertEquals("...AND 4 MORE", CaptureText.andMore(t, 4))
         assertEquals("THE LANGUAGE CODE SHOULD LOOK LIKE EN-US.", CaptureText.languageCodeBad(t, "EN-US"))
@@ -292,10 +297,10 @@ class CaptureTextTest {
     fun aScriptsCardsLineSaysAllDoneOnlyWhenEveryCardHasAClip_inEveryLanguage() {
         for ((tag, f) in listOf("en" to t as TextSource) + languages) {
             val allDone = f.get("capture_all_done")
-            assertEquals("$tag: every card has a clip", f.get("capture_script_cards", 4, 4) + " " + allDone, CaptureText.scriptCardsLine(f, 4, 4))
-            assertEquals("$tag: one card short", f.get("capture_script_cards", 4, 3), CaptureText.scriptCardsLine(f, 4, 3))
-            assertEquals("$tag: more clips than cards is still all done", f.get("capture_script_cards", 4, 5) + " " + allDone, CaptureText.scriptCardsLine(f, 4, 5))
-            assertEquals("$tag: a script with no cards is not all done", f.get("capture_script_cards", 0, 0), CaptureText.scriptCardsLine(f, 0, 0))
+            assertEquals("$tag: every card has a clip", f.count("capture_script_cards", 4, 4) + " " + allDone, CaptureText.scriptCardsLine(f, 4, 4))
+            assertEquals("$tag: one card short", f.count("capture_script_cards", 4, 3), CaptureText.scriptCardsLine(f, 4, 3))
+            assertEquals("$tag: more clips than cards is still all done", f.count("capture_script_cards", 4, 5) + " " + allDone, CaptureText.scriptCardsLine(f, 4, 5))
+            assertEquals("$tag: a script with no cards is not all done", f.count("capture_script_cards", 0, 0), CaptureText.scriptCardsLine(f, 0, 0))
             assertTrue("$tag: all-done words are not empty", allDone.isNotBlank())
         }
     }
@@ -330,6 +335,8 @@ class CaptureTextTest {
     @Test
     fun theRecordingScreenEnglishIsExactlyWhatItAlwaysSaid() {
         assertEquals("10 CARDS", CaptureText.setupCardsLine(t, 10, 10, includeDone = false))
+        assertEquals("1 CARD", CaptureText.setupCardsLine(t, 1, 1, includeDone = false))
+        assertEquals("1 CARD, 1 ALREADY RECORDED. THIS SESSION STARTS AT THE FIRST ONE THAT IS NOT.", CaptureText.setupCardsLine(t, 1, 0, includeDone = false))
         assertEquals("10 CARDS, 4 ALREADY RECORDED. THIS SESSION STARTS AT THE FIRST ONE THAT IS NOT.", CaptureText.setupCardsLine(t, 10, 6, includeDone = false))
         assertEquals("including the recorded ones, nothing is skipped", "10 CARDS", CaptureText.setupCardsLine(t, 10, 6, includeDone = true))
         assertEquals("0 CARDS", CaptureText.setupCardsLine(t, 0, 0, includeDone = false))
@@ -375,12 +382,12 @@ class CaptureTextTest {
 
     @Test
     fun theNoticesInEnglishAreExactlyWhatTheEnginesAndTheMicrophoneAlwaysSaid() {
-        val room = "50 MB free, room for about 0 minutes of recording"
+        val room = "50 MB FREE, ROOM FOR ABOUT 0 MINUTES OF RECORDING"
         assertEquals("THE RECORDING COULD NOT BE SAVED: disk gone", CaptureText.notice(t, CaptureNotice.CouldNotSave("disk gone")))
         assertEquals("THE RECORDING COULD NOT BE SAVED: STORAGE ERROR", CaptureText.notice(t, CaptureNotice.CouldNotSave(null)))
         assertEquals("OUT OF ROOM: $room. KEPT CLIPS ARE SAFE", CaptureText.notice(t, CaptureNotice.OutOfRoomKeptClipsSafe(DiskRoom(50, 0))))
         assertEquals("OUT OF ROOM: $room. WHAT WAS RECORDED IS SAVED", CaptureText.notice(t, CaptureNotice.OutOfRoomRecordingSaved(DiskRoom(50, 0))))
-        assertEquals("OUT OF ROOM: 1234 MB free, room for about 56 minutes of recording. KEPT CLIPS ARE SAFE", CaptureText.notice(t, CaptureNotice.OutOfRoomKeptClipsSafe(DiskRoom(1234, 56))))
+        assertEquals("OUT OF ROOM: 1234 MB FREE, ROOM FOR ABOUT 56 MINUTES OF RECORDING. KEPT CLIPS ARE SAFE", CaptureText.notice(t, CaptureNotice.OutOfRoomKeptClipsSafe(DiskRoom(1234, 56))))
         assertEquals("NOTHING HEARD FOR 20 SECONDS: PAUSED", CaptureText.notice(t, CaptureNotice.NothingHeard(20)))
         assertEquals("THE LONGEST RECORDING (90 MINUTES) WAS REACHED: SAVED. START A NEW ONE TO CARRY ON", CaptureText.notice(t, CaptureNotice.LongestRecording(90)))
         assertEquals("THE MICROPHONE IS NOT ALLOWED. ALLOW IT IN THE PHONE'S SETTINGS FOR ACK.", CaptureText.notice(t, CaptureNotice.MicNotAllowed))
@@ -389,7 +396,7 @@ class CaptureTextTest {
         assertEquals("SOMETHING WENT WRONG WHILE RECORDING: IllegalStateException", CaptureText.notice(t, CaptureNotice.MicTrouble("IllegalStateException")))
         assertEquals("THE MICROPHONE STOPPED (ERROR -3). ANOTHER APP MAY BE USING IT.", CaptureText.notice(t, CaptureNotice.MicStopped(-3)))
         assertEquals(
-            "NOT ENOUGH ROOM TO RECORD: 120 MB free, room for about 0 minutes of recording. FREE UP SPACE FIRST (NEEDS 300 MB).",
+            "NOT ENOUGH ROOM TO RECORD: 120 MB FREE, ROOM FOR ABOUT 0 MINUTES OF RECORDING. FREE UP SPACE FIRST (NEEDS 300 MB).",
             CaptureText.notice(t, CaptureNotice.NotEnoughRoomToStart(DiskRoom(120, 0), 300)),
         )
         assertEquals("THE SCRIPT IS NOT ON THIS PHONE ANY MORE.", CaptureText.notice(t, CaptureNotice.ScriptGone))
@@ -605,5 +612,27 @@ class CaptureTextTest {
             val stopped = CaptureText.notice(f, CaptureNotice.MicStopped(-9))
             assertTrue("$tag stopped: $stopped", stopped.contains("-9") && !stopped.contains("-3"))
         }
+    }
+
+    @Test
+    fun theSixCountedSentencesAreAskedOnePluralAtATime_andEveryFormKeepsTheOtherArguments() {
+        val counted = listOf("capture_on_phone", "capture_script_cards", "capture_setup_cards", "capture_setup_cards_skipping", "capture_cards_typical", "capture_cards_own")
+        val files = mapOf("en" to StringsXml.default) + StringsXml.translations()
+        for ((tag, file) in files) {
+            val plurals = StringsXml.plurals(file)
+            for (name in counted) {
+                val forms = plurals.getValue(name)
+                val other = forms.getValue("other")
+                // The quantity is %1$d (the cards or sessions); every other argument must be in every form, in the same place, so a form can never drop the sizes or the recorded count.
+                val wanted = StringsXml.placeholders(other).filter { it != "%1\$d" }
+                for ((quantity, text) in forms) assertEquals("$tag/$name/$quantity keeps its other arguments: $text", wanted, StringsXml.placeholders(text).filter { it != "%1\$d" })
+                assertTrue("$tag/$name has a one form", forms.containsKey("one"))
+                // The forms say the same thing the same way in every language but English and Arabic's one and two: only the English noun changes with the number.
+                if (tag != "en" && tag != "ar") assertEquals("$tag/$name: colon-style, so every form is one sentence", 1, forms.values.toSet().size)
+            }
+        }
+        // English singular and plural differ only by the noun's s.
+        val en = StringsXml.plurals(StringsXml.default)
+        for (name in counted) assertEquals(name, en.getValue(name).getValue("other").replace("SESSIONS", "SESSION").replace("CARDS", "CARD"), en.getValue(name).getValue("one"))
     }
 }

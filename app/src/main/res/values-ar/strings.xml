@@ -1279,7 +1279,14 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="capture_close">[إغلاق]</string>
     <string name="capture_intro">اقرأ نصًّا بصوت عالٍ فيسجّله الهاتف، ويقطع كل بطاقة إلى مقطع مستقل ويحتفظ بها. ثم احفظ رزمة في ملف وانقلها بنفسك إلى حاسوبك. لا يُرسل أي شيء إلى أي مكان؛ ولا توجد شيفرة شبكة في هذا الجزء من التطبيق.</string>
     <string name="capture_help_offer">جديد: لـ%2$s جولة إرشادية في %1$s. ستجدها تحت %1$s في أي وقت.</string>
-    <string name="capture_on_phone">على هذا الهاتف -- الجلسات: %1$d، المستخدم: %2$s، المتاح: %3$s</string>
+    <plurals name="capture_on_phone">
+        <item quantity="zero">على هذا الهاتف -- الجلسات: %1$d، المستخدم: %2$s، المتاح: %3$s</item>
+        <item quantity="one">على هذا الهاتف -- جلسة واحدة، المستخدم: %2$s، المتاح: %3$s</item>
+        <item quantity="two">على هذا الهاتف -- جلستان، المستخدم: %2$s، المتاح: %3$s</item>
+        <item quantity="few">على هذا الهاتف -- الجلسات: %1$d، المستخدم: %2$s، المتاح: %3$s</item>
+        <item quantity="many">على هذا الهاتف -- الجلسات: %1$d، المستخدم: %2$s، المتاح: %3$s</item>
+        <item quantity="other">على هذا الهاتف -- الجلسات: %1$d، المستخدم: %2$s، المتاح: %3$s</item>
+    </plurals>
     <string name="capture_recovered">أُغلق التطبيق قبل إنهاء جلسات (العدد: %1$d). تم إصلاح تسجيلات غير مكتملة (العدد: %2$d) وهي محجوزة حتى تستمع إليها وتحتفظ بها (افتح الجلسة).</string>
     <string name="capture_recovery_problem">تعذّر إصلاح بعض التسجيلات: %1$s</string>
     <string name="capture_damaged">تعذّرت قراءة: %1$s. تُركت ملفاتها كما هي.</string>
@@ -1287,7 +1294,14 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="capture_damaged_session">جلسة %1$s</string>
     <string name="capture_scripts">النصوص</string>
     <string name="capture_no_scripts">لا توجد نصوص بعد. النص هو أي كلام تريد قراءته: الصقه هنا.</string>
-    <string name="capture_script_cards">البطاقات: %1$d، المسجّلة: %2$d</string>
+    <plurals name="capture_script_cards">
+        <item quantity="zero">البطاقات: %1$d، المسجّلة: %2$d</item>
+        <item quantity="one">بطاقة واحدة، المسجّلة: %2$d</item>
+        <item quantity="two">بطاقتان، المسجّلة: %2$d</item>
+        <item quantity="few">البطاقات: %1$d، المسجّلة: %2$d</item>
+        <item quantity="many">البطاقات: %1$d، المسجّلة: %2$d</item>
+        <item quantity="other">البطاقات: %1$d، المسجّلة: %2$d</item>
+    </plurals>
     <string name="capture_all_done">(اكتمل كل شيء)</string>
     <string name="capture_record">تسجيل</string>
     <string name="capture_new_script">+ نص جديد</string>
@@ -1337,8 +1351,22 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="capture_language_code">رمز اللغة</string>
     <string name="capture_cards">البطاقات</string>
     <string name="capture_nothing_to_read">لا يوجد ما يُقرأ بعد.</string>
-    <string name="capture_cards_typical">البطاقات: %1$d، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرة معتادة؛ يتعلم الهاتف وتيرتك)</string>
-    <string name="capture_cards_own">البطاقات: %1$d، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرتك)</string>
+    <plurals name="capture_cards_typical">
+        <item quantity="zero">البطاقات: %1$d، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرة معتادة؛ يتعلم الهاتف وتيرتك)</item>
+        <item quantity="one">بطاقة واحدة، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرة معتادة؛ يتعلم الهاتف وتيرتك)</item>
+        <item quantity="two">بطاقتان، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرة معتادة؛ يتعلم الهاتف وتيرتك)</item>
+        <item quantity="few">البطاقات: %1$d، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرة معتادة؛ يتعلم الهاتف وتيرتك)</item>
+        <item quantity="many">البطاقات: %1$d، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرة معتادة؛ يتعلم الهاتف وتيرتك)</item>
+        <item quantity="other">البطاقات: %1$d، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرة معتادة؛ يتعلم الهاتف وتيرتك)</item>
+    </plurals>
+    <plurals name="capture_cards_own">
+        <item quantity="zero">البطاقات: %1$d، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرتك)</item>
+        <item quantity="one">بطاقة واحدة، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرتك)</item>
+        <item quantity="two">بطاقتان، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرتك)</item>
+        <item quantity="few">البطاقات: %1$d، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرتك)</item>
+        <item quantity="many">البطاقات: %1$d، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرتك)</item>
+        <item quantity="other">البطاقات: %1$d، نحو %2$s دقيقة بمعدل %3$s كلمة في الثانية (وتيرتك)</item>
+    </plurals>
     <string name="capture_symbol_cards">بطاقات تحتوي أرقامًا أو رموزًا: %1$d. إذا كنت ستنطقها بشكل مختلف فأعد كتابتها بالكلمات.</string>
     <string name="capture_and_more">...و%1$d أخرى</string>
     <string name="capture_delete_script">حذف هذا النص</string>
@@ -1387,8 +1415,22 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="capture_set_aside">استبعاد</string>
     <string name="capture_mark_hint">ضع علامة على هذا المقطع (تُبقيه العلامة خارج التدريب حتى تراجعه على الحاسوب):</string>
     <string name="capture_record_script_title">تسجيل نص</string>
-    <string name="capture_setup_cards">البطاقات: %1$d</string>
-    <string name="capture_setup_cards_skipping">البطاقات: %1$d، المسجّلة مسبقًا: %2$d. تبدأ هذه الجلسة من أول بطاقة لم تُسجَّل بعد.</string>
+    <plurals name="capture_setup_cards">
+        <item quantity="zero">البطاقات: %1$d</item>
+        <item quantity="one">بطاقة واحدة</item>
+        <item quantity="two">بطاقتان</item>
+        <item quantity="few">البطاقات: %1$d</item>
+        <item quantity="many">البطاقات: %1$d</item>
+        <item quantity="other">البطاقات: %1$d</item>
+    </plurals>
+    <plurals name="capture_setup_cards_skipping">
+        <item quantity="zero">البطاقات: %1$d، المسجّلة مسبقًا: %2$d. تبدأ هذه الجلسة من أول بطاقة لم تُسجَّل بعد.</item>
+        <item quantity="one">بطاقة واحدة، المسجّلة مسبقًا: %2$d. تبدأ هذه الجلسة من أول بطاقة لم تُسجَّل بعد.</item>
+        <item quantity="two">بطاقتان، المسجّلة مسبقًا: %2$d. تبدأ هذه الجلسة من أول بطاقة لم تُسجَّل بعد.</item>
+        <item quantity="few">البطاقات: %1$d، المسجّلة مسبقًا: %2$d. تبدأ هذه الجلسة من أول بطاقة لم تُسجَّل بعد.</item>
+        <item quantity="many">البطاقات: %1$d، المسجّلة مسبقًا: %2$d. تبدأ هذه الجلسة من أول بطاقة لم تُسجَّل بعد.</item>
+        <item quantity="other">البطاقات: %1$d، المسجّلة مسبقًا: %2$d. تبدأ هذه الجلسة من أول بطاقة لم تُسجَّل بعد.</item>
+    </plurals>
     <string name="capture_pace_own">حجم البطاقات مضبوط على %1$s كلمة في الثانية (وتيرتك).</string>
     <string name="capture_pace_typical">حجم البطاقات مضبوط على %1$s كلمة في الثانية (وتيرة معتادة؛ يتعلم الهاتف وتيرتك مما تحتفظ به).</string>
     <string name="capture_including_done">مع البطاقات المسجّلة مسبقًا</string>

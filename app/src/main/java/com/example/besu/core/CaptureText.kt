@@ -18,7 +18,8 @@ import java.util.Locale
  * here is shown as it is (a mark the person's computer added, say). A session's name, a script's title and the person's typed text are shown exactly as typed.
  *
  * **Numbers and units stay as they were written**: Latin digits (`Locale.ROOT`), `MB`, `KHZ`, `DB`, `S` and `UTC` are symbols, and the `//` between parts is the app's own separator, added here and never inside a
- * resource. Counts are written as "SESSIONS: 3" in a translation so no language has to agree a word with a number; English keeps its exact wording ("3 SESSIONS", "SESSION(S)").
+ * resource. Counts are written as "SESSIONS: 3" in a translation so no language has to agree a word with a number. English says "1 SESSION" and "1 CARD" for one (the six counted sentences are plurals,
+ * so a translation gives the same text for every form); where English has always hedged ("SESSION(S)", "CLIP(S)") it still does.
  *
  * **What the storage and package layers say stays as they say it.** A `StoreException` or a package problem is a technical sentence (a file that cannot be read, a checksum that differs); it is shown as it comes, inside
  * a sentence of ours that says what it means for the person's recordings. Only the screens' own fallbacks are translated.
@@ -46,8 +47,8 @@ object CaptureText {
     /** The tip about the walkthrough. [helpButton] is the HELP button's word and [screenName] the RECORD TRAINING DATA label (both follow the language and PLAIN WORDS), so the sentence points at things that exist. */
     fun helpOffer(text: TextSource, helpButton: String, screenName: String): String = text.get("capture_help_offer", helpButton, screenName)
 
-    /** "ON THIS PHONE: 3 SESSIONS, 12.3 MB USED, 4000.0 MB FREE"; [used] and [free] are sizes already written by [megabytes]. */
-    fun phoneLine(text: TextSource, sessions: Int, used: String, free: String): String = text.get("capture_on_phone", sessions, used, free)
+    /** "ON THIS PHONE: 3 SESSIONS, 12.3 MB USED, 4000.0 MB FREE" ("1 SESSION" for one); [used] and [free] are sizes already written by [megabytes]. */
+    fun phoneLine(text: TextSource, sessions: Int, used: String, free: String): String = text.count("capture_on_phone", sessions, used, free)
 
     /** What was repaired after the app closed unexpectedly, or, when some recordings could not be repaired, the first thing that went wrong (as the storage layer worded it). */
     fun recoveryNotice(text: TextSource, sessionsClosed: Int, clipsRecovered: Int, problems: List<String>): String =
@@ -64,7 +65,7 @@ object CaptureText {
 
     /** A script's card count and how many are recorded, with "(ALL DONE)" once every card has a clip (and there is at least one). */
     fun scriptCardsLine(text: TextSource, cards: Int, done: Int): String {
-        val base = text.get("capture_script_cards", cards, done)
+        val base = text.count("capture_script_cards", cards, done)
         return if (done >= cards && cards > 0) listOf(base, text.get("capture_all_done")).joinToString(" ") else base
     }
 
@@ -126,7 +127,7 @@ object CaptureText {
 
     /** The cards a text will become: how many, about how many minutes at what pace, and whether the pace is the person's own. [minutes] and [pace] are written with [wholeNumber] and [oneDecimal]. */
     fun cardsSummary(text: TextSource, cards: Int, minutes: Double, pace: Double, measured: Boolean): String =
-        text.get(if (measured) "capture_cards_own" else "capture_cards_typical", cards, wholeNumber(minutes), oneDecimal(pace))
+        text.count(if (measured) "capture_cards_own" else "capture_cards_typical", cards, wholeNumber(minutes), oneDecimal(pace))
 
     fun symbolCards(text: TextSource, count: Int): String = text.get("capture_symbol_cards", count)
 
@@ -192,7 +193,7 @@ object CaptureText {
 
     /** The setup line about the cards: how many, and (when the session starts partway) how many are already recorded. [pending] is how many this session would record. */
     fun setupCardsLine(text: TextSource, cards: Int, pending: Int, includeDone: Boolean): String =
-        if (pending < cards && !includeDone) text.get("capture_setup_cards_skipping", cards, cards - pending) else text.get("capture_setup_cards", cards)
+        if (pending < cards && !includeDone) text.count("capture_setup_cards_skipping", cards, cards - pending) else text.count("capture_setup_cards", cards)
 
     /** What the toggle says it is doing: including or skipping the cards that already have a clip (the screen's own state, never read back from this word). */
     fun includeDoneLabel(text: TextSource, includeDone: Boolean, allDone: Boolean): String =
@@ -259,7 +260,7 @@ object CaptureText {
 
     // ---- what the engines, the microphone and the screen report ----------------------------------------------------------------------------
 
-    /** "500 MB free, room for about 20 minutes of recording" (English keeps its lower case; the numbers are the engine's). */
+    /** "500 MB FREE, ROOM FOR ABOUT 20 MINUTES OF RECORDING" (the numbers are the engine's). */
     fun roomLeft(text: TextSource, room: DiskRoom): String = text.get("capture_room_left", room.megabytes, room.minutes)
 
     fun notice(text: TextSource, notice: CaptureNotice): String = when (notice) {

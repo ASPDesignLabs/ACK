@@ -48,9 +48,12 @@ class CaptureWordingTest {
             Regex(""""(capture_[a-z0-9_]+)"""").findAll(noComments(RepoFiles.read("$base/core/CaptureText.kt"))).map { it.groupValues[1] }.toSet() +
             // The DELETE DATA note points at SAVE ALL TO A FILE by this name.
             Regex(""""(capture_[a-z0-9_]+)"""").findAll(noComments(RepoFiles.read("$base/core/StorageCatalogue.kt"))).map { it.groupValues[1] }.toSet()
-        val defined = english.keys.filter { it.startsWith("capture_") }.toSet()
-        for ((tag, map) in listOf("en" to english) + translations.toList()) {
-            val missing = referenced.filter { it !in map }
+        // Six counted sentences are plurals (English says 1 SESSION / 1 CARD); a name may be a string or a plural.
+        val englishPlurals = StringsXml.plurals(StringsXml.default)
+        val defined = english.keys.filter { it.startsWith("capture_") }.toSet() + englishPlurals.keys.filter { it.startsWith("capture_") }
+        for ((tag, file) in listOf("en" to StringsXml.default) + StringsXml.translations().toList()) {
+            val have = StringsXml.map(file).keys + StringsXml.plurals(file).keys
+            val missing = referenced.filter { it !in have }
             assertEquals("$tag: named but not defined: $missing", emptyList<String>(), missing)
         }
         assertEquals("defined but never used: ${defined - referenced}", emptySet<String>(), defined - referenced)

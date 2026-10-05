@@ -1248,7 +1248,10 @@
     <string name="capture_close">[CLOSE]</string>
     <string name="capture_intro">READ TEXT ALOUD AND THE PHONE RECORDS IT, CUTS EACH CARD INTO ITS OWN CLIP AND KEEPS THEM. THEN SAVE A PACKAGE TO A FILE AND MOVE IT TO YOUR COMPUTER YOURSELF. NOTHING IS SENT ANYWHERE; THERE IS NO NETWORK CODE IN THIS PART OF THE APP.</string>
     <string name="capture_help_offer">NEW: %2$s HAS A %1$s WALKTHROUGH. FIND IT UNDER %1$s ANYTIME.</string>
-    <string name="capture_on_phone">ON THIS PHONE: %1$d SESSIONS, %2$s USED, %3$s FREE</string>
+    <plurals name="capture_on_phone">
+        <item quantity="one">ON THIS PHONE: %1$d SESSION, %2$s USED, %3$s FREE</item>
+        <item quantity="other">ON THIS PHONE: %1$d SESSIONS, %2$s USED, %3$s FREE</item>
+    </plurals>
     <string name="capture_recovered">THE APP CLOSED BEFORE %1$d SESSION(S) WERE ENDED. %2$d UNFINISHED RECORDING(S) WERE REPAIRED AND ARE HELD BACK UNTIL YOU LISTEN AND KEEP THEM (OPEN THE SESSION).</string>
     <string name="capture_recovery_problem">SOME RECORDINGS COULD NOT BE REPAIRED: %1$s</string>
     <string name="capture_damaged">COULD NOT READ: %1$s. THEIR FILES WERE LEFT AS THEY ARE.</string>
@@ -1256,7 +1259,10 @@
     <string name="capture_damaged_session">session %1$s</string>
     <string name="capture_scripts">SCRIPTS</string>
     <string name="capture_no_scripts">NO SCRIPTS YET. A SCRIPT IS ANY TEXT YOU WANT TO READ: PASTE IT IN.</string>
-    <string name="capture_script_cards">%1$d CARDS, %2$d RECORDED</string>
+    <plurals name="capture_script_cards">
+        <item quantity="one">%1$d CARD, %2$d RECORDED</item>
+        <item quantity="other">%1$d CARDS, %2$d RECORDED</item>
+    </plurals>
     <string name="capture_all_done">(ALL DONE)</string>
     <string name="capture_record">RECORD</string>
     <string name="capture_new_script">+ NEW SCRIPT</string>
@@ -1306,8 +1312,14 @@
     <string name="capture_language_code">LANGUAGE CODE</string>
     <string name="capture_cards">CARDS</string>
     <string name="capture_nothing_to_read">NOTHING TO READ YET.</string>
-    <string name="capture_cards_typical">%1$d CARDS, ABOUT %2$s MINUTES AT %3$s WORDS A SECOND (A TYPICAL PACE; THE PHONE LEARNS YOURS)</string>
-    <string name="capture_cards_own">%1$d CARDS, ABOUT %2$s MINUTES AT %3$s WORDS A SECOND (YOUR PACE)</string>
+    <plurals name="capture_cards_typical">
+        <item quantity="one">%1$d CARD, ABOUT %2$s MINUTES AT %3$s WORDS A SECOND (A TYPICAL PACE; THE PHONE LEARNS YOURS)</item>
+        <item quantity="other">%1$d CARDS, ABOUT %2$s MINUTES AT %3$s WORDS A SECOND (A TYPICAL PACE; THE PHONE LEARNS YOURS)</item>
+    </plurals>
+    <plurals name="capture_cards_own">
+        <item quantity="one">%1$d CARD, ABOUT %2$s MINUTES AT %3$s WORDS A SECOND (YOUR PACE)</item>
+        <item quantity="other">%1$d CARDS, ABOUT %2$s MINUTES AT %3$s WORDS A SECOND (YOUR PACE)</item>
+    </plurals>
     <string name="capture_symbol_cards">%1$d CARD(S) HAVE DIGITS OR SYMBOLS. IF YOU WOULD SAY THEM DIFFERENTLY, REWRITE THEM AS WORDS.</string>
     <string name="capture_and_more">...AND %1$d MORE</string>
     <string name="capture_delete_script">DELETE THIS SCRIPT</string>
@@ -1356,8 +1368,14 @@
     <string name="capture_set_aside">SET ASIDE</string>
     <string name="capture_mark_hint">MARK THIS CLIP (A MARK KEEPS IT OUT OF TRAINING UNTIL YOU REVIEW IT ON THE COMPUTER):</string>
     <string name="capture_record_script_title">RECORD A SCRIPT</string>
-    <string name="capture_setup_cards">%1$d CARDS</string>
-    <string name="capture_setup_cards_skipping">%1$d CARDS, %2$d ALREADY RECORDED. THIS SESSION STARTS AT THE FIRST ONE THAT IS NOT.</string>
+    <plurals name="capture_setup_cards">
+        <item quantity="one">%1$d CARD</item>
+        <item quantity="other">%1$d CARDS</item>
+    </plurals>
+    <plurals name="capture_setup_cards_skipping">
+        <item quantity="one">%1$d CARD, %2$d ALREADY RECORDED. THIS SESSION STARTS AT THE FIRST ONE THAT IS NOT.</item>
+        <item quantity="other">%1$d CARDS, %2$d ALREADY RECORDED. THIS SESSION STARTS AT THE FIRST ONE THAT IS NOT.</item>
+    </plurals>
     <string name="capture_pace_own">CARDS ARE SIZED FOR %1$s WORDS A SECOND (YOUR PACE).</string>
     <string name="capture_pace_typical">CARDS ARE SIZED FOR %1$s WORDS A SECOND (A TYPICAL PACE; THE PHONE LEARNS YOURS FROM WHAT YOU KEEP).</string>
     <string name="capture_including_done">INCLUDING CARDS ALREADY RECORDED</string>
@@ -1408,7 +1426,7 @@
     <string name="capture_n_storage_error">STORAGE ERROR</string>
     <string name="capture_n_room_clips">OUT OF ROOM: %1$s. KEPT CLIPS ARE SAFE</string>
     <string name="capture_n_room_free">OUT OF ROOM: %1$s. WHAT WAS RECORDED IS SAVED</string>
-    <string name="capture_room_left">%1$d MB free, room for about %2$d minutes of recording</string>
+    <string name="capture_room_left">%1$d MB FREE, ROOM FOR ABOUT %2$d MINUTES OF RECORDING</string>
     <string name="capture_n_idle">NOTHING HEARD FOR %1$d SECONDS: PAUSED</string>
     <string name="capture_n_longest">THE LONGEST RECORDING (%1$d MINUTES) WAS REACHED: SAVED. START A NEW ONE TO CARRY ON</string>
     <string name="capture_n_mic_not_allowed">THE MICROPHONE IS NOT ALLOWED. ALLOW IT IN THE PHONE\'S SETTINGS FOR ACK.</string>

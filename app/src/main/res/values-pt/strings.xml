@@ -1240,7 +1240,11 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="capture_close">[FECHAR]</string>
     <string name="capture_intro">LEIA UM TEXTO EM VOZ ALTA E O CELULAR O GRAVA, CORTA CADA CARTÃO EM SEU PRÓPRIO CLIPE E OS GUARDA. DEPOIS SALVE UM PACOTE EM UM ARQUIVO E LEVE-O VOCÊ MESMO PARA O SEU COMPUTADOR. NADA É ENVIADO PARA LUGAR NENHUM; NÃO HÁ CÓDIGO DE REDE NESTA PARTE DO APP.</string>
     <string name="capture_help_offer">NOVIDADE: %2$s TEM UM TUTORIAL EM %1$s. ENCONTRE-O EM %1$s QUANDO QUISER.</string>
-    <string name="capture_on_phone">NESTE CELULAR -- SESSÕES: %1$d, USADO: %2$s, LIVRE: %3$s</string>
+    <plurals name="capture_on_phone">
+        <item quantity="one">NESTE CELULAR -- SESSÕES: %1$d, USADO: %2$s, LIVRE: %3$s</item>
+        <item quantity="many">NESTE CELULAR -- SESSÕES: %1$d, USADO: %2$s, LIVRE: %3$s</item>
+        <item quantity="other">NESTE CELULAR -- SESSÕES: %1$d, USADO: %2$s, LIVRE: %3$s</item>
+    </plurals>
     <string name="capture_recovered">O APP FECHOU ANTES DE %1$d SESSÃO(ÕES) SEREM ENCERRADAS. %2$d GRAVAÇÃO(ÕES) INCOMPLETA(S) FORAM REPARADAS E FICAM RETIDAS ATÉ VOCÊ OUVIR E MANTER (ABRA A SESSÃO).</string>
     <string name="capture_recovery_problem">ALGUMAS GRAVAÇÕES NÃO PUDERAM SER REPARADAS: %1$s</string>
     <string name="capture_damaged">NÃO FOI POSSÍVEL LER: %1$s. OS ARQUIVOS FORAM DEIXADOS COMO ESTÃO.</string>
@@ -1248,7 +1252,11 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="capture_damaged_session">sessão %1$s</string>
     <string name="capture_scripts">ROTEIROS</string>
     <string name="capture_no_scripts">AINDA NÃO HÁ ROTEIROS. UM ROTEIRO É QUALQUER TEXTO QUE VOCÊ QUEIRA LER: COLE-O AQUI.</string>
-    <string name="capture_script_cards">CARTÕES: %1$d, GRAVADOS: %2$d</string>
+    <plurals name="capture_script_cards">
+        <item quantity="one">CARTÕES: %1$d, GRAVADOS: %2$d</item>
+        <item quantity="many">CARTÕES: %1$d, GRAVADOS: %2$d</item>
+        <item quantity="other">CARTÕES: %1$d, GRAVADOS: %2$d</item>
+    </plurals>
     <string name="capture_all_done">(TUDO PRONTO)</string>
     <string name="capture_record">GRAVAR</string>
     <string name="capture_new_script">+ NOVO ROTEIRO</string>
@@ -1298,8 +1306,16 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="capture_language_code">CÓDIGO DO IDIOMA</string>
     <string name="capture_cards">CARTÕES</string>
     <string name="capture_nothing_to_read">AINDA NÃO HÁ NADA PARA LER.</string>
-    <string name="capture_cards_typical">CARTÕES: %1$d, CERCA DE %2$s MINUTOS A %3$s PALAVRAS POR SEGUNDO (UM RITMO TÍPICO; O CELULAR APRENDE O SEU)</string>
-    <string name="capture_cards_own">CARTÕES: %1$d, CERCA DE %2$s MINUTOS A %3$s PALAVRAS POR SEGUNDO (O SEU RITMO)</string>
+    <plurals name="capture_cards_typical">
+        <item quantity="one">CARTÕES: %1$d, CERCA DE %2$s MINUTOS A %3$s PALAVRAS POR SEGUNDO (UM RITMO TÍPICO; O CELULAR APRENDE O SEU)</item>
+        <item quantity="many">CARTÕES: %1$d, CERCA DE %2$s MINUTOS A %3$s PALAVRAS POR SEGUNDO (UM RITMO TÍPICO; O CELULAR APRENDE O SEU)</item>
+        <item quantity="other">CARTÕES: %1$d, CERCA DE %2$s MINUTOS A %3$s PALAVRAS POR SEGUNDO (UM RITMO TÍPICO; O CELULAR APRENDE O SEU)</item>
+    </plurals>
+    <plurals name="capture_cards_own">
+        <item quantity="one">CARTÕES: %1$d, CERCA DE %2$s MINUTOS A %3$s PALAVRAS POR SEGUNDO (O SEU RITMO)</item>
+        <item quantity="many">CARTÕES: %1$d, CERCA DE %2$s MINUTOS A %3$s PALAVRAS POR SEGUNDO (O SEU RITMO)</item>
+        <item quantity="other">CARTÕES: %1$d, CERCA DE %2$s MINUTOS A %3$s PALAVRAS POR SEGUNDO (O SEU RITMO)</item>
+    </plurals>
     <string name="capture_symbol_cards">CARTÕES COM DÍGITOS OU SÍMBOLOS: %1$d. SE VOCÊ OS DIRIA DE OUTRO JEITO, REESCREVA-OS COM PALAVRAS.</string>
     <string name="capture_and_more">...E MAIS %1$d</string>
     <string name="capture_delete_script">EXCLUIR ESTE ROTEIRO</string>
@@ -1348,8 +1364,16 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="capture_set_aside">DEIXAR DE LADO</string>
     <string name="capture_mark_hint">MARQUE ESTE CLIPE (UMA MARCA O MANTÉM FORA DO TREINAMENTO ATÉ VOCÊ REVISÁ-LO NO COMPUTADOR):</string>
     <string name="capture_record_script_title">GRAVAR UM ROTEIRO</string>
-    <string name="capture_setup_cards">CARTÕES: %1$d</string>
-    <string name="capture_setup_cards_skipping">CARTÕES: %1$d, JÁ GRAVADOS: %2$d. ESTA SESSÃO COMEÇA NO PRIMEIRO QUE AINDA NÃO FOI.</string>
+    <plurals name="capture_setup_cards">
+        <item quantity="one">CARTÕES: %1$d</item>
+        <item quantity="many">CARTÕES: %1$d</item>
+        <item quantity="other">CARTÕES: %1$d</item>
+    </plurals>
+    <plurals name="capture_setup_cards_skipping">
+        <item quantity="one">CARTÕES: %1$d, JÁ GRAVADOS: %2$d. ESTA SESSÃO COMEÇA NO PRIMEIRO QUE AINDA NÃO FOI.</item>
+        <item quantity="many">CARTÕES: %1$d, JÁ GRAVADOS: %2$d. ESTA SESSÃO COMEÇA NO PRIMEIRO QUE AINDA NÃO FOI.</item>
+        <item quantity="other">CARTÕES: %1$d, JÁ GRAVADOS: %2$d. ESTA SESSÃO COMEÇA NO PRIMEIRO QUE AINDA NÃO FOI.</item>
+    </plurals>
     <string name="capture_pace_own">OS CARTÕES SÃO AJUSTADOS A %1$s PALAVRAS POR SEGUNDO (O SEU RITMO).</string>
     <string name="capture_pace_typical">OS CARTÕES SÃO AJUSTADOS A %1$s PALAVRAS POR SEGUNDO (UM RITMO TÍPICO; O CELULAR APRENDE O SEU COM O QUE VOCÊ MANTÉM).</string>
     <string name="capture_including_done">INCLUINDO CARTÕES JÁ GRAVADOS</string>
