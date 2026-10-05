@@ -209,9 +209,9 @@ class PatchNotesTest {
             "- NEW: THIS SCREEN'S OWN WORDS, ITS /help LIST AND THESE NOTES ARE",
             "  TRANSLATED TOO. COMMANDS YOU TYPE STAY EXACTLY AS TYPED. NOTES FOR A",
             "  NEW RELEASE SHOW IN ENGLISH UNTIL THEY ARE TRANSLATED",
-            "- THESE ARE DRAFTS NOT YET CHECKED BY NATIVE SPEAKERS. HELP'S",
-            "  WALKTHROUGHS, LINES OTHER PARTS OF ACK WRITE INTO THIS SCREEN AND",
-            "  MANY DIALOGS STAY IN ENGLISH. SEE DOCS/TRANSLATIONS.MD",
+            "- THESE ARE DRAFTS NOT YET CHECKED BY NATIVE SPEAKERS. LINES OTHER",
+            "  PARTS OF ACK WRITE INTO THIS SCREEN AND MANY DIALOGS STAY IN ENGLISH.",
+            "  SEE DOCS/TRANSLATIONS.MD",
         ) + oldPatchNotes.drop(at + 2)
     }
 
@@ -376,10 +376,12 @@ class PatchNotesTest {
 
     @Test
     fun theLanguageSectionNoLongerSaysThisScreenStaysEnglish_andSaysItIsTranslated() {
-        val joined = PatchNotes.lines(t).joinToString(" ")
+        // Where a line breaks (and the two-space indent added in code) is not part of the sentence, so compare with every run of white space as one space.
+        val joined = PatchNotes.lines(t).joinToString(" ").replace(Regex("\\s+"), " ")
         assertFalse("the old claim", joined.contains("HELP, THIS SCREEN AND MANY DIALOGS STAY IN ENGLISH"))
+        assertFalse("the walkthroughs are translated now, so these notes no longer list them as English", joined.contains("WALKTHROUGHS, LINES OTHER PARTS"))
         assertTrue(joined.contains("THIS SCREEN'S OWN WORDS, ITS /help LIST AND THESE NOTES ARE"))
-        assertTrue(joined.contains("LINES OTHER PARTS OF ACK WRITE INTO THIS SCREEN"))
+        assertTrue(joined.contains("NATIVE SPEAKERS. LINES OTHER PARTS OF ACK WRITE INTO THIS SCREEN AND MANY DIALOGS STAY IN ENGLISH. SEE DOCS/TRANSLATIONS.MD"))
     }
 
     // ---- the screen reads them ---------------------------------------------------------------------------------------------------------

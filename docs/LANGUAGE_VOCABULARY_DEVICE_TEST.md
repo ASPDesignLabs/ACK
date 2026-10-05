@@ -280,7 +280,7 @@ Take a **backup first** (EXPORT .JSON); nothing here deletes anything.
 - [ ] On a phone that already had ACK (set to Spanish, Portuguese, Hindi, Arabic or Afrikaans in the system settings), update and open ACK. → Everything is still
   **English**. (An existing install must not change language by itself.)
 - [ ] Open SETTINGS. → Just under PLAIN WORDS is a **LANGUAGE · IDIOMA · भाषा · اللغة · TAAL** heading, a short explanation that says the translations are drafts and that
-  the walkthroughs inside HELP, the lines other parts of ACK write into the Terminal and many dialogs stay English, and choices: THIS PHONE'S LANGUAGE, ENGLISH, ESPAÑOL, PORTUGUÊS, हिन्दी, العربية, AFRIKAANS. The current one has a tick and a thicker border.
+  the lines other parts of ACK write into the Terminal and many dialogs stay English, and choices: THIS PHONE'S LANGUAGE, ENGLISH, ESPAÑOL, PORTUGUÊS, हिन्दी, العربية, AFRIKAANS. The current one has a tick and a thicker border.
 - [ ] Tap **ESPAÑOL**. → A box says ACK will restart once, that nothing is deleted, and that you can change it back. **CANCEL** is first and large. Tap outside the box. → Nothing changes.
 - [ ] Tap ESPAÑOL again, then **CHANGE AND RESTART**. → A message says ACK is restarting, then ACK reopens (the screen you were on is not kept).
 

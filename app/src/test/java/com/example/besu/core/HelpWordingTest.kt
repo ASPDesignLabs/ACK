@@ -10,7 +10,7 @@ import org.junit.Test
 /**
  * HELP's own screens (the header's HELP button, the menu, the two chooser dialogs and the coach panel) read their words from string resources, in the chosen language. They cannot be
  * compiled here, so this reads them: the old English literals are gone, every string they name exists and none is unused, each word sits on the control that does what it says, and
- * every language has the words. HelpMenuTextTest holds the decisions (the family names, the cards' step line). The walkthroughs' own text is still English and is not tested here.
+ * every language has the words. HelpMenuTextTest holds the decisions (the family names, the cards' step line). The walkthroughs' own text is translated too and is tested by HelpWalkthroughWordingTest, not here.
  */
 class HelpWordingTest {
 
@@ -121,8 +121,14 @@ class HelpWordingTest {
         assertFalse("the tip no longer types the English button", capture.contains("WALKTHROUGH. FIND IT UNDER"))
         assertEquals("NEW: %2\$s HAS A %1\$s WALKTHROUGH. FIND IT UNDER %1\$s ANYTIME.", english.getValue("capture_help_offer"))
         for ((tag, map) in translations) assertEquals("$tag: the HELP button's name twice, the screen's once", listOf("%1\$s", "%1\$s", "%2\$s").sorted(), StringsXml.placeholders(map.getValue("capture_help_offer")).sorted())
-        // The language notice says what is still English now: the walkthroughs (no longer HELP as a whole) and, since the Terminal's own words moved, only the lines other parts of ACK write into it.
-        assertTrue(english.getValue("interface_language_explanation").contains("THE WALKTHROUGHS INSIDE HELP, THE LINES OTHER PARTS OF ACK WRITE INTO THE TERMINAL AND MANY DIALOGS ARE STILL IN ENGLISH."))
+        // The language notice says what is still English now: since the walkthroughs and the Terminal's own words moved, only the lines other parts of ACK write into the Terminal and many dialogs.
+        assertTrue(english.getValue("interface_language_explanation").contains("THE LINES OTHER PARTS OF ACK WRITE INTO THE TERMINAL AND MANY DIALOGS ARE STILL IN ENGLISH."))
+        assertFalse("the walkthroughs are translated now", english.getValue("interface_language_explanation").contains("WALKTHROUGHS"))
+        assertFalse("the walkthroughs are translated now", english.getValue("info_nr_language_2").contains("WALKTHROUGHS"))
+        // The same claim is gone from every translation: each draft's own word for the walkthroughs must not appear in either note.
+        val walkthroughWord = mapOf("es" to listOf("TUTORIALES", "GUÍAS DE AYUDA"), "pt" to listOf("TUTORIAIS"), "af" to listOf("LEIDRADE", "DEURLOOPGIDSE"), "hi" to listOf("वॉकथ्रू"), "ar" to listOf("الجولات الإرشادية", "جولات المساعدة"))
+        for ((tag, map) in translations) for (word in walkthroughWord.getValue(tag)) for (name in listOf("interface_language_explanation", "info_nr_language_2"))
+            assertFalse("$tag: $name still says the walkthroughs are English ($word)", map.getValue(name).contains(word))
         assertFalse("the old claim that all of HELP is English", english.getValue("interface_language_explanation").contains(". HELP, THE TERMINAL"))
         assertFalse("the old claim that all of the Terminal is English", english.getValue("interface_language_explanation").contains("INSIDE HELP, THE TERMINAL AND"))
     }

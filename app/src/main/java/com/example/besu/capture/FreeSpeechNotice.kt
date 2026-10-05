@@ -9,7 +9,7 @@ package com.example.besu.capture
  * and no vibration while the microphone is open (a buzz would land in the recording), so this is never a dialog, a toast or a standard button. The minutes in the
  * setup sentence come from [CaptureConstants.MAX_FREE_SESSION_S], so the notice cannot say a limit the engine does not enforce.
  *
- * Only the HELP walkthrough's sentence is still a constant here, because the walkthroughs' own text is English (and written in sentence case).
+ * Only the English of the HELP walkthrough's last sentence is still a constant here, as a pin: the walkthrough itself is a string resource (see the note on [HELP]).
  */
 object FreeSpeechNotice {
     /**

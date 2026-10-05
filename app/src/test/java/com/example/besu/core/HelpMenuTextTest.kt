@@ -9,7 +9,7 @@ import org.junit.Test
 
 /**
  * The words HELP's menu shows around a module family and on each card, in English exactly as they always were and in every language. The walkthroughs' own text is not here
- * (it is still English); this is the chrome.
+ * (HelpWalkthroughTextTest and HelpWalkthroughWordingTest hold it); this is the chrome.
  */
 class HelpMenuTextTest {
 

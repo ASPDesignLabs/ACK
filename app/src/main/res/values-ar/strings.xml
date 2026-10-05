@@ -199,7 +199,7 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="plain_ctl_clear_history">مسح السجل</string>
     <string name="plain_ctl_clear_history_body">سيؤدي هذا إلى إزالة كل سطر من السجل المعروض على هذه الشاشة. لا يمكن التراجع عن ذلك.</string>
     <string name="plain_ctl_cancel">إلغاء</string>
-    <string name="interface_language_explanation">لغة كلمات ACK الخاصة: أسماء الأزرار والعناوين. لا تترجم ما تكتبه أو ما يُنطق (لغة النطق في إعدادات الصوت تفعل ذلك). النص بكل اللغات عدا الإنجليزية مسودة لم يراجعها متحدثون أصليون بعد. الجولات الإرشادية في المساعدة والأسطر التي تكتبها أجزاء أخرى من ACK في الطرفية وكثير من مربعات الحوار ما زالت بالإنجليزية.</string>
+    <string name="interface_language_explanation">لغة كلمات ACK الخاصة: أسماء الأزرار والعناوين. لا تترجم ما تكتبه أو ما يُنطق (لغة النطق في إعدادات الصوت تفعل ذلك). النص بكل اللغات عدا الإنجليزية مسودة لم يراجعها متحدثون أصليون بعد. الأسطر التي تكتبها أجزاء أخرى من ACK في الطرفية وكثير من مربعات الحوار ما زالت بالإنجليزية.</string>
     <string name="interface_language_device">لغة هذا الهاتف</string>
     <string name="interface_language_confirm_title">تغيير اللغة</string>
     <string name="interface_language_confirm_body">سيعيد ACK التشغيل مرة واحدة ويعرض كلماته الخاصة بهذه اللغة: %1$s. لا يُحذف أو يتغير أي شيء. يمكنك إعادة التغيير من هنا.</string>
@@ -1158,7 +1158,7 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="info_nr_language_head">-- اللغة --</string>
     <string name="info_nr_language_1">- جديد: عنصر تحكم في اللغة ضمن الإعدادات: كلمات ACK الخاصة بالإسبانية أو البرتغالية أو الهندية أو العربية أو الأفريقانية. التثبيت الموجود يبقى بالإنجليزية حتى تختار؛ والتثبيت الجديد يتبع الهاتف. والاختيار يسأل أولا ويعيد تشغيل ACK مرة واحدة</string>
     <string name="info_nr_language_terminal">- جديد: كلمات هذه الشاشة الخاصة وقائمة /help وهذه الملاحظات مترجمة أيضا. والأوامر التي تكتبها تبقى كما كتبتها تماما. وملاحظات الإصدار الجديد تظهر بالإنجليزية حتى تُترجم</string>
-    <string name="info_nr_language_2">- هذه مسودات لم يراجعها بعد متحدثون أصليون. وجولات المساعدة والأسطر التي تكتبها أجزاء أخرى من ACK في هذه الشاشة والكثير من مربعات الحوار تبقى بالإنجليزية. راجع DOCS/TRANSLATIONS.MD</string>
+    <string name="info_nr_language_2">- هذه مسودات لم يراجعها بعد متحدثون أصليون. الأسطر التي تكتبها أجزاء أخرى من ACK في هذه الشاشة والكثير من مربعات الحوار تبقى بالإنجليزية. راجع DOCS/TRANSLATIONS.MD</string>
     <string name="info_nr_fixes_head">-- الإصلاحات --</string>
     <string name="info_nr_fixes_1">- تم الإصلاح: كان التأكيد قبل مسح متغيرات عبارة أو موجهها يعرض جملته الثانية فقط. وهو يعرض الآن السؤال كاملا بالصياغة السابقة نفسها</string>
     <string name="info_b8_title">=== ملاحظات إصدار ACK v1.0-BETA.8 ===</string>
