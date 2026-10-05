@@ -900,4 +900,24 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
         <item quantity="many">%d DIAS</item>
         <item quantity="other">%d DIAS</item>
     </plurals>
+    <string name="profile_warn_switch">AVISAR ANTES DE MUDAR DE PERFIL: %1$s</string>
+    <string name="profile_warn_explain_1">QUANDO MUDAR DE PERFIL FARIA UM GESTO DA MATRIZ DIZER ALGO DIFERENTE, O ACK MOSTRA O QUE MUDARIA E PERGUNTA ANTES.</string>
+    <string name="profile_warn_explain_2">ISSO VALE SÓ PARA O BARALHO MATRIZ: OS BARALHOS DE AÇÕES RÁPIDAS, EMERGÊNCIA, EMOJI E GIF NÃO TÊM PERFIS, ENTÃO SEUS BOTÕES NUNCA SE MOVEM.</string>
+    <string name="profile_warn_explain_3">SÓ SE APLICA AO MENU DE PERFIS DENTRO DO APP. O WIDGET DA TELA INICIAL E O RELÓGIO MUDAM DE PERFIL SEM PERGUNTAR.</string>
+    <string name="profile_warn_dialog_title">MUDAR DE PERFIL?</string>
+    <string name="profile_warn_stay">NÃO MUDAR</string>
+    <string name="profile_warn_change">MUDAR DE PERFIL</string>
+    <string name="profile_warn_dont_show">NÃO MOSTRAR ESTE AVISO DE NOVO</string>
+    <string name="profile_warn_dont_show_note">VOCÊ PODE ATIVÁ-LO DE NOVO EM CONFIGURAÇÕES.</string>
+    <string name="profile_warn_offer">NOVIDADE: O ACK PODE AVISAR ANTES QUE UMA MUDANÇA DE PERFIL FAÇA UM GESTO DIZER ALGO DIFERENTE. ESTÁ DESATIVADO PARA VOCÊ, E NADA MUDA A MENOS QUE VOCÊ ATIVE.</string>
+    <string name="profile_warn_offer_turn_on">ATIVAR</string>
+    <string name="profile_warn_offer_not_now">AGORA NÃO</string>
+    <string name="profile_swap_line">%1$s: %2$s, passa a: %3$s</string>
+    <string name="profile_swap_more">E MAIS %1$d</string>
+    <string name="profile_swap_blank">(EM BRANCO)</string>
+    <plurals name="profile_swap_heading">
+        <item quantity="one">%1$d GESTO VAI DIZER ALGO DIFERENTE SE VOCÊ MUDAR PARA %2$s:</item>
+        <item quantity="many">%1$d GESTOS VÃO DIZER ALGO DIFERENTE SE VOCÊ MUDAR PARA %2$s:</item>
+        <item quantity="other">%1$d GESTOS VÃO DIZER ALGO DIFERENTE SE VOCÊ MUDAR PARA %2$s:</item>
+    </plurals>
 </resources>

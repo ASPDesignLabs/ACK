@@ -912,4 +912,23 @@
         <item quantity="one">%d DAY</item>
         <item quantity="other">%d DAYS</item>
     </plurals>
+    <string name="profile_warn_switch">WARN BEFORE PROFILE CHANGES: %1$s</string>
+    <string name="profile_warn_explain_1">WHEN CHANGING PROFILE WOULD MAKE A MATRIX GESTURE SAY SOMETHING DIFFERENT, ACK SHOWS WHAT WOULD CHANGE AND ASKS FIRST.</string>
+    <string name="profile_warn_explain_2">THIS IS ABOUT THE MATRIX DECK ONLY: QUICK ACTIONS, EMERGENCY, EMOJI AND GIF DECKS HAVE NO PROFILES, SO THEIR BUTTONS NEVER MOVE.</string>
+    <string name="profile_warn_explain_3">IT ONLY APPLIES TO THE PROFILE MENU IN THE APP. THE HOME-SCREEN WIDGET AND THE WATCH CHANGE PROFILE WITHOUT ASKING.</string>
+    <string name="profile_warn_dialog_title">CHANGE PROFILE?</string>
+    <string name="profile_warn_stay">STAY</string>
+    <string name="profile_warn_change">CHANGE PROFILE</string>
+    <string name="profile_warn_dont_show">DO NOT SHOW THIS WARNING AGAIN</string>
+    <string name="profile_warn_dont_show_note">YOU CAN TURN IT BACK ON IN SETTINGS.</string>
+    <string name="profile_warn_offer">NEW: ACK CAN WARN YOU BEFORE A PROFILE CHANGE MAKES A GESTURE SAY SOMETHING DIFFERENT. IT IS OFF FOR YOU, AND NOTHING CHANGES UNLESS YOU TURN IT ON.</string>
+    <string name="profile_warn_offer_turn_on">TURN ON</string>
+    <string name="profile_warn_offer_not_now">NOT NOW</string>
+    <string name="profile_swap_line">%1$s: %2$s, becomes: %3$s</string>
+    <string name="profile_swap_more">AND %1$d MORE</string>
+    <string name="profile_swap_blank">(BLANK)</string>
+    <plurals name="profile_swap_heading">
+        <item quantity="one">%1$d GESTURE WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO %2$s:</item>
+        <item quantity="other">%1$d GESTURES WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO %2$s:</item>
+    </plurals>
 </resources>

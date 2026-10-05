@@ -115,10 +115,12 @@ class BackupWordingTest {
         // data/ResourceText.kt is Android-bound, so it is read: a name with no resource must come back as itself (a visible gap, not silence),
         // for a string and for a plural, and each lookup asks for its own kind of resource.
         val text = noComments(source("data/ResourceText.kt"))
-        assertEquals(2, Regex("""if \(id == 0\) return name""").findAll(text).count())
+        // Three lookups: a string, a plural, and a plural that also takes arguments (a sentence with a count and a name in it).
+        assertEquals(3, Regex("""if \(id == 0\) return name""").findAll(text).count())
         assertTrue(text.contains("getIdentifier(name, \"string\", context.packageName)"))
         assertTrue(text.contains("getIdentifier(name, \"plurals\", context.packageName)"))
         assertTrue(text.contains("getQuantityString(id, quantity, quantity)"))
+        assertTrue("the quantity comes first, then the other arguments", text.contains("getQuantityString(id, quantity, quantity, *args)"))
     }
 
     @Test

@@ -891,4 +891,23 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
         <item quantity="one">%d DAG</item>
         <item quantity="other">%d DAE</item>
     </plurals>
+    <string name="profile_warn_switch">WAARSKU VOOR PROFIELVERANDERINGS: %1$s</string>
+    <string name="profile_warn_explain_1">AS DIE VERANDERING VAN PROFIEL \'N MATRIKS-GEBAAR IETS ANDERS SOU LAAT SÊ, WYS ACK WAT SOU VERANDER EN VRA EERS.</string>
+    <string name="profile_warn_explain_2">DIT GAAN SLEGS OOR DIE MATRIKS-DEK: VINNIGE AKSIES-, NOODGEVAL-, EMOJI- EN GIF-DEKKE HET GEEN PROFIELE NIE, SO HUL KNOPPIES BEWEEG NOOIT.</string>
+    <string name="profile_warn_explain_3">DIT GELD SLEGS VIR DIE PROFIELMENU IN DIE APP. DIE TEHUISSKERM-WIDGET EN DIE HOROLOSIE VERANDER PROFIEL SONDER OM TE VRA.</string>
+    <string name="profile_warn_dialog_title">VERANDER PROFIEL?</string>
+    <string name="profile_warn_stay">BLY</string>
+    <string name="profile_warn_change">VERANDER PROFIEL</string>
+    <string name="profile_warn_dont_show">MOENIE HIERDIE WAARSKUWING WEER WYS NIE</string>
+    <string name="profile_warn_dont_show_note">JY KAN DIT IN INSTELLINGS WEER AANSKAKEL.</string>
+    <string name="profile_warn_offer">NUUT: ACK KAN JOU WAARSKU VOORDAT \'N PROFIELVERANDERING \'N GEBAAR IETS ANDERS LAAT SÊ. DIT IS AF VIR JOU, EN NIKS VERANDER TENSY JY DIT AANSKAKEL.</string>
+    <string name="profile_warn_offer_turn_on">SKAKEL AAN</string>
+    <string name="profile_warn_offer_not_now">NIE NOU NIE</string>
+    <string name="profile_swap_line">%1$s: %2$s, word: %3$s</string>
+    <string name="profile_swap_more">EN %1$d MEER</string>
+    <string name="profile_swap_blank">(LEEG)</string>
+    <plurals name="profile_swap_heading">
+        <item quantity="one">%1$d GEBAAR SAL IETS ANDERS SÊ AS JY NA %2$s VERANDER:</item>
+        <item quantity="other">%1$d GEBARE SAL IETS ANDERS SÊ AS JY NA %2$s VERANDER:</item>
+    </plurals>
 </resources>

@@ -891,4 +891,23 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
         <item quantity="one">%d दिन</item>
         <item quantity="other">%d दिन</item>
     </plurals>
+    <string name="profile_warn_switch">प्रोफ़ाइल बदलने से पहले चेतावनी: %1$s</string>
+    <string name="profile_warn_explain_1">जब प्रोफ़ाइल बदलने से कोई मैट्रिक्स जेस्चर कुछ और बोलने लगे, तो ACK दिखाता है कि क्या बदलेगा और पहले पूछता है।</string>
+    <string name="profile_warn_explain_2">यह केवल मैट्रिक्स डेक के लिए है: त्वरित क्रियाएँ, आपातकाल, इमोजी और जीआईएफ डेक में प्रोफ़ाइल नहीं होते, इसलिए उनके बटन कभी नहीं हिलते।</string>
+    <string name="profile_warn_explain_3">यह केवल ऐप के प्रोफ़ाइल मेन्यू पर लागू होता है। होम-स्क्रीन विजेट और घड़ी बिना पूछे प्रोफ़ाइल बदलते हैं।</string>
+    <string name="profile_warn_dialog_title">प्रोफ़ाइल बदलें?</string>
+    <string name="profile_warn_stay">न बदलें</string>
+    <string name="profile_warn_change">प्रोफ़ाइल बदलें</string>
+    <string name="profile_warn_dont_show">यह चेतावनी दोबारा न दिखाएँ</string>
+    <string name="profile_warn_dont_show_note">आप इसे सेटिंग्स में फिर चालू कर सकते हैं।</string>
+    <string name="profile_warn_offer">नया: प्रोफ़ाइल बदलने से कोई जेस्चर कुछ और बोलने लगे, उससे पहले ACK आपको चेतावनी दे सकता है। यह आपके लिए बंद है, और जब तक आप चालू नहीं करते कुछ नहीं बदलता।</string>
+    <string name="profile_warn_offer_turn_on">चालू करें</string>
+    <string name="profile_warn_offer_not_now">अभी नहीं</string>
+    <string name="profile_swap_line">%1$s: %2$s, बदलकर: %3$s</string>
+    <string name="profile_swap_more">और %1$d</string>
+    <string name="profile_swap_blank">(खाली)</string>
+    <plurals name="profile_swap_heading">
+        <item quantity="one">%1$d जेस्चर कुछ और बोलेगा अगर आप %2$s पर जाएँ:</item>
+        <item quantity="other">%1$d जेस्चर कुछ और बोलेंगे अगर आप %2$s पर जाएँ:</item>
+    </plurals>
 </resources>

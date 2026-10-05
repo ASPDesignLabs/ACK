@@ -13,6 +13,8 @@ for f in HelpCore HelpManager HelpTarget HelpOfferBanner RecordTrainingDataHelp;
 # the choosers draw (stubs/app/HelpModules.kt); helpText() is stubbed in stubs/app/AppUi.kt.
 for f in HelpMenuDialog HelpCoachDialog PoseSelectorDialog VoiceRecordingsHelpSelectorDialog; do cp "$A/help/$f.kt" "$STAGE/com/example/besu/help/"; done
 cp "$A/ui/OverlayStyle.kt" "$STAGE/com/example/besu/ui/"
+# The profile-change warning's dialog (its words come from core/ProfileSwapDiff.kt through a TextSource, which is staged with the rest of core/).
+cp "$A/ui/ProfileChangeDialog.kt" "$STAGE/com/example/besu/ui/"
 # PLAIN WORDS' Terminal controls: the screen file plus the plain-Kotlin model it uses and the dialog text helper it calls.
 mkdir -p "$STAGE/com/example/besu/core" "$STAGE/com/example/besu/settings"
 cp "$A/core/SendFlags.kt" "$A/core/PlainLabels.kt" "$STAGE/com/example/besu/core/"

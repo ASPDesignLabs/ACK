@@ -24,4 +24,10 @@ class ResourceText(private val context: Context) : TextSource {
         if (id == 0) return name
         return context.resources.getQuantityString(id, quantity, quantity)
     }
+
+    override fun count(name: String, quantity: Int, vararg args: Any): String {
+        val id = context.resources.getIdentifier(name, "plurals", context.packageName)
+        if (id == 0) return name
+        return context.resources.getQuantityString(id, quantity, quantity, *args)
+    }
 }

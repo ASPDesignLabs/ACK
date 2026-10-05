@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.ui
 
+import com.example.besu.R
 import com.example.besu.core.ProfileSwapText
-import com.example.besu.core.ProfileWarningText
 import com.example.besu.core.SlotChange
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -39,14 +40,18 @@ fun ProfileChangeDialog(
     onStay: () -> Unit,
     onChange: () -> Unit
 ) {
+    val words = rememberText()
+    // A gesture is named the way the Matrix screen names it (the everyday name under PLAIN WORDS, the language's name otherwise); what is saved never changes.
+    val shownNames = changes.map { slotLabel(it.name) }
+
     TightDialogSurface(
         onDismiss = onStay,
         primaryColor = primaryColor,
-        title = ProfileWarningText.DIALOG_TITLE,
-        dismissLabel = ProfileWarningText.STAY
+        title = stringResource(R.string.profile_warn_dialog_title),
+        dismissLabel = stringResource(R.string.profile_warn_stay)
     ) {
         Text(
-            text = ProfileSwapText.heading(changes.size, targetProfile),
+            text = ProfileSwapText.heading(words, changes.size, targetProfile),
             color = Color.White,
             fontSize = 14.sp,
             lineHeight = 19.sp,
@@ -56,7 +61,7 @@ fun ProfileChangeDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        ProfileSwapText.lines(changes).forEach { line ->
+        ProfileSwapText.lines(words, changes, shownNames).forEach { line ->
             Text(
                 text = line,
                 color = Color.LightGray,
@@ -88,13 +93,13 @@ fun ProfileChangeDialog(
             Spacer(modifier = Modifier.width(8.dp))
             androidx.compose.foundation.layout.Column {
                 Text(
-                    text = ProfileWarningText.DONT_SHOW_AGAIN,
+                    text = stringResource(R.string.profile_warn_dont_show),
                     color = Color.White,
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    text = ProfileWarningText.DONT_SHOW_AGAIN_NOTE,
+                    text = stringResource(R.string.profile_warn_dont_show_note),
                     color = Color.Gray,
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace
@@ -108,8 +113,8 @@ fun ProfileChangeDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            NeonButton(ProfileWarningText.STAY, Modifier.weight(1f), mainColor = primaryColor) { onStay() }
-            NeonButton(ProfileWarningText.CHANGE, Modifier.weight(1f), mainColor = Color.White) { onChange() }
+            NeonButton(stringResource(R.string.profile_warn_stay), Modifier.weight(1f), mainColor = primaryColor) { onStay() }
+            NeonButton(stringResource(R.string.profile_warn_change), Modifier.weight(1f), mainColor = Color.White) { onChange() }
         }
     }
 }

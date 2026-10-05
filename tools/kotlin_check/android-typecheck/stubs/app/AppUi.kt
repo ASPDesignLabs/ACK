@@ -25,3 +25,7 @@ fun poseLabel(stored: String): String = stored
 /** HELP text with its label placeholders filled in (the real one is in ui/PlainWords.kt, which is not staged). */
 @androidx.compose.runtime.Composable
 fun helpText(text: String): String = text
+
+/** The label for a Matrix slot's stored name (the real one is in ui/PlainWords.kt, which is not staged). */
+@androidx.compose.runtime.Composable
+fun slotLabel(stored: String): String = stored

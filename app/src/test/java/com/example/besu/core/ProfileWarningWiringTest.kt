@@ -141,9 +141,11 @@ class ProfileWarningWiringTest {
     fun theDialog_isQuiet_hasStayBeforeChange_andACheckboxThatFlipsTheSameSetting() {
         val dialog = source("ui/ProfileChangeDialog.kt")
         assertTrue(dialog.contains("TightDialogSurface("))
-        assertTrue(dialog.contains("ProfileSwapText.heading("))
-        assertTrue(dialog.contains("ProfileSwapText.lines("))
-        assertTrue("STAY must come before CHANGE PROFILE, and be the prominent one", dialog.indexOf("ProfileWarningText.STAY") < dialog.indexOf("ProfileWarningText.CHANGE"))
+        assertTrue(dialog.contains("ProfileSwapText.heading(words, changes.size, targetProfile)"))
+        // Each gesture is named the way the Matrix screen names it (the everyday name under PLAIN WORDS), and the names are handed to the list.
+        assertTrue(dialog.contains("val shownNames = changes.map { slotLabel(it.name) }"))
+        assertTrue(dialog.contains("ProfileSwapText.lines(words, changes, shownNames)"))
+        assertTrue("STAY must come before CHANGE PROFILE, and be the prominent one", dialog.indexOf("R.string.profile_warn_stay), Modifier.weight(1f), mainColor = primaryColor") in 0 until dialog.indexOf("R.string.profile_warn_change), Modifier.weight(1f), mainColor = Color.White"))
         assertTrue(dialog.contains("onDontShowAgainChanged"))
         for (banned in listOf("performHapticFeedback", "HapticFeedback", "ToneGenerator", "MediaPlayer", "SoundPool", "OutputService", "TextToSpeech", "animate", "TightPanelButton")) {
             assertFalse("the dialog must not use $banned", dialog.contains(banned))
@@ -159,8 +161,8 @@ class ProfileWarningWiringTest {
         val main = source("MainActivity.kt")
         assertTrue(main.contains("AssistPrefs.setProfileChangeWarning(context, !checked)"))
         val settings = source("settings/SettingsView.kt")
-        assertTrue(settings.contains("ProfileWarningText.switchLabel("))
-        assertTrue(settings.contains("ProfileWarningText.SWITCH_EXPLANATION"))
+        assertTrue("the switch label says the switch's own state", settings.contains("ProfileWarningText.switchLabel(words, profileWarningOn),"))
+        assertTrue(settings.contains("ProfileWarningText.switchExplanation(words)"))
         assertTrue(settings.contains("AssistPrefs.setProfileChangeWarning("))
     }
 
@@ -168,10 +170,10 @@ class ProfileWarningWiringTest {
     fun theOffer_isShownOnlyInSettings_andNeverStartsHelpOrNavigates() {
         val settings = source("settings/SettingsView.kt")
         assertTrue(settings.contains("AssistSettings.shouldOfferWarning("))
-        assertTrue(settings.contains("ProfileWarningText.OFFER_TEXT"))
+        assertTrue(settings.contains("stringResource(R.string.profile_warn_offer),"))
         assertTrue(settings.contains("AssistPrefs.dismissProfileWarningOffer(context)"))
         // the offer must not change the setting except by the TURN ON tap
-        val at = settings.indexOf("ProfileWarningText.OFFER_TURN_ON")
+        val at = settings.indexOf("R.string.profile_warn_offer_turn_on")
         assertTrue(at >= 0)
     }
 }

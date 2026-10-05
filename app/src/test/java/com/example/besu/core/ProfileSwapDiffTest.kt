@@ -101,14 +101,14 @@ class ProfileSwapDiffTest {
 
     @Test
     fun theHeading_countsTheGestures_andAgreesWithTheNumber() {
-        assertEquals("1 GESTURE WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO WORK:", ProfileSwapText.heading(1, "WORK"))
-        assertEquals("2 GESTURES WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO WORK:", ProfileSwapText.heading(2, "WORK"))
-        assertEquals("12 GESTURES WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO HIGH_STRESS:", ProfileSwapText.heading(12, "HIGH_STRESS"))
+        assertEquals("1 GESTURE WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO WORK:", ProfileSwapText.heading(EnglishText, 1, "WORK"))
+        assertEquals("2 GESTURES WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO WORK:", ProfileSwapText.heading(EnglishText, 2, "WORK"))
+        assertEquals("12 GESTURES WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO HIGH_STRESS:", ProfileSwapText.heading(EnglishText, 12, "HIGH_STRESS"))
     }
 
     @Test
     fun aFewChangesAreListed_theRestAreCounted() {
-        val lines = ProfileSwapText.lines((1..9).map { change(it) })
+        val lines = ProfileSwapText.lines(EnglishText, (1..9).map { change(it) })
         assertEquals(ProfileSwapText.MAX_LISTED + 1, lines.size)
         assertEquals("SLOT 1: old 1", lines[0].substringBefore(", becomes:"))
         assertTrue(lines[0].contains(", becomes: new 1"))
@@ -117,7 +117,7 @@ class ProfileSwapDiffTest {
 
     @Test
     fun exactlyAsManyAsFit_havingNoAndMoreLine() {
-        val lines = ProfileSwapText.lines((1..ProfileSwapText.MAX_LISTED).map { change(it) })
+        val lines = ProfileSwapText.lines(EnglishText, (1..ProfileSwapText.MAX_LISTED).map { change(it) })
         assertEquals(ProfileSwapText.MAX_LISTED, lines.size)
         assertTrue(lines.none { it.startsWith("AND ") })
     }
@@ -125,7 +125,7 @@ class ProfileSwapDiffTest {
     @Test
     fun aVeryLongPhraseIsShortenedInTheMiddle_soTheDialogStaysReadable() {
         val long = "A".repeat(40) + "-the-important-end"
-        val line = ProfileSwapText.lines(listOf(change(1, old = long, new = "short"))).single()
+        val line = ProfileSwapText.lines(EnglishText, listOf(change(1, old = long, new = "short"))).single()
         assertTrue(line.length < long.length + 40)
         assertTrue("the end of the phrase is kept", line.contains("important-end"))
         assertTrue(line.contains("…"))
@@ -133,14 +133,14 @@ class ProfileSwapDiffTest {
 
     @Test
     fun aBlankPhrase_isShownAsBlank_notAsNothing() {
-        val line = ProfileSwapText.lines(listOf(change(1, old = "", new = "Hello."))).single()
+        val line = ProfileSwapText.lines(EnglishText, listOf(change(1, old = "", new = "Hello."))).single()
         assertTrue(line.contains("(BLANK)"))
-        val line2 = ProfileSwapText.lines(listOf(change(1, old = "Hello.", new = "  "))).single()
+        val line2 = ProfileSwapText.lines(EnglishText, listOf(change(1, old = "Hello.", new = "  "))).single()
         assertTrue(line2.contains("(BLANK)"))
     }
 
     @Test
     fun noChanges_giveNoLines() {
-        assertTrue(ProfileSwapText.lines(emptyList()).isEmpty())
+        assertTrue(ProfileSwapText.lines(EnglishText, emptyList()).isEmpty())
     }
 }

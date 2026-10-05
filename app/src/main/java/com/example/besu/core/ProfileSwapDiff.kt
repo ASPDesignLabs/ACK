@@ -32,45 +32,41 @@ object ProfileSwapDiff {
     fun shouldWarn(warningOn: Boolean, changes: List<SlotChange>): Boolean = warningOn && changes.isNotEmpty()
 }
 
-/** The words the warning dialog shows. Plain Kotlin so they are tested. */
+/**
+ * The words the warning dialog shows, read through a [TextSource] so they are in the chosen language. Plain Kotlin so they are tested in every language.
+ * A gesture's name and a profile's name are shown as given (the caller passes a gesture's name already worded like the Matrix screen words it); the phrases are the person's own.
+ */
 object ProfileSwapText {
     /** How many changes are listed before "AND N MORE". */
     const val MAX_LISTED = 4
 
     private const val MAX_PHRASE_CHARS = 48
 
-    fun heading(count: Int, targetProfile: String): String =
-        "$count ${if (count == 1) "GESTURE" else "GESTURES"} WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO $targetProfile:"
+    /** "2 GESTURES WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO WORK:", with the gesture count in the language's plural form. */
+    fun heading(text: TextSource, count: Int, targetProfile: String): String = text.count("profile_swap_heading", count, targetProfile)
 
-    /** "GESTURE NAME: old phrase, becomes: new phrase" for the first few, then how many more. */
-    fun lines(changes: List<SlotChange>): List<String> {
-        val listed = changes.take(MAX_LISTED).map { "${it.name}: ${phrase(it.oldPhrase)}, becomes: ${phrase(it.newPhrase)}" }
+    /**
+     * "GESTURE NAME: old phrase, becomes: new phrase" for the first few, then how many more. [names] are the gestures' display names in the same order as [changes]
+     * (a name that is missing falls back to the stored one), so the dialog can name a gesture the way the Matrix screen does.
+     */
+    fun lines(text: TextSource, changes: List<SlotChange>, names: List<String> = emptyList()): List<String> {
+        val listed = changes.take(MAX_LISTED).mapIndexed { i, change ->
+            text.get("profile_swap_line", names.getOrNull(i) ?: change.name, phrase(text, change.oldPhrase), phrase(text, change.newPhrase))
+        }
         val more = changes.size - MAX_LISTED
-        return if (more > 0) listed + "AND $more MORE" else listed
+        return if (more > 0) listed + text.get("profile_swap_more", more) else listed
     }
 
     // A very long phrase is shortened in the middle (so its end shows); a blank one is said to be blank, not shown as nothing.
-    private fun phrase(text: String): String = if (text.isBlank()) "(BLANK)" else MiddleEllipsis.shorten(text.trim(), MAX_PHRASE_CHARS)
+    private fun phrase(text: TextSource, phrase: String): String = if (phrase.isBlank()) text.get("profile_swap_blank") else MiddleEllipsis.shorten(phrase.trim(), MAX_PHRASE_CHARS)
 }
 
-/** The words for the WARN BEFORE PROFILE CHANGES switch in SETTINGS, the dialog's buttons, and the one-time offer. */
+/** The words for the WARN BEFORE PROFILE CHANGES switch in SETTINGS: its label (ON or OFF said in words) and its three-sentence explanation. The dialog's and the offer's words are plain strings the screens read. */
 object ProfileWarningText {
-    fun switchLabel(on: Boolean): String = "WARN BEFORE PROFILE CHANGES: ${if (on) "ON" else "OFF"}"
+    fun switchLabel(text: TextSource, on: Boolean): String = text.get("profile_warn_switch", text.get(if (on) "common_on" else "common_off"))
 
-    const val SWITCH_EXPLANATION =
-        "WHEN CHANGING PROFILE WOULD MAKE A MATRIX GESTURE SAY SOMETHING DIFFERENT, ACK SHOWS WHAT WOULD CHANGE AND ASKS FIRST. " +
-            "THIS IS ABOUT THE MATRIX DECK ONLY: QUICK ACTIONS, EMERGENCY, EMOJI AND GIF DECKS HAVE NO PROFILES, SO THEIR BUTTONS NEVER MOVE. " +
-            "IT ONLY APPLIES TO THE PROFILE MENU IN THE APP. THE HOME-SCREEN WIDGET AND THE WATCH CHANGE PROFILE WITHOUT ASKING."
+    private val explanation = listOf("profile_warn_explain_1", "profile_warn_explain_2", "profile_warn_explain_3")
 
-    const val DIALOG_TITLE = "CHANGE PROFILE?"
-    const val STAY = "STAY"
-    const val CHANGE = "CHANGE PROFILE"
-    const val DONT_SHOW_AGAIN = "DO NOT SHOW THIS WARNING AGAIN"
-    const val DONT_SHOW_AGAIN_NOTE = "YOU CAN TURN IT BACK ON IN SETTINGS."
-
-    // For an install that already existed: said once, dismissible, and nothing changes unless it is tapped.
-    const val OFFER_TEXT =
-        "NEW: ACK CAN WARN YOU BEFORE A PROFILE CHANGE MAKES A GESTURE SAY SOMETHING DIFFERENT. IT IS OFF FOR YOU, AND NOTHING CHANGES UNLESS YOU TURN IT ON."
-    const val OFFER_TURN_ON = "TURN ON"
-    const val OFFER_NOT_NOW = "NOT NOW"
+    /** The three sentences, joined with one space in code (a string resource's own trailing space is trimmed by Android). */
+    fun switchExplanation(text: TextSource): String = explanation.joinToString(" ") { text.get(it) }
 }

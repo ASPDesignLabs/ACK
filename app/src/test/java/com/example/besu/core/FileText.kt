@@ -21,4 +21,9 @@ class FileText(override val languageTag: String) : TextSource {
         val forms = plurals[name] ?: return name
         return String.format(Locale.ROOT, forms.getValue("other"), quantity)
     }
+
+    override fun count(name: String, quantity: Int, vararg args: Any): String {
+        val forms = plurals[name] ?: return name
+        return String.format(Locale.ROOT, forms.getValue("other"), quantity, *args)
+    }
 }

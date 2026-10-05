@@ -1343,7 +1343,7 @@ fun SettingsView(
                             .padding(12.dp)
                     ) {
                         Text(
-                            ProfileWarningText.OFFER_TEXT,
+                            stringResource(R.string.profile_warn_offer),
                             color = Color.LightGray,
                             fontSize = 12.sp,
                             lineHeight = 17.sp,
@@ -1351,12 +1351,12 @@ fun SettingsView(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            NeonButton(ProfileWarningText.OFFER_TURN_ON, Modifier.weight(1f), mainColor = primaryColor) {
+                            NeonButton(stringResource(R.string.profile_warn_offer_turn_on), Modifier.weight(1f), mainColor = primaryColor) {
                                 AssistPrefs.setProfileChangeWarning(context, true)
                                 profileWarningOn = true
                                 profileWarningOffered = false
                             }
-                            NeonButton(ProfileWarningText.OFFER_NOT_NOW, Modifier.weight(1f), mainColor = Color.White) {
+                            NeonButton(stringResource(R.string.profile_warn_offer_not_now), Modifier.weight(1f), mainColor = Color.White) {
                                 AssistPrefs.dismissProfileWarningOffer(context)
                                 profileWarningOffered = false
                             }
@@ -1367,7 +1367,7 @@ fun SettingsView(
 
                 // On or off, said in words (not only colour) and without animation. Choosing it by hand answers the offer.
                 NeonButton(
-                    ProfileWarningText.switchLabel(profileWarningOn),
+                    ProfileWarningText.switchLabel(words, profileWarningOn),
                     Modifier.fillMaxWidth(),
                     mainColor = if (profileWarningOn) primaryColor else Color.White
                 ) {
@@ -1377,7 +1377,7 @@ fun SettingsView(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    ProfileWarningText.SWITCH_EXPLANATION,
+                    ProfileWarningText.switchExplanation(words),
                     color = Color.Gray,
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace

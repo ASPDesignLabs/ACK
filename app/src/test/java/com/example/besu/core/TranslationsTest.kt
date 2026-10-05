@@ -90,7 +90,8 @@ class TranslationsTest {
         // "1 DAY" and "5 DAYS" carry the number as %d. Arabic's "one" and "two" are the words "one day" and "two days" and need none.
         for ((tag, plurals) in pluralTexts) for ((name, forms) in plurals) for ((quantity, text) in forms) {
             val needsNumber = !(tag == "ar" && (quantity == "one" || quantity == "two"))
-            assertEquals("$tag/$name/$quantity", needsNumber, text.contains("%d"))
+            // The number is %d, or %1$d where the sentence also takes other arguments (a plural with a profile name, say).
+            assertEquals("$tag/$name/$quantity", needsNumber, Regex("""%(1\$)?d""").containsMatchIn(text))
         }
     }
 

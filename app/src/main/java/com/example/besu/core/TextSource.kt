@@ -13,6 +13,12 @@ interface TextSource {
     /** The text named [name] (a plurals resource) in the word form that fits [quantity], with the quantity filled in. */
     fun count(name: String, quantity: Int): String
 
+    /**
+     * Like [count], for a plural sentence that also holds other arguments: [args] follow the quantity, so `%1$d` is the quantity and `%2$s` the first of [args]. The real sources override it;
+     * a source that does not simply ignores the extra arguments and reads as [count].
+     */
+    fun count(name: String, quantity: Int, vararg args: Any): String = count(name, quantity)
+
     /** The language these words are in (a BCP 47 tag such as "es" or "ar-EG"), so a date can use that language's month names. English unless the source says otherwise. */
     val languageTag: String get() = "en"
 }

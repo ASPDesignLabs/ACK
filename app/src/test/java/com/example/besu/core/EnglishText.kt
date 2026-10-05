@@ -21,4 +21,10 @@ object EnglishText : TextSource {
         val text = if (quantity == 1) forms["one"] ?: forms.getValue("other") else forms.getValue("other")
         return String.format(Locale.ROOT, text, quantity)
     }
+
+    override fun count(name: String, quantity: Int, vararg args: Any): String {
+        val forms = plurals[name] ?: return name
+        val text = if (quantity == 1) forms["one"] ?: forms.getValue("other") else forms.getValue("other")
+        return String.format(Locale.ROOT, text, quantity, *args)
+    }
 }
