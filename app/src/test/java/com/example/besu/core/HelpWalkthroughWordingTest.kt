@@ -24,12 +24,12 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
         "FieldOpsHelp.kt", "MatrixDeckHelp.kt",
-        "PersonalizationHelp.kt", "RecordTrainingDataHelp.kt", "StatementComposerHelp.kt", "VoiceRecordingsHelp.kt",
+        "RecordTrainingDataHelp.kt", "StatementComposerHelp.kt", "VoiceRecordingsHelp.kt",
         // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
         "HelpRegistry.kt",
     )
@@ -181,6 +181,7 @@ class HelpWalkthroughWordingTest {
         "helpmod_settings_management_audio_output_routing_title" to "settings_audio_routing_heading",
         "helpmod_settings_management_watch_audio_title" to "settings_watch_audio_heading",
         "helpmod_target_computer_guide_me_title" to "people_wizard_title",
+        "helpmod_personalization_manage_profiles_title" to "audio_manage_profiles",
     )
 
     /** A text that names a label in plain words (English has no placeholder there), so every language holds that label's own standard word, and it does not follow PLAIN WORDS (a known gap). */
@@ -212,6 +213,11 @@ class HelpWalkthroughWordingTest {
         "helpmod_target_computer_display_modes_body" to listOf("people_mode_tree", "people_mode_dropdown"),
         "helpmod_target_computer_guide_me_body" to listOf("people_guide_me"),
         "helpmod_target_computer_status_indicator_body" to listOf("header_computer"),
+        // AUDIO ARCHITECT: GUIDE VOX and the PROTOCOL entry where the global switches now live, the MANAGE PROFILES button, COMMIT, and the DSP chain.
+        "helpmod_personalization_global_output_body" to listOf("label_vox", "label_settings_entry"),
+        "helpmod_personalization_manage_profiles_body" to listOf("audio_manage_profiles"),
+        "helpmod_personalization_save_profile_body" to listOf("common_commit", "label_dsp_chain"),
+        "helpmod_personalization_completion_body" to listOf("label_dsp_chain"),
     )
 
     @Test
