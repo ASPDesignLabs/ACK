@@ -92,6 +92,15 @@ class HelpPlaceholdersTest {
                 checked++
             }
         }
+        // A walkthrough family that has moved to resources keeps its placeholders in the English strings file, so the same rule is applied there.
+        for ((name, text) in strings.filter { it.key.startsWith("helpmod_") }) {
+            for (m in Regex("""\{\{([A-Z0-9_]+):([^{}]*)\}\}""").findAll(text)) {
+                val key = LabelKey.fromName(m.groupValues[1]) ?: continue
+                val standard = strings.getValue(key.resourceName(false))
+                assertTrue("$name: {{${key.name}:${m.groupValues[2]}}} does not read like the standard label \"$standard\"", m.groupValues[2].equals(standard, ignoreCase = true))
+                checked++
+            }
+        }
         assertTrue("expected to check many placeholders, checked $checked", checked > 100)
     }
 

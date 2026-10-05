@@ -2,78 +2,62 @@
 package com.example.besu.help
 
 import com.example.besu.*
+/** This family's words are string resources (helpmod_<module id>_..., core/HelpWalkthroughText.kt), read where a step is drawn or spoken. */
 object QuickActionsDeckHelp {
     val module = HelpModule(
         id = "deck_quick_actions",
         category = HelpCategory.USING_DECKS,
-        title = "{{DECK_TYPE_QUICK:QUICK ACTIONS}} {{DECK:DECK}}",
-        summary = "THREE POSES, FOUR ACTIONS EACH -- FAST, FIXED OUTPUT.",
+        title = "helpmod_deck_quick_actions_title",
+        summary = "helpmod_deck_quick_actions_summary",
         destination = HelpDestination.MATRIX,
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "{{DECK_TYPE_QUICK:QUICK ACTIONS}}",
-                body = "{{DECK_TYPE_QUICK:Quick Actions}} is a simpler, fixed alternative to the Matrix " +
-                    "{{DECK:deck}}: three groups of four phrases, meant for your most common " +
-                    "lines rather than live remapping.\n\n" +
-                    "While a {{DECK_TYPE_QUICK:Quick Actions}} {{DECK:deck}} is active, it takes over completely -- " +
-                    "the watch's pose and twist choose a phrase from THIS {{DECK:deck}} instead " +
-                    "of running the usual Matrix categories."
+                title = "helpmod_deck_quick_actions_intro_title",
+                body = "helpmod_deck_quick_actions_intro_body"
             ),
             HelpStep(
                 id = "groups_intro",
-                title = "THREE GROUPS, THREE POSES",
-                body = "Each of the three groups is bound to one root pose -- " +
-                    "IDENTITY, DEFEND, or CONNECT. Each group tab shows its " +
-                    "bound pose underneath (e.g. \"G1\" over \"IDE\")."
+                title = "helpmod_deck_quick_actions_groups_intro_title",
+                body = "helpmod_deck_quick_actions_groups_intro_body"
             ),
             HelpStep(
                 id = "select_group",
-                title = "SELECT A GROUP",
-                body = "Tap a group tab to view its four actions.",
+                title = "helpmod_deck_quick_actions_select_group_title",
+                body = "helpmod_deck_quick_actions_select_group_body",
                 action = HelpAction.Interact(AckTags.QUICK_ACTION_GROUP),
                 targetTag = AckTags.QUICK_ACTION_GROUP
             ),
             HelpStep(
                 id = "edit_group",
-                title = "REBIND THE POSE",
-                body = "Tap EDIT to rename the group or change which pose fires " +
-                    "it. Picking a pose another group already uses swaps the two " +
-                    "-- every pose always belongs to exactly one group.\n\n" +
-                    "ROOT OVERRIDE SOURCE is a separate setting: it picks which " +
-                    "A/B/C variable bank fills any {{tags}} in this group's " +
-                    "phrases, and has no effect on which gesture triggers it.",
+                title = "helpmod_deck_quick_actions_edit_group_title",
+                body = "helpmod_deck_quick_actions_edit_group_body",
                 action = HelpAction.Interact(AckTags.QUICK_ACTION_GROUP_EDIT),
                 targetTag = AckTags.QUICK_ACTION_GROUP_EDIT
             ),
             HelpStep(
                 id = "mods",
-                title = "FOUR ACTIONS PER GROUP",
-                body = "Within a bound pose, the four actions line up with the " +
-                    "watch's modifier twists: hold the pose and fire immediately " +
-                    "for action 1, or twist 1-3 times first to reach the others."
+                title = "helpmod_deck_quick_actions_mods_title",
+                body = "helpmod_deck_quick_actions_mods_body"
             ),
             HelpStep(
                 id = "edit_slot",
-                title = "EDIT AN ACTION",
-                body = "Hold an action to edit its label, phrase, and any local " +
-                    "variable values.",
+                title = "helpmod_deck_quick_actions_edit_slot_title",
+                body = "helpmod_deck_quick_actions_edit_slot_body",
                 action = HelpAction.Interact(AckTags.QUICK_ACTION_SLOT),
                 targetTag = AckTags.QUICK_ACTION_SLOT
             ),
             HelpStep(
                 id = "save_slot",
-                title = "SAVE AND PLAY BACK",
-                body = "Commit the action, then tap it normally -- it speaks the " +
-                    "resolved phrase immediately, so you can check it sounds right.",
+                title = "helpmod_deck_quick_actions_save_slot_title",
+                body = "helpmod_deck_quick_actions_save_slot_body",
                 action = HelpAction.CommitText(AckTags.QUICK_ACTION_SAVE),
                 targetTag = AckTags.QUICK_ACTION_SAVE
             ),
             HelpStep(
                 id = "complete",
-                title = "READY TO GO",
-                body = "That's the whole {{DECK:deck}}: pick a pose per group, four " +
-                    "phrases per pose, edited and played back right here."
+                title = "helpmod_deck_quick_actions_complete_title",
+                body = "helpmod_deck_quick_actions_complete_body"
             )
         )
     )

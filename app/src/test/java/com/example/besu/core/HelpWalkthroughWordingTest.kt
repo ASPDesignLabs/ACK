@@ -24,12 +24,12 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt")
 
     /** The families that still hold their own English, each to be moved in its own commit. */
     private val notYetMoved = listOf(
-        "BasicsNavigationHelp.kt", "FieldOpsHelp.kt", "MatrixDeckHelp.kt",
-        "PersonalizationHelp.kt", "QuickActionsDeckHelp.kt", "RecordTrainingDataHelp.kt", "SettingsManagementHelp.kt", "StatementComposerHelp.kt", "TargetComputerHelp.kt", "VoiceRecordingsHelp.kt",
+        "FieldOpsHelp.kt", "MatrixDeckHelp.kt",
+        "PersonalizationHelp.kt", "RecordTrainingDataHelp.kt", "SettingsManagementHelp.kt", "StatementComposerHelp.kt", "TargetComputerHelp.kt", "VoiceRecordingsHelp.kt",
         // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
         "HelpRegistry.kt",
     )
@@ -131,6 +131,9 @@ class HelpWalkthroughWordingTest {
 
     // ---- the labels a step names ------------------------------------------------------------------------------------------------------------------
 
+    /** A lowercase brace token such as {{tags}} is shown as it is (it is not a label placeholder), so it is not a leftover. */
+    private fun withoutLiteralTokens(text: String): String = text.replace(Regex("""\{\{[a-z][a-z_]*\}\}"""), "")
+
     private fun filled(map: Map<String, String>, text: String, plain: Boolean): String =
         HelpPlaceholders.substitute(text, plain) { key, usePlain -> map[key.resourceName(usePlain)] }
 
@@ -150,9 +153,9 @@ class HelpWalkthroughWordingTest {
                 val t = map.getValue(name)
                 assertFalse("$tag/$name: a translation carries no English original", Regex("""\{\{[A-Z0-9_]+:""").containsMatchIn(t))
                 assertEquals("$tag/$name: the same labels as English (a translation may restructure and name one a different number of times)", keys.toSet(), HelpPlaceholders.keysIn(t).toSet())
-                for (plain in listOf(false, true)) assertFalse("$tag/$name: braces left after the labels are filled in (plain=$plain)", filled(map, t, plain).contains("{{"))
+                for (plain in listOf(false, true)) assertFalse("$tag/$name: braces left after the labels are filled in (plain=$plain)", withoutLiteralTokens(filled(map, t, plain)).contains("{{"))
             }
-            for (plain in listOf(false, true)) assertFalse("en/$name: braces left (plain=$plain)", filled(english, text, plain).contains("{{"))
+            for (plain in listOf(false, true)) assertFalse("en/$name: braces left (plain=$plain)", withoutLiteralTokens(filled(english, text, plain)).contains("{{"))
         }
         assertTrue("expected to check some placeholders, checked $checked", checked > 0)
     }
@@ -189,6 +192,10 @@ class HelpWalkthroughWordingTest {
         // MANAGE in the deck menu, and the four kinds of deck the create dialog offers.
         "helpmod_deck_management_manage_body" to listOf("deckmenu_manage"),
         "helpmod_deck_management_type_body" to listOf("label_deck_type_quick", "label_deck_type_emergency", "label_deck_type_emoji", "label_deck_type_gif"),
+        // The PROFILE button in the header, the three poses a Quick Actions group can be bound to, EDIT and the ROOT OVERRIDE SOURCE setting.
+        "helpmod_basics_navigation_profile_selector_body" to listOf("header_profile"),
+        "helpmod_deck_quick_actions_groups_intro_body" to listOf("label_pose_identity", "label_pose_defend", "label_pose_connect"),
+        "helpmod_deck_quick_actions_edit_group_body" to listOf("common_edit", "qa_group_root_title"),
     )
 
     @Test
@@ -213,6 +220,31 @@ class HelpWalkthroughWordingTest {
             assertTrue("$tag: the .map file kind is named: $body", body.contains(".map", ignoreCase = true))
             for ((name, text) in map.filter { it.key.startsWith(HelpWalkthroughText.PREFIX) }) assertFalse("$tag/$name takes an argument nothing passes: $text", text.contains("%"))
         }
+    }
+
+    @Test
+    fun aParagraphBreakInEnglishIsAParagraphBreakInEveryLanguage_andNoFileHoldsARawNewline() {
+        for ((name, text) in english.filter { it.key.startsWith(HelpWalkthroughText.PREFIX) && it.value.contains("\n") }) {
+            for ((tag, map) in translations) assertEquals("$tag/$name: the same number of line breaks as English", text.count { it == '\n' }, map.getValue(name).count { it == '\n' })
+        }
+        // Android collapses a raw newline inside a string resource to a space, so a break must be written as the \n escape; the XML parser used by the tests would not notice.
+        for (path in listOf("values") + StringsXml.translations().keys.map { "values-$it" }) {
+            val raw = RepoFiles.read("app/src/main/res/$path/strings.xml")
+            for (m in Regex("""<string name="(helpmod_[a-z0-9_]+)"[^>]*>([^<]*)</string>""").findAll(raw)) assertFalse("$path/${m.groupValues[1]} holds a raw newline", m.groupValues[2].contains("\n"))
+        }
+    }
+
+    @Test
+    fun aLiteralLowercaseBraceTokenInEnglishIsKeptAsItIsInEveryLanguage_neverUppercasedIntoAPlaceholder() {
+        val literal = Regex("""\{\{[a-z][a-z_]*\}\}""")
+        var checked = 0
+        for ((name, text) in english.filter { it.key.startsWith(HelpWalkthroughText.PREFIX) }) {
+            val tokens = literal.findAll(text).map { it.value }.sorted().toList()
+            if (tokens.isEmpty()) continue
+            checked++
+            for ((tag, map) in translations) assertEquals("$tag/$name: the same literal tokens as English", tokens, literal.findAll(map.getValue(name)).map { it.value }.sorted().toList())
+        }
+        assertTrue("expected at least the Quick Actions {{tags}} step", checked >= 1)
     }
 
     @Test
