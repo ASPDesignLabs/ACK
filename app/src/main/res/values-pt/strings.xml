@@ -1867,4 +1867,10 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="helpmod_field_ops_pose_training_summary">ESCOLHA UMA POSE E PERCORRA ARMAR, TRAVAR, MODIFICAR E DISPARAR.</string>
     <string name="helpmod_field_ops_pose_training_select_title">TREINAMENTO DE POSES</string>
     <string name="helpmod_field_ops_pose_training_select_body">ESCOLHA UMA POSE PARA TREINAR.</string>
+    <string name="helpmod_manual_override_title">{{MANUAL_OVERRIDE}}</string>
+    <string name="helpmod_manual_override_summary">{{MEMORY_BANKS}}, FRASES SALVAS E SAÍDA DIRETA DE TEXTO.</string>
+    <string name="helpmod_manual_override_intro_title">{{MANUAL_OVERRIDE}}</string>
+    <string name="helpmod_manual_override_intro_body">{{MANUAL_OVERRIDE}} OFERECE COMUNICAÇÃO DIRETA POR TEXTO QUANDO A ENTRADA DO RELÓGIO NÃO ESTÁ DISPONÍVEL OU É INCONVENIENTE. ELA É ACESSADA PELO TERMINAL AGORA QUE DIGITAR É COMPOSITOR DE MENSAGENS.</string>
+    <string name="helpmod_manual_override_open_manual_title">ABRIR A ENTRADA MANUAL</string>
+    <string name="helpmod_manual_override_open_manual_body">DIGITE /m NO PROMPT DO TERMINAL E ENVIE.</string>
 </resources>

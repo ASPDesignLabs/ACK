@@ -1848,4 +1848,10 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="helpmod_field_ops_pose_training_summary">एक पोज़ चुनें, फिर आर्म, लॉक, मॉडिफ़ाई और फ़ायर करना सीखें।</string>
     <string name="helpmod_field_ops_pose_training_select_title">पोज़ प्रशिक्षण</string>
     <string name="helpmod_field_ops_pose_training_select_body">प्रशिक्षण के लिए एक पोज़ चुनें।</string>
+    <string name="helpmod_manual_override_title">{{MANUAL_OVERRIDE}}</string>
+    <string name="helpmod_manual_override_summary">{{MEMORY_BANKS}}, सहेजे हुए वाक्य और सीधा टेक्स्ट आउटपुट।</string>
+    <string name="helpmod_manual_override_intro_title">{{MANUAL_OVERRIDE}}</string>
+    <string name="helpmod_manual_override_intro_body">{{MANUAL_OVERRIDE}} तब सीधे टेक्स्ट से संवाद देता है जब घड़ी का इनपुट उपलब्ध न हो या असुविधाजनक हो। अब टाइप कथन संपादक बन गया है, इसलिए यह टर्मिनल से खुलता है।</string>
+    <string name="helpmod_manual_override_open_manual_title">मैन्युअल इनपुट खोलें</string>
+    <string name="helpmod_manual_override_open_manual_body">टर्मिनल के प्रॉम्प्ट पर /m टाइप करें और भेजें।</string>
 </resources>

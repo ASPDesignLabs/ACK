@@ -1848,4 +1848,10 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="helpmod_field_ops_pose_training_summary">KIES \'N POSE EN DOEN DAN BEWAPEN, SLUIT, MODIFISEER EN VUUR.</string>
     <string name="helpmod_field_ops_pose_training_select_title">POSE-OPLEIDING</string>
     <string name="helpmod_field_ops_pose_training_select_body">KIES \'N POSE OM TE OEFEN.</string>
+    <string name="helpmod_manual_override_title">{{MANUAL_OVERRIDE}}</string>
+    <string name="helpmod_manual_override_summary">{{MEMORY_BANKS}}, GESTOORDE SINNE EN DIREKTE TEKSUITSET.</string>
+    <string name="helpmod_manual_override_intro_title">{{MANUAL_OVERRIDE}}</string>
+    <string name="helpmod_manual_override_intro_body">{{MANUAL_OVERRIDE}} BIED DIREKTE TEKS-KOMMUNIKASIE WANNEER HORLOSIE-INVOER NIE BESKIKBAAR OF ONGERIEFLIK IS NIE. DIT WORD VANAF TERMINAAL BEREIK NOUDAT TIK DIE BOODSKAPSKRYWER IS.</string>
+    <string name="helpmod_manual_override_open_manual_title">MAAK HANDMATIGE INVOER OOP</string>
+    <string name="helpmod_manual_override_open_manual_body">TIK /m BY DIE TERMINAAL-PROMPT EN STUUR DIT.</string>
 </resources>

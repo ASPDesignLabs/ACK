@@ -1869,4 +1869,10 @@
     <string name="helpmod_field_ops_pose_training_summary">PICK A POSE, THEN WALK THROUGH ARM, LOCK, MODIFY, AND FIRE.</string>
     <string name="helpmod_field_ops_pose_training_select_title">POSE TRAINING</string>
     <string name="helpmod_field_ops_pose_training_select_body">Choose a pose to train.</string>
+    <string name="helpmod_manual_override_title">{{MANUAL_OVERRIDE:MANUAL OVERRIDE}}</string>
+    <string name="helpmod_manual_override_summary">{{MEMORY_BANKS:MEMORY BANKS}}, SAVED PHRASES, AND DIRECT TEXT OUTPUT.</string>
+    <string name="helpmod_manual_override_intro_title">{{MANUAL_OVERRIDE:MANUAL OVERRIDE}}</string>
+    <string name="helpmod_manual_override_intro_body">{{MANUAL_OVERRIDE:Manual Override}} provides direct text communication when watch input is unavailable or inconvenient. It\'s reached from TERMINAL now that TYPE is the statement composer.</string>
+    <string name="helpmod_manual_override_open_manual_title">OPEN MANUAL INPUT</string>
+    <string name="helpmod_manual_override_open_manual_body">Type /m at the TERMINAL prompt and send it.</string>
 </resources>

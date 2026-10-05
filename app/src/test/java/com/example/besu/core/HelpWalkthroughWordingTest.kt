@@ -24,13 +24,10 @@ class HelpWalkthroughWordingTest {
     private val everyLanguage get() = listOf("en" to english) + translations.toList()
 
     /** The families that have moved to resources (a file in help/). */
-    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt", "RecordTrainingDataHelp.kt", "MatrixDeckHelp.kt", "VoiceRecordingsHelp.kt", "FieldOpsHelp.kt")
+    private val moved = listOf("GeoProtocolHelp.kt", "LogsHelp.kt", "GifDeckHelp.kt", "EmojiDeckHelp.kt", "EmergencyDeckHelp.kt", "DeckManagementHelp.kt", "BasicsNavigationHelp.kt", "QuickActionsDeckHelp.kt", "SettingsManagementHelp.kt", "TargetComputerHelp.kt", "PersonalizationHelp.kt", "StatementComposerHelp.kt", "RecordTrainingDataHelp.kt", "MatrixDeckHelp.kt", "VoiceRecordingsHelp.kt", "FieldOpsHelp.kt", "HelpRegistry.kt")
 
-    /** The families that still hold their own English, each to be moved in its own commit. */
-    private val notYetMoved = listOf(
-        // The registry itself holds one inline module (MANUAL OVERRIDE), so it is a family too.
-        "HelpRegistry.kt",
-    )
+    /** The families that still hold their own English, each to be moved in its own commit. None is left: a new family file starts here until it moves. */
+    private val notYetMoved = emptyList<String>()
 
     private class Step(val id: String, val title: String?, val body: String?)
     private class Mod(val id: String, val title: String?, val summary: String?, val steps: List<Step>)
@@ -285,6 +282,9 @@ class HelpWalkthroughWordingTest {
         "helpmod_field_ops_pose_connect_summary" to listOf("label_pose_connect"),
         "helpmod_field_ops_pose_connect_pose_lock_title" to listOf("label_pose_connect"),
         "helpmod_field_ops_pose_connect_pose_locked_body" to listOf("label_pose_connect"),
+        // MANUAL OVERRIDE (the registry's inline module): the Terminal, the TYPE tab's name and the statement composer.
+        "helpmod_manual_override_intro_body" to listOf("label_terminal", "label_nav_type", "label_composer"),
+        "helpmod_manual_override_open_manual_body" to listOf("label_terminal"),
     )
 
     @Test
@@ -367,6 +367,20 @@ class HelpWalkthroughWordingTest {
             for ((tag, map) in translations) assertEquals("$tag/$name: the same literal tokens as English", tokens, literal.findAll(map.getValue(name)).map { it.value }.sorted().toList())
         }
         assertTrue("expected at least the Quick Actions {{tags}} step", checked >= 1)
+    }
+
+    @Test
+    fun aTypedCommandInEnglishIsKeptExactlyInEveryLanguage() {
+        // /m is typed at the Terminal prompt; the typed commands are never translated.
+        val command = Regex("""(?<![A-Za-z0-9/])/[a-z]{1,10}\b""")
+        var checked = 0
+        for ((name, text) in english.filter { it.key.startsWith(HelpWalkthroughText.PREFIX) }) {
+            for (c in command.findAll(text).map { it.value }) {
+                checked++
+                for ((tag, map) in translations) assertTrue("$tag/$name lost the command $c: ${map.getValue(name)}", Regex("""(?<![A-Za-z0-9/])${Regex.escape(c)}\b""").containsMatchIn(map.getValue(name)))
+            }
+        }
+        assertTrue("expected at least the /m step", checked >= 1)
     }
 
     @Test

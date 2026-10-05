@@ -107,9 +107,16 @@ class HelpPlaceholdersTest {
     @Test
     fun everyPlaceholderInTheHelpModulesNamesARealLabel_andItsOriginalIsNotLeftBlankInStandardMode() {
         val dir = RepoFiles.file("app/src/main/java/com/example/besu/help")
-        val used = dir.listFiles()!!.filter { it.extension == "kt" }.flatMap { file ->
+        val inSource = dir.listFiles()!!.filter { it.extension == "kt" }.flatMap { file ->
             Regex("""\{\{([A-Z0-9_]+)(?::[^{}]*)?\}\}""").findAll(file.readText()).map { file.name to it.groupValues[1] }.toList()
         }
+        // The walkthrough text lives in the string resources now (every language), so the same rule is applied there.
+        val inResources = (listOf("values") + StringsXml.translations().keys.map { "values-$it" }).flatMap { folder ->
+            StringsXml.read(RepoFiles.file("app/src/main/res/$folder/strings.xml")).filter { it.name.startsWith("helpmod_") }.flatMap { e ->
+                Regex("""\{\{([A-Z0-9_]+)(?::[^{}]*)?\}\}""").findAll(e.text).map { "$folder/${e.name}" to it.groupValues[1] }.toList()
+            }
+        }
+        val used = inSource + inResources
         for ((file, key) in used) assertTrue("$file uses {{$key}}, which is not a LabelKey", LabelKey.fromName(key) != null)
         assertFalse("the scan found no placeholder at all; is the HELP text really using them?", used.isEmpty())
     }
