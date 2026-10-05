@@ -194,7 +194,7 @@ class PlainTerminalControlsWiringTest {
         // One function does the restart and writes the history line; the typed /repair and the button both call it.
         val repair = RepoFiles.declarationOf(design.replace("\ninternal fun", "\n    internal fun"), "repairBackgroundServices")
         assertTrue(repair.contains("restartBackgroundServices(context)"))
-        assertTrue(repair.contains("logTerminalLocal(context, \"BACKGROUND SERVICES RESTARTED\")"))
+        assertTrue(repair.contains("logTerminalLocal(context, context.getString(R.string.term_services_restarted))"))
         assertEquals("the restart itself is called from one place", 1, Regex("""\brestartBackgroundServices\(context\)""").findAll(design).count())
         assertEquals("the definition plus the typed command", 2, Regex("""repairBackgroundServices\(""").findAll(design).count() - 0)
         val settings = noComments(source("settings/SettingsView.kt"))

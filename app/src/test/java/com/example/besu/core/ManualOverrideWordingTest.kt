@@ -11,7 +11,7 @@ import org.junit.Test
  * The legacy Manual Override screen (TYPE behind Terminal's `/m`), its memory-banks popup, the BUILDER deck's tactical guide and the Matrix editor's category buttons read their words from string
  * resources. The screen cannot be compiled here (`ui/DesignSystem.kt` uses the SDK; it is syntax-checked), so this reads it: the old English literals are gone, every string it names exists in every
  * language and none is unused, each word sits on the control that does what it says, and the values that are logic or saved (speech source tags, the variable letters, ids, the stored pose names) were not translated.
- * ManualOverrideTextTest holds the decisions. The Terminal's own save dialog, which shares four words with this screen, is the Terminal's group and is left alone.
+ * ManualOverrideTextTest holds the decisions. The Terminal's own save dialog shares four words with this screen and reads the same strings.
  */
 class ManualOverrideWordingTest {
 
@@ -72,12 +72,12 @@ class ManualOverrideWordingTest {
     }
 
     @Test
-    fun theTerminalsOwnSaveDialogIsTheTerminalsGroup_soItsSharedWordsAreStillLiteral() {
-        // Four words (ASSIGN A TAG, NEW TAG, SAVE, CANCEL) are spelled the same in the Terminal's save dialog. That dialog moves with the Terminal; pinned here so the boundary is a decision, not an oversight.
-        assertTrue(terminal.contains("TightSectionLabel(\"ASSIGN A TAG\")"))
-        assertTrue(terminal.contains("placeholder = { Text(\"NEW TAG\") },"))
-        assertTrue(terminal.contains("TightPanelButton(\"SAVE\", modifier = Modifier.weight(1f), mainColor = FluxCyan)"))
-        assertTrue(terminal.contains("TightPanelButton(\"CANCEL\", modifier = Modifier.weight(1f), isActive = false, mainColor = FluxCyan)"))
+    fun theTerminalsOwnSaveDialogSharesTheseFourWordsNowThatTheTerminalIsMigrated() {
+        // The Terminal's save dialog spells ASSIGN A TAG, NEW TAG, SAVE and CANCEL like this screen's, so it reads the very same strings (it was left literal until the Terminal moved).
+        assertTrue(terminal.contains("TightSectionLabel(stringResource(R.string.manual_assign_tag))"))
+        assertTrue(terminal.contains("placeholder = { Text(stringResource(R.string.manual_new_tag)) },"))
+        assertTrue(terminal.contains("TightPanelButton(stringResource(R.string.common_save), modifier = Modifier.weight(1f), mainColor = FluxCyan)"))
+        assertTrue(terminal.contains("TightPanelButton(stringResource(R.string.common_cancel), modifier = Modifier.weight(1f), isActive = false, mainColor = FluxCyan)"))
     }
 
     // ---- each word sits on the control that does what it says -----------------------------------------------------------------------

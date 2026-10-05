@@ -402,13 +402,14 @@ class SettingsWordingTest {
             "settings_term_hide_path_desc" to "Filters out the verbose per-tag RESOLVE trace logged every time a Matrix phrase plays, independent of the toggle above.",
             "settings_term_mono" to "MONOSPACE TERMINAL",
             "settings_term_mono_desc" to "Renders the Terminal screen -- log rows, the prompt line, command output -- in a true monospace font so columns line up like a real terminal. Off by default to keep the existing look.",
-            "settings_term_statusbox_desc" to "Color of the live TYPING / shared root variable strip above the Terminal prompt.",
-            "settings_voice_heading" to "VOICE RECORDINGS", "settings_voice_manage_desc" to "Manage voice clips recorded for Quick Actions prompts.",
+                        "settings_voice_heading" to "VOICE RECORDINGS", "settings_voice_manage_desc" to "Manage voice clips recorded for Quick Actions prompts.",
             "settings_voice_gain_desc" to "Trims volume for recorded voice prompts only, on top of the master gain above -- everything else (synthesized speech) is unaffected.",
             "settings_profiles_heading" to "PROFILES",
         )
         for ((name, text) in expected) assertEquals(name, text, english.getValue(name))
         assertEquals("STATUSBOX TEXT COLOR", EnglishText.get("settings_term_statusbox_color", "STATUSBOX"))
+        // The sentence names the Terminal's TYPING strip by the word the strip itself shows, handed in as an argument (the strip is translated now).
+        assertEquals("Color of the live TYPING / shared root variable strip above the Terminal prompt.", EnglishText.get("settings_term_statusbox_desc", english.getValue("term_typing")))
         assertEquals("LOG RETENTION: 7 DAYS (ROLLING)", EnglishText.get("settings_term_retention_line", EnglishText.count("settings_term_days", 7)))
         assertEquals("LOG RETENTION: 1 DAY (ROLLING)", EnglishText.get("settings_term_retention_line", EnglishText.count("settings_term_days", 1)))
         assertEquals("Entries older than this roll off on a continuous window, not a calendar day -- up to 400 kept either way.", EnglishText.get("settings_term_retention_desc", 400))
@@ -424,19 +425,23 @@ class SettingsWordingTest {
             assertTrue("$tag: the retention line takes the worded days", map.getValue("settings_term_retention_line").contains("%1\$s"))
             assertTrue("$tag: the retention sentence takes the number kept", map.getValue("settings_term_retention_desc").contains("%1\$d"))
             assertTrue("$tag: the gain takes a percentage and a literal percent sign", map.getValue("settings_voice_gain").contains("%1\$d%%"))
-            for (name in partC - setOf("settings_term_statusbox_color", "settings_term_retention_line", "settings_term_retention_desc", "settings_voice_gain")) {
+            assertTrue("$tag: the strip's description takes the word on the strip", map.getValue("settings_term_statusbox_desc").contains("%1\$s"))
+            for (name in partC - setOf("settings_term_statusbox_color", "settings_term_statusbox_desc", "settings_term_retention_line", "settings_term_retention_desc", "settings_voice_gain")) {
                 assertFalse("$tag/$name takes an argument nothing passes", Regex("""%\d""").containsMatchIn(map.getValue(name)))
             }
         }
     }
 
     @Test
-    fun theWordsTheTerminalPrintsItselfStayEnglishInsideTheSentencesThatPointAtThem() {
-        // RESOLVE is the word on the trace lines and TYPING the word on the strip, both printed by the Terminal in English, so the sentences keep them.
+    fun theTraceWordStaysEnglish_andTheStripWordIsHandedInBecauseTheStripIsTranslated() {
+        // RESOLVE is the word on the PATH trace lines, which the data layer writes (CommandRepository.debugResolvedPhrase) in English, so the sentence keeps it.
         for ((tag, map) in listOf("en" to english) + translations.toList()) {
             assertTrue("$tag: RESOLVE", Regex("""\bRESOLVE\b""").containsMatchIn(map.getValue("settings_term_hide_path_desc")))
-            assertTrue("$tag: TYPING", Regex("""\bTYPING\b""").containsMatchIn(map.getValue("settings_term_statusbox_desc")))
+            // TYPING is the word on the Terminal's own strip, which is translated now (term_typing): the sentence takes it as an argument and no longer types it.
+            assertFalse("$tag: no typed TYPING left", Regex("""\bTYPING\b""").containsMatchIn(map.getValue("settings_term_statusbox_desc")))
         }
+        val settings = RepoFiles.read("$base/settings/SettingsView.kt")
+        assertTrue(settings.contains("stringResource(R.string.settings_term_statusbox_desc, stringResource(R.string.term_typing)),"))
     }
 
     @Test

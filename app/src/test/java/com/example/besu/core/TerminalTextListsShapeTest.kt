@@ -5,9 +5,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The Terminal's two big text lists (`/help` and `/info`) are Kotlin `listOf(...)` blocks in ui/DesignSystem.kt, which cannot be compiled without the
- * Android SDK. A missing comma between two lines is a build error there, and an edit to these lists is made in nearly every release, so this checks
+ * The Terminal's big text list (`/info`'s patch notes) is a Kotlin `listOf(...)` block in ui/DesignSystem.kt, which cannot be compiled without the
+ * Android SDK. A missing comma between two lines is a build error there, and an edit to this list is made in nearly every release, so this checks
  * the shape of every line: one quoted line, a comma after it (not after the last), no `$` (which would start a template), no stray quote.
+ * (The `/help` list used to be one too; it is built from core/TerminalText.kt now and checked by TerminalTextTest.)
  */
 class TerminalTextListsShapeTest {
 
@@ -43,5 +44,9 @@ class TerminalTextListsShapeTest {
     fun theInfoPatchNotesAreWellFormed() = checkShape("PATCH_NOTES")
 
     @Test
-    fun theHelpLinesAreWellFormed() = checkShape("TERMINAL_HELP_LINES")
+    fun theHelpListIsNoLongerAKotlinListInTheScreen() {
+        val text = RepoFiles.read("app/src/main/java/com/example/besu/ui/DesignSystem.kt")
+        assertTrue(!text.contains("TERMINAL_HELP_LINES"))
+        assertTrue(text.contains("TerminalText.helpLines(ResourceText(context))"))
+    }
 }

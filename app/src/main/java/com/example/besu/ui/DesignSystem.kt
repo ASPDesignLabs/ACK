@@ -5,6 +5,7 @@ import androidx.compose.ui.res.stringResource
 import com.example.besu.R
 import com.example.besu.core.LabelKey
 import com.example.besu.core.ManualOverrideText
+import com.example.besu.core.TerminalText
 import com.example.besu.core.SendFlags
 import com.example.besu.core.SendSwitchPolicy
 import com.example.besu.*
@@ -363,21 +364,7 @@ private sealed class TerminalPromptResult {
     object ShowManualOverride : TerminalPromptResult()
 }
 
-private val TERMINAL_HELP_LINES = listOf(
-    "SLASH COMMANDS:",
-    "/help, /?        SHOW THIS LIST",
-    "/q, /quiet       SEND WITHOUT AUDIO",
-    "/n, /nosave      SEND WITHOUT LOGGING",
-    "/s, /sticky      SEND, HOLD TO CLEAR",
-    "/e, /emergency   SEND WITH EMERGENCY OVERRIDES",
-    "/v               BROWSE SHARED ROOT VARIABLES",
-    "/t               BROWSE TARGET COMPUTER ENTRIES",
-    "/cls             CLEAR THE LOG (CONFIRM REQUIRED)",
-    "/b, /backup      EXPORT ACK DATA (CONFIRM REQUIRED)",
-    "/repair          RESTART BACKGROUND SERVICES",
-    "/info            SHOW PATCH NOTES",
-    "/m               OPEN CLASSIC MANUAL OVERRIDE"
-)
+// The /help list is built by TerminalText.helpLines (core/TerminalText.kt): the commands as typed, never translated, beside what each does in the chosen language.
 
 // --- PATCH NOTES (/info) ---
 // One entry here = one line revealed every ~2s by TerminalView's reveal
@@ -632,12 +619,12 @@ private fun findTargetTrigger(text: String): IntRange? =
 // the caller only ever has to react to the result.
 private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptResult {
     if (findVariableTrigger(raw) != null) {
-        logTerminalLocal(context, "RESOLVE /v FIRST -- TAP A VARIABLE OR DELETE IT", "CMD_WARN")
+        logTerminalLocal(context, context.getString(R.string.term_resolve_v), "CMD_WARN")
         return TerminalPromptResult.Error
     }
 
     if (findTargetTrigger(raw) != null) {
-        logTerminalLocal(context, "RESOLVE /t FIRST -- TAP A TARGET OR DELETE IT", "CMD_WARN")
+        logTerminalLocal(context, context.getString(R.string.term_resolve_t), "CMD_WARN")
         return TerminalPromptResult.Error
     }
 
@@ -650,7 +637,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
     val rest = tokens.drop(1).joinToString(" ").trim().lowercase()
 
     if (first == "/help" || first == "/?") {
-        logTerminalLocal(context, TERMINAL_HELP_LINES.joinToString("\n"))
+        logTerminalLocal(context, TerminalText.helpLines(ResourceText(context)).joinToString("\n"))
         return TerminalPromptResult.HelpShown
     }
 
@@ -660,7 +647,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
         }
         logTerminalLocal(
             context,
-            "CLEAR ENTIRE LOG? THIS CANNOT BE UNDONE.\nTYPE /cls CONFIRM TO PROCEED.",
+            TerminalText.clearConfirmation(ResourceText(context)),
             "CMD_WARN"
         )
         return TerminalPromptResult.Error
@@ -696,7 +683,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
             "/s", "/sticky" -> flags = flags.copy(sticky = true)
             "/e", "/emergency" -> flags = flags.copy(emergency = true)
             else -> {
-                logTerminalLocal(context, "UNKNOWN COMMAND: ${tokens[index]} -- TRY /help", "CMD_ERR")
+                logTerminalLocal(context, TerminalText.unknownCommand(ResourceText(context), tokens[index]), "CMD_ERR")
                 return TerminalPromptResult.Error
             }
         }
@@ -705,7 +692,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
 
     val phrase = tokens.drop(index).joinToString(" ").trim()
     if (phrase.isEmpty()) {
-        logTerminalLocal(context, "NO PHRASE GIVEN", "CMD_WARN")
+        logTerminalLocal(context, context.getString(R.string.term_no_phrase), "CMD_WARN")
         return TerminalPromptResult.Error
     }
 
@@ -738,7 +725,15 @@ private fun dispatchTerminalPhrase(context: Context, phrase: String, flags: Send
             intent.putExtra("emergency_prevent_timed_clear", config.preventTimedClear)
             intent.putExtra("emergency_require_hold_to_clear", config.requireHoldToClear)
         } else {
-            logTerminalLocal(context, "NO EMERGENCY DECK ACTIVE -- /e SENT PLAIN", "CMD_WARN")
+            logTerminalLocal(
+                context,
+                TerminalText.noEmergencyDeck(
+                    ResourceText(context),
+                    LabelText.resolve(context, LabelKey.DECK_TYPE_EMERGENCY, PlainWordsState.on),
+                    LabelText.resolve(context, LabelKey.DECK, PlainWordsState.on)
+                ),
+                "CMD_WARN"
+            )
         }
     }
 
@@ -766,7 +761,7 @@ private fun restartBackgroundServices(context: Context) {
 // The typed /repair and the FIX PROBLEMS button in SETTINGS (PLAIN WORDS) both come here: restart, then one line in the Terminal's history.
 internal fun repairBackgroundServices(context: Context) {
     restartBackgroundServices(context)
-    logTerminalLocal(context, "BACKGROUND SERVICES RESTARTED")
+    logTerminalLocal(context, context.getString(R.string.term_services_restarted))
 }
 
 // --- TERMINAL VIEW ---
@@ -838,6 +833,7 @@ fun TerminalView(
     // working, and these call the same code. The send switches count only while this is on (core/SendFlags.kt).
     val plainWordsOn = LocalPlainWords.current
     var showClearHistoryDialog by remember { mutableStateOf(false) }
+    val words = rememberText()
 
     // --- /info (PATCH NOTES) ---
     // Reveals PATCH_NOTES one line every 2s via the same local-log path
@@ -894,7 +890,7 @@ fun TerminalView(
         if (uri != null) {
             BackupExporter.report(context, BackupExporter.writeBackup(context, uri))
         } else {
-            logTerminalLocal(context, "BACKUP CANCELLED", "CMD_WARN")
+            logTerminalLocal(context, context.getString(R.string.term_backup_cancelled), "CMD_WARN")
         }
     }
 
@@ -1077,7 +1073,7 @@ fun TerminalView(
     // Typing /cls CONFIRM and the CLEAR HISTORY dialog both end here.
     fun clearHistoryNow() {
         TerminalLogStore.clearAll(context, logs)
-        logTerminalLocal(context, "LOG CLEARED")
+        logTerminalLocal(context, context.getString(R.string.term_log_cleared))
     }
 
     // The /v and /t insert buttons: the same trigger text a person would type, put at the cursor by the shared insertion rule. If the trigger is
@@ -1344,7 +1340,7 @@ fun TerminalView(
                                 val slot = config.slots[tag] ?: RootOverrideValue()
                                 val hasValue = slot.enabled && slot.value.isNotBlank()
                                 StatusBoxItem(
-                                    label = "$tag:${if (hasValue) slot.value else "EMPTY"}",
+                                    label = TerminalText.variableChip(words, tag, slot.value, hasValue),
                                     clickable = hasValue,
                                     onClick = {
                                         promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -1359,7 +1355,7 @@ fun TerminalView(
                         )
                     } else {
                         Text(
-                            "TAP A ROOT ABOVE TO VIEW ITS VARIABLES",
+                            stringResource(R.string.term_vars_hint),
                             color = statusboxTextColor.copy(alpha = 0.5f),
                             fontFamily = FontFamily.Monospace,
                             fontSize = STATUSBOX_FONT_SIZE
@@ -1369,7 +1365,7 @@ fun TerminalView(
                     // Row 1: every Target Computer category.
                     if (tCategories.isEmpty()) {
                         Text(
-                            "NO TARGET CATEGORIES -- ADD SOME FROM THE TARGET COMPUTER TAB.",
+                            stringResource(R.string.term_targets_none, labelFor(LabelKey.TARGET_COMPUTER)),
                             color = statusboxTextColor.copy(alpha = 0.5f),
                             fontFamily = FontFamily.Monospace,
                             fontSize = STATUSBOX_FONT_SIZE
@@ -1412,14 +1408,14 @@ fun TerminalView(
                     // Row 3: whatever's at the current drill-down level.
                     if (tSelectedCategory == null) {
                         Text(
-                            "TAP A CATEGORY ABOVE TO BROWSE IT",
+                            stringResource(R.string.term_targets_pick),
                             color = statusboxTextColor.copy(alpha = 0.5f),
                             fontFamily = FontFamily.Monospace,
                             fontSize = STATUSBOX_FONT_SIZE
                         )
                     } else if (tCurrentChildren.isEmpty()) {
                         Text(
-                            "NOTHING HERE YET.",
+                            stringResource(R.string.term_targets_empty),
                             color = statusboxTextColor.copy(alpha = 0.5f),
                             fontFamily = FontFamily.Monospace,
                             fontSize = STATUSBOX_FONT_SIZE
@@ -1454,7 +1450,7 @@ fun TerminalView(
                     // Send) starts the reveal either way.
                     StatusBoxItemRow(
                         items = listOf(
-                            StatusBoxItem(label = "INFO") {
+                            StatusBoxItem(label = stringResource(R.string.term_info_button)) {
                                 promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 startInfoReveal()
                             }
@@ -1474,7 +1470,7 @@ fun TerminalView(
                     // there's no separate confirm logic to keep in sync
                     // with parseTerminalCommand's own.
                     Text(
-                        "THIS COMMAND REQUIRES CONFIRMATION",
+                        stringResource(R.string.term_confirm_needed),
                         color = statusboxTextColor,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
@@ -1485,7 +1481,7 @@ fun TerminalView(
 
                     StatusBoxItemRow(
                         items = listOf(
-                            StatusBoxItem(label = "CONFIRM") {
+                            StatusBoxItem(label = stringResource(R.string.term_confirm_button)) {
                                 promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 promptValue = TextFieldValue("$confirmTriggerCommand confirm")
                                 submitPrompt()
@@ -1503,7 +1499,7 @@ fun TerminalView(
                         PulsingStatusBox(color = statusboxTextColor)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "TYPING",
+                            stringResource(R.string.term_typing),
                             color = statusboxTextColor,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
@@ -1516,9 +1512,9 @@ fun TerminalView(
 
                     Text(
                         if (promptValue.text.isNotEmpty()) {
-                            "${promptValue.text.length} CHAR${if (promptValue.text.length == 1) "" else "S"}"
+                            TerminalText.charCount(words, promptValue.text.length)
                         } else {
-                            "AWAITING INPUT"
+                            stringResource(R.string.term_awaiting)
                         },
                         color = statusboxTextColor.copy(alpha = 0.5f),
                         fontFamily = FontFamily.Monospace,
@@ -1554,7 +1550,7 @@ fun TerminalView(
             Box(modifier = Modifier.weight(1f)) {
                 if (promptValue.text.isEmpty()) {
                     Text(
-                        "TYPE A COMMAND...",
+                        stringResource(R.string.term_prompt_hint),
                         color = Color.DarkGray,
                         fontFamily = terminalFontFamily,
                         fontSize = 14.sp
@@ -1623,7 +1619,7 @@ fun TerminalView(
             if (alreadySavedTags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "ALREADY SAVED: ${alreadySavedTags.joinToString(", ")}",
+                    TerminalText.alreadySaved(words, alreadySavedTags),
                     color = BioGreen,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1631,7 +1627,7 @@ fun TerminalView(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            TightSectionLabel("ASSIGN A TAG")
+            TightSectionLabel(stringResource(R.string.manual_assign_tag))
             Spacer(modifier = Modifier.height(12.dp))
 
             if (existingTags.isNotEmpty()) {
@@ -1656,7 +1652,7 @@ fun TerminalView(
             OutlinedTextField(
                 value = newTagInput,
                 onValueChange = { newTagInput = it.uppercase() },
-                placeholder = { Text("NEW TAG") },
+                placeholder = { Text(stringResource(R.string.manual_new_tag)) },
                 shape = AckHelpShape,
                 colors = TextFieldDefaults.colors(focusedTextColor = FluxCyan, unfocusedTextColor = FluxCyan, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = FluxCyan)
             )
@@ -1667,7 +1663,7 @@ fun TerminalView(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TightPanelButton("SAVE", modifier = Modifier.weight(1f), mainColor = FluxCyan) {
+                TightPanelButton(stringResource(R.string.common_save), modifier = Modifier.weight(1f), mainColor = FluxCyan) {
                     if (newTagInput.isNotEmpty()) {
                         CommandRepository.saveQuickPhrase(context, textToSave, newTagInput)
                         saveRefreshKey++
@@ -1675,7 +1671,7 @@ fun TerminalView(
                         newTagInput = ""
                     }
                 }
-                TightPanelButton("CANCEL", modifier = Modifier.weight(1f), isActive = false, mainColor = FluxCyan) {
+                TightPanelButton(stringResource(R.string.common_cancel), modifier = Modifier.weight(1f), isActive = false, mainColor = FluxCyan) {
                     saveDialogTarget = null
                     newTagInput = ""
                 }

@@ -1131,7 +1131,7 @@ fun SettingsView(
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    stringResource(R.string.settings_term_statusbox_desc),
+                    stringResource(R.string.settings_term_statusbox_desc, stringResource(R.string.term_typing)),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
