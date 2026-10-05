@@ -1083,8 +1083,8 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SettingsToggleRow(
-                    title = "HIDE SYSTEM MESSAGES",
-                    description = "Filters boot, status, and error lines out of the Terminal view. The underlying log is untouched -- switch off to see them again.",
+                    title = stringResource(R.string.settings_term_hide_system),
+                    description = stringResource(R.string.settings_term_hide_system_desc),
                     checked = hideSystemMessages,
                     primaryColor = primaryColor,
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
@@ -1097,8 +1097,8 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
-                    title = "HIDE PATH RESOLUTION",
-                    description = "Filters out the verbose per-tag RESOLVE trace logged every time a Matrix phrase plays, independent of the toggle above.",
+                    title = stringResource(R.string.settings_term_hide_path),
+                    description = stringResource(R.string.settings_term_hide_path_desc),
                     checked = hidePathTrace,
                     primaryColor = primaryColor,
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
@@ -1111,8 +1111,8 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
-                    title = "MONOSPACE TERMINAL",
-                    description = "Renders the Terminal screen -- log rows, the prompt line, command output -- in a true monospace font so columns line up like a real terminal. Off by default to keep the existing look.",
+                    title = stringResource(R.string.settings_term_mono),
+                    description = stringResource(R.string.settings_term_mono_desc),
                     checked = monospaceTerminal,
                     primaryColor = primaryColor,
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
@@ -1125,13 +1125,13 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    "${labelFor(LabelKey.STATUSBOX)} TEXT COLOR",
+                    stringResource(R.string.settings_term_statusbox_color, labelFor(LabelKey.STATUSBOX)),
                     color = Color.Gray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    "Color of the live TYPING / shared root variable strip above the Terminal prompt.",
+                    stringResource(R.string.settings_term_statusbox_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1161,13 +1161,13 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    "LOG RETENTION: ${retentionDays.toInt()} DAY${if (retentionDays.toInt() == 1) "" else "S"} (ROLLING)",
+                    stringResource(R.string.settings_term_retention_line, words.count("settings_term_days", retentionDays.toInt())),
                     color = Color.Gray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    "Entries older than this roll off on a continuous window, not a calendar day -- up to ${TerminalLogStore.MAX_ENTRIES} kept either way.",
+                    stringResource(R.string.settings_term_retention_desc, TerminalLogStore.MAX_ENTRIES),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1278,17 +1278,17 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("VOICE RECORDINGS", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
+                Text(stringResource(R.string.settings_voice_heading), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Manage voice clips recorded for Quick Actions prompts.",
+                    stringResource(R.string.settings_voice_manage_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 NeonButton(
-                    "MANAGE RECORDINGS",
+                    stringResource(R.string.manage_rec_title),
                     Modifier
                         .fillMaxWidth()
                         .testTag(AckTags.VOICE_REC_MANAGE_BTN)
@@ -1302,13 +1302,13 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    "RECORDING PLAYBACK GAIN: ${recordingGainPercent.toInt()}%",
+                    stringResource(R.string.settings_voice_gain, recordingGainPercent.toInt()),
                     color = Color.Gray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    "Trims volume for recorded voice prompts only, on top of the master gain above -- everything else (synthesized speech) is unaffected.",
+                    stringResource(R.string.settings_voice_gain_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1328,7 +1328,7 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("PROFILES", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
+                Text(stringResource(R.string.settings_profiles_heading), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // The one-time offer, only where nothing was ever stored. It says what it does, starts with the switch OFF, and changes nothing

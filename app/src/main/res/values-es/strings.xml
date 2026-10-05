@@ -880,4 +880,24 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="settings_env_offline">MONITOR APAGADO</string>
     <string name="settings_qk_label_hint">ETQ</string>
     <string name="settings_qk_phrase_hint">FRASE DE DESTINO</string>
+    <string name="settings_term_hide_system">OCULTAR MENSAJES DEL SISTEMA</string>
+    <string name="settings_term_hide_system_desc">FILTRA LAS LÍNEAS DE ARRANQUE, ESTADO Y ERROR DE LA VISTA DE LA TERMINAL. EL REGISTRO ORIGINAL NO SE TOCA -- DESACTÍVALO PARA VERLAS DE NUEVO.</string>
+    <string name="settings_term_hide_path">OCULTAR RESOLUCIÓN DE RUTAS</string>
+    <string name="settings_term_hide_path_desc">FILTRA EL RASTRO DETALLADO RESOLVE DE CADA ETIQUETA QUE SE REGISTRA CADA VEZ QUE SE REPRODUCE UNA FRASE DE LA MATRIZ, INDEPENDIENTE DEL INTERRUPTOR DE ARRIBA.</string>
+    <string name="settings_term_mono">TERMINAL MONOESPACIADA</string>
+    <string name="settings_term_mono_desc">MUESTRA LA PANTALLA DE LA TERMINAL -- FILAS DEL REGISTRO, LÍNEA DE COMANDOS, SALIDA DE COMANDOS -- EN UNA FUENTE MONOESPACIADA REAL PARA QUE LAS COLUMNAS QUEDEN ALINEADAS COMO EN UNA TERMINAL DE VERDAD. DESACTIVADO DE FORMA PREDETERMINADA PARA CONSERVAR EL ASPECTO ACTUAL.</string>
+    <string name="settings_term_statusbox_color">%1$s: COLOR DEL TEXTO</string>
+    <string name="settings_term_statusbox_desc">COLOR DE LA FRANJA EN VIVO TYPING / VARIABLE RAÍZ COMPARTIDA SOBRE LA LÍNEA DE ENTRADA DE LA TERMINAL.</string>
+    <string name="settings_term_retention_line">RETENCIÓN DEL REGISTRO: %1$s (CONTINUA)</string>
+    <string name="settings_term_retention_desc">LAS ENTRADAS MÁS ANTIGUAS SE ELIMINAN EN UNA VENTANA CONTINUA, NO POR DÍA DE CALENDARIO -- SE CONSERVAN COMO MÁXIMO %1$d EN CUALQUIER CASO.</string>
+    <string name="settings_voice_heading">GRABACIONES DE VOZ</string>
+    <string name="settings_voice_manage_desc">ADMINISTRA LOS CLIPS DE VOZ GRABADOS PARA LOS MENSAJES DE ACCIONES RÁPIDAS.</string>
+    <string name="settings_voice_gain">GANANCIA DE REPRODUCCIÓN DE GRABACIONES: %1$d%%</string>
+    <string name="settings_voice_gain_desc">AJUSTA EL VOLUMEN SOLO DE LOS MENSAJES DE VOZ GRABADOS, ADEMÁS DE LA GANANCIA GENERAL DE ARRIBA -- TODO LO DEMÁS (VOZ SINTETIZADA) NO CAMBIA.</string>
+    <string name="settings_profiles_heading">PERFILES</string>
+    <plurals name="settings_term_days">
+        <item quantity="one">%d DÍA</item>
+        <item quantity="many">%d DÍAS</item>
+        <item quantity="other">%d DÍAS</item>
+    </plurals>
 </resources>

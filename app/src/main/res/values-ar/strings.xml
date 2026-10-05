@@ -904,4 +904,27 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="settings_env_offline">المراقب متوقف</string>
     <string name="settings_qk_label_hint">تسمية</string>
     <string name="settings_qk_phrase_hint">عبارة الهدف</string>
+    <string name="settings_term_hide_system">إخفاء رسائل النظام</string>
+    <string name="settings_term_hide_system_desc">يخفي أسطر الإقلاع والحالة والأخطاء من عرض الطرفية. السجل الأصلي لا يُمس -- أوقف الخيار لرؤيتها مجددًا.</string>
+    <string name="settings_term_hide_path">إخفاء تحليل المسارات</string>
+    <string name="settings_term_hide_path_desc">يخفي أثر RESOLVE المفصّل لكل وسم والمسجَّل في كل مرة تُشغَّل فيها عبارة من المصفوفة، بصرف النظر عن المفتاح أعلاه.</string>
+    <string name="settings_term_mono">طرفية أحادية المسافة</string>
+    <string name="settings_term_mono_desc">يعرض شاشة الطرفية -- صفوف السجل وسطر الإدخال ومخرجات الأوامر -- بخط أحادي المسافة حقيقي لتصطف الأعمدة كما في طرفية حقيقية. متوقف افتراضيًا للحفاظ على المظهر الحالي.</string>
+    <string name="settings_term_statusbox_color">لون نص %1$s</string>
+    <string name="settings_term_statusbox_desc">لون الشريط الحي TYPING / المتغير الجذري المشترك فوق سطر إدخال الطرفية.</string>
+    <string name="settings_term_retention_line">الاحتفاظ بالسجل: %1$s (متجدد)</string>
+    <string name="settings_term_retention_desc">تُحذف الإدخالات الأقدم من ذلك ضمن نافذة متصلة لا بحسب اليوم التقويمي -- يُحتفظ بما يصل إلى %1$d في الحالتين.</string>
+    <string name="settings_voice_heading">التسجيلات الصوتية</string>
+    <string name="settings_voice_manage_desc">إدارة المقاطع الصوتية المسجلة لرسائل الإجراءات السريعة.</string>
+    <string name="settings_voice_gain">مستوى صوت التسجيلات: %1$d%%</string>
+    <string name="settings_voice_gain_desc">يضبط مستوى الصوت لرسائل الصوت المسجلة فقط فوق مستوى الصوت العام أعلاه -- كل ما عداها (الكلام المركّب) لا يتأثر.</string>
+    <string name="settings_profiles_heading">الملفات</string>
+    <plurals name="settings_term_days">
+        <item quantity="zero">%d يوم</item>
+        <item quantity="one">يوم واحد</item>
+        <item quantity="two">يومان</item>
+        <item quantity="few">%d أيام</item>
+        <item quantity="many">%d يومًا</item>
+        <item quantity="other">%d يوم</item>
+    </plurals>
 </resources>

@@ -872,4 +872,23 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="settings_env_offline">MONITOR AF-LYN</string>
     <string name="settings_qk_label_hint">ETI</string>
     <string name="settings_qk_phrase_hint">TEIKENFRASE</string>
+    <string name="settings_term_hide_system">VERSTEEK STELSELBOODSKAPPE</string>
+    <string name="settings_term_hide_system_desc">FILTREER OPSTART-, STATUS- EN FOUTLYNE UIT DIE TERMINAAL-WEERGAWE. DIE ONDERLIGGENDE LOG WORD NIE AANGERAAK NIE -- SKAKEL AF OM HULLE WEER TE SIEN.</string>
+    <string name="settings_term_hide_path">VERSTEEK PADOPLOSSING</string>
+    <string name="settings_term_hide_path_desc">FILTREER DIE UITGEBREIDE RESOLVE-SPOOR PER ETIKET WAT GELOG WORD ELKE KEER AS \'N MATRIKSFRASE SPEEL, ONAFHANKLIK VAN DIE SKAKELAAR HIERBO.</string>
+    <string name="settings_term_mono">EENSPASIE-TERMINAAL</string>
+    <string name="settings_term_mono_desc">TOON DIE TERMINAAL-SKERM -- LOGRYE, DIE INVOERLYN, OPDRAGUITVOER -- IN \'N ECHTE EENSPASIE-LETTERTIPE SODAT KOLOMME REGUIT LÊ SOOS IN \'N WERKLIKE TERMINAAL. STANDAARD AF OM DIE HUIDIGE LOOK TE BEHOU.</string>
+    <string name="settings_term_statusbox_color">%1$s-TEKSKLEUR</string>
+    <string name="settings_term_statusbox_desc">KLEUR VAN DIE LEWENDE TYPING / GEDEELDE WORTELVERANDERLIKE-STROOK BO DIE TERMINAAL-INVOERLYN.</string>
+    <string name="settings_term_retention_line">LOGBEWARING: %1$s (ROLLEND)</string>
+    <string name="settings_term_retention_desc">INSKRYWINGS OUER AS DIT ROL AF OP \'N VOORTDUREDE VENSTER, NIE \'N KALENDERDAG NIE -- TOT %1$d WORD IN ELKE GEVAL BEWAAR.</string>
+    <string name="settings_voice_heading">STEMOPNAMES</string>
+    <string name="settings_voice_manage_desc">BESTUUR STEMKLIPPE WAT VIR VINNIGE AKSIES-BOODSKAPPE OPGENEEM IS.</string>
+    <string name="settings_voice_gain">OPNAME-AFSPEELVOLUME: %1$d%%</string>
+    <string name="settings_voice_gain_desc">PAS DIE VOLUME SLEGS VIR OPGENEEMDE STEMBOODSKAPPE AAN, BOONOP DIE HOOFVOLUME HIERBO -- ALLES ANDERS (GESINTETISEERDE SPRAAK) BLY ONVERANDERD.</string>
+    <string name="settings_profiles_heading">PROFIELE</string>
+    <plurals name="settings_term_days">
+        <item quantity="one">%d DAG</item>
+        <item quantity="other">%d DAE</item>
+    </plurals>
 </resources>

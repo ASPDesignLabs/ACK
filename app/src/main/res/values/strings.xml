@@ -893,4 +893,23 @@
     <string name="settings_env_offline">MONITOR OFFLINE</string>
     <string name="settings_qk_label_hint">LBL</string>
     <string name="settings_qk_phrase_hint">TARGET PHRASE</string>
+    <string name="settings_term_hide_system">HIDE SYSTEM MESSAGES</string>
+    <string name="settings_term_hide_system_desc">Filters boot, status, and error lines out of the Terminal view. The underlying log is untouched -- switch off to see them again.</string>
+    <string name="settings_term_hide_path">HIDE PATH RESOLUTION</string>
+    <string name="settings_term_hide_path_desc">Filters out the verbose per-tag RESOLVE trace logged every time a Matrix phrase plays, independent of the toggle above.</string>
+    <string name="settings_term_mono">MONOSPACE TERMINAL</string>
+    <string name="settings_term_mono_desc">Renders the Terminal screen -- log rows, the prompt line, command output -- in a true monospace font so columns line up like a real terminal. Off by default to keep the existing look.</string>
+    <string name="settings_term_statusbox_color">%1$s TEXT COLOR</string>
+    <string name="settings_term_statusbox_desc">Color of the live TYPING / shared root variable strip above the Terminal prompt.</string>
+    <string name="settings_term_retention_line">LOG RETENTION: %1$s (ROLLING)</string>
+    <string name="settings_term_retention_desc">Entries older than this roll off on a continuous window, not a calendar day -- up to %1$d kept either way.</string>
+    <string name="settings_voice_heading">VOICE RECORDINGS</string>
+    <string name="settings_voice_manage_desc">Manage voice clips recorded for Quick Actions prompts.</string>
+    <string name="settings_voice_gain">RECORDING PLAYBACK GAIN: %1$d%%</string>
+    <string name="settings_voice_gain_desc">Trims volume for recorded voice prompts only, on top of the master gain above -- everything else (synthesized speech) is unaffected.</string>
+    <string name="settings_profiles_heading">PROFILES</string>
+    <plurals name="settings_term_days">
+        <item quantity="one">%d DAY</item>
+        <item quantity="other">%d DAYS</item>
+    </plurals>
 </resources>

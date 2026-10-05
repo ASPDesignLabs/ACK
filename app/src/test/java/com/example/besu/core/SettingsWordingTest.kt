@@ -14,6 +14,7 @@ import org.junit.Test
  *
  * Part A: AUDIO OUTPUT ROUTING, WATCH AUDIO FEEDBACK, VISUAL PROMPT DISPLAY and the display-permission warnings (the banner and the line under SILENT MODE).
  * Part B: the HARDWARE CONFIG sliders, the SHAKE KILL SWITCH and its test, the ENVIRONMENT SENSOR and the QUICK-ACCESS KEYS' field hints.
+ * Part C: the TERMINAL LOG options, the VOICE RECORDINGS section and the PROFILES heading.
  */
 class SettingsWordingTest {
 
@@ -42,7 +43,12 @@ class SettingsWordingTest {
         "settings_env_authorize", "settings_open_settings", "settings_env_critical", "settings_env_warning", "settings_env_optimal", "settings_env_offline",
         "settings_qk_label_hint", "settings_qk_phrase_hint",
     )
-    private val allNames get() = partA + partB
+    private val partC = listOf(
+        "settings_term_hide_system", "settings_term_hide_system_desc", "settings_term_hide_path", "settings_term_hide_path_desc", "settings_term_mono", "settings_term_mono_desc",
+        "settings_term_statusbox_color", "settings_term_statusbox_desc", "settings_term_retention_line", "settings_term_retention_desc",
+        "settings_voice_heading", "settings_voice_manage_desc", "settings_voice_gain", "settings_voice_gain_desc", "settings_profiles_heading",
+    )
+    private val allNames get() = partA + partB + partC
 
     // ---- the strings and the old literals --------------------------------------------------------------------------------------------------
 
@@ -52,8 +58,9 @@ class SettingsWordingTest {
         val referenced = Regex("""R\.string\.((?:settings|overlay_banner)_[a-z_]+)""").findAll(settings + "\n" + banner).map { it.groupValues[1] }.toSet()
         val named = Regex(""""((?:settings|overlay_banner)_[a-z_]+)"""").findAll(sources).map { it.groupValues[1] }.toSet()
         val used = referenced + named
+        val plurals = mapOf("en" to StringsXml.plurals(StringsXml.default).keys) + StringsXml.translations().mapValues { StringsXml.plurals(it.value).keys }
         for ((tag, map) in listOf("en" to english) + translations.toList()) {
-            val missing = used.filter { it !in map }
+            val missing = used.filter { it !in map && it !in plurals.getValue(tag) }
             assertEquals("$tag: named but not defined: $missing", emptyList<String>(), missing)
         }
         val unused = allNames.filter { it !in used }
@@ -74,7 +81,12 @@ class SettingsWordingTest {
             "\"DETECTED ✓", "\"ARMED -- SHAKE THE PHONE\"", "This uses the real detector at the sensitivity above", "\"AUTHORIZE MIC SCAN\"", "\"OPEN SETTINGS\"", "\"CRITICAL: A.S.R.", "\"WARNING: MODERATE NOISE LEVEL\"",
             "\"OPTIMAL: ENVIRONMENT CLEAR\"", "\"MONITOR OFFLINE\"", "Text(\"LBL\")", "Text(\"TARGET PHRASE\")",
         )
-        for (literal in goneFromSettings + goneB) assertFalse("SettingsView.kt still holds $literal", settings.contains(literal))
+        val goneC = listOf(
+            "\"HIDE SYSTEM MESSAGES\"", "Filters boot, status, and error lines", "\"HIDE PATH RESOLUTION\"", "Filters out the verbose per-tag RESOLVE trace", "\"MONOSPACE TERMINAL\"", "Renders the Terminal screen",
+            "} TEXT COLOR\"", "Color of the live TYPING / shared root variable strip", "\"LOG RETENTION:", "Entries older than this roll off", "Text(\"VOICE RECORDINGS\"", "Manage voice clips recorded for Quick Actions prompts",
+            "\"MANAGE RECORDINGS\"", "\"RECORDING PLAYBACK GAIN:", "Trims volume for recorded voice prompts only", "Text(\"PROFILES\"", "DAY${'$'}{if",
+        )
+        for (literal in goneFromSettings + goneB + goneC) assertFalse("SettingsView.kt still holds $literal", settings.contains(literal))
         for (literal in listOf("DISPLAY PERMISSION IS OFF. MESSAGES ARE SPOKEN", "\"ALLOW\"")) assertFalse("OverlayPermissionBanner.kt still holds $literal", banner.contains(literal))
         assertTrue(settings.contains("import com.example.besu.core.OutputRouteText"))
         assertTrue(banner.contains("import com.example.besu.R"))
@@ -210,6 +222,35 @@ class SettingsWordingTest {
         assertTrue("the label field", Regex("""value = shortcut\.label,[\s\S]{0,1800}?placeholder = \{ Text\(stringResource\(R\.string\.settings_qk_label_hint\)\) \}""").containsMatchIn(settings))
         assertTrue("the phrase field", Regex("""value = shortcut\.phrase,[\s\S]{0,1500}?placeholder = \{ Text\(stringResource\(R\.string\.settings_qk_phrase_hint\)\) \}""").containsMatchIn(settings))
         assertTrue("REC and +REC are the button's text in every language (a narrow button, and manage_rec_empty names it REC)", settings.contains("""text = if (hasRecording) "REC" else "+REC","""))
+    }
+
+    @Test
+    fun eachTerminalLogSwitchSaysItsOwnWords_andSavesWhatItShows() {
+        fun toggle(title: String, desc: String, state: String, setter: String) =
+            Regex("""title = stringResource\(R\.string\.$title\),\s*description = stringResource\(R\.string\.$desc\),\s*checked = $state,[\s\S]{0,400}?$state = enabled\s*TerminalLogStore\.$setter\(context, enabled\)""").containsMatchIn(settings)
+        assertTrue("HIDE SYSTEM MESSAGES", toggle("settings_term_hide_system", "settings_term_hide_system_desc", "hideSystemMessages", "setHideSystemMessages"))
+        assertTrue("HIDE PATH RESOLUTION", toggle("settings_term_hide_path", "settings_term_hide_path_desc", "hidePathTrace", "setHidePathTrace"))
+        assertTrue("MONOSPACE TERMINAL", toggle("settings_term_mono", "settings_term_mono_desc", "monospaceTerminal", "setMonospaceEnabled"))
+    }
+
+    @Test
+    fun theStatusboxColourLineAndTheRetentionLineSitOnTheirOwnControls() {
+        assertTrue("the colour line names STATUSBOX by its label and sits above the swatches", Regex("""settings_term_statusbox_color, labelFor\(LabelKey\.STATUSBOX\)\),[\s\S]{0,300}?settings_term_statusbox_desc[\s\S]{0,700}?NeonPalette\.SWATCHES\.forEachIndexed""").containsMatchIn(settings))
+        assertTrue("the retention line counts days in the language's plural form, then its sentence, then the slider", Regex("""settings_term_retention_line, words\.count\("settings_term_days", retentionDays\.toInt\(\)\)\),[\s\S]{0,300}?settings_term_retention_desc, TerminalLogStore\.MAX_ENTRIES\),[\s\S]{0,300}?Slider\(\s*value = retentionDays""").containsMatchIn(settings))
+    }
+
+    @Test
+    fun theVoiceRecordingsSectionsWordsSitOnTheirControls() {
+        assertTrue("heading, then the sentence, then the button that opens MANAGE RECORDINGS", Regex("""settings_voice_heading\)[\s\S]{0,400}?settings_voice_manage_desc[\s\S]{0,300}?stringResource\(R\.string\.manage_rec_title\),[\s\S]{0,300}?showManageRecordings = true""").containsMatchIn(settings))
+        assertTrue("the gain line, its sentence, then the slider that saves it", Regex("""settings_voice_gain, recordingGainPercent\.toInt\(\)\),[\s\S]{0,300}?settings_voice_gain_desc[\s\S]{0,300}?Slider\(\s*value = recordingGainPercent[\s\S]{0,400}?VoiceRecordingRepository\.setPlaybackGainPercent""").containsMatchIn(settings))
+        // The button is the dialog's own title, from the same string, so the two can never be called different things.
+        assertTrue(file("settings/ManageRecordingsDialog.kt").contains("R.string.manage_rec_title"))
+        assertEquals("MANAGE RECORDINGS", english.getValue("manage_rec_title"))
+    }
+
+    @Test
+    fun theProfilesHeadingIsAboveTheProfileWarningSwitch() {
+        assertTrue(Regex("""settings_profiles_heading\)[\s\S]{0,600}?profileWarningOffered""").containsMatchIn(settings))
     }
 
     // ---- every language -------------------------------------------------------------------------------------------------------------------------
@@ -350,5 +391,80 @@ class SettingsWordingTest {
         for ((tag, map) in listOf("en" to english) + translations.toList()) for (name in listOf("settings_env_critical", "settings_env_warning", "settings_env_optimal")) {
             assertTrue("$tag/$name: a level, then a colon: ${map.getValue(name)}", Regex("""^[^:]{2,20}:""").containsMatchIn(map.getValue(name)))
         }
+    }
+
+    @Test
+    fun theEnglishOfPartCIsHeldExactly() {
+        val expected = mapOf(
+            "settings_term_hide_system" to "HIDE SYSTEM MESSAGES",
+            "settings_term_hide_system_desc" to "Filters boot, status, and error lines out of the Terminal view. The underlying log is untouched -- switch off to see them again.",
+            "settings_term_hide_path" to "HIDE PATH RESOLUTION",
+            "settings_term_hide_path_desc" to "Filters out the verbose per-tag RESOLVE trace logged every time a Matrix phrase plays, independent of the toggle above.",
+            "settings_term_mono" to "MONOSPACE TERMINAL",
+            "settings_term_mono_desc" to "Renders the Terminal screen -- log rows, the prompt line, command output -- in a true monospace font so columns line up like a real terminal. Off by default to keep the existing look.",
+            "settings_term_statusbox_desc" to "Color of the live TYPING / shared root variable strip above the Terminal prompt.",
+            "settings_voice_heading" to "VOICE RECORDINGS", "settings_voice_manage_desc" to "Manage voice clips recorded for Quick Actions prompts.",
+            "settings_voice_gain_desc" to "Trims volume for recorded voice prompts only, on top of the master gain above -- everything else (synthesized speech) is unaffected.",
+            "settings_profiles_heading" to "PROFILES",
+        )
+        for ((name, text) in expected) assertEquals(name, text, english.getValue(name))
+        assertEquals("STATUSBOX TEXT COLOR", EnglishText.get("settings_term_statusbox_color", "STATUSBOX"))
+        assertEquals("LOG RETENTION: 7 DAYS (ROLLING)", EnglishText.get("settings_term_retention_line", EnglishText.count("settings_term_days", 7)))
+        assertEquals("LOG RETENTION: 1 DAY (ROLLING)", EnglishText.get("settings_term_retention_line", EnglishText.count("settings_term_days", 1)))
+        assertEquals("Entries older than this roll off on a continuous window, not a calendar day -- up to 400 kept either way.", EnglishText.get("settings_term_retention_desc", 400))
+        assertEquals("RECORDING PLAYBACK GAIN: 85%", EnglishText.get("settings_voice_gain", 85))
+        // The number the sentence is given is the store's own constant (400 when this was written), not a typed number.
+        assertTrue(RepoFiles.read("$base/data/TerminalLogStore.kt").contains("const val MAX_ENTRIES = 400"))
+    }
+
+    @Test
+    fun partCArgumentsAreWhereTheCodePutsThem() {
+        for ((tag, map) in listOf("en" to english) + translations.toList()) {
+            assertTrue("$tag: the colour line names STATUSBOX", map.getValue("settings_term_statusbox_color").contains("%1\$s"))
+            assertTrue("$tag: the retention line takes the worded days", map.getValue("settings_term_retention_line").contains("%1\$s"))
+            assertTrue("$tag: the retention sentence takes the number kept", map.getValue("settings_term_retention_desc").contains("%1\$d"))
+            assertTrue("$tag: the gain takes a percentage and a literal percent sign", map.getValue("settings_voice_gain").contains("%1\$d%%"))
+            for (name in partC - setOf("settings_term_statusbox_color", "settings_term_retention_line", "settings_term_retention_desc", "settings_voice_gain")) {
+                assertFalse("$tag/$name takes an argument nothing passes", Regex("""%\d""").containsMatchIn(map.getValue(name)))
+            }
+        }
+    }
+
+    @Test
+    fun theWordsTheTerminalPrintsItselfStayEnglishInsideTheSentencesThatPointAtThem() {
+        // RESOLVE is the word on the trace lines and TYPING the word on the strip, both printed by the Terminal in English, so the sentences keep them.
+        for ((tag, map) in listOf("en" to english) + translations.toList()) {
+            assertTrue("$tag: RESOLVE", Regex("""\bRESOLVE\b""").containsMatchIn(map.getValue("settings_term_hide_path_desc")))
+            assertTrue("$tag: TYPING", Regex("""\bTYPING\b""").containsMatchIn(map.getValue("settings_term_statusbox_desc")))
+        }
+    }
+
+    @Test
+    fun theStatusboxColourLineNamesTheLabelItWasGiven_inEveryLanguage() {
+        for ((tag, map) in translations) {
+            assertTrue("$tag: ${map.getValue("settings_term_statusbox_color")}", FileText(tag).get("settings_term_statusbox_color", map.getValue("label_statusbox")).contains(map.getValue("label_statusbox")))
+        }
+    }
+
+    @Test
+    fun theRetentionLineCountsDaysAndSaysItIsRolling_inEveryLanguage() {
+        for ((tag, map) in translations) {
+            val f = FileText(tag)
+            val days = f.count("settings_term_days", 7)
+            val line = f.get("settings_term_retention_line", days)
+            assertTrue("$tag: the number is in the line ($line)", line.contains("7"))
+            assertFalse("$tag: a resource name leaked: $line", line.contains("settings_"))
+            assertNotEquals("$tag: still English", "LOG RETENTION: 7 DAYS (ROLLING)", line)
+        }
+    }
+
+    @Test
+    fun partCWordsThatAnswerOppositeQuestionsDifferInEveryLanguage() {
+        val pairs = listOf(
+            "settings_term_hide_system" to "settings_term_hide_path", "settings_term_hide_path" to "settings_term_mono", "settings_term_hide_system_desc" to "settings_term_hide_path_desc",
+            "settings_term_mono_desc" to "settings_term_statusbox_desc", "settings_voice_heading" to "settings_profiles_heading", "settings_voice_manage_desc" to "settings_voice_gain_desc",
+            "settings_term_retention_line" to "settings_term_retention_desc",
+        )
+        for ((tag, map) in listOf("en" to english) + translations.toList()) for ((a, b) in pairs) assertNotEquals("$tag: $a and $b read the same", map.getValue(a), map.getValue(b))
     }
 }

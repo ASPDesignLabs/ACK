@@ -880,4 +880,24 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="settings_env_offline">MONITOR DESLIGADO</string>
     <string name="settings_qk_label_hint">ROT</string>
     <string name="settings_qk_phrase_hint">FRASE DE DESTINO</string>
+    <string name="settings_term_hide_system">OCULTAR MENSAGENS DO SISTEMA</string>
+    <string name="settings_term_hide_system_desc">FILTRA AS LINHAS DE INICIALIZAÇÃO, STATUS E ERRO DA VISÃO DO TERMINAL. O REGISTRO ORIGINAL NÃO É ALTERADO -- DESATIVE PARA VÊ-LAS DE NOVO.</string>
+    <string name="settings_term_hide_path">OCULTAR RESOLUÇÃO DE CAMINHOS</string>
+    <string name="settings_term_hide_path_desc">FILTRA O RASTRO DETALHADO RESOLVE DE CADA TAG REGISTRADO TODA VEZ QUE UMA FRASE DA MATRIZ É REPRODUZIDA, INDEPENDENTE DA CHAVE ACIMA.</string>
+    <string name="settings_term_mono">TERMINAL MONOESPAÇADO</string>
+    <string name="settings_term_mono_desc">EXIBE A TELA DO TERMINAL -- LINHAS DO REGISTRO, LINHA DE COMANDO, SAÍDA DE COMANDOS -- EM UMA FONTE MONOESPAÇADA DE VERDADE PARA QUE AS COLUNAS FIQUEM ALINHADAS COMO EM UM TERMINAL REAL. DESATIVADO POR PADRÃO PARA MANTER O VISUAL ATUAL.</string>
+    <string name="settings_term_statusbox_color">%1$s: COR DO TEXTO</string>
+    <string name="settings_term_statusbox_desc">COR DA FAIXA AO VIVO DE TYPING / VARIÁVEL RAIZ COMPARTILHADA ACIMA DA LINHA DE ENTRADA DO TERMINAL.</string>
+    <string name="settings_term_retention_line">RETENÇÃO DO REGISTRO: %1$s (CONTÍNUA)</string>
+    <string name="settings_term_retention_desc">AS ENTRADAS MAIS ANTIGAS SAEM EM UMA JANELA CONTÍNUA, NÃO POR DIA DE CALENDÁRIO -- NO MÁXIMO %1$d SÃO MANTIDAS DE QUALQUER FORMA.</string>
+    <string name="settings_voice_heading">GRAVAÇÕES DE VOZ</string>
+    <string name="settings_voice_manage_desc">GERENCIE OS CLIPES DE VOZ GRAVADOS PARA AS MENSAGENS DE AÇÕES RÁPIDAS.</string>
+    <string name="settings_voice_gain">GANHO DE REPRODUÇÃO DAS GRAVAÇÕES: %1$d%%</string>
+    <string name="settings_voice_gain_desc">AJUSTA O VOLUME SÓ DAS MENSAGENS DE VOZ GRAVADAS, POR CIMA DO GANHO GERAL ACIMA -- TODO O RESTO (VOZ SINTETIZADA) NÃO MUDA.</string>
+    <string name="settings_profiles_heading">PERFIS</string>
+    <plurals name="settings_term_days">
+        <item quantity="one">%d DIA</item>
+        <item quantity="many">%d DIAS</item>
+        <item quantity="other">%d DIAS</item>
+    </plurals>
 </resources>

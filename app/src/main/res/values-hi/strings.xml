@@ -872,4 +872,23 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="settings_env_offline">मॉनिटर बंद</string>
     <string name="settings_qk_label_hint">लेबल</string>
     <string name="settings_qk_phrase_hint">लक्ष्य वाक्य</string>
+    <string name="settings_term_hide_system">सिस्टम संदेश छिपाएँ</string>
+    <string name="settings_term_hide_system_desc">टर्मिनल व्यू से बूट, स्टेटस और एरर लाइनें हटाता है। असली लॉग नहीं बदलता -- उन्हें फिर देखने के लिए बंद करें।</string>
+    <string name="settings_term_hide_path">पाथ रेज़ोल्यूशन छिपाएँ</string>
+    <string name="settings_term_hide_path_desc">हर बार मैट्रिक्स वाक्य चलने पर दर्ज होने वाला विस्तृत प्रति-टैग RESOLVE ट्रेस छिपाता है, ऊपर वाले स्विच से स्वतंत्र।</string>
+    <string name="settings_term_mono">मोनोस्पेस टर्मिनल</string>
+    <string name="settings_term_mono_desc">टर्मिनल स्क्रीन -- लॉग पंक्तियाँ, प्रॉम्प्ट लाइन, कमांड आउटपुट -- को असली मोनोस्पेस फ़ॉन्ट में दिखाता है ताकि कॉलम असली टर्मिनल की तरह एक सीध में रहें। मौजूदा रूप बनाए रखने के लिए डिफ़ॉल्ट रूप से बंद है।</string>
+    <string name="settings_term_statusbox_color">%1$s टेक्स्ट रंग</string>
+    <string name="settings_term_statusbox_desc">टर्मिनल प्रॉम्प्ट के ऊपर की लाइव TYPING / साझा रूट वेरिएबल पट्टी का रंग।</string>
+    <string name="settings_term_retention_line">लॉग रिटेंशन: %1$s (लगातार)</string>
+    <string name="settings_term_retention_desc">इससे पुरानी प्रविष्टियाँ लगातार चलने वाली अवधि में हटती हैं, कैलेंडर दिन के हिसाब से नहीं -- दोनों स्थितियों में अधिकतम %1$d रखी जाती हैं।</string>
+    <string name="settings_voice_heading">आवाज़ रिकॉर्डिंग</string>
+    <string name="settings_voice_manage_desc">त्वरित क्रियाएँ संदेशों के लिए रिकॉर्ड किए गए आवाज़ क्लिप प्रबंधित करें।</string>
+    <string name="settings_voice_gain">रिकॉर्डिंग प्लेबैक गेन: %1$d%%</string>
+    <string name="settings_voice_gain_desc">केवल रिकॉर्ड किए गए आवाज़ संदेशों की आवाज़ ऊपर के मास्टर गेन के अतिरिक्त घटाता-बढ़ाता है -- बाकी सब (संश्लेषित आवाज़) अप्रभावित रहता है।</string>
+    <string name="settings_profiles_heading">प्रोफ़ाइल</string>
+    <plurals name="settings_term_days">
+        <item quantity="one">%d दिन</item>
+        <item quantity="other">%d दिन</item>
+    </plurals>
 </resources>
