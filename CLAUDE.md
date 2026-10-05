@@ -15,10 +15,12 @@ taps) rather than a static help document. Everything lives under
 
 ### Core data model — `help/HelpCore.kt`
 
-- **`HelpCategory`** — enum, each case carries `title`/`subtitle` in a
-  fixed `"SECTION // SUBSECTION"` style. Drives the chip row in
-  `HelpMenuDialog` (`HelpCategory.values().forEach { ... }` — adding a
-  case is enough, no separate registration needed for the chip itself).
+- **`HelpCategory`** — enum of module families, constants only. Its words
+  are string resources named `help_cat_<constant in lower case>_title` /
+  `_chip` / `_subtitle`, read through `core/HelpMenuText.kt`. Drives the
+  chip row in `HelpMenuDialog` (`HelpCategory.values().forEach { ... }`).
+  **Adding a case needs those three strings in `values/strings.xml` and
+  all five translations**; `HelpMenuTextTest` fails otherwise.
 - **`HelpDestination`** — enum wrapping a `viewMode` string
   (`"MATRIX"`, `"SETTINGS"`, `"TYPE"`, `"TERMINAL"`, `"AUDIO"`,
   `"TARGETS"`, `"GEO"`). This is what a module/step asks MainActivity to
@@ -1397,8 +1399,9 @@ Wording and decisions: `docs/PLAIN_LANGUAGE.md`, `docs/TRANSLATIONS.md`. Checkli
   silently overrides (a test fails if it appears). Every `letterSpacing = N.sp` goes through `looseSpacing()` (Arabic joins; spacing pulls it apart); a test fails on a raw one.
 - **The five translations (es, pt, hi, ar, af) are DRAFTS written without a native speaker** and must keep saying so (the notice at the top of each file, the control, the
   CHANGELOG, `THIRD_PARTY_NOTICES.md`). `TranslationsTest` checks completeness and safety only (same strings and `%1$s` placeholders, standard ≠ everyday, no two buttons
-  sharing an everyday name except the four same-place pairs, capitals for es/pt/af, own script for hi/ar, escaping, the notice), never that the words are right. HELP, the
-  Terminal, most dialogs and everything spoken stay English in every language; say so wherever the language is offered.
+  sharing an everyday name except the four same-place pairs, capitals for es/pt/af, own script for hi/ar, escaping, the notice), never that the words are right. The HELP
+  **walkthroughs' own text** (module titles and summaries, step titles and bodies, the options on the two chooser dialogs), the Terminal, most dialogs and everything
+  spoken stay English in every language; say so wherever the language is offered. HELP's chrome (the header button, the menu, the cards, the choosers, the coach panel) is translated.
 - **Kotlin the tests cannot compile can still hide a build error.** Two lines of text with nothing joining them are not one sentence: in a `when` branch only the last is used
   (the clear-variables confirmation lost its question this way), in a `listOf(` it is a build error (the `/info` notes did). `AdjacentTextLinesTest` and
   `TerminalTextListsShapeTest` read every source file for it. `tools/kotlin_check/android-typecheck` type-checks `ui/TerminalPlainControls.kt`,
@@ -1440,3 +1443,16 @@ Written while the backup and DELETE DATA wording moved into `strings.xml` (docs/
   matches a word to the action that follows it. Mutation testing showed a swapped label (SAVE on a DELETE) passes every "string exists / literal gone" check.
 - **The type-check stages a screen only if its Android edges are stubbed from their real signatures** (`tools/kotlin_check/android-typecheck/stubs/app/Audio*.kt` for
   AUDIO ARCHITECT). A stub is written from how the real code is used, so check it against the real file when that file changes.
+
+### HELP chrome in string resources — rules that must stay true
+Wording and checklist: `docs/TRANSLATIONS.md`, `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md` section K. Tests: `HelpMenuTextTest` (the decisions, in every language), `HelpWordingTest` (the screens), `PlainWordsWiringTest` (HELP text still goes through `helpText()`).
+
+- **What is translated and what is not.** The header's HELP button (`help_button`), the menu, the nine family chips and headings, the cards' `[RUN]` and step line, the empty state, the two chooser dialogs (title, hint, `[CLOSE]`) and the coach panel (`GUIDANCE // n/m`, `[ABORT]`, `ACKNOWLEDGE // CONTINUE`, the nine "awaiting" instructions). **Not** translated: module titles and summaries, step titles and bodies, and the choosers' option labels and hints (`FieldOpsHelp.PoseOption`, `VoiceRecordingsHelp.VoiceRecOption`). A translated menu therefore opens English steps; the language control says so.
+- **A family's chip is its own string**, never cut out of the title at a "// " (a translation must not have to keep a separator). `HelpMenuTextTest` holds the chip to the end of its title, and to the whole title when there is no section.
+- **Resource text keeps label placeholders unfilled and bare**: `{{DECKS}}`, never `{{DECKS:DECKS}}` (no English original in a translation) and never the filled word, so `helpText()` swaps in the standard word of the language or the everyday one under PLAIN WORDS. **No article before a placeholder** in a Latin-script draft ("GESTIÓN DE {{DECK}}", not "DEL {{DECK}}"): the everyday word may be the other gender. The walkthrough text still uses `{{KEY:Original}}` with an English original; if those steps are ever translated, switch them to the bare form at the same time.
+- **`HelpDestination.viewMode` is logic and never changes**; the card's "N STEPS // VIEW" shows a display mapping (`HelpMenuText.viewNameResources`). A destination with no words fails `HelpMenuTextTest`; an unknown mode reads as itself. These are the standard words, not the nav bar's labels (SETTINGS says SETTINGS, where the button is PROTOCOL), and they do not follow PLAIN WORDS: a known gap, kept as it always was.
+- **The step count is a plural** (`help_menu_steps`), so one step reads "1 STEP". This is the one deliberate English change: the two chooser entries (one placeholder step each) used to read "1 STEPS".
+- **The HELP button's name is an argument wherever a sentence points at it.** `voice_rec_help_offer` takes it twice (`%1$s`), and `TrainingCaptureHome`'s still-English tip builds its sentence with `$helpButton`. A sentence must never type an English "HELP" for a button that is now called AYUDA; `ManageRecordingsWordingTest` fails if one does. Any screen migrated later that mentions the HELP button does the same.
+- **`[CLOSE]`, `[RUN]`, `[ABORT]` and `[GOT IT]` keep their brackets inside the resource** (HELP's house style; the shared dialog frame's `common_close` has none). `HelpWordingTest` holds it in every language.
+- **Type-check:** `HelpMenuDialog`, `HelpCoachDialog`, `PoseSelectorDialog` and `VoiceRecordingsHelpSelectorDialog` are staged; `stubs/app/HelpModules.kt` gives the two option types they draw and `helpText` is stubbed in `stubs/app/AppUi.kt`. Proved by breaking three names on purpose.
+- **A Kotlin KDoc that writes `help/*Help.kt` opens a nested comment** (`/*`) and the whole file fails with "Unclosed comment"; write "the per-feature files in help/".
