@@ -427,9 +427,9 @@ class DeckScreensWordingTest {
         assertTrue(gifRepo.contains(".ifBlank { \"UNTITLED GIF\" }"))
         // The title the dialog starts with is what gets saved if the person imports without changing it, so it is the English text too.
         assertTrue(gif.contains("return \"UNTITLED GIF\""))
-        // The category list shows the shown name but selects, and saves, by id; the dialog saves what was typed.
+        // The category list shows the shown name but selects, and saves, by id; the dialog hands importGif what was typed (importGif saves it through createCategory, only once the file has passed its checks; GifImportCleanupTest pins that).
         assertTrue(Regex("""shownCategoryName\(words, category\.name\)[\s\S]{0,600}?selectedCategoryId = category\.id""").containsMatchIn(gif))
-        assertTrue(gif.contains("name = categoryName"))
+        assertTrue(gif.contains("categoryName = categoryName"))
         // The zip's folder name for an uncategorised GIF is a path in a file meant for browsing without ACK, and is a stored name: it stays English.
         assertTrue(file("decks/GifBackupManager.kt").contains("categoryName ?: \"UNCATEGORIZED\", \"UNCATEGORIZED\""))
     }
