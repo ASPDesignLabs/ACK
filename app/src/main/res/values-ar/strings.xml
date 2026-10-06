@@ -303,6 +303,7 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="export_cat_voice_recordings">تسجيلاتك الصوتية (الصوت نفسه)</string>
     <string name="export_cat_messages">العبارات والرسائل والحزم</string>
     <string name="export_cat_learned_words">كلمات تعلمها التطبيق مما حفظته أو نطقته أو نسخته</string>
+    <string name="export_cat_partner_card">جملك الخاصة في بطاقة الشريك</string>
     <string name="export_cat_settings">الإعدادات والسجل</string>
     <string name="export_contains_heading">قد يحتوي هذا الملف على:</string>
     <string name="export_not_protected">هو غير مشفر وليس له كلمة مرور. يمكن لأي شخص يفتحه أن يقرأ كل ما فيه.</string>
@@ -344,7 +345,7 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="data_port_integrity_failed">فشل فحص السلامة</string>
     <string name="common_continue">متابعة</string>
     <string name="area_messages_and_decks_label">الرسائل والحزم</string>
-    <string name="area_messages_and_decks_holds">حزمك ورسائلك وعباراتك والمتغيرات المشتركة وسجل الكتابة والكلمات المتعلمة وراء اقتراحات الكلمات. ليس بطاقة معلومات الطوارئ.</string>
+    <string name="area_messages_and_decks_holds">حزمك ورسائلك وعباراتك والمتغيرات المشتركة وسجل الكتابة والكلمات المتعلمة وراء اقتراحات الكلمات وجملك الخاصة في بطاقة الشريك. ليس بطاقة معلومات الطوارئ.</string>
     <string name="area_messages_and_decks_backup">هو موجود في %1$s.</string>
     <string name="area_emergency_info_card_label">بطاقة معلومات الطوارئ</string>
     <string name="area_emergency_info_card_holds">بطاقة الهوية الطبية: الاسم وتاريخ الميلاد وفصيلة الدم والحالات الصحية والأدوية والحساسية وجهات الاتصال.</string>
@@ -1167,7 +1168,8 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="info_nr_usage_1">- جديد: ملخص الاستخدام في الإعدادات يحسب عدد مرات إرسال الرسائل ووقتها، بحسب الساعة وبحسب المصدر، ولا يحفظ الكلمات أبداً. هو متوقف حتى تشغّله وتؤكد، وتعرض الطرفية سطراً أثناء تشغيله. الرسائل المرسلة بـ /n وسرد المساعدة لا تُحسب</string>
     <string name="info_nr_usage_2">- يُحفظ 90 يوماً على هذا الهاتف فقط وليس في أي نسخة احتياطية. لا يُرسل شيء إلى أي مكان. حفظ ملخص الاستخدام في ملف يحفظ نسخة في المكان الذي تختاره (وما زال يُظهر متى تتواصل، فاحفظه كما تحفظ يومياتك). نسيان ملخص الاستخدام يحذفه بعد سؤالين</string>
     <string name="info_nr_partner_head">-- بطاقة الشريك --</string>
-    <string name="info_nr_partner_1">- جديد: أيقونة بطاقة الشريك (فقاعة كلام) في الترويسة بجانب مساعدة. النقرة تسأل أولاً. إذا شغّلتها يقول ACK ويعرض خمس جمل قصيرة تخبر من يتحدث معك كيف يتواصل معك، مثل أي رسالة: صوتك ومخرجك، وتُعرض ولا تُنطق إذا كان الإخراج صامتاً. الكلمات مسودات. على الورق: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_1">- جديد: أيقونة بطاقة الشريك (فقاعة كلام) في الترويسة بجانب مساعدة. النقرة تسأل أولاً، وهناك يمكن تفعيل كل جملة أو إيقافها. إذا شغّلتها يقول ACK ويعرض ما هو مفعّل، مثل أي رسالة: صوتك ومخرجك، وتُعرض ولا تُنطق إذا كان الإخراج صامتاً. الكلمات مسودات. على الورق: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_2">- يمكن كتابة جملة أو جملتين من عندك للبطاقة. يقولها ACK تماماً كما كُتبت. تبقى على هذا الهاتف وتدخل في تصدير ملف JSON وتُحذف مع الرسائل والحزم. يحسب ملخص الاستخدام كل تشغيل كرسالة واحدة من بطاقة الشريك</string>
     <string name="info_nr_fixes_head">-- الإصلاحات --</string>
     <string name="info_nr_fixes_1">- تم الإصلاح: كان التأكيد قبل مسح متغيرات عبارة أو موجهها يعرض جملته الثانية فقط. وهو يعرض الآن السؤال كاملا بالصياغة السابقة نفسها</string>
     <string name="info_b8_title">=== ملاحظات إصدار ACK v1.0-BETA.8 ===</string>
@@ -2015,6 +2017,7 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="usage_kind_break">استراحة</string>
     <string name="usage_kind_boundary">حد</string>
     <string name="usage_kind_social">اجتماعي</string>
+    <string name="usage_kind_partner_card">بطاقة الشريك</string>
     <string name="usage_kind_other">أخرى</string>
     <string name="usage_channel_matrix">حزمة المصفوفة</string>
     <string name="usage_channel_quick_actions">حزمة الإجراءات السريعة</string>
@@ -2033,7 +2036,7 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="partner_card_name">بطاقة الشريك</string>
     <string name="partner_card_icon">بطاقة الشريك. تخبر من يتحدث معك كيف يتواصل معك. تسأل قبل أن تعمل.</string>
     <string name="partner_card_ask_title">تشغيل بطاقة الشريك؟</string>
-    <string name="partner_card_ask_intro">سيقول ACK هذا بصوت عالٍ ويعرضه على الشاشة، مثل أي رسالة أخرى:</string>
+    <string name="partner_card_ask_intro">اختر ما سيُقال. سيقول ACK ما هو مفعّل بصوت عالٍ ويعرضه على الشاشة، مثل أي رسالة أخرى:</string>
     <string name="partner_card_ask_silent">تستخدم مخرجك المعتاد. إذا كان %1$s مفعّلاً فتُعرض ولا تُنطق.</string>
     <string name="partner_card_ask_play">تشغيل</string>
     <string name="partner_card_1">أستخدم هذا التطبيق لأتحدث.</string>
@@ -2041,4 +2044,16 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="partner_card_3">أرجو الانتظار حتى أجيب.</string>
     <string name="partner_card_4">أرجو عدم أخذ هاتفي.</string>
     <string name="partner_card_5">إن لم يكن واضحاً ما أحتاجه، يمكنك أن تسألني وسأُريك.</string>
+    <string name="partner_card_own_label">جملتك الخاصة %1$s</string>
+    <string name="partner_card_own_empty">جملتك الخاصة %1$s: لم تُكتب بعد</string>
+    <string name="partner_card_write">اكتب</string>
+    <string name="partner_card_edit">تعديل</string>
+    <string name="partner_card_none_on">فعّل جملة واحدة على الأقل لتشغيل البطاقة.</string>
+    <string name="partner_card_edit_hint">اكتب جملة قصيرة واحدة. يقولها ACK ويعرضها تماماً كما تكتبها. تُحفظ على هذا الهاتف وتدخل في %1$s وهو غير مشفّر، فلا تكتب ما لا تريد أن يقرأه شخص آخر. حتى %2$s حرفاً.</string>
+    <string name="partner_card_edit_placeholder">اكتب جملة قصيرة</string>
+    <string name="partner_card_clear">مسح هذه الجملة</string>
+    <string name="partner_card_clear_title">مسح جملتك الخاصة %1$s؟</string>
+    <string name="partner_card_clear_body">ستُزال من هذا الهاتف ولا يمكن التراجع عن ذلك. ملف النسخة الاحتياطية الذي أنشأته سابقاً لا يتغير.</string>
+    <string name="partner_card_clear_confirm">امسحها</string>
+    <string name="partner_card_save_failed">تعذّر الحفظ. لم يتغيّر شيء.</string>
 </resources>

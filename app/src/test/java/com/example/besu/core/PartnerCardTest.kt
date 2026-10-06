@@ -37,7 +37,7 @@ class PartnerCardTest {
     @Test
     fun theQuestionThatAsksFirstIsExactlyThisInEnglish() {
         assertEquals("PLAY THE PARTNER CARD?", EnglishText.get(PartnerCard.ASK_TITLE))
-        assertEquals("ACK WILL SAY THIS OUT LOUD AND SHOW IT ON THE SCREEN, LIKE ANY OTHER MESSAGE:", EnglishText.get(PartnerCard.ASK_INTRO))
+        assertEquals("CHOOSE WHAT TO SAY. ACK WILL SAY WHAT IS ON, OUT LOUD, AND SHOW IT ON THE SCREEN, LIKE ANY OTHER MESSAGE:", EnglishText.get(PartnerCard.ASK_INTRO))
         assertEquals("IT USES YOUR NORMAL OUTPUT. IF SILENT MODE IS ON, IT IS SHOWN AND NOT SPOKEN.", EnglishText.get(PartnerCard.ASK_SILENT, "SILENT MODE"))
         assertEquals("PLAY IT", EnglishText.get(PartnerCard.ASK_PLAY))
         assertEquals("PARTNER CARD", EnglishText.get(PartnerCard.NAME))
@@ -125,6 +125,79 @@ class PartnerCardTest {
             assertTrue(map.getValue(PartnerCard.ASK_PLAY).isNotBlank())
             assertNotEquals("$tag: PLAY must not read like CANCEL", map.getValue("common_cancel"), map.getValue(PartnerCard.ASK_PLAY))
         }
+    }
+
+    // ---- the choice, the person's own sentences and their words ---------------------------------------------------------------------
+
+    private val newNames = listOf(
+        PartnerCard.OWN_LABEL, PartnerCard.OWN_EMPTY, PartnerCard.WRITE, PartnerCard.EDIT, PartnerCard.NONE_ON, PartnerCard.EDIT_HINT, PartnerCard.EDIT_PLACEHOLDER,
+        PartnerCard.CLEAR, PartnerCard.CLEAR_TITLE, PartnerCard.CLEAR_BODY, PartnerCard.CLEAR_CONFIRM, PartnerCard.SAVE_FAILED,
+    )
+
+    @Test
+    fun theChoiceAndOwnSentenceWordsAreExactlyThisInEnglish() {
+        val t = EnglishText
+        assertEquals("YOUR OWN SENTENCE 2", t.get(PartnerCard.OWN_LABEL, "2"))
+        assertEquals("YOUR OWN SENTENCE 1: NOT WRITTEN YET", t.get(PartnerCard.OWN_EMPTY, "1"))
+        assertEquals("WRITE", t.get(PartnerCard.WRITE))
+        assertEquals("EDIT", t.get(PartnerCard.EDIT))
+        assertEquals("TURN ON AT LEAST ONE SENTENCE TO PLAY THE CARD.", t.get(PartnerCard.NONE_ON))
+        assertEquals(
+            "WRITE ONE SHORT SENTENCE. ACK SAYS IT AND SHOWS IT EXACTLY AS YOU WRITE IT. IT IS KEPT ON THIS PHONE AND IS IN EXPORT .JSON, WHICH IS NOT ENCRYPTED, SO LEAVE OUT ANYTHING YOU WOULD NOT WANT SOMEONE ELSE TO READ. UP TO 200 CHARACTERS.",
+            t.get(PartnerCard.EDIT_HINT, "EXPORT .JSON", PartnerCard.MAX_OWN_LENGTH.toString()),
+        )
+        assertEquals("TYPE ONE SHORT SENTENCE", t.get(PartnerCard.EDIT_PLACEHOLDER))
+        assertEquals("CLEAR THIS SENTENCE", t.get(PartnerCard.CLEAR))
+        assertEquals("CLEAR YOUR OWN SENTENCE 1?", t.get(PartnerCard.CLEAR_TITLE, "1"))
+        assertEquals("IT WILL BE REMOVED FROM THIS PHONE AND CANNOT BE UNDONE. A BACKUP FILE YOU MADE EARLIER IS NOT CHANGED.", t.get(PartnerCard.CLEAR_BODY))
+        assertEquals("CLEAR IT", t.get(PartnerCard.CLEAR_CONFIRM))
+        assertEquals("THAT COULD NOT BE SAVED. NOTHING WAS CHANGED.", t.get(PartnerCard.SAVE_FAILED))
+    }
+
+    @Test
+    fun everyNewWordHasItsPlaceholders_inEveryLanguage() {
+        val one = mapOf(PartnerCard.OWN_LABEL to 1, PartnerCard.OWN_EMPTY to 1, PartnerCard.CLEAR_TITLE to 1)
+        for (tag in languages) {
+            val map = all(tag)
+            for (name in newNames) {
+                val raw = map.getValue(name)
+                assertTrue("$tag/$name is not blank", raw.isNotBlank())
+                assertFalse("$tag/$name has no raw line break", raw.contains('\n') || raw.contains('\r'))
+                assertEquals("$tag/$name has no space at either end", raw.trim(), raw)
+                val placeholders = Regex("%(\\d)\\$").findAll(raw).map { it.groupValues[1].toInt() }.toList()
+                val expected = when (name) {
+                    PartnerCard.EDIT_HINT -> listOf(1, 2)
+                    in one -> listOf(1)
+                    else -> emptyList()
+                }
+                assertEquals("$tag/$name placeholders", expected, placeholders.sorted())
+            }
+            assertEquals("$tag: the hint says both the export button and the limit", true, words(tag).get(PartnerCard.EDIT_HINT, "NAME-OF-EXPORT", "200").let { it.contains("NAME-OF-EXPORT") && it.contains("200") })
+        }
+    }
+
+    @Test
+    fun theWordsForTheBuiltInAndOwnSentencesDiffer_inEveryLanguage() {
+        for (tag in languages) {
+            val map = all(tag)
+            assertNotEquals("$tag: WRITE and EDIT are different words", map.getValue(PartnerCard.WRITE), map.getValue(PartnerCard.EDIT))
+            assertNotEquals("$tag: CLEAR IT must not read like CANCEL", map.getValue("common_cancel"), map.getValue(PartnerCard.CLEAR_CONFIRM))
+            assertNotEquals("$tag: the card's own-sentence label and its empty form differ", map.getValue(PartnerCard.OWN_LABEL), map.getValue(PartnerCard.OWN_EMPTY))
+        }
+    }
+
+    @Test
+    fun theUsageKindAndTheExportLineAndTheDeleteDataAreaNameTheCard_inEveryLanguage() {
+        for (tag in languages) {
+            val map = all(tag)
+            val name = map.getValue(PartnerCard.NAME)
+            assertEquals("$tag: the usage summary names the kind the same way", name, map.getValue("usage_kind_partner_card"))
+            assertTrue("$tag: the export warning names the card's sentences", map.getValue("export_cat_partner_card").contains(name))
+            assertTrue("$tag: DELETE DATA says the messages area holds them", map.getValue("area_messages_and_decks_holds").contains(name))
+            assertTrue("$tag: the clear question names the sentence by its number", words(tag).get(PartnerCard.CLEAR_TITLE, "2").contains("2"))
+        }
+        assertEquals("PARTNER CARD", english.getValue("usage_kind_partner_card"))
+        assertEquals("YOUR OWN PARTNER CARD SENTENCES", english.getValue("export_cat_partner_card"))
     }
 
     // ---- which language is spoken -------------------------------------------------------------------------------------------------------

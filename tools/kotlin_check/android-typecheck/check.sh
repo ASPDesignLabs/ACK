@@ -71,8 +71,9 @@ cp "$A/settings/LogExportDialog.kt" "$STAGE/com/example/besu/settings/"
 # USAGE SUMMARY: the SETTINGS section, its save flow and the Terminal line (the repository and the exporter are stubbed in stubs/app/UsageSummary.kt; every rule and word is core/Usage*.kt, staged with the rest of core/).
 cp "$A/settings/UsageSummarySection.kt" "$A/settings/UsageSummarySave.kt" "$STAGE/com/example/besu/settings/"
 cp "$A/ui/UsageSummaryState.kt" "$STAGE/com/example/besu/ui/"
-# PARTNER CARD: the header icon and the question a tap opens (every word and rule is core/PartnerCard.kt; the sender, output/PartnerCardPlayer.kt, uses the SDK and is syntax-checked only).
-cp "$A/ui/PartnerCardButton.kt" "$STAGE/com/example/besu/ui/"
+# PARTNER CARD: the header icon, the question a tap opens (with a switch per sentence) and the dialog for the person's own sentences, and the state they share (every word and rule is core/PartnerCard*.kt;
+# the repository is stubbed in stubs/app/PartnerCard.kt; the sender, output/PartnerCardPlayer.kt, uses the SDK and is syntax-checked only).
+cp "$A/ui/PartnerCardButton.kt" "$A/ui/PartnerCardState.kt" "$STAGE/com/example/besu/ui/"
 cp -r "$H/stubs/." "$STAGE/"
 cd "$H"
 gradle --no-daemon --console=plain -q -Pkotlin.compiler.execution.strategy=in-process compileKotlin > "$H/build/check.log" 2>&1 && status=0 || status=$?

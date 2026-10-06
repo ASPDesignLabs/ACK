@@ -303,6 +303,7 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="export_cat_voice_recordings">आपकी आवाज़ रिकॉर्डिंग (ऑडियो खुद)</string>
     <string name="export_cat_messages">वाक्य, संदेश और डेक</string>
     <string name="export_cat_learned_words">आपके सहेजे, बोले या कॉपी किए गए से सीखे गए शब्द</string>
+    <string name="export_cat_partner_card">आपके अपने साथी कार्ड वाक्य</string>
     <string name="export_cat_settings">सेटिंग्स और इतिहास</string>
     <string name="export_contains_heading">इस फ़ाइल में ये हो सकता है:</string>
     <string name="export_not_protected">यह एन्क्रिप्टेड नहीं है और इसमें कोई पासवर्ड नहीं है। जो भी इसे खोलेगा, वह सब कुछ पढ़ सकता है।</string>
@@ -340,7 +341,7 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="data_port_integrity_failed">अखंडता जाँच विफल</string>
     <string name="common_continue">जारी रखें</string>
     <string name="area_messages_and_decks_label">संदेश और डेक</string>
-    <string name="area_messages_and_decks_holds">आपके डेक, संदेश, वाक्य, साझा चर, टाइपिंग इतिहास और शब्द सुझावों के पीछे के सीखे हुए शब्द। आपातकालीन जानकारी कार्ड नहीं।</string>
+    <string name="area_messages_and_decks_holds">आपके डेक, संदेश, वाक्य, साझा चर, टाइपिंग इतिहास, शब्द सुझावों के पीछे के सीखे हुए शब्द और आपके अपने साथी कार्ड वाक्य। आपातकालीन जानकारी कार्ड नहीं।</string>
     <string name="area_messages_and_decks_backup">यह %1$s में है।</string>
     <string name="area_emergency_info_card_label">आपातकालीन जानकारी कार्ड</string>
     <string name="area_emergency_info_card_holds">मेडिकल आईडी कार्ड: नाम, जन्म तिथि, ब्लड ग्रुप, स्थितियाँ, दवाइयाँ, एलर्जी और संपर्क।</string>
@@ -1115,7 +1116,8 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="info_nr_usage_1">- नया: सेटिंग्स में उपयोग सारांश गिनता है कि संदेश कितनी बार और किस समय भेजे गए, घंटे के अनुसार और स्रोत के अनुसार, शब्द कभी नहीं। यह तब तक बंद रहता है जब तक आप इसे चालू करके पुष्टि नहीं करते, और चालू रहने पर टर्मिनल एक पंक्ति दिखाता है। /n वाले संदेश और सहायता का वर्णन नहीं गिने जाते</string>
     <string name="info_nr_usage_2">- यह 90 दिन तक केवल इसी फ़ोन पर रहता है और किसी बैकअप में नहीं है। कुछ भी कहीं नहीं भेजा जाता। उपयोग सारांश को फ़ाइल में सहेजें आपकी चुनी जगह पर एक प्रति रखता है (इससे अब भी पता चलता है कि आप कब बात करते हैं, इसलिए इसे डायरी की तरह रखें)। उपयोग सारांश भूल जाएँ इसे दो सवालों के बाद मिटा देता है</string>
     <string name="info_nr_partner_head">-- साथी कार्ड --</string>
-    <string name="info_nr_partner_1">- नया: हेडर में मदद के बगल में साथी कार्ड का आइकन (एक संवाद-बुलबुला)। एक टैप पहले पूछता है। चलाने पर ACK पाँच छोटे वाक्य बोलता और दिखाता है जो आपसे बात करने वाले को बताते हैं कि आपसे कैसे बात की जाए, किसी भी संदेश की तरह: आपकी आवाज़ और आपका आउटपुट, और आउटपुट मौन हो तो वह केवल दिखाया जाता है, बोला नहीं जाता। शब्द मसौदे हैं। कागज़ पर: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_1">- नया: हेडर में मदद के बगल में साथी कार्ड का आइकन (एक संवाद-बुलबुला)। एक टैप पहले पूछता है, और वहीं हर वाक्य को चालू या बंद किया जा सकता है। चलाने पर ACK जो चालू है उसे बोलता और दिखाता है, किसी भी संदेश की तरह: आपकी आवाज़ और आपका आउटपुट, और आउटपुट मौन हो तो वह केवल दिखाया जाता है, बोला नहीं जाता। शब्द मसौदे हैं। कागज़ पर: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_2">- कार्ड के लिए अपने एक या दो वाक्य लिखे जा सकते हैं। ACK उन्हें ठीक वैसे ही बोलता है जैसे वे लिखे गए हैं। वे इसी फ़ोन पर रहते हैं, JSON निर्यात करें में होते हैं और संदेश और डेक के साथ मिटते हैं। उपयोग सारांश हर बार चलाने को साथी कार्ड का एक संदेश गिनता है</string>
     <string name="info_nr_fixes_head">-- सुधार --</string>
     <string name="info_nr_fixes_1">- ठीक किया: किसी वाक्य के वेरिएबल या प्रॉम्प्ट साफ़ करने से पहले की पुष्टि केवल उसका दूसरा वाक्य दिखाती थी। अब वह पूरा प्रश्न दिखाती है, पहले जैसे शब्दों में</string>
     <string name="info_b8_title">=== ACK v1.0-BETA.8 पैच नोट्स ===</string>
@@ -1939,6 +1941,7 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="usage_kind_break">विराम</string>
     <string name="usage_kind_boundary">सीमा</string>
     <string name="usage_kind_social">सामाजिक</string>
+    <string name="usage_kind_partner_card">साथी कार्ड</string>
     <string name="usage_kind_other">अन्य</string>
     <string name="usage_channel_matrix">मैट्रिक्स डेक</string>
     <string name="usage_channel_quick_actions">क्विक एक्शन डेक</string>
@@ -1957,7 +1960,7 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="partner_card_name">साथी कार्ड</string>
     <string name="partner_card_icon">साथी कार्ड। आपसे बात करने वाले को बताता है कि आपसे बात कैसे की जाए। चलाने से पहले पूछता है।</string>
     <string name="partner_card_ask_title">साथी कार्ड चलाएँ?</string>
-    <string name="partner_card_ask_intro">ACK इसे ज़ोर से बोलेगा और स्क्रीन पर दिखाएगा, किसी भी दूसरे संदेश की तरह:</string>
+    <string name="partner_card_ask_intro">चुनें कि क्या बोलना है। ACK जो चालू है उसे ज़ोर से बोलेगा और स्क्रीन पर दिखाएगा, किसी भी दूसरे संदेश की तरह:</string>
     <string name="partner_card_ask_silent">यह आपके सामान्य आउटपुट का उपयोग करता है। %1$s चालू हो तो यह केवल दिखाया जाता है, बोला नहीं जाता।</string>
     <string name="partner_card_ask_play">चलाएँ</string>
     <string name="partner_card_1">मेरे लिए यह ऐप ही बोलने का तरीका है।</string>
@@ -1965,4 +1968,16 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="partner_card_3">कृपया मेरे जवाब देने तक रुकिए।</string>
     <string name="partner_card_4">कृपया मेरा फ़ोन मत लीजिए।</string>
     <string name="partner_card_5">अगर आपको नहीं पता कि मुझे क्या चाहिए, तो मुझसे पूछिए और मुझे दिखाने दीजिए।</string>
+    <string name="partner_card_own_label">आपका अपना वाक्य %1$s</string>
+    <string name="partner_card_own_empty">आपका अपना वाक्य %1$s: अभी लिखा नहीं गया</string>
+    <string name="partner_card_write">लिखें</string>
+    <string name="partner_card_edit">बदलें</string>
+    <string name="partner_card_none_on">कार्ड चलाने के लिए कम से कम एक वाक्य चालू करें।</string>
+    <string name="partner_card_edit_hint">एक छोटा वाक्य लिखें। ACK इसे ठीक वैसे ही बोलता और दिखाता है जैसा आप लिखते हैं। यह इसी फ़ोन पर रहता है और %1$s में होता है, जो एन्क्रिप्टेड नहीं है, इसलिए ऐसा कुछ न लिखें जिसे आप किसी और को पढ़ने नहीं देना चाहेंगे। अधिकतम %2$s अक्षर।</string>
+    <string name="partner_card_edit_placeholder">एक छोटा वाक्य लिखें</string>
+    <string name="partner_card_clear">यह वाक्य हटाएँ</string>
+    <string name="partner_card_clear_title">आपका अपना वाक्य %1$s हटाएँ?</string>
+    <string name="partner_card_clear_body">यह इस फ़ोन से हट जाएगा और वापस नहीं आ सकता। पहले बनाई गई बैकअप फ़ाइल नहीं बदलती।</string>
+    <string name="partner_card_clear_confirm">हटाएँ</string>
+    <string name="partner_card_save_failed">यह सहेजा नहीं जा सका। कुछ भी नहीं बदला।</string>
 </resources>

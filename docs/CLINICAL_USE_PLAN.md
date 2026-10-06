@@ -3,7 +3,7 @@
 **Status: in progress.** C4, C2, C1 and C3 are built on branch `claude/compassionate-hawking-bj1xap` (none yet tried on a phone); C5 and C6 wait on Q7. Written on that branch
 (which started level with `main`). Source: the AAC Readiness Tracker, Section 5 (rows C1 to C6), and the Speech-Language Pathology
 Evaluation it cites (R12, Q9, Q10, Q11). Each decision in section 6 is yours; a suggestion is a suggestion, not a decision.
-Nineteen decisions are recorded (section 6). Three questions are still open (Q7, Q8, Q12).
+Twenty-three decisions are recorded (section 6). Three questions are still open (Q7, Q8, Q12).
 
 ## 1. What Section 5 asks for
 
@@ -138,7 +138,10 @@ reminder's save icon moved to its left.** A tap asks first; the icon is about 24
 - **C3.4** **One engine change you did not ask for, and why:** `OutputService` takes a `full_text` request that makes the screen show the whole message whatever the preset says. Without it, a phone whose preset still cuts long messages would show "ALERT:" and
   three words while speaking all five sentences. Only the card asks for it; every other message is unchanged. It travels through the speech queue too, and a test pins both routes.
 - **C3.5** Printable page `docs/PARTNER_CARD.md` (all six languages), kept identical to the app by a test. CHANGELOG, `/info` (six languages), TRANSLATIONS, CLAUDE.md and device-test part D done. The usage summary counts the card as its own place.
-- **C3.6 (you)** The phone check (part D): the header on your smallest phone, the bubble as a tap target, that PLAY IT shows all five sentences, **whether about 10 seconds on screen is long enough to read them**, Silent Mode, your output devices, Arabic.
+- **C3.7** Added at your request: **each sentence can be switched on or off in the question (ON/OFF in words, remembered), there are two slots for sentences of your own (up to 200 characters, said exactly as written, never translated), and every play is logged with the kind
+  PARTNER CARD.** This is the first part of the card that stores anything, so it has its own file (`ack_partner_card`), is in EXPORT .JSON (named in its warning), is wiped by DELETE DATA > MESSAGES AND DECKS, and a restore only fills empty slots. Settings and backup rules are
+  in `core/PartnerCardSettings.kt`; 27 tests of the rules and 19 wiring tests, and fifteen deliberate breaks each caught. It also found and fixed a real gap (a "next line" character joined two words).
+- **C3.6 (you)** The phone check (part D, now longer): the header on your smallest phone, the bubble as a tap target, that PLAY IT shows all five sentences, **whether about 10 seconds on screen is long enough to read them**, Silent Mode, your output devices, Arabic.
 - **Verified by:** unit tests and thirteen deliberate breaks, each caught by a test; the type-check covers the icon file. The done-when ("tried with real partners") happens in C5's trials.
 
 ### C5: outside feedback (P1, in progress, mostly people)
@@ -188,6 +191,10 @@ a personal tool and give feedback. It is not described as a pilot programme or a
 | C3: tap area | **About 24 dp, like its neighbours.** | The header does not grow taller. Needs a small-screen phone check. |
 | C3: hiding the icon | **No switch: it is always shown.** | One less setting; the icon is a normal output, not an alarm. |
 | C3: the words | **Option C**: five sentences, with a request not to take the phone and an offer to show what you need. | Drafts for a speech-language pathologist; `docs/PARTNER_CARD.md` holds all six languages. |
+| C3: choosing what it says | **Each sentence has its own ON/OFF in the question, so one sentence can be said alone.** I chose to **remember** the choice (otherwise it would have to be re-ticked every time); the question always shows it. | With every sentence off there is no PLAY IT, only a line saying to turn one on. |
+| C3: your own sentences | **Two slots**, up to 200 characters, said and shown exactly as written (tidied to one line, with a full stop added if there is no sentence ending). | Never translated or reworded. Starts on when written. Clearing asks a second time. |
+| C3: where your sentences live | Their own file, **in EXPORT .JSON** (named in its warning), **wiped with MESSAGES AND DECKS**. A restore **only fills empty slots** (my choice: it can never overwrite a sentence you wrote since). | The ON/OFF choices stay on the phone and are not in the backup. |
+| C3: how a play is logged | **The kind is `partner_card`**, set by the tag, never by the words; **one play is one message** however many sentences were on. | The channel is still PARTNER CARD too, so a reader sees both. Say if you want the channel dropped. |
 
 ### Still open
 

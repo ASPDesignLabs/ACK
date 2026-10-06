@@ -188,9 +188,9 @@ class UsageTallyTest {
 
     @Test
     fun theRealCapIsFarAboveAnyRealUse_andAFullNinetyDaysOfEveryCombinationFitsUnderIt() {
-        // The largest a day can be: 24 hours x 12 channels x 11 kinds. Real use is a tiny fraction.
+        // The largest a day can be: 24 hours x 12 channels x 12 kinds. Real use is a tiny fraction.
         val perDay = 24 * UsageChannel.values().size * UsageKind.values().size
-        assertEquals(3168, perDay)
+        assertEquals(3456, perDay)
         assertTrue("the cap must stay above a realistic ninety days (a few hundred rows a day at the very most)", UsageTally.MAX_ROWS >= 90 * 200)
         assertEquals(20_000, UsageTally.MAX_ROWS)
     }

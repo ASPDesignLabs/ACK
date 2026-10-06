@@ -36,7 +36,7 @@ EMERGENCY, TERMINAL (typed at the Terminal prompt), MANUAL_OVERRIDE (`TERM/INPUT
 (`HW/WATCH`), SHORTCUT (`M-KEY`), PEOPLE (`COMPUTER/CONTACT`), PARTNER_CARD (`PARTNER/CARD`, the header's partner card, added with that feature so a reader can ignore it), and OTHER for any tag not on this list. A test reads the app's source and fails if a
 tag the app sends is not in this table, which is how the `BANK/...` one was found.
 
-**Kinds**: YES, NO, UNSURE, HELP, REPAIR, TURN_HOLDING, NAME_OR_ID, BREAK, BOUNDARY, SOCIAL (the ten in `core/StarterSets.kt`), and OTHER.
+**Kinds**: YES, NO, UNSURE, HELP, REPAIR, TURN_HOLDING, NAME_OR_ID, BREAK, BOUNDARY, SOCIAL (the ten in `core/StarterSets.kt`), PARTNER_CARD (added with the partner card at the developer's request: a play of the card is this kind whatever its words say, decided by the `PARTNER/CARD` tag), and OTHER.
 
 ## 3. What is never recorded
 

@@ -40,7 +40,7 @@ object InstallState {
         "ack_prefs", "app_prefs", "ack_matrix_config", "ack_visual_presets", "ack_voice_recordings", "ack_targets",
         "ack_statements", "ack_geo_secure", "ack_gif_library", "ack_autocomplete_history",
         "ack_training_capture", "ack_training_game", "ack_deck_trainer", "gestures", "ack_starter_seed", "ack_assist_prefs",
-        "ack_usage_tally",
+        "ack_usage_tally", "ack_partner_card",
     )
 
     private const val DEFAULT_VOICE = "ORGANIC"

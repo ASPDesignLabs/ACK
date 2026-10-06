@@ -320,6 +320,7 @@
     <string name="export_cat_voice_recordings">YOUR VOICE RECORDINGS (THE AUDIO ITSELF)</string>
     <string name="export_cat_messages">MESSAGES, STATEMENTS AND DECKS</string>
     <string name="export_cat_learned_words">WORDS LEARNED FROM WHAT YOU SAVED, SPOKE OR COPIED</string>
+    <string name="export_cat_partner_card">YOUR OWN PARTNER CARD SENTENCES</string>
     <string name="export_cat_settings">SETTINGS AND HISTORY</string>
     <string name="export_contains_heading">THIS FILE CAN CONTAIN:</string>
     <string name="export_not_protected">IT IS NOT ENCRYPTED AND HAS NO PASSWORD. ANYONE WHO OPENS IT CAN READ ALL OF IT.</string>
@@ -358,7 +359,7 @@
     <!-- DELETE DATA: the areas it offers, its confirmations, the two safety-copy dialogs and DELETE CUSTOM VOICE (docs/TRANSLATIONS.md). Every sentence that says what a delete does keeps its safety meaning in every language. -->
     <string name="common_continue">CONTINUE</string>
     <string name="area_messages_and_decks_label">MESSAGES AND DECKS</string>
-    <string name="area_messages_and_decks_holds">YOUR DECKS, MESSAGES, STATEMENTS, SHARED VARIABLES, TYPING HISTORY AND THE LEARNED WORDS BEHIND WORD SUGGESTIONS. NOT THE EMERGENCY INFO CARD.</string>
+    <string name="area_messages_and_decks_holds">YOUR DECKS, MESSAGES, STATEMENTS, SHARED VARIABLES, TYPING HISTORY, THE LEARNED WORDS BEHIND WORD SUGGESTIONS AND YOUR OWN PARTNER CARD SENTENCES. NOT THE EMERGENCY INFO CARD.</string>
     <string name="area_messages_and_decks_backup">IT IS IN %1$s.</string>
     <string name="area_emergency_info_card_label">EMERGENCY INFO CARD</string>
     <string name="area_emergency_info_card_holds">THE MEDICAL ID CARD: NAME, DATE OF BIRTH, BLOOD TYPE, CONDITIONS, MEDICATIONS, ALLERGIES AND CONTACTS.</string>
@@ -1136,7 +1137,8 @@
     <string name="info_nr_usage_1">- NEW: USAGE SUMMARY, IN SETTINGS, COUNTS HOW OFTEN AND WHEN MESSAGES\nARE SENT, BY HOUR AND BY WHERE FROM, NEVER THE WORDS. IT IS OFF UNTIL\nYOU TURN IT ON AND CONFIRM, AND THE TERMINAL SHOWS A LINE WHILE IT IS\nON. /n MESSAGES AND HELP NARRATION ARE NOT COUNTED</string>
     <string name="info_nr_usage_2">- KEPT 90 DAYS ON THIS PHONE ONLY AND NOT IN ANY BACKUP. NOTHING IS\nSENT ANYWHERE. SAVE USAGE SUMMARY TO A FILE KEEPS A COPY WHERE YOU\nCHOOSE (IT STILL SHOWS WHEN YOU COMMUNICATE, SO KEEP IT LIKE A\nDIARY). FORGET USAGE SUMMARY DELETES IT, AFTER TWO QUESTIONS</string>
     <string name="info_nr_partner_head">-- PARTNER CARD --</string>
-    <string name="info_nr_partner_1">- NEW: A PARTNER CARD ICON (A SPEECH BUBBLE) IN THE HEADER\nNEXT TO HELP. A TAP ASKS FIRST. IF YOU PLAY IT, ACK SAYS AND SHOWS\nFIVE SHORT SENTENCES TELLING SOMEONE HOW YOU TALK, LIKE ANY MESSAGE:\nYOUR VOICE AND YOUR OUTPUT, SHOWN BUT NOT SPOKEN IF OUTPUT IS SILENT.\nTHE WORDS ARE DRAFTS. ON PAPER: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_1">- NEW: A PARTNER CARD ICON (A SPEECH BUBBLE) IN THE HEADER\nNEXT TO HELP. A TAP ASKS FIRST, AND YOU TURN EACH SENTENCE ON OR OFF\nTHERE. IF YOU PLAY IT, ACK SAYS AND SHOWS WHAT IS ON, LIKE ANY\nMESSAGE: YOUR VOICE AND YOUR OUTPUT, SHOWN BUT NOT SPOKEN IF OUTPUT\nIS SILENT. THE WORDS ARE DRAFTS. ON PAPER: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_2">- YOU CAN WRITE ONE OR TWO SENTENCES OF YOUR OWN FOR THE CARD. ACK SAYS\nTHEM EXACTLY AS WRITTEN. THEY STAY ON THIS PHONE, ARE IN EXPORT .JSON\nAND ARE DELETED WITH MESSAGES AND DECKS. THE USAGE SUMMARY COUNTS\nEACH PLAY AS ONE PARTNER CARD MESSAGE</string>
     <string name="info_nr_fixes_head">-- FIXES --</string>
     <string name="info_nr_fixes_1">- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE\'S VARIABLES OR\nPROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE\nQUESTION, WORDED AS BEFORE</string>
     <string name="info_b8_title">=== ACK v1.0-BETA.8 PATCH NOTES ===</string>
@@ -1960,6 +1962,7 @@
     <string name="usage_kind_break">BREAK</string>
     <string name="usage_kind_boundary">BOUNDARY</string>
     <string name="usage_kind_social">SOCIAL</string>
+    <string name="usage_kind_partner_card">PARTNER CARD</string>
     <string name="usage_kind_other">OTHER</string>
     <string name="usage_channel_matrix">MATRIX DECK</string>
     <string name="usage_channel_quick_actions">QUICK ACTIONS DECK</string>
@@ -1978,7 +1981,7 @@
     <string name="partner_card_name">PARTNER CARD</string>
     <string name="partner_card_icon">PARTNER CARD. SAYS HOW YOU TALK, FOR SOMEONE TALKING WITH YOU. ASKS BEFORE IT PLAYS.</string>
     <string name="partner_card_ask_title">PLAY THE PARTNER CARD?</string>
-    <string name="partner_card_ask_intro">ACK WILL SAY THIS OUT LOUD AND SHOW IT ON THE SCREEN, LIKE ANY OTHER MESSAGE:</string>
+    <string name="partner_card_ask_intro">CHOOSE WHAT TO SAY. ACK WILL SAY WHAT IS ON, OUT LOUD, AND SHOW IT ON THE SCREEN, LIKE ANY OTHER MESSAGE:</string>
     <string name="partner_card_ask_silent">IT USES YOUR NORMAL OUTPUT. IF %1$s IS ON, IT IS SHOWN AND NOT SPOKEN.</string>
     <string name="partner_card_ask_play">PLAY IT</string>
     <string name="partner_card_1">I use this app to talk.</string>
@@ -1986,4 +1989,16 @@
     <string name="partner_card_3">Please wait while I answer.</string>
     <string name="partner_card_4">Please do not take my phone.</string>
     <string name="partner_card_5">If you are not sure what I need, ask me and I will show you.</string>
+    <string name="partner_card_own_label">YOUR OWN SENTENCE %1$s</string>
+    <string name="partner_card_own_empty">YOUR OWN SENTENCE %1$s: NOT WRITTEN YET</string>
+    <string name="partner_card_write">WRITE</string>
+    <string name="partner_card_edit">EDIT</string>
+    <string name="partner_card_none_on">TURN ON AT LEAST ONE SENTENCE TO PLAY THE CARD.</string>
+    <string name="partner_card_edit_hint">WRITE ONE SHORT SENTENCE. ACK SAYS IT AND SHOWS IT EXACTLY AS YOU WRITE IT. IT IS KEPT ON THIS PHONE AND IS IN %1$s, WHICH IS NOT ENCRYPTED, SO LEAVE OUT ANYTHING YOU WOULD NOT WANT SOMEONE ELSE TO READ. UP TO %2$s CHARACTERS.</string>
+    <string name="partner_card_edit_placeholder">TYPE ONE SHORT SENTENCE</string>
+    <string name="partner_card_clear">CLEAR THIS SENTENCE</string>
+    <string name="partner_card_clear_title">CLEAR YOUR OWN SENTENCE %1$s?</string>
+    <string name="partner_card_clear_body">IT WILL BE REMOVED FROM THIS PHONE AND CANNOT BE UNDONE. A BACKUP FILE YOU MADE EARLIER IS NOT CHANGED.</string>
+    <string name="partner_card_clear_confirm">CLEAR IT</string>
+    <string name="partner_card_save_failed">THAT COULD NOT BE SAVED. NOTHING WAS CHANGED.</string>
 </resources>

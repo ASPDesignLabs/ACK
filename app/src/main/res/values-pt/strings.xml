@@ -303,6 +303,7 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="export_cat_voice_recordings">SUAS GRAVAÇÕES DE VOZ (O ÁUDIO EM SI)</string>
     <string name="export_cat_messages">FRASES, MENSAGENS E BARALHOS</string>
     <string name="export_cat_learned_words">PALAVRAS APRENDIDAS DO QUE VOCÊ SALVOU, FALOU OU COPIOU</string>
+    <string name="export_cat_partner_card">SUAS PRÓPRIAS FRASES DO CARTÃO PARA INTERLOCUTORES</string>
     <string name="export_cat_settings">CONFIGURAÇÕES E HISTÓRICO</string>
     <string name="export_contains_heading">ESTE ARQUIVO PODE CONTER:</string>
     <string name="export_not_protected">ELE NÃO É CRIPTOGRAFADO E NÃO TEM SENHA. QUALQUER PESSOA QUE O ABRIR PODE LER TUDO.</string>
@@ -341,7 +342,7 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="data_port_integrity_failed">FALHA NA VERIFICAÇÃO DE INTEGRIDADE</string>
     <string name="common_continue">CONTINUAR</string>
     <string name="area_messages_and_decks_label">MENSAGENS E BARALHOS</string>
-    <string name="area_messages_and_decks_holds">SEUS BARALHOS, MENSAGENS, FRASES, VARIÁVEIS COMPARTILHADAS, HISTÓRICO DE DIGITAÇÃO E AS PALAVRAS APRENDIDAS POR TRÁS DAS SUGESTÕES DE PALAVRAS. NÃO O CARTÃO DE INFORMAÇÕES DE EMERGÊNCIA.</string>
+    <string name="area_messages_and_decks_holds">SEUS BARALHOS, MENSAGENS, FRASES, VARIÁVEIS COMPARTILHADAS, HISTÓRICO DE DIGITAÇÃO, AS PALAVRAS APRENDIDAS POR TRÁS DAS SUGESTÕES DE PALAVRAS E SUAS PRÓPRIAS FRASES DO CARTÃO PARA INTERLOCUTORES. NÃO O CARTÃO DE INFORMAÇÕES DE EMERGÊNCIA.</string>
     <string name="area_messages_and_decks_backup">ESTÁ EM %1$s.</string>
     <string name="area_emergency_info_card_label">CARTÃO DE INFORMAÇÕES DE EMERGÊNCIA</string>
     <string name="area_emergency_info_card_holds">O CARTÃO DE IDENTIFICAÇÃO MÉDICA: NOME, DATA DE NASCIMENTO, TIPO SANGUÍNEO, CONDIÇÕES, MEDICAMENTOS, ALERGIAS E CONTATOS.</string>
@@ -1128,7 +1129,8 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="info_nr_usage_1">- NOVO: RESUMO DE USO, EM CONFIGURAÇÕES, CONTA COM QUE FREQUÊNCIA E A QUE HORAS AS MENSAGENS SÃO ENVIADAS, POR HORA E POR ORIGEM, NUNCA AS PALAVRAS. FICA DESLIGADO ATÉ VOCÊ LIGAR E CONFIRMAR, E O TERMINAL MOSTRA UMA LINHA ENQUANTO ESTÁ LIGADO. MENSAGENS COM /n E A NARRAÇÃO DA AJUDA NÃO SÃO CONTADAS</string>
     <string name="info_nr_usage_2">- FICA 90 DIAS SÓ NESTE TELEFONE E NÃO ENTRA EM NENHUM BACKUP. NADA É ENVIADO A LUGAR NENHUM. SALVAR O RESUMO DE USO EM UM ARQUIVO GUARDA UMA CÓPIA ONDE VOCÊ ESCOLHER (ELA AINDA MOSTRA QUANDO VOCÊ SE COMUNICA, ENTÃO GUARDE COMO UM DIÁRIO). ESQUECER O RESUMO DE USO APAGA TUDO, DEPOIS DE DUAS PERGUNTAS</string>
     <string name="info_nr_partner_head">-- CARTÃO PARA INTERLOCUTORES --</string>
-    <string name="info_nr_partner_1">- NOVO: UM ÍCONE DO CARTÃO PARA INTERLOCUTORES (UM BALÃO DE FALA) NO CABEÇALHO, AO LADO DE AJUDA. UM TOQUE PERGUNTA PRIMEIRO. SE VOCÊ CONFIRMAR, O ACK DIZ E MOSTRA CINCO FRASES CURTAS QUE EXPLICAM A QUEM CONVERSA COM VOCÊ COMO VOCÊ SE COMUNICA, COMO QUALQUER MENSAGEM: SUA VOZ E SUA SAÍDA, E É MOSTRADO MAS NÃO FALADO SE A SAÍDA FOR SILENCIOSA. AS PALAVRAS SÃO RASCUNHOS. EM PAPEL: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_1">- NOVO: UM ÍCONE DO CARTÃO PARA INTERLOCUTORES (UM BALÃO DE FALA) NO CABEÇALHO, AO LADO DE AJUDA. UM TOQUE PERGUNTA PRIMEIRO, E É ALI QUE SE LIGA OU DESLIGA CADA FRASE. SE VOCÊ CONFIRMAR, O ACK DIZ E MOSTRA O QUE ESTIVER LIGADO, COMO QUALQUER MENSAGEM: SUA VOZ E SUA SAÍDA, E É MOSTRADO MAS NÃO FALADO SE A SAÍDA FOR SILENCIOSA. AS PALAVRAS SÃO RASCUNHOS. EM PAPEL: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_2">- VOCÊ PODE ESCREVER UMA OU DUAS FRASES SUAS PARA O CARTÃO PARA INTERLOCUTORES. O ACK AS DIZ EXATAMENTE COMO VOCÊ ESCREVER. ELAS FICAM NESTE TELEFONE, VÃO EM EXPORTAR .JSON E SÃO APAGADAS COM MENSAGENS E BARALHOS. O RESUMO DE USO CONTA CADA VEZ QUE O CARTÃO É TOCADO COMO UMA MENSAGEM DO CARTÃO PARA INTERLOCUTORES</string>
     <string name="info_nr_fixes_head">-- CORREÇÕES --</string>
     <string name="info_nr_fixes_1">- CORRIGIDO: A CONFIRMAÇÃO ANTES DE LIMPAR AS VARIÁVEIS OU O PROMPT DE UMA FRASE MOSTRAVA SÓ A SEGUNDA FRASE. AGORA MOSTRA A PERGUNTA INTEIRA, COM O MESMO TEXTO DE ANTES</string>
     <string name="info_b8_title">=== NOTAS DA VERSÃO ACK v1.0-BETA.8 ===</string>
@@ -1958,6 +1960,7 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="usage_kind_break">PAUSA</string>
     <string name="usage_kind_boundary">LIMITE</string>
     <string name="usage_kind_social">SOCIAL</string>
+    <string name="usage_kind_partner_card">CARTÃO PARA INTERLOCUTORES</string>
     <string name="usage_kind_other">OUTRO</string>
     <string name="usage_channel_matrix">BARALHO MATRIX</string>
     <string name="usage_channel_quick_actions">BARALHO AÇÕES RÁPIDAS</string>
@@ -1976,7 +1979,7 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="partner_card_name">CARTÃO PARA INTERLOCUTORES</string>
     <string name="partner_card_icon">CARTÃO PARA INTERLOCUTORES. DIZ COMO VOCÊ SE COMUNICA, PARA QUEM CONVERSA COM VOCÊ. PERGUNTA ANTES DE TOCAR.</string>
     <string name="partner_card_ask_title">TOCAR O CARTÃO PARA INTERLOCUTORES?</string>
-    <string name="partner_card_ask_intro">O ACK VAI DIZER ISTO EM VOZ ALTA E MOSTRAR NA TELA, COMO QUALQUER OUTRA MENSAGEM:</string>
+    <string name="partner_card_ask_intro">ESCOLHA O QUE DIZER. O ACK VAI DIZER EM VOZ ALTA O QUE ESTIVER ATIVADO E MOSTRAR NA TELA, COMO QUALQUER OUTRA MENSAGEM:</string>
     <string name="partner_card_ask_silent">USA A SUA SAÍDA NORMAL. SE %1$s ESTIVER ATIVADO, O CARTÃO É MOSTRADO E NÃO FALADO.</string>
     <string name="partner_card_ask_play">TOCAR</string>
     <string name="partner_card_1">Eu uso este aplicativo para falar.</string>
@@ -1984,4 +1987,16 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="partner_card_3">Por favor, espere enquanto eu respondo.</string>
     <string name="partner_card_4">Por favor, não pegue o meu celular.</string>
     <string name="partner_card_5">Se você não souber o que eu preciso, pergunte e eu mostro.</string>
+    <string name="partner_card_own_label">SUA PRÓPRIA FRASE %1$s</string>
+    <string name="partner_card_own_empty">SUA PRÓPRIA FRASE %1$s: AINDA NÃO ESCRITA</string>
+    <string name="partner_card_write">ESCREVER</string>
+    <string name="partner_card_edit">EDITAR</string>
+    <string name="partner_card_none_on">ATIVE PELO MENOS UMA FRASE PARA TOCAR O CARTÃO.</string>
+    <string name="partner_card_edit_hint">ESCREVA UMA FRASE CURTA. O ACK DIZ E MOSTRA EXATAMENTE COMO VOCÊ ESCREVER. ELA FICA NESTE TELEFONE E VAI EM %1$s, QUE NÃO É CRIPTOGRAFADO, ENTÃO NÃO ESCREVA NADA QUE VOCÊ NÃO QUEIRA QUE OUTRA PESSOA LEIA. ATÉ %2$s CARACTERES.</string>
+    <string name="partner_card_edit_placeholder">ESCREVA UMA FRASE CURTA</string>
+    <string name="partner_card_clear">APAGAR ESTA FRASE</string>
+    <string name="partner_card_clear_title">APAGAR SUA PRÓPRIA FRASE %1$s?</string>
+    <string name="partner_card_clear_body">ELA SERÁ REMOVIDA DESTE TELEFONE E NÃO PODE SER DESFEITO. UM ARQUIVO DE BACKUP QUE VOCÊ FEZ ANTES NÃO MUDA.</string>
+    <string name="partner_card_clear_confirm">APAGAR</string>
+    <string name="partner_card_save_failed">NÃO FOI POSSÍVEL SALVAR. NADA FOI ALTERADO.</string>
 </resources>

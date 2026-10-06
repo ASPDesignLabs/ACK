@@ -303,6 +303,7 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="export_cat_voice_recordings">TUS GRABACIONES DE VOZ (EL AUDIO MISMO)</string>
     <string name="export_cat_messages">FRASES, MENSAJES Y MAZOS</string>
     <string name="export_cat_learned_words">PALABRAS APRENDIDAS DE LO QUE GUARDASTE, DIJISTE O COPIASTE</string>
+    <string name="export_cat_partner_card">TUS PROPIAS FRASES DE LA TARJETA PARA INTERLOCUTORES</string>
     <string name="export_cat_settings">AJUSTES E HISTORIAL</string>
     <string name="export_contains_heading">ESTE ARCHIVO PUEDE CONTENER:</string>
     <string name="export_not_protected">NO ESTÁ CIFRADO NI TIENE CONTRASEÑA. CUALQUIERA QUE LO ABRA PUEDE LEERLO TODO.</string>
@@ -341,7 +342,7 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="data_port_integrity_failed">FALLÓ LA COMPROBACIÓN DE INTEGRIDAD</string>
     <string name="common_continue">CONTINUAR</string>
     <string name="area_messages_and_decks_label">MENSAJES Y MAZOS</string>
-    <string name="area_messages_and_decks_holds">TUS MAZOS, MENSAJES, FRASES, VARIABLES COMPARTIDAS, HISTORIAL DE ESCRITURA Y LAS PALABRAS APRENDIDAS QUE USAN LAS SUGERENCIAS DE PALABRAS. NO LA TARJETA DE INFORMACIÓN DE EMERGENCIA.</string>
+    <string name="area_messages_and_decks_holds">TUS MAZOS, MENSAJES, FRASES, VARIABLES COMPARTIDAS, HISTORIAL DE ESCRITURA, LAS PALABRAS APRENDIDAS QUE USAN LAS SUGERENCIAS DE PALABRAS Y TUS PROPIAS FRASES DE LA TARJETA PARA INTERLOCUTORES. NO LA TARJETA DE INFORMACIÓN DE EMERGENCIA.</string>
     <string name="area_messages_and_decks_backup">ESTÁ EN %1$s.</string>
     <string name="area_emergency_info_card_label">TARJETA DE INFORMACIÓN DE EMERGENCIA</string>
     <string name="area_emergency_info_card_holds">LA TARJETA DE IDENTIFICACIÓN MÉDICA: NOMBRE, FECHA DE NACIMIENTO, GRUPO SANGUÍNEO, AFECCIONES, MEDICAMENTOS, ALERGIAS Y CONTACTOS.</string>
@@ -1128,7 +1129,8 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="info_nr_usage_1">- NUEVO: RESUMEN DE USO, EN AJUSTES, CUENTA CON QUÉ FRECUENCIA Y A QUÉ HORA SE ENVÍAN MENSAJES, POR HORA Y POR ORIGEN, NUNCA LAS PALABRAS. ESTÁ DESACTIVADO HASTA QUE LO ACTIVAS Y LO CONFIRMAS, Y LA TERMINAL MUESTRA UNA LÍNEA MIENTRAS ESTÁ ACTIVADO. LOS MENSAJES CON /n Y LA NARRACIÓN DE LA AYUDA NO SE CUENTAN</string>
     <string name="info_nr_usage_2">- SE CONSERVA 90 DÍAS SOLO EN ESTE TELÉFONO Y NO ESTÁ EN NINGUNA COPIA DE SEGURIDAD. NO SE ENVÍA NADA A NINGÚN LADO. GUARDAR EL RESUMEN DE USO EN UN ARCHIVO GUARDA UNA COPIA DONDE ELIGES (SIGUE MOSTRANDO CUÁNDO TE COMUNICAS, ASÍ QUE GUÁRDALO COMO UN DIARIO). OLVIDAR EL RESUMEN DE USO LO BORRA, DESPUÉS DE DOS PREGUNTAS</string>
     <string name="info_nr_partner_head">-- TARJETA PARA INTERLOCUTORES --</string>
-    <string name="info_nr_partner_1">- NUEVO: UN ICONO DE LA TARJETA PARA INTERLOCUTORES (UN GLOBO DE DIÁLOGO) EN LA CABECERA, JUNTO A AYUDA. UN TOQUE PREGUNTA PRIMERO. SI LA REPRODUCES, ACK DICE Y MUESTRA CINCO FRASES CORTAS QUE LE EXPLICAN A QUIEN HABLA CONTIGO CÓMO TE COMUNICAS, COMO CUALQUIER MENSAJE: TU VOZ Y TU SALIDA, Y SE MUESTRA PERO NO SE DICE SI LA SALIDA ES SILENCIOSA. LAS PALABRAS SON BORRADORES. EN PAPEL: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_1">- NUEVO: UN ICONO DE LA TARJETA PARA INTERLOCUTORES (UN GLOBO DE DIÁLOGO) EN LA CABECERA, JUNTO A AYUDA. UN TOQUE PREGUNTA PRIMERO, Y AHÍ SE ACTIVA O DESACTIVA CADA FRASE. SI LA REPRODUCES, ACK DICE Y MUESTRA LO QUE ESTÉ ACTIVADO, COMO CUALQUIER MENSAJE: TU VOZ Y TU SALIDA, Y SE MUESTRA PERO NO SE DICE SI LA SALIDA ES SILENCIOSA. LAS PALABRAS SON BORRADORES. EN PAPEL: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_2">- PUEDES ESCRIBIR UNA O DOS FRASES PROPIAS PARA LA TARJETA PARA INTERLOCUTORES. ACK LAS DICE EXACTAMENTE COMO LAS ESCRIBES. SE QUEDAN EN ESTE TELÉFONO, VAN EN EXPORTAR .JSON Y SE BORRAN CON MENSAJES Y MAZOS. EL RESUMEN DE USO CUENTA CADA REPRODUCCIÓN COMO UN MENSAJE DE LA TARJETA PARA INTERLOCUTORES</string>
     <string name="info_nr_fixes_head">-- CORRECCIONES --</string>
     <string name="info_nr_fixes_1">- CORREGIDO: LA CONFIRMACIÓN ANTES DE BORRAR LAS VARIABLES O EL MENSAJE DE UNA FRASE MOSTRABA SOLO SU SEGUNDA ORACIÓN. AHORA MUESTRA LA PREGUNTA ENTERA, CON LA REDACCIÓN DE ANTES</string>
     <string name="info_b8_title">=== NOTAS DE LA VERSIÓN ACK v1.0-BETA.8 ===</string>
@@ -1958,6 +1960,7 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="usage_kind_break">PAUSA</string>
     <string name="usage_kind_boundary">LÍMITE</string>
     <string name="usage_kind_social">SOCIAL</string>
+    <string name="usage_kind_partner_card">TARJETA PARA INTERLOCUTORES</string>
     <string name="usage_kind_other">OTRO</string>
     <string name="usage_channel_matrix">MAZO MATRIX</string>
     <string name="usage_channel_quick_actions">MAZO ACCIONES RÁPIDAS</string>
@@ -1976,7 +1979,7 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="partner_card_name">TARJETA PARA INTERLOCUTORES</string>
     <string name="partner_card_icon">TARJETA PARA INTERLOCUTORES. DICE CÓMO TE COMUNICAS, PARA QUIEN HABLA CONTIGO. PREGUNTA ANTES DE REPRODUCIRSE.</string>
     <string name="partner_card_ask_title">¿REPRODUCIR LA TARJETA PARA INTERLOCUTORES?</string>
-    <string name="partner_card_ask_intro">ACK DIRÁ ESTO EN VOZ ALTA Y LO MOSTRARÁ EN LA PANTALLA, COMO CUALQUIER OTRO MENSAJE:</string>
+    <string name="partner_card_ask_intro">ELIGE QUÉ DECIR. ACK DIRÁ LO QUE ESTÉ ACTIVADO EN VOZ ALTA Y LO MOSTRARÁ EN LA PANTALLA, COMO CUALQUIER OTRO MENSAJE:</string>
     <string name="partner_card_ask_silent">USA TU SALIDA NORMAL. SI %1$s ESTÁ ACTIVADO, SE MUESTRA Y NO SE DICE.</string>
     <string name="partner_card_ask_play">REPRODUCIR</string>
     <string name="partner_card_1">Uso esta aplicación para hablar.</string>
@@ -1984,4 +1987,16 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="partner_card_3">Por favor, espera mientras respondo.</string>
     <string name="partner_card_4">Por favor, no me quites el teléfono.</string>
     <string name="partner_card_5">Si no sabes lo que necesito, pregúntame y te lo mostraré.</string>
+    <string name="partner_card_own_label">TU PROPIA FRASE %1$s</string>
+    <string name="partner_card_own_empty">TU PROPIA FRASE %1$s: AÚN SIN ESCRIBIR</string>
+    <string name="partner_card_write">ESCRIBIR</string>
+    <string name="partner_card_edit">EDITAR</string>
+    <string name="partner_card_none_on">ACTIVA AL MENOS UNA FRASE PARA REPRODUCIR LA TARJETA.</string>
+    <string name="partner_card_edit_hint">ESCRIBE UNA FRASE CORTA. ACK LA DICE Y LA MUESTRA EXACTAMENTE COMO LA ESCRIBES. SE GUARDA EN ESTE TELÉFONO Y VA EN %1$s, QUE NO ESTÁ CIFRADO, ASÍ QUE NO ESCRIBAS NADA QUE NO QUIERAS QUE LEA OTRA PERSONA. HASTA %2$s CARACTERES.</string>
+    <string name="partner_card_edit_placeholder">ESCRIBE UNA FRASE CORTA</string>
+    <string name="partner_card_clear">BORRAR ESTA FRASE</string>
+    <string name="partner_card_clear_title">¿BORRAR TU PROPIA FRASE %1$s?</string>
+    <string name="partner_card_clear_body">SE QUITARÁ DE ESTE TELÉFONO Y NO SE PUEDE DESHACER. UNA COPIA DE SEGURIDAD QUE HICISTE ANTES NO CAMBIA.</string>
+    <string name="partner_card_clear_confirm">BORRARLA</string>
+    <string name="partner_card_save_failed">NO SE PUDO GUARDAR. NO SE CAMBIÓ NADA.</string>
 </resources>

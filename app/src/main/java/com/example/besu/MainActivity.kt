@@ -9,6 +9,7 @@ import com.example.besu.core.ActiveScript
 import com.example.besu.core.HelpPlaceholders
 import com.example.besu.core.HelpWalkthroughText
 import com.example.besu.core.LimitsNotice
+import com.example.besu.core.PartnerCard
 import com.example.besu.core.ProfileSwapDiff
 import com.example.besu.core.SlotChange
 import com.example.besu.core.TextInsertion
@@ -28,6 +29,7 @@ import com.example.besu.watch.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
@@ -309,6 +311,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     var showBackupReminderDialog by remember { mutableStateOf(false) }
     // The partner card (core/PartnerCard.kt): the header icon only opens a question; nothing is spoken until PLAY IT is tapped there.
     var showPartnerCardDialog by remember { mutableStateOf(false) }
+    // Which of the person's own sentences (slot 5 or 6) is being written or changed, if one is; the question that asks first waits underneath.
+    var editingOwnSlot by remember { mutableStateOf<Int?>(null) }
     val startBackupExport = rememberBackupExportFlow(context, primaryColor)
     LaunchedEffect(Unit) { BackupReminder.refresh(context) }
 
@@ -1109,7 +1113,10 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     // The partner card, in the slot next to HELP, always shown (no setting hides it), about 24 dp like its neighbours. A tap asks first.
                                     PartnerCardIndicator(
                                         primaryColor = primaryColor,
-                                        onClick = { showPartnerCardDialog = true }
+                                        onClick = {
+                                            PartnerCardState.load(context)
+                                            showPartnerCardDialog = true
+                                        }
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
 
@@ -1653,16 +1660,42 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                     }
 
                     if (showPartnerCardDialog) {
-                        PartnerCardDialog(
-                            primaryColor = primaryColor,
-                            lines = PartnerCardPlayer.lines(context),
-                            silentModeName = labelFor(LabelKey.SILENT_MODE),
-                            onCancel = { showPartnerCardDialog = false },
-                            onPlay = {
-                                showPartnerCardDialog = false
-                                PartnerCardPlayer.play(context)
-                            }
-                        )
+                        val partnerSettings = PartnerCardState.settings
+                        val ownSlot = editingOwnSlot
+                        val saveFailed = context.getString(R.string.partner_card_save_failed)
+                        if (ownSlot == null) {
+                            PartnerCardDialog(
+                                primaryColor = primaryColor,
+                                rows = PartnerCardPlayer.rows(context, partnerSettings),
+                                anyOn = partnerSettings.anyOn,
+                                silentModeName = labelFor(LabelKey.SILENT_MODE),
+                                onToggle = { slot ->
+                                    if (!PartnerCardState.toggle(context, slot)) Toast.makeText(context, saveFailed, Toast.LENGTH_LONG).show()
+                                },
+                                onEditOwn = { slot -> editingOwnSlot = slot },
+                                onCancel = { showPartnerCardDialog = false },
+                                onPlay = {
+                                    showPartnerCardDialog = false
+                                    PartnerCardPlayer.play(context, partnerSettings)
+                                }
+                            )
+                        } else {
+                            PartnerCardEditDialog(
+                                primaryColor = primaryColor,
+                                ownNumber = ownSlot - PartnerCard.BUILT_IN_COUNT + 1,
+                                current = partnerSettings.own[ownSlot - PartnerCard.BUILT_IN_COUNT],
+                                exportName = labelFor(LabelKey.EXPORT_JSON),
+                                onSave = { raw ->
+                                    if (PartnerCardState.writeOwn(context, ownSlot, raw)) editingOwnSlot = null
+                                    else Toast.makeText(context, saveFailed, Toast.LENGTH_LONG).show()
+                                },
+                                onClear = {
+                                    if (PartnerCardState.writeOwn(context, ownSlot, "")) editingOwnSlot = null
+                                    else Toast.makeText(context, saveFailed, Toast.LENGTH_LONG).show()
+                                },
+                                onCancel = { editingOwnSlot = null }
+                            )
+                        }
                     }
 
                     if (showHelpMenu) {

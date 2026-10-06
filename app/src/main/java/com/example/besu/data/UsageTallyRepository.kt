@@ -48,7 +48,7 @@ object UsageTallyRepository {
         try {
             val app = context.applicationContext
             if (!AssistPrefs.isUsageSummaryOn(app)) return
-            val cell = UsageTally.cellFor(nowMillis, ZoneId.systemDefault(), UsageKinds.channelOf(source), UsageKinds.kindOf(text))
+            val cell = UsageTally.cellFor(nowMillis, ZoneId.systemDefault(), UsageKinds.channelOf(source), UsageKinds.kindOf(source, text))
             executor().execute {
                 try {
                     add(app, cell)

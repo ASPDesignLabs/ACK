@@ -129,10 +129,14 @@ class PatchNotesTest {
         "  DIARY). FORGET USAGE SUMMARY DELETES IT, AFTER TWO QUESTIONS",
         "-- PARTNER CARD --",
         "- NEW: A PARTNER CARD ICON (A SPEECH BUBBLE) IN THE HEADER",
-        "  NEXT TO HELP. A TAP ASKS FIRST. IF YOU PLAY IT, ACK SAYS AND SHOWS",
-        "  FIVE SHORT SENTENCES TELLING SOMEONE HOW YOU TALK, LIKE ANY MESSAGE:",
-        "  YOUR VOICE AND YOUR OUTPUT, SHOWN BUT NOT SPOKEN IF OUTPUT IS SILENT.",
-        "  THE WORDS ARE DRAFTS. ON PAPER: DOCS/PARTNER_CARD.MD",
+        "  NEXT TO HELP. A TAP ASKS FIRST, AND YOU TURN EACH SENTENCE ON OR OFF",
+        "  THERE. IF YOU PLAY IT, ACK SAYS AND SHOWS WHAT IS ON, LIKE ANY",
+        "  MESSAGE: YOUR VOICE AND YOUR OUTPUT, SHOWN BUT NOT SPOKEN IF OUTPUT",
+        "  IS SILENT. THE WORDS ARE DRAFTS. ON PAPER: DOCS/PARTNER_CARD.MD",
+        "- YOU CAN WRITE ONE OR TWO SENTENCES OF YOUR OWN FOR THE CARD. ACK SAYS",
+        "  THEM EXACTLY AS WRITTEN. THEY STAY ON THIS PHONE, ARE IN EXPORT .JSON",
+        "  AND ARE DELETED WITH MESSAGES AND DECKS. THE USAGE SUMMARY COUNTS",
+        "  EACH PLAY AS ONE PARTNER CARD MESSAGE",
         "-- FIXES --",
         "- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE'S VARIABLES OR",
         "  PROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE",
@@ -414,14 +418,18 @@ class PatchNotesTest {
     }
 
     @Test
-    fun thePartnerCardNoteNamesTheCardAndTheHelpButtonAsTheyReadInEveryLanguage() {
+    fun thePartnerCardNotesNameTheCardTheHelpButtonTheExportButtonAndTheAreaAsTheyReadInEveryLanguage() {
         for ((tag, map) in mapOf("en" to english) + translations) {
             val head = map.getValue("info_nr_partner_head")
-            val note = map.getValue("info_nr_partner_1")
+            val first = map.getValue("info_nr_partner_1")
+            val second = map.getValue("info_nr_partner_2")
             assertTrue("$tag: the heading", head.startsWith("-- ") && head.endsWith(" --"))
             assertTrue("$tag: the heading names the card as the screen does", head.contains(map.getValue("partner_card_name")))
-            assertTrue("$tag: the note names the card", note.contains(map.getValue("partner_card_name")))
-            assertTrue("$tag: the note names the HELP button as it reads", note.contains(map.getValue("help_button")))
+            assertTrue("$tag: the first note names the card", first.contains(map.getValue("partner_card_name")))
+            assertTrue("$tag: the first note names the HELP button as it reads", first.contains(map.getValue("help_button")))
+            assertTrue("$tag: the second note names the card (the usage summary's kind)", second.contains(map.getValue("partner_card_name")))
+            assertTrue("$tag: the second note names the export button as it reads", second.contains(map.getValue("label_export_json")))
+            assertTrue("$tag: the second note names the area DELETE DATA wipes it with", second.contains(map.getValue("area_messages_and_decks_label")))
         }
     }
 

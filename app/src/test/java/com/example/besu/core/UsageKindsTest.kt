@@ -97,12 +97,30 @@ class UsageKindsTest {
 
     @Test
     fun everyStarterKindIsReachable_andEveryStarterFunctionHasAKind() {
+        // The kinds that are not a starter's: OTHER (nothing matched) and PARTNER_CARD (decided by the tag, never by the words).
+        val notStarters = setOf(UsageKind.OTHER, UsageKind.PARTNER_CARD)
         assertEquals(
             StarterFunction.values().map { it.name }.toSet(),
-            UsageKind.values().filter { it != UsageKind.OTHER }.map { it.name }.toSet(),
+            UsageKind.values().filter { it !in notStarters }.map { it.name }.toSet(),
         )
         val reached = UsageKinds.starterPhrases.map { it.second }.toSet()
-        assertEquals(UsageKind.values().filter { it != UsageKind.OTHER }.toSet(), reached)
+        assertEquals(UsageKind.values().filter { it !in notStarters }.toSet(), reached)
+    }
+
+    @Test
+    fun aPartnerCardPlayIsThePartnerCardKind_whateverItsWordsSay() {
+        // The developer's decision: the kind comes from the tag. A sentence the person wrote that happens to read exactly like a starter is still the card.
+        assertEquals(UsageKind.PARTNER_CARD, UsageKinds.kindOf(PartnerCard.SOURCE, "I use this app to talk."))
+        assertEquals(UsageKind.PARTNER_CARD, UsageKinds.kindOf(PartnerCard.SOURCE, "Yes."))
+        assertEquals(UsageKind.PARTNER_CARD, UsageKinds.kindOf(PartnerCard.SOURCE, "I need help."))
+        assertEquals(UsageKind.PARTNER_CARD, UsageKinds.kindOf(PartnerCard.SOURCE, ""))
+        assertEquals(UsageChannel.PARTNER_CARD, UsageKinds.channelOf(PartnerCard.SOURCE))
+        // Every other tag is still decided by the words, exactly as before.
+        assertEquals(UsageKind.YES, UsageKinds.kindOf("MTX/ANY DECK", "Yes."))
+        assertEquals(UsageKind.OTHER, UsageKinds.kindOf("MTX/ANY DECK", "I use this app to talk."))
+        assertEquals(UsageKind.HELP, UsageKinds.kindOf("TERM/PROMPT", " i NEED help. "))
+        // A tag that only looks like the card's is not the card.
+        for (look in listOf("PARTNER/CARD ", "partner/card", "PARTNER/CARDS", "PARTNER", "")) assertEquals(look, UsageKind.YES, UsageKinds.kindOf(look, "Yes."))
     }
 
     @Test

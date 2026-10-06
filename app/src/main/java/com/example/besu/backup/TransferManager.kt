@@ -396,6 +396,7 @@ object TransferManager {
             speechLanguage = AssistPrefs.speechLanguageStored(context),
             interfaceLanguage = AssistPrefs.interfaceLanguageStored(context),
             plainWords = AssistPrefs.plainWordsStored(context),
+            partnerCard = PartnerCardRepository.exportForBackup(context),
         )
     }
 
@@ -1043,6 +1044,13 @@ object TransferManager {
             return false
         }
 
+        // 21b. The partner card's own sentences (core/PartnerCardSettings.kt: at most two, each one clean line within the screen's own limit). The reason it logs holds
+        // sizes only, never a sentence: what the person wrote does not go into a log.
+        backup.partnerCard?.validate()?.let { reason ->
+            Log.e("ACK_IMPORT", reason)
+            return false
+        }
+
         // 22. SPEECH LANGUAGE: one of the two stored names, or null. Anything else is not a setting this build knows.
         if (backup.speechLanguage != null && SpeechLanguage.fromStored(backup.speechLanguage) == null) {
             Log.e("ACK_IMPORT", "speechLanguage is not DEVICE or ENGLISH_US: \"${backup.speechLanguage.take(20)}\" (${backup.speechLanguage.length} chars)")
@@ -1416,6 +1424,9 @@ object TransferManager {
         // The learned words are ADDED to whatever this phone has learned: a count is never lowered and no word is removed. The
         // WORD SUGGESTIONS switch is not in a backup, so this never turns the feature on.
         backup.learnedWords?.let { LearnedWordsRepository.mergeFromBackup(context, it) }
+
+        // The partner card's own sentences are ADDED into this phone's empty slots: a sentence written here since is never overwritten, and the on/off choices are not in a backup.
+        backup.partnerCard?.let { PartnerCardRepository.mergeFromBackup(context, it) }
 
         // SPEECH LANGUAGE: a backup that says nothing (null) leaves the device's own choice alone.
         SpeechLanguage.fromStored(backup.speechLanguage)?.let { AssistPrefs.setSpeechLanguage(context, it) }

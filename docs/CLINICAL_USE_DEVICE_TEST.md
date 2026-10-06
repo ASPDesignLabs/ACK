@@ -151,8 +151,26 @@ what to change). Use a debug build. Nothing here is timed; stop whenever you lik
 - [ ] Tap the bubble. → A question opens: **PLAY THE PARTNER CARD?**; a line saying ACK will say this out loud and show it on the screen; the five sentences in bold; a line saying it uses your normal output and
   is only shown if Silent Mode is on; **CANCEL** (the prominent button) and below it **PLAY IT** (plainer). **Nothing has been spoken yet.**
 - [ ] Press **CANCEL**. → It closes; nothing is spoken or shown; no Terminal line. Open it again and use the back gesture, then open it again and tap outside the box. → Same each time.
-- [ ] Open it and press **PLAY IT**. → ACK says all five sentences in your current voice and shows them on the full screen like any message: **all five sentences are visible (shrunk to fit, or scrollable), not
+- [ ] Open it and press **PLAY IT** (with nothing changed yet). → ACK says all five sentences in your current voice and shows them on the full screen like any message: **all five sentences are visible (shrunk to fit, or scrollable), not
   cut to a few words.** The Terminal gets one line like `PARTNER/CARD > "I use this app to talk. I can hear you ..."`.
+- [ ] In the question, look at the sentences. → **Seven rows:** the five sentences, then **YOUR OWN SENTENCE 1: NOT WRITTEN YET** and **YOUR OWN SENTENCE 2: NOT WRITTEN YET**, each of those with a **WRITE** button. Each of the five has the word **ON** at its left and is
+  outlined in the theme colour. **Say if a row is hard to read or hard to hit at the largest font.**
+- [ ] Tap one sentence (for example "Please wait while I answer."). → Its word changes to **OFF**, its text goes grey, and nothing speaks. Tap it again → **ON** again. Turn all but "Please do not take my phone." **OFF** and press **PLAY IT**. → ACK says and shows
+  **only that sentence**. Open the question again. → The same sentences are still off (the choice is remembered).
+- [ ] Turn **every** sentence OFF. → The line **TURN ON AT LEAST ONE SENTENCE TO PLAY THE CARD.** appears and **there is no PLAY IT button** (only CANCEL). Turn one back on → PLAY IT comes back.
+- [ ] Tap **WRITE** on slot 1. → A box **YOUR OWN SENTENCE 1** with a hint (said exactly as written, kept on this phone, in **EXPORT .JSON** which is not encrypted, up to 200 characters), a text box, **CANCEL** (prominent), and **no SAVE button until you type something**. Type
+  a sentence **with no full stop at the end** (for example `Please call my mum`) and press **SAVE**. → Back in the question, the sentence is in row 6 with **ON** and the caption YOUR OWN SENTENCE 1. Turn off the five built-in sentences and press **PLAY IT**. → ACK says
+  **"Please call my mum."** with a pause after it, in your voice, and shows it on the screen.
+- [ ] Open WRITE on slot 2 and type text in another language or script, with an emoji, and a line break. → Saving it shows it as **one line**. Play it with the others on. → It is said and shown **exactly as written** (not translated), after the built-in sentences. Paste more than 200
+  characters. → The box stops at 200.
+- [ ] Press **CANCEL** in the edit box after typing. → Nothing is saved. Press the back gesture instead. → Same.
+- [ ] Tap **EDIT** on a written sentence, change it and **SAVE**. → The new words replace the old, and it is **ON** even if you had turned the old one off.
+- [ ] Tap **EDIT**, then **CLEAR THIS SENTENCE**. → A **second** question: **CLEAR YOUR OWN SENTENCE 1?**, saying it is removed from this phone, cannot be undone, and a backup made earlier is not changed. **CANCEL** is prominent. Press **CANCEL**. → The sentence is still there. Do it again and press
+  **CLEAR IT**. → Row 6 says **NOT WRITTEN YET** again.
+- [ ] Write a sentence, then EXPORT .JSON. → The warning has a line **YOUR OWN PARTNER CARD SENTENCES**. Clear the sentence, then FULL RESTORE FROM JSON with that file. → The sentence is back **in an empty slot**. Write a different sentence in that slot and restore the same file again. →
+  **The sentence you wrote is not overwritten.** Your ON/OFF choices are unchanged by the restore.
+- [ ] DELETE DATA → MESSAGES AND DECKS. → The words say it also holds **YOUR OWN PARTNER CARD SENTENCES**. After deleting it (only if you are finished), the sentences are gone and the five built-in ones are all ON again.
+- [ ] Turn the usage summary on, play the card once with two sentences on, and look at SETTINGS > USAGE SUMMARY. → **One** message counted, under the kind **PARTNER CARD** and the place **PARTNER CARD**, whatever the sentences said (including a sentence of yours that reads like "Yes.").
 - [ ] Note how long the card stays on the screen. → It clears by itself after about 10 seconds, like any message, or when you tap it. **Say whether that is long enough for someone to read all five
   sentences.** (If it is not, a hold-until-I-clear option is possible; I have not added one.)
 - [ ] If your display preset still cuts long messages (the visual editor's SHOW FULL MESSAGE is off), play the card, then send an ordinary long message. → The card is shown in full; the long message is cut as it

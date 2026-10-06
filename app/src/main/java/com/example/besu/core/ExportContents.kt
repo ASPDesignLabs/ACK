@@ -51,6 +51,10 @@ object ExportContents {
             setOf("learnedWords"),
         ),
         Category(
+            "partner_card",
+            setOf("partnerCard"),
+        ),
+        Category(
             "settings",
             setOf(
                 "dsp", "voiceRecordingGainPercent", "autocompleteHistory", "geoEngineMode", "geoMasterToggle",

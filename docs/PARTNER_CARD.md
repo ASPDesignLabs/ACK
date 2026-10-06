@@ -9,6 +9,9 @@ true for the person before using it, and change the words before printing if it 
 In ACK, the speech-bubble icon in the header (next to **HELP**) asks "PLAY THE PARTNER CARD?". If the person taps **PLAY IT**, ACK says the card out loud in their usual voice
 and shows it on the screen, like any other message. It follows the person's audio settings, and if silent mode is on it is shown and not spoken. CANCEL does nothing.
 
+The question also lets the person turn any sentence on or off before playing (so one sentence can be said on its own) and write one or two sentences of their own. Those are not on this page: they are
+the person's own words, kept on their phone and in their own backup file.
+
 This page is the same card on paper, for a person to hold up or hand over when the phone is not to hand. It makes no claim about how anyone communicates beyond what the person says
 in it. It is not an assessment, and it does not replace advice from a speech-language pathologist.
 
@@ -64,6 +67,7 @@ in it. It is not an assessment, and it does not replace advice from a speech-lan
 
 - The sentences are first person and use plain words. The Hindi and Arabic drafts avoid verb forms that depend on the speaker's or the listener's gender; the Spanish and Portuguese ones
   avoid gendered words for the listener. Please keep it that way if you reword them.
+- On the phone the person can say any one of these sentences on its own, or leave some out. Read each sentence as something that may be said alone.
 - Each sentence is a statement the person makes about themselves ("I can hear you and I understand you"). It is only on the card if it is true for them.
 - ACK speaks the translated card only when its speech language follows the phone and the screens are in the phone's own language; otherwise it speaks the English card, so a voice is
   never asked to read a language it is not set to speak.

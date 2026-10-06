@@ -303,6 +303,7 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="export_cat_voice_recordings">JOU STEMOPNAMES (DIE KLANK SELF)</string>
     <string name="export_cat_messages">FRASES, BOODSKAPPE EN DEKKE</string>
     <string name="export_cat_learned_words">WOORDE GELEER UIT WAT JY GESTOOR, GESÊ OF GEKOPIEER HET</string>
+    <string name="export_cat_partner_card">JOU EIE SINNE VIR DIE KAART VIR GESPREKSMAAT</string>
     <string name="export_cat_settings">INSTELLINGS EN GESKIEDENIS</string>
     <string name="export_contains_heading">HIERDIE LÊER KAN BEVAT:</string>
     <string name="export_not_protected">DIT IS NIE ENKRIPTEER NIE EN HET GEEN WAGWOORD NIE. ENIGIEMAND WAT DIT OOPMAAK, KAN ALLES LEES.</string>
@@ -340,7 +341,7 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="data_port_integrity_failed">INTEGRITEITSKONTROLE MISLUK</string>
     <string name="common_continue">GAAN VOORT</string>
     <string name="area_messages_and_decks_label">BOODSKAPPE EN DEKKE</string>
-    <string name="area_messages_and_decks_holds">JOU DEKKE, BOODSKAPPE, FRASES, GEDEELDE VERANDERLIKES, TIKGESKIEDENIS EN DIE GELEERDE WOORDE ACHTER WOORDVOORSTELLE. NIE DIE NOODINLIGTINGSKAART NIE.</string>
+    <string name="area_messages_and_decks_holds">JOU DEKKE, BOODSKAPPE, FRASES, GEDEELDE VERANDERLIKES, TIKGESKIEDENIS, DIE GELEERDE WOORDE ACHTER WOORDVOORSTELLE EN JOU EIE SINNE VIR DIE KAART VIR GESPREKSMAAT. NIE DIE NOODINLIGTINGSKAART NIE.</string>
     <string name="area_messages_and_decks_backup">DIT IS IN %1$s.</string>
     <string name="area_emergency_info_card_label">NOODINLIGTINGSKAART</string>
     <string name="area_emergency_info_card_holds">DIE MEDIESE ID-KAART: NAAM, GEBOORTEDATUM, BLOEDTIPE, TOESTANDE, MEDIKASIE, ALLERGIEË EN KONTAKTE.</string>
@@ -1115,7 +1116,8 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="info_nr_usage_1">- NUUT: DIE GEBRUIKSOPSOMMING, IN INSTELLINGS, TEL HOE DIKWELS EN WANNEER BOODSKAPPE GESTUUR WORD, PER UUR EN PER BRON, NOOIT DIE WOORDE NIE. DIT IS AF TOTDAT JY DIT AANSKAKEL EN BEVESTIG, EN DIE TERMINAAL WYS \'N LYN SOLANK DIT AAN IS. BOODSKAPPE MET /n EN DIE HULP-VERTELLING WORD NIE GETEL NIE</string>
     <string name="info_nr_usage_2">- DIT WORD 90 DAE SLEGS OP HIERDIE FOON BEWAAR EN IS IN GEEN RUGSTEUN NIE. NIKS WORD IEMERS HEEN GESTUUR NIE. STOOR DIE GEBRUIKSOPSOMMING IN \'N LÊER BEWAAR \'N KOPIE WAAR JY KIES (DIT WYS STEEDS WANNEER JY KOMMUNIKEER, SO BEWAAR DIT SOOS \'N DAGBOEK). VERGEET DIE GEBRUIKSOPSOMMING SKRAP DIT NA TWEE VRAE</string>
     <string name="info_nr_partner_head">-- KAART VIR GESPREKSMAAT --</string>
-    <string name="info_nr_partner_1">- NUUT: DIE IKOON VAN DIE KAART VIR GESPREKSMAAT (\'N SPRAAKBLOMMETJIE) IN DIE BOKANT, NAAS HULP. \'N TIK VRA EERS. AS JY DIT SPEEL, SÊ EN WYS ACK VYF KORT SINNE WAT AAN IEMAND VERTEL HOE OM MET JOU TE PRAAT, SOOS ENIGE BOODSKAP: JOU STEM EN JOU UITSET, EN DIT WORD GEWYS MAAR NIE GESÊ NIE AS DIE UITSET STIL IS. DIE WOORDE IS KONSEPTE. OP PAPIER: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_1">- NUUT: DIE IKOON VAN DIE KAART VIR GESPREKSMAAT (\'N SPRAAKBLOMMETJIE) IN DIE BOKANT, NAAS HULP. \'N TIK VRA EERS, EN DAAR SKAKEL JY ELKE SIN AAN OF AF. AS JY DIT SPEEL, SÊ EN WYS ACK WAT AAN IS, SOOS ENIGE BOODSKAP: JOU STEM EN JOU UITSET, EN DIT WORD GEWYS MAAR NIE GESÊ NIE AS DIE UITSET STIL IS. DIE WOORDE IS KONSEPTE. OP PAPIER: DOCS/PARTNER_CARD.MD</string>
+    <string name="info_nr_partner_2">- JY KAN EEN OF TWEE EIE SINNE VIR DIE KAART VIR GESPREKSMAAT SKRYF. ACK SÊ DIT PRESIES SOOS GESKRYF. DIT BLY OP HIERDIE FOON, IS IN VOER .JSON UIT EN WORD SAAM MET BOODSKAPPE EN DEKKE VERWYDER. DIE GEBRUIKSOPSOMMING TEL ELKE SPEEL AS EEN BOODSKAP VAN DIE KAART VIR GESPREKSMAAT</string>
     <string name="info_nr_fixes_head">-- REGSTELLINGS --</string>
     <string name="info_nr_fixes_1">- REGGEMAAK: DIE BEVESTIGING VOOR \'N FRASE SE VERANDERLIKES OF PROMPT GESKOON WORD, HET SLEGS DIE TWEEDE SIN GEWYS. DIT WYS NOU DIE HELE VRAAG, SOOS VOORHEEN GEFORMULEER</string>
     <string name="info_b8_title">=== ACK v1.0-BETA.8 VRYSTELLINGSNOTAS ===</string>
@@ -1939,6 +1941,7 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="usage_kind_break">POUSE</string>
     <string name="usage_kind_boundary">GRENS</string>
     <string name="usage_kind_social">SOSIAAL</string>
+    <string name="usage_kind_partner_card">KAART VIR GESPREKSMAAT</string>
     <string name="usage_kind_other">ANDER</string>
     <string name="usage_channel_matrix">MATRIX-DEK</string>
     <string name="usage_channel_quick_actions">SNELAKSIES-DEK</string>
@@ -1957,7 +1960,7 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="partner_card_name">KAART VIR GESPREKSMAAT</string>
     <string name="partner_card_icon">KAART VIR GESPREKSMAAT. SÊ AAN IEMAND WAT MET JOU PRAAT HOE OM MET JOU TE KOMMUNIKEER. VRA EERS VOORDAT DIT SPEEL.</string>
     <string name="partner_card_ask_title">SPEEL DIE KAART VIR GESPREKSMAAT?</string>
-    <string name="partner_card_ask_intro">ACK SAL DIT HARDOP SÊ EN OP DIE SKERM WYS, SOOS ENIGE ANDER BOODSKAP:</string>
+    <string name="partner_card_ask_intro">KIES WAT OM TE SÊ. ACK SAL SÊ WAT AAN IS, HARDOP, EN DIT OP DIE SKERM WYS, SOOS ENIGE ANDER BOODSKAP:</string>
     <string name="partner_card_ask_silent">DIT GEBRUIK JOU GEWONE UITSET. AS %1$s AAN IS, WORD DIT GEWYS EN NIE GESÊ NIE.</string>
     <string name="partner_card_ask_play">SPEEL DIT</string>
     <string name="partner_card_1">Ek gebruik hierdie toepassing om te praat.</string>
@@ -1965,4 +1968,16 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="partner_card_3">Wag asseblief terwyl ek antwoord.</string>
     <string name="partner_card_4">Moet asseblief nie my foon vat nie.</string>
     <string name="partner_card_5">As jy nie seker is wat ek nodig het nie, vra my en ek sal jou wys.</string>
+    <string name="partner_card_own_label">JOU EIE SIN %1$s</string>
+    <string name="partner_card_own_empty">JOU EIE SIN %1$s: NOG NIE GESKRYF NIE</string>
+    <string name="partner_card_write">SKRYF</string>
+    <string name="partner_card_edit">WYSIG</string>
+    <string name="partner_card_none_on">SKAKEL TEN MINSTE EEN SIN AAN OM DIE KAART TE SPEEL.</string>
+    <string name="partner_card_edit_hint">SKRYF EEN KORT SIN. ACK SÊ EN WYS DIT PRESIES SOOS JY DIT SKRYF. DIT WORD OP HIERDIE FOON BEWAAR EN IS IN %1$s, WAT NIE ENKRIPTEER IS NIE, SO LAAT UIT WAT JY NIE WIL HÊ IEMAND ANDERS MOET LEES NIE. TOT %2$s LETTERS.</string>
+    <string name="partner_card_edit_placeholder">TIK EEN KORT SIN</string>
+    <string name="partner_card_clear">VEE HIERDIE SIN UIT</string>
+    <string name="partner_card_clear_title">JOU EIE SIN %1$s UITVEE?</string>
+    <string name="partner_card_clear_body">DIT SAL VAN HIERDIE FOON AF VERWYDER WORD EN KAN NIE ONGEDAAN GEMAAK WORD NIE. \'N RUGSTEUNLÊER WAT JY VROEËR GEMAAK HET, VERANDER NIE.</string>
+    <string name="partner_card_clear_confirm">VEE DIT UIT</string>
+    <string name="partner_card_save_failed">DIT KON NIE GESTOOR WORD NIE. NIKS IS VERANDER NIE.</string>
 </resources>

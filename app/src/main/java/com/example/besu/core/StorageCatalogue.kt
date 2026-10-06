@@ -96,7 +96,8 @@ object StorageCatalogue {
         Area(
             id = ID_MESSAGES_AND_DECKS,
             // ack_starter_seed is the starter seed's own note of which phrases it wrote (per phone, never backed up).
-            prefsFilesCleared = setOf("ack_statements", "ack_autocomplete_history", StarterSets.RECORD_FILE),
+            // ack_partner_card holds the partner card's own sentences and which sentences are on (data/PartnerCardRepository.kt): words the person wrote, so they go with their messages.
+            prefsFilesCleared = setOf("ack_statements", "ack_autocomplete_history", StarterSets.RECORD_FILE, PartnerCardSettings.PREFS_FILE),
             prefsFilesClearedExcept = mapOf(FILE_MATRIX_CONFIG to setOf(KEY_EMERGENCY_INFO_CARD)),
             // The learned words (data/LearnedWordsRepository.kt): derived from typed statements, so they go with them.
             folders = setOf(LearnedWordsStore.FOLDER),
