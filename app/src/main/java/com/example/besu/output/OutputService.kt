@@ -391,6 +391,13 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                         speechQueue.add(request)
                     }
                 }
+
+                // The usage summary (docs/USAGE_SUMMARY_DESIGN.md): count this message, if the person turned counting on. Done after the message has been handed on, and never for
+                // tutorial narration (isRobotic) or a message sent with /n (skipLog), which exists so that a message leaves no trace. It cannot change what is spoken: it only
+                // schedules a background write and swallows any failure. The words are compared with the starter phrases inside it and not kept.
+                if (!isRobotic && !skipLog && (!phrase.isNullOrEmpty() || !recordingId.isNullOrEmpty())) {
+                    UsageTallyRepository.recordMessage(applicationContext, source, phrase.orEmpty())
+                }
             }
         }
         return START_STICKY

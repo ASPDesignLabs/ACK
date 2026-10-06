@@ -726,6 +726,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
     // PLAIN WORDS (ui/PlainWords.kt): read once here, then every screen below redraws in place when the switch is flipped.
     remember { PlainWordsState.load(context) }
+    // The usage summary's switch (ui/UsageSummaryState.kt): read once here, so the Terminal's quiet line appears and goes the moment SETTINGS flips it.
+    remember { UsageSummaryState.load(context) }
 
     CompositionLocalProvider(
         LocalHelpManager provides helpManager,
@@ -1426,16 +1428,24 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             }
                         } else {
                         when (viewMode) {
-                            "TERMINAL" -> TerminalView(
-                                logs = logs,
-                                context = context,
-                                onShowManualOverride = {
-                                    showLegacyManualOverride = true
-                                    helpManager.onEvent(
-                                        HelpEvent.WatchInput("MANUAL_OVERRIDE_OPENED")
+                            "TERMINAL" -> Column(modifier = Modifier.fillMaxSize()) {
+                                // While the usage summary is on, one quiet line says so (12 sp, no sound, no animation). Terminal only: never on a deck, Emergency or Type screen.
+                                if (UsageSummaryState.on) {
+                                    UsageSummaryTerminalLine()
+                                }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    TerminalView(
+                                        logs = logs,
+                                        context = context,
+                                        onShowManualOverride = {
+                                            showLegacyManualOverride = true
+                                            helpManager.onEvent(
+                                                HelpEvent.WatchInput("MANUAL_OVERRIDE_OPENED")
+                                            )
+                                        }
                                     )
                                 }
-                            )
+                            }
                             "MATRIX" -> {
                                 when (currentDeckType()) {
                                     DeckType.MATRIX -> {

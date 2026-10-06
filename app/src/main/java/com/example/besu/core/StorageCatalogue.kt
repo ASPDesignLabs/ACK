@@ -67,6 +67,7 @@ object StorageCatalogue {
     const val ID_PEOPLE_AND_PLACES = "PEOPLE_AND_PLACES"
     const val ID_SAVED_LOCATIONS = "SAVED_LOCATIONS"
     const val ID_TERMINAL_LOG = "TERMINAL_LOG"
+    const val ID_USAGE_SUMMARY = "USAGE_SUMMARY"
     const val ID_MESSAGE_RECORDINGS = "MESSAGE_RECORDINGS"
     const val ID_TRAINING_DATA = "TRAINING_DATA"
     const val ID_TRAINED_VOICE = "TRAINED_VOICE"
@@ -125,6 +126,13 @@ object StorageCatalogue {
         Area(
             id = ID_TERMINAL_LOG,
             prefsKeysRemoved = mapOf(FILE_ACK_PREFS to setOf(KEY_TERMINAL_LOG)),
+            coverage = Coverage.NOT_BACKED_UP,
+            restartAfter = false,
+        ),
+        Area(
+            // The usage summary's counts (core/UsageTally.kt). Per phone and never in a backup; only the counts, never a word of a message. No restart is needed: the repository reads the file each time.
+            id = ID_USAGE_SUMMARY,
+            prefsFilesCleared = setOf(UsageTally.PREFS_FILE),
             coverage = Coverage.NOT_BACKED_UP,
             restartAfter = false,
         ),

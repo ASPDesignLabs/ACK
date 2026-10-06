@@ -68,6 +68,9 @@ cp "$A/ui/LimitsNoticeBanner.kt" "$STAGE/com/example/besu/ui/"
 cp "$A/settings/AboutSection.kt" "$STAGE/com/example/besu/settings/"
 # SAVE MESSAGE LOG TO A FILE: the warning dialog and its flow (the exporter is stubbed in stubs/app/LogExporter.kt; the words and the file format are core/LogExport*.kt, staged with the rest of core/).
 cp "$A/settings/LogExportDialog.kt" "$STAGE/com/example/besu/settings/"
+# USAGE SUMMARY: the SETTINGS section, its save flow and the Terminal line (the repository and the exporter are stubbed in stubs/app/UsageSummary.kt; every rule and word is core/Usage*.kt, staged with the rest of core/).
+cp "$A/settings/UsageSummarySection.kt" "$A/settings/UsageSummarySave.kt" "$STAGE/com/example/besu/settings/"
+cp "$A/ui/UsageSummaryState.kt" "$STAGE/com/example/besu/ui/"
 cp -r "$H/stubs/." "$STAGE/"
 cd "$H"
 gradle --no-daemon --console=plain -q -Pkotlin.compiler.execution.strategy=in-process compileKotlin > "$H/build/check.log" 2>&1 && status=0 || status=$?

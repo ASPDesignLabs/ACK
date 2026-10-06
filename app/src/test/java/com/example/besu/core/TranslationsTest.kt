@@ -140,6 +140,10 @@ class TranslationsTest {
         "train_mod", "train_requested_mod", // MOD abbreviates "modifier" (modificador, modifiseerder) in Spanish, Portuguese and Afrikaans; the second is "<pose> + MOD <n>"
         "train_outcome_hit", "train_outcome_penalty", "train_number", // a sign and a number only: Arabic puts a left-to-right mark in front, the others read the same
         "train_points", // "<n> PTS" abbreviates puntos and pontos too
+        "usage_row", // "<name>: <count>": only placeholders, the words come in as arguments
+        "usage_kind_help", // HELP is the Afrikaans word too
+        "usage_kind_no", // NO is Spanish for no
+        "usage_kind_social", // SOCIAL is the same word in Spanish and Portuguese
     )
 
     @Test
@@ -202,7 +206,7 @@ class TranslationsTest {
     fun hindiAndArabicTextIsInItsOwnScript_exceptTheShortListOfPlainSymbolsAndAcronyms() {
         val devanagari = Regex("[\\u0900-\\u097F]")
         val arabic = Regex("[\\u0600-\\u06FF]")
-        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count", "help_menu_steps_line", "help_cat_basics_manual_override_chip", "settings_label_value", "qa_pose_part", "train_diff_extreme", "train_outcome_hit", "train_outcome_penalty", "train_number") // placeholders, a name (EUROPEAN EXTREME) and signed numbers and units, which have no letters of their own
+        val latinOnlyAllowed = setOf("label_add_var_plain_never", "storage_amount", "storage_size_kb", "storage_size_mb", "tree_kind_count", "help_menu_steps_line", "help_cat_basics_manual_override_chip", "settings_label_value", "qa_pose_part", "train_diff_extreme", "train_outcome_hit", "train_outcome_penalty", "train_number", "usage_row") // placeholders, a name (EUROPEAN EXTREME) and signed numbers and units, which have no letters of their own; usage_row is "<name>: <count>", only placeholders
         for ((tag, script) in listOf("hi" to devanagari, "ar" to arabic)) for ((name, text) in texts.getValue(tag)) {
             if (name in latinOnlyAllowed) continue
             // A label placeholder ({{DECK}}) is filled with the language's own word when the text is drawn, so it counts as that word here.

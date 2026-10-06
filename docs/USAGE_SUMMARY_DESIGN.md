@@ -1,8 +1,10 @@
 # Usage summary (C1): written design
 
-**Status: DRAFT for the developer to approve. No code for it has been written.** The tracker's "done when" for C1 asks for a written privacy design
-before anything is built. This is that design. It follows the decisions made on 2026-10-06 (listed in section 1) and the rules in CLAUDE.md. Where
-this page says "tested", the test is described in section 11 and is written with the code, after you approve.
+**Status: APPROVED by the developer on 2026-10-06, and built.** The tracker's "done when" for C1 asks for a written privacy design
+before anything is built. This is that design. It follows the decisions made on 2026-10-06 (listed in section 1) and the rules in CLAUDE.md. The
+answers to its three questions are in section 13. **What was built differs from the draft in one small way, noted in section 2** (a saved Manual
+Override phrase has its own tag, `BANK/...`, which the draft did not list). Not yet tried on a real phone: the checklist is part C of
+`docs/CLINICAL_USE_DEVICE_TEST.md`.
 
 ## 1. What it is, and what you decided
 
@@ -29,8 +31,10 @@ One number per combination of five things. Nothing else.
 | Count | How many messages |
 
 **Channels** (read from the tag the message already carries, `OutputService`'s `source`): MATRIX (`MTX/...`, whatever the deck's name), QUICK_ACTIONS,
-EMERGENCY, TERMINAL (typed at the Terminal prompt), MANUAL_OVERRIDE (`TERM/INPUT`), COMPOSER (`COMPOSER/...`), REPLAY (`LOG/REPLAY`, `CACHE/REPLAY`), WATCH
-(`HW/WATCH`), SHORTCUT (`M-KEY`), PEOPLE (`COMPUTER/CONTACT`), and OTHER for any tag not on this list.
+EMERGENCY, TERMINAL (typed at the Terminal prompt), MANUAL_OVERRIDE (`TERM/INPUT`, and `BANK/...`, a saved phrase played from Manual Override: the tag after
+`BANK/` is the person's own and is never kept), COMPOSER (`COMPOSER/...`), REPLAY (`LOG/REPLAY`, `CACHE/REPLAY`), WATCH
+(`HW/WATCH`), SHORTCUT (`M-KEY`), PEOPLE (`COMPUTER/CONTACT`), and OTHER for any tag not on this list. A test reads the app's source and fails if a
+tag the app sends is not in this table, which is how the `BANK/...` one was found.
 
 **Kinds**: YES, NO, UNSURE, HELP, REPAIR, TURN_HOLDING, NAME_OR_ID, BREAK, BOUNDARY, SOCIAL (the ten in `core/StarterSets.kt`), and OTHER.
 
@@ -109,10 +113,10 @@ Plain numbers in 12 sp text, no charts and no animation:
 | Words in six languages | String resources in English and the five drafts, with a draft notice kept. |
 | Touches screen or sound = tried on a phone before Done | Checklist part C in `docs/CLINICAL_USE_DEVICE_TEST.md`, yours to run. |
 
-## 11. What will be built, after you approve (each step is one commit)
+## 11. What was built (the plan as approved; the file names are the real ones)
 
 1. **C1.2** `core/UsageTally.kt` (plain Kotlin): the record, adding one message, the 90-day window, the row cap, the hour and date rules. **There is no text field, and a test fails if one is added.** Boundary tests: exactly 90 days, one day over, midnight, the hour edge, a time-zone change, the cap.
-2. **C1.3** `core/UsageKind.kt` (plain Kotlin): the channel table and the kind match. Tests: every starter phrase maps to its own kind, no two starters with the same words have different kinds, and every channel tag in the app maps to a channel.
+2. **C1.3** `core/UsageKinds.kt` (plain Kotlin): the channel table and the kind match. Tests: every starter phrase maps to its own kind, no two starters with the same words have different kinds, and every channel tag in the app maps to a channel.
 3. **C1.4** `data/UsageTallyRepository.kt`, the switch in `AssistPrefs`/`AssistSettings`, the DELETE DATA area. Wiring tests.
 4. **C1.5** One call in `OutputService`, off the speech path, skipping tutorial narration and `/n`. Wiring tests, including that a failure is swallowed.
 5. **C1.6** SETTINGS > USAGE SUMMARY: the switch with its first-time dialog, the numbers, SAVE USAGE SUMMARY TO A FILE, FORGET, and the Terminal line.
@@ -126,8 +130,8 @@ Plain numbers in 12 sp text, no charts and no animation:
 - It describes the phone, not the person: if a phone is shared, the counts are shared.
 - It cannot be proven from here that counting never slows speech; that is a phone check.
 
-## 13. Questions for you before I build it
+## 13. The three questions, and your answers (2026-10-06)
 
-1. **Replays.** The Terminal can replay a past message. Should a replay be counted (as its own channel, REPLAY, so it can be ignored when reading), or not counted at all? **My suggestion: counted as REPLAY.**
-2. **The first-time dialog.** Should turning it on always ask first, with CANCEL prominent? **My suggestion: yes.**
-3. **This design as a whole.** Anything above you want changed?
+1. **Replays.** The Terminal can replay a past message. Counted as its own channel, REPLAY, so it can be ignored when reading? **Yes.**
+2. **The first-time dialog.** Turning it on always asks first, with CANCEL prominent? **Yes.**
+3. **This design as a whole.** **Approved as written.**

@@ -24,6 +24,14 @@ object AssistSettings {
     const val KEY_WORD_OFFER_DISMISSED = "word_suggestions_offer_dismissed"
 
     /**
+     * The usage summary's switch (core/UsageTally.kt, docs/USAGE_SUMMARY_DESIGN.md): off when nothing is stored, **on every install**, and never seeded: it counts
+     * messages, so it starts only when a person turns it on and has been asked. Per phone: never in a backup, and a restore never turns it on. It lives in this
+     * file, so DELETE DATA > SETTINGS turns it off again; the counts themselves are their own area (USAGE SUMMARY).
+     */
+    const val KEY_USAGE_SUMMARY = "usage_summary"
+    const val USAGE_SUMMARY_FALLBACK = false
+
+    /**
      * The limits notice's one-time banner has been dismissed (core/LimitsNotice.kt). Written only by a tap, so it is not a seed key. Per phone: never in a
      * backup. It lives in this file, so DELETE DATA > SETTINGS clears it and the banner is shown once more after that wipe, which is wanted.
      */

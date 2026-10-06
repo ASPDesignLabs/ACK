@@ -353,6 +353,8 @@ class TrainingTextTest {
             "train_mod" to setOf("es", "pt", "af"), "train_requested_mod" to setOf("es", "pt", "af"), // MOD abbreviates the word for modifier
             "train_points" to setOf("es", "pt"), // PTS abbreviates puntos and pontos
             "train_outcome_hit" to signsOnly, "train_outcome_penalty" to signsOnly, "train_number" to signsOnly,
+            // The usage summary (UsageSummaryTextTest holds the same list by language): a row is only placeholders, and three kind names are the same word in some languages.
+            "usage_row" to translations.keys, "usage_kind_help" to setOf("af"), "usage_kind_no" to setOf("es"), "usage_kind_social" to setOf("es", "pt"),
         )
         for ((name, languages) in allowed) for ((tag, map) in translations) {
             assertTrue("$tag/$name is still English", tag in languages || map.getValue(name) != english.getValue(name))

@@ -1204,6 +1204,13 @@ fun SettingsView(
 
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
+            // USAGE SUMMARY (settings/UsageSummarySection.kt): counts of how often and when messages are sent, never the words. Off until someone turns it on and has been asked.
+            item {
+                UsageSummarySection(context = context, primaryColor = primaryColor)
+            }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
             item {
                 Text(labelFor(LabelKey.DATA_PORT), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
