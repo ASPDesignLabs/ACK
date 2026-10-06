@@ -142,7 +142,7 @@ class PlainWordsScreensWiringTest {
     private val stillLogic: Map<String, Set<String>> = mapOf(
         "MATRIX" to setOf("MainActivity.kt", "decks/CreateDeckDialog.kt", "data/CommandRepository.kt", "core/HelpMenuText.kt", "core/TrainingText.kt"), // the last two are a view-mode key and a deck type's enum name, each mapped to the words that name it
         "QUICK ACTIONS" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
-        "EMERGENCY" to setOf("ui/DesignSystem.kt", "decks/CreateDeckDialog.kt", "decks/EmergencyDeck.kt", "data/CommandRepository.kt", "output/OutputService.kt"),
+        "EMERGENCY" to setOf("ui/DesignSystem.kt", "decks/CreateDeckDialog.kt", "decks/EmergencyDeck.kt", "data/CommandRepository.kt", "output/OutputService.kt", "core/LogExport.kt", "core/UsageKinds.kt"), // core/UsageKinds.kt holds the EMERGENCY source tag and the channel it maps to, both stored values and never drawn. The log-export entry is the Terminal log's stored type for an Emergency message, written to the saved message log as that stored value, never drawn as a word
         "EMOJI" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
         "GIF" to setOf("decks/CreateDeckDialog.kt", "data/CommandRepository.kt"),
         "VARIABLE" to setOf("ui/DesignSystem.kt"),

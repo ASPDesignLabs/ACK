@@ -67,6 +67,7 @@ object StorageCatalogue {
     const val ID_PEOPLE_AND_PLACES = "PEOPLE_AND_PLACES"
     const val ID_SAVED_LOCATIONS = "SAVED_LOCATIONS"
     const val ID_TERMINAL_LOG = "TERMINAL_LOG"
+    const val ID_USAGE_SUMMARY = "USAGE_SUMMARY"
     const val ID_MESSAGE_RECORDINGS = "MESSAGE_RECORDINGS"
     const val ID_TRAINING_DATA = "TRAINING_DATA"
     const val ID_TRAINED_VOICE = "TRAINED_VOICE"
@@ -95,7 +96,8 @@ object StorageCatalogue {
         Area(
             id = ID_MESSAGES_AND_DECKS,
             // ack_starter_seed is the starter seed's own note of which phrases it wrote (per phone, never backed up).
-            prefsFilesCleared = setOf("ack_statements", "ack_autocomplete_history", StarterSets.RECORD_FILE),
+            // ack_partner_card holds the partner card's own sentences and which sentences are on (data/PartnerCardRepository.kt): words the person wrote, so they go with their messages.
+            prefsFilesCleared = setOf("ack_statements", "ack_autocomplete_history", StarterSets.RECORD_FILE, PartnerCardSettings.PREFS_FILE),
             prefsFilesClearedExcept = mapOf(FILE_MATRIX_CONFIG to setOf(KEY_EMERGENCY_INFO_CARD)),
             // The learned words (data/LearnedWordsRepository.kt): derived from typed statements, so they go with them.
             folders = setOf(LearnedWordsStore.FOLDER),
@@ -125,6 +127,13 @@ object StorageCatalogue {
         Area(
             id = ID_TERMINAL_LOG,
             prefsKeysRemoved = mapOf(FILE_ACK_PREFS to setOf(KEY_TERMINAL_LOG)),
+            coverage = Coverage.NOT_BACKED_UP,
+            restartAfter = false,
+        ),
+        Area(
+            // The usage summary's counts (core/UsageTally.kt). Per phone and never in a backup; only the counts, never a word of a message. No restart is needed: the repository reads the file each time.
+            id = ID_USAGE_SUMMARY,
+            prefsFilesCleared = setOf(UsageTally.PREFS_FILE),
             coverage = Coverage.NOT_BACKED_UP,
             restartAfter = false,
         ),

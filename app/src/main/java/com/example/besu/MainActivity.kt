@@ -8,6 +8,8 @@ import com.example.besu.backup.BackupReminder
 import com.example.besu.core.ActiveScript
 import com.example.besu.core.HelpPlaceholders
 import com.example.besu.core.HelpWalkthroughText
+import com.example.besu.core.LimitsNotice
+import com.example.besu.core.PartnerCard
 import com.example.besu.core.ProfileSwapDiff
 import com.example.besu.core.SlotChange
 import com.example.besu.core.TextInsertion
@@ -27,6 +29,7 @@ import com.example.besu.watch.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
@@ -296,6 +299,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     // Reset whenever the user leaves TYPE, so switching tabs never leaves
     // another screen stuck without its header/nav.
     var composerFullscreen by remember { mutableStateOf(false) }
+    // The limits statement's one-time banner (core/LimitsNotice.kt): hidden for good once dismissed anywhere. Dismissing only remembers it was seen.
+    var limitsNoticeSeen by remember { mutableStateOf(AssistPrefs.isLimitsNoticeSeen(context)) }
     LaunchedEffect(viewMode) {
         if (viewMode != "TYPE") composerFullscreen = false
     }
@@ -304,6 +309,10 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     // reminder could actually be due -- never on a timer. The banner (Terminal and Settings only), the save icon left of HELP
     // and the dialog it opens all read BackupReminder.due. BACK UP NOW starts the same flow as EXPORT .JSON (its warning first).
     var showBackupReminderDialog by remember { mutableStateOf(false) }
+    // The partner card (core/PartnerCard.kt): the header icon only opens a question; nothing is spoken until PLAY IT is tapped there.
+    var showPartnerCardDialog by remember { mutableStateOf(false) }
+    // Which of the person's own sentences (slot 5 or 6) is being written or changed, if one is; the question that asks first waits underneath.
+    var editingOwnSlot by remember { mutableStateOf<Int?>(null) }
     val startBackupExport = rememberBackupExportFlow(context, primaryColor)
     LaunchedEffect(Unit) { BackupReminder.refresh(context) }
 
@@ -723,6 +732,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
     // PLAIN WORDS (ui/PlainWords.kt): read once here, then every screen below redraws in place when the switch is flipped.
     remember { PlainWordsState.load(context) }
+    // The usage summary's switch (ui/UsageSummaryState.kt): read once here, so the Terminal's quiet line appears and goes the moment SETTINGS flips it.
+    remember { UsageSummaryState.load(context) }
 
     CompositionLocalProvider(
         LocalHelpManager provides helpManager,
@@ -749,6 +760,19 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             primaryColor = primaryColor,
                             onBackUpNow = { startBackupExport() },
                             onNotNow = { BackupReminder.snooze(context) },
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    // The limits statement, once (core/LimitsNotice.kt): Terminal and Settings only, never a deck, Emergency or Type screen. A notice, not a
+                    // question: GOT IT only remembers it was seen. The statement stays in SETTINGS > ABOUT ACK.
+                    if (LimitsNotice.shouldShowBanner(limitsNoticeSeen, viewMode)) {
+                        LimitsNoticeBanner(
+                            primaryColor = primaryColor,
+                            settingsName = labelFor(LabelKey.SETTINGS_ENTRY),
+                            onDismiss = {
+                                AssistPrefs.markLimitsNoticeSeen(context)
+                                limitsNoticeSeen = true
+                            },
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
@@ -1086,6 +1110,16 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
 
+                                    // The partner card, in the slot next to HELP, always shown (no setting hides it), about 24 dp like its neighbours. A tap asks first.
+                                    PartnerCardIndicator(
+                                        primaryColor = primaryColor,
+                                        onClick = {
+                                            PartnerCardState.load(context)
+                                            showPartnerCardDialog = true
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+
                                     Box(
                                         modifier = Modifier
                                             .testTag(AckTags.HELP_BUTTON)
@@ -1410,16 +1444,24 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             }
                         } else {
                         when (viewMode) {
-                            "TERMINAL" -> TerminalView(
-                                logs = logs,
-                                context = context,
-                                onShowManualOverride = {
-                                    showLegacyManualOverride = true
-                                    helpManager.onEvent(
-                                        HelpEvent.WatchInput("MANUAL_OVERRIDE_OPENED")
+                            "TERMINAL" -> Column(modifier = Modifier.fillMaxSize()) {
+                                // While the usage summary is on, one quiet line says so (12 sp, no sound, no animation). Terminal only: never on a deck, Emergency or Type screen.
+                                if (UsageSummaryState.on) {
+                                    UsageSummaryTerminalLine()
+                                }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    TerminalView(
+                                        logs = logs,
+                                        context = context,
+                                        onShowManualOverride = {
+                                            showLegacyManualOverride = true
+                                            helpManager.onEvent(
+                                                HelpEvent.WatchInput("MANUAL_OVERRIDE_OPENED")
+                                            )
+                                        }
                                     )
                                 }
-                            )
+                            }
                             "MATRIX" -> {
                                 when (currentDeckType()) {
                                     DeckType.MATRIX -> {
@@ -1615,6 +1657,45 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             },
                             onClose = { showBackupReminderDialog = false }
                         )
+                    }
+
+                    if (showPartnerCardDialog) {
+                        val partnerSettings = PartnerCardState.settings
+                        val ownSlot = editingOwnSlot
+                        val saveFailed = context.getString(R.string.partner_card_save_failed)
+                        if (ownSlot == null) {
+                            PartnerCardDialog(
+                                primaryColor = primaryColor,
+                                rows = PartnerCardPlayer.rows(context, partnerSettings),
+                                anyOn = partnerSettings.anyOn,
+                                silentModeName = labelFor(LabelKey.SILENT_MODE),
+                                onToggle = { slot ->
+                                    if (!PartnerCardState.toggle(context, slot)) Toast.makeText(context, saveFailed, Toast.LENGTH_LONG).show()
+                                },
+                                onEditOwn = { slot -> editingOwnSlot = slot },
+                                onCancel = { showPartnerCardDialog = false },
+                                onPlay = {
+                                    showPartnerCardDialog = false
+                                    PartnerCardPlayer.play(context, partnerSettings)
+                                }
+                            )
+                        } else {
+                            PartnerCardEditDialog(
+                                primaryColor = primaryColor,
+                                ownNumber = ownSlot - PartnerCard.BUILT_IN_COUNT + 1,
+                                current = partnerSettings.own[ownSlot - PartnerCard.BUILT_IN_COUNT],
+                                exportName = labelFor(LabelKey.EXPORT_JSON),
+                                onSave = { raw ->
+                                    if (PartnerCardState.writeOwn(context, ownSlot, raw)) editingOwnSlot = null
+                                    else Toast.makeText(context, saveFailed, Toast.LENGTH_LONG).show()
+                                },
+                                onClear = {
+                                    if (PartnerCardState.writeOwn(context, ownSlot, "")) editingOwnSlot = null
+                                    else Toast.makeText(context, saveFailed, Toast.LENGTH_LONG).show()
+                                },
+                                onCancel = { editingOwnSlot = null }
+                            )
+                        }
                     }
 
                     if (showHelpMenu) {

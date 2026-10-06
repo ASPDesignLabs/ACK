@@ -25,8 +25,8 @@ class PatchNotesTest {
         "- NEW: EXPORT .JSON NOW SAYS WHAT THE FILE CAN CONTAIN AND THAT IT IS",
         "  NOT ENCRYPTED, BEFORE THE FILE PICKER OPENS. /backup SAYS IT TOO",
         "- A FAILED EXPORT NOW SAYS SO AND LEAVES NO HALF-MADE FILE",
-        "- NEW: DELETE DATA IN DATA PORT. TWELVE AREAS, EACH WITH WHAT IT HOLDS",
-        "  AND HOW MUCH. EVERY DELETE ASKS TWICE AND NAMES A BACKUP FIRST",
+        "- NEW: DELETE DATA IN DATA PORT. THIRTEEN AREAS, EACH WITH WHAT IT",
+        "  HOLDS AND HOW MUCH. EVERY DELETE ASKS TWICE AND NAMES A BACKUP FIRST",
         "- NEW: DELETE CUSTOM VOICE IN AUDIO ARCHITECT. VOICES THAT USED IT",
         "  SWITCH TO A NORMAL ONE",
         "- NEW: SAFETY COPIES. THE PRIVATE COPY ACK MAKES BEFORE A DATA UPGRADE",
@@ -107,6 +107,36 @@ class PatchNotesTest {
         "  PHONE. CHOOSING ASKS FIRST AND RESTARTS ACK ONCE",
         "- THESE ARE DRAFTS NOT YET CHECKED BY NATIVE SPEAKERS. HELP, THIS",
         "  SCREEN AND MANY DIALOGS STAY IN ENGLISH. SEE DOCS/TRANSLATIONS.MD",
+        "-- ABOUT ACK --",
+        "- NEW: ABOUT ACK, AT THE END OF SETTINGS, SAYS WHAT ACK IS NOT: NOT A",
+        "  SUBSTITUTE FOR PROFESSIONAL AAC EVALUATION OR SPEECH-LANGUAGE",
+        "  THERAPY. IT ALSO ASKS YOU TO KEEP ANOTHER WAY TO COMMUNICATE. THE",
+        "  SAME WORDS SHOW ONCE IN A BANNER ON THE TERMINAL OR SETTINGS",
+        "  SCREEN. GOT IT HIDES THE BANNER AND DOES NOTHING ELSE",
+        "-- SAVING THE LOG --",
+        "- NEW: SAVE MESSAGE LOG TO A FILE, IN SETTINGS, SAVES THE MESSAGES THE",
+        "  LOG STILL KEEPS TO A FILE YOU CHOOSE: WHAT WAS SAID, WITH DATE, TIME",
+        "  AND SOURCE, NOTHING ELSE. IT WARNS FIRST AND SAVES NOTHING UNTIL YOU",
+        "  PICK WHERE. THE FILE IS NOT ENCRYPTED. NO NETWORK, NO SHARING",
+        "-- USAGE SUMMARY --",
+        "- NEW: USAGE SUMMARY, IN SETTINGS, COUNTS HOW OFTEN AND WHEN MESSAGES",
+        "  ARE SENT, BY HOUR AND BY WHERE FROM, NEVER THE WORDS. IT IS OFF UNTIL",
+        "  YOU TURN IT ON AND CONFIRM, AND THE TERMINAL SHOWS A LINE WHILE IT IS",
+        "  ON. /n MESSAGES AND HELP NARRATION ARE NOT COUNTED",
+        "- KEPT 90 DAYS ON THIS PHONE ONLY AND NOT IN ANY BACKUP. NOTHING IS",
+        "  SENT ANYWHERE. SAVE USAGE SUMMARY TO A FILE KEEPS A COPY WHERE YOU",
+        "  CHOOSE (IT STILL SHOWS WHEN YOU COMMUNICATE, SO KEEP IT LIKE A",
+        "  DIARY). FORGET USAGE SUMMARY DELETES IT, AFTER TWO QUESTIONS",
+        "-- PARTNER CARD --",
+        "- NEW: A PARTNER CARD ICON (A SPEECH BUBBLE) IN THE HEADER",
+        "  NEXT TO HELP. A TAP ASKS FIRST, AND YOU TURN EACH SENTENCE ON OR OFF",
+        "  THERE. IF YOU PLAY IT, ACK SAYS AND SHOWS WHAT IS ON, LIKE ANY",
+        "  MESSAGE: YOUR VOICE AND YOUR OUTPUT, SHOWN BUT NOT SPOKEN IF OUTPUT",
+        "  IS SILENT. THE WORDS ARE DRAFTS. ON PAPER: DOCS/PARTNER_CARD.MD",
+        "- YOU CAN WRITE ONE OR TWO SENTENCES OF YOUR OWN FOR THE CARD. ACK SAYS",
+        "  THEM EXACTLY AS WRITTEN. THEY STAY ON THIS PHONE, ARE IN EXPORT .JSON",
+        "  AND ARE DELETED WITH MESSAGES AND DECKS. THE USAGE SUMMARY COUNTS",
+        "  EACH PLAY AS ONE PARTNER CARD MESSAGE",
         "-- FIXES --",
         "- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE'S VARIABLES OR",
         "  PROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE",
@@ -341,6 +371,65 @@ class PatchNotesTest {
             }
             assertFalse("$tag/info_b8_train_9 still types the English button", map.getValue("info_b8_train_9").contains("SAVE ALL TO A FILE"))
             for (note in listOf("info_nr_privacy_7", "info_b8_train_3")) assertFalse("$tag/$note still types the English button", map.getValue(note).contains("RECORD FREE SPEECH"))
+        }
+    }
+
+    @Test
+    fun theAboutNoteNamesTheSectionAndTheButtonAsTheyReadInEveryLanguage() {
+        // The limits statement's note points at ABOUT ACK, GOT IT, the Terminal and Settings; each must be the word that screen carries in that language, not the English it was written with.
+        for ((tag, map) in mapOf("en" to english) + translations) {
+            val heading = map.getValue("info_nr_about_head")
+            val note = map.getValue("info_nr_about_1")
+            assertTrue("$tag: the heading names the section as the screen does", heading.contains(map.getValue("about_title")))
+            assertTrue("$tag: the note names the section", note.contains(map.getValue("about_title")))
+            assertTrue("$tag: the note names GOT IT as the button reads", note.contains(map.getValue("about_got_it")))
+            assertTrue("$tag: the note names SETTINGS as the plain label reads", note.contains(map.getValue("label_settings_entry_plain")))
+            assertTrue("$tag: the note names the Terminal", note.contains(map.getValue("label_terminal")))
+        }
+    }
+
+    @Test
+    fun theLogNoteNamesTheSaveButtonAndSettingsAsTheyReadInEveryLanguage() {
+        for ((tag, map) in mapOf("en" to english) + translations) {
+            val note = map.getValue("info_nr_log_1")
+            assertTrue("$tag: the note names the button as it reads", note.contains(map.getValue("log_export_button")))
+            assertTrue("$tag: the note names SETTINGS as the plain label reads", note.contains(map.getValue("label_settings_entry_plain")))
+            assertTrue("$tag: the heading", map.getValue("info_nr_log_head").let { it.startsWith("-- ") && it.endsWith(" --") })
+        }
+    }
+
+    @Test
+    fun theUsageSummaryNoteNamesTheSectionAndBothButtonsAsTheyReadInEveryLanguage_andSaysTheRealNumberOfDays() {
+        // Each name must be the word the screen carries in that language, on one line in English so a reader can find it, and the days must be the days the app really keeps.
+        for ((tag, map) in mapOf("en" to english) + translations) {
+            val head = map.getValue("info_nr_usage_head")
+            val first = map.getValue("info_nr_usage_1")
+            val second = map.getValue("info_nr_usage_2")
+            assertTrue("$tag: the heading", head.startsWith("-- ") && head.endsWith(" --"))
+            assertTrue("$tag: the heading names the section as the screen does", head.contains(map.getValue("usage_title")))
+            assertTrue("$tag: the first note names the section", first.contains(map.getValue("usage_title")))
+            assertTrue("$tag: it names SETTINGS as the plain label reads", first.contains(map.getValue("label_settings_entry_plain")))
+            assertTrue("$tag: it names the Terminal", first.contains(map.getValue("label_terminal")))
+            assertTrue("$tag: it names the save button as it reads", second.contains(map.getValue("usage_save_button")))
+            assertTrue("$tag: it names the forget button as it reads", second.contains(map.getValue("usage_forget_button")))
+            assertTrue("$tag: it says the days the app really keeps", second.contains(UsageTally.RETENTION_DAYS.toString()))
+            assertTrue("$tag: the typed command stays exactly as typed", Regex("(?<![A-Za-z0-9_])/n(?![A-Za-z0-9_])").containsMatchIn(first))
+        }
+    }
+
+    @Test
+    fun thePartnerCardNotesNameTheCardTheHelpButtonTheExportButtonAndTheAreaAsTheyReadInEveryLanguage() {
+        for ((tag, map) in mapOf("en" to english) + translations) {
+            val head = map.getValue("info_nr_partner_head")
+            val first = map.getValue("info_nr_partner_1")
+            val second = map.getValue("info_nr_partner_2")
+            assertTrue("$tag: the heading", head.startsWith("-- ") && head.endsWith(" --"))
+            assertTrue("$tag: the heading names the card as the screen does", head.contains(map.getValue("partner_card_name")))
+            assertTrue("$tag: the first note names the card", first.contains(map.getValue("partner_card_name")))
+            assertTrue("$tag: the first note names the HELP button as it reads", first.contains(map.getValue("help_button")))
+            assertTrue("$tag: the second note names the card (the usage summary's kind)", second.contains(map.getValue("partner_card_name")))
+            assertTrue("$tag: the second note names the export button as it reads", second.contains(map.getValue("label_export_json")))
+            assertTrue("$tag: the second note names the area DELETE DATA wipes it with", second.contains(map.getValue("area_messages_and_decks_label")))
         }
     }
 

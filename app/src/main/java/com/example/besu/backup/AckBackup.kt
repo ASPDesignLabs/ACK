@@ -3,6 +3,7 @@ package com.example.besu.backup
 
 import com.example.besu.capture.TrainingScript
 import com.example.besu.computer.*
+import com.example.besu.core.PartnerCardBackup
 import com.example.besu.core.WordModelData
 import com.example.besu.data.*
 import com.example.besu.decks.*
@@ -160,7 +161,12 @@ data class AckBackup(
 
     // PLAIN WORDS (data/AssistPrefs.kt): null on a backup made before it existed, or by a phone where nothing was ever stored ("nothing to say about
     // this field": restore leaves the device's own choice alone).
-    val plainWords: Boolean? = null
+    val plainWords: Boolean? = null,
+
+    // The partner card's own sentences (data/PartnerCardRepository.kt): the one or two sentences the person wrote for it. Null on a backup made before it existed, or by a phone
+    // where none is written ("nothing to say about this field"). These are words the person typed, so EXPORT .JSON names them in its warning (core/ExportContents.kt). Restore only
+    // ADDS them into empty slots and never overwrites a sentence written since. Which sentences are on is this phone's own choice and is deliberately not here.
+    val partnerCard: PartnerCardBackup? = null
 )
 
 @Serializable

@@ -83,6 +83,20 @@ class AssistSettingsTest {
         assertFalse(AssistSettings.shouldOfferWordSuggestions(switchOn = true, offerDismissed = true))
     }
 
+    // ---- LIMITS NOTICE (C4) --------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun theLimitsNoticeNoteIsOnlyWrittenByATap_soItIsNotASeedKey_andItsKeyIsStableAndDistinct() {
+        assertEquals("limits_notice_seen", AssistSettings.KEY_LIMITS_NOTICE_SEEN)
+        assertFalse(AssistSettings.KEY_LIMITS_NOTICE_SEEN in AssistSettings.SEED_KEYS)
+        val keys = listOf(
+            AssistSettings.KEY_WARN_PROFILE_CHANGE, AssistSettings.KEY_WARN_OFFER_DISMISSED, AssistSettings.KEY_WORD_SUGGESTIONS,
+            AssistSettings.KEY_WORD_OFFER_DISMISSED, AssistSettings.KEY_SPEECH_LANGUAGE, AssistSettings.KEY_INTERFACE_LANGUAGE,
+            AssistSettings.KEY_PLAIN_WORDS, AssistSettings.KEY_PLAIN_WORDS_OFFER_DISMISSED, AssistSettings.KEY_LIMITS_NOTICE_SEEN,
+        )
+        assertEquals("a key is used twice", keys.size, keys.toSet().size)
+    }
+
     // ---- PLAIN WORDS (L2) ---------------------------------------------------------------------------------------------------------
 
     @Test

@@ -32,6 +32,8 @@ object AssistPrefs {
     private const val KEY_PLAIN_WORDS_OFFER_DISMISSED = "plain_words_offer_dismissed"
     private const val KEY_WORD_SUGGESTIONS = "word_suggestions"
     private const val KEY_WORD_OFFER_DISMISSED = "word_suggestions_offer_dismissed"
+    private const val KEY_LIMITS_NOTICE_SEEN = "limits_notice_seen"
+    private const val KEY_USAGE_SUMMARY = "usage_summary"
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -94,6 +96,22 @@ object AssistPrefs {
     /** NOT NOW: hides the offer for good and changes no setting. */
     fun dismissWordSuggestionsOffer(context: Context) {
         prefs(context).edit().putBoolean(KEY_WORD_OFFER_DISMISSED, true).commit()
+    }
+
+    /** Whether the limits notice's one-time banner was dismissed (core/LimitsNotice.kt). False when nothing is stored, so every install sees it once. */
+    fun isLimitsNoticeSeen(context: Context): Boolean = prefs(context).getBoolean(KEY_LIMITS_NOTICE_SEEN, false)
+
+    /** Hides the banner for good. Changes no setting and starts nothing. commit(), so it is on disk before the person leaves the screen. */
+    fun markLimitsNoticeSeen(context: Context) {
+        prefs(context).edit().putBoolean(KEY_LIMITS_NOTICE_SEEN, true).commit()
+    }
+
+    /** Whether messages are being counted (the usage summary). Off when nothing is stored, on every install: it starts only when a person turns it on. */
+    fun isUsageSummaryOn(context: Context): Boolean = prefs(context).getBoolean(KEY_USAGE_SUMMARY, AssistSettings.USAGE_SUMMARY_FALLBACK)
+
+    /** commit(), so the choice is on disk before the person leaves the screen. Turning it off keeps what was counted; only FORGET deletes it. */
+    fun setUsageSummary(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(KEY_USAGE_SUMMARY, on).commit()
     }
 
     /** The language a profile with no voice of its own speaks in. English (US) when nothing (or something unreadable) is stored, so an existing install is unchanged. */

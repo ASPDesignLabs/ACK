@@ -261,7 +261,7 @@ class DeleteDataWordingTest {
             for (area in StorageCatalogue.areas) {
                 val note = map.getValue(area.backupResource)
                 val mentionsExport = note.contains("%1\$s")
-                val expected = area.id != StorageCatalogue.ID_TERMINAL_LOG && area.id != StorageCatalogue.ID_SAFETY_COPIES && area.id != StorageCatalogue.ID_TEMPORARY_FILES
+                val expected = area.id != StorageCatalogue.ID_TERMINAL_LOG && area.id != StorageCatalogue.ID_USAGE_SUMMARY && area.id != StorageCatalogue.ID_SAFETY_COPIES && area.id != StorageCatalogue.ID_TEMPORARY_FILES
                 assertEquals("${area.id}: $note", expected, mentionsExport)
             }
         }

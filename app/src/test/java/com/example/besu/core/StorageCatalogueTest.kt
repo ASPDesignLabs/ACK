@@ -31,10 +31,10 @@ class StorageCatalogueTest {
     }
 
     @Test
-    fun theTwelveApprovedAreasAreAllThere() {
+    fun theThirteenApprovedAreasAreAllThere() {
         assertEquals(
             listOf(
-                "MESSAGES AND DECKS", "EMERGENCY INFO CARD", "PEOPLE AND PLACES", "SAVED LOCATIONS", "TERMINAL LOG",
+                "MESSAGES AND DECKS", "EMERGENCY INFO CARD", "PEOPLE AND PLACES", "SAVED LOCATIONS", "TERMINAL LOG", "USAGE SUMMARY",
                 "MESSAGE RECORDINGS", "TRAINING DATA", "TRAINED VOICE", "GIF LIBRARY", "SAFETY COPIES", "TEMPORARY FILES",
                 "SETTINGS",
             ),
@@ -134,10 +134,11 @@ class StorageCatalogueTest {
     // --- restart, watch, geofences ---------------------------------------------------------------------------------
 
     @Test
-    fun onlyTheLogSafetyCopiesAndTemporaryFilesNeedNoRestart() {
+    fun onlyTheLogTheUsageSummarySafetyCopiesAndTemporaryFilesNeedNoRestart() {
+        // The usage summary needs none because its repository reads the file each time and keeps nothing in memory that a wipe could leave stale.
         val noRestart = areas.filterNot { it.restartAfter }.map { it.id }.toSet()
         assertEquals(
-            setOf(StorageCatalogue.ID_TERMINAL_LOG, StorageCatalogue.ID_SAFETY_COPIES, StorageCatalogue.ID_TEMPORARY_FILES),
+            setOf(StorageCatalogue.ID_TERMINAL_LOG, StorageCatalogue.ID_USAGE_SUMMARY, StorageCatalogue.ID_SAFETY_COPIES, StorageCatalogue.ID_TEMPORARY_FILES),
             noRestart,
         )
     }

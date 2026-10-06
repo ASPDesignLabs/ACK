@@ -111,6 +111,7 @@ class ExportContentsTest {
                 "YOUR VOICE RECORDINGS (THE AUDIO ITSELF)",
                 "MESSAGES, STATEMENTS AND DECKS",
                 "WORDS LEARNED FROM WHAT YOU SAVED, SPOKE OR COPIED",
+                "YOUR OWN PARTNER CARD SENTENCES",
                 "SETTINGS AND HISTORY",
             ),
             ExportContents.categories.map { EnglishText.get(it.resource) },
@@ -123,6 +124,16 @@ class ExportContentsTest {
         val category = ExportContents.categories.single { "learnedWords" in it.fields }
         assertEquals(setOf("learnedWords"), category.fields)
         assertTrue(EnglishText.get(category.resource).contains("WORDS"))
+        assertTrue(ExportContents.dialogText(EnglishText).contains(EnglishText.get(category.resource)))
+        assertTrue(ExportContents.terminalText(EnglishText).contains(EnglishText.get(category.resource)))
+    }
+
+    @Test
+    fun thePartnerCardSentencesHaveTheirOwnLine_soThePersonIsToldWhatTheyWroteIsInTheFile() {
+        // Words the person wrote for the partner card go into EXPORT .JSON, so the warning names them rather than filing them under messages or settings.
+        val category = ExportContents.categories.single { "partnerCard" in it.fields }
+        assertEquals(setOf("partnerCard"), category.fields)
+        assertEquals("YOUR OWN PARTNER CARD SENTENCES", EnglishText.get(category.resource))
         assertTrue(ExportContents.dialogText(EnglishText).contains(EnglishText.get(category.resource)))
         assertTrue(ExportContents.terminalText(EnglishText).contains(EnglishText.get(category.resource)))
     }

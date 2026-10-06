@@ -2,6 +2,7 @@
 package com.example.besu.settings
 
 import com.example.besu.core.LabelKey
+import com.example.besu.core.LogExportContents
 import com.example.besu.core.OutputRouteText
 import com.example.besu.*
 import com.example.besu.R
@@ -401,6 +402,9 @@ fun SettingsView(
 
     // EXPORT .JSON: the warning (what the file holds, that it is not protected) first, then the picker.
     val startBackupExport = rememberBackupExportFlow(context, primaryColor) { exportTick++ }
+
+    // SAVE MESSAGE LOG TO A FILE (settings/LogExportDialog.kt): the warning first, then the picker. Only the messages the Terminal log still keeps; nothing is written until a place is chosen.
+    val startLogExport = rememberLogExportFlow(context, primaryColor, labelFor(LabelKey.TERMINAL_LOG), logs)
 
     // Whole-protocol restore -- unlike importLauncher above (which only ever
     // imports matrix phrases into a new deck), this overwrites the entire
@@ -1184,6 +1188,25 @@ fun SettingsView(
                     colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor, inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    LogExportContents.buttonDescription(words, labelFor(LabelKey.TERMINAL_LOG)),
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                NeonButton(words.get(LogExportContents.BUTTON), Modifier.fillMaxWidth(), mainColor = primaryColor) {
+                    startLogExport()
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            // USAGE SUMMARY (settings/UsageSummarySection.kt): counts of how often and when messages are sent, never the words. Off until someone turns it on and has been asked.
+            item {
+                UsageSummarySection(context = context, primaryColor = primaryColor)
             }
 
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
@@ -1418,6 +1441,14 @@ fun SettingsView(
                     showManageAutocomplete = true
                     reportHelpInteraction(AckTags.AUTOCOMPLETE_MANAGE_BTN)
                 }
+            }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            // ABOUT ACK (settings/AboutSection.kt): the limits statement, always there to read again. Words only.
+            item {
+                AboutSection(primaryColor = primaryColor)
+                Spacer(modifier = Modifier.height(12.dp))
             }
         }
         HeroButton(labelFor(LabelKey.UPLOAD_PROTOCOL), Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }

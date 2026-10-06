@@ -63,6 +63,17 @@ cp "$A/output/VoiceInfoMapping.kt" "$STAGE/com/example/besu/output/"
 cp "$A/data/ResourceText.kt" "$STAGE/com/example/besu/data/"
 cp "$A/ui/ResourceText.kt" "$A/ui/BackupReminderBanner.kt" "$STAGE/com/example/besu/ui/"
 cp "$A/settings/BackupWarningDialog.kt" "$STAGE/com/example/besu/settings/"
+# The limits statement: the one-time banner and the ABOUT section (their words and rules are core/LimitsNotice.kt, staged with the rest of core/).
+cp "$A/ui/LimitsNoticeBanner.kt" "$STAGE/com/example/besu/ui/"
+cp "$A/settings/AboutSection.kt" "$STAGE/com/example/besu/settings/"
+# SAVE MESSAGE LOG TO A FILE: the warning dialog and its flow (the exporter is stubbed in stubs/app/LogExporter.kt; the words and the file format are core/LogExport*.kt, staged with the rest of core/).
+cp "$A/settings/LogExportDialog.kt" "$STAGE/com/example/besu/settings/"
+# USAGE SUMMARY: the SETTINGS section, its save flow and the Terminal line (the repository and the exporter are stubbed in stubs/app/UsageSummary.kt; every rule and word is core/Usage*.kt, staged with the rest of core/).
+cp "$A/settings/UsageSummarySection.kt" "$A/settings/UsageSummarySave.kt" "$STAGE/com/example/besu/settings/"
+cp "$A/ui/UsageSummaryState.kt" "$STAGE/com/example/besu/ui/"
+# PARTNER CARD: the header icon, the question a tap opens (with a switch per sentence) and the dialog for the person's own sentences, and the state they share (every word and rule is core/PartnerCard*.kt;
+# the repository is stubbed in stubs/app/PartnerCard.kt; the sender, output/PartnerCardPlayer.kt, uses the SDK and is syntax-checked only).
+cp "$A/ui/PartnerCardButton.kt" "$A/ui/PartnerCardState.kt" "$STAGE/com/example/besu/ui/"
 cp -r "$H/stubs/." "$STAGE/"
 cd "$H"
 gradle --no-daemon --console=plain -q -Pkotlin.compiler.execution.strategy=in-process compileKotlin > "$H/build/check.log" 2>&1 && status=0 || status=$?
