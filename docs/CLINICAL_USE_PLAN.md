@@ -3,7 +3,7 @@
 **Status: DRAFT for the developer to review. Nothing in the app has been changed.** Written on branch `claude/compassionate-hawking-bj1xap`
 (which starts level with `main`). Source: the AAC Readiness Tracker, Section 5 (rows C1 to C6), and the Speech-Language Pathology
 Evaluation it cites (R12, Q9, Q10, Q11). Each decision in section 6 is yours; a suggestion is a suggestion, not a decision.
-Eight decisions are recorded (section 6). Six questions are still open.
+Twelve decisions are recorded (section 6). Seven questions are still open, and the C1 design waits for your approval.
 
 ## 1. What Section 5 asks for
 
@@ -76,8 +76,8 @@ This order is a suggestion (Q8). Nothing is blocked on a decision any more excep
 |---|---|
 | C4 limits statement | **Built and pushed. Wording confirmed by you; the website now carries the third sentence too.** Not yet seen on a phone (C4.5 is yours). Phone checklist: `docs/CLINICAL_USE_DEVICE_TEST.md`, part A. |
 | C2 log file | **Built on this branch, not yet seen on a phone** (C2.6 is yours). Messages only, saved from a SETTINGS button. 1526 automated tests pass (63 new for C2); the dialog passes the type-check; `SettingsView.kt` and `LogExporter.kt` pass the syntax check. Ten deliberate breaks were each caught by a test. Phone checklist: part B. |
-| C1 usage summary | Not started. Waits for Q5 and Q6, then the written design. |
-| C3 partner card | Not started. Waits for the words and Q10. |
+| C1 usage summary | **Written design drafted: `docs/USAGE_SUMMARY_DESIGN.md`. Waiting for your approval; no code yet.** |
+| C3 partner card | Not started. Home chosen (a header icon); waits for the words and Q13 to Q15. |
 | C5, C6 | Not started. Wait for Q7. |
 
 ## 5. Tasks
@@ -112,34 +112,36 @@ Built as an off-by-default, person-chosen action available to anyone. It is not 
 - **C2.5** Docs done: DATA_SOVEREIGNTY, CHANGELOG, `/info` (six languages), TRANSLATIONS, CLAUDE.md, device-test part B. No new storage, so no new DELETE DATA area.
 - **C2.6 (you)** The phone check: the picker against your own storage, a failed save, a large log, the file opened on a PC.
 
-### C1: opt-in usage summary (P1, unblocked, needs Q5 and Q6)
-- **C1.1 (you, then me)** I write `docs/USAGE_SUMMARY_DESIGN.md`: exactly what is recorded and what never is, where it lives, who can see it,
-  how it is switched off and forgotten, how it is saved. The done-when asks for this before code. You approve it first.
-- **C1.2** `core/UsageTally.kt` (plain Kotlin): the record is a day, an hour bucket, a channel, a function (or OTHER) and a count. **There is
-  no text field**, and a test fails if one is added. Rules: off writes nothing, a row cap so it cannot grow without end, retention, time-zone and
-  midnight edges.
-- **C1.3** `core/UsageFunction.kt`: how a function is decided (Q5). Tested.
-- **C1.4** `data/UsageTallyRepository.kt`, prefs file `ack_usage_tally`. The switch lives in `ack_assist_prefs`, **off for everyone, never
-  seeded**, never in `AckBackup` (like WORD SUGGESTIONS). Registered in `OWNED_PREFS_FILES`, a new DELETE DATA area, and the six-language wording.
-- **C1.5** One call in `OutputService.processSpeech`, cheap, wrapped so a failure can never change what is spoken, skipped for tutorial narration.
-- **C1.6** SETTINGS > USAGE SUMMARY: the switch with plain words on what is and is not recorded, a table, SAVE TO FILE (reuses the C2 warning and
-  file code), and FORGET (asks twice, CANCEL prominent, BACK UP FIRST named). The screen says it is ON whenever it is. Optional HELP step.
-- **C1.7** Docs and a CLAUDE.md section for the rules above.
+### C1: opt-in usage summary (P1, design drafted, waiting for your approval)
+**Decided:** a kind is decided by where the message came from plus ACK's own starter kinds (OTHER for anything else); switched on in SETTINGS with a quiet line on the
+Terminal while it is on; kept 90 days, by day and hour of day. The full design, with what is and is never recorded, is `docs/USAGE_SUMMARY_DESIGN.md`.
+- **C1.1** Done: the written design. **You approve it before any code** (its section 13 has three small questions).
+- **C1.2** `core/UsageTally.kt` (plain Kotlin): the record is a date, an hour, a channel, a kind and a count. **There is no text field**, and a test fails if one is added.
+  Off writes nothing; a 90-day window; a row cap; time-zone and midnight edges.
+- **C1.3** `core/UsageKind.kt`: the channel table and the kind match against the starter phrases. Tested.
+- **C1.4** `data/UsageTallyRepository.kt`, prefs file `ack_usage_tally`. The switch lives in `ack_assist_prefs`, **off for everyone, never seeded**, never in `AckBackup`. Registered in
+  `OWNED_PREFS_FILES`, a new DELETE DATA area, and the six-language wording.
+- **C1.5** One call in `OutputService` where a message request arrives, off the speech path, so a failure can never change what is spoken. **A message sent with `/n` is not counted;
+  nor is tutorial narration.**
+- **C1.6** SETTINGS > USAGE SUMMARY: the switch with a first-time dialog, the numbers, SAVE USAGE SUMMARY TO A FILE (reuses the C2 flow), FORGET (asks twice), and the Terminal line.
+- **C1.7** Docs and a CLAUDE.md section.
 - **Verified by:** unit tests; on your phone: a day of real use, and that speech is not slowed.
 
-### C3: partner card (P1, form decided, needs the words and a home for the button, Q10)
-**Decided:** a playable message (shown full screen and spoken) plus a printable page. **Added by you:** it must follow the person's audio routing, and
-when silent output is on it must be silent too.
+### C3: partner card (P1, form and home decided, needs the words and three design answers)
+**Decided:** a playable message (shown full screen and spoken) plus a printable page. It must follow the person's audio routing, and when silent output is on it must be silent too.
+**The button lives in the header, in the slot where the backup reminder's save icon shows.** When no backup is due, the partner-card icon is in that slot. When a backup is due, the save
+icon appears to its left.
 - **C3.1 (you and an SLP)** The words. I will draft candidates at a plain reading level for you to choose from, and mark them as drafts for an SLP.
-- **C3.2** Send it through the **normal** output path, never the Emergency path. That is what makes both of your rules hold: Silent Mode shows the
-  text and does not speak it, and the chosen output device (phone, Bluetooth, ACK WATCH, FORCE SPEAKER) applies as it does for any message. The Emergency
-  path always speaks on the phone and ignores Silent Mode, so using it would break your rule. A test pins that the card never sets the emergency flag.
-  It would appear in the Terminal log as a normal spoken message, since that is what it is.
-- **C3.3** A home for the button (Q10). The STARTERS Quick Actions deck is full (3 groups of 4), and a Quick Actions deck cannot hold more
-  than 12 buttons, so something has to give: a new small deck, a typed Terminal command, or a one-time offer that adds it to a deck you choose.
-  Whatever it is, new installs may get it; an existing install is offered it once; **no existing phrase is ever overwritten**.
-- **C3.4** Words in six languages. The printable copy in `docs/` is kept identical to the app's text by a test.
-- **Verified by:** unit tests; your phone; the done-when ("tried with real partners") happens in C5's trials.
+- **C3.2** Send it through the **normal** output path, never the Emergency path. That is what makes both of your rules hold: Silent Mode shows the text and does not speak it, and the
+  chosen output device (phone, Bluetooth, ACK WATCH, FORCE SPEAKER) applies as it does for any message. The Emergency path always speaks on the phone and ignores Silent Mode, so using it
+  would break your rule. A test pins that the card never sets the emergency flag. It would appear in the Terminal log as a normal message, since that is what it is.
+- **C3.3** The header icon. What I found in `MainActivity.kt`: under the PROTOCOL button there is a row, `[save-icon slot, 24 dp, always laid out] [4 dp] [HELP]`. The save icon's slot is always
+  reserved so that nothing in the header moves when the icon comes and goes. To put the partner-card icon in that slot **and** keep the save icon from shifting anything, the save icon needs a
+  **second reserved slot to its left**, so the header gets about 28 dp wider on every screen, which narrows the deck and profile text on the left. It would need a phone check on a small
+  screen. The icon would be drawn like the save icon (an outline glyph in the theme colour) with a screen-reader name in six languages.
+- **C3.4** Three things I need you to decide before building it (Q13 to Q15): what a tap does, how big the tap area is, and whether the icon can be hidden.
+- **C3.5** Words in six languages. The printable copy in `docs/` is kept identical to the app's text by a test.
+- **Verified by:** unit tests; your phone (the header on a small screen especially); the done-when ("tried with real partners") happens in C5's trials.
 
 ### C5: outside feedback (P1, in progress, mostly people)
 Because the scope is "personal tool, shared as-is" (DEC2), the pack is framed as *trying ACK with a clinician*: for people who choose to try
@@ -177,17 +179,20 @@ a personal tool and give feedback. It is not described as a pilot programme or a
 | C2: how it is reached | **A button in SETTINGS only.** | No typed command and no Terminal button. A test fails if either appears. |
 | C3: form | A **playable message plus a printable page**. It follows the person's audio routing, and **is silent when silent output is on**. | It goes through the normal output path, never the Emergency path (C3.2). |
 | Tracker check | **Not now.** | I only report on Section 5. |
+| C1: kinds | **Where it came from, plus ACK's own starter kinds** (YES, NO, HELP, REPAIR...), OTHER for everything else. | A message's words are compared in memory with the starter phrases and thrown away. Nothing is guessed. |
+| C1: switching on | **In SETTINGS, plus a quiet line on the Terminal while it is on.** | A person using ACK can always see it is on. The design adds a first-time confirmation. |
+| C1: keeping | **90 days, by day and hour of day.** | Old rows are dropped as new ones are added; a hard row cap bounds the size. |
+| C3: where the button lives | **The header slot where the backup reminder's save icon shows**, with the save icon moved to its left. | See C3.3: the header gets about 28 dp wider, and a tap target and an accidental tap need deciding (Q13 to Q15). |
 
 ### Still open
 
-- **Q5** C1: how a message's function is decided. (a) By channel only (deck, slot, watch, typed): simplest, nothing guessed. (b) Plus a function
-  for slots that still hold their seeded starter phrase, OTHER for the rest. (c) Plus an optional function tag you or an SLP set on any slot
-  (touches every editor and the backup).
-- **Q6** C1: who may switch it on, and does the person using ACK always see that it is on? How many days are kept? Hour buckets or finer?
 - **Q7** C5 and C6: what already exists, and who is involved? Free text is fine.
 - **Q8** Is the order in section 4 right?
-- **Q10** C3: where does the partner-card button live? A new small deck, a typed Terminal command, or a one-time offer that adds it to a deck you
-  choose? (STARTERS is full.)
+- **Q13** C3: what should a tap on the header icon do? Play the card at once, or ask first (a small box with CANCEL prominent) so an accidental tap cannot speak a long message in front of people?
+- **Q14** C3: the icon's tap area. The save icon and HELP are about 24 dp tall, below the 48 dp used for new controls. A 48 dp tap area makes the header about 24 dp taller on every screen.
+  Keep it about 24 dp like its neighbours, or make it 48 dp?
+- **Q15** C3: should a switch in SETTINGS let someone hide the icon (on by default), so it cannot be tapped by accident?
+- **Q16** C1: do you approve `docs/USAGE_SUMMARY_DESIGN.md`, and its three questions (count replays as REPLAY; always ask before turning it on)?
 - **Q12** May I update the tracker's DEC2 row (Done, with this outcome in the Suggested column)? I will not edit it without a yes.
 
 ## 7. What I cannot do from here
