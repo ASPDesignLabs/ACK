@@ -3,6 +3,7 @@ package com.example.besu.decks
 
 import android.content.Context
 import android.net.Uri
+import com.example.besu.core.VerifiedFileReplace
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -272,6 +273,15 @@ object GifRepository {
     // the same size-limit and real-GIF-signature checks importGif does,
     // since these bytes come from an external file the user picked, not
     // from inside the app.
+    //
+    // Restore merges by id, so entry.fileName is very often a file a saved
+    // entry on this phone ALREADY uses (a deck exported and imported back
+    // onto the same phone). The bytes therefore never go straight to that
+    // file: VerifiedFileReplace stages them beside it, runs the signature
+    // check on the staged copy, and only then moves it over the real file.
+    // A bad picture in the backup is refused and the GIF already here is
+    // left exactly as it was -- nothing in this function deletes or opens
+    // the real file for writing.
     fun restoreEntry(context: Context, entry: GifEntry, gifBytes: ByteArray): Result<Unit> {
         return runCatching {
             // entry.fileName becomes a real filesystem path below -- this
@@ -293,10 +303,12 @@ object GifRepository {
             }
 
             val destinationFile = File(destinationDirectory, entry.fileName)
-            destinationFile.writeBytes(gifBytes)
 
-            if (!isGifFile(destinationFile)) {
-                destinationFile.delete()
+            val replaced = VerifiedFileReplace.replaceIfValid(destinationFile, gifBytes) { staged ->
+                isGifFile(staged)
+            }
+
+            if (!replaced) {
                 error("\"${entry.fileName}\" is not a valid GIF.")
             }
 

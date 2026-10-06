@@ -30,6 +30,7 @@ All notable changes to ACK are logged here. These same notes are available in-ap
 
 ### Fixed
 - **A GIF import that fails no longer leaves a half-copied file or an empty category behind.** A file over the 20 MB limit (or unreadable, or not really a GIF) was left in the GIF folder, up to 20 MB each time, and the category you had typed was stored before ACK knew the import would work. Now a failed import removes the file it was writing (a GIF already saved is never touched) and the category is only created once the file has passed its checks. The red message in the import dialog is unchanged. `docs/GIF_DEVICE_TEST.md` is the do-this-expect-that checklist, since the Android part was not run on a phone.
+- **Restoring a GIF deck backup can no longer destroy a GIF you already have.** Restore merges by id, so a picture in the backup usually has the same file name as one already on the phone; ACK wrote the backup's bytes straight over it and deleted the file if they were not a real GIF, so a damaged picture in the `.zip` took the good one with it (the GIF then quietly vanished from the deck). Now each picture is written beside the real file, checked there, and only moved into place once it passes; a refused one is skipped (counted in the IMPORTED … SKIPPED toast) and the GIF already on the phone is left exactly as it was.
 
 ## [1.0-beta.8] - 2026-10-03
 

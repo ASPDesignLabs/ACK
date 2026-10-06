@@ -24,30 +24,8 @@ class GifImportCleanupTest {
 
     private val importGif = bodyOf(repository, "fun importGif(")
 
-    /**
-     * The code from the first `{` after [signature] to its matching `}`, with `//` comments removed so that a word in an
-     * explanatory comment (the importGif comments name saveEntries and the finally) is never mistaken for a call. None of the
-     * bodies read here has a `//` inside a string.
-     */
-    private fun bodyOf(source: String, signature: String): String {
-        val start = source.indexOf(signature)
-        assertTrue("$signature not found", start >= 0)
-        val open = source.indexOf('{', start)
-        assertTrue("no body after $signature", open >= 0)
-        var depth = 0
-        for (i in open until source.length) {
-            when (source[i]) {
-                '{' -> depth++
-                '}' -> {
-                    depth--
-                    if (depth == 0) return withoutLineComments(source.substring(open, i + 1))
-                }
-            }
-        }
-        error("unbalanced braces after $signature")
-    }
-
-    private fun withoutLineComments(code: String): String = code.lines().joinToString("\n") { it.substringBefore("//") }
+    // Comments are stripped: the importGif comments name saveEntries and the finally, and must not count as calls.
+    private fun bodyOf(source: String, signature: String): String = RepoFiles.functionBody(source, signature)
 
     private fun indexAfter(text: String, needle: String, from: Int): Int {
         val i = text.indexOf(needle, from)

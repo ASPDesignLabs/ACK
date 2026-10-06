@@ -23,4 +23,29 @@ object RepoFiles {
 
     /** The app's Kotlin source folder. */
     val appSource: File get() = file("app/src/main/java")
+
+    /**
+     * The code from the first `{` after [signature] to its matching `}`, with `//` comments removed so that a word in an
+     * explanatory comment is never mistaken for a call. For the source-reading guards of Android-only files (they cannot run on a
+     * JVM). Only for bodies with no `//` inside a string.
+     */
+    fun functionBody(source: String, signature: String): String {
+        val start = source.indexOf(signature)
+        check(start >= 0) { "$signature not found" }
+        val open = source.indexOf('{', start)
+        check(open >= 0) { "no body after $signature" }
+        var depth = 0
+        for (i in open until source.length) {
+            when (source[i]) {
+                '{' -> depth++
+                '}' -> {
+                    depth--
+                    if (depth == 0) return withoutLineComments(source.substring(open, i + 1))
+                }
+            }
+        }
+        error("unbalanced braces after $signature")
+    }
+
+    private fun withoutLineComments(code: String): String = code.lines().joinToString("\n") { it.substringBefore("//") }
 }
