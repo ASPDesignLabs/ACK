@@ -23,6 +23,12 @@ object AssistSettings {
     const val KEY_WORD_SUGGESTIONS = "word_suggestions"
     const val KEY_WORD_OFFER_DISMISSED = "word_suggestions_offer_dismissed"
 
+    /**
+     * The limits notice's one-time banner has been dismissed (core/LimitsNotice.kt). Written only by a tap, so it is not a seed key. Per phone: never in a
+     * backup. It lives in this file, so DELETE DATA > SETTINGS clears it and the banner is shown once more after that wipe, which is wanted.
+     */
+    const val KEY_LIMITS_NOTICE_SEEN = "limits_notice_seen"
+
     /** What the warning is when nothing is stored: off, so an install that already existed behaves exactly as before. */
     const val WARN_FALLBACK = false
 

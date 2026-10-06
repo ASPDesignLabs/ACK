@@ -1120,6 +1120,8 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="info_nr_language_1">- NOVO: UM CONTROLE DE IDIOMA NAS CONFIGURAÇÕES: AS PALAVRAS PRÓPRIAS DO ACK EM ESPANHOL, PORTUGUÊS, HINDI, ÁRABE OU AFRIKAANS. UMA INSTALAÇÃO JÁ EXISTENTE CONTINUA EM INGLÊS ATÉ VOCÊ ESCOLHER; UMA NOVA SEGUE O CELULAR. ESCOLHER PERGUNTA PRIMEIRO E REINICIA O ACK UMA VEZ</string>
     <string name="info_nr_language_terminal">- NOVO: AS PALAVRAS PRÓPRIAS DESTA TELA, A LISTA /help E ESTAS NOTAS TAMBÉM ESTÃO TRADUZIDAS. OS COMANDOS QUE VOCÊ DIGITA FICAM EXATAMENTE COMO DIGITADOS. AS NOTAS DE UMA VERSÃO NOVA APARECEM EM INGLÊS ATÉ SEREM TRADUZIDAS</string>
     <string name="info_nr_language_2">- ESTES SÃO RASCUNHOS AINDA NÃO REVISADOS POR FALANTES NATIVOS. AS LINHAS QUE OUTRAS PARTES DO ACK ESCREVEM NESTA TELA E MUITOS DIÁLOGOS CONTINUAM EM INGLÊS. VEJA DOCS/TRANSLATIONS.MD</string>
+    <string name="info_nr_about_head">-- SOBRE O ACK --</string>
+    <string name="info_nr_about_1">- NOVO: SOBRE O ACK, NO FIM DE CONFIGURAÇÕES, DIZ O QUE O ACK NÃO É: NÃO SUBSTITUI A AVALIAÇÃO PROFISSIONAL DE AAC NEM A TERAPIA DA FALA E DA LINGUAGEM. TAMBÉM PEDE QUE VOCÊ MANTENHA SEMPRE OUTRA FORMA DE SE COMUNICAR. AS MESMAS PALAVRAS APARECEM UMA VEZ EM UM AVISO NA TELA TERMINAL OU EM CONFIGURAÇÕES. ENTENDI OCULTA O AVISO E NÃO FAZ MAIS NADA</string>
     <string name="info_nr_fixes_head">-- CORREÇÕES --</string>
     <string name="info_nr_fixes_1">- CORRIGIDO: A CONFIRMAÇÃO ANTES DE LIMPAR AS VARIÁVEIS OU O PROMPT DE UMA FRASE MOSTRAVA SÓ A SEGUNDA FRASE. AGORA MOSTRA A PERGUNTA INTEIRA, COM O MESMO TEXTO DE ANTES</string>
     <string name="info_b8_title">=== NOTAS DA VERSÃO ACK v1.0-BETA.8 ===</string>
@@ -1873,4 +1875,10 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="helpmod_manual_override_intro_body">{{MANUAL_OVERRIDE}} OFERECE COMUNICAÇÃO DIRETA POR TEXTO QUANDO A ENTRADA DO RELÓGIO NÃO ESTÁ DISPONÍVEL OU É INCONVENIENTE. ELA É ACESSADA PELO TERMINAL AGORA QUE DIGITAR É COMPOSITOR DE MENSAGENS.</string>
     <string name="helpmod_manual_override_open_manual_title">ABRIR A ENTRADA MANUAL</string>
     <string name="helpmod_manual_override_open_manual_body">DIGITE /m NO PROMPT DO TERMINAL E ENVIE.</string>
+    <string name="about_title">SOBRE O ACK</string>
+    <string name="about_limits_not_a_substitute">NÃO SUBSTITUI A AVALIAÇÃO PROFISSIONAL DE AAC NEM A TERAPIA DA FALA E DA LINGUAGEM.</string>
+    <string name="about_limits_built_by_one">FEITO POR UMA SÓ PESSOA COMO FERRAMENTA PESSOAL, COMPARTILHADO COMO ESTÁ.</string>
+    <string name="about_limits_keep_another_way">MANTENHA SEMPRE DISPONÍVEL OUTRA FORMA DE SE COMUNICAR.</string>
+    <string name="about_banner_where">VOCÊ PODE LER ISTO DE NOVO EM %1$s, EM %2$s.</string>
+    <string name="about_got_it">ENTENDI</string>
 </resources>

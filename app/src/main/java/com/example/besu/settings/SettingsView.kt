@@ -1419,6 +1419,14 @@ fun SettingsView(
                     reportHelpInteraction(AckTags.AUTOCOMPLETE_MANAGE_BTN)
                 }
             }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            // ABOUT ACK (settings/AboutSection.kt): the limits statement, always there to read again. Words only.
+            item {
+                AboutSection(primaryColor = primaryColor)
+                Spacer(modifier = Modifier.height(12.dp))
+            }
         }
         HeroButton(labelFor(LabelKey.UPLOAD_PROTOCOL), Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
     }

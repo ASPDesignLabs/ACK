@@ -1159,6 +1159,8 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="info_nr_language_1">- جديد: عنصر تحكم في اللغة ضمن الإعدادات: كلمات ACK الخاصة بالإسبانية أو البرتغالية أو الهندية أو العربية أو الأفريقانية. التثبيت الموجود يبقى بالإنجليزية حتى تختار؛ والتثبيت الجديد يتبع الهاتف. والاختيار يسأل أولا ويعيد تشغيل ACK مرة واحدة</string>
     <string name="info_nr_language_terminal">- جديد: كلمات هذه الشاشة الخاصة وقائمة /help وهذه الملاحظات مترجمة أيضا. والأوامر التي تكتبها تبقى كما كتبتها تماما. وملاحظات الإصدار الجديد تظهر بالإنجليزية حتى تُترجم</string>
     <string name="info_nr_language_2">- هذه مسودات لم يراجعها بعد متحدثون أصليون. الأسطر التي تكتبها أجزاء أخرى من ACK في هذه الشاشة والكثير من مربعات الحوار تبقى بالإنجليزية. راجع DOCS/TRANSLATIONS.MD</string>
+    <string name="info_nr_about_head">-- حول ACK --</string>
+    <string name="info_nr_about_1">- جديد: قسم حول ACK في نهاية الإعدادات يوضح ما ليس عليه ACK: ليس بديلاً عن التقييم المهني لـ AAC ولا عن علاج النطق واللغة. كما يطلب أن تُبقي دائماً وسيلة أخرى للتواصل متاحة. تظهر الكلمات نفسها مرة واحدة في شريط على شاشة الطرفية أو الإعدادات. فهمت يخفي الشريط ولا يفعل شيئاً آخر</string>
     <string name="info_nr_fixes_head">-- الإصلاحات --</string>
     <string name="info_nr_fixes_1">- تم الإصلاح: كان التأكيد قبل مسح متغيرات عبارة أو موجهها يعرض جملته الثانية فقط. وهو يعرض الآن السؤال كاملا بالصياغة السابقة نفسها</string>
     <string name="info_b8_title">=== ملاحظات إصدار ACK v1.0-BETA.8 ===</string>
@@ -1930,4 +1932,10 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="helpmod_manual_override_intro_body">يوفّر {{MANUAL_OVERRIDE}} تواصلًا نصيًا مباشرًا عندما يكون إدخال الساعة غير متاح أو غير مناسب. ويُوصل إليه من الطرفية بعد أن أصبح كتابة هو محرر العبارات.</string>
     <string name="helpmod_manual_override_open_manual_title">افتح الإدخال اليدوي</string>
     <string name="helpmod_manual_override_open_manual_body">اكتب /m عند مطالبة الطرفية وأرسله.</string>
+    <string name="about_title">حول ACK</string>
+    <string name="about_limits_not_a_substitute">ليس بديلاً عن التقييم المهني لـ AAC ولا عن علاج النطق واللغة.</string>
+    <string name="about_limits_built_by_one">صممه شخص واحد كأداة شخصية، ويُشارَك كما هو.</string>
+    <string name="about_limits_keep_another_way">أبقِ دائماً وسيلة أخرى للتواصل متاحة.</string>
+    <string name="about_banner_where">يمكنك قراءة هذا مرة أخرى في %1$s، تحت %2$s.</string>
+    <string name="about_got_it">فهمت</string>
 </resources>

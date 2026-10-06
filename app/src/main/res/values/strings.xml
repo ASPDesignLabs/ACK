@@ -1128,6 +1128,8 @@
     <string name="info_nr_language_1">- NEW: A LANGUAGE CONTROL IN SETTINGS: ACK\'S OWN WORDS IN SPANISH,\nPORTUGUESE, HINDI, ARABIC OR AFRIKAANS. AN INSTALL THAT ALREADY\nEXISTS STAYS ENGLISH UNTIL YOU CHOOSE; A NEW INSTALL FOLLOWS THE\nPHONE. CHOOSING ASKS FIRST AND RESTARTS ACK ONCE</string>
     <string name="info_nr_language_terminal">- NEW: THIS SCREEN\'S OWN WORDS, ITS /help LIST AND THESE NOTES ARE\nTRANSLATED TOO. COMMANDS YOU TYPE STAY EXACTLY AS TYPED. NOTES FOR A\nNEW RELEASE SHOW IN ENGLISH UNTIL THEY ARE TRANSLATED</string>
     <string name="info_nr_language_2">- THESE ARE DRAFTS NOT YET CHECKED BY NATIVE SPEAKERS. LINES OTHER\nPARTS OF ACK WRITE INTO THIS SCREEN AND MANY DIALOGS STAY IN ENGLISH.\nSEE DOCS/TRANSLATIONS.MD</string>
+    <string name="info_nr_about_head">-- ABOUT ACK --</string>
+    <string name="info_nr_about_1">- NEW: ABOUT ACK, AT THE END OF SETTINGS, SAYS WHAT ACK IS NOT: NOT A\nSUBSTITUTE FOR PROFESSIONAL AAC EVALUATION OR SPEECH-LANGUAGE\nTHERAPY. IT ALSO ASKS YOU TO KEEP ANOTHER WAY TO COMMUNICATE. THE\nSAME WORDS SHOW ONCE IN A BANNER ON THE TERMINAL OR SETTINGS\nSCREEN. GOT IT HIDES THE BANNER AND DOES NOTHING ELSE</string>
     <string name="info_nr_fixes_head">-- FIXES --</string>
     <string name="info_nr_fixes_1">- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE\'S VARIABLES OR\nPROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE\nQUESTION, WORDED AS BEFORE</string>
     <string name="info_b8_title">=== ACK v1.0-BETA.8 PATCH NOTES ===</string>
@@ -1875,4 +1877,10 @@
     <string name="helpmod_manual_override_intro_body">{{MANUAL_OVERRIDE:Manual Override}} provides direct text communication when watch input is unavailable or inconvenient. It\'s reached from TERMINAL now that TYPE is the statement composer.</string>
     <string name="helpmod_manual_override_open_manual_title">OPEN MANUAL INPUT</string>
     <string name="helpmod_manual_override_open_manual_body">Type /m at the TERMINAL prompt and send it.</string>
+    <string name="about_title">ABOUT ACK</string>
+    <string name="about_limits_not_a_substitute">NOT A SUBSTITUTE FOR PROFESSIONAL AAC EVALUATION OR SPEECH-LANGUAGE THERAPY.</string>
+    <string name="about_limits_built_by_one">BUILT BY ONE PERSON AS A PERSONAL TOOL, SHARED AS-IS.</string>
+    <string name="about_limits_keep_another_way">KEEP ANOTHER WAY TO COMMUNICATE AVAILABLE AT ALL TIMES.</string>
+    <string name="about_banner_where">YOU CAN READ THIS AGAIN IN %1$s, UNDER %2$s.</string>
+    <string name="about_got_it">GOT IT</string>
 </resources>

@@ -8,6 +8,7 @@ import com.example.besu.backup.BackupReminder
 import com.example.besu.core.ActiveScript
 import com.example.besu.core.HelpPlaceholders
 import com.example.besu.core.HelpWalkthroughText
+import com.example.besu.core.LimitsNotice
 import com.example.besu.core.ProfileSwapDiff
 import com.example.besu.core.SlotChange
 import com.example.besu.core.TextInsertion
@@ -296,6 +297,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     // Reset whenever the user leaves TYPE, so switching tabs never leaves
     // another screen stuck without its header/nav.
     var composerFullscreen by remember { mutableStateOf(false) }
+    // The limits statement's one-time banner (core/LimitsNotice.kt): hidden for good once dismissed anywhere. Dismissing only remembers it was seen.
+    var limitsNoticeSeen by remember { mutableStateOf(AssistPrefs.isLimitsNoticeSeen(context)) }
     LaunchedEffect(viewMode) {
         if (viewMode != "TYPE") composerFullscreen = false
     }
@@ -749,6 +752,19 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             primaryColor = primaryColor,
                             onBackUpNow = { startBackupExport() },
                             onNotNow = { BackupReminder.snooze(context) },
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    // The limits statement, once (core/LimitsNotice.kt): Terminal and Settings only, never a deck, Emergency or Type screen. A notice, not a
+                    // question: GOT IT only remembers it was seen. The statement stays in SETTINGS > ABOUT ACK.
+                    if (LimitsNotice.shouldShowBanner(limitsNoticeSeen, viewMode)) {
+                        LimitsNoticeBanner(
+                            primaryColor = primaryColor,
+                            settingsName = labelFor(LabelKey.SETTINGS_ENTRY),
+                            onDismiss = {
+                                AssistPrefs.markLimitsNoticeSeen(context)
+                                limitsNoticeSeen = true
+                            },
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }

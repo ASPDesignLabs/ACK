@@ -63,6 +63,9 @@ cp "$A/output/VoiceInfoMapping.kt" "$STAGE/com/example/besu/output/"
 cp "$A/data/ResourceText.kt" "$STAGE/com/example/besu/data/"
 cp "$A/ui/ResourceText.kt" "$A/ui/BackupReminderBanner.kt" "$STAGE/com/example/besu/ui/"
 cp "$A/settings/BackupWarningDialog.kt" "$STAGE/com/example/besu/settings/"
+# The limits statement: the one-time banner and the ABOUT section (their words and rules are core/LimitsNotice.kt, staged with the rest of core/).
+cp "$A/ui/LimitsNoticeBanner.kt" "$STAGE/com/example/besu/ui/"
+cp "$A/settings/AboutSection.kt" "$STAGE/com/example/besu/settings/"
 cp -r "$H/stubs/." "$STAGE/"
 cd "$H"
 gradle --no-daemon --console=plain -q -Pkotlin.compiler.execution.strategy=in-process compileKotlin > "$H/build/check.log" 2>&1 && status=0 || status=$?

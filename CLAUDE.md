@@ -1583,3 +1583,30 @@ Covers every HELP module: the 16 `help/*Help.kt` family files and the inline MAN
 - **No article before a placeholder in es and pt** (the everyday word under PLAIN WORDS may be the other gender); rephrase with a word that does not change (`EN USO`, `ACTUAL`, `CUALQUIER`). Afrikaans has no grammatical gender and is exempt.
 - **Still English: the two choosers' option labels and hints.** They are a separate group (`PoseSelectorDialog`, `VoiceRecordingsHelpSelectorDialog`).
 - **Drift**: the translations were generated with throwaway scripts that pulled each screen word out of that screen's own strings, so the strings are plain resources with nothing generating them; if a screen's word changes the wording test names the walkthrough string to update by hand.
+
+## CLINICAL USE (Section 5 of the AAC Readiness Tracker) — rules that must stay true
+
+The plan, the decisions and the open questions are in `docs/CLINICAL_USE_PLAN.md`; the phone checklist is `docs/CLINICAL_USE_DEVICE_TEST.md`. Written as the rows
+(C1 to C6) are built; only what exists is described here. **The developer decided (DEC2) that ACK's scope is "a personal tool, shared as-is"**, while still building
+the opt-in, local-only clinical-review features (C1, C2): nothing in the app or the docs may call ACK a clinical tool, a pilot programme or a medical product, and
+nothing may claim an effect (the evaluation found no evidence yet that it helps).
+
+### The limits statement (C4) — `core/LimitsNotice.kt`
+- **Three sentences, three resources** (`about_limits_*`), joined with a space in code (Android trims a trailing space). The first two are the website's disclaimer
+  (`index.html`, the `<p class="disclaimer">`) **word for word**; `LimitsNoticeWebsiteTest` compares them ignoring case (the app is in capitals, the page is not), so
+  editing one side alone fails. The third (keep another way to communicate available at all times) is app-only for now: the developer has not yet said whether the
+  website gets it.
+- **Two places:** a permanent ABOUT ACK section at the end of SETTINGS (`settings/AboutSection.kt`, words only: no switch, button or link), and a one-time banner
+  (`ui/LimitsNoticeBanner.kt`) drawn above the header **on the Terminal and Settings screens only** (`LimitsNotice.BANNER_SCREENS`; the Terminal is the screen ACK
+  opens on). **Never on a deck, Emergency or Type screen**, where it could move a button about to be tapped. Do not add it elsewhere without asking.
+- **It is only a notice.** GOT IT writes one note (`limits_notice_seen`, `AssistPrefs.markLimitsNoticeSeen`, `commit()`) and nothing else: it starts no HELP, navigates
+  nowhere, shows no toast and never touches speech. The note is in `ack_assist_prefs`, so it is **never seeded** (every install sees the banner once), **never in
+  `AckBackup`**, and cleared by DELETE DATA > SETTINGS (the banner then shows once more, which is wanted). `LimitsNoticeWiringTest` holds all of this.
+- **12 sp floor.** `HelpOfferBanner` is 9 sp and was deliberately **not** reused. The banner and the section use `ConfirmBodyText` (12 sp).
+- The banner's last line takes the SETTINGS button's name (`labelFor(LabelKey.SETTINGS_ENTRY)`, so it follows PLAIN WORDS) and the section's title as arguments; the
+  banner file itself reads no labels.
+- The five translations are drafts like the rest; a native speaker should read these sentences first (`docs/TRANSLATIONS.md`). The `/info` note (`info_nr_about_head`,
+  `info_nr_about_1`, listed in `PatchNotes.ENTRIES`) is translated too: although the HELP-chrome notes above say a release's new notes may ship in English first, `PatchNotesTest`
+  in fact reads every listed note in every language (`getValue`), so an untranslated one fails four tests. It also holds that the note names ABOUT ACK, GOT IT, SETTINGS and the
+  Terminal as those screens read in each language. A new note also goes into that test's pinned English list (`oldPatchNotes`).
+- Not seen on a phone: how the banner sits at the largest font on a small screen (it can take a lot of room above the Terminal), and the Arabic mirrored layout.

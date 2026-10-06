@@ -70,6 +70,16 @@ From CLAUDE.md and the tracker's working rules. If a task seems to need to break
 
 This order is a suggestion (Q8). Nothing is blocked on a decision any more except where a task below says "you decide".
 
+## Progress
+
+| Task | State |
+|---|---|
+| C4 limits statement | **Built on this branch, using the three sentences proposed in C4.1.** The wording is not yet confirmed by you (Q11) and nothing has been seen on a phone. Automated tests: 1463 pass (31 new for C4). The new screens pass the type-check; `MainActivity.kt` and `SettingsView.kt` pass the syntax check. Phone checklist: `docs/CLINICAL_USE_DEVICE_TEST.md`, part A. |
+| C2 log file | Not started. Waits for Q4. |
+| C1 usage summary | Not started. Waits for Q5 and Q6, then the written design. |
+| C3 partner card | Not started. Waits for the words and Q10. |
+| C5, C6 | Not started. Wait for Q7. |
+
 ## 5. Tasks
 
 ### C4: limits statement in the app (P2)

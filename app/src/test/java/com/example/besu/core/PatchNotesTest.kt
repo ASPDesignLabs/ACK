@@ -107,6 +107,12 @@ class PatchNotesTest {
         "  PHONE. CHOOSING ASKS FIRST AND RESTARTS ACK ONCE",
         "- THESE ARE DRAFTS NOT YET CHECKED BY NATIVE SPEAKERS. HELP, THIS",
         "  SCREEN AND MANY DIALOGS STAY IN ENGLISH. SEE DOCS/TRANSLATIONS.MD",
+        "-- ABOUT ACK --",
+        "- NEW: ABOUT ACK, AT THE END OF SETTINGS, SAYS WHAT ACK IS NOT: NOT A",
+        "  SUBSTITUTE FOR PROFESSIONAL AAC EVALUATION OR SPEECH-LANGUAGE",
+        "  THERAPY. IT ALSO ASKS YOU TO KEEP ANOTHER WAY TO COMMUNICATE. THE",
+        "  SAME WORDS SHOW ONCE IN A BANNER ON THE TERMINAL OR SETTINGS",
+        "  SCREEN. GOT IT HIDES THE BANNER AND DOES NOTHING ELSE",
         "-- FIXES --",
         "- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE'S VARIABLES OR",
         "  PROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE",
@@ -341,6 +347,20 @@ class PatchNotesTest {
             }
             assertFalse("$tag/info_b8_train_9 still types the English button", map.getValue("info_b8_train_9").contains("SAVE ALL TO A FILE"))
             for (note in listOf("info_nr_privacy_7", "info_b8_train_3")) assertFalse("$tag/$note still types the English button", map.getValue(note).contains("RECORD FREE SPEECH"))
+        }
+    }
+
+    @Test
+    fun theAboutNoteNamesTheSectionAndTheButtonAsTheyReadInEveryLanguage() {
+        // The limits statement's note points at ABOUT ACK, GOT IT, the Terminal and Settings; each must be the word that screen carries in that language, not the English it was written with.
+        for ((tag, map) in mapOf("en" to english) + translations) {
+            val heading = map.getValue("info_nr_about_head")
+            val note = map.getValue("info_nr_about_1")
+            assertTrue("$tag: the heading names the section as the screen does", heading.contains(map.getValue("about_title")))
+            assertTrue("$tag: the note names the section", note.contains(map.getValue("about_title")))
+            assertTrue("$tag: the note names GOT IT as the button reads", note.contains(map.getValue("about_got_it")))
+            assertTrue("$tag: the note names SETTINGS as the plain label reads", note.contains(map.getValue("label_settings_entry_plain")))
+            assertTrue("$tag: the note names the Terminal", note.contains(map.getValue("label_terminal")))
         }
     }
 

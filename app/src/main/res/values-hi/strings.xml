@@ -1107,6 +1107,8 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="info_nr_language_1">- नया: सेटिंग्स में भाषा का नियंत्रण: ACK के अपने शब्द स्पेनिश, पुर्तगाली, हिन्दी, अरबी या अफ़्रीकान्स में। पहले से मौजूद इंस्टॉलेशन आपके चुनने तक अंग्रेज़ी में रहती है; नई इंस्टॉलेशन फ़ोन की भाषा के अनुसार चलती है। चुनने पर पहले पूछा जाता है और ACK एक बार फिर से शुरू होता है</string>
     <string name="info_nr_language_terminal">- नया: इस स्क्रीन के अपने शब्द, इसकी /help सूची और ये नोट्स भी अनुवादित हैं। आप जो कमांड टाइप करते हैं वे ठीक वैसे ही रहते हैं जैसे टाइप किए गए। नए रिलीज़ के नोट्स अनुवाद होने तक अंग्रेज़ी में दिखते हैं</string>
     <string name="info_nr_language_2">- ये मसौदे हैं जिन्हें अभी मूल भाषा बोलने वालों ने जाँचा नहीं है। ACK के दूसरे हिस्सों द्वारा इस स्क्रीन पर लिखी गई पंक्तियाँ और कई डायलॉग अंग्रेज़ी में ही रहते हैं। देखें DOCS/TRANSLATIONS.MD</string>
+    <string name="info_nr_about_head">-- ACK के बारे में --</string>
+    <string name="info_nr_about_1">- नया: सेटिंग्स के अंत में ACK के बारे में बताता है कि ACK क्या नहीं है: यह पेशेवर AAC मूल्यांकन या वाक्-भाषा चिकित्सा का विकल्प नहीं है। यह भी कहता है कि संवाद का कोई दूसरा तरीका हमेशा तैयार रखें। यही शब्द टर्मिनल या सेटिंग्स स्क्रीन पर एक बार बैनर में दिखते हैं। समझ गया बैनर छिपाता है और कुछ और नहीं करता</string>
     <string name="info_nr_fixes_head">-- सुधार --</string>
     <string name="info_nr_fixes_1">- ठीक किया: किसी वाक्य के वेरिएबल या प्रॉम्प्ट साफ़ करने से पहले की पुष्टि केवल उसका दूसरा वाक्य दिखाती थी। अब वह पूरा प्रश्न दिखाती है, पहले जैसे शब्दों में</string>
     <string name="info_b8_title">=== ACK v1.0-BETA.8 पैच नोट्स ===</string>
@@ -1854,4 +1856,10 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="helpmod_manual_override_intro_body">{{MANUAL_OVERRIDE}} तब सीधे टेक्स्ट से संवाद देता है जब घड़ी का इनपुट उपलब्ध न हो या असुविधाजनक हो। अब टाइप कथन संपादक बन गया है, इसलिए यह टर्मिनल से खुलता है।</string>
     <string name="helpmod_manual_override_open_manual_title">मैन्युअल इनपुट खोलें</string>
     <string name="helpmod_manual_override_open_manual_body">टर्मिनल के प्रॉम्प्ट पर /m टाइप करें और भेजें।</string>
+    <string name="about_title">ACK के बारे में</string>
+    <string name="about_limits_not_a_substitute">यह पेशेवर AAC मूल्यांकन या वाक्-भाषा चिकित्सा का विकल्प नहीं है।</string>
+    <string name="about_limits_built_by_one">इसे एक व्यक्ति ने निजी उपकरण के रूप में बनाया है और जैसा है वैसा ही साझा किया गया है।</string>
+    <string name="about_limits_keep_another_way">संवाद करने का कोई दूसरा तरीका हमेशा तैयार रखें।</string>
+    <string name="about_banner_where">आप इसे दोबारा %1$s में, %2$s के अंतर्गत पढ़ सकते हैं।</string>
+    <string name="about_got_it">समझ गया</string>
 </resources>
