@@ -5,6 +5,8 @@ import com.example.besu.capture.TrainingScript
 import com.example.besu.capture.TrainingStore
 import com.example.besu.computer.*
 import com.example.besu.core.BackupFingerprint
+import com.example.besu.core.InterfaceLanguage
+import com.example.besu.core.SpeechLanguage
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.geo.*
@@ -388,6 +390,12 @@ object TransferManager {
             rootOverrideCollapsed = rootOverrideCollapsed,
             savedStatementTree = savedStatementTree,
             trainingScripts = trainingScripts,
+            starterPhrasesSeeded = StarterSeed.wasSeeded(context),
+            warnBeforeProfileChange = AssistPrefs.profileChangeWarningStored(context),
+            learnedWords = LearnedWordsRepository.exportForBackup(context),
+            speechLanguage = AssistPrefs.speechLanguageStored(context),
+            interfaceLanguage = AssistPrefs.interfaceLanguageStored(context),
+            plainWords = AssistPrefs.plainWordsStored(context),
         )
     }
 
@@ -1028,6 +1036,25 @@ object TransferManager {
             }
         }
 
+        // 21. The learned words (core/WordModel.kt checks counts, lengths, duplicates and pairs). The reason it logs holds sizes only,
+        // never a word: what the person typed does not go into a log.
+        backup.learnedWords?.validate()?.let { reason ->
+            Log.e("ACK_IMPORT", reason)
+            return false
+        }
+
+        // 22. SPEECH LANGUAGE: one of the two stored names, or null. Anything else is not a setting this build knows.
+        if (backup.speechLanguage != null && SpeechLanguage.fromStored(backup.speechLanguage) == null) {
+            Log.e("ACK_IMPORT", "speechLanguage is not DEVICE or ENGLISH_US: \"${backup.speechLanguage.take(20)}\" (${backup.speechLanguage.length} chars)")
+            return false
+        }
+
+        // 23. INTERFACE LANGUAGE: one of the stored names, or null. Anything else is not a setting this build knows.
+        if (backup.interfaceLanguage != null && InterfaceLanguage.fromStored(backup.interfaceLanguage) == null) {
+            Log.e("ACK_IMPORT", "interfaceLanguage is not a known language setting: \"${backup.interfaceLanguage.take(20)}\" (${backup.interfaceLanguage.length} chars)")
+            return false
+        }
+
         return true
     }
 
@@ -1220,6 +1247,16 @@ object TransferManager {
             Context.MODE_PRIVATE
         )
 
+        // The one narrow exception to "never remove what the file doesn't mention": a starter phrase this phone was given and the
+        // person never edited is not their data, and a backup never records a phrase left at the built-in text. Take those back
+        // first, so such a slot shows what the file's phone showed. Anything edited, or mentioned by the file, is never touched.
+        StarterSeed.takeBackUntouchedStarters(context, backup.matrixData.keys, backup.starterPhrasesSeeded)
+
+        // WARN BEFORE PROFILE CHANGES: a backup that says nothing about it (null) leaves the device's own choice alone.
+        if (backup.warnBeforeProfileChange != null) {
+            AssistPrefs.setProfileChangeWarning(context, backup.warnBeforeProfileChange)
+        }
+
         val editor = matrixPrefs.edit()
 
         backup.matrixData.forEach { (key, value) ->
@@ -1375,6 +1412,21 @@ object TransferManager {
                 Log.e("ACK_IMPORT", "trainingScripts \"${script.id}\" could not be restored: ${e.message}")
             }
         }
+
+        // The learned words are ADDED to whatever this phone has learned: a count is never lowered and no word is removed. The
+        // WORD SUGGESTIONS switch is not in a backup, so this never turns the feature on.
+        backup.learnedWords?.let { LearnedWordsRepository.mergeFromBackup(context, it) }
+
+        // SPEECH LANGUAGE: a backup that says nothing (null) leaves the device's own choice alone.
+        SpeechLanguage.fromStored(backup.speechLanguage)?.let { AssistPrefs.setSpeechLanguage(context, it) }
+
+        // INTERFACE LANGUAGE: a backup that says nothing (null) leaves the device's own choice alone. A FULL RESTORE restarts ACK afterwards, which is when
+        // the language is applied.
+        InterfaceLanguage.fromStored(backup.interfaceLanguage)?.let { AssistPrefs.setInterfaceLanguage(context, it) }
+
+        // PLAIN WORDS: a backup that says nothing (null) leaves the device's own choice alone. The label wording is a switch, so it is applied at
+        // once; the screens redraw from the saved value when next opened.
+        backup.plainWords?.let { AssistPrefs.setPlainWords(context, it) }
 
         // Restoring adopts the backup's active deck/profile/category
         // focus -- unchanged from every prior version of this restore

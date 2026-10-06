@@ -44,7 +44,7 @@ If `files/gif_library` does not exist yet, `ls` says so; that counts as "empty".
 ## A. An oversized file leaves nothing behind
 
 - [ ] In the GIF deck, tap **IMPORT**, pick `too-big.gif`, type the category **OVERSIZE TEST**, tap **IMPORT**. → A red line in the dialog says
-  **GIF exceeds the 20 MB safety limit.** and the dialog stays open. (It may take a moment to copy 20 MB before it stops.)
+  **GIF exceeds the 20 MB safety limit.** (in the app's language; English shown) and the dialog stays open. (It may take a moment to copy 20 MB before it stops.)
 - [ ] Run the two commands into `*-after.txt`. → `diff folder-before.txt folder-after.txt` shows **no difference**: no new `GIF_….gif`,
   and nothing of about 20 MB. `diff prefs-before.txt prefs-after.txt` shows **no difference**: no `OVERSIZE TEST` category was stored.
 - [ ] **CANCEL** the dialog. → The deck looks as it did. No category named **OVERSIZE TEST** anywhere.
@@ -52,8 +52,8 @@ If `files/gif_library` does not exist yet, `ls` says so; that counts as "empty".
 
 ## B. A file that is not a GIF leaves nothing behind
 
-- [ ] **IMPORT**, pick `not-a-gif.gif`, category **NOT A GIF TEST**, **IMPORT**. → The red line says **Selected file is not a valid GIF.** and the
-  dialog stays open.
+- [ ] **IMPORT**, pick `not-a-gif.gif`, category **NOT A GIF TEST**, **IMPORT**. → The red line says **Selected file is not a valid GIF.** (again in the
+  app's language) and the dialog stays open.
 - [ ] The two commands again. → **No difference** in the folder listing; **no** `NOT A GIF TEST` in `prefs-after.txt`.
 
 ## C. A good import still works, with the same category rules (the control)

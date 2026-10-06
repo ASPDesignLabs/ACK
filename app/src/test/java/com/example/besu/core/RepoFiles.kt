@@ -25,27 +25,14 @@ object RepoFiles {
     val appSource: File get() = file("app/src/main/java")
 
     /**
-     * The code from the first `{` after [signature] to its matching `}`, with `//` comments removed so that a word in an
-     * explanatory comment is never mistaken for a call. For the source-reading guards of Android-only files (they cannot run on a
-     * JVM). Only for bodies with no `//` inside a string.
+     * The whole declaration of `fun [name](` in an object whose members are indented four spaces: from the `fun` to the line before the next member.
+     * Unlike a brace-matching helper it also holds for an expression body (`fun x() = y`), which has no braces of its own to match; a brace
+     * matcher run on one silently reads the NEXT function's body, and a test built on it passes or fails by accident.
      */
-    fun functionBody(source: String, signature: String): String {
-        val start = source.indexOf(signature)
-        check(start >= 0) { "$signature not found" }
-        val open = source.indexOf('{', start)
-        check(open >= 0) { "no body after $signature" }
-        var depth = 0
-        for (i in open until source.length) {
-            when (source[i]) {
-                '{' -> depth++
-                '}' -> {
-                    depth--
-                    if (depth == 0) return withoutLineComments(source.substring(open, i + 1))
-                }
-            }
-        }
-        error("unbalanced braces after $signature")
+    fun declarationOf(text: String, name: String): String {
+        val at = text.indexOf("fun $name(")
+        check(at >= 0) { "fun $name( not found" }
+        val next = Regex("""\n    (/\*\*|//|fun |private fun |internal fun |@|val |private val |const |private const )""").find(text, at + 1)
+        return text.substring(at, next?.range?.first ?: text.length)
     }
-
-    private fun withoutLineComments(code: String): String = code.lines().joinToString("\n") { it.substringBefore("//") }
 }

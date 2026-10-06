@@ -19,21 +19,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.besu.R
 import com.example.besu.core.StorageCatalogue
 import com.example.besu.data.DataWipe
 import com.example.besu.data.LogEntry
 import com.example.besu.ui.NeonButton
 import com.example.besu.ui.RadicalRed
 import com.example.besu.ui.TightDialogSurface
+import com.example.besu.ui.rememberText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
  * DELETE DATA: every storage area with what it holds and how much is stored, a DELETE button for each, and DELETE EVERYTHING.
- * What each area is, how it is backed up and what the confirmations say all come from core/StorageCatalogue.kt (tested);
- * what is deleted comes from data/DataWipe.kt. This only displays them.
+ * What each area is, how it is backed up and what the confirmations say all come from core/StorageCatalogue.kt (tested) and are string resources in the chosen
+ * language; what is deleted comes from data/DataWipe.kt, which reports areas by id. This only displays them.
  *
  * Every delete asks twice, with CANCEL as the safe choice. Nothing is deleted or changed by opening this screen, and nothing
  * happens on a timer. Text is 12 sp or larger and the buttons are NeonButton (12 sp); the header's [CLOSE]/[CANCEL] is the
@@ -50,6 +53,7 @@ fun ManageDataDialog(
     onWiped: (needsRestart: Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val words = rememberText()
     var refresh by remember { mutableIntStateOf(0) }
     var amounts by remember { mutableStateOf<Map<String, DataWipe.Amount>>(emptyMap()) }
     LaunchedEffect(refresh) {
@@ -67,9 +71,7 @@ fun ManageDataDialog(
 
     fun areasFor(id: String) =
         if (id == StorageCatalogue.EVERYTHING_ID) StorageCatalogue.areas else listOf(StorageCatalogue.area(id))
-    fun labelFor(id: String) =
-        if (id == StorageCatalogue.EVERYTHING_ID) StorageCatalogue.EVERYTHING_LABEL else StorageCatalogue.area(id).label
-    fun amountTextFor(id: String) = amounts[id]?.text ?: "STILL COUNTING"
+    fun amountTextFor(id: String) = amounts[id]?.text(words) ?: words.get(StorageCatalogue.COUNTING)
 
     fun runDelete(id: String) {
         if (busy) return
@@ -89,18 +91,11 @@ fun ManageDataDialog(
                 if (StorageCatalogue.needsRestart(selected)) {
                     onWiped(true)
                 } else {
-                    status = "DELETED: ${result.deleted.joinToString(", ")}."
-                    Toast.makeText(context, "DELETED: ${result.deleted.joinToString(", ")}", Toast.LENGTH_LONG).show()
+                    status = StorageCatalogue.successStatus(words, result.deleted)
+                    Toast.makeText(context, StorageCatalogue.successToast(words, result.deleted), Toast.LENGTH_LONG).show()
                 }
             } else {
-                status = buildString {
-                    append("COULD NOT DELETE: ${result.failed.joinToString(", ")}. ")
-                    if (result.deleted.isNotEmpty()) append("DELETED: ${result.deleted.joinToString(", ")}. ")
-                    if (result.failed.contains(StorageCatalogue.area(StorageCatalogue.ID_SAVED_LOCATIONS).label)) {
-                        append("SAVED LOCATIONS: GOOGLE'S LOCATION SERVICE MUST CONFIRM ITS ALERTS ARE REMOVED FIRST. TRY AGAIN, OR TURN GEO-PROTOCOL OFF FIRST. ")
-                    }
-                    append("ACK DID NOT RESTART. CLOSE AND REOPEN IT TO SEE ALL CHANGES.")
-                }
+                status = StorageCatalogue.failureStatus(words, result.deleted, result.failed)
             }
         }
     }
@@ -108,13 +103,13 @@ fun ManageDataDialog(
     TightDialogSurface(
         onDismiss = { if (!busy) onDismiss() },
         primaryColor = primaryColor,
-        title = "DELETE DATA",
-        dismissLabel = "CLOSE"
+        title = stringResource(R.string.delete_data_title),
+        dismissLabel = stringResource(R.string.common_close)
     ) {
-        ConfirmBodyText("EACH DELETE ASKS TWICE, AND NOTHING CHANGES UNTIL YOU CONFIRM THE SECOND TIME. WHERE A BACKUP EXISTS, SAVE IT FIRST. DELETING CANNOT BE UNDONE.", color = Color.Gray)
+        ConfirmBodyText(stringResource(R.string.delete_data_intro), color = Color.Gray)
         if (busy) {
             Spacer(modifier = Modifier.height(8.dp))
-            ConfirmBodyText("DELETING...", bold = true, color = primaryColor)
+            ConfirmBodyText(stringResource(R.string.delete_data_deleting), bold = true, color = primaryColor)
         }
         status?.let {
             Spacer(modifier = Modifier.height(8.dp))
@@ -125,13 +120,13 @@ fun ManageDataDialog(
             Spacer(modifier = Modifier.height(14.dp))
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
             Spacer(modifier = Modifier.height(10.dp))
-            ConfirmBodyText(area.label, bold = true)
+            ConfirmBodyText(StorageCatalogue.label(words, area), bold = true)
             Spacer(modifier = Modifier.height(2.dp))
-            ConfirmBodyText(area.holds, color = Color.Gray)
+            ConfirmBodyText(StorageCatalogue.holds(words, area), color = Color.Gray)
             Spacer(modifier = Modifier.height(2.dp))
             ConfirmBodyText(amountTextFor(area.id), color = primaryColor)
             Spacer(modifier = Modifier.height(8.dp))
-            NeonButton("DELETE", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+            NeonButton(stringResource(R.string.common_delete), Modifier.fillMaxWidth(), mainColor = RadicalRed) {
                 if (!busy) firstFor = area.id
             }
         }
@@ -139,13 +134,13 @@ fun ManageDataDialog(
         Spacer(modifier = Modifier.height(14.dp))
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
         Spacer(modifier = Modifier.height(10.dp))
-        ConfirmBodyText(StorageCatalogue.EVERYTHING_LABEL, bold = true)
+        ConfirmBodyText(words.get(StorageCatalogue.EVERYTHING_LABEL), bold = true)
         Spacer(modifier = Modifier.height(2.dp))
-        ConfirmBodyText("ALL OF THE ABOVE, AND ACK'S NOTE OF WHETHER THIS PHONE IS A NEW INSTALL.", color = Color.Gray)
+        ConfirmBodyText(words.get(StorageCatalogue.EVERYTHING_HOLDS), color = Color.Gray)
         Spacer(modifier = Modifier.height(2.dp))
         ConfirmBodyText(amountTextFor(StorageCatalogue.EVERYTHING_ID), color = primaryColor)
         Spacer(modifier = Modifier.height(8.dp))
-        NeonButton("DELETE EVERYTHING", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+        NeonButton(stringResource(R.string.delete_data_delete_everything), Modifier.fillMaxWidth(), mainColor = RadicalRed) {
             if (!busy) firstFor = StorageCatalogue.EVERYTHING_ID
         }
     }
@@ -155,15 +150,15 @@ fun ManageDataDialog(
     if (first != null && secondFor == null) {
         val everything = first == StorageCatalogue.EVERYTHING_ID
         val paragraphs = if (everything) {
-            StorageCatalogue.firstConfirmationEverything(amountTextFor(first))
+            StorageCatalogue.firstConfirmationEverything(words, amountTextFor(first))
         } else {
-            StorageCatalogue.firstConfirmation(StorageCatalogue.area(first), amountTextFor(first))
+            StorageCatalogue.firstConfirmation(words, StorageCatalogue.area(first), amountTextFor(first))
         }
         TightDialogSurface(
             onDismiss = { if (!busy) firstFor = null },
             primaryColor = primaryColor,
-            title = "DELETE ${labelFor(first)}",
-            dismissLabel = "CANCEL"
+            title = stringResource(R.string.delete_data_confirm_title, StorageCatalogue.labelOf(words, first)),
+            dismissLabel = stringResource(R.string.common_cancel)
         ) {
             paragraphs.forEachIndexed { index, text ->
                 if (index > 0) Spacer(modifier = Modifier.height(10.dp))
@@ -173,14 +168,14 @@ fun ManageDataDialog(
             Spacer(modifier = Modifier.height(16.dp))
             // Only an area EXPORT .JSON covers offers BACK UP FIRST; the others name the backup that does (in the note above).
             if (everything || StorageCatalogue.offersBackupFirst(StorageCatalogue.area(first))) {
-                NeonButton("BACK UP FIRST", Modifier.fillMaxWidth(), mainColor = primaryColor) { onBackUpFirst() }
+                NeonButton(stringResource(R.string.delete_data_back_up_first), Modifier.fillMaxWidth(), mainColor = primaryColor) { onBackUpFirst() }
                 Spacer(modifier = Modifier.height(8.dp))
             }
-            NeonButton("CONTINUE", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+            NeonButton(stringResource(R.string.common_continue), Modifier.fillMaxWidth(), mainColor = RadicalRed) {
                 if (!busy) secondFor = first
             }
             Spacer(modifier = Modifier.height(8.dp))
-            NeonButton("CANCEL", Modifier.fillMaxWidth(), isActive = false, mainColor = primaryColor) {
+            NeonButton(stringResource(R.string.common_cancel), Modifier.fillMaxWidth(), isActive = false, mainColor = primaryColor) {
                 if (!busy) firstFor = null
             }
         }
@@ -194,18 +189,18 @@ fun ManageDataDialog(
         TightDialogSurface(
             onDismiss = { cancelBoth() },
             primaryColor = primaryColor,
-            title = "DELETE ${labelFor(second)}",
-            dismissLabel = "CANCEL"
+            title = stringResource(R.string.delete_data_confirm_title, StorageCatalogue.labelOf(words, second)),
+            dismissLabel = stringResource(R.string.common_cancel)
         ) {
-            ConfirmBodyText(StorageCatalogue.CANNOT_UNDO, bold = true, color = RadicalRed)
+            ConfirmBodyText(words.get(StorageCatalogue.CANNOT_UNDO), bold = true, color = RadicalRed)
             if (busy) {
                 Spacer(modifier = Modifier.height(10.dp))
-                ConfirmBodyText("DELETING...", bold = true, color = primaryColor)
+                ConfirmBodyText(stringResource(R.string.delete_data_deleting), bold = true, color = primaryColor)
             }
             Spacer(modifier = Modifier.height(16.dp))
-            NeonButton("CANCEL", Modifier.fillMaxWidth(), mainColor = primaryColor) { cancelBoth() }
+            NeonButton(stringResource(R.string.common_cancel), Modifier.fillMaxWidth(), mainColor = primaryColor) { cancelBoth() }
             Spacer(modifier = Modifier.height(8.dp))
-            NeonButton("DELETE ${labelFor(second)}", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+            NeonButton(stringResource(R.string.delete_data_confirm_title, StorageCatalogue.labelOf(words, second)), Modifier.fillMaxWidth(), mainColor = RadicalRed) {
                 runDelete(second)
             }
         }

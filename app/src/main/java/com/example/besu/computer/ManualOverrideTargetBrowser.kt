@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.computer
 
+import com.example.besu.core.LabelKey
 import com.example.besu.*
+import com.example.besu.R
 import com.example.besu.help.*
 import com.example.besu.ui.*
 import android.content.Context
@@ -22,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,12 +91,12 @@ fun TargetQuickAccessRow(
             .testTag(AckTags.MANUAL_TARGET_QUICK_ROW)
             .helpTarget(AckTags.MANUAL_TARGET_QUICK_ROW, primaryColor)
     ) {
-        TightSectionLabel("TARGET COMPUTER")
+        TightSectionLabel(labelFor(LabelKey.TARGET_COMPUTER))
         Spacer(modifier = Modifier.height(6.dp))
 
         if (activePicks.isEmpty()) {
             Text(
-                text = "NO ACTIVE TARGETS -- BROWSE TARGETS TO PICK ONE.",
+                text = stringResource(R.string.people_no_active_targets),
                 color = Color.DarkGray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace
@@ -123,7 +126,7 @@ fun TargetQuickAccessRow(
                     ) {
                         Column {
                             Text(
-                                text = category.label.uppercase(),
+                                text = categoryName(category).uppercase(),
                                 color = primaryColor.copy(alpha = 0.7f),
                                 fontSize = 8.sp,
                                 fontFamily = FontFamily.Monospace,
@@ -176,13 +179,13 @@ fun TargetBrowsePanel(
         if (category == null) {
             if (categories.isEmpty()) {
                 Text(
-                    text = "NO CATEGORIES YET. ADD SOME FROM THE TARGET COMPUTER TAB.",
+                    text = stringResource(R.string.people_browser_no_categories),
                     color = Color.DarkGray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
                 )
             } else {
-                TightSectionLabel("PICK A CATEGORY")
+                TightSectionLabel(stringResource(R.string.people_pick_category))
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -202,7 +205,7 @@ fun TargetBrowsePanel(
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Text(
-                                text = cat.label,
+                                text = categoryName(cat),
                                 color = primaryColor,
                                 fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace,
@@ -219,7 +222,7 @@ fun TargetBrowsePanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "← CATEGORIES",
+                    text = stringResource(R.string.people_back_to_categories),
                     color = Color.Gray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -230,7 +233,7 @@ fun TargetBrowsePanel(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     listOf("TREE", "DROPDOWN").forEach { mode ->
                         Text(
-                            text = mode,
+                            text = displayModeLabel(mode),
                             color = if (displayMode == mode) primaryColor else Color.Gray,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -244,7 +247,7 @@ fun TargetBrowsePanel(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = category.label.uppercase(),
+                text = categoryName(category).uppercase(),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -255,7 +258,7 @@ fun TargetBrowsePanel(
 
             if (category.root.children.isEmpty()) {
                 Text(
-                    text = "NOTHING HERE YET.",
+                    text = stringResource(R.string.people_nothing_here),
                     color = Color.DarkGray,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
@@ -335,15 +338,15 @@ fun ManualOverrideHeaderTakeover(
             .helpTarget(AckTags.MANUAL_HEADER_TAKEOVER, primaryColor)
     ) {
         Text(
-            text = "QUICK INSERT MODE",
+            text = stringResource(R.string.people_quick_insert),
             color = primaryColor,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
         Text(
-            text = "CLOSE THE KEYBOARD TO RETURN TO THE HEADER.",
+            text = stringResource(R.string.people_quick_insert_hint),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace
@@ -361,7 +364,7 @@ fun ManualOverrideHeaderTakeover(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = if (browseExpanded) "[HIDE FULL BROWSER]" else "[BROWSE ALL ENTRIES]",
+            text = stringResource(if (browseExpanded) R.string.people_hide_browser else R.string.people_browse_all),
             color = primaryColor,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,

@@ -3,6 +3,7 @@ package com.example.besu.help
 
 import com.example.besu.*
 import com.example.besu.decks.*
+/** This family's words are string resources (helpmod_<module id>_..., core/HelpWalkthroughText.kt), read where a step is drawn or spoken. */
 object HelpRegistry {
     val modules: List<HelpModule> = listOf(
         BasicsNavigationHelp.module,
@@ -21,22 +22,19 @@ object HelpRegistry {
         HelpModule(
             id = "manual_override",
             category = HelpCategory.BASICS_MANUAL_OVERRIDE,
-            title = "MANUAL OVERRIDE",
-            summary = "MEMORY BANKS, SAVED PHRASES, AND DIRECT TEXT OUTPUT.",
+            title = "helpmod_manual_override_title",
+            summary = "helpmod_manual_override_summary",
             destination = HelpDestination.TERMINAL,
             steps = listOf(
                 HelpStep(
                     id = "intro",
-                    title = "MANUAL OVERRIDE",
-                    body = "Manual Override provides direct text communication " +
-                        "when watch input is unavailable or inconvenient. It's " +
-                        "reached from TERMINAL now that TYPE is the statement " +
-                        "composer."
+                    title = "helpmod_manual_override_intro_title",
+                    body = "helpmod_manual_override_intro_body"
                 ),
                 HelpStep(
                     id = "open_manual",
-                    title = "OPEN MANUAL INPUT",
-                    body = "Type /m at the TERMINAL prompt and send it.",
+                    title = "helpmod_manual_override_open_manual_title",
+                    body = "helpmod_manual_override_open_manual_body",
                     action = HelpAction.WatchEvent("MANUAL_OVERRIDE_OPENED")
                 )
             )

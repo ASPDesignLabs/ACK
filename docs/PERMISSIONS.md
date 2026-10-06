@@ -27,6 +27,11 @@ written. "Install time" means Android grants it when the app is installed, with 
 
 The manifest also declares `uses-feature microphone required=false`: the app installs on a device without one.
 
+**The phone's own speech engine.** ACK speaks through Android's text-to-speech engine, which is a separate app (the phone maker's or Google's) and needs no
+permission from ACK. ACK has no network permission and no network code, and its voice list (AUDIO ARCHITECT, BASE VOICE) leaves out every voice the engine says
+needs the internet or is not installed, and says so under the list. What the engine does with text on its own is the engine's behaviour, not ACK's, and ACK
+cannot see it; to be sure, use only voices you have downloaded and turn off the engine's own online options in the phone's settings.
+
 ## The watch app
 
 | Permission | What needs it | Could it be removed? |

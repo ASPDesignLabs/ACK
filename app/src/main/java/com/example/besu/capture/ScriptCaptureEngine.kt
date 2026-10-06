@@ -14,7 +14,8 @@ interface CaptureListener {
     fun onCardStarted(cardIndex: Int, attempt: Int) {}
     /** A card's clip was cut, measured and kept. [cardsLeft] is how many cards remain after it. */
     fun onClipKept(clip: StoredClip, cardsLeft: Int) {}
-    fun onPaused(reason: PauseReason, message: String) {}
+    /** The engine stopped listening. [notice] says why when the person needs to know (a full phone, a failed write, nobody speaking); it is null when they asked for the pause themselves. */
+    fun onPaused(reason: PauseReason, notice: CaptureNotice?) {}
     /** The last card was kept, or the person ended the session. The session's notes are closed. */
     fun onFinished() {}
     /** The level of the latest hop, for a live meter. Called every 10 ms of audio. */
@@ -91,7 +92,7 @@ class ScriptCaptureEngine(
     @Synchronized
     fun pause() {
         if (isPaused || isFinished) return
-        pauseInternal(PauseReason.REQUESTED, "PAUSED")
+        pauseInternal(PauseReason.REQUESTED, null)
     }
 
     @Synchronized
@@ -137,7 +138,7 @@ class ScriptCaptureEngine(
                     processHop()
                 } catch (e: IOException) {
                     abandonOpenCard()
-                    pauseInternal(PauseReason.ERROR, "THE RECORDING COULD NOT BE SAVED: ${e.message ?: "STORAGE ERROR"}")
+                    pauseInternal(PauseReason.ERROR, CaptureNotice.CouldNotSave(e.message))
                 }
             }
         }
@@ -180,7 +181,7 @@ class ScriptCaptureEngine(
             val free = freeBytes()
             if (DiskGuard.mustStop(free)) {
                 abandonOpenCard()
-                pauseInternal(PauseReason.DISK_FULL, "OUT OF ROOM: ${DiskGuard.describe(free, sampleRate)}. KEPT CLIPS ARE SAFE")
+                pauseInternal(PauseReason.DISK_FULL, CaptureNotice.OutOfRoomKeptClipsSafe(DiskGuard.room(free, sampleRate)))
                 return
             }
         }
@@ -188,7 +189,7 @@ class ScriptCaptureEngine(
             is DetectorEvent.Clip -> closeCard(o, event)
             is DetectorEvent.IdleTimeout -> {
                 abandonOpenCard()
-                pauseInternal(PauseReason.IDLE, "NOTHING HEARD FOR 20 SECONDS: PAUSED")
+                pauseInternal(PauseReason.IDLE, CaptureNotice.NothingHeard(CaptureConstants.NO_SPEECH_TIMEOUT_HOPS / 100))
             }
             null -> {}
         }
@@ -234,11 +235,11 @@ class ScriptCaptureEngine(
         if (detector.isInSpeech) store.markRedone(sessionId, o.clip.index) else store.deleteClip(sessionId, o.clip.index)
     }
 
-    private fun pauseInternal(reason: PauseReason, message: String) {
+    private fun pauseInternal(reason: PauseReason, notice: CaptureNotice?) {
         abandonOpenCard()
         isPaused = true
         hopFill = 0
-        listener.onPaused(reason, message)
+        listener.onPaused(reason, notice)
     }
 
     private fun finishInternal() {

@@ -8,6 +8,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.example.besu.core.CustomVoiceRemoval
 import com.example.besu.core.StorageCatalogue
 import com.example.besu.core.StorageCatalogue.Area
+import com.example.besu.core.TextSource
 import com.example.besu.geo.GeoEngineController
 import com.example.besu.geo.GeoEngineMode
 import com.example.besu.geo.GeoRepository
@@ -30,11 +31,12 @@ object DataWipe {
     private const val TAG = "ACK_WIPE"
     private const val GEOFENCE_REMOVAL_TIMEOUT_MS = 4000L
 
+    /** What is stored in an area: how much, said in the words of [text] (the chosen language). */
     class Amount(val bytes: Long, val items: Int) {
-        val text: String get() = StorageCatalogue.describeAmount(bytes, items)
+        fun text(text: TextSource): String = StorageCatalogue.describeAmount(text, bytes, items)
     }
 
-    /** Area labels only. [failed] is empty when everything asked for was deleted. */
+    /** Area ids only (never content, never a translated label), so no decision depends on a word. [failed] is empty when everything asked for was deleted. */
     class Result(val deleted: List<String>, val failed: List<String>) {
         val allOk: Boolean get() = failed.isEmpty()
     }
@@ -89,11 +91,11 @@ object DataWipe {
                 Log.e(TAG, "wipe failed for ${area.id}", e)
                 false
             }
-            (if (ok) deleted else failed).add(area.label)
+            (if (ok) deleted else failed).add(area.id)
             Log.i(TAG, "area ${area.id}: ${if (ok) "deleted" else "FAILED"}")
         }
 
-        val deletedIds = selected.filter { it.label in deleted }.map { it.id }.toSet()
+        val deletedIds = deleted.toSet()
 
         // DELETE EVERYTHING also forgets that this install was ever recorded, so the next launch seeds as a new install.
         if (everything && failed.isEmpty()) {
@@ -103,6 +105,11 @@ object DataWipe {
         if (StorageCatalogue.ID_SETTINGS in deletedIds) {
             InstallState.seedDefaultsAfterWipe(context)
         }
+        // A wiped MESSAGES AND DECKS area would leave every Matrix slot on the old built-in wording (the developer's own). The neutral
+        // starter phrases are saved again, the same ones a new install gets. DELETE EVERYTHING is covered: this is one of its areas.
+        if (StorageCatalogue.ID_MESSAGES_AND_DECKS in deletedIds) {
+            StarterSeed.seedAfterWipe(context)
+        }
         // The paired watch keeps its own copy of the Target Computer names. Best effort: out of reach, it keeps them until
         // it next connects (the confirmation says so).
         if (StorageCatalogue.ID_PEOPLE_AND_PLACES in deletedIds) {
@@ -111,14 +118,9 @@ object DataWipe {
         return Result(deleted, failed)
     }
 
-    /** One Terminal line: the areas by name, never their content. */
+    /** One Terminal line: the areas by name (in the chosen language), never their content. */
     fun logResult(context: Context, result: Result) {
-        val message = if (result.allOk) {
-            "DATA DELETED: ${result.deleted.joinToString(", ")}"
-        } else {
-            "DATA DELETE INCOMPLETE. COULD NOT DELETE: ${result.failed.joinToString(", ")}" +
-                (if (result.deleted.isNotEmpty()) ". DELETED: ${result.deleted.joinToString(", ")}" else "")
-        }
+        val message = StorageCatalogue.logLine(ResourceText(context), result.deleted, result.failed)
         context.sendBroadcast(
             Intent("ACK_LOG").apply {
                 setPackage(context.packageName)

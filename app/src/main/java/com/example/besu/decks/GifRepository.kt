@@ -3,6 +3,9 @@ package com.example.besu.decks
 
 import android.content.Context
 import android.net.Uri
+import com.example.besu.core.GifImportException
+import com.example.besu.core.GifImportFailure
+import com.example.besu.core.GifLabels
 import com.example.besu.core.VerifiedFileReplace
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -134,7 +137,7 @@ object GifRepository {
             .trim()
             .uppercase()
             .take(30)
-            .ifBlank { "UNCATEGORIZED" }
+            .ifBlank { GifLabels.STORED_DEFAULT_CATEGORY }
 
         val existing = readCategories(context).firstOrNull { category ->
             category.name.equals(cleanName, ignoreCase = true)
@@ -162,7 +165,8 @@ object GifRepository {
     // file has passed every check: a failed import (too big, unreadable,
     // not a GIF) must not leave an empty category behind in the list.
     // categoryName goes through createCategory unchanged, so it still
-    // dedupes by name and a blank name still becomes UNCATEGORIZED.
+    // dedupes by name and a blank name still becomes
+    // GifLabels.STORED_DEFAULT_CATEGORY.
     fun importGif(
         context: Context,
         deckId: String,
@@ -178,7 +182,7 @@ object GifRepository {
                 mimeType != null &&
                 mimeType != "image/gif"
             ) {
-                error("Selected file is not a GIF.")
+                throw GifImportException(GifImportFailure.NOT_A_GIF)
             }
 
             val destinationDirectory = getGifDirectory(context)
@@ -195,8 +199,9 @@ object GifRepository {
             // entry can point at it until saveEntries has run below. Every
             // failure before that point (over the size limit, unreadable,
             // not a real GIF, a write error) lands in the finally and
-            // removes it; the exception itself still propagates untouched.
-            // Once the entry is saved the file is referenced and is kept.
+            // removes it; the exception itself, with its GifImportFailure,
+            // still propagates untouched. Once the entry is saved the file
+            // is referenced and is kept.
             var entrySaved = false
 
             try {
@@ -215,16 +220,16 @@ object GifRepository {
                             copiedBytes += read
 
                             if (copiedBytes > MAX_GIF_SIZE_BYTES) {
-                                error("GIF exceeds the 20 MB safety limit.")
+                                throw GifImportException(GifImportFailure.TOO_BIG)
                             }
 
                             output.write(buffer, 0, read)
                         }
                     }
-                } ?: error("Unable to read selected file.")
+                } ?: throw GifImportException(GifImportFailure.UNREADABLE)
 
                 if (!isGifFile(destinationFile)) {
-                    error("Selected file is not a valid GIF.")
+                    throw GifImportException(GifImportFailure.INVALID)
                 }
 
                 val category = createCategory(context, categoryName)

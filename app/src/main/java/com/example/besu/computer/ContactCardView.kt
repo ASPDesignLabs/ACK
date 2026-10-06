@@ -3,6 +3,7 @@
 
 package com.example.besu.computer
 
+import com.example.besu.R
 import com.example.besu.help.*
 import com.example.besu.output.OutputService
 import com.example.besu.ui.*
@@ -29,8 +30,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.RowScope
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -78,12 +79,12 @@ fun ContactCardDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = if (localCard.type == ContactCardType.PLACE) "PLACE CARD" else "PERSON CARD",
+        title = stringResource(if (localCard.type == ContactCardType.PLACE) R.string.people_place_card else R.string.people_person_card),
         subtitle = node.label
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Text(
-                text = if (editing) "[DONE EDITING]" else "[EDIT]",
+                text = stringResource(if (editing) R.string.people_done_editing else R.string.people_edit_link),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -134,38 +135,38 @@ private fun PlaceCardBody(
     onSave: (ContactCard) -> Unit
 ) {
     ContactField(
-        label = "NAME",
+        label = stringResource(R.string.common_name),
         value = card.name,
         primaryColor = primaryColor,
         editing = editing,
-        placeholder = "E.G. TOPS FRIENDLY MARKETS",
+        placeholder = stringResource(R.string.people_example_place_name),
         onValueChange = { onSave(card.copy(name = it)) },
         onTap = { speak(context, card.name.ifBlank { entryLabel }) },
         onCopy = { copyToClipboard(context, "NAME", card.name) }
     )
     ContactField(
-        label = "PHONE",
+        label = stringResource(R.string.people_phone),
         value = card.phone,
         primaryColor = primaryColor,
         editing = editing,
-        placeholder = "E.G. (555) 555-1234",
+        placeholder = stringResource(R.string.people_example_phone),
         onValueChange = { onSave(card.copy(phone = it)) },
         onTap = { openDialer(context, card.phone) },
         onCopy = { copyToClipboard(context, "PHONE", card.phone) }
     )
     ContactField(
-        label = "ADDRESS",
+        label = stringResource(R.string.people_address),
         value = card.address,
         primaryColor = primaryColor,
         editing = editing,
-        placeholder = "E.G. 123 MAIN ST",
+        placeholder = stringResource(R.string.people_example_address),
         onValueChange = { onSave(card.copy(address = it)) },
         onTap = { openMaps(context, card.address) },
         onCopy = { copyToClipboard(context, "ADDRESS", card.address) }
     )
 
     Spacer(modifier = Modifier.height(10.dp))
-    TightSectionLabel("HOURS")
+    TightSectionLabel(stringResource(R.string.people_hours))
     Spacer(modifier = Modifier.height(6.dp))
     HoursChecklist(primaryColor = primaryColor, hours = card.hours, editing = editing) { newHours ->
         onSave(card.copy(hours = newHours))
@@ -185,7 +186,7 @@ private fun PersonCardBody(
     // is their name. Still shown as its own tap-to-speak/long-press-to-copy
     // row for consistency with every other field on the card.
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        TightSectionLabel("NAME")
+        TightSectionLabel(stringResource(R.string.common_name))
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             entryLabel,
@@ -205,31 +206,31 @@ private fun PersonCardBody(
     }
 
     ContactField(
-        label = "PHONE",
+        label = stringResource(R.string.people_phone),
         value = card.phone,
         primaryColor = primaryColor,
         editing = editing,
-        placeholder = "E.G. (555) 555-1234",
+        placeholder = stringResource(R.string.people_example_phone),
         onValueChange = { onSave(card.copy(phone = it)) },
         onTap = { openDialer(context, card.phone) },
         onCopy = { copyToClipboard(context, "PHONE", card.phone) }
     )
     ContactField(
-        label = "ADDRESS",
+        label = stringResource(R.string.people_address),
         value = card.address,
         primaryColor = primaryColor,
         editing = editing,
-        placeholder = "E.G. 123 MAIN ST",
+        placeholder = stringResource(R.string.people_example_address),
         onValueChange = { onSave(card.copy(address = it)) },
         onTap = { openMaps(context, card.address) },
         onCopy = { copyToClipboard(context, "ADDRESS", card.address) }
     )
     ContactField(
-        label = "EMAIL",
+        label = stringResource(R.string.people_email),
         value = card.email,
         primaryColor = primaryColor,
         editing = editing,
-        placeholder = "E.G. NAME@EXAMPLE.COM",
+        placeholder = stringResource(R.string.people_example_email),
         onValueChange = { onSave(card.copy(email = it)) },
         onTap = { openEmail(context, card.email) },
         onCopy = { copyToClipboard(context, "EMAIL", card.email) }
@@ -239,7 +240,7 @@ private fun PersonCardBody(
         value = card.socialX,
         primaryColor = primaryColor,
         editing = editing,
-        placeholder = "E.G. @HANDLE",
+        placeholder = stringResource(R.string.people_example_x),
         onValueChange = { onSave(card.copy(socialX = it)) },
         onTap = { openUrl(context, socialUrl("X", card.socialX)) },
         onCopy = { copyToClipboard(context, "X", card.socialX) }
@@ -249,7 +250,7 @@ private fun PersonCardBody(
         value = card.socialFacebook,
         primaryColor = primaryColor,
         editing = editing,
-        placeholder = "E.G. HANDLE",
+        placeholder = stringResource(R.string.people_example_handle),
         onValueChange = { onSave(card.copy(socialFacebook = it)) },
         onTap = { openUrl(context, socialUrl("FACEBOOK", card.socialFacebook)) },
         onCopy = { copyToClipboard(context, "FACEBOOK", card.socialFacebook) }
@@ -259,7 +260,7 @@ private fun PersonCardBody(
         value = card.socialLinkedIn,
         primaryColor = primaryColor,
         editing = editing,
-        placeholder = "E.G. HANDLE",
+        placeholder = stringResource(R.string.people_example_handle),
         onValueChange = { onSave(card.copy(socialLinkedIn = it)) },
         onTap = { openUrl(context, socialUrl("LINKEDIN", card.socialLinkedIn)) },
         onCopy = { copyToClipboard(context, "LINKEDIN", card.socialLinkedIn) }
@@ -334,7 +335,7 @@ private fun HoursChecklist(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ContactCardTypeCheckbox(
-                    label = day.day,
+                    label = dayName(day.day),
                     checked = day.enabled,
                     enabled = editing,
                     color = primaryColor
@@ -347,7 +348,7 @@ private fun HoursChecklist(
                 if (day.enabled) {
                     Spacer(modifier = Modifier.width(10.dp))
                     if (editing) {
-                        HourTimeField(day.open, primaryColor, "OPEN") { newOpen ->
+                        HourTimeField(day.open, primaryColor, stringResource(R.string.people_hours_open)) { newOpen ->
                             val updated = hours.toMutableList()
                             updated[index] = day.copy(open = newOpen)
                             onChange(updated)
@@ -355,7 +356,7 @@ private fun HoursChecklist(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("-", color = Color.Gray, fontFamily = FontFamily.Monospace)
                         Spacer(modifier = Modifier.width(6.dp))
-                        HourTimeField(day.close, primaryColor, "CLOSE") { newClose ->
+                        HourTimeField(day.close, primaryColor, stringResource(R.string.people_hours_close)) { newClose ->
                             val updated = hours.toMutableList()
                             updated[index] = day.copy(close = newClose)
                             onChange(updated)
@@ -403,7 +404,7 @@ private fun launchOrToast(context: Context, intent: Intent) {
     try {
         context.startActivity(intent)
     } catch (e: ActivityNotFoundException) {
-        Toast.makeText(context, "NO APP AVAILABLE FOR THIS ACTION", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.people_no_app), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -448,7 +449,7 @@ private fun copyToClipboard(context: Context, label: String, value: String) {
     if (value.isBlank()) return
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText(label, value))
-    Toast.makeText(context, "COPIED", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, context.getString(R.string.common_copied), Toast.LENGTH_SHORT).show()
 }
 
 // Speaks a name through the same OutputService pipeline as everywhere else

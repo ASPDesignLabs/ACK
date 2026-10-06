@@ -8,24 +8,29 @@ import org.junit.Test
 
 /**
  * Source-reading guards for GIF import (decks/GifRepository.kt and decks/GifDeck.kt are Android files, so they cannot be run on
- * a JVM; this reads them, like ExportContentsTest and StorageCatalogueTest read AckBackup.kt). Kept in core/ because that is the
- * test folder tools/kotlin_check compiles. Two promises:
+ * a JVM; this reads them, like DeckScreensWordingTest, ExportContentsTest and StorageCatalogueTest do). Two promises:
  *
  *  1. An import that fails after its file was created (over 20 MB, unreadable, not a GIF, a write error) leaves no file behind
- *     in gif_library/, and the original exception is what the caller sees.
+ *     in gif_library/, and the exception the caller sees is the very one that was thrown, with its [GifImportFailure].
  *  2. A failed import leaves no empty category behind either.
  *
  * "Never delete a file a saved entry points at" is why the delete is safe: the file is named after a brand-new id and is only
- * ever removed until the entry that names it has been saved.
+ * ever removed until the entry that names it has been saved. DeckScreensWordingTest pins that each failure is thrown once, as
+ * its typed reason; this pins where, and what happens to the file around it.
  */
 class GifImportCleanupTest {
-    private val repository = RepoFiles.read("app/src/main/java/com/example/besu/decks/GifRepository.kt")
-    private val deck = RepoFiles.read("app/src/main/java/com/example/besu/decks/GifDeck.kt")
+    private val base = "app/src/main/java/com/example/besu/decks"
 
-    private val importGif = bodyOf(repository, "fun importGif(")
+    // Comment lines are dropped, as DeckScreensWordingTest does, so a word in an explanatory comment is never mistaken for a call.
+    private fun noComments(text: String): String = text.lines().joinToString("\n") { line ->
+        val t = line.trimStart()
+        if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) "" else line
+    }
 
-    // Comments are stripped: the importGif comments name saveEntries and the finally, and must not count as calls.
-    private fun bodyOf(source: String, signature: String): String = RepoFiles.functionBody(source, signature)
+    private val repository = noComments(RepoFiles.read("$base/GifRepository.kt"))
+    private val deck = noComments(RepoFiles.read("$base/GifDeck.kt"))
+
+    private val importGif = RepoFiles.declarationOf(repository, "importGif")
 
     private fun indexAfter(text: String, needle: String, from: Int): Int {
         val i = text.indexOf(needle, from)
@@ -43,14 +48,15 @@ class GifImportCleanupTest {
 
         // Nothing that can throw sits between creating the File object and the try.
         val gap = importGif.substring(created, tryAt)
-        for (risky in listOf("openInputStream", "outputStream", "error(", "isGifFile", "createCategory", "saveEntries")) {
+        for (risky in listOf("openInputStream", "outputStream", "throw ", "isGifFile", "createCategory", "saveEntries")) {
             assertFalse("\"$risky\" runs before the try, so its failure would not clean up", gap.contains(risky))
         }
 
-        // Every step that can fail, including the size limit and the writing, is inside the try.
+        // Every step that can fail, including the size limit, the writing and the three typed reasons that follow the file, is inside the try.
         for (step in listOf(
-            "openInputStream(", "outputStream()", "MAX_GIF_SIZE_BYTES", "GIF exceeds", "isGifFile(",
-            "Selected file is not a valid GIF", "createCategory(", "saveEntries(",
+            "openInputStream(", "outputStream()", "MAX_GIF_SIZE_BYTES",
+            "GifImportFailure.TOO_BIG", "GifImportFailure.UNREADABLE", "isGifFile(", "GifImportFailure.INVALID",
+            "createCategory(", "saveEntries(",
         )) {
             val at = indexAfter(importGif, step, tryAt)
             assertTrue("\"$step\" is not inside the try", at in tryAt until finallyAt)
@@ -60,7 +66,7 @@ class GifImportCleanupTest {
     @Test
     fun theFinallyDeletesTheFileUnlessTheEntryWasSaved() {
         val finallyAt = indexAfter(importGif, "finally {", 0)
-        val finallyBody = bodyOf(importGif.substring(finallyAt), "finally {")
+        val finallyBody = importGif.substring(finallyAt)
         assertTrue("the finally must delete destinationFile", finallyBody.contains("destinationFile.delete()"))
         assertTrue("the delete must be skipped once the entry is saved", finallyBody.contains("if (!entrySaved)"))
 
@@ -79,11 +85,19 @@ class GifImportCleanupTest {
 
     @Test
     fun noCatchInImportGifCanSwallowOrReplaceTheFailure() {
-        // try/finally rethrows the very same exception, so the caller (the IMPORT button shows error.message) sees what was
-        // thrown. A catch here could swallow it or turn it into something else.
+        // try/finally rethrows the very same exception, so the caller (GifLabels.importError reads its GifImportFailure) sees what
+        // was thrown. A catch here could swallow it or turn it into something that has no reason attached.
         assertFalse("importGif must not catch", Regex("\\bcatch\\s*[({]").containsMatchIn(importGif))
         // The one catch is runCatching, which wraps the whole body into the Result the dialog already handles.
         assertTrue(importGif.contains("return runCatching {"))
+    }
+
+    @Test
+    fun everyFailureIsStillATypedReasonNeverASentence() {
+        assertFalse("importGif must not throw a sentence", importGif.contains("error(\""))
+        for (reason in listOf("NOT_A_GIF", "TOO_BIG", "UNREADABLE", "INVALID")) {
+            assertEquals("importGif throws $reason once", 1, Regex("""throw GifImportException\(GifImportFailure\.$reason\)""").findAll(importGif).count())
+        }
     }
 
     @Test
@@ -108,21 +122,26 @@ class GifImportCleanupTest {
 
     @Test
     fun theImportButtonNoLongerCreatesTheCategoryItself() {
-        val dialog = bodyOf(deck, "private fun GifImportDialog(")
+        // GifImportDialog is a top-level function, so take its text up to the next top-level declaration.
+        val at = indexAfter(deck, "private fun GifImportDialog(", 0)
+        val next = Regex("\n(private fun |@Composable|fun )").find(deck, at + 1)
+        val dialog = deck.substring(at, next?.range?.first ?: deck.length)
         assertFalse("GifImportDialog must not call createCategory before importGif", dialog.contains("createCategory"))
         assertTrue("the dialog must hand the typed category name to importGif", dialog.contains("categoryName = categoryName"))
+        assertTrue("a failure is still shown through the typed message", dialog.contains("GifLabels.importError(words, error)"))
         assertFalse("importGif no longer takes a category id", importGif.contains("categoryId: String"))
-        // Nothing else in the app creates a category on the way to an import.
+        // Nothing else in the screen creates a category on the way to an import.
         assertEquals(0, Regex("GifRepository\\.createCategory\\(").findAll(deck).count())
     }
 
     @Test
     fun createCategoryKeepsItsNameRules() {
-        val create = bodyOf(repository, "fun createCategory(")
+        val create = RepoFiles.declarationOf(repository, "createCategory")
         assertTrue("trimmed", create.contains(".trim()"))
         assertTrue("capitals", create.contains(".uppercase()"))
         assertTrue("30 characters at most", create.contains(".take(30)"))
-        assertTrue("the saved default name", create.contains(".ifBlank { \"UNCATEGORIZED\" }"))
+        assertTrue("the saved default name, from the one constant", create.contains(".ifBlank { GifLabels.STORED_DEFAULT_CATEGORY }"))
+        assertEquals("the saved default name is unchanged", "UNCATEGORIZED", GifLabels.STORED_DEFAULT_CATEGORY)
         assertTrue("dedupes by name, ignoring case", create.contains("category.name.equals(cleanName, ignoreCase = true)"))
         assertTrue("returns the existing category instead of adding a second", create.contains("return existing"))
     }

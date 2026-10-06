@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.geo
 
+import com.example.besu.core.GeoText
 import com.example.besu.data.*
 import com.example.besu.watch.*
 import android.app.NotificationChannel
@@ -73,26 +74,22 @@ class GeoBroadcastReceiver : BroadcastReceiver() {
 
         if (targetDeckId == "NONE") return
 
-        val decks = CommandRepository.getDecks(context)
-        val deckName = when (targetDeckId) {
-            "DEFAULT" -> "SYSTEM DEFAULT"
-            "PREVIOUS" -> "PREVIOUS DECK"
-            else -> decks.find { it.id == targetDeckId }?.name ?: "UNKNOWN"
-        }
-
         val actionText = if (isEntering) "Entering" else "Exiting"
         broadcastLog(context, "$actionText ${zone.name}. Awaiting User Ack.", "GEO")
 
-        showNotification(context, zone, targetDeckId, deckName, isEntering)
+        showNotification(context, zone, targetDeckId, isEntering)
     }
 
-    private fun showNotification(context: Context, zone: GeoZone, targetDeckId: String, deckName: String, isEntering: Boolean) {
+    private fun showNotification(context: Context, zone: GeoZone, targetDeckId: String, isEntering: Boolean) {
+        // A notification is built outside any screen, so the chosen interface language is applied to this context here (the same wrap MainActivity uses); the engine's own log lines stay English.
+        val words = ResourceText(InterfaceLocale.wrap(context))
+        val deckName = GeoText.notificationDeckName(words, targetDeckId, CommandRepository.getDecks(context).find { it.id == targetDeckId }?.name)
         val notifManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "geo_protocol_alerts"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                channelId, "Geo-Protocol Alerts", NotificationManager.IMPORTANCE_HIGH
+                channelId, words.get("geo_notif_channel"), NotificationManager.IMPORTANCE_HIGH
             )
             notifManager.createNotificationChannel(channel)
         }
@@ -123,12 +120,12 @@ class GeoBroadcastReceiver : BroadcastReceiver() {
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_map)
-            .setContentTitle("GEO-NODE: ${zone.name}")
-            .setContentText("Switch layout to [$deckName]?")
+            .setContentTitle(GeoText.notificationTitle(words, zone.name))
+            .setContentText(GeoText.notificationText(words, deckName))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVibrate(longArrayOf(0, 250, 250, 250)) // Haptic attention
-            .addAction(0, "ENGAGE", engagePending)
-            .addAction(0, "ABORT", abortPending)
+            .addAction(0, words.get("geo_notif_engage"), engagePending)
+            .addAction(0, words.get("common_abort"), abortPending)
             .setAutoCancel(true)
 
         notifManager.notify(notifId, builder.build())

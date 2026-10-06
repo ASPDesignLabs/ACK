@@ -2,60 +2,51 @@
 package com.example.besu.help
 
 import com.example.besu.*
+/** This family's words are string resources (helpmod_<module id>_..., core/HelpWalkthroughText.kt), read where a step is drawn or spoken. */
 object EmergencyDeckHelp {
     val module = HelpModule(
         id = "deck_emergency",
         category = HelpCategory.USING_DECKS,
-        title = "EMERGENCY DECK",
-        summary = "HIGH-PRIORITY PROMPTS, OUTPUT OVERRIDES, AND CLEARING.",
+        title = "helpmod_deck_emergency_title",
+        summary = "helpmod_deck_emergency_summary",
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "EMERGENCY OUTPUT",
-                body = "The Emergency deck is intended for immediate, " +
-                    "high-priority communication with minimal interaction."
+                title = "helpmod_deck_emergency_intro_title",
+                body = "helpmod_deck_emergency_intro_body"
             ),
             HelpStep(
                 id = "slot",
-                title = "CONFIGURE A PROMPT",
-                body = "Hold an emergency tile to set its label, phrase, and " +
-                    "optional local variables.",
+                title = "helpmod_deck_emergency_slot_title",
+                body = "helpmod_deck_emergency_slot_body",
                 action = HelpAction.Interact(AckTags.EMERGENCY_SLOT),
                 targetTag = AckTags.EMERGENCY_SLOT
             ),
             HelpStep(
                 id = "save",
-                title = "COMMIT THE PROMPT",
-                body = "Save the emergency prompt. A normal tap will execute it.",
+                title = "helpmod_deck_emergency_save_title",
+                body = "helpmod_deck_emergency_save_body",
                 action = HelpAction.CommitText(AckTags.EMERGENCY_SAVE),
                 targetTag = AckTags.EMERGENCY_SAVE
             ),
             HelpStep(
                 id = "overrides",
-                title = "EMERGENCY OVERRIDES",
-                body = "Overrides can force device speaker output, boost audio, " +
-                    "change clearing behavior, and add an alert tone. You can " +
-                    "also switch on CONFIRM BEFORE SENDING: a tap on an emergency " +
-                    "tile then shows what it will say and asks you to confirm " +
-                    "first, so an accidental touch cannot send it.",
+                title = "helpmod_deck_emergency_overrides_title",
+                body = "helpmod_deck_emergency_overrides_body",
                 action = HelpAction.Interact(AckTags.EMERGENCY_OVERRIDES),
                 targetTag = AckTags.EMERGENCY_OVERRIDES
             ),
             HelpStep(
                 id = "info",
-                title = "EMERGENCY INFO",
-                body = "Below the overrides button, this opens a large, easy-to-read " +
-                    "medical ID card -- name, conditions, allergies, medications, and " +
-                    "emergency contacts -- for a bystander or first responder to read " +
-                    "if you can't speak.",
+                title = "helpmod_deck_emergency_info_title",
+                body = "helpmod_deck_emergency_info_body",
                 action = HelpAction.Interact(AckTags.EMERGENCY_INFO),
                 targetTag = AckTags.EMERGENCY_INFO
             ),
             HelpStep(
                 id = "info_save",
-                title = "FILL IT OUT",
-                body = "Tap EDIT to fill in your own info. It's saved once, not per " +
-                    "deck, so it's the same card no matter which deck you're in.",
+                title = "helpmod_deck_emergency_info_save_title",
+                body = "helpmod_deck_emergency_info_save_body",
                 action = HelpAction.CommitText(AckTags.EMERGENCY_INFO_SAVE),
                 targetTag = AckTags.EMERGENCY_INFO_SAVE
             )

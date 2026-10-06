@@ -1,0 +1,394 @@
+helpmod_geo_protocol_title	GEO-PROTOCOL
+helpmod_geo_protocol_summary	LOCATION-BASED CONTEXT AND ZONE BEHAVIOR.
+helpmod_geo_protocol_intro_title	GEO-PROTOCOL
+helpmod_geo_protocol_intro_body	{{GEO_PROTOCOL:Geo-Protocol}} manages location-aware ACK behavior and zones.
+helpmod_geo_protocol_geo_view_title	ZONE CONTROLS
+helpmod_geo_protocol_geo_view_body	Review zone controls and configure behavior appropriate to your environment.
+helpmod_geo_protocol_map_data_title	MAP DATA
+helpmod_geo_protocol_map_data_body	No region map ships with the app. Zones still work by coordinate with nothing imported, but you can import your own Mapsforge-compatible .map file here any time to see real basemap tiles on the {{GEO_GRID:Tactical Grid}}.
+helpmod_logs_title	SYSTEM LOGS
+helpmod_logs_summary	READ OUTPUT, WATCH, AND SYSTEM EVENT HISTORY.
+helpmod_logs_intro_title	TERMINAL LOGS
+helpmod_logs_intro_body	The Terminal records ACK system activity, output events, and watch-linked status messages.
+helpmod_logs_terminal_title	READING EVENTS
+helpmod_logs_terminal_body	Use logs to confirm what ACK received, resolved, and sent.
+helpmod_deck_gif_title	GIF {{DECK:DECK}}
+helpmod_deck_gif_summary	LOCAL GIF IMPORT, CATEGORIES, NAVIGATION, AND DISPLAY.
+helpmod_deck_gif_intro_title	LOCAL GIF LIBRARY
+helpmod_deck_gif_intro_body	GIF {{DECKS:decks}} use local files. Imported GIFs stay organized by category and can be displayed full-screen.
+helpmod_deck_gif_import_title	IMPORT A GIF
+helpmod_deck_gif_import_body	Choose IMPORT and select a local GIF file.
+helpmod_deck_gif_commit_import_title	NAME AND CATEGORIZE
+helpmod_deck_gif_commit_import_body	Give the GIF a title, select or create a category, and commit the import.
+helpmod_deck_gif_category_title	GIF CATEGORIES
+helpmod_deck_gif_category_body	Use the category selector to filter the active GIF wheel.
+helpmod_deck_gif_landscape_title	LANDSCAPE DISPLAY
+helpmod_deck_gif_landscape_body	Enable landscape display when a GIF benefits from a wider full-screen presentation.
+helpmod_deck_emoji_title	EMOJI {{DECK:DECK}}
+helpmod_deck_emoji_summary	VISUAL PROMPTS, TEXT, LIBRARY PICKS, AND RELATED PANELS.
+helpmod_deck_emoji_intro_title	EMOJI EXPRESS
+helpmod_deck_emoji_intro_body	The Emoji {{DECK:deck}} displays visual communication prompts. It can show an emoji alone or pair it with overlay text.
+helpmod_deck_emoji_slot_title	CONFIGURE A TILE
+helpmod_deck_emoji_slot_body	Hold an emoji tile to configure its emoji, label, and optional display text.
+helpmod_deck_emoji_library_title	EMOJI LIBRARY
+helpmod_deck_emoji_library_body	Use the library for common communication symbols, or enter a custom emoji directly.
+helpmod_deck_emoji_related_title	RELATED PANELS
+helpmod_deck_emoji_related_body	A configured emoji can open one related panel. This is useful for grouping similar responses or needs.
+helpmod_deck_emoji_clear_title	DISPLAY CLEARING
+helpmod_deck_emoji_clear_body	When you display an emoji, ACK may wait for its normal timeout or your configured clearing behavior.
+helpmod_deck_emergency_title	EMERGENCY {{DECK:DECK}}
+helpmod_deck_emergency_summary	HIGH-PRIORITY PROMPTS, OUTPUT OVERRIDES, AND CLEARING.
+helpmod_deck_emergency_intro_title	EMERGENCY OUTPUT
+helpmod_deck_emergency_intro_body	The Emergency {{DECK:deck}} is intended for immediate, high-priority communication with minimal interaction.
+helpmod_deck_emergency_slot_title	CONFIGURE A PROMPT
+helpmod_deck_emergency_slot_body	Hold an emergency tile to set its label, phrase, and optional local variables.
+helpmod_deck_emergency_save_title	COMMIT THE PROMPT
+helpmod_deck_emergency_save_body	Save the emergency prompt. A normal tap will execute it.
+helpmod_deck_emergency_overrides_title	EMERGENCY OVERRIDES
+helpmod_deck_emergency_overrides_body	Overrides can force device speaker output, boost audio, change clearing behavior, and add an alert tone. You can also switch on CONFIRM BEFORE SENDING: a tap on an emergency tile then shows what it will say and asks you to confirm first, so an accidental touch cannot send it.
+helpmod_deck_emergency_info_title	EMERGENCY INFO
+helpmod_deck_emergency_info_body	Below the overrides button, this opens a large, easy-to-read medical ID card -- name, conditions, allergies, medications, and emergency contacts -- for a bystander or first responder to read if you can't speak.
+helpmod_deck_emergency_info_save_title	FILL IT OUT
+helpmod_deck_emergency_info_save_body	Tap EDIT to fill in your own info. It's saved once, not per {{DECK:deck}}, so it's the same card no matter which {{DECK:deck}} you're in.
+helpmod_deck_management_title	CREATING AND MANAGING {{DECKS:DECKS}}
+helpmod_deck_management_summary	CREATE, NAME, RECOLOR, ORGANIZE, AND DELETE {{DECKS:DECKS}}.
+helpmod_deck_management_intro_title	DECKS
+helpmod_deck_management_intro_body	{{DECKS:Decks}} organize different communication workflows. The DEFAULT MATRIX {{DECK:deck}} is permanent; custom {{DECKS:decks}} can be created, renamed, recolored, and removed.
+helpmod_deck_management_open_deck_menu_title	OPEN {{DECK:DECK}} CONTROL
+helpmod_deck_management_open_deck_menu_body	Tap the current {{DECK:DECK}} label.
+helpmod_deck_management_create_title	CREATE A {{DECK:DECK}}
+helpmod_deck_management_create_body	Choose {{DECK_CREATE:CREATE DECK}} to start a new specialized {{DECK:deck}}.
+helpmod_deck_management_type_title	CHOOSE A {{DECK:DECK}} TYPE
+helpmod_deck_management_type_body	Choose the {{DECK:deck}} type that fits the workflow: Quick Actions, Emergency, Emoji, or GIF.
+helpmod_deck_management_commit_title	DEPLOY THE {{DECK:DECK}}
+helpmod_deck_management_commit_body	Name the {{DECK:deck}}, choose its color, then create it.
+helpmod_deck_management_manage_title	MANAGE EXISTING {{DECKS:DECKS}}
+helpmod_deck_management_manage_body	Use MANAGE to rename, recolor, or remove a custom {{DECK:deck}}.
+helpmod_basics_navigation_title	UI NAVIGATION
+helpmod_basics_navigation_summary	{{DECKS:DECKS}}, PROFILES, CONTEXT, AND SIMPLE PROMPTS.
+helpmod_basics_navigation_intro_title	WELCOME TO ACK
+helpmod_basics_navigation_intro_body	ACK is organized around {{DECKS:decks}}, views, and output tools. Start by learning the primary navigation controls.
+helpmod_basics_navigation_deck_vs_profile_title	{{DECKS:DECKS}} VS PROFILES
+helpmod_basics_navigation_deck_vs_profile_body	{{DECK:DECK}} and PROFILE control different layers of ACK. A {{DECK:deck}} changes the communication system you are using. A profile changes the phrase set used inside a Matrix {{DECK:deck}}.
+helpmod_basics_navigation_deck_selector_title	SWITCHING {{DECKS:DECKS}}
+helpmod_basics_navigation_deck_selector_body	Tap the {{DECK:DECK}} selector to open the available {{DECK:deck}} list.
+helpmod_basics_navigation_deck_selector_detail_title	UNDERSTANDING {{DECKS:DECKS}}
+helpmod_basics_navigation_deck_selector_detail_body	{{DECKS:Decks}} are complete communication workspaces. Matrix {{DECKS:decks}} use watch gestures and profiles. Other {{DECKS:decks}} can provide {{DECK_TYPE_QUICK:quick actions}}, emergency phrases, emoji, or GIF output for specific situations.
+helpmod_basics_navigation_profile_selector_title	MATRIX PROFILES
+helpmod_basics_navigation_profile_selector_body	Tap PROFILE to select a Matrix communication profile.
+helpmod_basics_navigation_profile_detail_one_title	WHAT PROFILES CHANGE
+helpmod_basics_navigation_profile_detail_one_body	Profiles belong to Matrix {{DECKS:decks}}. They let the same watch poses and twists produce wording appropriate for different people, places, routines, or communication contexts.
+helpmod_basics_navigation_profile_detail_two_title	PROFILES KEEP THE MAP
+helpmod_basics_navigation_profile_detail_two_body	Switching profiles does not change how the gesture map is laid out. It changes the phrases assigned within that map, so your muscle memory can remain consistent.
+helpmod_basics_navigation_navigation_complete_title	NAVIGATION COMPLETE
+helpmod_basics_navigation_navigation_complete_body	Congratulations, you now know the basics of UI navigation within ACK. You can select a communication {{DECK:deck}}, choose a Matrix profile, and move between ACK's primary tools.
+helpmod_deck_quick_actions_title	{{DECK_TYPE_QUICK:QUICK ACTIONS}} {{DECK:DECK}}
+helpmod_deck_quick_actions_summary	THREE POSES, FOUR ACTIONS EACH -- FAST, FIXED OUTPUT.
+helpmod_deck_quick_actions_intro_title	{{DECK_TYPE_QUICK:QUICK ACTIONS}}
+helpmod_deck_quick_actions_intro_body	{{DECK_TYPE_QUICK:Quick Actions}} is a simpler, fixed alternative to the Matrix {{DECK:deck}}: three groups of four phrases, meant for your most common lines rather than live remapping.\n\nWhile a {{DECK_TYPE_QUICK:Quick Actions}} {{DECK:deck}} is active, it takes over completely -- the watch's pose and twist choose a phrase from THIS {{DECK:deck}} instead of running the usual Matrix categories.
+helpmod_deck_quick_actions_groups_intro_title	THREE GROUPS, THREE POSES
+helpmod_deck_quick_actions_groups_intro_body	Each of the three groups is bound to one root pose -- IDENTITY, DEFEND, or CONNECT. Each group tab shows its bound pose underneath (e.g. "G1" over "IDE").
+helpmod_deck_quick_actions_select_group_title	SELECT A GROUP
+helpmod_deck_quick_actions_select_group_body	Tap a group tab to view its four actions.
+helpmod_deck_quick_actions_edit_group_title	REBIND THE POSE
+helpmod_deck_quick_actions_edit_group_body	Tap EDIT to rename the group or change which pose fires it. Picking a pose another group already uses swaps the two -- every pose always belongs to exactly one group.\n\nROOT OVERRIDE SOURCE is a separate setting: it picks which A/B/C variable bank fills any {{tags}} in this group's phrases, and has no effect on which gesture triggers it.
+helpmod_deck_quick_actions_mods_title	FOUR ACTIONS PER GROUP
+helpmod_deck_quick_actions_mods_body	Within a bound pose, the four actions line up with the watch's modifier twists: hold the pose and fire immediately for action 1, or twist 1-3 times first to reach the others.
+helpmod_deck_quick_actions_edit_slot_title	EDIT AN ACTION
+helpmod_deck_quick_actions_edit_slot_body	Hold an action to edit its label, phrase, and any local variable values.
+helpmod_deck_quick_actions_save_slot_title	SAVE AND PLAY BACK
+helpmod_deck_quick_actions_save_slot_body	Commit the action, then tap it normally -- it speaks the resolved phrase immediately, so you can check it sounds right.
+helpmod_deck_quick_actions_complete_title	READY TO GO
+helpmod_deck_quick_actions_complete_body	That's the whole {{DECK:deck}}: pick a pose per group, four phrases per pose, edited and played back right here.
+helpmod_settings_management_title	SETTINGS MANAGEMENT
+helpmod_settings_management_summary	AUDIO ROUTING, WATCH AUDIO, HARDWARE, SENSORS, SHORTCUTS, AND DATA.
+helpmod_settings_management_intro_title	PROTOCOL OVERVIEW
+helpmod_settings_management_intro_body	PROTOCOL contains ACK's system-wide configuration. These controls affect the application independently of the currently active {{DECK:deck}}.
+helpmod_settings_management_audio_output_routing_title	AUDIO OUTPUT ROUTING
+helpmod_settings_management_audio_output_routing_body	{{FORCE_SPEAKER:Force Speaker}} can direct speech toward the device speaker when that is appropriate for your setup. Guide Vox controls whether tutorial and guide narration is spoken aloud. Silent Mode shows prompts as normal but never speaks them out loud.
+helpmod_settings_management_watch_audio_title	WATCH AUDIO FEEDBACK
+helpmod_settings_management_watch_audio_body	This section controls audio feedback played by the watch when issuing pose commands. Select a texture preset and adjust the watch feedback volume to fit your needs.
+helpmod_settings_management_hardware_config_title	WATCH CONFIGURATION
+helpmod_settings_management_hardware_config_body	Hardware Configuration controls the behavior of ACK's watch input system. Crown Resistance adjusts how much rotation is needed. Twist Sensitivity controls motion response. Gravity Lock controls pose stability, and Auto-Cryo controls automatic idle behavior.
+helpmod_settings_management_environment_sensor_title	{{ENV_SENSOR:ENVIRONMENT SENSOR}}
+helpmod_settings_management_environment_sensor_body	The {{ENV_SENSOR:Environment Sensor}} estimates local sound levels using the microphone in your handset. For most devices this is a small sensor, so the readings are not 100% accurate. Good enough to help judge exposure time. Use the scan control to begin or stop monitoring. This can help you judge whether speech output may need a different volume, route, or communication strategy.
+helpmod_settings_management_quick_access_keys_title	{{QUICK_ACCESS_KEYS:QUICK-ACCESS KEYS}}
+helpmod_settings_management_quick_access_keys_body	{{QUICK_ACCESS_KEYS:Quick-Access Keys}} appear in the ACK Command bar. Each slot has a short label and a saved phrase. Configure these for phrases that need to be available with minimal effort.
+helpmod_settings_management_data_port_title	{{DATA_PORT:DATA PORT}}
+helpmod_settings_management_data_port_body	The {{DATA_PORT:Data Port}} manages configuration transfer and backup. Export creates a JSON backup and warns what the file contains, Import Matrix As New {{DECK:Deck}} brings in a backup's matrix phrases as a new {{DECK:deck}}, and Full Restore applies everything else a backup carries -- overwriting or adding to your current setup, never deleting what it doesn't mention. The guide has moved upward so these controls remain visible.
+helpmod_settings_management_completion_title	SETTINGS MANAGEMENT COMPLETE
+helpmod_settings_management_completion_body	Protocol training complete. You now know where to tune audio output routing, watch feedback, hardware response, environmental scanning, header shortcuts, and configuration backups.
+helpmod_target_computer_title	{{TARGET_COMPUTER:TARGET COMPUTER}}
+helpmod_target_computer_summary	CATEGORY TREES, TARGET TAGS, AND GUIDED SETUP.
+helpmod_target_computer_intro_title	{{TARGET_COMPUTER:TARGET COMPUTER}}
+helpmod_target_computer_intro_body	The {{TARGET_COMPUTER:Target Computer}} organizes reusable prompt content -- names, places, food, actions, and anything else you add -- into categories you define. Each category holds one active pick at a time, which can be dropped into outgoing phrases without retyping it.
+helpmod_target_computer_open_category_title	OPEN A CATEGORY
+helpmod_target_computer_open_category_body	Tap any category chip to view what's inside it. Long-press a chip to rename it, change whether its pick clears itself after use, or delete it.
+helpmod_target_computer_add_category_title	ADD A CATEGORY
+helpmod_target_computer_add_category_body	Beyond the defaults, add as many categories as you want. The four shipped categories can be renamed too -- nothing about them is fixed.
+helpmod_target_computer_tree_navigation_title	TAP TO SELECT, HOLD TO EDIT
+helpmod_target_computer_tree_navigation_body	Inside a category: tap a subcategory to open it, tap an entry to make it that category's active pick (tap it again to clear it). Long-press anything to rename or delete it. "+ CATEGORY" and "+ ENTRY" add new items under whatever you last tapped.
+helpmod_target_computer_display_modes_title	TREE OR DROPDOWN
+helpmod_target_computer_display_modes_body	Switch between a branching TREE view and a cascading DROPDOWN view of the same category -- whichever is faster for how deep you've organized it.
+helpmod_target_computer_guide_me_title	GUIDED SETUP
+helpmod_target_computer_guide_me_body	Not sure where to start? GUIDE ME walks you through adding categories and entries one step at a time, staying wherever you're building instead of sending you back to the start after every add.
+helpmod_target_computer_computer_tag_title	USING A TARGET IN A PHRASE
+helpmod_target_computer_computer_tag_body	In the Matrix phrase editor, {{INSERT_TARGET_TAG:INSERT TARGET TAG}} adds a tag like [COMPUTER:PEOPLE] to your template, at your cursor. It resolves to that category's current active pick -- or to an authored fallback if nothing is active.
+helpmod_target_computer_status_indicator_title	CHECK WHAT'S ACTIVE
+helpmod_target_computer_status_indicator_body	The COMPUTER status in the header shows how many categories currently have an active pick. Tap it to see every category's pick at a glance and clear any of them on the spot.
+helpmod_target_computer_completion_title	{{TARGET_COMPUTER:TARGET COMPUTER}} TRAINING COMPLETE
+helpmod_target_computer_completion_body	{{TARGET_COMPUTER:Target Computer}} training complete. You can now build categories, navigate and edit their trees, insert target tags into phrases, and check what's currently active.
+helpmod_personalization_title	{{AUDIO_ARCHITECT:AUDIO ARCHITECT}}
+helpmod_personalization_summary	VOICE PROFILES, DSP, OUTPUT ROUTING, AND CUSTOM SLOTS.
+helpmod_personalization_intro_title	{{AUDIO_ARCHITECT:AUDIO ARCHITECT}}
+helpmod_personalization_intro_body	{{AUDIO_ARCHITECT:Audio Architect}} controls how ACK sounds when it speaks. It lets you configure output volume, routing behavior, voice profiles, and custom signal processing.
+helpmod_personalization_global_output_title	GLOBAL OUTPUT
+helpmod_personalization_global_output_body	Global Output settings affect ACK's overall speech behavior. Master Gain controls output level. {{FORCE_SPEAKER:Force Speaker}}, Guide Vox, and {{SILENT_MODE:Silent Mode}} now live in PROTOCOL, alongside the rest of ACK's system-wide configuration.
+helpmod_personalization_master_gain_title	MASTER GAIN
+helpmod_personalization_master_gain_body	Adjust Master Gain to set overall speech volume. Choose a value that remains comfortable and understandable in your common environments.
+helpmod_personalization_factory_presets_title	FACTORY VOICE PRESETS
+helpmod_personalization_factory_presets_body	Factory presets provide ready-to-use voice styles. They are useful when you want a consistent voice without editing a full {{DSP_CHAIN:DSP chain}}. Select a factory preset to use it as the active speech profile.
+helpmod_personalization_custom_profiles_title	CUSTOM PROFILE SLOTS
+helpmod_personalization_custom_profiles_body	Custom profile slots can store your own voice designs. Select one of the custom slots below to open its editable {{DSP_CHAIN:DSP Chain}} in a popup.
+helpmod_personalization_manage_profiles_title	MANAGE PROFILES
+helpmod_personalization_manage_profiles_body	Use MANAGE to create a new custom slot, rename an existing one, or delete one you no longer want. Deleting a profile always asks for confirmation first.
+helpmod_personalization_dsp_chain_title	{{DSP_CHAIN:DSP CHAIN}}
+helpmod_personalization_dsp_chain_body	The {{DSP_CHAIN:DSP Chain}} opens as a popup when a custom profile is selected or created. It controls the source voice and signal treatment stored inside that custom slot.
+helpmod_personalization_base_voice_title	SELECT A BASE VOICE
+helpmod_personalization_base_voice_body	Select a Base Voice to choose from on-device Android TTS voices. This is the human-readable source signal before pitch, speed, robotic processing, or texture effects are applied.
+helpmod_personalization_pitch_speed_title	PITCH AND SPEED
+helpmod_personalization_pitch_speed_body	Pitch Shift changes the perceived height of the voice. Speed changes how quickly it speaks. Small adjustments can make a profile clearer, calmer, more expressive, or more recognizably yours.
+helpmod_personalization_robotic_overlay_title	{{ROBOTIC_OVERLAY:ROBOTIC OVERLAY}}
+helpmod_personalization_robotic_overlay_body	The {{ROBOTIC_OVERLAY:Robotic Overlay}} ring-modulates the selected voice. Enable it to reveal frequency and depth controls directly below. Frequency changes the character of the effect, while depth controls how strongly the processed signal replaces the base voice.
+helpmod_personalization_bitcrush_title	{{BITCRUSH:BITCRUSH}} TEXTURE
+helpmod_personalization_bitcrush_body	{{BITCRUSH:Bitcrush}} adds a deliberately digital texture to the voice. Use subtle values for a lightly synthesized edge, or higher values for a more aggressively processed communication style.
+helpmod_personalization_save_profile_title	COMMIT CUSTOM PROFILE
+helpmod_personalization_save_profile_body	When the profile sounds right, use COMMIT to save the DSP Chain into the selected custom slot. That profile can then be selected as ACK's active output voice.
+helpmod_personalization_completion_title	{{AUDIO_ARCHITECT:AUDIO ARCHITECT}} COMPLETE
+helpmod_personalization_completion_body	{{AUDIO_ARCHITECT:Audio Architect}} training complete. You can now configure global output, select voice profiles, build a custom DSP Chain, and save it to a reusable custom slot.
+helpmod_statement_composer_title	{{COMPOSER:STATEMENT COMPOSER}}
+helpmod_statement_composer_summary	BUILD, SAVE, COPY, OR SPEAK MULTI-SENTENCE STATEMENTS.
+helpmod_statement_composer_intro_title	{{COMPOSER:STATEMENT COMPOSER}}
+helpmod_statement_composer_intro_body	Build longer, structured statements from {{TARGET_COMPUTER:Target Computer}} entries and {{SHARED_VARIABLES:Shared Root Variables}}, then save, copy, or speak them. Saved statements stay mutable -- they always resolve against whatever those entries currently hold, not a frozen snapshot.
+helpmod_statement_composer_fullscreen_title	FULL SCREEN
+helpmod_statement_composer_fullscreen_body	Tap FULL SCREEN to hide the header and bottom navigation and give the composer the whole screen -- useful for longer statements. The toggle stays pinned at the top so you can always tap back out.
+helpmod_statement_composer_variable_context_title	{{VARIABLE_CONTEXT:VARIABLE CONTEXT}}
+helpmod_statement_composer_variable_context_body	Pick which {{SHARED_VARIABLES:Shared Root Variables}} grouping this statement's variables use. A/B/C slots are only unique within one grouping, same as a Matrix phrase resolving against its own node's pose.
+helpmod_statement_composer_compose_field_title	COMPOSE
+helpmod_statement_composer_compose_field_body	Type freely here -- full sentences and paragraphs, not just a single phrase.
+helpmod_statement_composer_word_suggestions_title	WORD SUGGESTIONS (OPTIONAL)
+helpmod_statement_composer_word_suggestions_body	Under the text box ACK can offer words as you type: the rest of the word you are typing, or the word that usually comes next. It is off until you turn it on in SETTINGS > WORD SUGGESTIONS, and nothing is added until you tap a word. It learns only from statements you save, speak or copy here. FORGET WORDS, in the same place in SETTINGS, removes what it learned.
+helpmod_statement_composer_insert_target_chip_title	INSERT A LIVE REFERENCE
+helpmod_statement_composer_insert_target_chip_body	Tap a {{TARGET_COMPUTER:Target Computer}} chip to insert a live reference -- it always resolves to whatever's currently active in that category. It goes where your cursor is, with a space added only where one is needed. Long-press a chip to retarget which entry is active, for real, across the whole app.
+helpmod_statement_composer_browse_targets_title	BROWSE FOR A SPECIFIC ENTRY
+helpmod_statement_composer_browse_targets_body	{{BROWSE_TARGETS:BROWSE TARGETS}} opens the full {{TARGET_COMPUTER:Target Computer}} tree. Entries picked here insert as plain text, not a live reference -- a browsed entry might not be the active one, so it can't be represented as a token.
+helpmod_statement_composer_insert_variable_title	INSERT A VARIABLE
+helpmod_statement_composer_insert_variable_body	{{INSERT_VARIABLE:INSERT VARIABLE}} browses the current grouping's A/B/C Shared Root Variable slots and inserts a live reference to whichever one you tap.
+helpmod_statement_composer_preview_title	{{LIVE_PREVIEW:LIVE PREVIEW}}
+helpmod_statement_composer_preview_body	This shows exactly what the statement will say or copy as right now, with every reference resolved.
+helpmod_statement_composer_save_title	SAVE
+helpmod_statement_composer_save_body	SAVE stores the statement as typed, references intact -- it keeps resolving live every time it's reused, even if the entries it points at change later.
+helpmod_statement_composer_copy_title	COPY
+helpmod_statement_composer_copy_body	COPY resolves the statement and places the result on the clipboard, ready to paste into Messages, chat apps, or anywhere else.
+helpmod_statement_composer_speak_title	SPEAK
+helpmod_statement_composer_speak_body	SPEAK resolves the statement and sends it straight to output.
+helpmod_statement_composer_statements_list_title	{{MY_STATEMENTS:MY STATEMENTS}}
+helpmod_statement_composer_statements_list_body	{{MY_STATEMENTS:MY STATEMENTS}} organizes everything you've saved into folders, tree-and-leaf, the same shape as {{TARGET_COMPUTER:Target Computer}} entries. Tap a folder to expand it, or a statement to reload it for editing, copy, speak, or delete it right from the list.
+helpmod_record_training_data_title	{{RECORD_TRAINING:RECORD TRAINING DATA}}
+helpmod_record_training_data_summary	RECORD YOUR VOICE FOR A VOICE MODEL, WITHOUT YOUR COMPUTER.
+helpmod_record_training_data_intro_title	{{RECORD_TRAINING:RECORD TRAINING DATA}}
+helpmod_record_training_data_intro_body	This gathers recordings of your voice on this phone, so you can collect them wherever you are and train a voice model later. You read text aloud. The phone records it, cuts it into clips, notes how each one went, and keeps them. Nothing is sent anywhere: the recordings stay on this phone until you save them to a file and move that file yourself.
+helpmod_record_training_data_open_title	OPEN IT
+helpmod_record_training_data_open_body	Tap {{RECORD_TRAINING:RECORD TRAINING DATA}}, under {{CUSTOM_VOICE:CUSTOM VOICE}}.
+helpmod_record_training_data_scripts_title	SCRIPTS
+helpmod_record_training_data_scripts_body	A script is any text you want to read aloud: a book chapter, something you wrote, a list of sentences. ACK splits it into cards sized to read in one go, about ten seconds each, so every card becomes one clip.
+helpmod_record_training_data_new_script_title	WRITE OR PASTE A SCRIPT
+helpmod_record_training_data_new_script_body	Tap + NEW SCRIPT to see where a script is written.
+helpmod_record_training_data_title_title	GIVE IT A TITLE
+helpmod_record_training_data_title_body	A short name so you can find it again.
+helpmod_record_training_data_text_title	THE TEXT
+helpmod_record_training_data_text_body	Type or paste the text. Write numbers and symbols the way you will say them ("twenty twenty-six", "percent"): what you read is what your voice model learns. Below it you can see how many cards it becomes and a warning for any card with digits or symbols.
+helpmod_record_training_data_save_title	SAVE IT
+helpmod_record_training_data_save_body	SAVE keeps the script. Changing a saved script always asks you first, and leaving with unsaved changes asks too. Save the script (or go BACK), then continue here.
+helpmod_record_training_data_record_title	RECORD A SCRIPT
+helpmod_record_training_data_record_body	RECORD on a script starts a session. It starts at the first card you have not recorded yet, so you can read a long script over many days. The list shows how many cards are done.
+helpmod_record_training_data_quiet_check_title	THE QUIET CHECK
+helpmod_record_training_data_quiet_check_body	Put the phone where it will stay, such as a stand or propped on books, and keep your mouth the same distance from it all the time. Then run the two-second quiet check: stay silent and the phone measures the room. It tells you in words if the room is loud, the microphone is covered, or something interrupted it.
+helpmod_record_training_data_hands_free_title	HANDS-FREE RECORDING
+helpmod_record_training_data_hands_free_body	One card shows at a time, in large text. Read it when you are ready. The phone hears when you finish, keeps the clip, and shows the next card by itself. You do not touch the phone. While it listens it makes no sound and no vibration, so nothing ends up in your recordings but your voice.
+helpmod_record_training_data_redo_title	IF YOU STUMBLE
+helpmod_record_training_data_redo_body	REDO LAST sets the clip you just recorded aside (it is kept on the phone, but not saved to a file) and shows that card again. PAUSE stops listening until you tap RESUME. After a clip is kept you can mark it as noise, unclear, laugh, cough or stumble; a mark keeps it out of training until you review it on the computer.
+helpmod_record_training_data_end_title	ENDING A SESSION
+helpmod_record_training_data_end_body	END SESSION asks first, and everything already kept stays kept. If the app closes unexpectedly, the next time you open {{RECORD_TRAINING:RECORD TRAINING DATA}} it repairs what it can, and holds a repaired recording back until you listen to it and decide.
+helpmod_record_training_data_free_title	FREE SPEECH
+helpmod_record_training_data_free_body	To talk about anything with no script, use RECORD FREE SPEECH. The audio is kept whole, for as long as 90 minutes. The phone only suggests where it could be cut; the computer decides. It also records anyone nearby.
+helpmod_record_training_data_save_file_title	SAVING TO A FILE
+helpmod_record_training_data_save_file_body	SAVE ALL TO A FILE makes a package you choose where to put. The phone then reads it back and checks every recording in it; if anything is wrong it removes the file and tells you nothing was lost. Move the file to your computer yourself, check it there, and only then delete a session from the phone. The phone never deletes one because you saved it.
+helpmod_record_training_data_complete_title	THAT IS THE PHONE'S PART
+helpmod_record_training_data_complete_body	On the computer, Freeform Studio imports the package and does the rest: it listens again, lines the words up with the text you read, and lets you review every piece before anything is used for training.
+helpmod_ack_command_bar_title	ACK COMMAND BAR
+helpmod_ack_command_bar_summary	HEADER CONTROLS, SHORTCUTS, WATCH LINK, AND HELP.
+helpmod_ack_command_bar_header_intro_title	ACK COMMAND BAR
+helpmod_ack_command_bar_header_intro_body	The ACK Command Bar is your always-available control surface. It shows your active {{DECK:deck}}, active profile, quick phrases, watch connection state, system settings, and Help access.
+helpmod_ack_command_bar_header_deck_title	{{DECK:DECK}} SELECTOR
+helpmod_ack_command_bar_header_deck_body	{{DECK:DECK}} selects the communication system currently loaded in ACK. A {{DECK:deck}} can be a Matrix, emergency board, quick-action board, emoji board, GIF board, or another custom workflow.
+helpmod_ack_command_bar_header_profile_title	PROFILE SELECTOR
+helpmod_ack_command_bar_header_profile_body	PROFILE selects the active communication profile inside a Matrix {{DECK:deck}}. Profiles let the same gesture structure use different phrasing for different situations.
+helpmod_ack_command_bar_header_shortcuts_title	SHORTCUT ROW
+helpmod_ack_command_bar_header_shortcuts_body	The compact buttons beside ACK are header shortcuts. Tap one to immediately transmit its saved phrase without opening a {{DECK:deck}}.
+helpmod_ack_command_bar_header_protocol_title	PROTOCOL
+helpmod_ack_command_bar_header_protocol_body	PROTOCOL opens system configuration: watch behavior, sensor settings, shortcuts, data controls, and output preferences.
+helpmod_ack_command_bar_header_help_title	HELP SYSTEM
+helpmod_ack_command_bar_header_help_body	HELP opens this training system. Modules guide you through live controls instead of making you memorize the whole machine.
+helpmod_ack_command_bar_header_watch_link_title	WATCH LINK
+helpmod_ack_command_bar_header_watch_link_body	The pulsing square is the watch link indicator. Its color and the nearby status label show whether the watch is offline, armed, locked, or actively communicating with ACK.
+helpmod_ack_command_bar_header_complete_title	COMMAND BAR COMPLETE
+helpmod_ack_command_bar_header_complete_body	Command Bar training complete! The ACK Command Bar remains present at all times, making access to shortcuts and status effortless when using the app.
+helpmod_deck_profile_selection_title	{{DECK:DECK}} AND PROFILE SELECTION
+helpmod_deck_profile_selection_summary	LOAD A MATRIX {{DECK:DECK}}, THEN SWITCH ITS ACTIVE PROFILE.
+helpmod_deck_profile_selection_select_deck_title	SELECT A MATRIX {{DECK:DECK}}
+helpmod_deck_profile_selection_select_deck_body	Start by selecting a Matrix {{DECK:deck}}. Matrix {{DECKS:decks}} support profiles, gesture mapping, local variables, and shared root values.
+helpmod_deck_profile_selection_select_profile_title	SELECT A PROFILE
+helpmod_deck_profile_selection_select_profile_body	Now select a profile. Profiles let one gesture system adapt to different communication contexts without rebuilding the Matrix. If ACK asks first because a gesture would say something different, tap CHANGE PROFILE to go ahead.
+helpmod_deck_profile_selection_deck_profile_complete_title	SELECTION COMPLETE
+helpmod_deck_profile_selection_deck_profile_complete_body	{{DECK:Deck}} and profile selection complete. You can now switch between communication environments before transmitting a phrase.
+helpmod_matrix_prompt_creation_title	CREATING AND USING PROMPTS
+helpmod_matrix_prompt_creation_summary	EDIT A MATRIX NODE, SAVE ITS TEMPLATE, AND PLAY IT.
+helpmod_matrix_prompt_creation_matrix_intro_title	THE ACK MATRIX
+helpmod_matrix_prompt_creation_matrix_intro_body	The ACK Matrix maps watch poses and twists to communication phrases. Each category is a gesture context, and each row is a phrase node that can be edited or played manually.
+helpmod_matrix_prompt_creation_identity_root_title	ROOT :: IDENTITY
+helpmod_matrix_prompt_creation_identity_root_body	ROOT :: IDENTITY is the primary status-reporting context. Its gesture rows are commonly used for direct personal output. Each row can hold a phrase and local fallback values.
+helpmod_matrix_prompt_creation_edit_twist_zero_title	EDIT YOUR FIRST PROMPT
+helpmod_matrix_prompt_creation_edit_twist_zero_body	Your first prompt lives in Twist 0. Tap the highlighted Twist 0 row to open its Live Save Editor.
+helpmod_matrix_prompt_creation_macro_template_title	LIVE SAVE EDITOR
+helpmod_matrix_prompt_creation_macro_template_body	This is the Live Save Editor. Use MACRO TEMPLATE to type the phrase you want ACK to transmit. Changes are saved while you work. Variables are powerful and useful, but they get their own training module so we do not summon the complexity goblins yet.
+helpmod_matrix_prompt_creation_commit_prompt_title	SAVE YOUR PROMPT
+helpmod_matrix_prompt_creation_commit_prompt_body	Destructive Controls can clear local values, the prompt, or both. They are intentionally dramatic. Your prompt is already live-saved, but tap COMMIT now to confirm this editing pass and return to the Matrix.
+helpmod_matrix_prompt_creation_play_prompt_title	PLAY BACK YOUR PROMPT
+helpmod_matrix_prompt_creation_play_prompt_body	Your prompt is now ready for manual playback. Tap the highlighted play control beside Twist 0 to transmit the phrase you created.
+helpmod_matrix_prompt_creation_prompt_complete_title	PROMPT COMPLETE
+helpmod_matrix_prompt_creation_prompt_complete_body	Prompt creation complete. You edited a Matrix node, saved its template, and played it back from the Matrix.
+helpmod_voice_rec_recording_title	RECORDING A VOICE PROMPT
+helpmod_voice_rec_recording_summary	RECORD, PREVIEW, AND ACCEPT YOUR OWN VOICE FOR ANY PROMPT.
+helpmod_voice_rec_recording_intro_title	VOICE RECORDINGS
+helpmod_voice_rec_recording_intro_body	Any {{DECK_TYPE_QUICK:Quick Actions}} slot, Quick-Access key, or Matrix node can play your own recorded voice instead of synthesized speech. The record, preview, and accept flow is identical everywhere it shows up -- this walkthrough uses a {{DECK_TYPE_QUICK:Quick Actions}} slot as the example.
+helpmod_voice_rec_recording_open_slot_title	OPEN A SLOT
+helpmod_voice_rec_recording_open_slot_body	Hold a {{DECK_TYPE_QUICK:Quick Actions}} slot to open its editor.
+helpmod_voice_rec_recording_find_section_title	VOICE RECORDING SECTION
+helpmod_voice_rec_recording_find_section_body	Scroll down past the phrase template to the VOICE RECORDING section.
+helpmod_voice_rec_recording_record_title	RECORD
+helpmod_voice_rec_recording_record_body	Tap RECORD. The first time, you'll be asked to allow microphone access.
+helpmod_voice_rec_recording_stop_title	STOP
+helpmod_voice_rec_recording_stop_body	Tap STOP when you're done talking. ACK automatically reduces background noise and trims dead air from both ends -- you don't need to leave silence around your words.
+helpmod_voice_rec_recording_preview_title	PREVIEW IT
+helpmod_voice_rec_recording_preview_body	Tap PLAY to hear exactly what will play back. Not happy with it? DISCARD and record again -- nothing is saved yet.
+helpmod_voice_rec_recording_accept_title	ACCEPT
+helpmod_voice_rec_recording_accept_body	Tap ACCEPT to save it. This slot now plays your recording instead of synthesized speech.
+helpmod_voice_rec_recording_complete_title	RECORDING COMPLETE
+helpmod_voice_rec_recording_complete_body	That's the whole flow, and it's the same wherever you see a VOICE RECORDING section. REMOVE clears a saved recording and falls back to synthesized speech; RE-RECORD (in MANAGE RECORDINGS) replaces one without deleting it first.
+helpmod_voice_rec_matrix_title	MATRIX VOICE ENTRIES
+helpmod_voice_rec_matrix_summary	RECORD OVER A TEMPLATE, SET A VISUAL OVERRIDE, AND HANDLE LATER EDITS.
+helpmod_voice_rec_matrix_intro_title	MATRIX VOICE ENTRIES
+helpmod_voice_rec_matrix_intro_body	A Matrix node can play a recording instead of resolving its template. Nothing about the template or its variables is touched -- remove the recording and the node goes right back to normal.
+helpmod_voice_rec_matrix_open_node_title	OPEN A NODE
+helpmod_voice_rec_matrix_open_node_body	Tap any node's row to open its Live-Save Editor.
+helpmod_voice_rec_matrix_variables_caveat_title	VARIABLES GO QUIET
+helpmod_voice_rec_matrix_variables_caveat_body	If this node's template has {VAR} tokens or [COMPUTER:] tags, attaching a recording plays it back exactly as recorded and ignores them while it's active. Their values are kept, not deleted -- remove the recording later and they're right where you left them. You'll see an ATTACH VOICE RECORDING button and a one-time confirmation first if this applies.
+helpmod_voice_rec_matrix_record_title	RECORD
+helpmod_voice_rec_matrix_record_body	Tap RECORD (or ATTACH VOICE RECORDING first, then RECORD, if this node has variables).
+helpmod_voice_rec_matrix_stop_title	STOP
+helpmod_voice_rec_matrix_stop_body	Tap STOP when you're done.
+helpmod_voice_rec_matrix_accept_title	ACCEPT
+helpmod_voice_rec_matrix_accept_body	Preview it with PLAY if you'd like, then tap ACCEPT.
+helpmod_voice_rec_matrix_visual_override_title	VISUAL PROMPT OVERRIDE
+helpmod_voice_rec_matrix_visual_override_body	With a recording active, VISUAL PROMPT OVERRIDE controls what shows on the overlay and in the log while it plays -- handy since the raw template can carry unresolved {VAR} tokens once a recording takes over. Leave it blank to show the raw template as-is.
+helpmod_voice_rec_matrix_re_enable_title	IF THE TEMPLATE CHANGES LATER
+helpmod_voice_rec_matrix_re_enable_body	Editing this node's text after a recording is attached disables the recording (not deletes it) so old audio can't play against new text. A RE-ENABLE button appears the next time you open this node -- tap it once the recording still matches, or record fresh audio instead.
+helpmod_voice_rec_matrix_complete_title	MATRIX RECORDING COMPLETE
+helpmod_voice_rec_matrix_complete_body	Template, variables, and the recording all coexist -- removing the recording is always enough to get back to today's normal resolved behavior.
+helpmod_voice_rec_manage_title	MANAGING RECORDINGS
+helpmod_voice_rec_manage_summary	BROWSE, PLAY, RE-RECORD, AND DELETE EVERY RECORDING IN ONE PLACE.
+helpmod_voice_rec_manage_intro_title	MANAGE RECORDINGS
+helpmod_voice_rec_manage_intro_body	Every recording you've made -- {{DECK_TYPE_QUICK:Quick Actions}}, {{QUICK_ACCESS_KEYS:Quick-Access keys}}, and Matrix nodes alike -- lives in one browsable tree under PROTOCOL.
+helpmod_voice_rec_manage_open_title	OPEN IT
+helpmod_voice_rec_manage_open_body	Tap MANAGE RECORDINGS.
+helpmod_voice_rec_manage_tree_title	DRILL DOWN
+helpmod_voice_rec_manage_tree_body	Recordings are grouped by how they're used: {{DECK:Deck}} > Group > Slot for {{DECK_TYPE_QUICK:Quick Actions}}, a flat list for {{QUICK_ACCESS_KEYS:Quick-Access keys}}, and {{DECK:Deck}} > Profile > Pose > Slot for Matrix. Tap a branch row to expand or collapse it.
+helpmod_voice_rec_manage_leaf_title	WHAT A RECORDING SHOWS
+helpmod_voice_rec_manage_leaf_body	Each recording shows the text that would actually reach the overlay if it played right now, its play time, and its file size on disk.
+helpmod_voice_rec_manage_actions_title	PLAY, RE-RECORD, DELETE
+helpmod_voice_rec_manage_actions_body	PLAY previews it in place. RE-RECORD replaces the audio without touching whatever it's bound to. DELETE removes it -- whatever it was bound to falls back to synthesized speech (or, for Matrix, its normal resolved text).
+helpmod_voice_rec_manage_overlay_toggle_title	OVERLAY ON PLAY
+helpmod_voice_rec_manage_overlay_toggle_body	Tap the OVERLAY toggle in the top corner. When on, tapping PLAY also shows that recording's own text on screen -- a second way to confirm you found the right one.
+helpmod_voice_rec_manage_complete_title	MANAGE RECORDINGS COMPLETE
+helpmod_voice_rec_manage_complete_body	One tree, every recording, no need to remember where each one lives.
+helpmod_voice_recordings_training_title	VOICE RECORDINGS
+helpmod_voice_recordings_training_summary	PICK A TOPIC: RECORDING, MATRIX ENTRIES, OR MANAGING WHAT YOU'VE SAVED.
+helpmod_voice_recordings_training_select_title	VOICE RECORDINGS
+helpmod_voice_recordings_training_select_body	Choose a topic.
+helpmod_field_ops_gesture_training_title	IDENTITY POSE
+helpmod_field_ops_gesture_training_summary	ARM, LOCK IDENTITY, MODIFY, AND FIRE USING THE WATCH.
+helpmod_field_ops_gesture_training_intro_title	PHYSICAL SYNC
+helpmod_field_ops_gesture_training_intro_body	Stand by for the physical command cycle: arm the system, lock a pose, apply a modifier, then fire. Make sure the watch app is open and its screen is active.
+helpmod_field_ops_gesture_training_wake_gesture_title	THE WAKE GESTURE
+helpmod_field_ops_gesture_training_wake_gesture_body	The watch is locked by default to prevent accidental commands.\n\nPerform a TRIPLE WRIST TWIST (rotate wrist out/in three times fast) to arm the system.
+helpmod_field_ops_gesture_training_system_armed_title	SYSTEM ARMED
+helpmod_field_ops_gesture_training_system_armed_body	The system is now ARMED. It's scanning for a dominant pose.
+helpmod_field_ops_gesture_training_pose_lock_title	POSE: IDENTITY
+helpmod_field_ops_gesture_training_pose_lock_body	Raise your arm straight up, like checking the time, and hold steady.\n\nThe watch starts listening fresh the moment this step appears. (Test build: it gives this about five seconds -- the shipped app will use a shorter window.)
+helpmod_field_ops_gesture_training_pose_locked_title	POSE LOCKED
+helpmod_field_ops_gesture_training_pose_locked_body	IDENTITY pose detected.\n\nWhile holding the pose, perform ONE TWIST to apply a modifier. The watch resets its modifier count fresh as soon as this step appears.
+helpmod_field_ops_gesture_training_fire_command_title	FIRE COMMAND
+helpmod_field_ops_gesture_training_fire_command_body	Hold your arm steady again to FIRE the selected command.
+helpmod_field_ops_gesture_training_sync_complete_title	SYNC COMPLETE
+helpmod_field_ops_gesture_training_sync_complete_body	You've executed a full physical command cycle: armed, posed, modified, and fired.
+helpmod_field_ops_pose_defend_title	DEFEND POSE
+helpmod_field_ops_pose_defend_summary	ARM, LOCK DEFEND, MODIFY, AND FIRE USING THE WATCH.
+helpmod_field_ops_pose_defend_intro_title	PHYSICAL SYNC
+helpmod_field_ops_pose_defend_intro_body	Stand by for the physical command cycle: arm the system, lock a pose, apply a modifier, then fire. Make sure the watch app is open and its screen is active.
+helpmod_field_ops_pose_defend_wake_gesture_title	THE WAKE GESTURE
+helpmod_field_ops_pose_defend_wake_gesture_body	The watch is locked by default to prevent accidental commands.\n\nPerform a TRIPLE WRIST TWIST (rotate wrist out/in three times fast) to arm the system.
+helpmod_field_ops_pose_defend_system_armed_title	SYSTEM ARMED
+helpmod_field_ops_pose_defend_system_armed_body	The system is now ARMED. It's scanning for a dominant pose.
+helpmod_field_ops_pose_defend_pose_lock_title	POSE: DEFEND
+helpmod_field_ops_pose_defend_pose_lock_body	Hold your arm out flat, palm down, like signaling stop.\n\nThe watch starts listening fresh the moment this step appears. (Test build: it gives this about five seconds -- the shipped app will use a shorter window.)
+helpmod_field_ops_pose_defend_pose_locked_title	POSE LOCKED
+helpmod_field_ops_pose_defend_pose_locked_body	DEFEND pose detected.\n\nWhile holding the pose, perform ONE TWIST to apply a modifier. The watch resets its modifier count fresh as soon as this step appears.
+helpmod_field_ops_pose_defend_fire_command_title	FIRE COMMAND
+helpmod_field_ops_pose_defend_fire_command_body	Hold your arm steady again to FIRE the selected command.
+helpmod_field_ops_pose_defend_sync_complete_title	SYNC COMPLETE
+helpmod_field_ops_pose_defend_sync_complete_body	You've executed a full physical command cycle: armed, posed, modified, and fired.
+helpmod_field_ops_pose_connect_title	CONNECT POSE
+helpmod_field_ops_pose_connect_summary	ARM, LOCK CONNECT, MODIFY, AND FIRE USING THE WATCH.
+helpmod_field_ops_pose_connect_intro_title	PHYSICAL SYNC
+helpmod_field_ops_pose_connect_intro_body	Stand by for the physical command cycle: arm the system, lock a pose, apply a modifier, then fire. Make sure the watch app is open and its screen is active.
+helpmod_field_ops_pose_connect_wake_gesture_title	THE WAKE GESTURE
+helpmod_field_ops_pose_connect_wake_gesture_body	The watch is locked by default to prevent accidental commands.\n\nPerform a TRIPLE WRIST TWIST (rotate wrist out/in three times fast) to arm the system.
+helpmod_field_ops_pose_connect_system_armed_title	SYSTEM ARMED
+helpmod_field_ops_pose_connect_system_armed_body	The system is now ARMED. It's scanning for a dominant pose.
+helpmod_field_ops_pose_connect_pose_lock_title	POSE: CONNECT
+helpmod_field_ops_pose_connect_pose_lock_body	Hold your arm out to the side, like offering a handshake.\n\nThe watch starts listening fresh the moment this step appears. (Test build: it gives this about five seconds -- the shipped app will use a shorter window.)
+helpmod_field_ops_pose_connect_pose_locked_title	POSE LOCKED
+helpmod_field_ops_pose_connect_pose_locked_body	CONNECT pose detected.\n\nWhile holding the pose, perform ONE TWIST to apply a modifier. The watch resets its modifier count fresh as soon as this step appears.
+helpmod_field_ops_pose_connect_fire_command_title	FIRE COMMAND
+helpmod_field_ops_pose_connect_fire_command_body	Hold your arm steady again to FIRE the selected command.
+helpmod_field_ops_pose_connect_sync_complete_title	SYNC COMPLETE
+helpmod_field_ops_pose_connect_sync_complete_body	You've executed a full physical command cycle: armed, posed, modified, and fired.
+helpmod_field_ops_training_ground_title	TRAINING GROUND
+helpmod_field_ops_training_ground_summary	FREE-FORM PRACTICE. LIVE TELEMETRY, NORMAL PACING, NO REAL OUTPUT.
+helpmod_field_ops_training_ground_live_title	TRAINING GROUND
+helpmod_field_ops_training_ground_live_body	Live telemetry only. Gesture freely and watch the readout -- no steps to complete, no commands fire.
+helpmod_field_ops_deck_trainer_title	{{DECK:DECK}} TRAINER
+helpmod_field_ops_deck_trainer_summary	SCORED PRACTICE AGAINST YOUR OWN MATRIX OR {{DECK_TYPE_QUICK:QUICK ACTIONS}} {{DECK:DECK}}.
+helpmod_field_ops_deck_trainer_live_title	{{DECK:DECK}} TRAINER
+helpmod_field_ops_deck_trainer_live_body	Pick a {{DECK:deck}} (and, for Matrix, a profile) to train against. Each round shows the real statement that pose/modifier combo resolves to in your own configuration -- root variables included.
+helpmod_field_ops_pose_training_title	POSE TRAINING
+helpmod_field_ops_pose_training_summary	PICK A POSE, THEN WALK THROUGH ARM, LOCK, MODIFY, AND FIRE.
+helpmod_field_ops_pose_training_select_title	POSE TRAINING
+helpmod_field_ops_pose_training_select_body	Choose a pose to train.
+helpmod_manual_override_title	{{MANUAL_OVERRIDE:MANUAL OVERRIDE}}
+helpmod_manual_override_summary	{{MEMORY_BANKS:MEMORY BANKS}}, SAVED PHRASES, AND DIRECT TEXT OUTPUT.
+helpmod_manual_override_intro_title	{{MANUAL_OVERRIDE:MANUAL OVERRIDE}}
+helpmod_manual_override_intro_body	{{MANUAL_OVERRIDE:Manual Override}} provides direct text communication when watch input is unavailable or inconvenient. It's reached from TERMINAL now that TYPE is the statement composer.
+helpmod_manual_override_open_manual_title	OPEN MANUAL INPUT
+helpmod_manual_override_open_manual_body	Type /m at the TERMINAL prompt and send it.

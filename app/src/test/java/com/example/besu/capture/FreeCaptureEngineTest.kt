@@ -23,6 +23,7 @@ class FreeCaptureEngineTest {
     private val thr = -45.0
     private val sid = "s20261002-181500-b4a0"
     private val stopped = mutableListOf<String>()
+    private val notices = mutableListOf<CaptureNotice>()
     private val free = AtomicLong(Long.MAX_VALUE)
     private var levels = 0
     private var speechHops = 0
@@ -32,7 +33,7 @@ class FreeCaptureEngineTest {
         dir = Files.createTempDirectory("ack-free-test").toFile()
         store = TrainingStore(File(dir, "training_capture"))
         store.createSession(StoredSession(id = sid, mode = "free", started = "2026-10-02T18:15:00Z", sampleRate = rate, source = "UNPROCESSED", sourceRequested = "UNPROCESSED", thresholdDbfs = thr, topic = "my day"))
-        stopped.clear(); free.set(Long.MAX_VALUE); levels = 0; speechHops = 0
+        stopped.clear(); notices.clear(); free.set(Long.MAX_VALUE); levels = 0; speechHops = 0
     }
 
     @After
@@ -40,7 +41,7 @@ class FreeCaptureEngineTest {
 
     private val listener = object : FreeCaptureListener {
         override fun onLevel(db: Double, isSpeech: Boolean) { levels++; if (isSpeech) speechHops++ }
-        override fun onStoppedByItself(reason: PauseReason, message: String) { stopped.add(reason.toString()) }
+        override fun onStoppedByItself(reason: PauseReason, notice: CaptureNotice) { stopped.add(reason.toString()); notices.add(notice) }
     }
 
     private fun engine(maxSeconds: Int = CaptureConstants.MAX_FREE_SESSION_S) =
@@ -121,6 +122,7 @@ class FreeCaptureEngineTest {
         e.start()
         feedAll(e, Vectors.square(listOf(Triple(8.0, 8000, 24)), rate), 4800)
         assertEquals(listOf("REQUESTED"), stopped)
+        assertEquals("the notice carries the engine's own limit in minutes", listOf<CaptureNotice>(CaptureNotice.LongestRecording(0)), notices)
         assertTrue(e.isStopped)
         val notes = store.getSession(sid)!!
         assertTrue(notes.closed)
@@ -138,6 +140,7 @@ class FreeCaptureEngineTest {
         free.set(10L * 1024 * 1024)
         feedAll(e, Vectors.square(listOf(Triple(10.0, 8000, 24)), rate), 4800)
         assertEquals(listOf("DISK_FULL"), stopped)
+        assertEquals(listOf<CaptureNotice>(CaptureNotice.OutOfRoomRecordingSaved(DiskRoom(10, 0))), notices)
         val rec = store.getSession(sid)!!.recording!!
         assertEquals(ClipState.DONE, rec.state)
         assertTrue("it kept the three seconds and some of what came after, not nothing", rec.durationS in 3.0..8.0)

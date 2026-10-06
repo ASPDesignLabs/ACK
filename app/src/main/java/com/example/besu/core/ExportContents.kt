@@ -4,8 +4,9 @@ package com.example.besu.core
 /**
  * What EXPORT .JSON (and the Terminal's /backup) tells the person the file contains, and that it is not protected.
  *
- * One source for the wording, so the settings dialog and the Terminal can never say different things. Plain Kotlin (no
- * `android.*`) so it is tested without a phone. The screens only display what is here.
+ * One source for what is said, so the settings dialog and the Terminal can never say different things. Plain Kotlin (no
+ * `android.*`) so it is tested without a phone. The words are string resources (`export_*` in strings.xml, so they are in the chosen language);
+ * this holds which of them are said and in what order, and a [TextSource] supplies them. The screens only display what is here.
  *
  * Every field of `AckBackup` must be named in exactly one category (or in [formatFields]). A test reads
  * `backup/AckBackup.kt` and fails if a field is missing, so whoever adds a backed-up field has to decide how this warning
@@ -16,82 +17,99 @@ package com.example.besu.core
  */
 object ExportContents {
 
-    class Category(val label: String, val fields: Set<String>)
+    /** [key] names the line's string resource (`export_cat_<key>`); [fields] are the AckBackup fields it describes. */
+    class Category(val key: String, val fields: Set<String>) {
+        val resource: String get() = "export_cat_$key"
+    }
 
     val categories: List<Category> = listOf(
         Category(
-            "EMERGENCY INFO CARD",
+            "emergency_card",
             setOf("emergencyInfoCard"),
         ),
         Category(
-            "PEOPLE AND PLACES, WITH PHONE NUMBERS AND ADDRESSES",
+            "people_places",
             setOf("computerCategories", "targets"),
         ),
         Category(
-            "SAVED LOCATIONS (MAP COORDINATES)",
+            "saved_locations",
             setOf("geoZones"),
         ),
         Category(
-            "YOUR VOICE RECORDINGS (THE AUDIO ITSELF)",
+            "voice_recordings",
             setOf("voiceRecordings"),
         ),
         Category(
-            "MESSAGES, STATEMENTS AND DECKS",
+            "messages",
             setOf(
                 "matrixData", "quickPhrases", "quickActionsDecks", "emergencyDecks", "savedStatementTree",
                 "headerShortcuts", "rootOverrides", "customContextEntries", "decks", "trainingScripts", "syntaxRules",
             ),
         ),
         Category(
-            "SETTINGS AND HISTORY",
+            "learned_words",
+            setOf("learnedWords"),
+        ),
+        Category(
+            "settings",
             setOf(
                 "dsp", "voiceRecordingGainPercent", "autocompleteHistory", "geoEngineMode", "geoMasterToggle",
                 "visualPresets", "activeVisualPresetId", "forceDeviceRotation", "outputRouteMode",
                 "outputRouteBtAddress", "outputRouteBtLabel", "terminalRetentionDays", "terminalHideSystemMessages",
                 "terminalHidePathTrace", "terminalMonospaceEnabled", "terminalStatusboxColorIndex", "shakeThreshold",
                 "rootOverrideCollapsed", "activeDeckId", "activeDeckColorIndex", "activeProfile", "activeCategoryFocus",
+                "warnBeforeProfileChange", "speechLanguage", "interfaceLanguage", "plainWords",
             ),
         ),
     )
 
-    /** Fields that describe the file itself (its format number and when it was made), not anything the person stored. */
-    val formatFields: Set<String> = setOf("version", "timestamp")
+    /**
+     * Fields that describe the file itself (its format number, when it was made, and whether its phone was given the starter
+     * phrases), not anything the person stored.
+     */
+    val formatFields: Set<String> = setOf("version", "timestamp", "starterPhrasesSeeded")
 
     /** Every field name the warning accounts for. */
     val mappedFields: Set<String> get() = categories.flatMapTo(HashSet(formatFields)) { it.fields }
 
-    const val CONTAINS_HEADING = "THIS FILE CAN CONTAIN:"
+    // Resource names, not words: the text is in strings.xml, in every language.
+    const val CONTAINS_HEADING = "export_contains_heading"
+    const val NOT_PROTECTED = "export_not_protected"
+    const val WHERE_TO_SAVE = "export_where_to_save"
+    const val TERMINAL_QUESTION = "export_terminal_question"
+    const val TERMINAL_CONFIRM = "export_terminal_confirm"
+    const val EXPORTED = "backup_exported"
+    const val FAILED = "backup_failed"
 
-    const val NOT_PROTECTED =
-        "IT IS NOT ENCRYPTED AND HAS NO PASSWORD. ANYONE WHO OPENS IT CAN READ ALL OF IT."
+    /** What the toast and the Terminal say after a good export. */
+    fun exportedText(text: TextSource): String = text.get(EXPORTED)
 
-    const val WHERE_TO_SAVE =
-        "SAVE IT WHERE YOU CONTROL WHO CAN SEE IT: THIS PHONE'S OWN STORAGE, OR YOUR OWN COMPUTER BY CABLE. " +
-            "AVOID GOOGLE DRIVE, ONEDRIVE AND OTHER ONLINE FOLDERS. THEIR APP WOULD UPLOAD IT."
-
-    const val TERMINAL_QUESTION = "EXPORT ACK BACKUP?"
-    const val TERMINAL_CONFIRM = "TYPE /backup CONFIRM TO PROCEED."
+    /**
+     * What they say after a failed one: that it failed, why in words, and that nothing was saved. [reason] is the NAME of a reason string
+     * (`backup_fail_*`, chosen by BackupExporter), never any of the person's own data.
+     */
+    fun failedText(text: TextSource, reason: String): String = text.get(FAILED, text.get(reason))
 
     /** The settings dialog's body as plain text: what the screen shows, line for line. */
-    fun dialogText(): String = buildString {
-        appendLine(CONTAINS_HEADING)
-        categories.forEach { appendLine("- ${it.label}") }
+    fun dialogText(text: TextSource): String = buildString {
+        appendLine(text.get(CONTAINS_HEADING))
+        categories.forEach { appendLine("- ${text.get(it.resource)}") }
         appendLine()
-        appendLine(NOT_PROTECTED)
+        appendLine(text.get(NOT_PROTECTED))
         appendLine()
-        append(WHERE_TO_SAVE)
+        append(text.get(WHERE_TO_SAVE))
     }
 
     /**
      * The Terminal's reply to a bare /backup: the same facts, then the line that still has to be typed. Each line is its
      * own row in the Terminal's response block, so the lines stay short.
      */
-    fun terminalText(): String = buildString {
-        appendLine(TERMINAL_QUESTION)
-        appendLine(CONTAINS_HEADING)
-        categories.forEach { appendLine("- ${it.label}") }
-        appendLine(NOT_PROTECTED)
-        appendLine(WHERE_TO_SAVE)
-        append(TERMINAL_CONFIRM)
+    fun terminalText(text: TextSource): String = buildString {
+        appendLine(text.get(TERMINAL_QUESTION))
+        appendLine(text.get(CONTAINS_HEADING))
+        categories.forEach { appendLine("- ${text.get(it.resource)}") }
+        appendLine(text.get(NOT_PROTECTED))
+        appendLine(text.get(WHERE_TO_SAVE))
+        append(text.get(TERMINAL_CONFIRM))
     }
 }

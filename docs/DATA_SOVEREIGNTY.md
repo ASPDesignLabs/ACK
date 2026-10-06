@@ -98,6 +98,9 @@ What was verified, and what was not, when this was written (2026-10-01):
   profile with sync off, or a browser without an account, for this page. If the phone is shared, clear the site's data in the
   browser's settings when you finish. The phone's keyboard, voice typing and any screen-recording or backup apps are outside
   this project's control.
+* **Speech on the phone (the ACK app).** ACK speaks through Android's own text-to-speech engine, a separate app. ACK itself has no network permission, and
+  its voice list shows only voices the engine reports as installed and not needing the internet. What the engine does with the text is outside this
+  project's control; see `docs/PERMISSIONS.md`.
 * **The start-up message prints the access link.** Don't share a screenshot of the terminal. The token only works on your own
   network, but it opens your recordings.
 * **Your network.** `--host 0.0.0.0` lets other devices on your network reach the server. Keep the access token on (the
@@ -132,7 +135,7 @@ apply. Ask your organization's privacy officer. Some things to settle with the p
    * the checkpoints (`~/piper/checkpoints/`, `lightning_logs/`) and the exported `.onnx`/`.onnx.json`. **A checkpoint contains
      what the model learned about the voice, and it cannot be "un-trained", so delete them if consent is withdrawn.**
    * copies on phones, USB drives and other computers, and the voice imported into the ACK app
-   * **on the phone, in ACK:** PROTOCOL → DATA PORT → **DELETE DATA** (twelve areas: messages and decks, the Emergency info card, people and
+   * **on the phone, in ACK:** PROTOCOL → DATA PORT → **DELETE DATA** (twelve areas: messages and decks (with the words learned for word suggestions), the Emergency info card, people and
      places, saved locations, the Terminal log, message recordings, training data, the trained voice, the GIF library, safety copies,
      temporary files, and settings, plus DELETE EVERYTHING). Each asks twice and says how to save the data first. Also **DELETE CUSTOM VOICE**
      (AUDIO ARCHITECT), **MANAGE RECORDINGS** for single voice recordings, and deleting a **training session** (it asks twice).

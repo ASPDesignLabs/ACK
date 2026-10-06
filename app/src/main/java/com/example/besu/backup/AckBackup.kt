@@ -3,6 +3,7 @@ package com.example.besu.backup
 
 import com.example.besu.capture.TrainingScript
 import com.example.besu.computer.*
+import com.example.besu.core.WordModelData
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.geo.GeoZone
@@ -131,7 +132,35 @@ data class AckBackup(
     // made before this feature existed -- applyBackupToStorage restores each
     // script by id (overwriting a script with the same id, leaving every
     // other script on the device alone), so an empty list changes nothing.
-    val trainingScripts: List<TrainingScript> = emptyList()
+    val trainingScripts: List<TrainingScript> = emptyList(),
+
+    // Whether the phone this backup came from was given ACK's neutral starter phrases (data/StarterSeed.kt): null on a backup made
+    // before that existed, false on a phone that was not given them, true on one that was. A backup never records a phrase left at
+    // the built-in text, so a restore onto a phone that HAS the starters uses this to take back only the starters the person never
+    // edited (core/StarterRestore.kt); with true, the file's own phrases already say what that phone showed. It describes the
+    // file, not anything stored: restore never applies it, and the backup fingerprint ignores it.
+    val starterPhrasesSeeded: Boolean? = null,
+
+    // WARN BEFORE PROFILE CHANGES (data/AssistPrefs.kt): null on a backup made before it existed, or by a phone where nothing was ever
+    // stored ("nothing to say about this field": restore leaves the device's own choice alone).
+    val warnBeforeProfileChange: Boolean? = null,
+
+    // The words behind WORD SUGGESTIONS (data/LearnedWordsRepository.kt): null on a backup made before it existed, or by a phone that learned
+    // nothing. These are words the person typed, so EXPORT .JSON names them in its warning (core/ExportContents.kt). Restore only ADDS: it never
+    // lowers a count or removes a word. The on/off switch is a choice about each phone and is deliberately not here.
+    val learnedWords: WordModelData? = null,
+
+    // SPEECH LANGUAGE (data/AssistPrefs.kt): "DEVICE" or "ENGLISH_US"; null on a backup made before it existed, or by a phone that never stored one
+    // ("nothing to say about this field": restore leaves the device's own choice alone).
+    val speechLanguage: String? = null,
+
+    // INTERFACE LANGUAGE (data/AssistPrefs.kt): one of InterfaceLanguage's stored names ("DEVICE", "ENGLISH", "ES", "PT", "HI", "AR", "AF"); null on a backup
+    // made before it existed, or by a phone that never stored one ("nothing to say about this field": restore leaves the device's own choice alone).
+    val interfaceLanguage: String? = null,
+
+    // PLAIN WORDS (data/AssistPrefs.kt): null on a backup made before it existed, or by a phone where nothing was ever stored ("nothing to say about
+    // this field": restore leaves the device's own choice alone).
+    val plainWords: Boolean? = null
 )
 
 @Serializable

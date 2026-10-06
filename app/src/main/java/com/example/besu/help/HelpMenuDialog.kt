@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.help
 
+import com.example.besu.R
+import com.example.besu.core.HelpMenuText
+import com.example.besu.ui.looseSpacing
 import com.example.besu.data.*
+import com.example.besu.ui.helpText
+import com.example.besu.ui.helpWords
+import com.example.besu.ui.rememberText
 import com.example.besu.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,6 +66,8 @@ fun HelpMenuDialog(
             initialCategory ?: defaultHelpCategory(context)
         )
     }
+
+    val text = rememberText()
 
     val visibleModules: List<HelpModule> = modules.filter { module ->
         module.category == selectedCategory
@@ -90,10 +99,10 @@ fun HelpMenuDialog(
             ) {
                 Column {
                     HelpHeader(
-                        title = "ACK // HELP SYSTEM",
-                        subtitle = "TRAINING MODULES AND REFERENCE PROTOCOLS",
+                        title = stringResource(R.string.help_menu_title),
+                        subtitle = stringResource(R.string.help_menu_subtitle),
                         primaryColor = primaryColor,
-                        rightLabel = "[CLOSE]",
+                        rightLabel = stringResource(R.string.help_close),
                         onRightClick = onDismiss
                     )
 
@@ -104,11 +113,11 @@ fun HelpMenuDialog(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "SELECT MODULE FAMILY",
+                        text = stringResource(R.string.help_menu_select_family),
                         color = Color.Gray,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,
-                        letterSpacing = 1.sp,
+                        letterSpacing = looseSpacing(1.sp),
                         modifier = Modifier.padding(horizontal = 14.dp)
                     )
 
@@ -142,18 +151,18 @@ fun HelpMenuDialog(
                             .padding(horizontal = 14.dp, vertical = 10.dp)
                     ) {
                         Text(
-                            text = selectedCategory.title,
+                            text = helpText(HelpMenuText.categoryTitle(text, selectedCategory.name)),
                             color = primaryColor,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
+                            letterSpacing = looseSpacing(1.sp)
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = selectedCategory.subtitle,
+                            text = helpText(HelpMenuText.categorySubtitle(text, selectedCategory.name)),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -214,7 +223,7 @@ private fun HelpHeader(
                 fontSize = 15.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 1.5.sp
+                letterSpacing = looseSpacing(1.5.sp)
             )
 
             Spacer(modifier = Modifier.height(5.dp))
@@ -224,7 +233,7 @@ private fun HelpHeader(
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 0.8.sp
+                letterSpacing = looseSpacing(0.8.sp)
             )
         }
 
@@ -248,6 +257,7 @@ private fun HelpCategoryChip(
     primaryColor: Color,
     onClick: () -> Unit
 ) {
+    val text = rememberText()
     val borderColor = if (isSelected) Color.White else primaryColor.copy(
         alpha = 0.5f
     )
@@ -273,12 +283,12 @@ private fun HelpCategoryChip(
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
         Text(
-            text = category.title.substringAfter("// ").trim(),
+            text = helpText(HelpMenuText.categoryChip(text, category.name)),
             color = textColor,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp
+            letterSpacing = looseSpacing(0.5.sp)
         )
     }
 }
@@ -289,6 +299,8 @@ private fun HelpModuleMenuItem(
     primaryColor: Color,
     onClick: () -> Unit
 ) {
+    val text = rememberText()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -309,19 +321,19 @@ private fun HelpModuleMenuItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = module.title,
+                text = helpWords(module.title),
                 color = primaryColor,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp,
+                letterSpacing = looseSpacing(0.8.sp),
                 modifier = Modifier.weight(1f)
             )
 
             Spacer(modifier = Modifier.width(8.dp))
 
             Text(
-                text = "[RUN]",
+                text = stringResource(R.string.help_menu_run),
                 color = Color.White,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -332,7 +344,7 @@ private fun HelpModuleMenuItem(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = module.summary,
+            text = helpWords(module.summary),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace
@@ -341,8 +353,7 @@ private fun HelpModuleMenuItem(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "${module.steps.size} STEPS // " +
-                (module.destination?.viewMode ?: "CURRENT VIEW"),
+            text = HelpMenuText.stepsLine(text, module.steps.size, module.destination?.viewMode),
             color = primaryColor.copy(alpha = 0.7f),
             fontSize = 8.sp,
             fontFamily = FontFamily.Monospace
@@ -363,7 +374,7 @@ private fun HelpEmptyState(primaryColor: Color) {
             .padding(14.dp)
     ) {
         Text(
-            text = "NO MODULES DEPLOYED",
+            text = stringResource(R.string.help_menu_empty_title),
             color = primaryColor.copy(alpha = 0.65f),
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
@@ -373,7 +384,7 @@ private fun HelpEmptyState(primaryColor: Color) {
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "THIS KNOWLEDGE FAMILY HAS NO ACTIVE HELP PROTOCOLS.",
+            text = stringResource(R.string.help_menu_empty_body),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace

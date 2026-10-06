@@ -171,10 +171,7 @@ class VerifiedFileReplaceTest {
     @Test
     fun theHelperNeverOpensOrDeletesTheTargetItselfAndMovesInOneStep() {
         // Running it cannot show a delete-then-move (a crash between the two would lose the file), so read the source.
-        val body = RepoFiles.functionBody(
-            RepoFiles.read("app/src/main/java/com/example/besu/core/VerifiedFileReplace.kt"),
-            "fun replaceIfValid(",
-        )
+        val body = RepoFiles.declarationOf(RepoFiles.read("app/src/main/java/com/example/besu/core/VerifiedFileReplace.kt"), "replaceIfValid")
         for (forbidden in listOf("target.delete", "target.outputStream", "target.writeBytes", "target.writeText", "target.appendBytes", "target.renameTo")) {
             assertFalse("replaceIfValid must not use \"$forbidden\"", body.contains(forbidden))
         }

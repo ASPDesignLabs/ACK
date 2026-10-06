@@ -4,7 +4,7 @@ package com.example.besu.capture
 import kotlin.math.max
 import kotlin.math.sqrt
 
-/** What the quiet check found, in words for the person. */
+/** What the quiet check found. The words for it are in core/CaptureText.noiseVerdict, in the chosen language. */
 enum class NoiseVerdict { GOOD, LOUD_ROOM, NO_SIGNAL, INTERRUPTED }
 
 // The two-second check taken before the first card: the person stays quiet, and the room's level sets what counts as speech (format
@@ -59,16 +59,6 @@ class NoiseCheck(private val sampleRate: Int) {
             hopLevels.isNotEmpty() && hopLevels.max() - hopLevels.sorted()[hopLevels.size / 2] > INTERRUPTION_DB -> NoiseVerdict.INTERRUPTED
             floor > LOUD_ROOM_DB -> NoiseVerdict.LOUD_ROOM
             else -> NoiseVerdict.GOOD
-        }
-    }
-
-    fun describe(): String {
-        val floor = floorDbfs()
-        return when (verdict()) {
-            NoiseVerdict.GOOD -> "ROOM LEVEL ${floor} dB: GOOD."
-            NoiseVerdict.LOUD_ROOM -> "ROOM LEVEL ${floor} dB: LOUD. QUIET WORDS MAY BE MISSED. A QUIETER SPOT WILL GIVE BETTER TRAINING DATA."
-            NoiseVerdict.NO_SIGNAL -> "NOTHING WAS HEARD. IS THE MICROPHONE COVERED OR MUTED?"
-            NoiseVerdict.INTERRUPTED -> "A SOUND INTERRUPTED THE QUIET CHECK. STAY QUIET AND TRY AGAIN."
         }
     }
 }

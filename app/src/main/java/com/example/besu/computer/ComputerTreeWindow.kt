@@ -2,6 +2,8 @@
 package com.example.besu.computer
 
 import com.example.besu.*
+import com.example.besu.R
+import com.example.besu.core.LabelKey
 import com.example.besu.geo.*
 import com.example.besu.help.*
 import com.example.besu.ui.*
@@ -25,6 +27,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -106,11 +110,15 @@ fun ComputerTreeWindow(
 
     val addTargetNode = addTargetNodeId?.let { ComputerRepository.findNode(category, it) } ?: category.root
 
+    // The category's name as shown (a default name in the chosen language); its root node is that same name. Nothing saved changes.
+    val categoryShown = categoryName(category)
+    val addTargetShown = if (addTargetNode.id == category.root.id) categoryShown else addTargetNode.label
+
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = category.label,
-        dismissLabel = "DONE"
+        title = categoryShown,
+        dismissLabel = stringResource(R.string.common_done)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -124,7 +132,7 @@ fun ComputerTreeWindow(
             ) {
                 listOf("TREE", "DROPDOWN").forEach { mode ->
                     Text(
-                        text = mode,
+                        text = displayModeLabel(mode),
                         color = if (displayMode == mode) primaryColor else Color.Gray,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -138,7 +146,7 @@ fun ComputerTreeWindow(
             }
 
             Text(
-                text = "[GUIDE ME]",
+                text = stringResource(R.string.people_guide_me),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -151,7 +159,7 @@ fun ComputerTreeWindow(
 
         if (category.root.children.isEmpty()) {
             Text(
-                text = "NOTHING HERE YET.",
+                text = stringResource(R.string.people_nothing_here),
                 color = Color.DarkGray,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
@@ -165,7 +173,7 @@ fun ComputerTreeWindow(
                     .padding(vertical = 4.dp)
             ) {
                 Text(
-                    text = category.label.uppercase(),
+                    text = categoryShown.uppercase(),
                     color = if (addTargetNodeId == null) primaryColor else Color.Gray,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
@@ -216,7 +224,7 @@ fun ComputerTreeWindow(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "ADD TO: ${addTargetNode.label.uppercase()}",
+            text = stringResource(R.string.people_add_to, addTargetShown.uppercase()),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace
@@ -225,10 +233,10 @@ fun ComputerTreeWindow(
         Spacer(modifier = Modifier.height(6.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TightPanelButton("+ CATEGORY", Modifier.weight(1f), mainColor = primaryColor) {
+            TightPanelButton(stringResource(R.string.people_add_category_button), Modifier.weight(1f), mainColor = primaryColor) {
                 addDialogType = ComputerNodeType.CATEGORY
             }
-            TightPanelButton("+ ENTRY", Modifier.weight(1f), mainColor = primaryColor) {
+            TightPanelButton(stringResource(R.string.people_add_entry_button), Modifier.weight(1f), mainColor = primaryColor) {
                 addDialogType = ComputerNodeType.ENTRY
             }
         }
@@ -238,7 +246,7 @@ fun ComputerTreeWindow(
     if (addType != null) {
         AddTreeNodeDialog(
             primaryColor = primaryColor,
-            parentLabel = addTargetNode.label,
+            parentLabel = addTargetShown,
             kind = addType,
             onDismiss = { addDialogType = null },
             onCreate = { label ->
@@ -388,7 +396,7 @@ internal fun ComputerTreeVisualRow(
 
         if (hasCard) {
             Text(
-                text = "[CARD]",
+                text = stringResource(R.string.people_card_badge),
                 color = primaryColor,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -402,7 +410,7 @@ internal fun ComputerTreeVisualRow(
 
         if (isActive) {
             Text(
-                text = "ACTIVE",
+                text = stringResource(R.string.people_active),
                 color = primaryColor,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -433,7 +441,7 @@ internal fun ComputerDropdownPath(
             val selected = pathNodes.getOrNull(level)
 
             ComputerDropdownLevel(
-                label = "LEVEL ${level + 1}",
+                label = stringResource(R.string.people_level, level + 1),
                 options = parent.children,
                 selected = selected,
                 primaryColor = primaryColor,
@@ -480,7 +488,7 @@ internal fun ComputerDropdownLevel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = selected?.label?.uppercase() ?: "SELECT...",
+                    text = selected?.label?.uppercase() ?: stringResource(R.string.people_select),
                     color = if (selected != null) primaryColor else Color.DarkGray,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
@@ -530,13 +538,13 @@ private fun AddTreeNodeDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = if (kind == ComputerNodeType.CATEGORY) "ADD CATEGORY" else "ADD ENTRY",
-        subtitle = "UNDER: ${parentLabel.uppercase()}"
+        title = if (kind == ComputerNodeType.CATEGORY) labelFor(LabelKey.TARGET_ADD_CATEGORY) else stringResource(R.string.people_add_entry_title),
+        subtitle = stringResource(R.string.people_under, parentLabel.uppercase())
     ) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            placeholder = { Text(if (kind == ComputerNodeType.CATEGORY) "E.G. FRIENDS" else "E.G. MOM") },
+            placeholder = { Text(stringResource(if (kind == ComputerNodeType.CATEGORY) R.string.people_example_subcategory else R.string.people_example_entry)) },
             singleLine = true,
             colors = TextFieldDefaults.colors(
                 focusedTextColor = primaryColor,
@@ -550,10 +558,10 @@ private fun AddTreeNodeDialog(
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TightPanelButton("CREATE", Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
+            TightPanelButton(stringResource(R.string.common_create), Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
                 if (isValid) onCreate(name.trim())
             }
-            TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor, onClick = onDismiss)
+            TightPanelButton(stringResource(R.string.common_cancel), Modifier.weight(1f), isActive = false, mainColor = primaryColor, onClick = onDismiss)
         }
     }
 }
@@ -577,7 +585,7 @@ private fun EditTreeNodeDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = if (node.type == ComputerNodeType.CATEGORY) "EDIT CATEGORY" else "EDIT ENTRY"
+        title = stringResource(if (node.type == ComputerNodeType.CATEGORY) R.string.people_edit_category else R.string.people_edit_entry)
     ) {
         OutlinedTextField(
             value = name,
@@ -596,7 +604,7 @@ private fun EditTreeNodeDialog(
         // offers this.
         if (isEntry) {
             Spacer(modifier = Modifier.height(16.dp))
-            TightSectionLabel("CONTACT CARD")
+            TightSectionLabel(stringResource(R.string.people_contact_card))
             Spacer(modifier = Modifier.height(6.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -604,7 +612,7 @@ private fun EditTreeNodeDialog(
                 // to NONE -- an entry is a person's card or a place's card,
                 // never both at once.
                 ContactCardTypeCheckbox(
-                    label = "PERSON",
+                    label = stringResource(R.string.people_person),
                     checked = cardType == ContactCardType.PERSON,
                     enabled = cardType != ContactCardType.PLACE,
                     color = primaryColor
@@ -612,7 +620,7 @@ private fun EditTreeNodeDialog(
                     cardType = if (cardType == ContactCardType.PERSON) ContactCardType.NONE else ContactCardType.PERSON
                 }
                 ContactCardTypeCheckbox(
-                    label = "PLACE",
+                    label = stringResource(R.string.people_place),
                     checked = cardType == ContactCardType.PLACE,
                     enabled = cardType != ContactCardType.PERSON,
                     color = primaryColor
@@ -623,7 +631,7 @@ private fun EditTreeNodeDialog(
 
             if (hasExistingCard) {
                 Spacer(modifier = Modifier.height(10.dp))
-                TightPanelButton("OPEN CONTACT CARD", Modifier.fillMaxWidth(), mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.people_open_contact_card), Modifier.fillMaxWidth(), mainColor = primaryColor) {
                     onOpenContactCard()
                 }
             }
@@ -633,19 +641,19 @@ private fun EditTreeNodeDialog(
 
         if (!confirmingDelete) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("SAVE", Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_save), Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
                     if (isValid) onSave(name.trim(), cardType)
                 }
-                TightPanelButton("DELETE", Modifier.weight(1f), mainColor = DangerRed, onClick = { confirmingDelete = true })
+                TightPanelButton(stringResource(R.string.common_delete), Modifier.weight(1f), mainColor = DangerRed, onClick = { confirmingDelete = true })
             }
         } else {
             val descendantCount = countDescendants(node)
 
             Text(
                 text = if (descendantCount > 0) {
-                    "This also removes $descendantCount item(s) nested inside it. This cannot be undone."
+                    rememberText().count("people_delete_nested", descendantCount)
                 } else {
-                    "This cannot be undone."
+                    stringResource(R.string.people_cannot_undo)
                 },
                 color = Color.Gray,
                 fontSize = 10.sp,
@@ -655,8 +663,8 @@ private fun EditTreeNodeDialog(
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("CONFIRM DELETE", Modifier.weight(1f), mainColor = DangerRed, onClick = onDelete)
-                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_confirm_delete), Modifier.weight(1f), mainColor = DangerRed, onClick = onDelete)
+                TightPanelButton(stringResource(R.string.common_cancel), Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
                     confirmingDelete = false
                 }
             }
@@ -709,7 +717,7 @@ internal fun ContactCardTypeCheckbox(
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
     }
 }

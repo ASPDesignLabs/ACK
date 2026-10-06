@@ -4,6 +4,8 @@ package com.example.besu.training
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import android.content.Context
+import com.example.besu.core.TrainingOutcome
+import com.example.besu.core.TrainingStatement
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -26,12 +28,15 @@ private val TRAINABLE_POSES = listOf(
 
 // One rolled prompt: which physical pose+twist the watch must report, and the
 // actual statement that combo currently resolves to for the deck/profile this
-// round is training against (root-variable substitution included).
+// round is training against (root-variable substitution included). poseLabel is
+// the stored pose name (IDENTITY/DEFEND/CONNECT), not a drawn word; the panel
+// shows it through the label table. The statement is a decision (a phrase, or
+// why there is none); the words for the "none" cases are made when it is drawn.
 data class DeckTrainerTarget(
     val poseCode: String,
     val poseLabel: String,
     val twist: Int,
-    val statement: String
+    val statement: TrainingStatement
 )
 
 @Serializable
@@ -95,10 +100,10 @@ class DeckTrainerController(private val context: Context) {
     var timeRemainingSeconds by mutableIntStateOf(0)
         private set
 
-    var target by mutableStateOf(DeckTrainerTarget("ID", "IDENTITY", 0, ""))
+    var target by mutableStateOf(DeckTrainerTarget("ID", "IDENTITY", 0, TrainingStatement.Blank))
         private set
 
-    var lastOutcome by mutableStateOf<String?>(null)
+    var lastOutcome by mutableStateOf<TrainingOutcome?>(null)
         private set
 
     var history by mutableStateOf(DeckTrainerHistory.load(context))
@@ -156,13 +161,13 @@ class DeckTrainerController(private val context: Context) {
         lastOutcome = when {
             correct -> {
                 score += difficulty.rewardPoints
-                "+${difficulty.rewardPoints}"
+                TrainingOutcome.hit(difficulty.rewardPoints)
             }
             difficulty.hasPenalty -> {
                 score -= difficulty.penaltyPoints
-                "-${difficulty.penaltyPoints}"
+                TrainingOutcome.penalty(difficulty.penaltyPoints)
             }
-            else -> "MISS"
+            else -> TrainingOutcome.MISS
         }
 
         rollTarget()
@@ -192,32 +197,36 @@ class DeckTrainerController(private val context: Context) {
         activeProfile: String,
         category: String,
         twist: Int
-    ): String {
+    ): TrainingStatement {
         return when (deckMeta.type) {
             DeckType.QUICK_ACTIONS -> {
                 val config = CommandRepository.getQuickActionsConfig(context, deckMeta.id)
                 val group = config.groups.find { it.boundPose == category }
-                    ?: return "(no group bound to $category)"
+                    ?: return TrainingStatement.NoGroup(category)
 
-                CommandRepository.resolveQuickAction(
-                    context,
-                    deckMeta.id,
-                    group.groupIndex,
-                    twist
-                ).ifBlank { "(blank slot)" }
+                TrainingStatement.fromResolved(
+                    CommandRepository.resolveQuickAction(
+                        context,
+                        deckMeta.id,
+                        group.groupIndex,
+                        twist
+                    )
+                )
             }
             else -> {
                 val node = CommandRepository.BASE_TEMPLATE.find { node ->
                     node.category == category &&
                         node.path.substringAfterLast("/").toIntOrNull() == twist
-                } ?: return "(unmapped)"
+                } ?: return TrainingStatement.Unmapped
 
-                CommandRepository.getResolvedPhrase(
-                    context,
-                    node.path,
-                    deckMeta.id,
-                    activeProfile
-                ).ifBlank { "(blank slot)" }
+                TrainingStatement.fromResolved(
+                    CommandRepository.getResolvedPhrase(
+                        context,
+                        node.path,
+                        deckMeta.id,
+                        activeProfile
+                    )
+                )
             }
         }
     }

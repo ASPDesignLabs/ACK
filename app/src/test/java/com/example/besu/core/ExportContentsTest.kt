@@ -8,6 +8,35 @@ import org.junit.Test
 
 class ExportContentsTest {
 
+    // --- what is said after an export ---------------------------------------------------------------------------------
+
+    @Test
+    fun aGoodExportSaysSo() {
+        assertEquals("BACKUP EXPORTED", ExportContents.exportedText(EnglishText))
+    }
+
+    @Test
+    fun aFailedExportSaysWhyInWords_andThatNothingWasSaved() {
+        // The five reasons BackupExporter can give (backup/BackupExporter.kt REASON_*), spelled out here on purpose so a renamed one is noticed.
+        val reasons = mapOf(
+            "backup_fail_open" to "THE FILE COULD NOT BE OPENED",
+            "backup_fail_not_allowed" to "THIS LOCATION DID NOT ALLOW ACK TO SAVE THERE",
+            "backup_fail_write" to "THE FILE COULD NOT BE WRITTEN. THE LOCATION MAY BE FULL OR READ-ONLY",
+            "backup_fail_memory" to "THIS PHONE RAN OUT OF MEMORY PREPARING THE BACKUP",
+            "backup_fail_prepare" to "THE BACKUP COULD NOT BE PREPARED",
+        )
+        for ((name, words) in reasons) {
+            assertEquals("BACKUP FAILED: $words. NOTHING WAS SAVED.", ExportContents.failedText(EnglishText, name))
+        }
+    }
+
+    @Test
+    fun theReasonsBackupExporterGivesAreTheOnesTheWordingKnows() {
+        val exporter = RepoFiles.read("app/src/main/java/com/example/besu/backup/BackupExporter.kt")
+        val named = Regex("""const val REASON_[A-Z_]+ = "(backup_fail_[a-z_]+)"""").findAll(exporter).map { it.groupValues[1] }.toSet()
+        assertEquals(setOf("backup_fail_open", "backup_fail_not_allowed", "backup_fail_write", "backup_fail_memory", "backup_fail_prepare"), named)
+    }
+
     // --- the drift guard -------------------------------------------------------------------------------------------
 
     @Test
@@ -81,26 +110,37 @@ class ExportContentsTest {
                 "SAVED LOCATIONS (MAP COORDINATES)",
                 "YOUR VOICE RECORDINGS (THE AUDIO ITSELF)",
                 "MESSAGES, STATEMENTS AND DECKS",
+                "WORDS LEARNED FROM WHAT YOU SAVED, SPOKE OR COPIED",
                 "SETTINGS AND HISTORY",
             ),
-            ExportContents.categories.map { it.label },
+            ExportContents.categories.map { EnglishText.get(it.resource) },
         )
+    }
+
+    @Test
+    fun theLearnedWordsHaveTheirOwnLine_soThePersonIsToldWhatTheyTypedIsInTheFile() {
+        // Chosen by the developer: the words are in EXPORT .JSON AND named in this warning. Filing them under "SETTINGS AND HISTORY" would not say so.
+        val category = ExportContents.categories.single { "learnedWords" in it.fields }
+        assertEquals(setOf("learnedWords"), category.fields)
+        assertTrue(EnglishText.get(category.resource).contains("WORDS"))
+        assertTrue(ExportContents.dialogText(EnglishText).contains(EnglishText.get(category.resource)))
+        assertTrue(ExportContents.terminalText(EnglishText).contains(EnglishText.get(category.resource)))
     }
 
     @Test
     fun everyCategoryHasALabelAndFields() {
         for (c in ExportContents.categories) {
-            assertTrue("blank label", c.label.isNotBlank())
-            assertTrue("${c.label} has no fields", c.fields.isNotEmpty())
+            assertTrue("blank label", EnglishText.get(c.resource).isNotBlank())
+            assertTrue("${c.key} has no fields", c.fields.isNotEmpty())
         }
-        val labels = ExportContents.categories.map { it.label }
+        val labels = ExportContents.categories.map { EnglishText.get(it.resource) }
         assertEquals("labels must be unique", labels.size, labels.toSet().size)
     }
 
     @Test
     fun theDialogTextNamesEveryCategoryAndSaysItIsNotEncrypted() {
-        val text = ExportContents.dialogText()
-        for (c in ExportContents.categories) assertTrue("missing ${c.label}", c.label in text)
+        val text = ExportContents.dialogText(EnglishText)
+        for (c in ExportContents.categories) assertTrue("missing ${c.key}", EnglishText.get(c.resource) in text)
         assertTrue(text.contains("NOT ENCRYPTED"))
         assertTrue(text.contains("NO PASSWORD"))
         assertTrue(text.contains("GOOGLE DRIVE, ONEDRIVE"))
@@ -108,8 +148,8 @@ class ExportContentsTest {
 
     @Test
     fun theTerminalTextHasTheSameFactsAndTheConfirmLineLast() {
-        val text = ExportContents.terminalText()
-        for (c in ExportContents.categories) assertTrue("missing ${c.label}", c.label in text)
+        val text = ExportContents.terminalText(EnglishText)
+        for (c in ExportContents.categories) assertTrue("missing ${c.key}", EnglishText.get(c.resource) in text)
         assertTrue(text.contains("NOT ENCRYPTED"))
         assertTrue(text.contains("ONLINE FOLDERS"))
         assertTrue("the confirm line must still be the last line", text.lines().last() == "TYPE /backup CONFIRM TO PROCEED.")
@@ -119,13 +159,13 @@ class ExportContentsTest {
     @Test
     fun theWordingIsCapitalsLikeTheRestOfTheApp() {
         // The confirm line keeps the lower-case command name the person must type.
-        val shown = ExportContents.dialogText() + "\n" + ExportContents.terminalText().replace("/backup", "/BACKUP")
+        val shown = ExportContents.dialogText(EnglishText) + "\n" + ExportContents.terminalText(EnglishText).replace("/backup", "/BACKUP")
         assertEquals(shown.uppercase(), shown)
     }
 
     @Test
     fun itNeverMentionsAnAppLockOrAPasswordOption() {
-        val text = (ExportContents.dialogText() + ExportContents.terminalText()).uppercase()
+        val text = (ExportContents.dialogText(EnglishText) + ExportContents.terminalText(EnglishText)).uppercase()
         for (banned in listOf("APP LOCK", "SET A PASSWORD", "PASSWORD-PROTECT", "ENCRYPT IT", "PASSCODE")) {
             assertFalse("must not mention: $banned", text.contains(banned))
         }

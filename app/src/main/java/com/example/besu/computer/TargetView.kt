@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.computer
 
+import com.example.besu.core.ComputerLabels
+import com.example.besu.core.LabelKey
 import com.example.besu.*
+import com.example.besu.R
 import com.example.besu.backup.*
 import com.example.besu.help.*
 import com.example.besu.output.*
@@ -26,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -86,11 +90,11 @@ fun TargetView(context: Context, primaryColor: Color) {
 
         // --- HEADER ---
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("TARGET COMPUTER", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text(labelFor(LabelKey.TARGET_COMPUTER), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("CATEGORIES", color = if(subMode=="CATEGORIES") primaryColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { subMode = "CATEGORIES" })
+                Text(stringResource(R.string.people_tab_categories), color = if(subMode=="CATEGORIES") primaryColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { subMode = "CATEGORIES" })
                 Text("|", color = Color.DarkGray)
-                Text("VISUALS", color = if(subMode=="VISUALS") primaryColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { subMode = "VISUALS" })
+                Text(stringResource(R.string.people_tab_visuals), color = if(subMode=="VISUALS") primaryColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { subMode = "VISUALS" })
             }
         }
 
@@ -98,7 +102,7 @@ fun TargetView(context: Context, primaryColor: Color) {
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "[GUIDE ME]",
+                text = stringResource(R.string.people_guide_me),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -274,8 +278,8 @@ fun ComputerSummaryDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "TARGET COMPUTER STATUS",
-        dismissLabel = "CLOSE"
+        title = stringResource(R.string.people_summary_title),
+        dismissLabel = stringResource(R.string.common_close)
     ) {
         val cleared = lastCleared
 
@@ -290,7 +294,7 @@ fun ComputerSummaryDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "CLEARED ${cleared.categoryLabel.uppercase()}: ${cleared.node.label}",
+                    text = stringResource(R.string.people_cleared, cleared.categoryLabel.uppercase(), cleared.node.label),
                     color = Color.White,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -298,7 +302,7 @@ fun ComputerSummaryDialog(
                 )
 
                 Text(
-                    text = "UNDO",
+                    text = stringResource(R.string.common_undo),
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -319,7 +323,7 @@ fun ComputerSummaryDialog(
 
         if (categories.isEmpty()) {
             Text(
-                text = "NO CATEGORIES YET.",
+                text = stringResource(R.string.people_no_categories),
                 color = Color.DarkGray,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -330,6 +334,8 @@ fun ComputerSummaryDialog(
                     val activeNode = category.activeNodeId?.let { ComputerRepository.findNode(category, it) }
                     val isActive = activeNode != null
                     val isConfirming = confirmingClearId == category.id
+                    // The name as shown (a default name in the chosen language); what is saved and tokens built from the id never change.
+                    val shownName = categoryName(category)
 
                     Row(
                         modifier = Modifier
@@ -350,7 +356,7 @@ fun ComputerSummaryDialog(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = category.label.uppercase(),
+                                text = shownName.uppercase(),
                                 color = if (isActive) primaryColor else Color.Gray,
                                 fontSize = 10.sp,
                                 fontFamily = FontFamily.Monospace,
@@ -359,9 +365,9 @@ fun ComputerSummaryDialog(
 
                             Text(
                                 text = if (isConfirming) {
-                                    "CLEAR ${activeNode?.label}?"
+                                    stringResource(R.string.people_clear_question, activeNode?.label.orEmpty())
                                 } else {
-                                    activeNode?.label ?: "NOTHING SELECTED"
+                                    activeNode?.label ?: stringResource(R.string.people_nothing_selected)
                                 },
                                 color = if (isConfirming) DangerRed else if (isActive) Color.White else Color.DarkGray,
                                 fontSize = 11.sp,
@@ -373,7 +379,7 @@ fun ComputerSummaryDialog(
                         if (isConfirming) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
-                                    text = "CANCEL",
+                                    text = stringResource(R.string.common_cancel),
                                     color = Color.Gray,
                                     fontSize = 10.sp,
                                     fontFamily = FontFamily.Monospace,
@@ -392,7 +398,7 @@ fun ComputerSummaryDialog(
                                             val node = activeNode
                                             if (node != null) {
                                                 ComputerRepository.clearActiveEntry(context, category.id)
-                                                lastCleared = ClearedRecord(category.id, category.label, node)
+                                                lastCleared = ClearedRecord(category.id, shownName, node)
                                             }
                                             confirmingClearId = null
                                             refreshKey++
@@ -401,7 +407,7 @@ fun ComputerSummaryDialog(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "CONFIRM",
+                                        text = stringResource(R.string.common_confirm),
                                         color = DangerRed,
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -419,7 +425,7 @@ fun ComputerSummaryDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "CLEAR",
+                                    text = stringResource(R.string.common_clear),
                                     color = DangerRed,
                                     fontSize = 10.sp,
                                     fontFamily = FontFamily.Monospace,
@@ -457,7 +463,7 @@ fun TargetCategoryChip(
             .padding(12.dp)
     ) {
         Text(
-            text = category.label.uppercase(),
+            text = categoryName(category).uppercase(),
             color = Color.Gray,
             fontSize = 8.sp,
             fontFamily = FontFamily.Monospace,
@@ -475,7 +481,7 @@ fun TargetCategoryChip(
             )
         } else {
             Text(
-                text = "EMPTY",
+                text = stringResource(R.string.common_empty),
                 color = Color.DarkGray,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,
@@ -499,7 +505,7 @@ private fun AddCategoryTile(primaryColor: Color, onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "+ ADD\nCATEGORY",
+            text = stringResource(R.string.people_add_category_tile),
             color = primaryColor,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
@@ -538,19 +544,19 @@ private fun ContactCardBrowserPanel(
             .padding(10.dp)
     ) {
         Text(
-            text = "CONTACT CARDS",
+            text = labelFor(LabelKey.CONTACT_CARDS),
             color = primaryColor,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
 
         Spacer(modifier = Modifier.height(6.dp))
 
         LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
             if (names.isNotEmpty()) {
-                item { ContactCardBrowserSectionLabel("NAMES") }
+                item { ContactCardBrowserSectionLabel(stringResource(R.string.people_names)) }
                 items(names, key = { it.node.id }) { listing ->
                     ContactCardBrowserRow(listing.node.label, primaryColor) {
                         onOpen(listing.categoryId, listing.node.id)
@@ -558,7 +564,7 @@ private fun ContactCardBrowserPanel(
                 }
             }
             if (places.isNotEmpty()) {
-                item { ContactCardBrowserSectionLabel("PLACES") }
+                item { ContactCardBrowserSectionLabel(stringResource(R.string.people_places)) }
                 items(places, key = { it.node.id }) { listing ->
                     val displayName = listing.node.contactCard?.name?.ifBlank { listing.node.label } ?: listing.node.label
                     ContactCardBrowserRow(displayName, primaryColor) {
@@ -578,7 +584,7 @@ private fun ContactCardBrowserSectionLabel(text: String) {
         fontSize = 9.sp,
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Bold,
-        letterSpacing = 1.sp,
+        letterSpacing = looseSpacing(1.sp),
         modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
     )
 }
@@ -608,11 +614,11 @@ private fun AddCategoryDialog(
     var name by remember { mutableStateOf("") }
     val isValid = name.trim().isNotEmpty()
 
-    TightDialogSurface(onDismiss = onDismiss, primaryColor = primaryColor, title = "ADD CATEGORY") {
+    TightDialogSurface(onDismiss = onDismiss, primaryColor = primaryColor, title = labelFor(LabelKey.TARGET_ADD_CATEGORY)) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            placeholder = { Text("E.G. FEELINGS") },
+            placeholder = { Text(stringResource(R.string.people_example_category)) },
             singleLine = true,
             colors = TextFieldDefaults.colors(
                 focusedTextColor = primaryColor,
@@ -626,10 +632,10 @@ private fun AddCategoryDialog(
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TightPanelButton("CREATE", Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
+            TightPanelButton(stringResource(R.string.common_create), Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
                 if (isValid) onCreate(name.trim())
             }
-            TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor, onClick = onDismiss)
+            TightPanelButton(stringResource(R.string.common_cancel), Modifier.weight(1f), isActive = false, mainColor = primaryColor, onClick = onDismiss)
         }
     }
 }
@@ -642,13 +648,15 @@ private fun CategoryOptionsDialog(
     onDismiss: () -> Unit,
     onChanged: () -> Unit
 ) {
-    var name by remember(category.id) { mutableStateOf(category.label) }
+    // The field starts with the name as it is shown (a default name in the chosen language). Left untouched, saving keeps what was stored: a saved name is never rewritten.
+    val shownAtStart = categoryName(category)
+    var name by remember(category.id) { mutableStateOf(shownAtStart) }
     var persistUntilCleared by remember(category.id) { mutableStateOf(category.persistUntilCleared) }
     var confirmingDelete by remember { mutableStateOf(false) }
     val isValid = name.trim().isNotEmpty()
 
-    TightDialogSurface(onDismiss = onDismiss, primaryColor = primaryColor, title = "CATEGORY OPTIONS") {
-        TightSectionLabel("NAME")
+    TightDialogSurface(onDismiss = onDismiss, primaryColor = primaryColor, title = labelFor(LabelKey.TARGET_CATEGORY_OPTIONS)) {
+        TightSectionLabel(stringResource(R.string.common_name))
         Spacer(modifier = Modifier.height(6.dp))
         OutlinedTextField(
             value = name,
@@ -664,18 +672,18 @@ private fun CategoryOptionsDialog(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-        TightSectionLabel("WHEN A PICK IS MADE")
+        TightSectionLabel(stringResource(R.string.people_when_pick))
         Spacer(modifier = Modifier.height(6.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TightPanelButton("KEEP IT", Modifier.weight(1f), isActive = persistUntilCleared, mainColor = primaryColor) {
+            TightPanelButton(stringResource(R.string.people_keep_it), Modifier.weight(1f), isActive = persistUntilCleared, mainColor = primaryColor) {
                 persistUntilCleared = true
             }
-            TightPanelButton("CLEAR AFTER USE", Modifier.weight(1f), isActive = !persistUntilCleared, mainColor = primaryColor) {
+            TightPanelButton(stringResource(R.string.people_clear_after_use), Modifier.weight(1f), isActive = !persistUntilCleared, mainColor = primaryColor) {
                 persistUntilCleared = false
             }
         }
         Text(
-            text = if (persistUntilCleared) "Stays active until you clear it." else "Automatically clears the next time it's used.",
+            text = stringResource(if (persistUntilCleared) R.string.people_keep_it_note else R.string.people_clear_after_use_note),
             color = Color.Gray,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
@@ -686,35 +694,35 @@ private fun CategoryOptionsDialog(
 
         if (!confirmingDelete) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("SAVE", Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_save), Modifier.weight(1f), isActive = isValid, mainColor = primaryColor) {
                     if (isValid) {
                         ComputerRepository.saveCategory(
                             context,
-                            category.copy(label = name.trim(), persistUntilCleared = persistUntilCleared)
+                            category.copy(label = ComputerLabels.nameToSave(name.trim(), shownAtStart, category.label), persistUntilCleared = persistUntilCleared)
                         )
                         onChanged()
                         onDismiss()
                     }
                 }
-                TightPanelButton("DELETE", Modifier.weight(1f), mainColor = DangerRed) {
+                TightPanelButton(stringResource(R.string.common_delete), Modifier.weight(1f), mainColor = DangerRed) {
                     confirmingDelete = true
                 }
             }
         } else {
             Text(
-                text = "This removes the whole category and everything in it. This cannot be undone.",
+                text = stringResource(R.string.people_delete_category_warning),
                 color = Color.Gray,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace
             )
             Spacer(modifier = Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("CONFIRM DELETE", Modifier.weight(1f), mainColor = DangerRed) {
+                TightPanelButton(stringResource(R.string.common_confirm_delete), Modifier.weight(1f), mainColor = DangerRed) {
                     ComputerRepository.deleteCategory(context, category.id)
                     onChanged()
                     onDismiss()
                 }
-                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_cancel), Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
                     confirmingDelete = false
                 }
             }
@@ -731,13 +739,11 @@ private fun MigrationNoticeDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "TARGETS MOVED",
-        dismissLabel = "LOOKS GOOD"
+        title = stringResource(R.string.people_migrated_title),
+        dismissLabel = stringResource(R.string.people_migrated_ok)
     ) {
         Text(
-            text = "Your previously saved targets are now entries under PEOPLE. " +
-                "Nothing was deleted, and a backup was taken automatically before " +
-                "anything moved.",
+            text = stringResource(R.string.people_migrated_body, ComputerLabels.defaultName(rememberText(), "PEOPLE")),
             color = Color.Gray,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace
@@ -746,7 +752,7 @@ private fun MigrationNoticeDialog(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Want help organizing them into subcategories?",
+            text = stringResource(R.string.people_migrated_help),
             color = Color.Gray,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace
@@ -755,8 +761,8 @@ private fun MigrationNoticeDialog(
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TightPanelButton("START WIZARD", Modifier.weight(1f), mainColor = primaryColor, onClick = onStartWizard)
-            TightPanelButton("I'LL DO IT MYSELF", Modifier.weight(1f), isActive = false, mainColor = primaryColor, onClick = onDismiss)
+            TightPanelButton(stringResource(R.string.people_start_wizard), Modifier.weight(1f), mainColor = primaryColor, onClick = onStartWizard)
+            TightPanelButton(stringResource(R.string.people_do_it_myself), Modifier.weight(1f), isActive = false, mainColor = primaryColor, onClick = onDismiss)
         }
     }
 }

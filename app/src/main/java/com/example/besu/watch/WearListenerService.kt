@@ -46,7 +46,7 @@ class WearListenerService : WearableListenerService() {
                     .ifBlank { CommandRepository.getResolvedPhrase(this, node.path) }
                 triggerVoice(displayText, recording.id)
             } else {
-                // A. Resolve Base Phrase from Matrix (e.g. "Systems Online")
+                // A. Resolve Base Phrase from Matrix (e.g. "Hello")
                 // This is a genuine dispatch (about to become real spoken output),
                 // so single-use [COMPUTER:X] picks are allowed to clear here.
                 val basePhrase = CommandRepository.resolveSignalToPhrase(this, path, consumeSingleUse = true)
@@ -54,7 +54,7 @@ class WearListenerService : WearableListenerService() {
                 if (basePhrase.isNotEmpty()) {
                     // B. INJECT TARGET NAME
                     // Checks if a Target is active. Checks Training Rules.
-                    // Result: "Systems Online, Sarah."
+                    // Result: "Hello, Sarah."
                     val finalPhrase = TargetRepository.processPhrase(this, basePhrase, path)
 
                     triggerVoice(finalPhrase)

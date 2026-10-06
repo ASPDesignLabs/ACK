@@ -25,10 +25,17 @@ object BackupFingerprint {
      * Top-level fields that change all the time without the person adding anything: the backup's own time, which deck/profile
      * is open, the typing history, and which sections are folded. Only top-level fields are ignored: a deck or a recording that
      * has a field of the same name is real data.
+     *
+     * "starterPhrasesSeeded" describes where the file came from, not anything the person stored. Left in, the new field would make
+     * every existing phone's fingerprint change once after the update and the backup reminder would fire for nothing.
+     * "warnBeforeProfileChange" is a small on/off switch that is cheap to set again, and the same applies to the new field.
+     * "learnedWords" grows by itself every time a statement is saved, spoken or copied, like the typing history; counting it would make the
+     * backup reminder fire after a day of ordinary use.
+     * "plainWords" is a display switch that is flipped back and forth freely, like the profile warning's.
      */
     val IGNORED_FIELDS: Set<String> = setOf(
         "timestamp", "activeDeckId", "activeDeckColorIndex", "activeProfile", "activeCategoryFocus",
-        "autocompleteHistory", "rootOverrideCollapsed",
+        "autocompleteHistory", "rootOverrideCollapsed", "starterPhrasesSeeded", "warnBeforeProfileChange", "learnedWords", "plainWords",
     )
 
     /** @throws IllegalArgumentException if [rawJson] is JSON but not an object; a parse error if it is not JSON. */

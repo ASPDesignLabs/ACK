@@ -2,126 +2,95 @@
 package com.example.besu.help
 
 import com.example.besu.*
+/** This family's words are string resources (helpmod_<module id>_..., core/HelpWalkthroughText.kt), read where a step is drawn or spoken. */
 object PersonalizationHelp {
     val module = HelpModule(
         id = "personalization",
         category = HelpCategory.BASICS_PERSONALIZATION,
-        title = "AUDIO ARCHITECT",
-        summary = "VOICE PROFILES, DSP, OUTPUT ROUTING, AND CUSTOM SLOTS.",
+        title = "helpmod_personalization_title",
+        summary = "helpmod_personalization_summary",
         destination = HelpDestination.AUDIO,
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "AUDIO ARCHITECT",
-                body = "Audio Architect controls how ACK sounds when it speaks. " +
-                    "It lets you configure output volume, routing behavior, " +
-                    "voice profiles, and custom signal processing."
+                title = "helpmod_personalization_intro_title",
+                body = "helpmod_personalization_intro_body"
             ),
             HelpStep(
                 id = "global_output",
-                title = "GLOBAL OUTPUT",
-                body = "Global Output settings affect ACK's overall speech " +
-                    "behavior. Master Gain controls output level. Force Speaker, " +
-                    "Guide Vox, and Silent Mode now live in PROTOCOL, alongside " +
-                    "the rest of ACK's system-wide configuration."
+                title = "helpmod_personalization_global_output_title",
+                body = "helpmod_personalization_global_output_body"
             ),
             HelpStep(
                 id = "master_gain",
-                title = "MASTER GAIN",
-                body = "Adjust Master Gain to set overall speech volume. Choose " +
-                    "a value that remains comfortable and understandable in " +
-                    "your common environments.",
+                title = "helpmod_personalization_master_gain_title",
+                body = "helpmod_personalization_master_gain_body",
                 action = HelpAction.Interact(AckTags.AUDIO_MASTER_GAIN),
                 targetTag = AckTags.AUDIO_MASTER_GAIN
             ),
             HelpStep(
                 id = "factory_presets",
-                title = "FACTORY VOICE PRESETS",
-                body = "Factory presets provide ready-to-use voice styles. They " +
-                    "are useful when you want a consistent voice without editing " +
-                    "a full DSP chain. Select a factory preset to use it as the " +
-                    "active speech profile."
+                title = "helpmod_personalization_factory_presets_title",
+                body = "helpmod_personalization_factory_presets_body"
             ),
             HelpStep(
                 id = "custom_profiles",
-                title = "CUSTOM PROFILE SLOTS",
-                body = "Custom profile slots can store your own voice designs. " +
-                    "Select one of the custom slots below to open " +
-                    "its editable DSP Chain in a popup.",
+                title = "helpmod_personalization_custom_profiles_title",
+                body = "helpmod_personalization_custom_profiles_body",
                 action = HelpAction.Interact(AckTags.AUDIO_PROFILE_SELECT),
                 targetTag = AckTags.AUDIO_PROFILE_SELECT
             ),
             HelpStep(
                 id = "manage_profiles",
-                title = "MANAGE PROFILES",
-                body = "Use MANAGE to create a new custom slot, rename an " +
-                    "existing one, or delete one you no longer want. " +
-                    "Deleting a profile always asks for confirmation first.",
+                title = "helpmod_personalization_manage_profiles_title",
+                body = "helpmod_personalization_manage_profiles_body",
                 action = HelpAction.Interact(AckTags.AUDIO_PROFILE_MANAGE),
                 targetTag = AckTags.AUDIO_PROFILE_MANAGE
             ),
             HelpStep(
                 id = "dsp_chain",
-                title = "DSP CHAIN",
-                body = "The DSP Chain opens as a popup when a custom profile is " +
-                    "selected or created. It controls the source voice and signal " +
-                    "treatment stored inside that custom slot."
+                title = "helpmod_personalization_dsp_chain_title",
+                body = "helpmod_personalization_dsp_chain_body"
             ),
             HelpStep(
                 id = "base_voice",
-                title = "SELECT A BASE VOICE",
-                body = "Select a Base Voice to choose from on-device Android TTS " +
-                    "voices. This is the human-readable source signal before " +
-                    "pitch, speed, robotic processing, or texture effects are " +
-                    "applied.",
+                title = "helpmod_personalization_base_voice_title",
+                body = "helpmod_personalization_base_voice_body",
                 action = HelpAction.Interact(AckTags.AUDIO_VOICE_PICKER),
                 targetTag = AckTags.AUDIO_VOICE_PICKER
             ),
             HelpStep(
                 id = "pitch_speed",
-                title = "PITCH AND SPEED",
-                body = "Pitch Shift changes the perceived height of the voice. " +
-                    "Speed changes how quickly it speaks. Small adjustments can " +
-                    "make a profile clearer, calmer, more expressive, or more " +
-                    "recognizably yours.",
+                title = "helpmod_personalization_pitch_speed_title",
+                body = "helpmod_personalization_pitch_speed_body",
                 action = HelpAction.Interact(AckTags.AUDIO_PITCH_SPEED),
                 targetTag = AckTags.AUDIO_PITCH_SPEED
             ),
             HelpStep(
                 id = "robotic_overlay",
-                title = "ROBOTIC OVERLAY",
-                body = "The Robotic Overlay ring-modulates the selected voice. " +
-                    "Enable it to reveal frequency and depth controls directly " +
-                    "below. Frequency changes the character of the effect, " +
-                    "while depth controls how strongly the processed signal " +
-                    "replaces the base voice.",
+                title = "helpmod_personalization_robotic_overlay_title",
+                body = "helpmod_personalization_robotic_overlay_body",
                 action = HelpAction.Interact(AckTags.AUDIO_ROBOTIC_OVERLAY),
                 targetTag = AckTags.AUDIO_ROBOTIC_OVERLAY
             ),
             HelpStep(
                 id = "bitcrush",
-                title = "BITCRUSH TEXTURE",
-                body = "Bitcrush adds a deliberately digital texture to the voice. " +
-                    "Use subtle values for a lightly synthesized edge, or higher " +
-                    "values for a more aggressively processed communication style.",
+                title = "helpmod_personalization_bitcrush_title",
+                body = "helpmod_personalization_bitcrush_body",
                 action = HelpAction.Interact(AckTags.AUDIO_BITCRUSH),
                 targetTag = AckTags.AUDIO_BITCRUSH
             ),
             HelpStep(
                 id = "save_profile",
-                title = "COMMIT CUSTOM PROFILE",
-                body = "When the profile sounds right, use COMMIT to save the DSP " +
-                    "Chain into the selected custom slot. That profile can then " +
-                    "be selected as ACK's active output voice.",
+                title = "helpmod_personalization_save_profile_title",
+                body = "helpmod_personalization_save_profile_body",
                 action = HelpAction.CommitText(AckTags.AUDIO_SAVE),
                 targetTag = AckTags.AUDIO_SAVE
             ),
             HelpStep(
                 id = "completion",
-                title = "AUDIO ARCHITECT COMPLETE",
-                body = "Audio Architect training complete. You can now configure " +
-                    "global output, select voice profiles, build a custom DSP " +
-                    "Chain, and save it to a reusable custom slot."
+                title = "helpmod_personalization_completion_title",
+                body = "helpmod_personalization_completion_body"
             )
         )
     )

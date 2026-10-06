@@ -7,11 +7,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.besu.R
 import com.example.besu.core.CustomVoiceRemoval
+import com.example.besu.core.LabelKey
+import com.example.besu.core.StorageCatalogue
+import com.example.besu.ui.labelFor
 import com.example.besu.ui.NeonButton
 import com.example.besu.ui.RadicalRed
 import com.example.besu.ui.TightDialogSurface
+import com.example.besu.ui.rememberText
 
 // The two confirmations DELETE CUSTOM VOICE needs before anything is removed. Nothing happens in either dialog except
 // through a tap; no timer, no checkbox. Text is 12 sp or larger and the buttons are NeonButton (12 sp), so the header's
@@ -34,28 +40,28 @@ fun DeleteVoiceFirstDialog(
     TightDialogSurface(
         onDismiss = onCancel,
         primaryColor = primaryColor,
-        title = "DELETE CUSTOM VOICE",
-        dismissLabel = "CANCEL"
+        title = labelFor(LabelKey.DELETE_CUSTOM_VOICE),
+        dismissLabel = stringResource(R.string.common_cancel)
     ) {
-        ConfirmBodyText("THIS REMOVES YOUR TRAINED VOICE FROM THIS PHONE: THE VOICE MODEL, ITS SETTINGS FILE, AND THE TEMPORARY FILE MADE FROM IT.")
+        ConfirmBodyText(stringResource(R.string.delete_voice_removes))
         Spacer(modifier = Modifier.height(10.dp))
-        ConfirmBodyText("THE ONLY COPY MAY BE ON THIS PHONE. IF YOU MIGHT WANT IT AGAIN, SAVE A VOICE BACKUP FIRST.", bold = true)
+        ConfirmBodyText(stringResource(R.string.delete_voice_only_copy), bold = true)
 
         if (impact.anyAffected) {
             Spacer(modifier = Modifier.height(10.dp))
-            ConfirmBodyText("THESE VOICES USE IT AND WILL SWITCH TO A NORMAL VOICE:")
+            ConfirmBodyText(stringResource(R.string.delete_voice_these_voices))
             impact.affectedLabels.forEach { label ->
                 Spacer(modifier = Modifier.height(3.dp))
                 ConfirmBodyText("- $label")
             }
             if (impact.activeProfileChanges) {
                 Spacer(modifier = Modifier.height(6.dp))
-                ConfirmBodyText("YOUR ACTIVE VOICE WILL BECOME ${CustomVoiceRemoval.FALLBACK_PROFILE_ID}.")
+                ConfirmBodyText(stringResource(R.string.delete_voice_active_becomes, CustomVoiceRemoval.FALLBACK_PROFILE_ID))
             }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
-        ConfirmBodyText("THIS DOES NOT DELETE A BACKUP YOU SAVED ELSEWHERE.", color = Color.Gray)
+        ConfirmBodyText(stringResource(R.string.delete_voice_not_backup), color = Color.Gray)
 
         if (backupStatus != null) {
             Spacer(modifier = Modifier.height(10.dp))
@@ -63,11 +69,11 @@ fun DeleteVoiceFirstDialog(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        NeonButton("EXPORT VOICE BACKUP FIRST", Modifier.fillMaxWidth(), mainColor = primaryColor) { onExportBackupFirst() }
+        NeonButton(stringResource(R.string.delete_voice_export_first), Modifier.fillMaxWidth(), mainColor = primaryColor) { onExportBackupFirst() }
         Spacer(modifier = Modifier.height(8.dp))
-        NeonButton("CONTINUE", Modifier.fillMaxWidth(), mainColor = RadicalRed) { onContinue() }
+        NeonButton(stringResource(R.string.common_continue), Modifier.fillMaxWidth(), mainColor = RadicalRed) { onContinue() }
         Spacer(modifier = Modifier.height(8.dp))
-        NeonButton("CANCEL", Modifier.fillMaxWidth(), isActive = false, mainColor = primaryColor) { onCancel() }
+        NeonButton(stringResource(R.string.common_cancel), Modifier.fillMaxWidth(), isActive = false, mainColor = primaryColor) { onCancel() }
     }
 }
 
@@ -81,13 +87,13 @@ fun DeleteVoiceSecondDialog(
     TightDialogSurface(
         onDismiss = onCancel,
         primaryColor = primaryColor,
-        title = "DELETE CUSTOM VOICE",
-        dismissLabel = "CANCEL"
+        title = labelFor(LabelKey.DELETE_CUSTOM_VOICE),
+        dismissLabel = stringResource(R.string.common_cancel)
     ) {
-        ConfirmBodyText("THIS CANNOT BE UNDONE.", bold = true, color = RadicalRed)
+        ConfirmBodyText(rememberText().get(StorageCatalogue.CANNOT_UNDO), bold = true, color = RadicalRed)
         Spacer(modifier = Modifier.height(16.dp))
-        NeonButton("CANCEL", Modifier.fillMaxWidth(), mainColor = primaryColor) { onCancel() }
+        NeonButton(stringResource(R.string.common_cancel), Modifier.fillMaxWidth(), mainColor = primaryColor) { onCancel() }
         Spacer(modifier = Modifier.height(8.dp))
-        NeonButton("DELETE VOICE", Modifier.fillMaxWidth(), mainColor = RadicalRed) { onDelete() }
+        NeonButton(stringResource(R.string.delete_voice_delete), Modifier.fillMaxWidth(), mainColor = RadicalRed) { onDelete() }
     }
 }

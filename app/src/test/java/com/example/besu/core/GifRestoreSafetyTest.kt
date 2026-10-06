@@ -14,8 +14,14 @@ import org.junit.Test
  * passed on a staged copy. A change that goes back to `writeBytes` on the real file fails here.
  */
 class GifRestoreSafetyTest {
-    private val repository = RepoFiles.read("app/src/main/java/com/example/besu/decks/GifRepository.kt")
-    private val restore = RepoFiles.functionBody(repository, "fun restoreEntry(")
+    // Comment lines are dropped, as DeckScreensWordingTest does, so a word in an explanatory comment is never mistaken for a call.
+    private fun noComments(text: String): String = text.lines().joinToString("\n") { line ->
+        val t = line.trimStart()
+        if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) "" else line
+    }
+
+    private val repository = noComments(RepoFiles.read("app/src/main/java/com/example/besu/decks/GifRepository.kt"))
+    private val restore = RepoFiles.declarationOf(repository, "restoreEntry")
 
     @Test
     fun theBytesReachTheRealFileOnlyThroughVerifiedFileReplace() {

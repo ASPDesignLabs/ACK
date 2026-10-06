@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.core.content.ContextCompat
 import com.example.besu.AckTags
+import com.example.besu.R
 import com.example.besu.help.HelpEvent
 import com.example.besu.help.HelpOfferBanner
 import com.example.besu.help.LocalHelpManager
@@ -65,7 +67,7 @@ fun VoiceRecordingPanel(
     primaryColor: Color,
     panelKey: Any,
     existingRecording: VoiceRecording?,
-    description: String = "WHEN SET, THIS PLAYS INSTEAD OF THE SYNTHESIZED PHRASE ABOVE.",
+    description: String = stringResource(R.string.voice_rec_description),
     onAccept: (pcm: ShortArray, sampleRate: Int) -> Unit,
     onRemove: () -> Unit
 ) {
@@ -154,7 +156,7 @@ fun VoiceRecordingPanel(
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        TightSectionLabel("VOICE RECORDING", color = primaryColor)
+        TightSectionLabel(stringResource(R.string.voice_rec_title), color = primaryColor)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = description,
@@ -168,9 +170,7 @@ fun VoiceRecordingPanel(
             RecordingPanelPhase.IDLE -> {
                 if (!hasSeenHelpOffer) {
                     HelpOfferBanner(
-                        message = "NEW: VOICE RECORDINGS HAS A HELP WALKTHROUGH -- " +
-                            "RECORDING, MATRIX NOTES, AND MANAGING WHAT YOU'VE RECORDED. " +
-                            "FIND IT UNDER HELP ANYTIME.",
+                        message = stringResource(R.string.voice_rec_help_offer, stringResource(R.string.help_button)),
                         primaryColor = primaryColor,
                         onDismiss = {
                             VoiceRecordingRepository.markHelpOfferSeen(context)
@@ -182,7 +182,7 @@ fun VoiceRecordingPanel(
 
                 if (existingRecording != null) {
                     Text(
-                        text = "RECORDED (${VoiceRecordingRepository.formatDurationMs(existingRecording.durationMs)})",
+                        text = stringResource(R.string.voice_rec_recorded, VoiceRecordingRepository.formatDurationMs(existingRecording.durationMs)),
                         color = primaryColor,
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,
@@ -197,7 +197,7 @@ fun VoiceRecordingPanel(
                 ) {
                     if (existingRecording != null) {
                         TightPanelButton(
-                            text = if (isPlayingPreview) "PLAYING..." else "PLAY",
+                            text = stringResource(if (isPlayingPreview) R.string.voice_rec_playing else R.string.voice_rec_play),
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag(AckTags.VOICE_REC_PLAY_BTN)
@@ -223,7 +223,7 @@ fun VoiceRecordingPanel(
                             }
                         }
                         TightPanelButton(
-                            text = "REMOVE",
+                            text = stringResource(R.string.voice_rec_remove),
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag(AckTags.VOICE_REC_REMOVE_BTN)
@@ -236,7 +236,7 @@ fun VoiceRecordingPanel(
                         }
                     }
                     TightPanelButton(
-                        text = if (existingRecording != null) "RE-RECORD" else "RECORD",
+                        text = stringResource(if (existingRecording != null) R.string.voice_rec_rerecord else R.string.voice_rec_record),
                         modifier = Modifier
                             .weight(1f)
                             .testTag(AckTags.VOICE_REC_RECORD_BTN)
@@ -258,7 +258,7 @@ fun VoiceRecordingPanel(
 
             RecordingPanelPhase.RECORDING -> {
                 Text(
-                    text = "RECORDING... ${VoiceRecordingRepository.formatDurationMs(recordingDurationMs)}",
+                    text = stringResource(R.string.voice_rec_recording_now, VoiceRecordingRepository.formatDurationMs(recordingDurationMs)),
                     color = RadicalRed,
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace,
@@ -270,7 +270,7 @@ fun VoiceRecordingPanel(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "STOP",
+                        text = stringResource(R.string.voice_rec_stop),
                         modifier = Modifier
                             .weight(1f)
                             .testTag(AckTags.VOICE_REC_STOP_BTN)
@@ -281,7 +281,7 @@ fun VoiceRecordingPanel(
                         finishRecording()
                     }
                     TightPanelButton(
-                        text = "CANCEL",
+                        text = stringResource(R.string.common_cancel),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -294,7 +294,7 @@ fun VoiceRecordingPanel(
 
             RecordingPanelPhase.PROCESSING -> {
                 Text(
-                    text = "REDUCING NOISE, TRIMMING SILENCE & LEVELING VOLUME...",
+                    text = stringResource(R.string.voice_rec_processing),
                     color = Color.Gray,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
@@ -303,7 +303,7 @@ fun VoiceRecordingPanel(
 
             RecordingPanelPhase.PREVIEW -> {
                 Text(
-                    text = "PREVIEW (${VoiceRecordingRepository.formatDurationMs(recordingDurationMs)})",
+                    text = stringResource(R.string.voice_rec_preview, VoiceRecordingRepository.formatDurationMs(recordingDurationMs)),
                     color = primaryColor,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
@@ -315,7 +315,7 @@ fun VoiceRecordingPanel(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = if (isPlayingPreview) "PLAYING..." else "PLAY",
+                        text = stringResource(if (isPlayingPreview) R.string.voice_rec_playing else R.string.voice_rec_play),
                         modifier = Modifier
                             .weight(1f)
                             .testTag(AckTags.VOICE_REC_PLAY_BTN)
@@ -341,7 +341,7 @@ fun VoiceRecordingPanel(
                         }
                     }
                     TightPanelButton(
-                        text = "DISCARD",
+                        text = stringResource(R.string.common_discard),
                         modifier = Modifier
                             .weight(1f)
                             .testTag(AckTags.VOICE_REC_DISCARD_BTN)
@@ -354,7 +354,7 @@ fun VoiceRecordingPanel(
                         phase = RecordingPanelPhase.IDLE
                     }
                     TightPanelButton(
-                        text = "ACCEPT",
+                        text = stringResource(R.string.voice_rec_accept),
                         modifier = Modifier
                             .weight(1f)
                             .testTag(AckTags.VOICE_REC_ACCEPT_BTN)

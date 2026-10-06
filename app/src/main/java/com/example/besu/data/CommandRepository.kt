@@ -3,6 +3,8 @@ package com.example.besu.data
 
 import com.example.besu.backup.*
 import com.example.besu.computer.*
+import com.example.besu.core.PhraseKeys
+import com.example.besu.core.SlotPhrases
 import com.example.besu.decks.*
 import com.example.besu.ui.theme.*
 import com.example.besu.watch.*
@@ -934,6 +936,12 @@ object CommandRepository {
             )
             .apply()
 
+        // On a phone that began with the neutral starter phrases, a new Matrix deck begins with them too (and not with the old
+        // built-in wording). Does nothing on a phone that already had ACK before the starters existed.
+        if (type == DeckType.MATRIX) {
+            StarterSeed.seedNewMatrixDeck(context, newDeck.id)
+        }
+
         return newDeck
     }
 
@@ -1282,11 +1290,9 @@ object CommandRepository {
     }
 
     // --- UNIVERSAL KEY GENERATOR ---
-    private fun generateStorageKey(deckId: String, profile: String, path: String): String {
-        val deckPrefix = if (deckId == "DEFAULT") "" else "${deckId}_"
-        val profilePrefix = if (profile == "DEFAULT") "" else "${profile}_"
-        return "$deckPrefix$profilePrefix$path"
-    }
+    // The recipe lives in core/PhraseKeys.kt so the starter seed writes to exactly the keys this reads.
+    private fun generateStorageKey(deckId: String, profile: String, path: String): String =
+        PhraseKeys.storageKey(deckId, profile, path)
 
     fun getPhrase(
         context: Context,
@@ -1839,6 +1845,21 @@ object CommandRepository {
                     )
                 )
             }
+        }
+    }
+
+    // For the profile-change warning (core/ProfileSwapDiff.kt): what every Matrix slot of [deckId] (the 12 built-in and any custom ones)
+    // says under [fromProfile] and under [toProfile]. It uses getResolvedPhrase, which already applies the fall-back to the DEFAULT profile
+    // and fills in variables and targets, so nothing here re-implements that, and it never consumes a single-use target (it only looks).
+    fun profileSwapSlots(context: Context, deckId: String, fromProfile: String, toProfile: String): List<SlotPhrases> {
+        refreshCache(context)
+        return cachedNodes.toList().map { node ->
+            SlotPhrases(
+                path = node.path,
+                name = "${node.category} / ${node.label}".uppercase(),
+                current = getResolvedPhrase(context, node.path, deckId, fromProfile),
+                target = getResolvedPhrase(context, node.path, deckId, toProfile)
+            )
         }
     }
 
