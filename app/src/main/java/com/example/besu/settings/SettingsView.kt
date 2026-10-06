@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.settings
 
+import com.example.besu.core.LabelKey
+import com.example.besu.core.OutputRouteText
 import com.example.besu.*
+import com.example.besu.R
 import com.example.besu.backup.*
+import com.example.besu.core.AssistSettings
+import androidx.compose.ui.res.stringResource
 import com.example.besu.core.BackupReminderText
+import com.example.besu.core.ProfileWarningText
 import com.example.besu.core.SafetyCopyPolicy
 import com.example.besu.core.StorageCatalogue
 import com.example.besu.data.*
@@ -162,6 +168,8 @@ fun SettingsView(
     val prefs = context.getSharedPreferences("ack_prefs", Context.MODE_PRIVATE)
 
     val helpManager = LocalHelpManager.current
+    // The words of decisions that live in core/ (the backup reminder), in the language of this screen.
+    val words = rememberText()
 
     var hideSystemMessages by remember { mutableStateOf(TerminalLogStore.getHideSystemMessages(context)) }
     var hidePathTrace by remember { mutableStateOf(TerminalLogStore.getHidePathTrace(context)) }
@@ -356,6 +364,16 @@ fun SettingsView(
     var showFullRestoreConfirm by remember { mutableStateOf(false) }
     var showManageData by remember { mutableStateOf(false) }
     var backupRemindersOn by remember { mutableStateOf(BackupState.remindersEnabled(context)) }
+    // WARN BEFORE PROFILE CHANGES (data/AssistPrefs.kt): the switch, and the one-time offer, which is only for a phone where nothing was ever stored.
+    var profileWarningOn by remember { mutableStateOf(AssistPrefs.isProfileChangeWarningOn(context)) }
+    var profileWarningOffered by remember {
+        mutableStateOf(
+            AssistSettings.shouldOfferWarning(
+                switchStored = AssistPrefs.profileChangeWarningStored(context) != null,
+                offerDismissed = AssistPrefs.isProfileWarningOfferDismissed(context)
+            )
+        )
+    }
     // SAFETY COPIES (data/SafetyCopies.kt): the list, the copy being confirmed (first, then second), and a tick that moves when an
     // export has just been tried, so the first confirmation re-reads whether a newer export exists.
     var safetyCopiesRefresh by remember { mutableIntStateOf(0) }
@@ -430,13 +448,115 @@ fun SettingsView(
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         LazyColumn(modifier = Modifier.weight(1f)) {
+            // PLAIN WORDS (ui/PlainWords.kt): first on the screen so it can always be found. Its own words are plain string resources, not labels from the
+            // table, so they read the same in both modes. Flipping it redraws everything in place: no restart, nothing lost.
             item {
-                Text("AUDIO OUTPUT ROUTING", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                val plainOn = PlainWordsState.on
+                var plainOffered by remember {
+                    mutableStateOf(
+                        AssistSettings.shouldOfferPlainWords(
+                            switchOn = AssistPrefs.isPlainWordsOn(context),
+                            offerDismissed = AssistPrefs.isPlainWordsOfferDismissed(context)
+                        )
+                    )
+                }
+                if (plainOffered) {
+                    val offerShape = CutCornerShape(8.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, primaryColor.copy(alpha = 0.6f), offerShape)
+                            .background(primaryColor.copy(alpha = 0.08f), offerShape)
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.plain_words_offer),
+                            color = Color.LightGray,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            NeonButton(stringResource(R.string.plain_words_turn_on), Modifier.weight(1f), mainColor = primaryColor) {
+                                PlainWordsState.set(context, true)
+                                plainOffered = false
+                            }
+                            NeonButton(stringResource(R.string.plain_words_not_now), Modifier.weight(1f), mainColor = Color.White) {
+                                AssistPrefs.dismissPlainWordsOffer(context)
+                                plainOffered = false
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                NeonButton(
+                    stringResource(if (plainOn) R.string.plain_words_switch_on else R.string.plain_words_switch_off),
+                    Modifier.fillMaxWidth().testTag(AckTags.PLAIN_WORDS_SWITCH).helpTarget(AckTags.PLAIN_WORDS_SWITCH, primaryColor),
+                    mainColor = if (plainOn) primaryColor else Color.White
+                ) {
+                    PlainWordsState.set(context, !plainOn)
+                    plainOffered = false
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    stringResource(R.string.plain_words_explanation),
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // INTERFACE LANGUAGE (settings/InterfaceLanguageSection.kt): the language of ACK's own words. A choice asks first and restarts ACK once.
+            item {
+                InterfaceLanguageSection(
+                    current = AssistPrefs.interfaceLanguage(context),
+                    primaryColor = primaryColor
+                ) { language ->
+                    AssistPrefs.setInterfaceLanguage(context, language)
+                    Toast.makeText(context, context.getString(R.string.interface_language_restarting), Toast.LENGTH_SHORT).show()
+                    pendingRestart = true
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // FIX PROBLEMS: the typed /repair as a button, shown while PLAIN WORDS is on. No confirmation, as the command: it restarts two
+            // background services and deletes nothing.
+            item {
+                if (PlainWordsState.on) {
+                    Text(
+                        stringResource(R.string.plain_ctl_fix_problems_hint),
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    PlainActionButton(
+                        stringResource(R.string.plain_ctl_fix_problems),
+                        primaryColor,
+                        Modifier.fillMaxWidth().testTag(AckTags.SETTINGS_FIX_PROBLEMS)
+                    ) {
+                        repairBackgroundServices(context)
+                        Toast.makeText(context, context.getString(R.string.plain_ctl_fix_problems_done), Toast.LENGTH_SHORT).show()
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+
+            item {
+                Text(stringResource(R.string.settings_audio_routing_heading), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SettingsToggleRow(
-                    title = "FORCE SPEAKER",
-                    description = "Routes speech to the device's built-in speaker instead of the current audio route.",
+                    title = labelFor(LabelKey.FORCE_SPEAKER),
+                    description = stringResource(R.string.settings_force_speaker_desc),
                     checked = forceSpeaker,
                     primaryColor = primaryColor,
                     modifier = Modifier.testTag(AckTags.SETTINGS_AUDIO_ROUTING).helpTarget(AckTags.SETTINGS_AUDIO_ROUTING, primaryColor)
@@ -465,19 +585,14 @@ fun SettingsView(
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "OUTPUT DEVICE",
+                            text = stringResource(R.string.settings_output_device),
                             color = if (forceSpeaker) Color.DarkGray else Color.White,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = when {
-                                forceSpeaker -> "OVERRIDDEN BY FORCE SPEAKER ABOVE"
-                                outputRouteMode == "BLUETOOTH" -> outputRouteBtLabel ?: "BLUETOOTH DEVICE"
-                                outputRouteMode == "WATCH" -> "ACK WATCH"
-                                else -> "AUTO (SYSTEM DEFAULT)"
-                            },
+                            text = OutputRouteText.summary(words, forceSpeaker, outputRouteMode, outputRouteBtLabel, labelFor(LabelKey.FORCE_SPEAKER)),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -493,8 +608,8 @@ fun SettingsView(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         OutputRouteRow(
-                            label = "AUTO (SYSTEM DEFAULT)",
-                            hint = "WHATEVER THE PHONE'S CURRENT AUDIO ROUTE IS",
+                            label = stringResource(R.string.settings_route_auto),
+                            hint = stringResource(R.string.settings_route_auto_hint),
                             isSelected = outputRouteMode == "AUTO",
                             primaryColor = primaryColor
                         ) {
@@ -506,12 +621,8 @@ fun SettingsView(
                         }
 
                         OutputRouteRow(
-                            label = "ACK WATCH",
-                            hint = if (isWatchConnected) {
-                                "CONNECTED"
-                            } else {
-                                "NOT CURRENTLY CONNECTED -- FALLS BACK TO AUTO WHEN UNREACHABLE"
-                            },
+                            label = stringResource(R.string.settings_route_watch),
+                            hint = OutputRouteText.watchHint(words, isWatchConnected),
                             isSelected = outputRouteMode == "WATCH",
                             primaryColor = primaryColor
                         ) {
@@ -526,7 +637,7 @@ fun SettingsView(
                             val deviceLabel = AudioRouting.friendlyLabel(device)
                             OutputRouteRow(
                                 label = deviceLabel,
-                                hint = "CONNECTED",
+                                hint = stringResource(R.string.settings_route_connected),
                                 isSelected = outputRouteMode == "BLUETOOTH" &&
                                     outputRouteBtAddress == device.address,
                                 primaryColor = primaryColor
@@ -549,8 +660,8 @@ fun SettingsView(
                             connectedBtDevices.none { it.address == outputRouteBtAddress }
                         if (selectedBtMissing) {
                             OutputRouteRow(
-                                label = outputRouteBtLabel ?: "BLUETOOTH DEVICE",
-                                hint = "NOT CURRENTLY CONNECTED -- FALLS BACK TO AUTO WHEN UNREACHABLE",
+                                label = OutputRouteText.bluetoothName(words, outputRouteBtLabel),
+                                hint = stringResource(R.string.settings_route_not_connected),
                                 isSelected = true,
                                 primaryColor = primaryColor,
                                 enabled = false,
@@ -560,7 +671,7 @@ fun SettingsView(
 
                         if (connectedBtDevices.isEmpty() && !selectedBtMissing) {
                             Text(
-                                text = "NO BLUETOOTH DEVICES CURRENTLY CONNECTED",
+                                text = stringResource(R.string.settings_route_bt_none),
                                 color = Color.DarkGray,
                                 fontSize = 9.sp,
                                 fontFamily = FontFamily.Monospace
@@ -572,8 +683,8 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
-                    title = "GUIDE VOX",
-                    description = "Controls whether tutorial and guide narration is spoken aloud.",
+                    title = labelFor(LabelKey.VOX),
+                    description = stringResource(R.string.settings_vox_desc),
                     checked = guideVoxEnabled,
                     primaryColor = primaryColor,
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_AUDIO_ROUTING, primaryColor)
@@ -586,8 +697,8 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
-                    title = "SILENT MODE",
-                    description = "Shows prompts as normal but never speaks them out loud -- for places where sound itself is the problem. Emergency messages and tutorial narration are never silenced.",
+                    title = labelFor(LabelKey.SILENT_MODE),
+                    description = stringResource(R.string.settings_silent_desc),
                     checked = silentOutput,
                     primaryColor = primaryColor,
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_AUDIO_ROUTING, primaryColor)
@@ -603,7 +714,7 @@ fun SettingsView(
                 if (silentOutput && !canDrawOverlays) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "SILENT MODE IS ON AND DISPLAY PERMISSION IS OFF: A MESSAGE WOULD BE NEITHER SPOKEN NOR SHOWN.",
+                        stringResource(R.string.settings_silent_no_display, labelFor(LabelKey.SILENT_MODE)),
                         color = ErrorRed,
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace,
@@ -614,29 +725,29 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("WATCH AUDIO FEEDBACK", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(stringResource(R.string.settings_watch_audio_heading), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ThemeOption(0, "SHARP", if(toneTheme == 0) 0 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 0; syncAll()
+                    ThemeOption(0, stringResource(R.string.settings_tone_sharp), if(toneTheme == 0) 0 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 0; syncAll()
                         reportHelpInteraction(AckTags.SETTINGS_WATCH_AUDIO)}
-                    ThemeOption(1, "CLEAN", if(toneTheme == 1) 1 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 1; syncAll()
+                    ThemeOption(1, stringResource(R.string.settings_tone_clean), if(toneTheme == 1) 1 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 1; syncAll()
                         reportHelpInteraction(AckTags.SETTINGS_WATCH_AUDIO)}
-                    ThemeOption(2, "SOFT", if(toneTheme == 2) 2 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 2; syncAll()
+                    ThemeOption(2, stringResource(R.string.settings_tone_soft), if(toneTheme == 2) 2 else -1, primaryColor, modifier = Modifier.testTag(AckTags.SETTINGS_WATCH_AUDIO).helpTarget(AckTags.SETTINGS_WATCH_AUDIO, primaryColor)) { toneTheme = 2; syncAll()
                         reportHelpInteraction(AckTags.SETTINGS_WATCH_AUDIO)}
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("WATCH VOLUME: ${(toneVolume * 100).toInt()}%", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_watch_volume, (toneVolume * 100).toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = toneVolume, onValueChange = { toneVolume = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, colors = SliderDefaults.colors(thumbColor = primaryColor, activeTrackColor = primaryColor, inactiveTrackColor = Color.DarkGray))
             }
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("VISUAL PROMPT DISPLAY", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(stringResource(R.string.settings_visual_heading), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    "Text/emoji/GIF prompts fill the screen and rotate their content in place so words display large without wrapping.",
+                    stringResource(R.string.settings_visual_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -651,14 +762,14 @@ fun SettingsView(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "FORCE DEVICE ROTATION",
+                            stringResource(R.string.settings_force_rotation),
                             color = if (forceDeviceRotation) primaryColor else Color.White,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "OFF: rotate the prompt only. ON: rotate the whole screen (old behavior).",
+                            stringResource(R.string.settings_force_rotation_desc, stringResource(R.string.common_off), stringResource(R.string.common_on)),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -681,10 +792,10 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("HARDWARE CONFIG", color = NeonPalette.SWATCHES[5], fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.HARDWARE_CONFIG), color = NeonPalette.SWATCHES[5], fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text("CROWN RESISTANCE: LEVEL ${crownSens.toInt()}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_hw_crown, crownSens.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = crownSens, onValueChange = { crownSens = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 1f..5f, steps = 3, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
@@ -692,7 +803,7 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("TWIST SENSITIVITY: ${String.format("%.1f", motTwist)}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_label_value, labelFor(LabelKey.TWIST_SENS), String.format("%.1f", motTwist)), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = motTwist, onValueChange = { motTwist = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 2.0f..12.0f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
@@ -700,7 +811,7 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("GRAVITY LOCK: ${String.format("%.1f", motPose)}", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_hw_gravity_lock, String.format("%.1f", motPose)), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = motPose, onValueChange = { motPose = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 2.0f..9.0f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[5], activeTrackColor = NeonPalette.SWATCHES[5], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
@@ -708,9 +819,9 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("FIRE GRACE WINDOW: ${fireGraceMs.toInt()}ms", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_hw_fire_grace, fireGraceMs.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Text(
-                    "Extra time after a pose locks and goes quiet before it fires. Tap the watch face anytime before then to cancel instead.",
+                    stringResource(R.string.settings_hw_fire_grace_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -722,9 +833,9 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("WAKE GESTURE WINDOW: ${wakeWindowMs.toInt()}ms", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_hw_wake_window, wakeWindowMs.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Text(
-                    "How much time is allowed between each of the 3 wake twists. Higher gives more room if your hand isn't perfectly steady.",
+                    stringResource(R.string.settings_hw_wake_window_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -736,9 +847,9 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("TARGET FLYOUT TIMEOUT: ${computerFlyoutTimeoutSec.toInt()}s", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_hw_flyout, computerFlyoutTimeoutSec.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Text(
-                    "How long the watch's Target Computer flyout (tap-tap-hold on a Quick Actions deck) waits with no interaction before closing itself.",
+                    stringResource(R.string.settings_hw_flyout_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -750,7 +861,7 @@ fun SettingsView(
                         primaryColor
                     ))
 
-                Text("AUTO-CRYO: ${autoCryo.toInt()} MIN", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_cryo_line, labelFor(LabelKey.CRYO), autoCryo.toInt()), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = autoCryo, onValueChange = { autoCryo = it }, onValueChangeFinished = { syncAll()
                     reportHelpInteraction(AckTags.SETTINGS_WATCH_CONFIG)}, valueRange = 1f..10f, steps = 8, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[3], activeTrackColor = NeonPalette.SWATCHES[3], inactiveTrackColor = Color.DarkGray),
                     modifier = Modifier.helpTarget(
@@ -763,17 +874,17 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("SHAKE KILL SWITCH", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.SHAKE_KILL), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    "Shake the phone to immediately stop whatever it's currently saying or showing -- a backstop for a mistaken watch fire or a wrong tap.",
+                    stringResource(R.string.settings_shake_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text("SENSITIVITY: ${String.format("%.1f", shakeThreshold)} (lower = easier to trigger)", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.settings_shake_sensitivity, String.format("%.1f", shakeThreshold)), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Slider(value = shakeThreshold, onValueChange = { shakeThreshold = it }, onValueChangeFinished = { updateShakeThreshold() },
                     valueRange = 8f..25f, colors = SliderDefaults.colors(thumbColor = NeonPalette.SWATCHES[3], activeTrackColor = NeonPalette.SWATCHES[3], inactiveTrackColor = Color.DarkGray))
 
@@ -784,9 +895,9 @@ fun SettingsView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("TRAIN / TEST", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+                    Text(labelFor(LabelKey.TRAIN_TEST), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(1.sp))
                     Text(
-                        text = if (isShakeTestActive) "[STOP]" else "[TEST]",
+                        text = stringResource(if (isShakeTestActive) R.string.settings_btn_stop else R.string.settings_btn_test),
                         color = if (isShakeTestActive) Color.Red else primaryColor,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -806,7 +917,7 @@ fun SettingsView(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (isShakeDetectedFlash) "DETECTED ✓  ($shakeDetectedCount)" else "ARMED -- SHAKE THE PHONE",
+                            text = if (isShakeDetectedFlash) stringResource(R.string.settings_shake_detected, shakeDetectedCount) else stringResource(R.string.settings_shake_armed),
                             color = if (isShakeDetectedFlash) BioGreen else Color.Gray,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
@@ -814,7 +925,7 @@ fun SettingsView(
                         )
                     }
                     Text(
-                        "This uses the real detector at the sensitivity above -- shake exactly as hard as you would to actually cut off output, and adjust the slider until that feels right.",
+                        stringResource(R.string.settings_shake_test_note),
                         color = Color.Gray,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace
@@ -831,10 +942,10 @@ fun SettingsView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("ENVIRONMENT SENSOR", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                    Text(labelFor(LabelKey.ENV_SENSOR), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                     if (hasMicPermission) {
                         Text(
-                            text = if (isMonitoringActive) "[STOP]" else "[SCAN]",
+                            text = stringResource(if (isMonitoringActive) R.string.settings_btn_stop else R.string.settings_btn_scan),
                             color = if (isMonitoringActive) Color.Red else primaryColor,
 
                             fontSize = 10.sp,
@@ -853,7 +964,7 @@ fun SettingsView(
                 if (!hasMicPermission) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         NeonButton(
-                            "AUTHORIZE MIC SCAN",
+                            stringResource(R.string.settings_env_authorize),
                             Modifier
                                 .weight(1f)
                                 .helpTarget(AckTags.SETTINGS_ENV_SENSOR, primaryColor),
@@ -863,7 +974,7 @@ fun SettingsView(
                             reportHelpInteraction(AckTags.SETTINGS_ENV_SENSOR)
                         }
                         // Fallback button to manually open App Settings if the system prompt is blocked
-                        NeonButton("OPEN SETTINGS", Modifier.weight(1f), mainColor = Color.DarkGray) {
+                        NeonButton(stringResource(R.string.settings_open_settings), Modifier.weight(1f), mainColor = Color.DarkGray) {
                             val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                 data = android.net.Uri.fromParts("package", context.packageName, null)
                             }
@@ -897,20 +1008,22 @@ fun SettingsView(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    val statusText = when {
-                        currentDb > 80f -> "CRITICAL: A.S.R. INTERFERENCE HIGH"
-                        currentDb > 65f -> "WARNING: MODERATE NOISE LEVEL"
-                        else -> "OPTIMAL: ENVIRONMENT CLEAR"
-                    }
+                    val statusText = stringResource(
+                        when {
+                            currentDb > 80f -> R.string.settings_env_critical
+                            currentDb > 65f -> R.string.settings_env_warning
+                            else -> R.string.settings_env_optimal
+                        }
+                    )
 
                     Text(text = statusText, color = levelColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 } else {
-                    Text("MONITOR OFFLINE", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                    Text(stringResource(R.string.settings_env_offline), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 }
             }
 
             item {
-                Text("QUICK-ACCESS KEYS", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.QUICK_ACCESS_KEYS), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 for (i in 0..2) {
@@ -929,7 +1042,7 @@ fun SettingsView(
                             modifier = Modifier.weight(0.25f).helpTarget(AckTags.SETTINGS_SHORTCUTS, primaryColor),
                             colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.DarkGray),
                             textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 10.sp),
-                            placeholder = { Text("LBL") }
+                            placeholder = { Text(stringResource(R.string.settings_qk_label_hint)) }
                         )
                         OutlinedTextField(
                             value = shortcut.phrase,
@@ -940,7 +1053,7 @@ fun SettingsView(
                             modifier = Modifier.weight(0.6f),
                             colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.DarkGray),
                             textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 10.sp),
-                            placeholder = { Text("TARGET PHRASE") }
+                            placeholder = { Text(stringResource(R.string.settings_qk_phrase_hint)) }
                         )
                         Box(
                             modifier = Modifier
@@ -966,12 +1079,12 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("TERMINAL LOG", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.TERMINAL_LOG), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SettingsToggleRow(
-                    title = "HIDE SYSTEM MESSAGES",
-                    description = "Filters boot, status, and error lines out of the Terminal view. The underlying log is untouched -- switch off to see them again.",
+                    title = stringResource(R.string.settings_term_hide_system),
+                    description = stringResource(R.string.settings_term_hide_system_desc),
                     checked = hideSystemMessages,
                     primaryColor = primaryColor,
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
@@ -984,8 +1097,8 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
-                    title = "HIDE PATH RESOLUTION",
-                    description = "Filters out the verbose per-tag RESOLVE trace logged every time a Matrix phrase plays, independent of the toggle above.",
+                    title = stringResource(R.string.settings_term_hide_path),
+                    description = stringResource(R.string.settings_term_hide_path_desc),
                     checked = hidePathTrace,
                     primaryColor = primaryColor,
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
@@ -998,8 +1111,8 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
-                    title = "MONOSPACE TERMINAL",
-                    description = "Renders the Terminal screen -- log rows, the prompt line, command output -- in a true monospace font so columns line up like a real terminal. Off by default to keep the existing look.",
+                    title = stringResource(R.string.settings_term_mono),
+                    description = stringResource(R.string.settings_term_mono_desc),
                     checked = monospaceTerminal,
                     primaryColor = primaryColor,
                     modifier = Modifier.helpTarget(AckTags.SETTINGS_TERMINAL_LOG, primaryColor)
@@ -1012,13 +1125,13 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    "STATUSBOX TEXT COLOR",
+                    stringResource(R.string.settings_term_statusbox_color, labelFor(LabelKey.STATUSBOX)),
                     color = Color.Gray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    "Color of the live TYPING / shared root variable strip above the Terminal prompt.",
+                    stringResource(R.string.settings_term_statusbox_desc, stringResource(R.string.term_typing)),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1048,13 +1161,13 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    "LOG RETENTION: ${retentionDays.toInt()} DAY${if (retentionDays.toInt() == 1) "" else "S"} (ROLLING)",
+                    stringResource(R.string.settings_term_retention_line, words.count("settings_term_days", retentionDays.toInt())),
                     color = Color.Gray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    "Entries older than this roll off on a continuous window, not a calendar day -- up to ${TerminalLogStore.MAX_ENTRIES} kept either way.",
+                    stringResource(R.string.settings_term_retention_desc, TerminalLogStore.MAX_ENTRIES),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1076,11 +1189,11 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("DATA PORT", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(labelFor(LabelKey.DATA_PORT), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     NeonButton(
-                        "EXPORT .JSON",
+                        labelFor(LabelKey.EXPORT_JSON),
                         Modifier
                             .weight(1f)
                             .helpTarget(AckTags.SETTINGS_DATA_PORT, primaryColor),
@@ -1090,18 +1203,18 @@ fun SettingsView(
 
                         reportHelpInteraction(AckTags.SETTINGS_DATA_PORT)
                     }
-                    NeonButton("IMPORT MATRIX AS NEW DECK", Modifier.weight(1f), mainColor = primaryColor) { importLauncher.launch(arrayOf("application/json")) }
+                    NeonButton(labelFor(LabelKey.IMPORT_MATRIX), Modifier.weight(1f), mainColor = primaryColor) { importLauncher.launch(arrayOf("application/json")) }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "IMPORT MATRIX AS NEW DECK brings in a backup's matrix phrases as a brand new deck, without touching anything else. FULL RESTORE below applies everything else a backup carries -- overwriting or adding to your current setup, never deleting what it doesn't mention.",
+                    stringResource(R.string.data_port_import_note, labelFor(LabelKey.IMPORT_MATRIX), labelFor(LabelKey.FULL_RESTORE)),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 NeonButton(
-                    "FULL RESTORE FROM JSON",
+                    labelFor(LabelKey.FULL_RESTORE),
                     Modifier
                         .fillMaxWidth()
                         .testTag(AckTags.SETTINGS_FULL_RESTORE_BTN)
@@ -1115,7 +1228,7 @@ fun SettingsView(
                 // BACKUP REMINDER: on or off, said in words (not only colour) and without animation. It reminds; it never makes a
                 // file. Checked when ACK starts, so turning it on shows nothing until then. Turning it off hides a showing one.
                 NeonButton(
-                    BackupReminderText.switchLabel(backupRemindersOn),
+                    BackupReminderText.switchLabel(words, backupRemindersOn),
                     Modifier.fillMaxWidth(),
                     mainColor = if (backupRemindersOn) primaryColor else Color.White
                 ) {
@@ -1125,7 +1238,7 @@ fun SettingsView(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    BackupReminderText.SWITCH_EXPLANATION,
+                    words.get(BackupReminderText.SWITCH_EXPLANATION),
                     color = Color.Gray,
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace
@@ -1133,20 +1246,21 @@ fun SettingsView(
 
                 Spacer(modifier = Modifier.height(16.dp))
                 // Opens a list of what can be deleted; nothing is deleted by this tap, and every delete asks twice.
-                NeonButton("DELETE DATA", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+                NeonButton(stringResource(R.string.delete_data_title), Modifier.fillMaxWidth(), mainColor = RadicalRed) {
                     showManageData = true
                 }
 
                 // Only when ACK has made one (before a data upgrade): they hold the same data as an export and are not encrypted.
                 if (safetyCopies.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
-                    Text("SAFETY COPIES", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                    Text(labelFor(LabelKey.SAFETY_COPIES), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                     safetyCopies.forEach { copy ->
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             SafetyCopyPolicy.rowText(
-                                SafetyCopyPolicy.dateText(copy.createdAtMs, ZoneId.systemDefault()),
-                                StorageCatalogue.describeSize(copy.sizeBytes)
+                                words,
+                                SafetyCopyPolicy.dateText(words, copy.createdAtMs, ZoneId.systemDefault()),
+                                StorageCatalogue.describeSize(words, copy.sizeBytes)
                             ),
                             color = Color.Gray,
                             fontSize = 12.sp,
@@ -1154,7 +1268,7 @@ fun SettingsView(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         // Opens two confirmations; nothing is deleted by this tap.
-                        NeonButton("DELETE", Modifier.fillMaxWidth(), mainColor = RadicalRed) {
+                        NeonButton(stringResource(R.string.common_delete), Modifier.fillMaxWidth(), mainColor = RadicalRed) {
                             safetyCopyFirst = copy
                         }
                     }
@@ -1164,17 +1278,17 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("VOICE RECORDINGS", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(stringResource(R.string.settings_voice_heading), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Manage voice clips recorded for Quick Actions prompts.",
+                    stringResource(R.string.settings_voice_manage_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 NeonButton(
-                    "MANAGE RECORDINGS",
+                    stringResource(R.string.manage_rec_title),
                     Modifier
                         .fillMaxWidth()
                         .testTag(AckTags.VOICE_REC_MANAGE_BTN)
@@ -1188,13 +1302,13 @@ fun SettingsView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    "RECORDING PLAYBACK GAIN: ${recordingGainPercent.toInt()}%",
+                    stringResource(R.string.settings_voice_gain, recordingGainPercent.toInt()),
                     color = Color.Gray,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    "Trims volume for recorded voice prompts only, on top of the master gain above -- everything else (synthesized speech) is unaffected.",
+                    stringResource(R.string.settings_voice_gain_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1214,17 +1328,87 @@ fun SettingsView(
             item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
 
             item {
-                Text("AUTOCOMPLETE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                Text(stringResource(R.string.settings_profiles_heading), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // The one-time offer, only where nothing was ever stored. It says what it does, starts with the switch OFF, and changes nothing
+                // unless TURN ON is tapped. It never opens HELP or goes to another screen.
+                if (profileWarningOffered) {
+                    val offerShape = CutCornerShape(8.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, primaryColor.copy(alpha = 0.6f), offerShape)
+                            .background(primaryColor.copy(alpha = 0.08f), offerShape)
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.profile_warn_offer),
+                            color = Color.LightGray,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            NeonButton(stringResource(R.string.profile_warn_offer_turn_on), Modifier.weight(1f), mainColor = primaryColor) {
+                                AssistPrefs.setProfileChangeWarning(context, true)
+                                profileWarningOn = true
+                                profileWarningOffered = false
+                            }
+                            NeonButton(stringResource(R.string.profile_warn_offer_not_now), Modifier.weight(1f), mainColor = Color.White) {
+                                AssistPrefs.dismissProfileWarningOffer(context)
+                                profileWarningOffered = false
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                // On or off, said in words (not only colour) and without animation. Choosing it by hand answers the offer.
+                NeonButton(
+                    ProfileWarningText.switchLabel(words, profileWarningOn),
+                    Modifier.fillMaxWidth(),
+                    mainColor = if (profileWarningOn) primaryColor else Color.White
+                ) {
+                    profileWarningOn = !profileWarningOn
+                    AssistPrefs.setProfileChangeWarning(context, profileWarningOn)
+                    profileWarningOffered = false
+                }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "ACK remembers what you've typed into Matrix and Quick Actions variable fields and Shared Root Variables, offering your most-used past values back as tappable chips. Local to this device, and included in EXPORT .JSON backups.",
+                    ProfileWarningText.switchExplanation(words),
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            // WORD SUGGESTIONS (settings/WordSuggestionsSection.kt): the switch (off until turned on), what it learns, FORGET WORDS.
+            item {
+                WordSuggestionsSection(
+                    context = context,
+                    primaryColor = primaryColor,
+                    onBackUpFirst = { startBackupExport() }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(24.dp)); Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray)); Spacer(modifier = Modifier.height(24.dp)) }
+
+            item {
+                Text(stringResource(R.string.autocomplete_section_title), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    stringResource(R.string.autocomplete_section_help, labelFor(LabelKey.EXPORT_JSON)),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 NeonButton(
-                    "MANAGE AUTOCOMPLETE",
+                    stringResource(R.string.autocomplete_manage),
                     Modifier
                         .fillMaxWidth()
                         .testTag(AckTags.AUTOCOMPLETE_MANAGE_BTN)
@@ -1236,33 +1420,33 @@ fun SettingsView(
                 }
             }
         }
-        HeroButton("UPLOAD PROTOCOL", Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
+        HeroButton(labelFor(LabelKey.UPLOAD_PROTOCOL), Modifier.fillMaxWidth().testTag(AckTags.UPLOAD_BTN), mainColor = primaryColor) { syncAll(); onUploadClick() }
     }
 
     if (showImportDialog && importedBackup != null) {
         AlertDialog(
             onDismissRequest = { showImportDialog = false }, containerColor = Graphite,
-            title = { Text("IMPORT CONFIGURATION", color = primaryColor, fontFamily = FontFamily.Monospace) },
+            title = { Text(stringResource(R.string.data_port_import_title), color = primaryColor, fontFamily = FontFamily.Monospace) },
             text = { Column {
-                Text("Import as new Deck? Select identity color:", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.data_port_import_prompt), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(value = newDeckName, onValueChange = { newDeckName = it.uppercase() }, placeholder = { Text("DECK NAME") }, colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.Gray))
+                OutlinedTextField(value = newDeckName, onValueChange = { newDeckName = it.uppercase() }, placeholder = { Text(labelFor(LabelKey.DECK_NAME)) }, colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor, unfocusedIndicatorColor = Color.Gray))
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                     NeonPalette.SWATCHES.forEachIndexed { index, color -> Box(modifier = Modifier.padding(4.dp).size(36.dp).background(color, CutCornerShape(4.dp)).border(2.dp, if(selectedColorIdx == index) Color.White else Color.Transparent, CutCornerShape(4.dp)).clickable { selectedColorIdx = index }) }
                 }
             }},
             confirmButton = {
-                NeonButton("CREATE DECK", isActive = true, mainColor = primaryColor) {
+                NeonButton(labelFor(LabelKey.DECK_CREATE), isActive = true, mainColor = primaryColor) {
                     if(newDeckName.isNotEmpty()) {
                         CommandRepository.saveDeck(context, newDeckName, selectedColorIdx, importedBackup!!.matrixData)
                         showImportDialog = false; newDeckName = ""; WatchSync.sendDeckList(context)
-                        Toast.makeText(context, "DECK CREATED -- RESTARTING", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.data_port_deck_created), Toast.LENGTH_SHORT).show()
                         pendingRestart = true
                     }
                 }
             },
-            dismissButton = { Text("CANCEL", color = Color.Red, modifier = Modifier.clickable { showImportDialog = false }.padding(8.dp)) }
+            dismissButton = { Text(stringResource(R.string.common_cancel), color = Color.Red, modifier = Modifier.clickable { showImportDialog = false }.padding(8.dp)) }
         )
     }
 
@@ -1291,12 +1475,13 @@ fun SettingsView(
         SafetyCopyFirstDialog(
             primaryColor = primaryColor,
             paragraphs = SafetyCopyPolicy.firstConfirmation(
-                SafetyCopyPolicy.dateText(firstCopy.createdAtMs, ZoneId.systemDefault()),
-                StorageCatalogue.describeSize(firstCopy.sizeBytes),
+                words,
+                SafetyCopyPolicy.dateText(words, firstCopy.createdAtMs, ZoneId.systemDefault()),
+                StorageCatalogue.describeSize(words, firstCopy.sizeBytes),
                 hasNewerExport
             ),
             offersExportFirst = SafetyCopyPolicy.offersExportFirst(hasNewerExport),
-            proceedLabel = SafetyCopyPolicy.proceedLabel(hasNewerExport),
+            proceedLabel = SafetyCopyPolicy.proceedLabel(words, hasNewerExport),
             onExportFirst = { startBackupExport() },
             onProceed = { safetyCopySecond = firstCopy },
             onCancel = { safetyCopyFirst = null }
@@ -1310,7 +1495,7 @@ fun SettingsView(
                 val gone = SafetyCopies.delete(context, secondCopy)
                 Toast.makeText(
                     context,
-                    if (gone) "SAFETY COPY DELETED" else "COULD NOT DELETE THE SAFETY COPY",
+                    context.getString(if (gone) R.string.safety_copy_deleted else R.string.safety_copy_not_deleted),
                     Toast.LENGTH_LONG
                 ).show()
                 safetyCopySecond = null
@@ -1336,7 +1521,7 @@ fun SettingsView(
                 if (needsRestart) {
                     // Memory caches (the deck list and so on) make a restart the reliable way to show a clean state. Same
                     // toast -> flag -> delayed restart as FULL RESTORE; the 1.5 s delay is load-bearing (see CLAUDE.md).
-                    Toast.makeText(context, "DATA DELETED -- RESTARTING", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.delete_data_done_restarting), Toast.LENGTH_LONG).show()
                     pendingRestart = true
                 }
             },
@@ -1351,35 +1536,44 @@ fun SettingsView(
                 pendingFullRestoreJson = null
             },
             primaryColor = primaryColor,
-            title = "FULL RESTORE FROM JSON",
-            dismissLabel = "CANCEL"
+            title = labelFor(LabelKey.FULL_RESTORE),
+            dismissLabel = stringResource(R.string.common_cancel)
         ) {
             Text(
-                "This applies whatever the selected file contains -- decks, quick actions, root overrides, target computer entries, emergency prompts, voice recordings, autocomplete history, Geo-Protocol zones, visual presets, output routing, and more -- overwriting a matching entry by its id, or adding it if you don't already have one. Nothing on this device that the file doesn't mention is touched or removed. To clear something instead, use that feature's own dedicated clear/delete action.",
+                stringResource(R.string.data_port_restore_body),
                 color = Color.White,
                 fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                stringResource(R.string.data_port_restore_starters),
+                color = Color.White,
+                fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton("RESTORE", Modifier.weight(1f), mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.data_port_restore_button), Modifier.weight(1f), mainColor = primaryColor) {
                     val rawJson = pendingFullRestoreJson
                     if (rawJson != null) {
                         val success = TransferManager.restoreBackup(context, rawJson)
                         if (success) {
                             WatchSync.sendDeckList(context)
-                            Toast.makeText(context, "PROTOCOL RESTORED -- RESTARTING", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.data_port_restored), Toast.LENGTH_SHORT).show()
                             pendingRestart = true
                         } else {
-                            Toast.makeText(context, "INTEGRITY CHECK FAILED", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.data_port_integrity_failed), Toast.LENGTH_SHORT).show()
                         }
                     }
                     showFullRestoreConfirm = false
                     pendingFullRestoreJson = null
                 }
-                TightPanelButton("CANCEL", Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_cancel), Modifier.weight(1f), isActive = false, mainColor = primaryColor) {
                     showFullRestoreConfirm = false
                     pendingFullRestoreJson = null
                 }
@@ -1393,14 +1587,14 @@ fun SettingsView(
         TightDialogSurface(
             onDismiss = { recordingKeyIndex = null },
             primaryColor = primaryColor,
-            title = "$keyLabel RECORDING"
+            title = stringResource(R.string.voice_rec_key_title, keyLabel)
         ) {
             VoiceRecordingPanel(
                 context = context,
                 primaryColor = primaryColor,
                 panelKey = "qk_$keyIndex",
                 existingRecording = VoiceRecordingRepository.getForQuickAccessKey(context, keyIndex),
-                description = "WHEN SET, THIS PLAYS INSTEAD OF THE KEY'S TARGET PHRASE.",
+                description = stringResource(R.string.voice_rec_description_key),
                 onAccept = { pcm, sampleRate ->
                     VoiceRecordingRepository.saveForQuickAccessKey(context, keyIndex, pcm, sampleRate)
                     recordingRefreshKey++

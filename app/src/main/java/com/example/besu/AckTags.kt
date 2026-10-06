@@ -181,6 +181,27 @@ object AckTags {
     const val COMPOSER_COPY_BTN = "COMPOSER_COPY_BTN"
     const val COMPOSER_SPEAK_BTN = "COMPOSER_SPEAK_BTN"
 
+    // WORD SUGGESTIONS (composer/StatementComposerView.kt strip and one-time offer; settings/WordSuggestionsSection.kt).
+    const val COMPOSER_WORD_STRIP = "COMPOSER_WORD_STRIP"
+    const val COMPOSER_WORD_OFFER = "COMPOSER_WORD_OFFER"
+    const val WORD_SUGGESTIONS_SWITCH = "WORD_SUGGESTIONS_SWITCH"
+    const val WORD_SUGGESTIONS_FORGET_BTN = "WORD_SUGGESTIONS_FORGET_BTN"
+
+    // PLAIN WORDS (settings/SettingsView.kt, top of SETTINGS).
+    const val PLAIN_WORDS_SWITCH = "PLAIN_WORDS_SWITCH"
+
+    // The Terminal screen's plain-mode controls (ui/TerminalPlainControls.kt): SEND OPTIONS, WHAT'S NEW, CLEAR HISTORY.
+    const val TERMINAL_SEND_OPTIONS = "TERMINAL_SEND_OPTIONS"
+    const val TERMINAL_WHATS_NEW = "TERMINAL_WHATS_NEW"
+    const val TERMINAL_CLEAR_HISTORY = "TERMINAL_CLEAR_HISTORY"
+
+    // INTERFACE LANGUAGE (settings/InterfaceLanguageSection.kt).
+    const val INTERFACE_LANGUAGE = "INTERFACE_LANGUAGE"
+
+    // The other two plain-mode buttons: the Type tab's way into classic Manual Override, and SETTINGS' FIX PROBLEMS.
+    const val TYPE_CLASSIC_BUTTON = "TYPE_CLASSIC_BUTTON"
+    const val SETTINGS_FIX_PROBLEMS = "SETTINGS_FIX_PROBLEMS"
+
     // RECORD TRAINING DATA (voicecapture/*, entered from AUDIO ARCHITECT's
     // CUSTOM VOICE section).
     const val TRAIN_ENTRY_BTN = "TRAIN_ENTRY_BTN"

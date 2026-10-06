@@ -8,7 +8,7 @@ interface FreeCaptureListener {
     /** The level of the latest hop and whether it counts as speech, for a live meter. Called every 10 ms of audio. */
     fun onLevel(db: Double, isSpeech: Boolean) {}
     /** Recording stopped by itself: the disk is nearly full, a write failed, or the longest allowed recording was reached. */
-    fun onStoppedByItself(reason: PauseReason, message: String) {}
+    fun onStoppedByItself(reason: PauseReason, notice: CaptureNotice) {}
 }
 
 // Records one long, unscripted stretch of speech into a single file (format document, section 4.4). The phone never cuts the audio:
@@ -75,7 +75,7 @@ class FreeCaptureEngine(
                 try {
                     processHop()
                 } catch (e: IOException) {
-                    stoppedByItself(PauseReason.ERROR, "THE RECORDING COULD NOT BE SAVED: ${e.message ?: "STORAGE ERROR"}")
+                    stoppedByItself(PauseReason.ERROR, CaptureNotice.CouldNotSave(e.message))
                 }
             }
         }
@@ -90,20 +90,20 @@ class FreeCaptureEngine(
         val level = LevelMath.levelDb(Math.sqrt(sum / hop))
         listener.onLevel(level, level > thresholdDb)
         if (hops >= maxSeconds * 100L) {
-            stoppedByItself(PauseReason.REQUESTED, "THE LONGEST RECORDING (${maxSeconds / 60} MINUTES) WAS REACHED: SAVED. START A NEW ONE TO CARRY ON")
+            stoppedByItself(PauseReason.REQUESTED, CaptureNotice.LongestRecording(maxSeconds / 60))
             return
         }
         if (++hopsSinceRoomCheck >= 200) {
             hopsSinceRoomCheck = 0
             val free = freeBytes()
             if (DiskGuard.mustStop(free)) {
-                stoppedByItself(PauseReason.DISK_FULL, "OUT OF ROOM: ${DiskGuard.describe(free, sampleRate)}. WHAT WAS RECORDED IS SAVED")
+                stoppedByItself(PauseReason.DISK_FULL, CaptureNotice.OutOfRoomRecordingSaved(DiskGuard.room(free, sampleRate)))
             }
         }
     }
 
-    private fun stoppedByItself(reason: PauseReason, message: String) {
-        listener.onStoppedByItself(reason, message)
+    private fun stoppedByItself(reason: PauseReason, notice: CaptureNotice) {
+        listener.onStoppedByItself(reason, notice)
         stopInternal()
     }
 

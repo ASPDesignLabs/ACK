@@ -74,7 +74,7 @@ fun EnvironmentMonitorView(primaryColor: Color) {
             color = primaryColor,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 2.sp,
+            letterSpacing = looseSpacing(2.sp),
             modifier = Modifier.align(Alignment.Start)
         )
         

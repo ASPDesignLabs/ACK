@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.decks
 
+import com.example.besu.ui.looseSpacing
 import com.example.besu.*
+import com.example.besu.R
+import com.example.besu.core.EmergencyLabels
+import com.example.besu.core.EmergencyLabels.CardLabel
+import com.example.besu.core.LabelKey
+import com.example.besu.ui.labelFor
+import com.example.besu.ui.rememberText
+import com.example.besu.ui.stringFormatLabel
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.output.*
@@ -41,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -162,6 +171,7 @@ fun EmergencyDeck(
     }
 
     val helpManager = LocalHelpManager.current
+    val words = rememberText()
 
     fun reportHelpInteraction(tag: String) {
         helpManager?.onEvent(HelpEvent.Interacted(tag))
@@ -219,18 +229,18 @@ fun EmergencyDeck(
             .padding(16.dp)
     ) {
         Text(
-            text = "EMERGENCY",
+            text = labelFor(LabelKey.DECK_TYPE_EMERGENCY),
             color = primaryColor,
             fontSize = 20.sp,
             fontWeight = FontWeight.Black,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 2.sp
+            letterSpacing = looseSpacing(2.sp)
         )
 
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "TAP: EXECUTE  //  HOLD: CONFIGURE",
+            text = EmergencyLabels.hint(words),
             color = Color.Gray,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace
@@ -270,7 +280,7 @@ fun EmergencyDeck(
                                 // Resolving a phrase has no side effects, so it is safe to
                                 // resolve it once here to show it.
                                 pendingConfirm = PendingEmergencySend(
-                                    slotLabel = slot.label,
+                                    slotLabel = EmergencyLabels.shownLabel(words, slot.label, slot.slotIndex),
                                     phrase = phrase
                                 )
                             } else {
@@ -291,7 +301,7 @@ fun EmergencyDeck(
         Spacer(modifier = Modifier.height(4.dp))
 
         AckOutlineButton(
-            text = "CONFIGURE OVERRIDES",
+            text = stringResource(R.string.emergency_configure_overrides),
             primaryColor = primaryColor,
             modifier = Modifier
                 .fillMaxWidth()
@@ -308,7 +318,7 @@ fun EmergencyDeck(
         // easy target to hit, and white instead of the deck's accent color so
         // it reads as the "for someone else looking at this screen" action.
         AckOutlineButton(
-            text = "EMERGENCY INFO",
+            text = stringResource(R.string.emergency_info_title),
             primaryColor = Color.White,
             verticalPadding = 24.dp,
             modifier = Modifier
@@ -400,22 +410,24 @@ private fun EmergencyStatusStrip(
     config: EmergencyDeckConfig,
     primaryColor: Color
 ) {
-    val states = buildList {
-        if (config.preventTimedClear) add("PERSIST")
-        if (config.requireHoldToClear) add("HOLD CLEAR")
-        if (config.forceSpeaker) add("SPEAKER")
-        if (config.boostVolume) add("BOOST")
-        if (config.tone != EmergencyTone.OFF) add(config.tone.name)
-        if (config.confirmBeforeSend) add("CONFIRM")
-    }
+    // Which overrides are on and how they read is decided in core/EmergencyLabels.kt (tested); this only draws it. The saved tone is mapped to 0..3 here.
+    val overrides = EmergencyLabels.Overrides(
+        preventTimedClear = config.preventTimedClear,
+        requireHoldToClear = config.requireHoldToClear,
+        forceSpeaker = config.forceSpeaker,
+        boostVolume = config.boostVolume,
+        tone = when (config.tone) {
+            EmergencyTone.OFF -> 0
+            EmergencyTone.TONE_1 -> 1
+            EmergencyTone.TONE_2 -> 2
+            EmergencyTone.TONE_3 -> 3
+        },
+        confirmBeforeSend = config.confirmBeforeSend
+    )
 
     Text(
-        text = if (states.isEmpty()) {
-            "OVERRIDES: STANDARD"
-        } else {
-            "OVERRIDES: ${states.joinToString(" // ")}"
-        },
-        color = if (states.isEmpty()) Color.Gray else primaryColor,
+        text = EmergencyLabels.overridesLine(rememberText(), overrides),
+        color = if (overrides.isStandard) Color.Gray else primaryColor,
         fontSize = 9.sp,
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Bold
@@ -469,7 +481,7 @@ private fun EmergencyPromptButton(
         )
 
         Text(
-            text = slot.label,
+            text = EmergencyLabels.shownLabel(rememberText(), slot.label, slot.slotIndex),
             color = if (isConfigured) primaryColor else Color.Gray,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
@@ -481,9 +493,9 @@ private fun EmergencyPromptButton(
 
         Text(
             text = if (isConfigured) {
-                "READY"
+                stringResource(R.string.emergency_slot_ready)
             } else {
-                "HOLD TO SET"
+                stringResource(R.string.emergency_slot_hold_to_set)
             },
             color = Color.Gray,
             fontSize = 9.sp,
@@ -505,8 +517,14 @@ private fun EmergencySlotEditorDialog(
         localValues: List<String>
     ) -> Unit
 ) {
+    // The field starts with the name as it is shown (the default in the chosen language). Left untouched, saving keeps what was stored: a saved name is never rewritten.
+    val words = rememberText()
+    val shownAtStart = remember(slot.slotIndex) {
+        EmergencyLabels.shownLabel(words, slot.label, slot.slotIndex)
+    }
+
     var label by remember(slot.slotIndex) {
-        mutableStateOf(slot.label)
+        mutableStateOf(shownAtStart)
     }
 
     var template by remember(slot.slotIndex) {
@@ -526,12 +544,12 @@ private fun EmergencySlotEditorDialog(
     }
 
     AckDialogShell(
-        title = "CONFIGURE E${slot.slotIndex + 1}",
+        title = stringResource(R.string.emergency_configure_slot, slot.slotIndex + 1),
         primaryColor = primaryColor,
         onDismiss = onDismiss
     ) {
         AckTextField(
-            label = "BUTTON LABEL",
+            label = stringResource(R.string.emergency_button_label),
             value = label,
             primaryColor = primaryColor,
             onValueChange = {
@@ -542,7 +560,7 @@ private fun EmergencySlotEditorDialog(
         Spacer(modifier = Modifier.height(12.dp))
 
         AckTextField(
-            label = "EMERGENCY PHRASE",
+            label = stringResource(R.string.emergency_phrase),
             value = template,
             primaryColor = primaryColor,
             singleLine = false,
@@ -555,7 +573,7 @@ private fun EmergencySlotEditorDialog(
             Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = "LOCAL VARIABLES",
+                text = stringResource(R.string.emergency_local_variables),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -566,7 +584,7 @@ private fun EmergencySlotEditorDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 AckTextField(
-                    label = tag?.let { "VAR:$it" } ?: "VARIABLE ${index + 1}",
+                    label = tag?.let { stringFormatLabel(LabelKey.VARIABLE_TAG, it) } ?: "${labelFor(LabelKey.VARIABLE)} ${index + 1}",
                     value = localValues.getOrNull(index).orEmpty(),
                     primaryColor = primaryColor,
                     onValueChange = { value ->
@@ -585,7 +603,7 @@ private fun EmergencySlotEditorDialog(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             AckOutlineButton(
-                text = "CANCEL",
+                text = stringResource(R.string.common_cancel),
                 primaryColor = Color.Gray,
                 modifier = Modifier.weight(1f)
             ) {
@@ -593,7 +611,7 @@ private fun EmergencySlotEditorDialog(
             }
 
             AckOutlineButton(
-                text = "SAVE",
+                text = stringResource(R.string.common_save),
                 primaryColor = primaryColor,
                 modifier = Modifier
                     .weight(1f)
@@ -601,7 +619,7 @@ private fun EmergencySlotEditorDialog(
                     .helpTarget(AckTags.EMERGENCY_SAVE, primaryColor)
             ) {
                 onSave(
-                    label,
+                    EmergencyLabels.labelToSave(label, shownAtStart, slot.label),
                     template,
                     localValues
                 )
@@ -642,12 +660,12 @@ private fun EmergencyOverridesDialog(
     }
 
     AckDialogShell(
-        title = "EMERGENCY OVERRIDES",
+        title = stringResource(R.string.emergency_overrides_title),
         primaryColor = primaryColor,
         onDismiss = onDismiss
     ) {
         Text(
-            text = "OVERLAY CLEARING",
+            text = stringResource(R.string.emergency_overlay_clearing),
             color = primaryColor,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
@@ -657,7 +675,7 @@ private fun EmergencyOverridesDialog(
         Spacer(modifier = Modifier.height(8.dp))
 
         AckToggleRow(
-            label = "PREVENT TIMED CLEAR",
+            label = stringResource(R.string.emergency_prevent_timed_clear),
             enabled = preventTimedClear,
             primaryColor = primaryColor
         ) {
@@ -667,7 +685,7 @@ private fun EmergencyOverridesDialog(
         Spacer(modifier = Modifier.height(8.dp))
 
         AckToggleRow(
-            label = "REQUIRE HOLD TO CLEAR",
+            label = stringResource(R.string.emergency_require_hold),
             enabled = requireHoldToClear,
             primaryColor = primaryColor
         ) {
@@ -677,7 +695,7 @@ private fun EmergencyOverridesDialog(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "OUTPUT ROUTING",
+            text = stringResource(R.string.emergency_output_routing),
             color = primaryColor,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
@@ -687,7 +705,7 @@ private fun EmergencyOverridesDialog(
         Spacer(modifier = Modifier.height(8.dp))
 
         AckToggleRow(
-            label = "FORCE DEVICE SPEAKER",
+            label = stringResource(R.string.emergency_force_speaker),
             enabled = forceSpeaker,
             primaryColor = primaryColor
         ) {
@@ -697,7 +715,7 @@ private fun EmergencyOverridesDialog(
         Spacer(modifier = Modifier.height(8.dp))
 
         AckToggleRow(
-            label = "EMERGENCY VOLUME BOOST",
+            label = stringResource(R.string.emergency_volume_boost),
             enabled = boostVolume,
             primaryColor = primaryColor
         ) {
@@ -707,7 +725,7 @@ private fun EmergencyOverridesDialog(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "ALERT TONE",
+            text = stringResource(R.string.emergency_alert_tone),
             color = primaryColor,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
@@ -722,7 +740,14 @@ private fun EmergencyOverridesDialog(
         ) {
             EmergencyTone.entries.forEach { option ->
                 AckSegmentButton(
-                    label = option.name.replace('_', ' '),
+                    label = stringResource(
+                        when (option) {
+                            EmergencyTone.OFF -> R.string.emergency_tone_off
+                            EmergencyTone.TONE_1 -> R.string.emergency_tone_1
+                            EmergencyTone.TONE_2 -> R.string.emergency_tone_2
+                            EmergencyTone.TONE_3 -> R.string.emergency_tone_3
+                        }
+                    ),
                     selected = tone == option,
                     primaryColor = primaryColor,
                     modifier = Modifier.weight(1f)
@@ -735,7 +760,7 @@ private fun EmergencyOverridesDialog(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "TAP PROTECTION",
+            text = stringResource(R.string.emergency_tap_protection),
             color = primaryColor,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
@@ -745,7 +770,7 @@ private fun EmergencyOverridesDialog(
         Spacer(modifier = Modifier.height(8.dp))
 
         AckToggleRow(
-            label = "CONFIRM BEFORE SENDING",
+            label = stringResource(R.string.emergency_confirm_before_sending),
             enabled = confirmBeforeSend,
             primaryColor = primaryColor
         ) {
@@ -755,7 +780,7 @@ private fun EmergencyOverridesDialog(
         Spacer(modifier = Modifier.height(18.dp))
 
         AckOutlineButton(
-            text = "SAVE OVERRIDES",
+            text = stringResource(R.string.emergency_save_overrides),
             primaryColor = primaryColor,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -785,7 +810,7 @@ private fun EmergencyConfirmDialog(
     onCancel: () -> Unit
 ) {
     AckDialogShell(
-        title = "CONFIRM EMERGENCY",
+        title = stringResource(R.string.emergency_confirm_title),
         primaryColor = primaryColor,
         onDismiss = onCancel
     ) {
@@ -814,14 +839,14 @@ private fun EmergencyConfirmDialog(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             AckConfirmButton(
-                text = "CANCEL",
+                text = stringResource(R.string.common_cancel),
                 color = Color.White,
                 modifier = Modifier.weight(1f),
                 onClick = onCancel
             )
 
             AckConfirmButton(
-                text = "SEND",
+                text = stringResource(R.string.emergency_send),
                 color = primaryColor,
                 modifier = Modifier.weight(1f),
                 onClick = onSend
@@ -881,7 +906,12 @@ private fun EmergencyInfoDialog(
     var isEditing by remember { mutableStateOf(false) }
 
     AckDialogShell(
-        title = if (isEditing) "EDIT EMERGENCY INFO" else "EMERGENCY INFO",
+        // The card view is read by someone else, so its title is the chosen language and English; the edit form is the person's own.
+        title = if (isEditing) {
+            stringResource(R.string.emergency_info_edit_title)
+        } else {
+            EmergencyLabels.cardLabel(rememberText(), CardLabel.TITLE)
+        },
         primaryColor = Color.White,
         onDismiss = onDismiss
     ) {
@@ -904,7 +934,7 @@ private fun EmergencyInfoDialog(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 AckOutlineButton(
-                    text = "CLOSE",
+                    text = stringResource(R.string.common_close),
                     primaryColor = Color.Gray,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -912,7 +942,7 @@ private fun EmergencyInfoDialog(
                 }
 
                 AckOutlineButton(
-                    text = "EDIT",
+                    text = stringResource(R.string.common_edit),
                     primaryColor = Color.White,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -934,7 +964,7 @@ private fun EmergencyInfoField(label: String, value: String) {
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = looseSpacing(1.sp)
         )
 
         Spacer(modifier = Modifier.height(2.dp))
@@ -951,10 +981,12 @@ private fun EmergencyInfoField(label: String, value: String) {
 
 @Composable
 private fun EmergencyInfoDisplay(card: EmergencyInfoCard) {
+    val words = rememberText()
+
     Column(modifier = Modifier.fillMaxWidth()) {
         if (card.isBlank) {
             Text(
-                text = "NO INFO ON FILE YET. TAP EDIT TO FILL OUT YOUR CARD.",
+                text = stringResource(R.string.emergency_info_empty),
                 color = Color.Gray,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -963,18 +995,18 @@ private fun EmergencyInfoDisplay(card: EmergencyInfoCard) {
             Spacer(modifier = Modifier.height(14.dp))
         }
 
-        EmergencyInfoField("NAME", card.fullName)
-        EmergencyInfoField("DATE OF BIRTH", card.dateOfBirth)
-        EmergencyInfoField("BLOOD TYPE", card.bloodType)
-        EmergencyInfoField("COMMUNICATION", card.communicationNote)
-        EmergencyInfoField("CONDITIONS", card.conditions)
-        EmergencyInfoField("ALLERGIES", card.allergies)
-        EmergencyInfoField("MEDICATIONS", card.medications)
+        EmergencyInfoField(EmergencyLabels.cardLabel(words, CardLabel.NAME), card.fullName)
+        EmergencyInfoField(EmergencyLabels.cardLabel(words, CardLabel.DATE_OF_BIRTH), card.dateOfBirth)
+        EmergencyInfoField(EmergencyLabels.cardLabel(words, CardLabel.BLOOD_TYPE), card.bloodType)
+        EmergencyInfoField(EmergencyLabels.cardLabel(words, CardLabel.COMMUNICATION), card.communicationNote)
+        EmergencyInfoField(EmergencyLabels.cardLabel(words, CardLabel.CONDITIONS), card.conditions)
+        EmergencyInfoField(EmergencyLabels.cardLabel(words, CardLabel.ALLERGIES), card.allergies)
+        EmergencyInfoField(EmergencyLabels.cardLabel(words, CardLabel.MEDICATIONS), card.medications)
 
         card.contacts.forEachIndexed { index, contact ->
             if (!contact.isBlank) {
                 EmergencyInfoField(
-                    label = if (index == 0) "PRIMARY CONTACT" else "EMERGENCY CONTACT",
+                    label = EmergencyLabels.cardLabel(words, if (index == 0) CardLabel.PRIMARY_CONTACT else CardLabel.EMERGENCY_CONTACT),
                     value = listOf(contact.name, contact.relationship, contact.phone)
                         .filter { it.isNotBlank() }
                         .joinToString("  //  ")
@@ -982,7 +1014,7 @@ private fun EmergencyInfoDisplay(card: EmergencyInfoCard) {
             }
         }
 
-        EmergencyInfoField("NOTES", card.notes)
+        EmergencyInfoField(EmergencyLabels.cardLabel(words, CardLabel.NOTES), card.notes)
     }
 }
 
@@ -1012,26 +1044,26 @@ private fun EmergencyInfoEditForm(
     var contact2Phone by remember { mutableStateOf(contact2.phone) }
 
     Column {
-        AckTextField(label = "FULL NAME", value = fullName, primaryColor = Color.White) {
+        AckTextField(label = stringResource(R.string.emergency_form_full_name), value = fullName, primaryColor = Color.White) {
             fullName = it
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        AckTextField(label = "DATE OF BIRTH", value = dateOfBirth, primaryColor = Color.White) {
+        AckTextField(label = stringResource(R.string.emergency_card_dob), value = dateOfBirth, primaryColor = Color.White) {
             dateOfBirth = it
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        AckTextField(label = "BLOOD TYPE", value = bloodType, primaryColor = Color.White) {
+        AckTextField(label = stringResource(R.string.emergency_card_blood), value = bloodType, primaryColor = Color.White) {
             bloodType = it
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
         AckTextField(
-            label = "COMMUNICATION NOTE",
+            label = stringResource(R.string.emergency_form_communication_note),
             value = communicationNote,
             primaryColor = Color.White,
             singleLine = false
@@ -1042,7 +1074,7 @@ private fun EmergencyInfoEditForm(
         Spacer(modifier = Modifier.height(10.dp))
 
         AckTextField(
-            label = "MEDICAL CONDITIONS",
+            label = stringResource(R.string.emergency_form_conditions),
             value = conditions,
             primaryColor = Color.White,
             singleLine = false
@@ -1053,7 +1085,7 @@ private fun EmergencyInfoEditForm(
         Spacer(modifier = Modifier.height(10.dp))
 
         AckTextField(
-            label = "ALLERGIES",
+            label = stringResource(R.string.emergency_card_allergies),
             value = allergies,
             primaryColor = Color.White,
             singleLine = false
@@ -1064,7 +1096,7 @@ private fun EmergencyInfoEditForm(
         Spacer(modifier = Modifier.height(10.dp))
 
         AckTextField(
-            label = "MEDICATIONS",
+            label = stringResource(R.string.emergency_card_medications),
             value = medications,
             primaryColor = Color.White,
             singleLine = false
@@ -1075,7 +1107,7 @@ private fun EmergencyInfoEditForm(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "PRIMARY CONTACT",
+            text = stringResource(R.string.emergency_card_primary),
             color = Color.White,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
@@ -1084,14 +1116,14 @@ private fun EmergencyInfoEditForm(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        AckTextField(label = "NAME", value = contact1Name, primaryColor = Color.White) {
+        AckTextField(label = stringResource(R.string.emergency_card_name), value = contact1Name, primaryColor = Color.White) {
             contact1Name = it
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         AckTextField(
-            label = "RELATIONSHIP",
+            label = stringResource(R.string.emergency_form_relationship),
             value = contact1Relationship,
             primaryColor = Color.White
         ) {
@@ -1100,14 +1132,14 @@ private fun EmergencyInfoEditForm(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        AckTextField(label = "PHONE", value = contact1Phone, primaryColor = Color.White) {
+        AckTextField(label = stringResource(R.string.emergency_form_phone), value = contact1Phone, primaryColor = Color.White) {
             contact1Phone = it
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "SECONDARY CONTACT",
+            text = stringResource(R.string.emergency_form_secondary),
             color = Color.White,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
@@ -1116,14 +1148,14 @@ private fun EmergencyInfoEditForm(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        AckTextField(label = "NAME", value = contact2Name, primaryColor = Color.White) {
+        AckTextField(label = stringResource(R.string.emergency_card_name), value = contact2Name, primaryColor = Color.White) {
             contact2Name = it
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         AckTextField(
-            label = "RELATIONSHIP",
+            label = stringResource(R.string.emergency_form_relationship),
             value = contact2Relationship,
             primaryColor = Color.White
         ) {
@@ -1132,14 +1164,14 @@ private fun EmergencyInfoEditForm(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        AckTextField(label = "PHONE", value = contact2Phone, primaryColor = Color.White) {
+        AckTextField(label = stringResource(R.string.emergency_form_phone), value = contact2Phone, primaryColor = Color.White) {
             contact2Phone = it
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
         AckTextField(
-            label = "ADDITIONAL NOTES",
+            label = stringResource(R.string.emergency_form_notes),
             value = notes,
             primaryColor = Color.White,
             singleLine = false
@@ -1154,7 +1186,7 @@ private fun EmergencyInfoEditForm(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             AckOutlineButton(
-                text = "CANCEL",
+                text = stringResource(R.string.common_cancel),
                 primaryColor = Color.Gray,
                 modifier = Modifier.weight(1f)
             ) {
@@ -1162,7 +1194,7 @@ private fun EmergencyInfoEditForm(
             }
 
             AckOutlineButton(
-                text = "SAVE",
+                text = stringResource(R.string.common_save),
                 primaryColor = Color.White,
                 modifier = Modifier
                     .weight(1f)
@@ -1228,7 +1260,7 @@ private fun AckDialogShell(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Black,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(18.dp))

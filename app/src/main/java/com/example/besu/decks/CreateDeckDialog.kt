@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.decks
 
+import com.example.besu.R
+import com.example.besu.ui.looseSpacing
+import com.example.besu.core.LabelKey
+import com.example.besu.ui.labelFor
 import com.example.besu.*
 import com.example.besu.data.*
 import com.example.besu.help.*
@@ -30,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -65,27 +70,15 @@ fun CreateDeckDialog(
 
     val helpManager = LocalHelpManager.current
 
-    val description = when (deckType) {
-        DeckType.MATRIX -> {
-            "A full 3-pose Matrix with its own phrases, context layers, and profiles."
+    val description = stringResource(
+        when (deckType) {
+            DeckType.MATRIX -> R.string.deck_create_desc_matrix
+            DeckType.QUICK_ACTIONS -> R.string.deck_create_desc_quick
+            DeckType.EMERGENCY -> R.string.deck_create_desc_emergency
+            DeckType.EMOJI -> R.string.deck_create_desc_emoji
+            DeckType.GIF -> R.string.deck_create_desc_gif
         }
-
-        DeckType.QUICK_ACTIONS -> {
-            "Three action groups with four configurable slots per group."
-        }
-
-        DeckType.EMERGENCY -> {
-            "Four immediate prompt slots with optional emergency overrides."
-        }
-
-        DeckType.EMOJI -> {
-            "Visual-only emoji pages with configurable grids and optional text."
-        }
-
-        DeckType.GIF -> {
-            "Local GIF library with categories, previews, and fullscreen playback."
-        }
-    }
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -109,18 +102,18 @@ fun CreateDeckDialog(
                 .padding(18.dp)
         ) {
             Text(
-                text = "CREATE DECK",
+                text = labelFor(LabelKey.DECK_CREATE),
                 color = primaryColor,
                 fontSize = 16.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(18.dp))
 
             CreateDeckSectionLabel(
-                text = "DECK TYPE",
+                text = stringResource(R.string.deck_create_type, labelFor(LabelKey.DECK)),
                 color = primaryColor
             )
 
@@ -135,7 +128,7 @@ fun CreateDeckDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     DeckTypeOption(
-                        text = "MATRIX",
+                        text = labelFor(LabelKey.DECK_TYPE_MATRIX),
                         selected = deckType == DeckType.MATRIX,
                         primaryColor = primaryColor,
                         modifier = Modifier.weight(1f)
@@ -148,7 +141,7 @@ fun CreateDeckDialog(
                     }
 
                     DeckTypeOption(
-                        text = "QUICK ACTIONS",
+                        text = labelFor(LabelKey.DECK_TYPE_QUICK),
                         selected = deckType == DeckType.QUICK_ACTIONS,
                         primaryColor = primaryColor,
                         modifier = Modifier.weight(1f)
@@ -166,7 +159,7 @@ fun CreateDeckDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     DeckTypeOption(
-                        text = "EMERGENCY",
+                        text = labelFor(LabelKey.DECK_TYPE_EMERGENCY),
                         selected = deckType == DeckType.EMERGENCY,
                         primaryColor = primaryColor,
                         modifier = Modifier.weight(1f)
@@ -179,7 +172,7 @@ fun CreateDeckDialog(
                     }
 
                     DeckTypeOption(
-                        text = "EMOJI",
+                        text = labelFor(LabelKey.DECK_TYPE_EMOJI),
                         selected = deckType == DeckType.EMOJI,
                         primaryColor = primaryColor,
                         modifier = Modifier.weight(1f)
@@ -197,7 +190,7 @@ fun CreateDeckDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     DeckTypeOption(
-                        text = "GIF",
+                        text = labelFor(LabelKey.DECK_TYPE_GIF),
                         selected = deckType == DeckType.GIF,
                         primaryColor = primaryColor,
                         modifier = Modifier.weight(1f)
@@ -225,7 +218,7 @@ fun CreateDeckDialog(
             Spacer(modifier = Modifier.height(18.dp))
 
             CreateDeckSectionLabel(
-                text = "DECK NAME",
+                text = labelFor(LabelKey.DECK_NAME),
                 color = primaryColor
             )
 
@@ -242,7 +235,7 @@ fun CreateDeckDialog(
             Spacer(modifier = Modifier.height(18.dp))
 
             CreateDeckSectionLabel(
-                text = "DECK COLOR",
+                text = stringResource(R.string.deck_create_color, labelFor(LabelKey.DECK)),
                 color = primaryColor
             )
 
@@ -262,7 +255,7 @@ fun CreateDeckDialog(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 CreateDeckButton(
-                    text = "CANCEL",
+                    text = stringResource(R.string.common_cancel),
                     color = Color.Gray,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -270,7 +263,7 @@ fun CreateDeckDialog(
                 }
 
                 CreateDeckButton(
-                    text = "CREATE",
+                    text = stringResource(R.string.common_create),
                     color = primaryColor,
                     modifier = Modifier
                         .weight(1f)

@@ -25,12 +25,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.example.besu.R
 import com.example.besu.ui.theme.ErrorRed
 import com.example.besu.ui.theme.Graphite
 
@@ -91,14 +93,14 @@ fun OverlayPermissionBanner(modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "DISPLAY PERMISSION IS OFF. MESSAGES ARE SPOKEN BUT NOT SHOWN ON SCREEN.",
+            text = stringResource(R.string.overlay_banner_text),
             color = ErrorRed,
             fontSize = BANNER_TEXT_SP.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f)
         )
-        NeonButton("ALLOW", mainColor = ErrorRed) { openOverlaySettings(context) }
+        NeonButton(stringResource(R.string.overlay_banner_allow), mainColor = ErrorRed) { openOverlaySettings(context) }
     }
 }
 

@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.decks
 
+import com.example.besu.R
+import com.example.besu.core.AutocompleteLabels
+import com.example.besu.core.LabelKey
+import com.example.besu.core.QuickActionLabels
 import com.example.besu.*
 import com.example.besu.computer.*
+import com.example.besu.core.SlotFamily
+import com.example.besu.core.TextInsertion
+import com.example.besu.core.TokenSlots
 import com.example.besu.data.*
 import com.example.besu.help.*
 import com.example.besu.output.*
@@ -41,8 +48,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.besu.ui.theme.VoidBlack
@@ -75,6 +85,7 @@ fun QuickActionsDeck(
     }
 
     val helpManager = LocalHelpManager.current
+    val words = rememberText()
 
     fun reportHelpInteraction(tag: String) {
         helpManager?.onEvent(HelpEvent.Interacted(tag))
@@ -94,18 +105,18 @@ fun QuickActionsDeck(
             .padding(16.dp)
     ) {
         Text(
-            text = "QUICK ACTIONS",
+            text = labelFor(LabelKey.DECK_TYPE_QUICK),
             color = primaryColor,
             fontSize = 20.sp,
             fontWeight = FontWeight.Black,
             fontFamily = FontFamily.Monospace,
-            letterSpacing = 2.sp
+            letterSpacing = looseSpacing(2.sp)
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "TAP: EXECUTE  //  HOLD: EDIT",
+            text = QuickActionLabels.hint(words),
             color = Color.Gray,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace
@@ -151,13 +162,13 @@ fun QuickActionsDeck(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "G${group.groupIndex + 1}",
+                            text = QuickActionLabels.groupTab(words, group.groupIndex),
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
                         )
 
                         Text(
-                            text = group.boundPose.take(3),
+                            text = QuickActionLabels.poseShort(words, group.boundPose),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -298,6 +309,8 @@ private fun QuickActionsGroupHeader(
     primaryColor: Color,
     onEdit: () -> Unit
 ) {
+    val words = rememberText()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -315,7 +328,7 @@ private fun QuickActionsGroupHeader(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = group.label,
+                text = QuickActionLabels.shownGroupLabel(words, group.label, group.groupIndex),
                 color = primaryColor,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
@@ -323,7 +336,7 @@ private fun QuickActionsGroupHeader(
             )
 
             Text(
-                text = "POSE: ${group.boundPose}  //  ROOT: ${group.rootCategory}",
+                text = QuickActionLabels.poseRootLine(words, labelFor(LabelKey.POSE), poseLabel(group.boundPose), poseLabel(group.rootCategory)),
                 color = Color.Gray,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace
@@ -331,7 +344,7 @@ private fun QuickActionsGroupHeader(
         }
 
         NeonButton(
-            text = "EDIT",
+            text = stringResource(R.string.common_edit),
             modifier = Modifier
                 .testTag(AckTags.QUICK_ACTION_GROUP_EDIT)
                 .helpTarget(AckTags.QUICK_ACTION_GROUP_EDIT, primaryColor),
@@ -351,6 +364,7 @@ private fun QuickActionButton(
     onEdit: () -> Unit
 ) {
     val isConfigured = slot.template.isNotBlank()
+    val words = rememberText()
 
     Column(
         modifier = Modifier
@@ -377,7 +391,7 @@ private fun QuickActionButton(
             .padding(horizontal = 18.dp, vertical = 20.dp)
     ) {
         Text(
-            text = slot.label,
+            text = QuickActionLabels.shownSlotLabel(words, slot.label, slot.slotIndex),
             color = if (isConfigured) primaryColor else Color.Gray,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
@@ -390,7 +404,7 @@ private fun QuickActionButton(
             text = if (isConfigured) {
                 slot.template
             } else {
-                "[HOLD TO CONFIGURE]"
+                stringResource(R.string.qa_hold_configure)
             },
             color = Color.Gray,
             fontSize = 11.sp,
@@ -416,12 +430,25 @@ private fun QuickActionEditorDialog(
     ) -> Unit,
     onRecordingChanged: () -> Unit
 ) {
+    // The slot's default name is shown in the language but SAVED as it was stored: saving without touching the field never rewrites the name (core/QuickActionLabels.kt).
+    val words = rememberText()
+    val shownLabelAtStart = remember(slot.slotIndex) {
+        QuickActionLabels.shownSlotLabel(words, slot.label, slot.slotIndex)
+    }
+
     var label by remember(slot.slotIndex) {
-        mutableStateOf(slot.label)
+        mutableStateOf(shownLabelAtStart)
     }
 
     var template by remember(slot.slotIndex) {
         mutableStateOf(slot.template)
+    }
+
+    // The template field's text AND its cursor, so INSERT TARGET TAG can insert AT THE CURSOR with the shared rule
+    // (core/TextInsertion.kt). `template` stays the one place the text is saved from. The cursor starts at the END, so on a freshly
+    // opened editor the first insertion still lands last, as it always did.
+    var templateValue by remember(slot.slotIndex) {
+        mutableStateOf(TextFieldValue(slot.template, TextRange(slot.template.length)))
     }
 
     // Every category with at least one entry to browse for -- shown as the
@@ -445,6 +472,9 @@ private fun QuickActionEditorDialog(
 
     fun updateTemplate(newTemplate: String) {
         template = newTemplate
+        if (templateValue.text != newTemplate) {
+            templateValue = TextFieldValue(newTemplate, TextRange(newTemplate.length))
+        }
 
         val newComputerTagCount = TemplateEngine.countComputerTags(newTemplate)
         while (computerFallbacks.size > newComputerTagCount) {
@@ -453,6 +483,19 @@ private fun QuickActionEditorDialog(
         while (computerFallbacks.size < newComputerTagCount) {
             computerFallbacks.add("")
         }
+    }
+
+    // Inserts a [COMPUTER:..] tag at the cursor with the shared rule. The fallbacks are stored BY POSITION, so they are shifted to
+    // match first (core/TokenSlots.kt); otherwise a tag put in the middle would take over the fallback of the tag that used to be there.
+    fun insertComputerTagAtCursor(categoryId: String) {
+        val token = "[COMPUTER:$categoryId]"
+        val selection = templateValue.selection
+        val result = TextInsertion.insert(template, selection.start, selection.end, token)
+        val shifted = TokenSlots.realign(computerFallbacks.toList(), template, result.replaced, token, SlotFamily.COMPUTER)
+        computerFallbacks.clear()
+        computerFallbacks.addAll(shifted)
+        updateTemplate(result.text)
+        templateValue = TextFieldValue(result.text, TextRange(result.cursor))
     }
 
     val tags = remember(template) {
@@ -470,7 +513,7 @@ private fun QuickActionEditorDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "EDIT QUICK ACTION"
+        title = stringResource(R.string.qa_edit_title)
     ) {
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
@@ -479,7 +522,7 @@ private fun QuickActionEditorDialog(
                         label = it
                     },
                     label = {
-                        Text("BUTTON LABEL")
+                        Text(stringResource(R.string.emergency_button_label))
                     },
                     shape = AckHelpShape,
                     singleLine = true,
@@ -490,12 +533,16 @@ private fun QuickActionEditorDialog(
 
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
-                    value = template,
+                    value = templateValue,
                     onValueChange = { newValue ->
-                        updateTemplate(newValue)
+                        // Only a change of TEXT is a template edit; moving the cursor just moves the cursor.
+                        if (newValue.text != template) {
+                            updateTemplate(newValue.text)
+                        }
+                        templateValue = newValue
                     },
                     label = {
-                        Text("PHRASE TEMPLATE")
+                        Text(stringResource(R.string.qa_phrase_template))
                     },
                     shape = AckHelpShape,
                     colors = NeonTextFieldColors(primaryColor),
@@ -505,7 +552,7 @@ private fun QuickActionEditorDialog(
                 if (computerCategories.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    TightSectionLabel("INSERT TARGET TAG", color = primaryColor)
+                    TightSectionLabel(labelFor(LabelKey.INSERT_TARGET_TAG), color = primaryColor)
 
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -519,10 +566,10 @@ private fun QuickActionEditorDialog(
                     ) {
                         computerCategories.forEach { computerCategory ->
                             TightPanelButton(
-                                text = "+ ${computerCategory.label}",
+                                text = "+ ${categoryName(computerCategory)}",
                                 mainColor = primaryColor
                             ) {
-                                updateTemplate("$template [COMPUTER:${computerCategory.id}]")
+                                insertComputerTagAtCursor(computerCategory.id)
                             }
                         }
                     }
@@ -531,7 +578,7 @@ private fun QuickActionEditorDialog(
                 if (tags.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    TightSectionLabel("LOCAL VARIABLES", color = primaryColor)
+                    TightSectionLabel(stringResource(R.string.emergency_local_variables), color = primaryColor)
 
                     tags.forEachIndexed { index, tag ->
                         Spacer(modifier = Modifier.height(8.dp))
@@ -546,7 +593,7 @@ private fun QuickActionEditorDialog(
                             },
                             label = {
                                 Text(
-                                    tag?.let { "VAR:$it" } ?: "VAR ${index + 1}"
+                                    AutocompleteLabels.quickActionField(words, index, tag)
                                 )
                             },
                             shape = AckHelpShape,
@@ -559,7 +606,8 @@ private fun QuickActionEditorDialog(
                                 context,
                                 AutocompleteHistoryRepository.quickActionVariableScopeKey(
                                     deckId, groupIndex, slot.slotIndex, index
-                                )
+                                ),
+                                localValues.getOrNull(index).orEmpty()
                             ),
                             primaryColor = primaryColor,
                             modifier = Modifier.padding(top = 4.dp)
@@ -574,15 +622,12 @@ private fun QuickActionEditorDialog(
                 if (computerFallbacks.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    TightSectionLabel("TARGET TAG FALLBACKS", color = primaryColor)
+                    TightSectionLabel(stringResource(R.string.matrix_edit_fallbacks_title), color = primaryColor)
 
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "[COMPUTER:X] resolves to whichever entry is " +
-                            "currently active for that category in the Target " +
-                            "Computer. If nothing is active, the fallback below " +
-                            "is used instead.",
+                        text = stringResource(R.string.matrix_edit_fallbacks_hint),
                         color = Color.Gray,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace
@@ -598,7 +643,7 @@ private fun QuickActionEditorDialog(
                         val categoryId = computerTagsInOrder.getOrNull(index)
                         val categoryLabel = computerCategories
                             .find { it.id == categoryId }
-                            ?.label
+                            ?.let { categoryName(it) }
                             ?: categoryId
                             ?: "?"
 
@@ -612,7 +657,7 @@ private fun QuickActionEditorDialog(
                                 computerFallbacks[index] = newValue
                             },
                             label = {
-                                Text("TARGET TAG ${index + 1} // $categoryLabel")
+                                Text(stringResource(R.string.matrix_edit_target_tag, index + 1, categoryLabel))
                             },
                             shape = AckHelpShape,
                             singleLine = true,
@@ -622,7 +667,8 @@ private fun QuickActionEditorDialog(
                         AutocompleteChipRow(
                             suggestions = AutocompleteHistoryRepository.getSuggestions(
                                 context,
-                                autocompleteScopeKey
+                                autocompleteScopeKey,
+                                value
                             ),
                             primaryColor = primaryColor,
                             modifier = Modifier.padding(top = 4.dp)
@@ -654,7 +700,7 @@ private fun QuickActionEditorDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "SAVE",
+                        text = stringResource(R.string.common_save),
                         modifier = Modifier
                             .weight(1f)
                             .testTag(AckTags.QUICK_ACTION_SAVE)
@@ -688,7 +734,7 @@ private fun QuickActionEditorDialog(
                         }
 
                         onSave(
-                            label,
+                            QuickActionLabels.labelToSave(label, shownLabelAtStart, slot.label),
                             template,
                             localValues,
                             computerFallbacks.toList()
@@ -696,7 +742,7 @@ private fun QuickActionEditorDialog(
                     }
 
                     TightPanelButton(
-                        text = "CANCEL",
+                        text = stringResource(R.string.common_cancel),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor,
@@ -779,8 +825,14 @@ private fun QuickActionGroupEditorDialog(
         boundPose: String
     ) -> Unit
 ) {
+    // The group's default name is shown in the language but SAVED as it was stored (core/QuickActionLabels.kt).
+    val words = rememberText()
+    val shownLabelAtStart = remember(group.groupIndex) {
+        QuickActionLabels.shownGroupLabel(words, group.label, group.groupIndex)
+    }
+
     var label by remember(group.groupIndex) {
-        mutableStateOf(group.label)
+        mutableStateOf(shownLabelAtStart)
     }
 
     var rootCategory by remember(group.groupIndex) {
@@ -794,7 +846,7 @@ private fun QuickActionGroupEditorDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "EDIT GROUP"
+        title = stringResource(R.string.qa_edit_group)
     ) {
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
@@ -803,7 +855,7 @@ private fun QuickActionGroupEditorDialog(
                         label = it
                     },
                     label = {
-                        Text("GROUP LABEL")
+                        Text(stringResource(R.string.qa_group_label))
                     },
                     shape = AckHelpShape,
                     singleLine = true,
@@ -812,10 +864,10 @@ private fun QuickActionGroupEditorDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TightSectionLabel("WATCH POSE", color = primaryColor)
+                TightSectionLabel(labelFor(LabelKey.WATCH_POSE), color = primaryColor)
 
                 Text(
-                    text = "WHICH GESTURE ON THE WATCH FIRES THIS GROUP.",
+                    text = stringResource(R.string.qa_group_pose_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -831,10 +883,10 @@ private fun QuickActionGroupEditorDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TightSectionLabel("ROOT OVERRIDE SOURCE", color = primaryColor)
+                TightSectionLabel(stringResource(R.string.qa_group_root_title), color = primaryColor)
 
                 Text(
-                    text = "WHICH A/B/C VARIABLE BANK FILLS THIS GROUP'S {{TAGS}}.",
+                    text = stringResource(R.string.qa_group_root_desc),
                     color = Color.Gray,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -855,15 +907,15 @@ private fun QuickActionGroupEditorDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "SAVE",
+                        text = stringResource(R.string.common_save),
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
-                        onSave(label, rootCategory, boundPose)
+                        onSave(QuickActionLabels.labelToSave(label, shownLabelAtStart, group.label), rootCategory, boundPose)
                     }
 
                     TightPanelButton(
-                        text = "CANCEL",
+                        text = stringResource(R.string.common_cancel),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor,
@@ -879,6 +931,8 @@ private fun CategoryButtonRow(
     primaryColor: Color,
     onSelect: (String) -> Unit
 ) {
+    val words = rememberText()
+
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -899,7 +953,7 @@ private fun CategoryButtonRow(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = category.take(3),
+                    text = QuickActionLabels.poseShort(words, category),
                     color = color,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,

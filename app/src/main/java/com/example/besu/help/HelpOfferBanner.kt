@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.help
 
+import com.example.besu.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,7 +52,7 @@ fun HelpOfferBanner(
         Spacer(modifier = Modifier.width(10.dp))
 
         Text(
-            text = "[GOT IT]",
+            text = stringResource(R.string.help_got_it),
             color = primaryColor,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,

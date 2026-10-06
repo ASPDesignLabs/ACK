@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.geo
 
+import com.example.besu.R
+import com.example.besu.core.GeoText
+import com.example.besu.core.LabelKey
 import com.example.besu.ui.*
 import com.example.besu.ui.theme.*
 import android.Manifest
@@ -17,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,32 +36,33 @@ fun GeoPermissionModal(
     permissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, @JvmSuppressWildcards Boolean>>,
     onDismiss: () -> Unit
 ) {
+    val words = rememberText()
     val hasForeground = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Graphite,
         modifier = Modifier.border(1.dp, primaryColor, CutCornerShape(8.dp)),
-        title = { Text("GEO-PROTOCOL // AUTHORIZATION", color = primaryColor, fontFamily = FontFamily.Monospace, fontSize = 14.sp) },
+        title = { Text(GeoText.authTitle(words, labelFor(LabelKey.GEO_PROTOCOL)), color = primaryColor, fontFamily = FontFamily.Monospace, fontSize = 14.sp) },
         text = {
             Column {
                 Text(
-                    "To switch decks automatically, ACK requires 'Always On' location access to detect boundaries while in your pocket.",
+                    stringResource(R.string.geo_auth_body),
                     color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    "PRIVACY NOTICE: Your coordinates are kept strictly on-device only when using the SOVEREIGN model as processing is handled on device. Using the OPTIMIZED model enables Google Play Services support. Your location information will be transmitted to Google services if you use this method.",
+                    GeoText.privacyNotice(words, GeoEngineMode.SOVEREIGN.name, GeoEngineMode.OPTIMIZED.name),
                     color = NeonPalette.SWATCHES[3], fontSize = 10.sp, fontFamily = FontFamily.Monospace
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 if (hasForeground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    Text("STEP 2: Please select 'Allow all the time' in the following Android settings screen.", color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                    Text(stringResource(R.string.geo_auth_step2), color = primaryColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                 }
             }
         },
         confirmButton = {
-            NeonButton("PROCEED", mainColor = primaryColor) {
+            NeonButton(stringResource(R.string.geo_proceed), mainColor = primaryColor) {
                 if (!hasForeground) {
                     // Step 1: Request Foreground
                     permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
@@ -69,7 +74,7 @@ fun GeoPermissionModal(
             }
         },
         dismissButton = {
-            NeonButton("ABORT", isActive = false, mainColor = primaryColor) { onDismiss() }
+            NeonButton(stringResource(R.string.common_abort), isActive = false, mainColor = primaryColor) { onDismiss() }
         }
     )
 }

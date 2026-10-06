@@ -1,10 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.ui
 
+import androidx.compose.ui.res.stringResource
+import com.example.besu.R
+import com.example.besu.core.LabelKey
+import com.example.besu.core.ManualOverrideText
+import com.example.besu.core.PatchNotes
+import com.example.besu.core.TerminalText
+import com.example.besu.core.SendFlags
+import com.example.besu.core.SendSwitchPolicy
 import com.example.besu.*
 import com.example.besu.backup.*
 import com.example.besu.computer.*
+import com.example.besu.core.CharSpan
 import com.example.besu.core.ExportContents
+import com.example.besu.core.InsertMode
+import com.example.besu.core.SlotFamily
+import com.example.besu.core.TextInsertion
+import com.example.besu.core.TokenSlots
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -144,7 +157,7 @@ fun NeonButton(
         // FIX: Button is always enabled so we can click it to switch tabs
         enabled = true 
     ) {
-        Text(text.uppercase(), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, fontSize = 12.sp)
+        Text(text.uppercase(), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp), fontSize = 12.sp)
     }
 }
 
@@ -314,7 +327,7 @@ fun RowScope.ThemeOption(
             .clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if(active) activeColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+        Text(label, color = if(active) activeColor else Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(2.sp))
     }
 }
 
@@ -328,15 +341,8 @@ fun RowScope.ThemeOption(
 // ("/q /s help is on the way") and they compose; /help, /cls, /backup, and
 // /repair are local-only actions that never carry a phrase and
 // short-circuit everything else.
-private data class TerminalFlags(
-    val quiet: Boolean = false,
-    val skipLog: Boolean = false,
-    val sticky: Boolean = false,
-    val emergency: Boolean = false
-)
-
 private sealed class TerminalPromptResult {
-    data class Dispatch(val flags: TerminalFlags, val phrase: String) : TerminalPromptResult()
+    data class Dispatch(val flags: SendFlags, val phrase: String) : TerminalPromptResult()
     object HelpShown : TerminalPromptResult()
     object Error : TerminalPromptResult()
     // These three need things only the composable has (the log list, the
@@ -359,138 +365,12 @@ private sealed class TerminalPromptResult {
     object ShowManualOverride : TerminalPromptResult()
 }
 
-private val TERMINAL_HELP_LINES = listOf(
-    "SLASH COMMANDS:",
-    "/help, /?        SHOW THIS LIST",
-    "/q, /quiet       SEND WITHOUT AUDIO",
-    "/n, /nosave      SEND WITHOUT LOGGING",
-    "/s, /sticky      SEND, HOLD TO CLEAR",
-    "/e, /emergency   SEND WITH EMERGENCY OVERRIDES",
-    "/v               BROWSE SHARED ROOT VARIABLES",
-    "/t               BROWSE TARGET COMPUTER ENTRIES",
-    "/cls             CLEAR THE LOG (CONFIRM REQUIRED)",
-    "/b, /backup      EXPORT ACK DATA (CONFIRM REQUIRED)",
-    "/repair          RESTART BACKGROUND SERVICES",
-    "/info            SHOW PATCH NOTES",
-    "/m               OPEN CLASSIC MANUAL OVERRIDE"
-)
+// The /help list is built by TerminalText.helpLines (core/TerminalText.kt): the commands as typed, never translated, beside what each does in the chosen language.
 
 // --- PATCH NOTES (/info) ---
-// One entry here = one line revealed every ~2s by TerminalView's reveal
-// loop, not a paragraph to be pre-wrapped -- long lines still wrap fine
-// inside a CMD block, but keeping each entry to a single idea is what
-// makes the line-by-line pacing actually read as a rundown instead of a
-// wall of text arriving one row at a time. No blank-string entries --
-// each CMD line renders as its own bordered block (see TerminalView), so
-// an empty one shows up as a bare box rather than a clean gap; section
-// headers do the separating instead. Update this list (and CHANGELOG.md
-// at the repo root, which carries the same notes) with each beta.
-private val PATCH_NOTES = listOf(
-    "=== NEXT RELEASE (NOT YET NUMBERED) ===",
-    "-- PRIVACY AND DATA --",
-    "- NEW: EXPORT .JSON NOW SAYS WHAT THE FILE CAN CONTAIN AND THAT IT IS",
-    "  NOT ENCRYPTED, BEFORE THE FILE PICKER OPENS. /backup SAYS IT TOO",
-    "- A FAILED EXPORT NOW SAYS SO AND LEAVES NO HALF-MADE FILE",
-    "- NEW: DELETE DATA IN DATA PORT. TWELVE AREAS, EACH WITH WHAT IT HOLDS",
-    "  AND HOW MUCH. EVERY DELETE ASKS TWICE AND NAMES A BACKUP FIRST",
-    "- NEW: DELETE CUSTOM VOICE IN AUDIO ARCHITECT. VOICES THAT USED IT",
-    "  SWITCH TO A NORMAL ONE",
-    "- NEW: SAFETY COPIES. THE PRIVATE COPY ACK MAKES BEFORE A DATA UPGRADE",
-    "  IS LISTED IN DATA PORT AND CAN BE DELETED",
-    "- NEW: A BACKUP REMINDER AFTER 7 DAYS IF SETTINGS OR DECKS CHANGED.",
-    "  A BANNER ON TERMINAL AND SETTINGS, AND A SAVE ICON LEFT OF HELP.",
-    "  NOT NOW HIDES IT FOR A DAY. A SWITCH IN DATA PORT. IT NEVER MAKES",
-    "  A FILE FOR YOU",
-    "- NEW: RECORD FREE SPEECH NOW SAYS IT RECORDS ANYONE NEARBY",
-    "- NO NEW PERMISSIONS. SEE DOCS/PERMISSIONS.MD",
-    "=== ACK v1.0-BETA.8 PATCH NOTES ===",
-    "-- CUSTOM VOICE --",
-    "- NEW: SPEAK IN A VOICE TRAINED FROM YOUR OWN RECORDINGS, ENTIRELY",
-    "  ON THE PHONE. NO NETWORK, NO CLOUD",
-    "- NEW: IMPORT CUSTOM VOICE IN AUDIO ARCHITECT. PICK THE .ONNX AND",
-    "  .ONNX.JSON TOGETHER. ACK RESTARTS ONCE TO LOAD IT",
-    "- NEW: A MY VOICE CHIP IN THE VOICE PROFILE ROW, OR USE MY VOICE IN",
-    "  ANY CUSTOM SLOT'S DSP CHAIN EDITOR",
-    "- MASTER GAIN APPLIES. ROBOTIC OVERLAY, BITCRUSH, PITCH AND SPEED DO",
-    "  NOT -- THIS ENGINE HAS NO DSP CONTROLS OF ITS OWN",
-    "- IF THE VOICE FAILS ON AN UTTERANCE, ACK SPEAKS IT WITH THE PHONE'S",
-    "  NORMAL VOICE INSTEAD OF GOING SILENT. SHAKE STILL STOPS IT",
-    "- NEW: EXPORT / IMPORT VOICE BACKUP (.ZIP), SEPARATE FROM EXPORT .JSON",
-    "-- RECORD TRAINING DATA --",
-    "- NEW: RECORD VOICE-TRAINING DATA ON THE PHONE, AWAY FROM YOUR",
-    "  COMPUTER. AUDIO ARCHITECT > CUSTOM VOICE > RECORD TRAINING DATA",
-    "- WRITE OR PASTE A SCRIPT. ACK SPLITS IT INTO CARDS OF ABOUT TEN",
-    "  SECONDS. READ A CARD; ACK HEARS YOU FINISH, KEEPS THE CLIP, AND",
-    "  SHOWS THE NEXT CARD. NO TOUCHING THE PHONE BETWEEN CARDS",
-    "- OR RECORD FREE SPEECH, UP TO 90 MINUTES. THE PHONE ONLY SUGGESTS",
-    "  CUTS. THE RAW AUDIO IS NEVER CUT ON THE PHONE",
-    "- A TWO-SECOND QUIET CHECK COMES FIRST: ROOM LEVEL, A COVERED MIC,",
-    "  OR AN INTERRUPTION",
-    "- REDO LAST, PAUSE, AND MARKS: NOISE, UNCLEAR, LAUGH, COUGH, STUMBLE",
-    "- RECORDS AT 48 KHZ WHEN THE PHONE ALLOWS IT, ELSE 44.1 KHZ, WITH NO",
-    "  PHONE-SIDE PROCESSING WHERE THE PHONE OFFERS THAT",
-    "- NO SOUND OR VIBRATION WHILE LISTENING. THE SCREEN STAYS ON AND DOES",
-    "  NOT ROTATE. LEAVING THE APP PAUSES",
-    "- IF ACK CLOSES MID-CARD, THAT CLIP IS REPAIRED NEXT TIME AND HELD",
-    "  BACK UNTIL YOU LISTEN AND CHOOSE TO KEEP IT",
-    "- SAVE ALL TO A FILE WRITES ONE .ZIP THROUGH ANDROID'S SAVE SCREEN,",
-    "  THEN READS IT BACK AND CHECKS IT. NO SHARE SHEET, NO NETWORK",
-    "- TRAINING SCRIPTS (TEXT ONLY) ARE IN EXPORT .JSON AND FULL RESTORE.",
-    "  RECORDINGS TRAVEL AS .ZIP PACKAGES INSTEAD",
-    "- NEW: A RECORD TRAINING DATA WALKTHROUGH IN HELP",
-    "- NEW AND NOT YET PROVEN ON MANY PHONES. SEE",
-    "  DOCS/TRAINING_CAPTURE_DEVICE_TEST.MD",
-    "-- STATEMENT COMPOSER --",
-    "- NEW: TYPE IS NOW THE STATEMENT COMPOSER. BUILD MULTI-SENTENCE",
-    "  STATEMENTS FROM TARGET COMPUTER ENTRIES AND SHARED ROOT VARIABLES,",
-    "  WITH A LIVE PREVIEW OF EXACTLY WHAT IT'LL SAY",
-    "- NEW: SAVE, COPY, OR SPEAK A STATEMENT. SAVED STATEMENTS STAY",
-    "  MUTABLE -- THEY KEEP RESOLVING LIVE AGAINST WHATEVER THE ENTRIES OR",
-    "  VARIABLES THEY REFERENCE CURRENTLY HOLD, NEVER A FROZEN SNAPSHOT",
-    "- NEW: COPY PUTS THE FINISHED TEXT ON THE CLIPBOARD SO YOU CAN PASTE",
-    "  IT INTO ANY OTHER APP. EVERY SAVED STATEMENT HAS COPY TOO",
-    "- NEW: TAP A TARGET COMPUTER CHIP FOR A LIVE REFERENCE, OR BROWSE",
-    "  TARGETS FOR A SPECIFIC ENTRY AS PLAIN TEXT. LONG-PRESS A CHIP TO",
-    "  RETARGET ITS ACTIVE ENTRY, APP-WIDE, WITHOUT LEAVING THE COMPOSER",
-    "- NEW: MY STATEMENTS ORGANIZES SAVED STATEMENTS INTO FOLDERS, TREE >",
-    "  LEAF -- SAME SHAPE AS TARGET COMPUTER ENTRIES. RELOAD, COPY, SPEAK,",
-    "  OR DELETE ANY STATEMENT RIGHT FROM THE LIST. INCLUDED IN EXPORT",
-    "  .JSON BACKUPS",
-    "- NEW: FULL SCREEN HIDES THE HEADER AND BOTTOM NAV FOR MORE ROOM WHILE",
-    "  COMPOSING. PINNED TOGGLE, ALWAYS REACHABLE",
-    "- MOVED: CLASSIC MANUAL OVERRIDE (MEMORY BANKS, SAVED PHRASES, DIRECT",
-    "  TEXT OUTPUT) IS UNCHANGED BUT NOW REACHED WITH /m AT THE TERMINAL",
-    "  PROMPT INSTEAD OF THE TYPE TAB",
-    "- NEW: A STATEMENT COMPOSER WALKTHROUGH IN HELP",
-    "-- GIF DECK --",
-    "- NEW: SHARE NEXT TO DISPLAY FULL SCREEN SENDS THE GIF ITSELF THROUGH",
-    "  ANDROID'S SHARE SHEET. NO NEW PERMISSION",
-    "-- TARGET COMPUTER --",
-    "- THE WATCH'S COPY IS NOW RE-SYNCED AFTER EVERY PICK OR CLEAR, FROM",
-    "  ANY SCREEN, NOT JUST WHEN A DECK IS ACTIVATED",
-    "- NEW: ACK WEAR RELAYS TARGET COMPUTER TO OVERSEER AND PASSES A PICK",
-    "  MADE THERE BACK TO THE PHONE",
-    "-- PRIVACY AND LICENSE --",
-    "- CHANGED: ACK'S DATA IS NO LONGER INCLUDED IN GOOGLE CLOUD BACKUP.",
-    "  PHONE-TO-PHONE SETUP TRANSFER IS STILL ALLOWED. EXPORT .JSON AND THE",
-    "  GIF AND VOICE .ZIP BACKUPS ARE HOW YOU MOVE YOUR DATA",
-    "- NO NEW PERMISSIONS IN THIS RELEASE",
-    "- ACK IS NOW EXPLICITLY GPL-3.0-OR-LATER. SEE THIRD_PARTY_NOTICES.MD",
-    "-- VOICE TRAINING TOOLS --",
-    "- NEW: FREEFORM STUDIO, A DESKTOP TOOL IN THE REPOSITORY, TURNS",
-    "  RECORDINGS INTO TRAINING CLIPS ON YOUR OWN COMPUTER. IT NEVER GOES",
-    "  ONLINE. SEE DOCS/VOICE_TRAINING_GUIDE.MD",
-    "- TO INSTALL: CLONE THE REPOSITORY, RUN TOOLS/FREEFORM_STUDIO/",
-    "  INSTALL.SH, THEN FETCH THE SPEECH MODEL ONCE. SEE ITS README.MD",
-    "- NEW: BRING RECORD TRAINING DATA PACKAGES IN WITH ADD RECORDINGS",
-    "  FROM ACK ON THE REVIEW PAGE, OR THE ACK_IMPORT COMMAND. IMPORTING",
-    "  ONLY ADDS AND IS SAFE TO REPEAT",
-    "- CHANGED: THE INSTALL COMMAND NOW CLONES THE DEFAULT BRANCH",
-    "-- FIXES --",
-    "- FIXED ACK WEAR MISSING TARGET COMPUTER UPDATES WHILE ITS APP WASN'T",
-    "  ON SCREEN",
-    "=== END PATCH NOTES ==="
-)
+// The rundown is core/PatchNotes.kt: the names of the string resources (one per bullet or heading, `info_*`) in the order they are shown, with the line layout and the pacing. One line is revealed every ~2s
+// by TerminalView's reveal loop (a longer line waits one more step per 71 characters), not a paragraph to be pre-wrapped. Update PatchNotes.ENTRIES, the English strings in values/strings.xml and CHANGELOG.md
+// (which carries the same notes) with each beta; a translation can follow later, and until it does the note shows in English.
 
 // Logs a line straight into the Terminal without dispatching any speech --
 // matches the same local ACK_LOG broadcast pattern MatrixCategory already
@@ -554,17 +434,17 @@ private fun findTargetTrigger(text: String): IntRange? =
 // the caller only ever has to react to the result.
 private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptResult {
     if (findVariableTrigger(raw) != null) {
-        logTerminalLocal(context, "RESOLVE /v FIRST -- TAP A VARIABLE OR DELETE IT", "CMD_WARN")
+        logTerminalLocal(context, context.getString(R.string.term_resolve_v), "CMD_WARN")
         return TerminalPromptResult.Error
     }
 
     if (findTargetTrigger(raw) != null) {
-        logTerminalLocal(context, "RESOLVE /t FIRST -- TAP A TARGET OR DELETE IT", "CMD_WARN")
+        logTerminalLocal(context, context.getString(R.string.term_resolve_t), "CMD_WARN")
         return TerminalPromptResult.Error
     }
 
     if (!raw.startsWith("/")) {
-        return TerminalPromptResult.Dispatch(TerminalFlags(), raw)
+        return TerminalPromptResult.Dispatch(SendFlags(), raw)
     }
 
     val tokens = raw.split(Regex("\\s+"))
@@ -572,7 +452,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
     val rest = tokens.drop(1).joinToString(" ").trim().lowercase()
 
     if (first == "/help" || first == "/?") {
-        logTerminalLocal(context, TERMINAL_HELP_LINES.joinToString("\n"))
+        logTerminalLocal(context, TerminalText.helpLines(ResourceText(context)).joinToString("\n"))
         return TerminalPromptResult.HelpShown
     }
 
@@ -582,7 +462,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
         }
         logTerminalLocal(
             context,
-            "CLEAR ENTIRE LOG? THIS CANNOT BE UNDONE.\nTYPE /cls CONFIRM TO PROCEED.",
+            TerminalText.clearConfirmation(ResourceText(context)),
             "CMD_WARN"
         )
         return TerminalPromptResult.Error
@@ -593,7 +473,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
             return TerminalPromptResult.RunBackup
         }
         // The same facts the settings dialog shows (core/ExportContents.kt), then the confirm line.
-        logTerminalLocal(context, ExportContents.terminalText())
+        logTerminalLocal(context, ExportContents.terminalText(ResourceText(context)))
         return TerminalPromptResult.Error
     }
 
@@ -609,7 +489,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
         return TerminalPromptResult.ShowManualOverride
     }
 
-    var flags = TerminalFlags()
+    var flags = SendFlags()
     var index = 0
     while (index < tokens.size && tokens[index].startsWith("/")) {
         when (tokens[index].lowercase()) {
@@ -618,7 +498,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
             "/s", "/sticky" -> flags = flags.copy(sticky = true)
             "/e", "/emergency" -> flags = flags.copy(emergency = true)
             else -> {
-                logTerminalLocal(context, "UNKNOWN COMMAND: ${tokens[index]} -- TRY /help", "CMD_ERR")
+                logTerminalLocal(context, TerminalText.unknownCommand(ResourceText(context), tokens[index]), "CMD_ERR")
                 return TerminalPromptResult.Error
             }
         }
@@ -627,7 +507,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
 
     val phrase = tokens.drop(index).joinToString(" ").trim()
     if (phrase.isEmpty()) {
-        logTerminalLocal(context, "NO PHRASE GIVEN", "CMD_WARN")
+        logTerminalLocal(context, context.getString(R.string.term_no_phrase), "CMD_WARN")
         return TerminalPromptResult.Error
     }
 
@@ -640,7 +520,7 @@ private fun parseTerminalCommand(context: Context, raw: String): TerminalPromptR
 // dispatches -- but only when that active deck is actually an Emergency
 // deck. If it isn't, the phrase still goes out (never silently drop a
 // communication attempt), just without the overrides, and a warning says so.
-private fun dispatchTerminalPhrase(context: Context, phrase: String, flags: TerminalFlags) {
+private fun dispatchTerminalPhrase(context: Context, phrase: String, flags: SendFlags) {
     val intent = Intent(context, OutputService::class.java).apply {
         putExtra("phrase", phrase)
         putExtra("robotic", false)
@@ -660,7 +540,15 @@ private fun dispatchTerminalPhrase(context: Context, phrase: String, flags: Term
             intent.putExtra("emergency_prevent_timed_clear", config.preventTimedClear)
             intent.putExtra("emergency_require_hold_to_clear", config.requireHoldToClear)
         } else {
-            logTerminalLocal(context, "NO EMERGENCY DECK ACTIVE -- /e SENT PLAIN", "CMD_WARN")
+            logTerminalLocal(
+                context,
+                TerminalText.noEmergencyDeck(
+                    ResourceText(context),
+                    LabelText.resolve(context, LabelKey.DECK_TYPE_EMERGENCY, PlainWordsState.on),
+                    LabelText.resolve(context, LabelKey.DECK, PlainWordsState.on)
+                ),
+                "CMD_WARN"
+            )
         }
     }
 
@@ -683,6 +571,12 @@ private fun restartBackgroundServices(context: Context) {
             context.startService(intent)
         }
     }
+}
+
+// The typed /repair and the FIX PROBLEMS button in SETTINGS (PLAIN WORDS) both come here: restart, then one line in the Terminal's history.
+internal fun repairBackgroundServices(context: Context) {
+    restartBackgroundServices(context)
+    logTerminalLocal(context, context.getString(R.string.term_services_restarted))
 }
 
 // --- TERMINAL VIEW ---
@@ -750,8 +644,14 @@ fun TerminalView(
     val promptFocusRequester = remember { FocusRequester() }
     val promptHaptic = LocalHapticFeedback.current
 
+    // PLAIN WORDS adds visible controls for what used to need a typed command (docs/PLAIN_LANGUAGE.md, section B): the typed commands keep
+    // working, and these call the same code. The send switches count only while this is on (core/SendFlags.kt).
+    val plainWordsOn = LocalPlainWords.current
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
+    val words = rememberText()
+
     // --- /info (PATCH NOTES) ---
-    // Reveals PATCH_NOTES one line every 2s via the same local-log path
+    // Reveals the patch notes (core/PatchNotes.kt) one line every ~2s via the same local-log path
     // every other command uses (logTerminalLocal), rather than pushing
     // the whole list in at once like /help does -- both the typed command
     // and the STATUSBOX shortcut button below call this same function, so
@@ -763,9 +663,9 @@ fun TerminalView(
         infoRevealJob?.cancel()
         promptValue = TextFieldValue("")
         infoRevealJob = infoRevealScope.launch {
-            for (line in PATCH_NOTES) {
+            for (line in PatchNotes.lines(ResourceText(context))) {
                 logTerminalLocal(context, line, "CMD")
-                delay(2000)
+                delay(PatchNotes.pauseMillis(line))
             }
             infoRevealJob = null
         }
@@ -805,7 +705,7 @@ fun TerminalView(
         if (uri != null) {
             BackupExporter.report(context, BackupExporter.writeBackup(context, uri))
         } else {
-            logTerminalLocal(context, "BACKUP CANCELLED", "CMD_WARN")
+            logTerminalLocal(context, context.getString(R.string.term_backup_cancelled), "CMD_WARN")
         }
     }
 
@@ -963,15 +863,14 @@ fun TerminalView(
 
     val statusboxTextColor = NeonPalette.getColor(TerminalLogStore.getStatusboxColorIndex(context))
 
-    // Shared by /v and /t: replaces whichever trigger range is still live
-    // with the resolved value plus a trailing space, so the cursor lands
-    // ready for the next word instead of jammed against it.
+    // Shared by /v and /t: replaces whichever trigger range is still live with the resolved value, using the shared insertion rule
+    // (core/TextInsertion.kt, with the trigger as the replace range): a space only where one is needed, and the cursor lands ready
+    // for the next word instead of jammed against it.
     fun insertAtTrigger(trigger: IntRange?, value: String) {
         trigger ?: return
-        val insertion = "$value "
-        val newText = promptValue.text.replaceRange(trigger, insertion)
-        val newCursor = trigger.first + insertion.length
-        promptValue = TextFieldValue(newText, TextRange(newCursor))
+        val span = CharSpan(trigger.first, trigger.last + 1)
+        val result = TextInsertion.insert(promptValue.text, span.start, span.end, value, InsertMode.WORD, span)
+        promptValue = TextFieldValue(result.text, TextRange(result.cursor))
         promptFocusRequester.requestFocus()
     }
 
@@ -986,20 +885,41 @@ fun TerminalView(
         tDrillPath = emptyList()
     }
 
+    // Typing /cls CONFIRM and the CLEAR HISTORY dialog both end here.
+    fun clearHistoryNow() {
+        TerminalLogStore.clearAll(context, logs)
+        logTerminalLocal(context, context.getString(R.string.term_log_cleared))
+    }
+
+    // The /v and /t insert buttons: the same trigger text a person would type, put at the cursor by the shared insertion rule. If the trigger is
+    // already there the picker is already open, so nothing is added twice. The STATUSBOX is shown by hand because the keyboard may be closed.
+    fun insertTriggerWord(word: String, alreadyThere: Boolean) {
+        if (!alreadyThere) {
+            val selection = promptValue.selection
+            val result = TextInsertion.insert(promptValue.text, selection.min, selection.max, word, InsertMode.WORD)
+            promptValue = TextFieldValue(result.text, TextRange(result.cursor))
+        }
+        statusBoxManualVisible = true
+        promptFocusRequester.requestFocus()
+    }
+
     fun submitPrompt() {
         val raw = promptValue.text.trim()
         if (raw.isNotEmpty()) {
             when (val result = parseTerminalCommand(context, raw)) {
                 is TerminalPromptResult.Dispatch -> {
-                    dispatchTerminalPhrase(context, result.phrase, result.flags)
+                    dispatchTerminalPhrase(
+                        context,
+                        result.phrase,
+                        SendSwitchPolicy.effective(result.flags, TerminalSendSwitches.flags, plainWordsOn)
+                    )
                     promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.HelpShown -> {
                     promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.ClearLog -> {
-                    TerminalLogStore.clearAll(context, logs)
-                    logTerminalLocal(context, "LOG CLEARED")
+                    clearHistoryNow()
                     promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.RunBackup -> {
@@ -1007,8 +927,7 @@ fun TerminalView(
                     promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.RunRepair -> {
-                    restartBackgroundServices(context)
-                    logTerminalLocal(context, "BACKGROUND SERVICES RESTARTED")
+                    repairBackgroundServices(context)
                     promptValue = TextFieldValue("")
                 }
                 TerminalPromptResult.ShowInfo -> {
@@ -1041,6 +960,15 @@ fun TerminalView(
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+        if (plainWordsOn) {
+            TerminalToolsRow(
+                primaryColor = FluxCyan,
+                onWhatsNew = { startInfoReveal() },
+                onClearHistory = { showClearHistoryDialog = true }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         // reverseLayout draws the newest line at the bottom and the log
         // grows upward from there, like a real terminal's scrollback --
         // visibleLogs is already newest-first, so index 0 lands at the
@@ -1156,6 +1084,15 @@ fun TerminalView(
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(FluxCyan.copy(alpha = 0.3f)))
         Spacer(modifier = Modifier.height(6.dp))
 
+        if (plainWordsOn) {
+            SendOptionsPanel(
+                primaryColor = FluxCyan,
+                onInsertVariable = { insertTriggerWord("/v", variableTriggerRange != null) },
+                onBrowseTargets = { insertTriggerWord("/t", targetTriggerRange != null) }
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+        }
+
         // --- STATUSBOX: POSIX-menu styled, not another set of neon chips.
         // TYPING mode is a compact two-line block; /v and /t expand it to
         // three rows (grouping/category picker, a breadcrumb, the actual
@@ -1218,7 +1155,7 @@ fun TerminalView(
                                 val slot = config.slots[tag] ?: RootOverrideValue()
                                 val hasValue = slot.enabled && slot.value.isNotBlank()
                                 StatusBoxItem(
-                                    label = "$tag:${if (hasValue) slot.value else "EMPTY"}",
+                                    label = TerminalText.variableChip(words, tag, slot.value, hasValue),
                                     clickable = hasValue,
                                     onClick = {
                                         promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -1233,7 +1170,7 @@ fun TerminalView(
                         )
                     } else {
                         Text(
-                            "TAP A ROOT ABOVE TO VIEW ITS VARIABLES",
+                            stringResource(R.string.term_vars_hint),
                             color = statusboxTextColor.copy(alpha = 0.5f),
                             fontFamily = FontFamily.Monospace,
                             fontSize = STATUSBOX_FONT_SIZE
@@ -1243,7 +1180,7 @@ fun TerminalView(
                     // Row 1: every Target Computer category.
                     if (tCategories.isEmpty()) {
                         Text(
-                            "NO TARGET CATEGORIES -- ADD SOME FROM THE TARGET COMPUTER TAB.",
+                            stringResource(R.string.term_targets_none, labelFor(LabelKey.TARGET_COMPUTER)),
                             color = statusboxTextColor.copy(alpha = 0.5f),
                             fontFamily = FontFamily.Monospace,
                             fontSize = STATUSBOX_FONT_SIZE
@@ -1286,14 +1223,14 @@ fun TerminalView(
                     // Row 3: whatever's at the current drill-down level.
                     if (tSelectedCategory == null) {
                         Text(
-                            "TAP A CATEGORY ABOVE TO BROWSE IT",
+                            stringResource(R.string.term_targets_pick),
                             color = statusboxTextColor.copy(alpha = 0.5f),
                             fontFamily = FontFamily.Monospace,
                             fontSize = STATUSBOX_FONT_SIZE
                         )
                     } else if (tCurrentChildren.isEmpty()) {
                         Text(
-                            "NOTHING HERE YET.",
+                            stringResource(R.string.term_targets_empty),
                             color = statusboxTextColor.copy(alpha = 0.5f),
                             fontFamily = FontFamily.Monospace,
                             fontSize = STATUSBOX_FONT_SIZE
@@ -1328,7 +1265,7 @@ fun TerminalView(
                     // Send) starts the reveal either way.
                     StatusBoxItemRow(
                         items = listOf(
-                            StatusBoxItem(label = "INFO") {
+                            StatusBoxItem(label = stringResource(R.string.term_info_button)) {
                                 promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 startInfoReveal()
                             }
@@ -1348,7 +1285,7 @@ fun TerminalView(
                     // there's no separate confirm logic to keep in sync
                     // with parseTerminalCommand's own.
                     Text(
-                        "THIS COMMAND REQUIRES CONFIRMATION",
+                        stringResource(R.string.term_confirm_needed),
                         color = statusboxTextColor,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
@@ -1359,7 +1296,7 @@ fun TerminalView(
 
                     StatusBoxItemRow(
                         items = listOf(
-                            StatusBoxItem(label = "CONFIRM") {
+                            StatusBoxItem(label = stringResource(R.string.term_confirm_button)) {
                                 promptHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 promptValue = TextFieldValue("$confirmTriggerCommand confirm")
                                 submitPrompt()
@@ -1377,12 +1314,12 @@ fun TerminalView(
                         PulsingStatusBox(color = statusboxTextColor)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "TYPING",
+                            stringResource(R.string.term_typing),
                             color = statusboxTextColor,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                             fontSize = STATUSBOX_FONT_SIZE,
-                            letterSpacing = 2.sp
+                            letterSpacing = looseSpacing(2.sp)
                         )
                     }
 
@@ -1390,9 +1327,9 @@ fun TerminalView(
 
                     Text(
                         if (promptValue.text.isNotEmpty()) {
-                            "${promptValue.text.length} CHAR${if (promptValue.text.length == 1) "" else "S"}"
+                            TerminalText.charCount(words, promptValue.text.length)
                         } else {
-                            "AWAITING INPUT"
+                            stringResource(R.string.term_awaiting)
                         },
                         color = statusboxTextColor.copy(alpha = 0.5f),
                         fontFamily = FontFamily.Monospace,
@@ -1428,7 +1365,7 @@ fun TerminalView(
             Box(modifier = Modifier.weight(1f)) {
                 if (promptValue.text.isEmpty()) {
                     Text(
-                        "TYPE A COMMAND...",
+                        stringResource(R.string.term_prompt_hint),
                         color = Color.DarkGray,
                         fontFamily = terminalFontFamily,
                         fontSize = 14.sp
@@ -1465,6 +1402,17 @@ fun TerminalView(
         }
     }
 
+    if (showClearHistoryDialog) {
+        ClearHistoryDialog(
+            primaryColor = FluxCyan,
+            onConfirm = {
+                clearHistoryNow()
+                showClearHistoryDialog = false
+            },
+            onCancel = { showClearHistoryDialog = false }
+        )
+    }
+
     val savingEntry = saveDialogTarget
     val textToSave = savingEntry?.replayText
     if (savingEntry != null && textToSave != null) {
@@ -1474,7 +1422,7 @@ fun TerminalView(
         TightDialogSurface(
             onDismiss = { saveDialogTarget = null; newTagInput = "" },
             primaryColor = FluxCyan,
-            title = "SAVE TO MEMORY BANK"
+            title = labelFor(LabelKey.SAVE_TO_MEMORY_BANK)
         ) {
             Text(
                 "\"$textToSave\"",
@@ -1486,7 +1434,7 @@ fun TerminalView(
             if (alreadySavedTags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "ALREADY SAVED: ${alreadySavedTags.joinToString(", ")}",
+                    TerminalText.alreadySaved(words, alreadySavedTags),
                     color = BioGreen,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
@@ -1494,7 +1442,7 @@ fun TerminalView(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            TightSectionLabel("ASSIGN A TAG")
+            TightSectionLabel(stringResource(R.string.manual_assign_tag))
             Spacer(modifier = Modifier.height(12.dp))
 
             if (existingTags.isNotEmpty()) {
@@ -1519,7 +1467,7 @@ fun TerminalView(
             OutlinedTextField(
                 value = newTagInput,
                 onValueChange = { newTagInput = it.uppercase() },
-                placeholder = { Text("NEW TAG") },
+                placeholder = { Text(stringResource(R.string.manual_new_tag)) },
                 shape = AckHelpShape,
                 colors = TextFieldDefaults.colors(focusedTextColor = FluxCyan, unfocusedTextColor = FluxCyan, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = FluxCyan)
             )
@@ -1530,7 +1478,7 @@ fun TerminalView(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TightPanelButton("SAVE", modifier = Modifier.weight(1f), mainColor = FluxCyan) {
+                TightPanelButton(stringResource(R.string.common_save), modifier = Modifier.weight(1f), mainColor = FluxCyan) {
                     if (newTagInput.isNotEmpty()) {
                         CommandRepository.saveQuickPhrase(context, textToSave, newTagInput)
                         saveRefreshKey++
@@ -1538,7 +1486,7 @@ fun TerminalView(
                         newTagInput = ""
                     }
                 }
-                TightPanelButton("CANCEL", modifier = Modifier.weight(1f), isActive = false, mainColor = FluxCyan) {
+                TightPanelButton(stringResource(R.string.common_cancel), modifier = Modifier.weight(1f), isActive = false, mainColor = FluxCyan) {
                     saveDialogTarget = null
                     newTagInput = ""
                 }
@@ -1558,6 +1506,7 @@ fun TypeView(
     onInsertAtCursor: (categoryId: String, label: String) -> Unit
 ) {
     val primaryColor = NeonPalette.getColor(CommandRepository.getActiveColorIndex(context))
+    val words = rememberText()
 
     var refreshKey by remember { mutableIntStateOf(0) }
     var savedPhrases by remember(refreshKey) { mutableStateOf(CommandRepository.getQuickPhrases(context)) }
@@ -1596,7 +1545,7 @@ fun TypeView(
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("MANUAL OVERRIDE", color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+        Text(labelFor(LabelKey.MANUAL_OVERRIDE), color = primaryColor, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -1616,7 +1565,7 @@ fun TypeView(
                 cursorColor = primaryColor
             ),
             textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 16.sp),
-            placeholder = { Text("ENTER SEQUENCE...", color = Color.Gray, fontFamily = FontFamily.Monospace) },
+            placeholder = { Text(stringResource(R.string.manual_placeholder), color = Color.Gray, fontFamily = FontFamily.Monospace) },
             maxLines = 3
         )
 
@@ -1624,10 +1573,10 @@ fun TypeView(
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             // Encode button relies on isActive for dimming, but logic check inside lambda protects it
-            NeonButton("ENCODE", Modifier.weight(0.4f), isActive = textFieldValue.text.isNotBlank(), mainColor = primaryColor) {
+            NeonButton(stringResource(R.string.manual_encode), Modifier.weight(0.4f), isActive = textFieldValue.text.isNotBlank(), mainColor = primaryColor) {
                 if (textFieldValue.text.isNotBlank()) showSaveDialog = true
             }
-            HeroButton("TRANSMIT", Modifier.weight(0.6f), mainColor = primaryColor) {
+            HeroButton(stringResource(R.string.manual_transmit), Modifier.weight(0.6f), mainColor = primaryColor) {
                 speak(textFieldValue.text, "TERM/INPUT")
             }
         }
@@ -1645,7 +1594,7 @@ fun TypeView(
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
-                text = if (showBrowsePanel) "[HIDE TARGET BROWSER]" else "[BROWSE TARGETS]",
+                text = if (showBrowsePanel) stringResource(R.string.manual_hide_browser) else "[${labelFor(LabelKey.BROWSE_TARGETS)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -1660,7 +1609,7 @@ fun TypeView(
             )
 
             Text(
-                text = if (savedPhrases.isNotEmpty()) "[MEMORY BANKS (${savedPhrases.size})]" else "[MEMORY BANKS]",
+                text = if (savedPhrases.isNotEmpty()) "[${labelFor(LabelKey.MEMORY_BANKS)} (${savedPhrases.size})]" else "[${labelFor(LabelKey.MEMORY_BANKS)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -1690,7 +1639,7 @@ fun TypeView(
         // behind its own popup -- previously a single saved phrase would
         // permanently hide recents from this screen.
         if (recentPhrases.isNotEmpty()) {
-            Text("CACHE [RECENT]", color = primaryColor.copy(alpha=0.7f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+            Text(stringResource(R.string.manual_cache_recent), color = primaryColor.copy(alpha=0.7f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
             Spacer(modifier = Modifier.height(8.dp))
             // Bounded height, not weight(1f) -- the outer Column now scrolls
             // (see below), and weight() only makes sense against a parent
@@ -1709,12 +1658,11 @@ fun TypeView(
         TightDialogSurface(
             onDismiss = { showMemoryBanks = false },
             primaryColor = primaryColor,
-            title = "MEMORY BANKS",
-            dismissLabel = "CLOSE"
+            title = labelFor(LabelKey.MEMORY_BANKS)
         ) {
             if (savedPhrases.isEmpty()) {
                 Text(
-                    text = "NO SAVED PHRASES YET. ENCODE ONE FROM THE TEXT FIELD ABOVE.",
+                    text = ManualOverrideText.emptyBanks(words, stringResource(R.string.manual_encode)),
                     color = Color.DarkGray,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
@@ -1736,9 +1684,9 @@ fun TypeView(
         TightDialogSurface(
             onDismiss = { showSaveDialog = false },
             primaryColor = primaryColor,
-            title = "ENCODE TO BANK"
+            title = stringResource(R.string.manual_encode_to_bank)
         ) {
-                TightSectionLabel("ASSIGN A TAG")
+                TightSectionLabel(stringResource(R.string.manual_assign_tag))
                 Spacer(modifier = Modifier.height(12.dp))
                 if (existingTags.isNotEmpty()) {
                     Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -1752,7 +1700,7 @@ fun TypeView(
                 }
                 OutlinedTextField(
                     value = newTagInput, onValueChange = { newTagInput = it.uppercase() },
-                    placeholder = { Text("NEW TAG") },
+                    placeholder = { Text(stringResource(R.string.manual_new_tag)) },
                     shape = AckHelpShape,
                     colors = TextFieldDefaults.colors(focusedTextColor = primaryColor, unfocusedTextColor = primaryColor, focusedContainerColor = VoidBlack, unfocusedContainerColor = VoidBlack, focusedIndicatorColor = primaryColor)
                 )
@@ -1763,7 +1711,7 @@ fun TypeView(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TightPanelButton("SAVE", modifier = Modifier.weight(1f), mainColor = primaryColor) {
+                    TightPanelButton(stringResource(R.string.common_save), modifier = Modifier.weight(1f), mainColor = primaryColor) {
                         if (newTagInput.isNotEmpty()) {
                             CommandRepository.saveQuickPhrase(context, textFieldValue.text, newTagInput)
                             refreshKey++
@@ -1771,7 +1719,7 @@ fun TypeView(
                             newTagInput = ""
                         }
                     }
-                    TightPanelButton("CANCEL", modifier = Modifier.weight(1f), isActive = false, mainColor = primaryColor) { showSaveDialog = false }
+                    TightPanelButton(stringResource(R.string.common_cancel), modifier = Modifier.weight(1f), isActive = false, mainColor = primaryColor) { showSaveDialog = false }
                 }
         }
     }
@@ -1800,7 +1748,7 @@ fun QuickAccessAccordion(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("[$tag]", color = if(isExpanded) primaryColor else Color.Gray, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+                    Text("[$tag]", color = if(isExpanded) primaryColor else Color.Gray, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(1.sp))
                     Text(if(isExpanded) "▼" else "▶", color = if(isExpanded) primaryColor else Color.Gray, fontSize = 10.sp)
                 }
             }
@@ -1832,13 +1780,11 @@ fun QuickAccessAccordion(
         TightDialogSurface(
             onDismiss = { deletingPhrase = null },
             primaryColor = RadicalRed,
-            title = "CONFIRM DELETE",
-            dismissLabel = "ABORT"
+            title = stringResource(R.string.manual_confirm_delete),
+            dismissLabel = stringResource(R.string.common_abort)
         ) {
             Text(
-                text = "Permanently remove the saved phrase " +
-                        "\"${deleting.text}\"? This cannot be undone -- " +
-                        "consider exporting a backup first.",
+                text = ManualOverrideText.deleteQuestion(rememberText(), deleting.text),
                 color = Color.White,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
@@ -1848,7 +1794,7 @@ fun QuickAccessAccordion(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TightPanelButton(
-                    text = "DELETE PERMANENTLY",
+                    text = stringResource(R.string.manual_delete_permanently),
                     modifier = Modifier.fillMaxWidth(),
                     mainColor = RadicalRed
                 ) {
@@ -1857,7 +1803,7 @@ fun QuickAccessAccordion(
                 }
 
                 TightPanelButton(
-                    text = "CANCEL",
+                    text = stringResource(R.string.common_cancel),
                     modifier = Modifier.fillMaxWidth(),
                     isActive = false,
                     mainColor = primaryColor
@@ -1877,7 +1823,7 @@ fun RecentHistoryItem(phrase: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = if (phrase.length > 25) phrase.take(22) + "..." else phrase, color = Color.Gray, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-        Text("REPLAY", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        Text(stringResource(R.string.manual_replay), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
     }
 }
 
@@ -1903,9 +1849,9 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
             item {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("SEQUENCE :: $deckName", color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                    Text(stringResource(R.string.matrix_sequence_header, deckName), color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = looseSpacing(2.sp))
                     Text(
-                        "[MANAGE CONTEXT]",
+                        stringResource(R.string.matrix_manage_context),
                         color = primaryColor,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -1948,6 +1894,13 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
         var tempText by remember(node.path) {
             mutableStateOf(rawPhrase)
+        }
+
+        // The template field's text AND its cursor, so the insert buttons below can insert AT THE CURSOR with the shared rule
+        // (core/TextInsertion.kt). tempText stays the one place the text is saved from. The cursor starts at the END, so on a freshly
+        // opened editor the first insertion still lands last, as it always did.
+        var templateValue by remember(node.path) {
+            mutableStateOf(TextFieldValue(rawPhrase, TextRange(rawPhrase.length)))
         }
 
         val tempVars = remember(node.path) {
@@ -2075,6 +2028,9 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
         fun updateTemplate(newTemplate: String) {
             tempText = newTemplate
+            if (templateValue.text != newTemplate) {
+                templateValue = TextFieldValue(newTemplate, TextRange(newTemplate.length))
+            }
 
             val newVariableCount = TemplateEngine.countVariables(newTemplate)
             val newComputerTagCount = TemplateEngine.countComputerTags(newTemplate)
@@ -2110,6 +2066,23 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                 matrixRecording = currentRecording.copy(enabled = false)
                 showStaleWarning = true
             }
+        }
+
+        // Inserts [token] at the cursor with the shared rule. The {VAR} values and [COMPUTER] fallbacks are stored BY POSITION, so they
+        // are shifted to match first (core/TokenSlots.kt); otherwise a token put in the middle would take over the value of the
+        // token that used to be there.
+        fun insertTokenAtCursor(token: String) {
+            val selection = templateValue.selection
+            val result = TextInsertion.insert(tempText, selection.start, selection.end, token)
+            val shiftedVars = TokenSlots.realign(tempVars.toList(), tempText, result.replaced, token, SlotFamily.VARIABLE)
+            val shiftedFallbacks =
+                TokenSlots.realign(tempComputerFallbacks.toList(), tempText, result.replaced, token, SlotFamily.COMPUTER)
+            tempVars.clear()
+            tempVars.addAll(shiftedVars)
+            tempComputerFallbacks.clear()
+            tempComputerFallbacks.addAll(shiftedFallbacks)
+            updateTemplate(result.text)
+            templateValue = TextFieldValue(result.text, TextRange(result.cursor))
         }
 
         fun commitEditor() {
@@ -2165,19 +2138,23 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                 closeEditor()
             },
             primaryColor = primaryColor,
-            title = node.label,
-            subtitle = "LIVE-SAVE EDITOR",
+            title = slotLabel(node.label),
+            subtitle = stringResource(R.string.matrix_edit_subtitle),
             surfaceModifier = Modifier.testTag(AckTags.EDIT_NODE_DIALOG)
         ) {
                 Column {
-                    TightSectionLabel("MACRO TEMPLATE")
+                    TightSectionLabel(stringResource(R.string.matrix_edit_template))
 
                     Spacer(modifier = Modifier.height(6.dp))
 
                     OutlinedTextField(
-                        value = tempText,
-                        onValueChange = { newText ->
-                            updateTemplate(newText)
+                        value = templateValue,
+                        onValueChange = { newValue ->
+                            // Only a change of TEXT is a template edit; moving the cursor just moves the cursor.
+                            if (newValue.text != tempText) {
+                                updateTemplate(newValue.text)
+                            }
+                            templateValue = newValue
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2193,7 +2170,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         maxLines = 4,
                         placeholder = {
                             Text(
-                                text = "ENTER OUTPUT PHRASE...",
+                                text = stringResource(R.string.matrix_edit_phrase_hint),
                                 color = Color.DarkGray,
                                 fontFamily = FontFamily.Monospace
                             )
@@ -2218,7 +2195,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     val recordingIsActive = matrixRecording?.enabled == true
 
                     if (!recordingIsActive) {
-                        TightSectionLabel("INSERT VARIABLE TOKEN")
+                        TightSectionLabel(stringResource(R.string.matrix_edit_insert_token))
 
                         Spacer(modifier = Modifier.height(6.dp))
 
@@ -2227,11 +2204,11 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             TightPanelButton(
-                                text = "+ VAR",
+                                text = labelFor(LabelKey.ADD_VAR),
                                 modifier = Modifier.weight(1f),
                                 mainColor = primaryColor
                             ) {
-                                updateTemplate("$tempText {VAR}")
+                                insertTokenAtCursor("{VAR}")
                             }
 
                             TightPanelButton(
@@ -2239,7 +2216,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 modifier = Modifier.weight(1f),
                                 mainColor = primaryColor
                             ) {
-                                updateTemplate("$tempText {VAR:A}")
+                                insertTokenAtCursor("{VAR:A}")
                             }
 
                             TightPanelButton(
@@ -2247,7 +2224,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 modifier = Modifier.weight(1f),
                                 mainColor = primaryColor
                             ) {
-                                updateTemplate("$tempText {VAR:B}")
+                                insertTokenAtCursor("{VAR:B}")
                             }
 
                             TightPanelButton(
@@ -2255,14 +2232,14 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 modifier = Modifier.weight(1f),
                                 mainColor = primaryColor
                             ) {
-                                updateTemplate("$tempText {VAR:C}")
+                                insertTokenAtCursor("{VAR:C}")
                             }
                         }
 
                         if (computerCategories.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            TightSectionLabel("INSERT TARGET TAG")
+                            TightSectionLabel(labelFor(LabelKey.INSERT_TARGET_TAG))
 
                             Spacer(modifier = Modifier.height(6.dp))
 
@@ -2276,10 +2253,10 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             ) {
                                 computerCategories.forEach { computerCategory ->
                                     TightPanelButton(
-                                        text = "+ ${computerCategory.label}",
+                                        text = "+ ${categoryName(computerCategory)}",
                                         mainColor = primaryColor
                                     ) {
-                                        updateTemplate("$tempText [COMPUTER:${computerCategory.id}]")
+                                        insertTokenAtCursor("[COMPUTER:${computerCategory.id}]")
                                         helpManager?.onEvent(
                                             HelpEvent.Interacted(AckTags.MATRIX_INSERT_COMPUTER_TAG)
                                         )
@@ -2300,9 +2277,9 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             panelKey = "mtx_${activeDeckId}_${activeProfile}_${node.path}",
                             existingRecording = matrixRecording,
                             description = if (recordingIsActive) {
-                                "RECORDED PROMPT -- VARIABLES BELOW ARE HIDDEN AND INACTIVE WHILE THIS PLAYS. THEIR VALUES ARE KEPT. REMOVE THIS RECORDING TO GET THEM BACK."
+                                stringResource(R.string.matrix_edit_recorded_note)
                             } else {
-                                "WHEN SET, THIS PLAYS INSTEAD OF THE TEMPLATE ABOVE."
+                                stringResource(R.string.matrix_edit_recording_hint)
                             },
                             onAccept = { pcm, sampleRate ->
                                 val saved = VoiceRecordingRepository.saveForMatrixNode(
@@ -2326,24 +2303,23 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         // that recording this entry disables its variables
                         // while active -- see showAttachRecordingWarning.
                         Text(
-                            text = "VOICE RECORDING",
+                            text = stringResource(R.string.matrix_edit_voice_recording),
                             color = primaryColor,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 2.sp
+                            letterSpacing = looseSpacing(2.sp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "This entry has $variableCount variable(s) and $computerTagCount target tag(s). " +
-                                "Recording a voice prompt disables them while active.",
+                            text = stringResource(R.string.matrix_edit_voice_info, variableCount, computerTagCount),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         TightPanelButton(
-                            text = "ATTACH VOICE RECORDING",
+                            text = stringResource(R.string.matrix_edit_attach_recording),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag(AckTags.VOICE_REC_MATRIX_ATTACH_BTN)
@@ -2360,15 +2336,12 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     if (recordingIsActive) {
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        TightSectionLabel("VISUAL PROMPT OVERRIDE", color = primaryColor)
+                        TightSectionLabel(stringResource(R.string.matrix_edit_visual_override), color = primaryColor)
 
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "WHAT SHOWS ON SCREEN WHILE THIS RECORDING PLAYS. LEAVE BLANK " +
-                                "TO SHOW THE RAW TEMPLATE TEXT ABOVE AS-IS (VARIABLE TOKENS " +
-                                "INCLUDED, UNRESOLVED). YOUR TEMPLATE AND VARIABLES ARE NEVER " +
-                                "CHANGED BY THIS -- IT ONLY REPLACES WHAT'S DISPLAYED.",
+                            text = stringResource(R.string.matrix_edit_visual_hint),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -2391,7 +2364,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             maxLines = 3,
                             placeholder = {
                                 Text(
-                                    text = "e.g. \"Hi Sarah, nice to see you\"",
+                                    text = stringResource(R.string.matrix_edit_visual_example),
                                     color = Color.DarkGray,
                                     fontFamily = FontFamily.Monospace
                                 )
@@ -2415,15 +2388,14 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     if (matrixRecording?.enabled == false) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "DISABLED -- this entry's text changed since this recording was made. " +
-                                "It won't play until you re-enable it above.",
+                            text = stringResource(R.string.matrix_edit_disabled_note),
                             color = RadicalRed,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         TightPanelButton(
-                            text = "RE-ENABLE (MATCH CURRENT TEXT)",
+                            text = stringResource(R.string.matrix_edit_reenable),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag(AckTags.VOICE_REC_MATRIX_REENABLE_BTN)
@@ -2448,7 +2420,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
-                            text = "LOCAL VARIABLE DATA",
+                            text = stringResource(R.string.matrix_edit_local_data),
                             color = NeonPalette.SWATCHES[3],
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -2458,8 +2430,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "Saved immediately. Tagged A/B/C values can be "
-                                    + "replaced by enabled root overrides.",
+                            text = stringResource(R.string.matrix_edit_local_hint),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -2473,9 +2444,9 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 .getOrNull(index)
 
                             val label = if (tag == null) {
-                                "VARIABLE ${index + 1}"
+                                "${labelFor(LabelKey.VARIABLE)} ${index + 1}"
                             } else {
-                                "VARIABLE ${index + 1} // ROOT $tag"
+                                "${labelFor(LabelKey.VARIABLE)} ${index + 1} // ${stringResource(R.string.matrix_root_tag, tag)}"
                             }
 
                             // Per node, per variable slot -- typing the
@@ -2523,7 +2494,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 },
                                 placeholder = {
                                     Text(
-                                        text = "ENTER LOCAL FALLBACK...",
+                                        text = stringResource(R.string.matrix_edit_fallback_hint),
                                         color = Color.DarkGray,
                                         fontFamily = FontFamily.Monospace
                                     )
@@ -2544,8 +2515,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             )
 
                             AutocompleteChipRow(
-                                suggestions = AutocompleteHistoryRepository
-                                    .getSuggestions(context, autocompleteScopeKey),
+                                suggestions = AutocompleteHistoryRepository.getSuggestions(context, autocompleteScopeKey, tempVars[index]),
                                 primaryColor = NeonPalette.SWATCHES[3],
                                 modifier = Modifier.padding(top = 4.dp)
                             ) { suggestion ->
@@ -2563,7 +2533,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
-                            text = "TARGET TAG FALLBACKS",
+                            text = stringResource(R.string.matrix_edit_fallbacks_title),
                             color = NeonPalette.SWATCHES[3],
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -2573,10 +2543,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "[COMPUTER:X] resolves to whichever entry is " +
-                                "currently active for that category in the Target " +
-                                "Computer. If nothing is active, the fallback below " +
-                                "is used instead.",
+                            text = stringResource(R.string.matrix_edit_fallbacks_hint),
                             color = Color.Gray,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace
@@ -2607,14 +2574,14 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 singleLine = true,
                                 label = {
                                     Text(
-                                        text = "TARGET TAG ${index + 1} // $categoryLabel",
+                                        text = stringResource(R.string.matrix_edit_target_tag, index + 1, categoryLabel),
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 10.sp
                                     )
                                 },
                                 placeholder = {
                                     Text(
-                                        text = "ENTER LOCAL FALLBACK...",
+                                        text = stringResource(R.string.matrix_edit_fallback_hint),
                                         color = Color.DarkGray,
                                         fontFamily = FontFamily.Monospace
                                     )
@@ -2654,7 +2621,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace
                         )
-                        TightSectionLabel("DESTRUCTIVE CONTROLS", color = RadicalRed)
+                        TightSectionLabel(stringResource(R.string.matrix_edit_destructive), color = RadicalRed)
                     }
 
                     if (destructiveControlsExpanded) {
@@ -2665,7 +2632,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             TightPanelButton(
-                                text = "CLEAR VARS",
+                                text = stringResource(R.string.matrix_edit_clear_vars),
                                 modifier = Modifier.weight(1f),
                                 isActive = false,
                                 mainColor = RadicalRed
@@ -2674,7 +2641,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                             }
 
                             TightPanelButton(
-                                text = "CLEAR PROMPT",
+                                text = stringResource(R.string.matrix_edit_clear_prompt),
                                 modifier = Modifier.weight(1f),
                                 isActive = false,
                                 mainColor = RadicalRed
@@ -2686,7 +2653,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         Spacer(modifier = Modifier.height(6.dp))
 
                         TightPanelButton(
-                            text = "CLEAR ALL",
+                            text = stringResource(R.string.matrix_edit_clear_all),
                             modifier = Modifier.fillMaxWidth(),
                             isActive = false,
                             mainColor = RadicalRed
@@ -2703,7 +2670,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "COMMIT",
+                        text = stringResource(R.string.common_commit),
                         modifier = Modifier
                             .weight(1f)
                             .testTag(AckTags.MATRIX_COMMIT_BUTTON)
@@ -2718,7 +2685,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     }
 
                     TightPanelButton(
-                        text = "CLOSE",
+                        text = stringResource(R.string.common_close),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -2733,18 +2700,15 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         if (mode != null) {
             val confirmationText = when (mode) {
                 "VARS" -> {
-                    "Clear every local variable value for this phrase? "
-                     "The prompt will remain."
+                    stringResource(R.string.matrix_edit_confirm_vars)
                 }
 
                 "PROMPT" -> {
-                    "Clear this prompt only? Existing local variable values "
-                     "will be preserved."
+                    stringResource(R.string.matrix_edit_confirm_prompt)
                 }
 
                 else -> {
-                    "Clear both the prompt and every local variable value? "
-                     "This cannot be undone from this dialog."
+                    stringResource(R.string.matrix_edit_confirm_all)
                 }
             }
 
@@ -2753,8 +2717,8 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     clearMode = null
                 },
                 primaryColor = RadicalRed,
-                title = "CONFIRM CLEAR",
-                dismissLabel = "ABORT"
+                title = stringResource(R.string.matrix_edit_confirm_title),
+                dismissLabel = stringResource(R.string.common_abort)
             ) {
                 Text(
                     text = confirmationText,
@@ -2770,7 +2734,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "CONFIRM",
+                        text = stringResource(R.string.common_confirm),
                         modifier = Modifier.weight(1f),
                         mainColor = RadicalRed
                     ) {
@@ -2787,6 +2751,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 // Prompt-only intentionally preserves the
                                 // variable bank for a future replacement prompt.
                                 tempText = ""
+                                templateValue = TextFieldValue("")
 
                                 CommandRepository.setPhrase(
                                     context = context,
@@ -2797,6 +2762,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
 
                             "ALL" -> {
                                 tempText = ""
+                                templateValue = TextFieldValue("")
                                 tempVars.clear()
 
                                 CommandRepository.setPhrase(
@@ -2814,7 +2780,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     }
 
                     TightPanelButton(
-                        text = "CANCEL",
+                        text = stringResource(R.string.common_cancel),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -2829,14 +2795,11 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             TightDialogSurface(
                 onDismiss = { showAttachRecordingWarning = false },
                 primaryColor = primaryColor,
-                title = "VOICE RECORDING",
-                dismissLabel = "CANCEL"
+                title = stringResource(R.string.matrix_edit_voice_recording),
+                dismissLabel = stringResource(R.string.common_cancel)
             ) {
                 Text(
-                    text = "This entry has $variableCount variable(s) and $computerTagCount " +
-                        "target tag(s). Attaching a recording plays it back exactly as " +
-                        "recorded, ignoring what they'd resolve to. Their values are kept, " +
-                        "not deleted -- remove the recording at any time to get them back.",
+                    text = stringResource(R.string.matrix_edit_attach_body, variableCount, computerTagCount),
                     color = Color.White,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
@@ -2849,7 +2812,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "CONFIRM",
+                        text = stringResource(R.string.common_confirm),
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
@@ -2857,7 +2820,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         showAttachRecordingWarning = false
                     }
                     TightPanelButton(
-                        text = "CANCEL",
+                        text = stringResource(R.string.common_cancel),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -2872,14 +2835,11 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             TightDialogSurface(
                 onDismiss = { showStaleWarning = false },
                 primaryColor = RadicalRed,
-                title = "RECORDING DISABLED",
-                dismissLabel = "OK"
+                title = stringResource(R.string.matrix_edit_rec_disabled_title),
+                dismissLabel = stringResource(R.string.common_ok)
             ) {
                 Text(
-                    text = "This entry's text changed since its recording was made, so the " +
-                        "recording has been disabled to avoid mismatched audio. It hasn't " +
-                        "been deleted -- re-enable it from the VOICE RECORDING panel above " +
-                        "once you're happy with the new wording.",
+                    text = stringResource(R.string.matrix_edit_rec_disabled_body),
                     color = Color.White,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
@@ -2888,7 +2848,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                 Spacer(modifier = Modifier.height(16.dp))
 
                 TightPanelButton(
-                    text = "OK, GOT IT",
+                    text = stringResource(R.string.matrix_edit_got_it),
                     modifier = Modifier.fillMaxWidth(),
                     mainColor = RadicalRed
                 ) {
@@ -2907,11 +2867,11 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
         TightDialogSurface(
             onDismiss = { variableEditRequest = null },
             primaryColor = primaryColor,
-            title = "${request.nodeLabel} // VAR ${request.index + 1}",
-            dismissLabel = "ABORT"
+            title = "${slotLabel(request.nodeLabel)} // ${stringFormatLabel(LabelKey.VARIABLE_TAG, request.index + 1)}",
+            dismissLabel = stringResource(R.string.common_abort)
         ) {
                 Column {
-                    TightSectionLabel("LIVE VARIABLE VALUE")
+                    TightSectionLabel(stringResource(R.string.matrix_edit_live_value))
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -2923,7 +2883,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                         singleLine = true,
                         placeholder = {
                             Text(
-                                text = "ENTER VALUE",
+                                text = stringResource(R.string.common_enter_value),
                                 fontFamily = FontFamily.Monospace
                             )
                         },
@@ -2950,7 +2910,8 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                                 CommandRepository.getActiveProfile(context),
                                 request.nodePath,
                                 request.index
-                            )
+                            ),
+                            value
                         ),
                         primaryColor = primaryColor,
                         modifier = Modifier.padding(top = 6.dp)
@@ -2966,7 +2927,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "UPDATE",
+                        text = stringResource(R.string.common_update),
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
@@ -3009,7 +2970,7 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
                     }
 
                     TightPanelButton(
-                        text = "ABORT",
+                        text = stringResource(R.string.common_abort),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -3027,640 +2988,6 @@ fun MatrixEditor(context: Context, deckName: String, onDialogStateChange: (Boole
             onDismiss = { showManageContextDialog = false },
             onChanged = { refreshKey++ }
         )
-    }
-}
-
-// --- MANAGE CONTEXT ---
-//
-// IDENTITY, DEFEND, and CONNECT are the three immutable poses -- they can
-// never be renamed, reassigned, reordered, or removed here. Everything below
-// them is a custom context layer the wearer added: additional expression
-// riding on top of one of those same three physical gestures.
-@Composable
-fun ManageContextDialog(
-    context: Context,
-    primaryColor: Color,
-    onDismiss: () -> Unit,
-    onChanged: () -> Unit
-) {
-    var refreshKey by remember { mutableIntStateOf(0) }
-    var entries by remember(refreshKey) {
-        mutableStateOf(CommandRepository.getCustomContextEntries(context))
-    }
-
-    var showAddDialog by remember { mutableStateOf(false) }
-    var renamingEntry by remember { mutableStateOf<CustomContextEntry?>(null) }
-    var reassigningEntry by remember { mutableStateOf<CustomContextEntry?>(null) }
-    var deletingEntry by remember { mutableStateOf<CustomContextEntry?>(null) }
-
-    fun refresh() {
-        refreshKey++
-        onChanged()
-    }
-
-    TightDialogSurface(
-        onDismiss = onDismiss,
-        primaryColor = primaryColor,
-        title = "MANAGE CONTEXT",
-        dismissLabel = "DONE"
-    ) {
-                Text(
-                    text = "The three base poses are permanent. Custom " +
-                            "context layers ride on top of one pose's " +
-                            "gestures and can be reordered, reassigned, " +
-                            "renamed, or removed.",
-                    color = Color.Gray,
-                    fontSize = 9.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(POSE_CATEGORIES) { pose ->
-                        ImmutablePoseRow(pose = pose, primaryColor = primaryColor)
-                    }
-
-                    items(entries, key = { it.name }) { entry ->
-                        val index = entries.indexOf(entry)
-
-                        CustomContextRow(
-                            entry = entry,
-                            primaryColor = primaryColor,
-                            canMoveUp = index > 0,
-                            canMoveDown = index < entries.lastIndex,
-                            onMoveUp = {
-                                CommandRepository.moveCustomContextEntry(
-                                    context, entry.name, -1
-                                )
-                                refresh()
-                            },
-                            onMoveDown = {
-                                CommandRepository.moveCustomContextEntry(
-                                    context, entry.name, 1
-                                )
-                                refresh()
-                            },
-                            onRename = { renamingEntry = entry },
-                            onReassign = { reassigningEntry = entry },
-                            onDelete = { deletingEntry = entry }
-                        )
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 44.dp)
-                                .border(1.dp, primaryColor, AckHelpShape)
-                                .background(
-                                    primaryColor.copy(alpha = 0.12f),
-                                    AckHelpShape
-                                )
-                                .clickable { showAddDialog = true }
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "+ ADD CONTEXT",
-                                color = primaryColor,
-                                fontSize = 10.sp,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                    }
-                }
-    }
-
-    if (showAddDialog) {
-        AddContextDialog(
-            primaryColor = primaryColor,
-            existingNames = entries.map { it.name },
-            onDismiss = { showAddDialog = false },
-            onCreate = { name, basePose ->
-                if (CommandRepository.addCustomContextEntry(context, name, basePose)) {
-                    refresh()
-                    showAddDialog = false
-                }
-            }
-        )
-    }
-
-    val renaming = renamingEntry
-
-    if (renaming != null) {
-        RenameContextDialog(
-            entry = renaming,
-            primaryColor = primaryColor,
-            existingNames = entries.map { it.name },
-            onDismiss = { renamingEntry = null },
-            onConfirm = { newName ->
-                if (
-                    CommandRepository.renameCustomContextEntry(
-                        context, renaming.name, newName
-                    )
-                ) {
-                    refresh()
-                    renamingEntry = null
-                }
-            }
-        )
-    }
-
-    val reassigning = reassigningEntry
-
-    if (reassigning != null) {
-        ReassignPoseDialog(
-            entry = reassigning,
-            primaryColor = primaryColor,
-            onDismiss = { reassigningEntry = null },
-            onConfirm = { newPose ->
-                CommandRepository.reassignCustomContextPose(
-                    context, reassigning.name, newPose
-                )
-                refresh()
-                reassigningEntry = null
-            }
-        )
-    }
-
-    val deleting = deletingEntry
-
-    if (deleting != null) {
-        TightDialogSurface(
-            onDismiss = { deletingEntry = null },
-            primaryColor = RadicalRed,
-            title = "CONFIRM DELETE",
-            dismissLabel = "ABORT"
-        ) {
-            Text(
-                text = "Permanently remove context layer " +
-                        "\"${deleting.name}\"? Every phrase, variable, " +
-                        "and shared override saved under it will be " +
-                        "deleted across every deck and profile. This " +
-                        "cannot be undone -- consider exporting a " +
-                        "backup first.",
-                color = Color.White,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TightPanelButton(
-                    text = "DELETE PERMANENTLY",
-                    modifier = Modifier.fillMaxWidth(),
-                    mainColor = RadicalRed
-                ) {
-                    CommandRepository.removeCustomContextEntry(context, deleting.name)
-                    refresh()
-                    deletingEntry = null
-                }
-
-                TightPanelButton(
-                    text = "CANCEL",
-                    modifier = Modifier.fillMaxWidth(),
-                    isActive = false,
-                    mainColor = primaryColor
-                ) {
-                    deletingEntry = null
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ImmutablePoseRow(pose: String, primaryColor: Color) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, Color.DarkGray, AckHelpShape)
-            .padding(horizontal = 10.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "ROOT :: $pose",
-            color = primaryColor,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            text = "[IMMUTABLE]",
-            color = Color.Gray,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace
-        )
-    }
-}
-
-@Composable
-private fun CustomContextRow(
-    entry: CustomContextEntry,
-    primaryColor: Color,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
-    onRename: () -> Unit,
-    onReassign: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, primaryColor.copy(alpha = 0.5f), AckHelpShape)
-            .background(primaryColor.copy(alpha = 0.05f), AckHelpShape)
-            .padding(10.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = entry.name,
-                    color = primaryColor,
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "BASED ON: ${entry.basePose}",
-                    color = Color.Gray,
-                    fontSize = 9.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                ContextRowIconButton(
-                    text = "▲",
-                    enabled = canMoveUp,
-                    primaryColor = primaryColor,
-                    onClick = onMoveUp
-                )
-
-                ContextRowIconButton(
-                    text = "▼",
-                    enabled = canMoveDown,
-                    primaryColor = primaryColor,
-                    onClick = onMoveDown
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            ContextRowActionButton(
-                text = "REASSIGN",
-                primaryColor = primaryColor,
-                modifier = Modifier.weight(1f),
-                onClick = onReassign
-            )
-
-            ContextRowActionButton(
-                text = "RENAME",
-                primaryColor = primaryColor,
-                modifier = Modifier.weight(1f),
-                onClick = onRename
-            )
-
-            ContextRowActionButton(
-                text = "DELETE",
-                primaryColor = RadicalRed,
-                modifier = Modifier.weight(1f),
-                onClick = onDelete
-            )
-        }
-    }
-}
-
-@Composable
-private fun ContextRowIconButton(
-    text: String,
-    enabled: Boolean,
-    primaryColor: Color,
-    onClick: () -> Unit
-) {
-    val color = if (enabled) primaryColor else Color.DarkGray
-
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .border(1.dp, color, AckHelpShape)
-            .then(
-                if (enabled) Modifier.clickable { onClick() } else Modifier
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = text, color = color, fontSize = 12.sp)
-    }
-}
-
-@Composable
-private fun ContextRowActionButton(
-    text: String,
-    primaryColor: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .heightIn(min = 44.dp)
-            .border(1.dp, primaryColor, AckHelpShape)
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = primaryColor,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-private fun PosePicker(
-    selected: String,
-    primaryColor: Color,
-    onSelect: (String) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        POSE_CATEGORIES.forEach { pose ->
-            val isSelected = pose == selected
-            val color = if (isSelected) primaryColor else Color.Gray
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 44.dp)
-                    .border(
-                        width = if (isSelected) 2.dp else 1.dp,
-                        color = color,
-                        shape = AckHelpShape
-                    )
-                    .background(
-                        if (isSelected) primaryColor.copy(alpha = 0.14f) else Color.Transparent,
-                        AckHelpShape
-                    )
-                    .clickable { onSelect(pose) }
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = pose,
-                    color = color,
-                    fontSize = 9.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AddContextDialog(
-    primaryColor: Color,
-    existingNames: List<String>,
-    onDismiss: () -> Unit,
-    onCreate: (name: String, basePose: String) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
-    var basePose by remember { mutableStateOf(POSE_CATEGORIES[0]) }
-
-    val cleanName = name.trim().uppercase()
-    val isValid = cleanName.isNotEmpty() &&
-            cleanName !in POSE_CATEGORIES &&
-            cleanName !in existingNames
-
-    TightDialogSurface(
-        onDismiss = onDismiss,
-        primaryColor = primaryColor,
-        title = "ADD CONTEXT"
-    ) {
-                TightSectionLabel("CONTEXT NAME")
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it.uppercase().take(24) },
-                    placeholder = { Text("E.G. SCHOOL, WORK, PLAY") },
-                    shape = AckHelpShape,
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedTextColor = primaryColor,
-                        unfocusedTextColor = primaryColor,
-                        focusedContainerColor = VoidBlack,
-                        unfocusedContainerColor = VoidBlack,
-                        focusedIndicatorColor = primaryColor
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                TightSectionLabel("ASSIGN TO POSE")
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "The physical gesture that activates this " +
-                            "layer's phrases when it is focused.",
-                    color = Color.DarkGray,
-                    fontSize = 9.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                PosePicker(
-                    selected = basePose,
-                    primaryColor = primaryColor,
-                    onSelect = { basePose = it }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TightPanelButton(
-                        text = "CREATE",
-                        modifier = Modifier.weight(1f),
-                        isActive = isValid,
-                        mainColor = primaryColor
-                    ) {
-                        if (isValid) {
-                            onCreate(cleanName, basePose)
-                        }
-                    }
-
-                    TightPanelButton(
-                        text = "CANCEL",
-                        modifier = Modifier.weight(1f),
-                        isActive = false,
-                        mainColor = primaryColor
-                    ) {
-                        onDismiss()
-                    }
-                }
-    }
-}
-
-@Composable
-private fun RenameContextDialog(
-    entry: CustomContextEntry,
-    primaryColor: Color,
-    existingNames: List<String>,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
-) {
-    var name by remember(entry.name) { mutableStateOf(entry.name) }
-
-    val cleanName = name.trim().uppercase()
-    val isValid = cleanName.isNotEmpty() &&
-            (cleanName == entry.name ||
-                    (cleanName !in POSE_CATEGORIES && cleanName !in existingNames))
-
-    TightDialogSurface(
-        onDismiss = onDismiss,
-        primaryColor = primaryColor,
-        title = "RENAME CONTEXT"
-    ) {
-                Text(
-                    text = "Every saved phrase, variable, and override " +
-                            "moves with the new name.",
-                    color = Color.Gray,
-                    fontSize = 9.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it.uppercase().take(24) },
-                    shape = AckHelpShape,
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedTextColor = primaryColor,
-                        unfocusedTextColor = primaryColor,
-                        focusedContainerColor = VoidBlack,
-                        unfocusedContainerColor = VoidBlack,
-                        focusedIndicatorColor = primaryColor
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TightPanelButton(
-                        text = "CONFIRM RENAME",
-                        modifier = Modifier.weight(1f),
-                        isActive = isValid,
-                        mainColor = primaryColor
-                    ) {
-                        if (isValid) {
-                            onConfirm(cleanName)
-                        }
-                    }
-
-                    TightPanelButton(
-                        text = "CANCEL",
-                        modifier = Modifier.weight(1f),
-                        isActive = false,
-                        mainColor = primaryColor
-                    ) {
-                        onDismiss()
-                    }
-                }
-    }
-}
-
-@Composable
-private fun ReassignPoseDialog(
-    entry: CustomContextEntry,
-    primaryColor: Color,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
-) {
-    var basePose by remember(entry.name) { mutableStateOf(entry.basePose) }
-
-    TightDialogSurface(
-        onDismiss = onDismiss,
-        primaryColor = primaryColor,
-        title = "REASSIGN POSE // ${entry.name}"
-    ) {
-                Text(
-                    text = "Choose which pose's physical gesture activates " +
-                            "this context layer when it is focused.",
-                    color = Color.Gray,
-                    fontSize = 9.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                PosePicker(
-                    selected = basePose,
-                    primaryColor = primaryColor,
-                    onSelect = { basePose = it }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TightPanelButton(
-                        text = "CONFIRM",
-                        modifier = Modifier.weight(1f),
-                        mainColor = primaryColor
-                    ) {
-                        onConfirm(basePose)
-                    }
-
-                    TightPanelButton(
-                        text = "CANCEL",
-                        modifier = Modifier.weight(1f),
-                        isActive = false,
-                        mainColor = primaryColor
-                    ) {
-                        onDismiss()
-                    }
-                }
     }
 }
 
@@ -3713,11 +3040,11 @@ fun MatrixCategory(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Text(
-                    text = "ROOT :: $title",
+                    text = stringResource(R.string.matrix_root_heading, poseLabel(title)),
                     color = if (isFocused) primaryColor else Color.Gray,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
-                    letterSpacing = 2.sp
+                    letterSpacing = looseSpacing(2.sp)
                 )
             }
 
@@ -3753,7 +3080,7 @@ fun MatrixCategory(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (isFocused) "ACTIVE" else "ACTIVATE",
+                        text = stringResource(if (isFocused) R.string.matrix_active else R.string.matrix_activate),
                         color = if (isFocused) primaryColor else Color.Gray,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace
@@ -3801,11 +3128,11 @@ fun MatrixCategory(
                     val computerFallbacks = CommandRepository.getComputerFallbackValues(context, node.path)
 
                     val computerTagChips = computerTagsInOrder.mapIndexed { index, categoryId ->
-                        val categoryLabel = computerCategories.find { it.id == categoryId }?.label ?: categoryId
+                        val categoryLabel = computerCategories.find { it.id == categoryId }?.let { categoryName(it) } ?: categoryId
                         val activeValue = ComputerRepository.resolveTag(context, categoryId)
                         val displayValue = activeValue
                             .ifBlank { computerFallbacks.getOrNull(index).orEmpty() }
-                            .ifBlank { "EMPTY" }
+                            .ifBlank { stringResource(R.string.common_empty) }
                         categoryLabel to displayValue
                     }
 
@@ -3836,7 +3163,7 @@ fun MatrixCategory(
                     }
 
                     MatrixNodeItem(
-                        label = node.label,
+                        label = slotLabel(node.label),
                         phrase = recordedDisplayPhrase,
                         variableValues = if (recordingIsActive) emptyList() else variableValues,
                         computerTagChips = if (recordingIsActive) emptyList() else computerTagChips,
@@ -3999,16 +3326,16 @@ fun RootOverrideStrip(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "SHARED ROOT VARIABLES",
+                text = labelFor(LabelKey.SHARED_VARIABLES),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Text(
-                text = if (collapsed) "[EXPAND ▼]" else "[COLLAPSE ▲]",
+                text = stringResource(if (collapsed) R.string.matrix_expand else R.string.matrix_collapse),
                 color = primaryColor,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
@@ -4060,7 +3387,7 @@ fun RootOverrideStrip(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "$tag: ${if (slot.enabled) "ON" else "OFF"}",
+                                text = "$tag: ${stringResource(if (slot.enabled) R.string.common_on else R.string.common_off)}",
                                 color = if (slot.enabled) {
                                     primaryColor
                                 } else {
@@ -4085,7 +3412,7 @@ fun RootOverrideStrip(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Enabled tags replace matching {VAR:A}, {VAR:B}, or {VAR:C}.",
+                text = stringResource(R.string.matrix_root_hint),
                 color = Color.Gray,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace
@@ -4095,7 +3422,7 @@ fun RootOverrideStrip(
 
             listOf("A", "B", "C").forEach { tag ->
                 val slot = config.slots[tag] ?: RootOverrideValue()
-                val valueText = slot.value.ifBlank { "NO SHARED VALUE SET" }
+                val valueText = slot.value.ifBlank { stringResource(R.string.matrix_no_shared_value) }
 
                 Row(
                     modifier = Modifier
@@ -4162,7 +3489,7 @@ fun RootOverrideStrip(
                             )
 
                             Text(
-                                text = if (slot.enabled) "ON" else "OFF",
+                                text = stringResource(if (slot.enabled) R.string.common_on else R.string.common_off),
                                 color = if (slot.enabled) {
                                     primaryColor
                                 } else {
@@ -4180,7 +3507,7 @@ fun RootOverrideStrip(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "ROOT $tag",
+                            text = stringResource(R.string.matrix_root_tag, tag),
                             color = if (slot.enabled) primaryColor else Color.Gray,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -4218,7 +3545,7 @@ fun RootOverrideStrip(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "EDIT",
+                            text = stringResource(R.string.common_edit),
                             color = primaryColor,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
@@ -4277,10 +3604,10 @@ fun RootOverrideValueDialog(
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "ROOT $category // TAG $tag",
-        dismissLabel = "ABORT"
+        title = stringResource(R.string.matrix_override_title, poseLabel(category), tag),
+        dismissLabel = stringResource(R.string.common_abort)
     ) {
-                TightSectionLabel("SHARED OVERRIDE VALUE")
+                TightSectionLabel(stringResource(R.string.matrix_shared_override_value))
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -4292,7 +3619,7 @@ fun RootOverrideValueDialog(
                     singleLine = true,
                     placeholder = {
                         Text(
-                            text = "ENTER VALUE",
+                            text = stringResource(R.string.common_enter_value),
                             fontFamily = FontFamily.Monospace
                         )
                     },
@@ -4314,7 +3641,8 @@ fun RootOverrideValueDialog(
                 AutocompleteChipRow(
                     suggestions = AutocompleteHistoryRepository.getSuggestions(
                         context,
-                        autocompleteScopeKey
+                        autocompleteScopeKey,
+                        value
                     ),
                     primaryColor = primaryColor,
                     modifier = Modifier.padding(top = 6.dp)
@@ -4329,7 +3657,7 @@ fun RootOverrideValueDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TightPanelButton(
-                        text = "COMMIT",
+                        text = stringResource(R.string.common_commit),
                         modifier = Modifier.weight(1f),
                         mainColor = primaryColor
                     ) {
@@ -4343,7 +3671,7 @@ fun RootOverrideValueDialog(
                     }
 
                     TightPanelButton(
-                        text = "ABORT",
+                        text = stringResource(R.string.common_abort),
                         modifier = Modifier.weight(1f),
                         isActive = false,
                         mainColor = primaryColor
@@ -4433,7 +3761,7 @@ fun MatrixNodeItem(
                 if (isRecorded) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "● RECORDED",
+                        text = stringResource(R.string.matrix_recorded),
                         color = RadicalRed,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,
@@ -4451,7 +3779,7 @@ fun MatrixNodeItem(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         variableValues.forEachIndexed { index, value ->
-                            val displayValue = value.ifBlank { "EMPTY" }
+                            val displayValue = value.ifBlank { stringResource(R.string.common_empty) }
 
                             Box(
                                 modifier = Modifier
@@ -4551,14 +3879,10 @@ fun MatrixNodeItem(
 
 @Composable
 fun BuilderGuideCard(category: String, primaryColor: Color) {
-    val (title, body) = when(category) {
-        "IDENTITY" -> "POSE: ARM RAISED UP" to "Use for: Status reporting."
-        "DEFEND" -> "POSE: ARM FLAT / PALM DOWN" to "Use for: Boundaries, stops."
-        "CONNECT" -> "POSE: HANDSHAKE / SIDEWAYS" to "Use for: Social protocols."
-        else -> "UNKNOWN" to "No data available."
-    }
+    val words = rememberText()
+    val (title, body) = ManualOverrideText.guide(words, labelFor(LabelKey.POSE), category)
     Column(modifier = Modifier.fillMaxWidth().border(1.dp, primaryColor, CutCornerShape(8.dp)).background(primaryColor.copy(alpha = 0.05f)).padding(12.dp)) {
-        Text("// TACTICAL GUIDE: $title", color = primaryColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text(ManualOverrideText.guideHeader(words, title), color = primaryColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = looseSpacing(1.sp))
         Spacer(modifier = Modifier.height(4.dp))
         Text(body, color = Color.Gray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
     }

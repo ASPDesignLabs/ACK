@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.capture
 
+import com.example.besu.core.CaptureText
+import com.example.besu.core.EnglishText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -25,7 +27,7 @@ class NoiseCheckTest {
         assertEquals(2.0, c.seconds, 0.0)
         assertEquals(LevelMath.rnd(LevelMath.levelDb(30.0), 1), c.floorDbfs()!!, 0.0)
         assertEquals(NoiseVerdict.GOOD, c.verdict())
-        assertTrue(c.describe().startsWith("ROOM LEVEL -60.8 dB: GOOD"))
+        assertEquals("ROOM LEVEL -60.8 dB: GOOD.", CaptureText.noiseVerdict(EnglishText, c.verdict(), c.floorDbfs()))
     }
 
     @Test
@@ -41,7 +43,11 @@ class NoiseCheckTest {
         val c = heard(listOf(Triple(2.0, 2000, 24)))                   // about -24 dBFS
         assertEquals(NoiseVerdict.LOUD_ROOM, c.verdict())
         assertEquals(-30.0, LevelMath.thresholdDb(c.floorDbfs()), 0.0)
-        assertTrue(c.describe().contains("LOUD"))
+        val floor = c.floorDbfs()!!
+        assertEquals(
+            "ROOM LEVEL $floor dB: LOUD. QUIET WORDS MAY BE MISSED. A QUIETER SPOT WILL GIVE BETTER TRAINING DATA.",
+            CaptureText.noiseVerdict(EnglishText, c.verdict(), floor),
+        )
     }
 
     @Test
@@ -49,14 +55,14 @@ class NoiseCheckTest {
         val c = heard(listOf(Triple(2.0, 0, 24)))
         assertEquals(-120.0, c.floorDbfs()!!, 0.0)
         assertEquals(NoiseVerdict.NO_SIGNAL, c.verdict())
-        assertTrue(c.describe().contains("MUTED"))
+        assertEquals("NOTHING WAS HEARD. IS THE MICROPHONE COVERED OR MUTED?", CaptureText.noiseVerdict(EnglishText, c.verdict(), c.floorDbfs()))
     }
 
     @Test
     fun aSoundDuringTheCheckIsNoticedEvenThoughItDragsTheAverageUpWithIt() {
         val c = heard(listOf(Triple(1.0, 30, 24), Triple(0.05, 3000, 24), Triple(0.95, 30, 24)))
         assertEquals(NoiseVerdict.INTERRUPTED, c.verdict())
-        assertTrue(c.describe().contains("INTERRUPTED"))
+        assertEquals("A SOUND INTERRUPTED THE QUIET CHECK. STAY QUIET AND TRY AGAIN.", CaptureText.noiseVerdict(EnglishText, c.verdict(), c.floorDbfs()))
     }
 
     @Test

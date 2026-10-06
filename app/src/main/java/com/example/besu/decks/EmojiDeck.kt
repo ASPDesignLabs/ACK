@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.decks
 
+import com.example.besu.R
+import com.example.besu.core.EmojiLabels
+import com.example.besu.core.LabelKey
+import com.example.besu.ui.labelFor
+import com.example.besu.ui.looseSpacing
+import com.example.besu.ui.rememberText
 import com.example.besu.*
 import com.example.besu.data.*
 import com.example.besu.help.*
@@ -35,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -131,6 +138,7 @@ fun EmojiDeck(
     }
 
     val helpManager = LocalHelpManager.current
+    val words = rememberText()
 
     fun reloadConfig() {
         config = CommandRepository.getEmojiDeckConfig(
@@ -179,24 +187,24 @@ fun EmojiDeck(
                 modifier = Modifier.weight(1f)
             ) {
                 AckText(
-                    text = "EMOJI // EXPRESS",
+                    text = stringResource(R.string.emoji_title, labelFor(LabelKey.DECK_TYPE_EMOJI)),
                     color = primaryColor,
                     size = 18.sp,
                     weight = FontWeight.Black,
-                    letterSpacing = 2.sp
+                    letterSpacing = looseSpacing(2.sp)
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 AckText(
-                    text = "TAP: DISPLAY  //  HOLD: CONFIGURE",
+                    text = EmojiLabels.hint(words),
                     color = Color.Gray,
                     size = 9.sp
                 )
             }
 
             AckTapButton(
-                text = "CONFIG",
+                text = stringResource(R.string.emoji_config_button),
                 color = primaryColor
             ) {
                 showDeckConfig = true
@@ -206,7 +214,7 @@ fun EmojiDeck(
         Spacer(modifier = Modifier.height(14.dp))
 
         EmojiPageNavigator(
-            pageName = activePage.name,
+            pageName = EmojiLabels.shownPageName(words, activePage.name, activePageIndex),
             pageIndex = activePageIndex,
             pageCount = config.pages.size,
             primaryColor = primaryColor,
@@ -499,11 +507,11 @@ private fun EmojiSlotButton(
 
             if (hasText) {
                 AckText(
-                    text = "TXT",
+                    text = stringResource(R.string.emoji_txt),
                     color = Color.White,
                     size = 7.sp,
                     weight = FontWeight.Black,
-                    letterSpacing = 1.sp,
+                    letterSpacing = looseSpacing(1.sp),
                     modifier = Modifier.align(Alignment.BottomEnd)
                 )
             }
@@ -519,7 +527,7 @@ private fun EmojiSlotButton(
             }
         } else {
             AckText(
-                text = "HOLD\nTO SET",
+                text = stringResource(R.string.emoji_hold_to_set),
                 color = Color.Gray,
                 size = 8.sp,
                 weight = FontWeight.Bold,
@@ -587,12 +595,12 @@ private fun EmojiSlotEditorDialog(
     }
 
     AckDialogShell(
-        title = "CONFIGURE EMOJI ${initialSlot.slotIndex + 1}",
+        title = stringResource(R.string.emoji_configure_title, initialSlot.slotIndex + 1),
         primaryColor = primaryColor,
         onDismiss = onDismiss
     ) {
         AckInput(
-            label = "CUSTOM EMOJI",
+            label = stringResource(R.string.emoji_custom),
             value = emoji,
             primaryColor = primaryColor,
             onValueChange = {
@@ -604,9 +612,9 @@ private fun EmojiSlotEditorDialog(
 
         AckTapButton(
             text = if (pickerOpen) {
-                "HIDE EMOJI LIBRARY"
+                stringResource(R.string.emoji_hide_library)
             } else {
-                "PICK FROM LIBRARY"
+                stringResource(R.string.emoji_pick_library)
             },
             color = primaryColor,
             modifier = Modifier
@@ -632,7 +640,7 @@ private fun EmojiSlotEditorDialog(
         Spacer(modifier = Modifier.height(12.dp))
 
         AckInput(
-            label = "LABEL // OPTIONAL",
+            label = stringResource(R.string.emoji_label_optional),
             value = label,
             primaryColor = primaryColor,
             onValueChange = {
@@ -643,7 +651,7 @@ private fun EmojiSlotEditorDialog(
         Spacer(modifier = Modifier.height(12.dp))
 
         AckInput(
-            label = "OVERLAY TEXT // OPTIONAL",
+            label = stringResource(R.string.emoji_overlay_text_optional),
             value = displayText,
             primaryColor = primaryColor,
             singleLine = false,
@@ -655,7 +663,7 @@ private fun EmojiSlotEditorDialog(
         Spacer(modifier = Modifier.height(14.dp))
 
         AckToggleRow(
-            label = "OPEN RELATED EMOJI PANEL",
+            label = stringResource(R.string.emoji_open_related),
             enabled = opensRelatedPanel,
             primaryColor = primaryColor,
             modifier = Modifier
@@ -670,7 +678,7 @@ private fun EmojiSlotEditorDialog(
             Spacer(modifier = Modifier.height(8.dp))
 
             AckTapButton(
-                text = "CONFIGURE RELATED PANEL",
+                text = stringResource(R.string.emoji_configure_related),
                 color = primaryColor,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -690,7 +698,7 @@ private fun EmojiSlotEditorDialog(
             Spacer(modifier = Modifier.height(6.dp))
 
             AckText(
-                text = "THIS SLOT OPENS A SINGLE-PAGE EMOJI PANEL.",
+                text = stringResource(R.string.emoji_related_note),
                 color = Color.Gray,
                 size = 8.sp
             )
@@ -703,7 +711,7 @@ private fun EmojiSlotEditorDialog(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             AckTapButton(
-                text = "CLEAR",
+                text = stringResource(R.string.common_clear),
                 color = Color.Gray,
                 modifier = Modifier.weight(1f)
             ) {
@@ -714,7 +722,7 @@ private fun EmojiSlotEditorDialog(
             }
 
             AckTapButton(
-                text = "SAVE",
+                text = stringResource(R.string.common_save),
                 color = primaryColor,
                 modifier = Modifier.weight(1f)
             ) {
@@ -777,16 +785,12 @@ private fun RelatedEmojiPanelEditorDialog(
     }
 
     AckDialogShell(
-        title = "RELATED // ${
-            parentSlot.label.ifBlank {
-                parentSlot.emoji.ifBlank { "PANEL" }
-            }
-        }",
+        title = EmojiLabels.relatedTitle(rememberText(), parentSlot.label, parentSlot.emoji),
         primaryColor = primaryColor,
         onDismiss = onDismiss
     ) {
         AckText(
-            text = "HOLD A TILE TO CONFIGURE IT.",
+            text = stringResource(R.string.emoji_related_hold),
             color = Color.Gray,
             size = 8.sp
         )
@@ -822,7 +826,7 @@ private fun RelatedEmojiPanelEditorDialog(
         Spacer(modifier = Modifier.height(14.dp))
 
         AckTapButton(
-            text = "DONE",
+            text = stringResource(R.string.common_done),
             color = primaryColor,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -882,16 +886,12 @@ private fun RelatedEmojiPanelViewerDialog(
     }
 
     AckDialogShell(
-        title = "RELATED // ${
-            parentSlot.label.ifBlank {
-                parentSlot.emoji.ifBlank { "PANEL" }
-            }
-        }",
+        title = EmojiLabels.relatedTitle(rememberText(), parentSlot.label, parentSlot.emoji),
         primaryColor = primaryColor,
         onDismiss = onDismiss
     ) {
         AckText(
-            text = "TAP AN EMOJI TO DISPLAY IT.",
+            text = stringResource(R.string.emoji_related_tap),
             color = Color.Gray,
             size = 8.sp
         )
@@ -925,7 +925,7 @@ private fun RelatedEmojiPanelViewerDialog(
         Spacer(modifier = Modifier.height(14.dp))
 
         AckTapButton(
-            text = "DONE",
+            text = stringResource(R.string.common_done),
             color = primaryColor,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -987,11 +987,11 @@ private fun RelatedEmojiPanelViewerSlot(
 
             if (slot.displayText.isNotBlank()) {
                 AckText(
-                    text = "TXT",
+                    text = stringResource(R.string.emoji_txt),
                     color = Color.White,
                     size = 7.sp,
                     weight = FontWeight.Black,
-                    letterSpacing = 1.sp,
+                    letterSpacing = looseSpacing(1.sp),
                     modifier = Modifier.align(Alignment.BottomEnd)
                 )
             }
@@ -1035,12 +1035,12 @@ private fun RelatedEmojiSlotEditorDialog(
     }
 
     AckDialogShell(
-        title = "RELATED EMOJI ${initialSlot.slotIndex + 1}",
+        title = stringResource(R.string.emoji_related_edit_title, initialSlot.slotIndex + 1),
         primaryColor = primaryColor,
         onDismiss = onDismiss
     ) {
         AckInput(
-            label = "CUSTOM EMOJI",
+            label = stringResource(R.string.emoji_custom),
             value = emoji,
             primaryColor = primaryColor,
             onValueChange = {
@@ -1052,9 +1052,9 @@ private fun RelatedEmojiSlotEditorDialog(
 
         AckTapButton(
             text = if (pickerOpen) {
-                "HIDE EMOJI LIBRARY"
+                stringResource(R.string.emoji_hide_library)
             } else {
-                "PICK FROM LIBRARY"
+                stringResource(R.string.emoji_pick_library)
             },
             color = primaryColor,
             modifier = Modifier.fillMaxWidth()
@@ -1076,7 +1076,7 @@ private fun RelatedEmojiSlotEditorDialog(
         Spacer(modifier = Modifier.height(12.dp))
 
         AckInput(
-            label = "LABEL // OPTIONAL",
+            label = stringResource(R.string.emoji_label_optional),
             value = label,
             primaryColor = primaryColor,
             onValueChange = {
@@ -1087,7 +1087,7 @@ private fun RelatedEmojiSlotEditorDialog(
         Spacer(modifier = Modifier.height(12.dp))
 
         AckInput(
-            label = "OVERLAY TEXT // OPTIONAL",
+            label = stringResource(R.string.emoji_overlay_text_optional),
             value = displayText,
             primaryColor = primaryColor,
             singleLine = false,
@@ -1103,7 +1103,7 @@ private fun RelatedEmojiSlotEditorDialog(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             AckTapButton(
-                text = "CLEAR",
+                text = stringResource(R.string.common_clear),
                 color = Color.Gray,
                 modifier = Modifier.weight(1f)
             ) {
@@ -1113,7 +1113,7 @@ private fun RelatedEmojiSlotEditorDialog(
             }
 
             AckTapButton(
-                text = "SAVE",
+                text = stringResource(R.string.common_save),
                 color = primaryColor,
                 modifier = Modifier.weight(1f)
             ) {
@@ -1133,17 +1133,17 @@ private fun EmojiLibrary(
     onSelect: (String) -> Unit
 ) {
     val categories = listOf(
-        "RESPONSES" to listOf("✅", "❌", "👍", "👎", "❓", "💬"),
-        "BOUNDARIES" to listOf("🛑", "✋", "🚫", "🔇", "↔️", "🚪"),
-        "NEEDS" to listOf("⏳", "🥤", "🍽️", "🛏️", "🚻", "💊"),
-        "FEELINGS" to listOf("😀", "😐", "😖", "😢", "😡", "😵💫"),
-        "REGULATION" to listOf("🧠", "🎧", "🌧️", "🌿", "🫂", "🧊"),
-        "PEOPLE / PLACES" to listOf("👤", "👥", "🏠", "🚗", "🏥", "📱")
+        R.string.emoji_cat_responses to listOf("✅", "❌", "👍", "👎", "❓", "💬"),
+        R.string.emoji_cat_boundaries to listOf("🛑", "✋", "🚫", "🔇", "↔️", "🚪"),
+        R.string.emoji_cat_needs to listOf("⏳", "🥤", "🍽️", "🛏️", "🚻", "💊"),
+        R.string.emoji_cat_feelings to listOf("😀", "😐", "😖", "😢", "😡", "😵💫"),
+        R.string.emoji_cat_regulation to listOf("🧠", "🎧", "🌧️", "🌿", "🫂", "🧊"),
+        R.string.emoji_cat_people_places to listOf("👤", "👥", "🏠", "🚗", "🏥", "📱")
     )
 
-    categories.forEach { (title, emojiList) ->
+    categories.forEach { (titleRes, emojiList) ->
         AckText(
-            text = title,
+            text = stringResource(titleRes),
             color = primaryColor,
             size = 9.sp,
             weight = FontWeight.Bold
@@ -1208,12 +1208,12 @@ private fun EmojiDeckConfigDialog(
     }
 
     AckDialogShell(
-        title = "EMOJI DECK CONFIG",
+        title = stringResource(R.string.emoji_config_title, labelFor(LabelKey.DECK_TYPE_EMOJI), labelFor(LabelKey.DECK)),
         primaryColor = primaryColor,
         onDismiss = onDismiss
     ) {
         AckText(
-            text = "GRID SIZE",
+            text = stringResource(R.string.emoji_grid_size),
             color = primaryColor,
             size = 10.sp,
             weight = FontWeight.Bold
@@ -1243,7 +1243,7 @@ private fun EmojiDeckConfigDialog(
         Spacer(modifier = Modifier.height(16.dp))
 
         AckText(
-            text = "OVERLAY TIMEOUT",
+            text = stringResource(R.string.emoji_overlay_timeout),
             color = primaryColor,
             size = 10.sp,
             weight = FontWeight.Bold
@@ -1253,7 +1253,13 @@ private fun EmojiDeckConfigDialog(
 
         EmojiOverlayTimeout.entries.forEach { option ->
             AckToggleRow(
-                label = option.name.replace('_', ' '),
+                label = stringResource(
+                    when (option) {
+                        EmojiOverlayTimeout.STANDARD -> R.string.emoji_timeout_standard
+                        EmojiOverlayTimeout.EXTENDED -> R.string.emoji_timeout_extended
+                        EmojiOverlayTimeout.NO_AUTO_CLEAR -> R.string.emoji_timeout_none
+                    }
+                ),
                 enabled = timeout == option,
                 primaryColor = primaryColor
             ) {
@@ -1266,7 +1272,7 @@ private fun EmojiDeckConfigDialog(
         Spacer(modifier = Modifier.height(10.dp))
 
         AckText(
-            text = "PAGES // ${pages.size}",
+            text = stringResource(R.string.emoji_pages, pages.size),
             color = primaryColor,
             size = 10.sp,
             weight = FontWeight.Bold
@@ -1275,7 +1281,7 @@ private fun EmojiDeckConfigDialog(
         Spacer(modifier = Modifier.height(7.dp))
 
         AckTapButton(
-            text = "+ ADD PAGE",
+            text = stringResource(R.string.emoji_add_page),
             color = primaryColor,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -1290,7 +1296,7 @@ private fun EmojiDeckConfigDialog(
         Spacer(modifier = Modifier.height(14.dp))
 
         AckTapButton(
-            text = "SAVE CONFIG",
+            text = stringResource(R.string.emoji_save_config),
             color = primaryColor,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -1338,7 +1344,7 @@ private fun AckDialogShell(
                 color = primaryColor,
                 size = 15.sp,
                 weight = FontWeight.Black,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))

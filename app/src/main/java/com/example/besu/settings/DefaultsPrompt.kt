@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.settings
 
+import com.example.besu.R
 import com.example.besu.core.DefaultsOffer
+import com.example.besu.core.DefaultsText
+import com.example.besu.core.LabelKey
 import com.example.besu.output.VisualPresetRepository
 import com.example.besu.ui.NeonButton
+import com.example.besu.ui.labelFor
+import com.example.besu.ui.rememberText
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,10 +55,7 @@ fun DefaultsPromptBanner(
     onNotNow: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val what = buildList {
-        if (offer.unprocessedVoice) add("THE UNPROCESSED VOICE")
-        if (offer.fullMessage) add("FULL MESSAGES ON SCREEN")
-    }.joinToString(" AND ")
+    val words = rememberText()
     val shape = CutCornerShape(8.dp)
 
     Column(
@@ -63,7 +66,7 @@ fun DefaultsPromptBanner(
             .padding(12.dp)
     ) {
         Text(
-            text = "NEW INSTALLS NOW START WITH $what. YOURS IS UNCHANGED, AND NOTHING CHANGES UNLESS YOU CHOOSE.",
+            text = DefaultsText.banner(words, offer),
             color = Color.LightGray,
             fontSize = 12.sp,
             lineHeight = 17.sp,
@@ -74,7 +77,7 @@ fun DefaultsPromptBanner(
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "[REVIEW]",
+                text = stringResource(R.string.defaults_review),
                 color = primaryColor,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,
@@ -85,7 +88,7 @@ fun DefaultsPromptBanner(
                     .padding(horizontal = 10.dp, vertical = 14.dp)
             )
             Text(
-                text = "[NOT NOW]",
+                text = stringResource(R.string.defaults_not_now),
                 color = Color.Gray,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,
@@ -114,14 +117,14 @@ fun DefaultsReviewDialog(
     var chooseFullMessage by remember { mutableStateOf(false) }
     val anyChosen = (offer.unprocessedVoice && chooseVoice) || (offer.fullMessage && chooseFullMessage)
 
-    AudioDialogFrame(onDismissRequest = onDismiss, primaryColor = primaryColor, title = "NEWER DEFAULTS") {
+    AudioDialogFrame(onDismissRequest = onDismiss, primaryColor = primaryColor, title = stringResource(R.string.defaults_title)) {
         Column(
             modifier = Modifier
                 .heightIn(max = 540.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = "New installs start with these settings. Yours stay exactly as they are unless you switch one on below and tap APPLY.",
+                text = stringResource(R.string.defaults_intro, stringResource(R.string.defaults_apply)),
                 color = Color.White,
                 fontSize = 12.sp,
                 lineHeight = 17.sp,
@@ -132,8 +135,8 @@ fun DefaultsReviewDialog(
 
             if (offer.unprocessedVoice) {
                 DefaultsToggleRow(
-                    title = "USE THE UNPROCESSED VOICE (ORGANIC)",
-                    detail = "Now: CYBER, a robotic effect voice, and Emergency messages use it too. CYBER stays available to choose again.",
+                    title = stringResource(R.string.defaults_voice_title, DefaultsText.ORGANIC),
+                    detail = stringResource(R.string.defaults_voice_detail, DefaultsText.CYBER),
                     on = chooseVoice,
                     primaryColor = primaryColor
                 ) { chooseVoice = !chooseVoice }
@@ -142,10 +145,8 @@ fun DefaultsReviewDialog(
 
             if (offer.fullMessage) {
                 DefaultsToggleRow(
-                    title = "SHOW THE FULL MESSAGE ON SCREEN",
-                    detail = "Now: a message over 5 words is cut to ALERT: plus 3 words, so the screen can show less than was spoken. " +
-                        "This adds a display preset called FULL TEXT (your current colours and size, with SHOW FULL MESSAGE on) and makes " +
-                        "it the active one. Your current preset is kept as it is.",
+                    title = stringResource(R.string.defaults_full_title),
+                    detail = stringResource(R.string.defaults_full_detail),
                     on = chooseFullMessage,
                     primaryColor = primaryColor
                 ) { chooseFullMessage = !chooseFullMessage }
@@ -154,9 +155,10 @@ fun DefaultsReviewDialog(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            NeonButton("BACK UP FIRST", Modifier.fillMaxWidth(), mainColor = primaryColor) { onBackUpFirst() }
+            NeonButton(stringResource(R.string.defaults_back_up_first), Modifier.fillMaxWidth(), mainColor = primaryColor) { onBackUpFirst() }
             Text(
-                text = backupStatus ?: "Saves a copy of your whole setup to a file you choose (the same as EXPORT .JSON). Optional.",
+                // The button is named the way it reads on the SETTINGS screen now (its everyday name when PLAIN WORDS is on).
+                text = backupStatus ?: stringResource(R.string.defaults_back_up_hint, labelFor(LabelKey.EXPORT_JSON)),
                 color = if (backupStatus == null) Color.Gray else Color.White,
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
@@ -167,8 +169,8 @@ fun DefaultsReviewDialog(
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                NeonButton("CANCEL", Modifier.weight(1f), mainColor = Color.Gray) { onDismiss() }
-                NeonButton("APPLY", Modifier.weight(1f), isActive = anyChosen, mainColor = primaryColor) {
+                NeonButton(stringResource(R.string.common_cancel), Modifier.weight(1f), mainColor = Color.Gray) { onDismiss() }
+                NeonButton(stringResource(R.string.defaults_apply), Modifier.weight(1f), isActive = anyChosen, mainColor = primaryColor) {
                     if (anyChosen) {
                         onApply(offer.unprocessedVoice && chooseVoice, offer.fullMessage && chooseFullMessage)
                     }

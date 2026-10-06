@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.settings
 
+import androidx.compose.ui.res.stringResource
+import com.example.besu.R
+import com.example.besu.core.LabelKey
+import com.example.besu.ui.rememberText
+import com.example.besu.ui.labelFor
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,14 +42,15 @@ fun BackupWarningDialog(
     onDismiss: () -> Unit,
     onChooseLocation: () -> Unit
 ) {
+    val text = rememberText()
     TightDialogSurface(
         onDismiss = onDismiss,
         primaryColor = primaryColor,
-        title = "EXPORT .JSON",
-        dismissLabel = "CANCEL"
+        title = labelFor(LabelKey.EXPORT_JSON),
+        dismissLabel = stringResource(R.string.common_cancel)
     ) {
         Text(
-            ExportContents.CONTAINS_HEADING,
+            text.get(ExportContents.CONTAINS_HEADING),
             color = Color.White,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
@@ -53,7 +59,7 @@ fun BackupWarningDialog(
         Spacer(modifier = Modifier.height(6.dp))
         ExportContents.categories.forEach { category ->
             Text(
-                "- ${category.label}",
+                "- ${text.get(category.resource)}",
                 color = Color.White,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace
@@ -63,7 +69,7 @@ fun BackupWarningDialog(
 
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            ExportContents.NOT_PROTECTED,
+            text.get(ExportContents.NOT_PROTECTED),
             color = Color.White,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
@@ -72,14 +78,14 @@ fun BackupWarningDialog(
 
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            ExportContents.WHERE_TO_SAVE,
+            text.get(ExportContents.WHERE_TO_SAVE),
             color = Color.White,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-        NeonButton("CHOOSE WHERE TO SAVE", Modifier.fillMaxWidth(), mainColor = primaryColor) {
+        NeonButton(stringResource(R.string.export_choose_where), Modifier.fillMaxWidth(), mainColor = primaryColor) {
             onChooseLocation()
         }
     }

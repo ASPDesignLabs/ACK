@@ -126,8 +126,6 @@ object DiskGuard {
         return maxOf(0L, usableBytes - MIN_FREE_WHILE_RECORDING_BYTES) / perMinute
     }
 
-    fun describe(usableBytes: Long, sampleRate: Int): String {
-        val mb = usableBytes / (1024 * 1024)
-        return "${mb} MB free, room for about ${minutesLeft(usableBytes, sampleRate)} minutes of recording"
-    }
+    /** What is left, as numbers; the screen words it (CaptureText.roomLeft) in the chosen language. */
+    fun room(usableBytes: Long, sampleRate: Int): DiskRoom = DiskRoom(usableBytes / (1024 * 1024), minutesLeft(usableBytes, sampleRate))
 }

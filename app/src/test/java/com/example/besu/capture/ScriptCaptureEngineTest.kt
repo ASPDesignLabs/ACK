@@ -23,12 +23,14 @@ class ScriptCaptureEngineTest {
     private val sid = "s20261002-180411-a3f9"
     private val events = mutableListOf<String>()
     private val free = AtomicLong(Long.MAX_VALUE)
+    private val notices = mutableListOf<CaptureNotice?>()
 
     @Before
     fun setUp() {
         dir = Files.createTempDirectory("ack-engine-test").toFile()
         store = TrainingStore(File(dir, "training_capture"))
         events.clear()
+        notices.clear()
         free.set(Long.MAX_VALUE)
     }
 
@@ -38,7 +40,7 @@ class ScriptCaptureEngineTest {
     private val listener = object : CaptureListener {
         override fun onCardStarted(cardIndex: Int, attempt: Int) { events.add("card $cardIndex attempt $attempt") }
         override fun onClipKept(clip: StoredClip, cardsLeft: Int) { events.add("kept ${clip.index} left $cardsLeft") }
-        override fun onPaused(reason: PauseReason, message: String) { events.add("paused $reason") }
+        override fun onPaused(reason: PauseReason, notice: CaptureNotice?) { events.add("paused $reason"); notices.add(notice) }
         override fun onFinished() { events.add("finished") }
     }
 
@@ -178,6 +180,7 @@ class ScriptCaptureEngineTest {
         e.start()
         feedAll(e, Vectors.square(listOf(quiet(25.0)), rate), 4800)
         assertEquals(listOf("card 0 attempt 1", "paused IDLE"), events)
+        assertEquals("the notice says how long, from the engine's own timeout", listOf<CaptureNotice?>(CaptureNotice.NothingHeard(20)), notices)
         assertTrue(e.isPaused)
         assertEquals("the empty card's entry and file are gone", emptyList<StoredClip>(), store.getSession(sid)!!.clips)
         assertFalse(store.sessionDir(sid).resolve("clips").listFiles().orEmpty().any { it.name.endsWith(".wav") })
@@ -265,6 +268,7 @@ class ScriptCaptureEngineTest {
         free.set(50L * 1024 * 1024)
         feedAll(e, Vectors.square(listOf(quiet(1.0), speech(1.0), quiet(3.0)), rate), 4800)
         assertTrue(events.toString(), events.contains("paused DISK_FULL"))
+        assertEquals("the notice carries the numbers, not a sentence", listOf<CaptureNotice?>(CaptureNotice.OutOfRoomKeptClipsSafe(DiskRoom(50, 0))), notices)
         val clips = store.getSession(sid)!!.clips
         assertEquals("the clip that was kept is still kept", ClipState.DONE, clips.first().state)
         assertTrue(store.clipFile(sid, 1).isFile)

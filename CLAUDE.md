@@ -15,10 +15,12 @@ taps) rather than a static help document. Everything lives under
 
 ### Core data model — `help/HelpCore.kt`
 
-- **`HelpCategory`** — enum, each case carries `title`/`subtitle` in a
-  fixed `"SECTION // SUBSECTION"` style. Drives the chip row in
-  `HelpMenuDialog` (`HelpCategory.values().forEach { ... }` — adding a
-  case is enough, no separate registration needed for the chip itself).
+- **`HelpCategory`** — enum of module families, constants only. Its words
+  are string resources named `help_cat_<constant in lower case>_title` /
+  `_chip` / `_subtitle`, read through `core/HelpMenuText.kt`. Drives the
+  chip row in `HelpMenuDialog` (`HelpCategory.values().forEach { ... }`).
+  **Adding a case needs those three strings in `values/strings.xml` and
+  all five translations**; `HelpMenuTextTest` fails otherwise.
 - **`HelpDestination`** — enum wrapping a `viewMode` string
   (`"MATRIX"`, `"SETTINGS"`, `"TYPE"`, `"TERMINAL"`, `"AUDIO"`,
   `"TARGETS"`, `"GEO"`). This is what a module/step asks MainActivity to
@@ -102,7 +104,7 @@ The convention is always `.testTag(tag)` immediately followed by
 
 **Important: `targetTag` and `action`'s tag are independent.** A step can
 set `targetTag` for a highlight without gating on it (action stays
-`Read`, e.g. `MatrixDeckHelpCopy`'s `identity_root` step just highlights
+`Read`, e.g. the `identity_root` step in `MatrixDeckHelp` just highlights
 `MATRIX_ROOT_IDENTITY` while explaining it) — or gate on interaction
 without necessarily being the only thing highlighted. In practice nearly
 every gating step also sets the same tag as both `action`'s payload and
@@ -340,6 +342,7 @@ small prefs file `ack_voice_recordings`, key `seen_help_offer`):
 | `AckTags.kt` (top-level package) | Every tag constant, single source of truth |
 | `help/HelpRegistry.kt` | Flat list of every registered module |
 | `help/HelpMenuDialog.kt` | The category-tabbed browse UI |
+| `core/HelpWalkthroughText.kt` | The naming rule for walkthrough strings and the rule for when the translated step may be spoken |
 | `help/HelpCoachDialog.kt` | The global floating step overlay |
 | `help/*Help.kt` (one per feature area) | Module definitions for that feature |
 | `help/PoseSelectorDialog.kt`, `help/VoiceRecordingsHelpSelectorDialog.kt` | Chooser dialogs for the "fan out" pattern |
@@ -1226,3 +1229,357 @@ the free-speech notice). On-device checks are in `docs/PRIVACY_DEVICE_TEST.md`; 
   it appears. The fingerprint is `core/BackupFingerprint.kt` over the no-audio backup (`TransferManager.backupFingerprint`); audio is never read for it.
 - **Copied text is plain on the clipboard, on purpose.** The developer wants to see it in the clipboard preview. Do not add the sensitive flag or a
   clearing timer without asking.
+
+## STARTER PHRASES, TYPING and SUGGESTIONS (Section 4, so far) — rules that must stay true
+
+Written for the Language and vocabulary work: neutral starter phrases (L1), one shared insertion rule, and the history chips. What is
+**not** built yet (plain-language mode, non-English voices and text, word prediction) is not described here; add those rules when they
+exist. The profile-change warning is described in the last subsection. The device checklist is `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md`; the starter wording for review is
+`docs/STARTER_PHRASES.md` (a test keeps it identical to the code).
+
+### Starter phrases: seed, never edit the built-in text
+- **`CommandRepository.BASE_TEMPLATE`'s strings are never edited.** A button with no saved value falls back to them (deck+profile value,
+  then the same deck's DEFAULT-profile value, then `BASE_TEMPLATE`), so editing them silently changes what an existing person's untouched
+  buttons say. `StarterSetsTest.theBuiltInText_isLeftExactlyAsItWas` pins the twelve strings. New defaults are **saved values**
+  (`data/StarterSeed.kt`, wording in `core/StarterSets.kt`), written for a **fresh install only** and only where nothing is stored.
+- **That fallback chain is per deck, not global.** Seeding only the DEFAULT deck left every other Matrix deck, and a wiped phone, on the old
+  wording. So a new Matrix deck on a seeded phone is seeded too (`CommandRepository.createDeck`), and DELETE DATA > MESSAGES AND DECKS
+  (so DELETE EVERYTHING) saves the twelve again (`DataWipe.wipe`). The STARTERS Quick Actions deck is only made on a brand-new install.
+- **The starter seed is not part of `seedFreshInstallDefaults`.** That function also runs after a SETTINGS wipe; seeding phrases there
+  would give an existing person's untouched buttons new phrases. `StarterSeed.seedFreshInstall` is called only from the fresh branch of
+  `InstallState.ensureRecorded`. A test guards both.
+- **`InstallClassifier.SEED_KEYS` lists every key the seed writes** (the twelve bare paths, `custom_decks_meta`, the STARTERS layout key, and
+  the note file's keys), so an interrupted seed still reads as fresh and finishes. The pin test spells the keys out independently.
+- **Storage keys come from `core/PhraseKeys.kt`.** `CommandRepository.generateStorageKey` delegates to it, so the repository and the seed
+  cannot disagree. Never hand-write a phrase key.
+- **The seed's note** (`ack_starter_seed`: `seeded:<path>` to the text it wrote, DEFAULT deck only) is per-phone state: owned by
+  `InstallState`, cleared with MESSAGES AND DECKS, never in `AckBackup`. Written before the phrases, so an interruption leaves a note with no
+  phrase (harmless) and never the reverse. `StarterSeed.wasSeeded` (read only) decides whether a new Matrix deck is seeded.
+- **Restore takes back only untouched starters** (`core/StarterRestore.kt`, called from `TransferManager.applyBackupToStorage` BEFORE the
+  file's phrases are written): a starter goes only if the file does not mention it AND it still holds exactly the text the seed wrote. The
+  nullable `AckBackup.starterPhrasesSeeded` says where a file came from: **null (older) and false (phone had none) take starters back;
+  only an explicit true keeps them.** The field is a format field in `ExportContents` and is on `BackupFingerprint.IGNORED_FIELDS`
+  (otherwise every existing phone's fingerprint would change once and the backup reminder would fire). Never restore-delete anything else.
+
+### One insertion rule
+- **Every insert button goes through `core/TextInsertion.kt`**: the Composer, the Terminal's `/v` and `/t` (trigger as the replace range),
+  Manual Override, and the Matrix and Quick Actions editors. It replaces the selection (ordered, clamped, never inside an emoji), never splits
+  a token (`[COMPUTER:..]`, `{VAR}`, `{VAR:A..C}`; the patterns are checked against `TemplateEngine` by a drift test), adds a space only where
+  one is needed, and an empty insertion changes nothing. `InsertionDriftGuardTest` scans the whole app source and fails on `replaceRange` or
+  appending a token by string outside it. **The token-versus-literal rule is unchanged** (see the STATEMENT COMPOSER section): this rule
+  decides where and how much space, never what goes in.
+- **{VAR} values and [COMPUTER] fallbacks are stored by position.** Inserting a token mid-text without shifting those lists attaches every later
+  value to the wrong token. `core/TokenSlots.kt` shifts them (values of replaced tokens go, a blank goes where the new token sits) and the
+  editors call it before saving. Typing a token by hand mid-text still has the old problem (see the report).
+- The editors' template fields are `TextFieldValue` so the cursor is known; they start with the cursor at the END (so a fresh editor's first
+  insertion still lands last), and a cursor-only change is not a template edit.
+
+### Suggestions: nothing changes without a tap
+- `core/WordSuggestions.kt` decides what the history chips show and what is stored: nothing typed gives the old top five; typed text keeps only
+  values that start with it (case-insensitive, NFC, a locale-independent lower-case so a Turkish phone is unaffected); "Mum" and "mum" are one
+  word (the latest form is shown); what is exactly typed is not offered back; order is count, recency, value. **A suggestion is only a button:
+  no auto-correct, no auto-complete on space, nothing inserted without a tap.** Reading never writes; recording touches at most one entry and
+  never rewrites older duplicates.
+- The chip row keeps a 56 dp height with or without chips (the developer chose a steady layout over hiding an empty row), is 14 sp with
+  48 dp chips, shows both ends of a long value (`core/MiddleEllipsis.kt`), and uses no animation or haptics. `ChipRowGuardTest` holds it to this.
+  Never use `NeonButton` or `TightPanelButton` for a chip: they vibrate, and a vibration is audible to a microphone that may be open.
+- The per-scope cap (20) ranks by use count first, so a value typed for the first time is dropped at once when twenty others are used twice
+  or more. Pinned by a test, not endorsed; decide before changing it.
+
+### File map
+
+| File | Owns |
+|---|---|
+| `core/StarterSets.kt`, `core/StarterSeedPlan.kt`, `core/StarterRestore.kt`, `core/PhraseKeys.kt` | Starter wording, what the seed writes, the restore rule, the phrase key recipe |
+| `data/StarterSeed.kt` | The Android edge: seeds, notes, takes back untouched starters, `wasSeeded` |
+| `docs/STARTER_PHRASES.md` | The review page (tables checked against `StarterSets`) |
+| `core/TextInsertion.kt`, `core/TokenSlots.kt` | The insertion rule; shifting by-position values |
+| `core/WordSuggestions.kt`, `core/MiddleEllipsis.kt` | The suggestion rules; shortening a long value in the middle |
+| `data/AutocompleteHistoryRepository.kt`, `ui/SharedComponents.kt` | Load and save history through the engine; the chip row |
+| `InsertionDriftGuardTest`, `ChipRowGuardTest`, `StarterSeedWiringTest`, `StarterRestoreWiringTest` | Source-reading guards for the Android-only files that cannot be compiled without the SDK |
+
+### Profile-change warning (L7, the warning half) — rules that must stay true
+- **The decision is `core/ProfileSwapDiff.kt`** (tested). It compares each Matrix slot's **resolved** phrase under the current and the target
+  profile (`CommandRepository.profileSwapSlots`, which calls `getResolvedPhrase` twice). Never re-implement the fall-back to the DEFAULT
+  profile, never compare stored keys, and never consume a single-use target. Equality is by `trim()` only, so a different capital letter or
+  full stop counts and a space at either end does not. No differences means no warning at all (never interrupt for nothing).
+- **Only the in-app PROFILE menu asks** (`MainActivity.requestProfileChange`, then `applyProfileChange`, which holds the unchanged
+  `setActiveProfile` / watch / HELP-event steps). The home-screen widget (`OutputService` `CHANGE_PROFILE`) and a backup restore are
+  deliberately NOT wired: the widget and watch are remote controls with no screen to ask on, and a restore is already confirmed. Do not put a
+  dialog there without asking. The profile lock (D2) was decided against; a test fails if either path gains the warning.
+- **Quick Actions, Emoji, GIF and Emergency decks have no profiles**, so their buttons never move. A test fails if `quickActionsKey`,
+  `emojiDeckKey` or `emergencyKey` ever gain a profile parameter.
+- **The switch (WARN BEFORE PROFILE CHANGES, SETTINGS > PROFILES) lives in `ack_assist_prefs`** (`data/AssistPrefs.kt`, decisions in
+  `core/AssistSettings.kt`). Read with nothing stored it is **OFF**, so an existing install is unchanged; a new install and a phone after
+  DELETE DATA > SETTINGS are **seeded ON** (this seed IS in `seedFreshInstallDefaults`, unlike the starter phrases, because it changes no
+  data the person made); an install with nothing stored is offered it once. It travels in EXPORT .JSON as a nullable `AckBackup` field (null
+  leaves the device's own choice alone) and is on `BackupFingerprint.IGNORED_FIELDS`. New person-chosen switches for Section 4 belong in this file.
+- **The dialog is quiet and defaults to STAY**: no sound, no animation, nothing starts HELP; back and a tap outside are STAY; its checkbox
+  writes the same setting as SETTINGS. A voice recording bound to a slot is not part of the comparison (a known limit).
+
+### Word suggestions (L5) — rules that must stay true
+- **Off until the person turns it on, on every install.** `AssistSettings.WORD_SUGGESTIONS_FALLBACK = false`; unlike the profile warning it is **never
+  seeded** (`SEED_KEYS` does not hold it) and **never in `AckBackup`** (a restore must not turn a learning feature on). The one-time offer
+  (`shouldOfferWordSuggestions`) shows in the Statement Composer; choosing either way in SETTINGS, TURN ON or NOT NOW retires it. Keys live in
+  `ack_assist_prefs` with the other switches (`data/AssistPrefs.kt`).
+- **The switch is checked inside `LearnedWordsRepository.learn` and `.predict`**, so no screen can forget it. Listing, forgetting and the backup are
+  deliberately **not** gated: the words are the person's data whether or not the feature is on.
+- **Learning happens in exactly one place: the composer's SAVE, COPY and SPEAK of the text typed there** (`learnFromCommittedText`: background thread,
+  the same text counts once, a changed text counts again). Not MY STATEMENTS' own COPY/SPEAK, not the Terminal, Manual Override, the Emergency deck or
+  any editor. `WordSuggestionsUiWiringTest.onlyTheComposerEverLearns...` fails if another file calls `LearnedWordsRepository.learn(`.
+- **Names from elsewhere are read live and never copied** (`composer/WordSources.kt` → `core/ExtraWords.kt`): only Target Computer ENTRY names (not
+  category headings, not contact cards: no phone numbers, addresses or emails) and Shared Root Variable slots that are on and filled in. Renaming or
+  deleting a contact changes what is offered with nothing left behind.
+- **Nothing typed is ever logged**, not in an error either. Every `Log.` line in `LearnedWordsRepository` must be `Log.x(TAG, "a fixed sentence")` (a test
+  checks the shape); `LearnedWordsStore` has no logging; `WordModelData.validate()` reasons hold counts and lengths only, and `TransferManager` logs that
+  reason to `ACK_IMPORT` before `return false`.
+- **Storage is `filesDir/learned_words/model.json`, in the DELETE DATA > MESSAGES AND DECKS area** (not a thirteenth area: the words are derived from typed
+  statements, like the typing history it already holds). `core/LearnedWordsStore.kt` is plain Kotlin and tested on a JVM: atomic save (temp file, fsync,
+  `ATOMIC_MOVE`); a file that is not JSON, fails `validate()` or is over 8 MB is **set aside** as `model.json.damaged-<time>`, never overwritten or deleted;
+  the file's size and time are compared on every use, so a wipe or restore behind its back is noticed and a wipe is never saved back over; reading never
+  creates the folder; text with no word in it writes nothing; `forgetAll` removes every `model.json*` and nothing else.
+- **The model** (`WordTokens`, `WordModel`, `WordPrediction`): words are letters of any script with an apostrophe or hyphen inside; anything with a digit,
+  an emoji and a tag are never words; a full stop, `?`, `!`, an ellipsis, a line break, a tag or a digit ends a sentence, and words are only linked within one
+  sentence. 5,000 words and 20,000 pairs, least used evicted (count, then last used, then key). A word that only ever started a sentence is stored lower
+  case; a name in the middle keeps its capital. **Quiet is the rule:** nothing is offered mid-word, inside a tag, after punctuation or a line break, at the
+  start, with a digit, or while text is selected.
+- **The strip is `AutocompleteChipRow`** (the history chips' row: 14 sp, 48 dp, no animation, no vibration, reserved height while the feature is on), never
+  `NeonButton`/`TightPanelButton` (they vibrate). A tapped word goes through `TextInsertion.insert(..., replace = prediction.replace)`. Nothing is inserted,
+  corrected or completed without a tap.
+- **Backup:** `AckBackup.learnedWords: WordModelData?` is null when nothing was learned; restore **merges** (never lowers a count, never removes a word, drops
+  anything broken). It has its own line in `ExportContents` ("WORDS LEARNED FROM WHAT YOU SAVED, SPOKE OR COPIED", chosen by the developer so the export warning
+  names it) and is on `BackupFingerprint.IGNORED_FIELDS` (it grows with ordinary use; counting it would make the backup reminder fire after a day).
+- **FORGET WORDS** (`settings/WordSuggestionsSection.kt`): REMOVE on one word asks once more; FORGET ALL WORDS asks twice with CANCEL prominent and BACK UP
+  FIRST named, the second confirmation being the only place `forgetAll` is called. 12 sp text, `NeonButton`, `ConfirmBodyText`.
+- **Test-writing lesson:** a brace-matching `bodyOf(...)` on an *expression-bodied* function (`fun x() = y`) silently reads the NEXT function's body. Use
+  `RepoFiles.declarationOf` for those. (`ProfileWarningWiringTest.theSwitchLivesInItsOwnFile...` passed by accident before this was noticed.)
+
+### Voice list and SPEECH LANGUAGE (L3, part 1) — rules that must stay true
+- **The picker lists every language, never a voice that needs the network or is not installed** (`core/VoiceListing.usable`, tested): sorted by language
+  name (a `Collator` at PRIMARY strength with `Locale.ROOT`, so case and accents are ignored and a Turkish phone is unaffected), then voice name. ACK has no
+  network permission and promises local-only speech, so such a voice is never offered. **`MainActivity.onInit` must not filter by `language == "en"` again**
+  (a test fails if it does). A voice's **name is never changed** (a profile stores it exactly), and a voice a profile already chose stays chosen even when it is
+  no longer listed. `output/VoiceInfoMapping.kt` is the only place an Android `Voice` becomes a `VoiceInfo`.
+- **SPEECH LANGUAGE** (`core/SpeechLanguage.kt`, key `speech_language` in `ack_assist_prefs`, set in AUDIO ARCHITECT): THIS PHONE'S LANGUAGE (`DEVICE`) or ENGLISH (US)
+  (`ENGLISH_US`). It only affects a profile with **no voice of its own**; a profile's chosen voice and the cloned MY VOICE are separate and untouched.
+  **Nothing stored reads as ENGLISH (US)**, so an install that already existed speaks exactly as before (a German phone that always spoke English phrases must not
+  start reading them with a German accent). A **new install is seeded DEVICE** (`SEED_KEYS` holds it, so an interrupted seed still reads as fresh), and so is a phone
+  after DELETE DATA > SETTINGS, whose confirmation says so. Never change the read-site fallback to make a default "take".
+- **A missing language is never silence.** `OutputService.applySpeechLanguage` asks the engine and, whatever it answers, goes on: after `tts?.setLanguage(` nothing
+  may `return` or `throw` (a test checks), the engine keeps its own default, and a log line says so at most once a minute. `isTtsReady` is set whatever the
+  language result was.
+- **The engine keeps the last voice a profile chose**, so `speakWithSystemTts` remembers `voiceSetByProfile` and a profile with no voice re-asks for the language
+  (`SpeechLanguagePolicy.needsApplying`: first time, the setting changed, or a profile's voice is still set). It is asked once, not every utterance.
+- **Backup:** `AckBackup.speechLanguage: String?` (null = nothing to say, restore leaves the device's own choice alone), validated against the two stored names with a
+  specific `ACK_IMPORT` line, mapped in `ExportContents`, an ordinary setting (not on the fingerprint ignore list).
+- **No claim the app cannot keep:** `docs/PERMISSIONS.md` says what the system speech engine is and that what it does with text is outside ACK's control.
+- **Plain words (L2) are only a proposal so far:** `docs/PLAIN_LANGUAGE.md` lists the jargon labels and the Terminal-only features; no code reads it, and nothing is
+  wired in until the developer approves the wording. The developer chose the switch **off for everyone**, with one dismissible offer.
+- **A test that bars a function may not bar a whole object:** `ProfileWarningWiringTest` used to fail if `OutputService` mentioned `AssistPrefs` at all; it now bars only the
+  profile warning's own functions, because the service legitimately reads other switches in that object.
+
+### PLAIN WORDS (L2) and INTERFACE LANGUAGE (L3, part 2) — rules that must stay true
+Wording and decisions: `docs/PLAIN_LANGUAGE.md`, `docs/TRANSLATIONS.md`. Checklist: `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md` sections J and K.
+
+- **A label is display text only.** The table is string resources (`label_<key>` standard, `label_<key>_plain` everyday) keyed by `core/LabelKey`; a screen asks
+  `labelFor(LabelKey.X)` (`ui/PlainWords.kt`). A label never reaches an id, a storage key, a tag, an event, a log line, a token or anything typed: stored pose and
+  slot names ("IDENTITY", "Twist 1") are matched exactly and shown through `poseLabel`/`slotLabel`, never rewritten. `PlainWordsScreensWiringTest` enforces this
+  (no label inside `putExtra`/`onEvent`/`Log`/`upsert`, nothing but screens reads labels, no `.uppercase()` on one, no wired label also drawn as its English
+  literal; the few places an English text is still logic are listed there and checked not to go stale). **A key with no screen yet goes on that test's short
+  `notYetWired` list with a reason.** HELP text holds `{{KEY:Original}}` placeholders filled at draw time and for the spoken text (`helpText`, `HelpPlaceholders`).
+- **PLAIN WORDS is off for everyone, never seeded** (the developer's decision), flips at once with no restart (Compose state, `PlainWordsState`, provided beside
+  `LocalHelpManager`), and its own switch is worded identically in both modes so it can always be found. It is in EXPORT .JSON (nullable) and on the fingerprint ignore list.
+- **The Terminal's plain-mode controls call the same code as the typed commands** (`clearHistoryNow`, `repairBackgroundServices`, `showLegacyManualOverride`, the
+  `/v` and `/t` triggers); every typed command keeps working. The four send switches (`/q /n /s /e`) **stay on until turned off** (developer's choice), are kept in
+  memory only (`TerminalSendSwitches`, nothing stored, wiped or backed up), count **only while PLAIN WORDS is on** (`SendSwitchPolicy`, a hidden switch must never make a
+  message silent, unsaved or loud), and are turned off with it. `/e` and its switch never ask for confirmation. The closed SEND OPTIONS row names every switch that is on.
+  New controls there: 12 sp or larger, 48 dp, no haptics, no animation, ON/OFF written in words.
+- **INTERFACE LANGUAGE: an install that exists stays English, a new one follows the phone.** Read with nothing stored is ENGLISH; `seedFreshInstallDefaults` writes DEVICE
+  (a seed key); DELETE DATA > SETTINGS reseeds it and says so. It is applied in `MainActivity.attachBaseContext` (`data/InterfaceLocale.kt`), never fails the launch, and a
+  change **asks first and restarts once** (shared delayed `restartApp`). **No `android:localeConfig`**: Android 13's per-app screen would be a second switch the in-app one
+  silently overrides (a test fails if it appears). Every `letterSpacing = N.sp` goes through `looseSpacing()` (Arabic joins; spacing pulls it apart); a test fails on a raw one.
+- **The five translations (es, pt, hi, ar, af) are DRAFTS written without a native speaker** and must keep saying so (the notice at the top of each file, the control, the
+  CHANGELOG, `THIRD_PARTY_NOTICES.md`). `TranslationsTest` checks completeness and safety only (same strings and `%1$s` placeholders, standard ≠ everyday, no two buttons
+  sharing an everyday name except the four same-place pairs, capitals for es/pt/af, own script for hi/ar, escaping, the notice), never that the words are right. The options on the two HELP chooser dialogs (`FieldOpsHelp.poseOptions`, `VoiceRecordingsHelp.options`), **the lines other parts of ACK write into the Terminal**
+  (the output service, the watch, Geo, the path trace: English text through the `ACK_LOG` broadcast), most dialogs and everything spoken stay English in every language; say so
+  wherever the language is offered. HELP's chrome, **the walkthroughs' own text (see "HELP walkthrough text" below)** and the Terminal's own words (see below) are translated.
+- **Kotlin the tests cannot compile can still hide a build error.** Two lines of text with nothing joining them are not one sentence: in a `when` branch only the last is used
+  (the clear-variables confirmation lost its question this way), in a `listOf(` it is a build error (the `/info` notes did, which is one reason they are string resources
+  now). `AdjacentTextLinesTest` reads every source file for it, and `TerminalTextListsShapeTest` fails if a hand-written list of text lines is put back in `ui/DesignSystem.kt`. `tools/kotlin_check/android-typecheck` type-checks `ui/TerminalPlainControls.kt`,
+  `settings/InterfaceLanguageSection.kt` and the capture screens against Compose, with `R` generated from the real `strings.xml` (a wrong string name fails it).
+
+### Wording in string resources (INTERFACE LANGUAGE, long tail) — rules that must stay true
+Written while the backup and DELETE DATA wording moved into `strings.xml` (docs/TRANSLATIONS.md has the translation side).
+
+- **A decision in `core/` names its words by resource and reads them through `core/TextSource`.** `ExportContents`, `BackupReminderText`, `StorageCatalogue`,
+  `SafetyCopyPolicy` stay plain Kotlin; the Android edge is `data/ResourceText.kt` (`ui/rememberText()` in a composable), the tests' is `EnglishText` (the real
+  English strings file, plurals by English's rule). A name that is not a resource reads as itself, so a gap shows. Never put `android.*` in `core/` to get a string.
+- **A result is carried by id, never by a label.** `DataWipe.Result` holds area ids; screens and the Terminal line turn them into names. Anything that compares a
+  displayed word (for example "did SAVED LOCATIONS fail?") breaks the day it is translated.
+- **A resource's trailing space is trimmed by Android.** Join sentences in code (`joinToString(" ")`), never with a space at the end of a string.
+- **A button or screen name inside a sentence is an argument, not a literal**, when that name is translated (`%1$s` = `label_export_json`), so a note and the
+  button it points to read the same in every language. A name that is still a literal English button on its own screen stays English in every translation until
+  that screen moves, and `DeleteDataWordingTest.theButtonNamesStillEnglish...` holds it there: change the notes and that test together.
+- **A toast, a launcher callback and a `semantics {}` block are not composable lambdas**: read their text with `context.getString(R.string.x)` (or resolve it
+  just before). Any file outside `com.example.besu` that uses `R.string` needs `import com.example.besu.R` (`ResourceImportTest`).
+- **Every confirmation that deletes keeps its safety sentences in every language** (cannot be undone, back up first, files saved elsewhere are not deleted, the
+  restart and watch notes); `DeleteDataWordingTest` fails if one is missing, is still English, or loses a placeholder. `/backup CONFIRM` and `/cls CONFIRM` are
+  typed commands and are never translated.
+- **Dates and numbers keep Latin digits.** `DateTimeFormatter.ofPattern(pattern, locale)` already does; only `localizedBy` would change that (a test pins it).
+  The date's language is `ActiveScript.tag` (the language the words are really in), not the phone's setting.
+- **The type-check (`tools/kotlin_check/run_typecheck.sh`) now compiles all of `core/` and the backup and DELETE DATA screens**; `BackupExporter`,
+  `BackupReminder` and `DataWipe` are stubs written from their real signatures. Prove a new staged file is covered by breaking it on purpose once.
+- **Source-reading tests**: a pattern like `.label` also matches `StorageCatalogue.label(...)`; use `area.label`. A "gone" literal test needs the positive
+  assertion beside it (the new call is there), or a swapped argument slips through (found by mutation).
+- **Names that are not words stay as they are, in every language, and are handed to a sentence as `%1$s`.** The developer decided (AUDIO ARCHITECT) that CYBER, MECH,
+  ORGANIC, MY VOICE and the CUSTOM A, B... name a new slot is saved with are names, like a product name: the chips, the widget, HELP and every sentence agree. A
+  sentence passes them in (`CustomVoiceRemoval.MY_VOICE_LABEL`, `DefaultsText.ORGANIC` / `CYBER`) and `AudioScreenWordingTest` / `DefaultsWordingTest` fail if a
+  translation retypes one. If they are ever translated for display, do it the way the Emergency button names and the People categories are done (shown translated,
+  saved text and ids never changed; `core/EmergencyLabels.kt`, `core/ComputerLabels.kt`) and only after the widget, the watch, HELP and the Terminal can follow.
+- **An English name that is still on screen stays English inside a translated sentence**, held by a test (`ALERT:`, `FULL TEXT`, `SHOW FULL MESSAGE` in the defaults
+  offer). When that screen is migrated, change the sentence and the test together.
+- **A fixed width clips a longer word.** The DSP editor's ON / OFF buttons were `width(60.dp)`; they are `widthIn(min = 60.dp)` so DESACTIVADO fits. New buttons with a
+  short English word should not fix their width.
+- **A migration test must check that each word sits on the control that does the thing**, not only that the string exists: `AudioScreenWordingTest.everyButtonWordIs...`
+  matches a word to the action that follows it. Mutation testing showed a swapped label (SAVE on a DELETE) passes every "string exists / literal gone" check.
+- **The type-check stages a screen only if its Android edges are stubbed from their real signatures** (`tools/kotlin_check/android-typecheck/stubs/app/Audio*.kt` for
+  AUDIO ARCHITECT). A stub is written from how the real code is used, so check it against the real file when that file changes.
+
+### HELP chrome in string resources — rules that must stay true
+Wording and checklist: `docs/TRANSLATIONS.md`, `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md` section K. Tests: `HelpMenuTextTest` (the decisions, in every language), `HelpWordingTest` (the screens), `PlainWordsWiringTest` (HELP text still goes through `helpText()`).
+
+- **What is translated and what is not.** The header's HELP button (`help_button`), the menu, the nine family chips and headings, the cards' `[RUN]` and step line, the empty state, the two chooser dialogs (title, hint, `[CLOSE]`) and the coach panel (`GUIDANCE // n/m`, `[ABORT]`, `ACKNOWLEDGE // CONTINUE`, the nine "awaiting" instructions). **Not** translated: the choosers' option labels and hints (`FieldOpsHelp.PoseOption`, `VoiceRecordingsHelp.VoiceRecOption`). The walkthroughs' own text is translated (see "HELP walkthrough text" below).
+- **A family's chip is its own string**, never cut out of the title at a "// " (a translation must not have to keep a separator). `HelpMenuTextTest` holds the chip to the end of its title, and to the whole title when there is no section.
+- **Resource text keeps label placeholders unfilled and bare**: `{{DECKS}}`, never `{{DECKS:DECKS}}` (no English original in a translation) and never the filled word, so `helpText()` swaps in the standard word of the language or the everyday one under PLAIN WORDS. **No article before a placeholder** in a Latin-script draft ("GESTIÓN DE {{DECK}}", not "DEL {{DECK}}"): the everyday word may be the other gender. The walkthrough text (`helpmod_*`) is the one place English keeps its `{{KEY:Original}}` (so English is word for word what it always read); its translations use the bare form (see "HELP walkthrough text" below).
+- **`HelpDestination.viewMode` is logic and never changes**; the card's "N STEPS // VIEW" shows a display mapping (`HelpMenuText.viewNameResources`). A destination with no words fails `HelpMenuTextTest`; an unknown mode reads as itself. These are the standard words, not the nav bar's labels (SETTINGS says SETTINGS, where the button is PROTOCOL), and they do not follow PLAIN WORDS: a known gap, kept as it always was.
+- **The step count is a plural** (`help_menu_steps`), so one step reads "1 STEP". This is the one deliberate English change: the two chooser entries (one placeholder step each) used to read "1 STEPS".
+- **The HELP button's name is an argument wherever a sentence points at it.** `voice_rec_help_offer` takes it twice (`%1$s`), and `TrainingCaptureHome`'s tip is `CaptureText.helpOffer(words, help_button, label)`. A sentence must never type an English "HELP" for a button that is now called AYUDA; `ManageRecordingsWordingTest` fails if one does. Any screen migrated later that mentions the HELP button does the same.
+- **`[CLOSE]`, `[RUN]`, `[ABORT]` and `[GOT IT]` keep their brackets inside the resource** (HELP's house style; the shared dialog frame's `common_close` has none). `HelpWordingTest` holds it in every language.
+- **Type-check:** `HelpMenuDialog`, `HelpCoachDialog`, `PoseSelectorDialog` and `VoiceRecordingsHelpSelectorDialog` are staged; `stubs/app/HelpModules.kt` gives the two option types they draw and `helpText` is stubbed in `stubs/app/AppUi.kt`. Proved by breaking three names on purpose.
+- **A Kotlin KDoc that writes `help/*Help.kt` opens a nested comment** (`/*`) and the whole file fails with "Unclosed comment"; write "the per-feature files in help/".
+
+### SETTINGS wording, plurals with arguments, and the syntax check — rules that must stay true
+Tests: `SettingsWordingTest` (the screen's words, parts A to C), `OutputRouteTextTest`, `ProfileWarningTextTest`. Checklist: `docs/LANGUAGE_VOCABULARY_DEVICE_TEST.md` section K.
+
+- **`TextSource.count(name, quantity, vararg args)`** is for a plural sentence that also names something ("2 GESTURES WILL SAY SOMETHING DIFFERENT IF YOU CHANGE TO WORK:"). `%1$d` is the
+  quantity and `%2$s` the first of `args`, so the verb can agree with the number in each language. `ResourceText`, `EnglishText` and `FileText` override it; a source that does not
+  reads as `count(name, quantity)` and drops the arguments, so a new `TextSource` that carries plurals must override it. `TranslationsTest` accepts `%d` or `%1$d` as the number.
+- **`tools/kotlin_check/run_syntax_check.sh File.kt ...` for an Android-only file.** `SettingsView.kt`, `OverlayPermissionBanner.kt` and `SharedComponents.kt` use the SDK and cannot be
+  type-checked here; after a wording edit to one of them it must print `syntax errors: 0`. It finds a missing bracket and nothing else (a wrong string name is `SettingsWordingTest`'s job).
+- **A stored value is logic and never translated, and a unit is a symbol.** `AUTO`, `BLUETOOTH` and `WATCH` (the output route, read by `OutputService` and checked by the backup),
+  `ms`, `s` and `dB` stay as they are; `String.format("%.1f", x)` is left to the phone's own number format and passed in as an argument. A Bluetooth device's own name is shown exactly as the phone gives it.
+- **A sentence names a screen or a button as an argument only where its English is already all capitals.** A mixed-case English description that names "Target Computer" or "Quick Actions"
+  keeps the standard names (the translation uses the language's own label, checked by a test) and does not follow PLAIN WORDS: a known gap. `REC` and `+REC` on the Quick-Access key
+  buttons stay the English abbreviation (the buttons are narrow, and MANAGE RECORDINGS' empty-state sentence names them as REC). `RESOLVE` stays English inside the
+  sentence that mentions it (the PATH trace lines are written in English by the data layer); the Terminal's own TYPING word is handed to the sentence as an argument
+  (`settings_term_statusbox_desc`).
+- **A gesture is named the way the Matrix screen names it** in the profile-change dialog (`slotLabel`, handed to `ProfileSwapText.lines` as `names`); a profile's own name and the person's
+  phrases are shown as typed, and the connector "becomes:" stays lower case in every language because it sits between two phrases the person typed.
+- **A fixed width clips a longer word** (again): `ThemeOption` (SHARP / CLEAN / SOFT) is `widthIn(min = 60.dp)` with a little side padding.
+- **Source-reading tests measure "word then control" in characters, indentation included.** A regex like `R\.string\.x\)[\s\S]{0,260}?Slider\(` fails quietly when the code is indented
+  more deeply than the test's author imagined; give a distance with room, and break the code on purpose once to see the test fail.
+
+### Deck screens in string resources — rules that must stay true
+Covers CREATE DECK, QUICK ACTIONS, EMOJI and GIF (`decks/CreateDeckDialog.kt`, `QuickActionsDeck.kt`, `EmojiDeck.kt`, `GifDeck.kt`). The decisions are plain Kotlin with tests in every language (`core/QuickActionLabels.kt`, `EmojiLabels.kt`, `GifLabels.kt`, `GifImportFailure.kt`; `QuickActionLabelsTest`, `EmojiLabelsTest`, `GifLabelsTest`); the screens are read by `DeckScreensWordingTest` (parts 1 to 4). `CreateDeckDialog` is type-checked; the other three use the SDK and are syntax-checked only (`run_syntax_check.sh`, listed in `tools/kotlin_check/README.md`).
+
+- **A saved default is shown translated and stored English; a typed name is shown as typed.** A slot is saved `ACTION n`, a group `GROUP n`, a page `PAGE n`, a GIF category `UNCATEGORIZED` (one shared constant, `GifLabels.STORED_DEFAULT_CATEGORY`, which `GifRepository.createCategory` uses too), a new deck its English type name, a nameless GIF `UNTITLED GIF`. The screen compares the stored text for **exact equality** with the default (never `startsWith`, never ignoring case) and only then draws the language's word; the tests pin the source literals so a later "helpful" translation of a saved value fails.
+- **Opening an editor and saving without touching the name must not rewrite it.** `QuickActionLabels.labelToSave(typed, shownAtStart, storedAtStart)` returns the stored text when the field still holds what was shown. A new editor over a saved name needs the same three values.
+- **The prefilled text of a field that gets saved is saved text.** The import dialog's title (`UNTITLED GIF`) and a new deck's starting name stay English in every language, like CYBER or MY VOICE.
+- **Why an import failed is carried by id.** `GifImportFailure` + `GifImportException` (still an `IllegalStateException` whose `message` is the old English text, so logs and callers see no change); `GifLabels.importError` says a known reason in the language, passes any other failure's own text through, and says GIF IMPORT FAILED when there is none. The repository's log-only `error(...)` calls in `restoreEntry` stay English.
+- **A plural sentence with a second number: the quantity is `%1$d` and the extra arguments follow it.** `text.count("gif_imported_skipped_toast", imported, skipped)`, never `(imported, imported, skipped)` (that shifts every argument; caught while writing it, and `GifLabelsTest` uses 7 and 3 so a shifted argument shows a number twice). English keeps its exact wording ("3 SKIPPED"); a translation may restructure ("SKIPPED: 3") so no language has to agree a word with a number.
+- **Arrows that mean a direction live in the resource, and a mirrored layout flips them.** `◀ PREV` / `NEXT ▶`; Arabic is `▶ السابق` / `التالي ◀` because its Row is mirrored (PREV is first, on the right). The ▲ / ▼ after BACKUP and CATEGORY are a state symbol, added in code.
+- **"GIF" in a sentence is the file kind; the deck-type label is the deck.** Sentences about files keep `GIF` (es, pt, af) or the label's own script (hi, ar); only the screen title and the export toast take `label_deck_type_gif` and `label_deck` as arguments so they follow PLAIN WORDS.
+- **`labelFor` is composable: capture it (and `rememberText()`) before a launcher callback.** A toast inside `rememberLauncherForActivityResult` uses `words` / `context.getString`, never `stringResource`.
+- **Test-writing lessons.** `StringsXml.map` turns a resource's `\n` escape into a real line break, so resource-side tests compare a real newline while source-reading tests of the `.kt` keep the escape. A regex through an indented Compose block needs 700 characters or more between anchors (a 300 limit failed twice on indentation alone). All 64 deliberate breaks of these four screens (swapped labels, a translated saved name, a shifted plural argument, a dropped placeholder) are caught by a test.
+- **Known open items:** `GifRepository.importGif` leaves a partly copied file when an oversized GIF is refused, and the import dialog creates its category before the import runs; the zip folder name `UNCATEGORIZED` in `GifBackupManager` is a stored name and stays English.
+
+### Terminal and Manual Override wording — rules that must stay true
+Covers `ui/DesignSystem.kt`'s legacy Manual Override screen (TYPE behind `/m`), the Terminal's own words and `/info`. Decisions are plain Kotlin with tests in every language
+(`core/ManualOverrideText.kt`, `core/TerminalText.kt`, `core/PatchNotes.kt`; `ManualOverrideTextTest`, `TerminalTextTest`, `PatchNotesTest`); the screen is read by `ManualOverrideWordingTest`
+and `TerminalWordingTest`. `ui/DesignSystem.kt` uses the SDK, so it is syntax-checked only.
+
+- **Typed commands are logic and are never translated.** `/help /q /n /s /e /v /t /cls /backup /repair /info /m` and the word `CONFIRM` in `/cls CONFIRM` stay exactly as typed inside every
+  translated sentence, and a command that is not known is echoed back exactly as typed (a test feeds it `%`, `$`, quotes and Arabic). `TerminalText.HELP_COMMANDS` holds each command as typed
+  beside the resource that says what it does; the `/help` command column is padded to 17 characters **in code** so a description never has to keep the spacing, and the English output is held
+  identical to the old list line for line. A check that a typed word survived must look for it **as a whole word**: "/cls CONFIRMAR" contains "/cls CONFIRM" and the parser would not accept it.
+- **What the Terminal says is two different things.** Its own words (STATUSBOX, the prompt hint, replies to typed commands, `/help`, `/info`) are translated; lines other parts of ACK send in
+  through `ACK_LOG` arrive as English text, are saved as written and stay English (translating them would mean carrying them by id through every sender and the saved log). A reply the Terminal
+  writes itself is saved in the language of that moment, so a log kept across a language change shows both. Each reply keeps its log type (`CMD`, `CMD_WARN`, `CMD_ERR`), which decides how it is
+  shown and filtered; a test pins each.
+- **`/info`'s notes are one string per bullet or heading (`info_*`), listed in `PatchNotes.ENTRIES`.** English keeps its hard-wrapped lines (a bullet's lines joined by a line break) so `/info`
+  reveals exactly the lines it always did, and the two-space continuation indent is added **in code**, because Android collapses runs of spaces in a resource (the same trap as a trailing
+  space). A translation is one line per note and need not keep the English line breaks. A long line waits one more 2 s step per 71 characters (the longest English line), so a translated bullet
+  gets time to be read; shake still stops it.
+- **A release's new notes ship in English and are translated later.** `TranslationsTest` does not demand the `info_*` family in every language (Android falls back to the English string per
+  string); `PatchNotesTest` fails if a name in `ENTRIES` has no English string, or an `info_*` string is not listed. To add notes: the English strings, their names in `ENTRIES`, CHANGELOG.md
+  (which carries the same notes); translations when wanted.
+- **A name that is still English on its own screen stays English inside a translated sentence**, so a reader can find it: `RECORD FREE SPEECH` and the capture screens' buttons, Freeform Studio's
+  `ADD RECORDINGS FROM ACK`, commands, file names (`DOCS/....MD`), `STARTERS`, `MY VOICE`, `ACK WEAR`. `PatchNotesTest.thingsThatAreNotWordsComeThroughEveryTranslationExactly` holds the list;
+  extend it when a note names something new, and when a capture screen is migrated, change the notes and that test together.
+- **A saved phrase is a format argument, never part of the format.** The delete confirmation is two strings joined by one space in code (`ManualOverrideText.deleteQuestion`: the question with the
+  phrase exactly as saved in straight quotes, then the warning that it cannot be undone and to export a backup first), so a test can check both are said in every language; it is fed a phrase with
+  `%s`, `$1`, a quote and a line break. `/cls` has the same shape (`term_cls_question` and `term_cls_warning`, then the typed instruction): one combined string let a translation quietly lose its warning.
+- **A shared word pinned in one group is flipped, not forgotten, in the next.** The Terminal's save dialog spells four words like the Manual Override one; the Manual Override change left it literal
+  and pinned that with a test, and the Terminal change flipped the pin and read the same strings. Do the same when a later group shares words with an earlier one.
+- **A source-reading test that quotes `$name` inside a `"""` raw string needs `[$]`** (the template swallows it); `\$` does not work there.
+- **ENCODE and TRANSMIT have no entry in the PLAIN WORDS table**, so they read the same in both modes (a stated gap, like the HELP step names).
+
+### Training Ground and Deck Trainer wording — rules that must stay true
+Covers `training/TrainingGroundPanel.kt` and `training/DeckTrainerPanel.kt`. The two controllers (`TrainingGame.kt`, `DeckTrainerGame.kt`) are rules and read no words, labels or resources. Decisions are plain Kotlin in `core/TrainingText.kt` (`TrainingOutcome`, `TrainingStatement`, `TrainingPoses`, `TrainingText`) with `TrainingTextTest` (every language); `TrainingWordingTest` reads the panels and both controllers. The panels use the SDK, so they are syntax-checked only.
+
+- **The watch's words are the watch's.** The state (OFFLINE, IDLE, ARMED, LOCKED, COOLDOWN, CRYO) and the pose codes (ID, DEF, CON, ---) are what the watch sends and what the drills react to (`stateLabel == "COOLDOWN"` is the fire edge). The panels show the state exactly as received, as the header and the watch's own screen do, and translate only the labels beside it (STATE, MOD). The POSE label and every pose a drill names come from the label table (`rememberTrainingPoseWords()` -> `poseLabel`), keyed by the **stored** pose name, so PLAIN WORDS applies; `DeckTrainerTarget.poseLabel` is that stored name (the statement lookup uses it), never a drawn word.
+- **Never read logic back from drawn text.** The round outcome ("+10", "-5", "MISS") used to be compared as a string to choose its colour; it is now `TrainingOutcome` (kind + points) and the words are made from it. The Deck Trainer's "(no group bound...)", "(blank slot)" and "(unmapped)" are a `TrainingStatement` turned into words when drawn, so a person's own phrase that happens to read "(blank slot)" is still a phrase. Same lesson as "a result is carried by id, never by a label". Scoring is unchanged and pinned by source-reading tests.
+- **A saved enum name is shown through a mapping and never rewritten.** History stores `difficulty.name` (EASY, NORMAL, HARD, EUROPEAN_EXTREME); `TrainingText.difficultyName` maps it to the language's word, and a name this build does not know reads as it always did (underscores as spaces). `GameDifficulty.label` stays the English name and the screens do not draw it. **EUROPEAN EXTREME is a name** (the developer's own, like CYBER and MECH; the developer confirmed it stays as it is) and reads the same in every language. A saved deck name and a profile id are shown as saved.
+- **A number that can be negative gets a left-to-right mark in Arabic.** A score can go below zero, and in a right-to-left paragraph a minus sign in front of a bare number is drawn after it ("5-"). Every Arabic string that holds a signed number (`train_number`, `train_outcome_*`, `train_points`, the HARD and EUROPEAN EXTREME descriptions) has U+200E directly before the number, and no other language has one; `TrainingTextTest` pins both. Any new string with a signed number must do the same.
+- **A long saved name or a longer word must not push a value off its row.** The history rows, the DECK / PROFILE / DURATION header rows give their text `Modifier.weight(1f)` so the points and [EXPAND] stay on screen; a test fails if one loses it.
+- **`PlainWordsScreensWiringTest` names the controllers by prefix** (`training/TrainingGame`, `training/DeckTrainerGame`) instead of the whole `training/` folder, because the two panels in that folder are screens that read labels. A controller that starts reading a label still fails it.
+- **`TranslationsTest`'s "same as English" allowlist is by name, not by language**, so `TrainingTextTest.aNameAllowedToMatchEnglish...` holds each such name to the languages that really write it that way. Extend that map when a name is added to the allowlist.
+
+### Deck menu wording (MainActivity) — rules that must stay true
+Covers the deck menu in MainActivity's header (the SYSTEM DEFAULT row, a deck's row, MANAGE mode, the edit panel, the two deck-deletion dialogs) and the Manual Override overlay's `[CLOSE]`. Decisions are plain Kotlin in `core/DeckMenuText.kt` with `DeckMenuTextTest` (every language); `DeckMenuWordingTest` reads `MainActivity.kt`, which uses the SDK and is syntax-checked only.
+
+- **Deleting a deck takes two steps and only the second can delete.** The first dialog only marks the deck (CONTINUE opens the second; CANCEL closes); the one `CommandRepository.deleteDeck(` call is in the final dialog's `[DELETE PERMANENTLY]`, and the editor's DELETE button only opens the first dialog. `DeckMenuWordingTest` pins all of this. The final dialog names what is lost, says it cannot be undone and **what to back up first** (the developer asked for this; the other delete confirmations already did), and the GIF-files sentence and the back-up advice are part of the decision (`DeckMenuText.finalConfirmation(..., isGifDeck, words)`): the GIF sentence only for a GIF deck, the advice for every deck. **Every kind of deck's configuration is in EXPORT .JSON, but a GIF deck's files are not**, so a GIF deck is pointed at the GIF screen's own BACKUP menu and EXPORT DECK (.ZIP), worded exactly as that screen words them (`gif_backup`, `gif_export_deck`); the advice is 12 sp white (new text keeps the floor) and sits in the same dialog as `[DELETE PERMANENTLY]`.
+- **A deck is chosen by its id and shown by its saved name; only its type's word follows the language.** `ui/deckTypeLabel(DeckType)` maps each type to its label (`DECK_TYPE_*`) in a `when` with no `else`, so a new deck type fails the build until it has a label (a test fails if an `else` is added). The deck name is an argument of the sentence, never part of the format (`%s`, `$1`, quotes and line breaks are tested).
+- **Words that name two things can be written in either order.** `deckmenu_locked_title` / `deckmenu_locked_body` take the Matrix word (`%1$s`) and the DECK word (`%2$s`); English reads "MATRIX DECK", Spanish, Portuguese and Arabic write `%2$s %1$s`. The tests count each word once and never check the order; positional arguments exist for this.
+- **The profile names (DEFAULT, WORK, HIGH_STRESS, SOCIAL, BUILDER), the deck called DEFAULT and the boot line MainActivity writes to the Terminal log are names or log text and stay English** (the widget and the watch show the same ids). A later change that translates profile names for display must do it the way the Emergency button names and the deck types are done (saved ids never change) and must move the widget, the watch, the Terminal, the Deck Trainer and the profile-change dialog with it.
+- **A button that already has a label uses the label.** The create button is `"+ " + labelFor(LabelKey.DECK_CREATE)`, so with PLAIN WORDS on it reads + ADD A PAGE like the dialog it opens; in English standard mode it reads exactly what it always did.
+
+### RECORD TRAINING DATA wording — rules that must stay true
+Covers the library, the script editor, a session's details and the recording screen (`voicecapture/TrainingCaptureHome.kt`, `ScriptEditor.kt`, `SessionDetailDialog.kt`, `CaptureSessionScreen.kt`). Decisions are plain Kotlin in `core/CaptureText.kt` with `CaptureTextTest` (every language); `CaptureWordingTest` reads the four screens, the engines, the runners and the microphone; `FreeSpeechNoticeTest` pins the free-speech notices. All four screens are **type-checked** (`tools/kotlin_check/run_typecheck.sh`, with `R` generated from `strings.xml`), so a wrong string name or argument fails there; prove it by breaking one on purpose.
+
+- **The engines and the microphone say no words.** They report a `CaptureNotice` (`capture/CaptureNotice.kt`: a kind, its numbers, and sometimes a technical detail) through `CaptureListener.onPaused(reason, notice?)`, `FreeCaptureListener.onStoppedByItself(reason, notice)`, `TrainingMicrophone.open()` and `.failure`; `CaptureText.notice` words it where it is drawn. A pause the person asked for has a null notice. The limits in a notice are the engine's own constants (`NO_SPEECH_TIMEOUT_HOPS / 100`, `MAX_FREE_SESSION_S / 60`), so a sentence cannot name a limit the engine does not keep. `DiskGuard.describe` and `NoiseCheck.describe` no longer exist (`DiskGuard.room` returns numbers; `CaptureText.noiseVerdict` words the verdict). `CaptureWordingTest.theEnginesTheRunnersAndTheMicrophoneSayNoWords` fails if a sentence is typed back into them. A technical detail (an exception's message, what the storage or package layer says) is shown as it came, inside a sentence that says what it means; only the screens' own fallbacks are translated.
+- **Stored words are logic.** A session's mode (`script`/`free`), a script's line setting (`join`/`keep`), a mark's id (`noise`, `unclear`, `laugh`, `cough`, `stumble`, `long`, `short`, `no_end`) and a clip's state are saved and read by the computer; only the word *drawn* follows the language (`markWord`, `clipState`...), a mark or state with no word reads as before (the id in capitals, `UNFINISHED`), and a toggle passes the **id** (`toggleMark(flag)`, never the drawn word). A script's title, a session's name and the person's typed text are shown exactly as typed and are never used as a format.
+- **`ClipState` is an object of `String` constants, not a type**: a function that takes a clip's state takes `state: String`. (`state: ClipState` compiles until the first call that passes `clip.state`; the JVM tests found it.)
+- **Counts are colon-style in translations** ("SESIONES: 3"), so no language has to agree a word with a number. The six counted sentences (`capture_on_phone`, `capture_script_cards`, `capture_setup_cards`, `capture_setup_cards_skipping`, `capture_cards_typical`, `capture_cards_own`) are `<plurals>` so English says "1 SESSION" and "1 CARD" (read through `text.count(name, quantity, args)`; `%1$d` is the quantity and the other arguments follow); every form of a translation is the same sentence, **except Arabic's `one` and `two`, which are the words ("بطاقة واحدة", "بطاقتان") because `TranslationsTest` forbids a number there**. `CaptureTextTest.theSixCountedSentences...` pins that every form keeps the other arguments. Still imperfect in English, left as it is: "ABOUT 1 MINUTES" in the cards summary (a second number that would need a second plural), and the hedged "(S)" forms ("SESSION(S)", "CLIP(S)") which were always written that way.
+- **A number that can be negative has a left-to-right mark in Arabic, and only there** (the room level and the microphone's error code: `capture_room_db`, `capture_noise_good`, `capture_noise_loud`, `capture_n_mic_stopped`); `CaptureTextTest.aNumberThatCanBeNegativeHasALeftToRightMarkInArabicAndNowhereElse` pins exactly those four.
+- **A resource's leading and trailing space is trimmed by Android**, so the two spaces before "(TRY 2)" are joined in code (`CaptureText.cardHeading`); a test fails if any `capture_*` string starts or ends with a space.
+- **Marks are short words, and a recording button wraps rather than cuts.** The five marks sit across a narrow screen at 9 sp; `CaptureButton` allows two lines (`maxLines = 2`, minimum height unchanged), so a longer translated word wraps instead of being clipped, and no fixed width is used. **Not seen on a phone**: check POCO CLARO / POUCO CLARO / ONDUIDELIK on a 360 dp-wide screen (device checklist section K).
+- **The recording screen stays quiet.** No `NeonButton`, toast, haptic, sound or animation (`CaptureWordingTest`, `FreeSpeechNoticeTest`); its buttons are the haptic-free `CaptureButton`. **Known open item**: `ConfirmDialog` (used for END THIS SESSION while the microphone is open) is built from `TightPanelButton`, which vibrates, so tapping KEEP RECORDING can buzz into the card; decide before changing it.
+- **The free-speech notices are string resources** (`capture_free_notice_setup` with the engine's minutes, `capture_free_notice_home`); only `FreeSpeechNotice.HELP` (the English of the free-speech step's last sentence, now only a pin held by `FreeSpeechNoticeTest`) is still a constant. They stay text only, 12 sp, no alarm colour, and the setup one sits directly inside `if (free)` before the quiet-check button.
+- **The notes that point at these buttons use the translated names**: DELETE DATA's TRAINING DATA note takes SAVE ALL TO A FILE and RECORD TRAINING DATA as arguments (`StorageCatalogue.SAVE_ALL_LABEL`, `RECORD_TRAINING_LABEL`), and `/info`'s notes name RECORD FREE SPEECH, SAVE ALL TO A FILE, REDO LAST, PAUSE and the marks as the buttons read in the language (`PatchNotesTest`); only EXPORT DECK (.ZIP) is still a literal English button in a note.
+- **English changes made by these groups**: a session whose size could not be read said "THIS REMOVES ITS OF RECORDINGS" and now says "THIS REMOVES ITS RECORDINGS"; "1 SESSION"/"1 CARD" (see the counts bullet); and the "MB FREE, ROOM FOR ABOUT N MINUTES OF RECORDING" line inside the out-of-room notices is in capitals like the sentences around it (it was the one mixed-case line, so the capitals rule of `TranslationsTest` now applies to its Spanish, Portuguese and Afrikaans too).
+
+### GEO-PROTOCOL wording — rules that must stay true
+Covers the GEO-PROTOCOL screen (SYSTEM and engine controls, MAP DATA with its two confirmations, each zone's card, the map overlay), its authorization dialog and the notification a zone sends (`geo/GeoProtocolView.kt`, `geo/PermissionModal.kt`, `geo/GeoBroadcastReceiver.kt`). Decisions are plain Kotlin in `core/GeoText.kt` with `GeoTextTest` (every language); `GeoWordingTest` reads the three files. All three use the SDK, so they are syntax-checked only (`tools/kotlin_check/run_syntax_check.sh`, listed in `tools/kotlin_check/README.md`).
+
+- **A zone saves a deck id, never a word.** `enter/exitDeckId` is `DEFAULT`, `NONE`, `PREVIOUS` or a deck's own id (`GeoText.DEFAULT/NONE/PREVIOUS`, pinned against the repository). `GeoText.enterOptions/exitOptions` pair each id with the word *drawn*; `optionLabel(options, id)` finds the word (first match wins, as it always did) and shows an id it does not know as itself (a deleted deck). Picking an option saves the id (`onUpdate(zone.copy(enterDeckId = id))`, pinned by `GeoWordingTest.aZoneStillSavesDeckIdsAndTheEnginesStillSaveTheirNames`, which also pins the repository's defaults and the ids the receiver compares). A deck's own name and a zone's own name are shown as saved; a typed zone name is saved in capitals as it always was, and a new zone is still saved `NODE n` in English (a stored default, shown as saved).
+- **SOVEREIGN and OPTIMIZED are names.** The developer decided they stay in every language (like CYBER and MECH). The engine chips draw `mode.name`, and the privacy notice takes both as `%1$s` / `%2$s` (`GeoText.privacyNotice`), so the chips and the sentence agree; `GeoTextTest.theTwoEngineNamesAreNamesHandedInAsArguments_inEveryLanguage` fails if a translation types one back.
+- **Coordinates and sizes keep Latin digits** (`Locale.ROOT`, four decimals for a coordinate, one for the map's megabytes), whatever the phone's number format. The Arabic coordinate line has a left-to-right mark before each coordinate (a longitude is usually negative) and no other language has one; `GeoTextTest` pins both.
+- **The notification is built outside any screen.** `GeoBroadcastReceiver.showNotification` wraps its context with `InterfaceLocale.wrap(context)` before it reads words (the same wrap `MainActivity.attachBaseContext` uses), so an install that stayed English sends English and one that chose a language sends that language. The deck it names is `GeoText.notificationDeckName` (system default, previous deck, the deck's saved name, or UNKNOWN when it no longer exists). The engine's own Terminal log lines ("Entering NODE 1. Awaiting User Ack.", the SOVEREIGN/OPTIMIZED engine lines) are written in English and stay English, like every line other parts of ACK send in through `ACK_LOG`.
+- **The two map questions still ask first, and only the answer acts.** `GeoText.importAction(hasMap)` chooses REPLACE or IMPORT; REMOVE is its own question. `GeoRepository.importUserMapFile` / `clearUserMapFile` are called only from the dialogs' `onConfirm`. A reason an import failed is shown exactly as the file layer worded it, inside "IMPORT FAILED: ..."; only the screen's own fallback ("Unknown error") is translated.
+- **Names that follow PLAIN WORDS are arguments.** The screen title in the authorization dialog (`geo_auth_title`), the grid screen in the "NONE -- ... RENDERS COORDINATES ONLY" line (`geo_map_none`) and the deck word in ENTER DECK / EXIT DECK are passed in from `labelFor`, so they read the same as the screens they name in both modes.
+- **STEP 2 quotes Android's own option.** "Allow all the time" is the system's wording, not ACK's. Each translation quotes the phone's language as best a draft can; **these are the words to check first on a real phone** (the option's name differs between Android versions and manufacturers). Not run on a phone: the permission screens, the notification channel's name in system settings, the Arabic mirrored layout of a zone card.
+
+### HELP walkthrough text — rules that must stay true
+Covers every HELP module: the 16 `help/*Help.kt` family files and the inline MANUAL OVERRIDE module in `help/HelpRegistry.kt` (27 modules, about 390 strings per language). Decisions are plain Kotlin in `core/HelpWalkthroughText.kt` with `HelpWalkthroughTextTest`; `HelpWalkthroughWordingTest` reads every family file and every language; the English of every string is pinned in `app/src/test/resources/help_walkthrough_english.tsv`.
+
+- **A step holds a resource name, not words.** `HelpStep.title`/`body` and `HelpModule.title`/`summary` are `helpmod_<module id>_title` / `_summary` and `helpmod_<module id>_<step id>_title` / `_body`, written out as literals (greppable; the wording test holds the rule and fails on a name that is missing, unused or defined twice). They are read through `helpWords()` (`ui/PlainWords.kt`: `rememberText()`, then `helpText()` for the placeholders) in the coach panel and the menu card, and through `HelpWalkthroughText.read` where the step is spoken. A text that is not a resource reads as itself, which is how the families moved one commit at a time; the wording test's `moved` / `notYetMoved` lists must name every family file (a new one fails the test until it is on a list). Never draw `step.title` with `helpText()` alone: it would draw the name.
+- **English is word for word what it always said.** The extractor read each family's English out of the old source (never retyped), and the pin file holds it: a deliberate copy edit changes the string and its pin line together. English keeps `{{KEY:Original}}` and a mixed-case original may differ from the standard label's case; a translation uses the bare `{{KEY}}`, never an English original, and names the same *set* of labels as English (a sentence may be restructured to name one a different number of times, e.g. to avoid a word that would need a gender).
+- **A step that points at something uses that screen's own word.** The walkthrough's word for a button or a heading is taken from the screen's own string in that language, and the wording test keeps two tables: `isExactly` (a title that is exactly a label or heading) and `namesLabelLiterally` (a sentence that holds the word of each control it names). The second is checked for translations only, because English may name a button loosely ("Export", "Full Restore"). **Add a row whenever a step names a control**, so a later change to a screen's word fails until the walkthrough follows. English that differs slightly from the screen ("LIVE SAVE EDITOR" against "LIVE-SAVE EDITOR") stays as it was and is listed as such.
+- **Things that are not words stay exactly as they are, in every language**: typed commands (`/m`), the tokens the phrase editor inserts (`{VAR}`, `[COMPUTER:PEOPLE]`, `[COMPUTER:]`), the watch's own state words (OFFLINE, ARMED, LOCKED, FIRE: shown as the watch sends them, with a translated gloss beside), the deck called DEFAULT, Freeform Studio, and a literal lowercase brace token such as `{{tags}}` (not a label placeholder, so it must not be upper-cased into one). **Upper-casing a draft (es, pt, af are capitals) must not reach these**: it turned `/m` into `/M` and `{{tags}}` into a placeholder before the tests that now hold them existed.
+- **A raw newline in a string resource is collapsed to a space by Android; write the `\n` escape.** The test XML parser keeps the raw newline and would not notice, so a test reads the raw files, and a paragraph break in English must be a paragraph break in every language.
+- **The spoken guide**: the coach panel speaks each step (`MainActivity`, `source = "HELP/<module id>"`). `HelpWalkthroughText.speaksInterfaceLanguage` says the **translated** step is spoken only when SPEECH LANGUAGE follows the phone **and** the screens are in the phone's own language (`Locale.getDefault().language`, never the wrapped context's configuration, which is the chosen interface locale); every other case speaks the English step, read from `EnglishResources.context(context)`, with the labels filled in from that same context. An install that already existed (English (US) voice) hears exactly what it always heard. Not run on a phone: whether a phone with no voice for its own language keeps its default voice.
+- **Privacy and safety sentences are kept in every language** and a native speaker should read them first: RECORD TRAINING DATA (nothing is sent anywhere; no sound or vibration while it listens; free speech also records anyone nearby; the phone never deletes a session because it was saved), the word-suggestions step (off until turned on; nothing added without a tap; the path to the switch and the forget button are named), and the DATA PORT step (a restore never deletes what it does not mention). The free-speech step ends, in every language, with the very sentence the home screen shows; English ends with `FreeSpeechNotice.HELP`.
+- **No article before a placeholder in es and pt** (the everyday word under PLAIN WORDS may be the other gender); rephrase with a word that does not change (`EN USO`, `ACTUAL`, `CUALQUIER`). Afrikaans has no grammatical gender and is exempt.
+- **Still English: the two choosers' option labels and hints.** They are a separate group (`PoseSelectorDialog`, `VoiceRecordingsHelpSelectorDialog`).
+- **Drift**: the translations were generated with throwaway scripts that pulled each screen word out of that screen's own strings, so the strings are plain resources with nothing generating them; if a screen's word changes the wording test names the walkthrough string to update by hand.

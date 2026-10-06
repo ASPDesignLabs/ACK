@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu.composer
 
+import androidx.compose.ui.res.stringResource
+import com.example.besu.R
+import com.example.besu.core.LabelKey
 import com.example.besu.*
 import com.example.besu.computer.*
+import com.example.besu.core.AssistSettings
+import com.example.besu.core.Prediction
+import com.example.besu.core.TextInsertion
 import com.example.besu.data.*
 import com.example.besu.decks.*
 import com.example.besu.help.*
@@ -26,11 +32,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +54,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // The statement composer: builds multi-sentence statements from Target
 // Computer entries and Shared Root Variables, saves them, and lets them be
@@ -64,7 +75,9 @@ fun StatementComposerView(
     context: Context,
     primaryColor: Color,
     isFullscreen: Boolean = false,
-    onToggleFullscreen: (() -> Unit)? = null
+    onToggleFullscreen: (() -> Unit)? = null,
+    // PLAIN WORDS shows a button for classic Manual Override (the typed /m at the Terminal). Null means no button, so any other caller is unchanged.
+    onShowManualOverride: (() -> Unit)? = null
 ) {
     var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     var editingStatementId by remember { mutableStateOf<String?>(null) }
@@ -117,13 +130,65 @@ fun StatementComposerView(
         helpManager?.onEvent(HelpEvent.Interacted(tag))
     }
 
+    // The one shared insertion rule (core/TextInsertion.kt): replaces the selection, never splits a token, and adds a space only
+    // where one is needed, so the same button behaves the same way on every screen.
     fun insertTextAtCursor(text: String) {
         val selection = textFieldValue.selection
-        val spliced = "$text "
-        val newText = textFieldValue.text.replaceRange(selection.start, selection.end, spliced)
-        val newCursor = selection.start + spliced.length
-        textFieldValue = TextFieldValue(newText, TextRange(newCursor))
+        val result = TextInsertion.insert(textFieldValue.text, selection.start, selection.end, text)
+        textFieldValue = TextFieldValue(result.text, TextRange(result.cursor))
         focusRequester.requestFocus()
+    }
+
+    // WORD SUGGESTIONS (L5). Off until the person turns it on, in SETTINGS or from the one-time offer below. LearnedWordsRepository checks
+    // the switch itself, so nothing here can learn or suggest with it off. Suggestions are only buttons: nothing is inserted without a tap.
+    var wordSuggestionsOn by remember { mutableStateOf(AssistPrefs.isWordSuggestionsOn(context)) }
+    var wordOfferShown by remember {
+        mutableStateOf(
+            AssistSettings.shouldOfferWordSuggestions(
+                switchOn = AssistPrefs.isWordSuggestionsOn(context),
+                offerDismissed = AssistPrefs.isWordSuggestionsOfferDismissed(context)
+            )
+        )
+    }
+    val learnScope = rememberCoroutineScope()
+    // The last text that was learned from, so COPY then SAVE then SPEAK of the same text counts once; a changed text counts again.
+    var lastLearnedText by remember { mutableStateOf("") }
+
+    // The first read parses the saved words, so it is done off the main thread before the first keystroke needs it.
+    LaunchedEffect(wordSuggestionsOn) {
+        if (wordSuggestionsOn) withContext(Dispatchers.IO) { LearnedWordsRepository.wordCount(context) }
+    }
+
+    // Names kept elsewhere, read live (never copied into the learned words); re-read when a chip retargets a category.
+    val extraWords = remember(wordSuggestionsOn, targetRefreshKey) {
+        if (wordSuggestionsOn) WordSources.collect(context) else emptyList()
+    }
+
+    // Quiet while text is selected (there is no single cursor to complete or continue from).
+    val prediction = remember(wordSuggestionsOn, extraWords, textFieldValue.text, textFieldValue.selection) {
+        if (!wordSuggestionsOn || !textFieldValue.selection.collapsed) {
+            Prediction.NONE
+        } else {
+            LearnedWordsRepository.predict(context, extraWords, textFieldValue.text, textFieldValue.selection.start)
+        }
+    }
+
+    // A tapped suggestion goes through the same insertion rule as every other insert button; a COMPLETE one replaces the half-typed word.
+    fun insertWordSuggestion(word: String) {
+        val selection = textFieldValue.selection
+        val result = TextInsertion.insert(
+            textFieldValue.text, selection.start, selection.end, word, replace = prediction.replace
+        )
+        textFieldValue = TextFieldValue(result.text, TextRange(result.cursor))
+        focusRequester.requestFocus()
+    }
+
+    // Learning happens only at SAVE, COPY and SPEAK of what was typed here (never from MY STATEMENTS' own buttons, the Terminal, Manual Override
+    // or the Emergency deck), in the background so a tap is never held up by a file write.
+    fun learnFromCommittedText(text: String) {
+        if (!wordSuggestionsOn || text == lastLearnedText) return
+        lastLearnedText = text
+        learnScope.launch(Dispatchers.IO) { LearnedWordsRepository.learn(context, text) }
     }
 
     val resolvedPreview = remember(textFieldValue.text, variableContext, targetRefreshKey) {
@@ -135,7 +200,7 @@ fun StatementComposerView(
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("ACK STATEMENT", resolved))
         consumeSingleUseComputerTags(context, template)
-        Toast.makeText(context, "COPIED", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.composer_copied), Toast.LENGTH_SHORT).show()
     }
 
     fun speakResolvedText(template: String, resolved: String, sourceTag: String) {
@@ -163,16 +228,16 @@ fun StatementComposerView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "STATEMENT COMPOSER",
+                labelFor(LabelKey.COMPOSER),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 2.sp
+                letterSpacing = looseSpacing(2.sp)
             )
 
             if (onToggleFullscreen != null) {
                 Text(
-                    text = if (isFullscreen) "[EXIT FULL SCREEN]" else "[FULL SCREEN]",
+                    text = stringResource(if (isFullscreen) R.string.composer_exit_full_screen else R.string.composer_full_screen),
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -196,7 +261,36 @@ fun StatementComposerView(
                 .verticalScroll(rememberScrollState())
         ) {
 
-        TightSectionLabel("VARIABLE CONTEXT")
+        if (LocalPlainWords.current && onShowManualOverride != null) {
+            PlainActionButton(
+                labelFor(LabelKey.MANUAL_OVERRIDE),
+                primaryColor,
+                Modifier.fillMaxWidth().testTag(AckTags.TYPE_CLASSIC_BUTTON)
+            ) { onShowManualOverride() }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // The one-time offer. It says what it does, learns nothing unless TURN ON is tapped, and never opens HELP or another screen.
+        if (wordOfferShown) {
+            WordSuggestionsOffer(
+                primaryColor = primaryColor,
+                modifier = Modifier
+                    .testTag(AckTags.COMPOSER_WORD_OFFER)
+                    .helpTarget(AckTags.COMPOSER_WORD_OFFER, primaryColor),
+                onTurnOn = {
+                    AssistPrefs.setWordSuggestions(context, true)
+                    wordSuggestionsOn = true
+                    wordOfferShown = false
+                },
+                onNotNow = {
+                    AssistPrefs.dismissWordSuggestionsOffer(context)
+                    wordOfferShown = false
+                }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        TightSectionLabel(labelFor(LabelKey.VARIABLE_CONTEXT))
         Spacer(modifier = Modifier.height(6.dp))
         VariableContextRow(
             context = context,
@@ -229,7 +323,7 @@ fun StatementComposerView(
             ),
             placeholder = {
                 Text(
-                    "COMPOSE A STATEMENT...",
+                    stringResource(R.string.composer_hint),
                     color = Color.Gray,
                     fontFamily = FontFamily.Monospace
                 )
@@ -238,9 +332,23 @@ fun StatementComposerView(
             maxLines = 12
         )
 
+        // The strip keeps its height whether or not there is anything to offer, so a suggestion appearing never moves a button. It uses the
+        // history chips' row: 14 sp text, 48 dp chips, no animation, no sound, no vibration.
+        if (wordSuggestionsOn) {
+            Spacer(modifier = Modifier.height(6.dp))
+            AutocompleteChipRow(
+                suggestions = prediction.suggestions,
+                primaryColor = primaryColor,
+                modifier = Modifier
+                    .testTag(AckTags.COMPOSER_WORD_STRIP)
+                    .helpTarget(AckTags.COMPOSER_WORD_STRIP, primaryColor),
+                onSelect = { word -> insertWordSuggestion(word) }
+            )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
-        TightSectionLabel("LIVE PREVIEW")
+        TightSectionLabel(labelFor(LabelKey.LIVE_PREVIEW))
         Spacer(modifier = Modifier.height(6.dp))
         Box(
             modifier = Modifier
@@ -252,7 +360,7 @@ fun StatementComposerView(
                 .padding(10.dp)
         ) {
             Text(
-                text = resolvedPreview.ifBlank { "NOTHING TO PREVIEW YET." },
+                text = resolvedPreview.ifBlank { stringResource(R.string.composer_preview_empty) },
                 color = if (resolvedPreview.isBlank()) Color.DarkGray else primaryColor,
                 fontSize = 13.sp,
                 fontFamily = FontFamily.Monospace
@@ -285,7 +393,7 @@ fun StatementComposerView(
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
-                text = if (showTargetBrowsePanel) "[HIDE TARGET BROWSER]" else "[BROWSE TARGETS]",
+                text = if (showTargetBrowsePanel) stringResource(R.string.composer_hide_targets) else "[${labelFor(LabelKey.BROWSE_TARGETS)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -300,7 +408,7 @@ fun StatementComposerView(
             )
 
             Text(
-                text = if (showVariablePicker) "[HIDE VARIABLES]" else "[INSERT VARIABLE]",
+                text = if (showVariablePicker) stringResource(R.string.composer_hide_variables) else "[${labelFor(LabelKey.INSERT_VARIABLE)}]",
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -316,9 +424,9 @@ fun StatementComposerView(
 
             Text(
                 text = if (statementCount > 0) {
-                    "[MY STATEMENTS ($statementCount)]"
+                    "[${labelFor(LabelKey.MY_STATEMENTS)} ($statementCount)]"
                 } else {
-                    "[MY STATEMENTS]"
+                    "[${labelFor(LabelKey.MY_STATEMENTS)}]"
                 },
                 color = primaryColor,
                 fontSize = 10.sp,
@@ -365,7 +473,7 @@ fun StatementComposerView(
             modifier = Modifier.fillMaxWidth()
         ) {
             TightPanelButton(
-                text = "SAVE",
+                text = stringResource(R.string.common_save),
                 modifier = Modifier
                     .weight(1f)
                     .testTag(AckTags.COMPOSER_SAVE_BTN)
@@ -385,7 +493,7 @@ fun StatementComposerView(
             }
 
             TightPanelButton(
-                text = "COPY",
+                text = stringResource(R.string.common_copy),
                 modifier = Modifier
                     .weight(1f)
                     .testTag(AckTags.COMPOSER_COPY_BTN)
@@ -394,11 +502,12 @@ fun StatementComposerView(
                 mainColor = primaryColor
             ) {
                 copyResolvedText(textFieldValue.text, resolvedPreview)
+                if (resolvedPreview.isNotBlank()) learnFromCommittedText(textFieldValue.text)
                 reportHelpInteraction(AckTags.COMPOSER_COPY_BTN)
             }
 
             HeroButton(
-                text = "SPEAK",
+                text = stringResource(R.string.common_speak),
                 modifier = Modifier
                     .weight(1f)
                     .testTag(AckTags.COMPOSER_SPEAK_BTN)
@@ -406,6 +515,7 @@ fun StatementComposerView(
                 mainColor = primaryColor
             ) {
                 speakResolvedText(textFieldValue.text, resolvedPreview, "COMPOSER/SPEAK")
+                if (resolvedPreview.isNotBlank()) learnFromCommittedText(textFieldValue.text)
                 reportHelpInteraction(AckTags.COMPOSER_SPEAK_BTN)
             }
         }
@@ -416,14 +526,14 @@ fun StatementComposerView(
         TightDialogSurface(
             onDismiss = { showSaveDialog = false },
             primaryColor = primaryColor,
-            title = "SAVE STATEMENT"
+            title = stringResource(R.string.composer_save_title)
         ) {
-            TightSectionLabel("LABEL")
+            TightSectionLabel(stringResource(R.string.composer_label))
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = saveLabelInput,
                 onValueChange = { saveLabelInput = it },
-                placeholder = { Text("E.G. \"ORDER AT A CAFE\"") },
+                placeholder = { Text(stringResource(R.string.composer_label_example)) },
                 shape = AckHelpShape,
                 colors = NeonTextFieldColors(primaryColor),
                 modifier = Modifier.fillMaxWidth()
@@ -436,9 +546,9 @@ fun StatementComposerView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TightSectionLabel("FOLDER")
+                TightSectionLabel(stringResource(R.string.composer_folder))
                 Text(
-                    text = "[+ NEW FOLDER]",
+                    text = stringResource(R.string.composer_new_folder_button),
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -464,7 +574,7 @@ fun StatementComposerView(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TightPanelButton("SAVE", modifier = Modifier.weight(1f), mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_save), modifier = Modifier.weight(1f), mainColor = primaryColor) {
                     if (saveLabelInput.isNotBlank()) {
                         val existing = editingStatementId
                             ?.let { id -> StatementRepository.findNode(statementRoot, id) }
@@ -478,10 +588,11 @@ fun StatementComposerView(
                             updatedAt = System.currentTimeMillis()
                         )
                         StatementRepository.upsertNode(context, node, saveDestinationFolderId)
+                        learnFromCommittedText(node.template)
                         editingStatementId = node.id
                         refreshKey++
                         showSaveDialog = false
-                        Toast.makeText(context, "STATEMENT SAVED", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.composer_saved_toast), Toast.LENGTH_SHORT).show()
                         // CommitText/TextCommitted, not Interact -- matches
                         // every other "SAVE" action's HELP wiring in the app
                         // (QUICK_ACTION_SAVE, EMERGENCY_SAVE, AUDIO_SAVE,
@@ -492,7 +603,7 @@ fun StatementComposerView(
                     }
                 }
                 TightPanelButton(
-                    "CANCEL",
+                    stringResource(R.string.common_cancel),
                     modifier = Modifier.weight(1f),
                     isActive = false,
                     mainColor = primaryColor
@@ -507,14 +618,14 @@ fun StatementComposerView(
         TightDialogSurface(
             onDismiss = { showNewFolderDialog = false },
             primaryColor = primaryColor,
-            title = "NEW FOLDER"
+            title = stringResource(R.string.composer_new_folder_title)
         ) {
-            TightSectionLabel("LABEL")
+            TightSectionLabel(stringResource(R.string.composer_label))
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = newFolderLabelInput,
                 onValueChange = { newFolderLabelInput = it },
-                placeholder = { Text("E.G. \"CAFE VISITS\"") },
+                placeholder = { Text(stringResource(R.string.composer_folder_example)) },
                 shape = AckHelpShape,
                 colors = NeonTextFieldColors(primaryColor),
                 modifier = Modifier.fillMaxWidth()
@@ -532,7 +643,7 @@ fun StatementComposerView(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TightPanelButton("CREATE", modifier = Modifier.weight(1f), mainColor = primaryColor) {
+                TightPanelButton(stringResource(R.string.common_create), modifier = Modifier.weight(1f), mainColor = primaryColor) {
                     if (newFolderLabelInput.isNotBlank()) {
                         val folder = StatementRepository.createFolder(
                             context,
@@ -551,7 +662,7 @@ fun StatementComposerView(
                     }
                 }
                 TightPanelButton(
-                    "CANCEL",
+                    stringResource(R.string.common_cancel),
                     modifier = Modifier.weight(1f),
                     isActive = false,
                     mainColor = primaryColor
@@ -569,11 +680,11 @@ fun StatementComposerView(
                 confirmingDeleteId = null
             },
             primaryColor = primaryColor,
-            title = "MY STATEMENTS",
-            dismissLabel = "CLOSE"
+            title = labelFor(LabelKey.MY_STATEMENTS),
+            dismissLabel = stringResource(R.string.common_close)
         ) {
             Text(
-                text = "[+ NEW FOLDER]",
+                text = stringResource(R.string.composer_new_folder_button),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -588,8 +699,7 @@ fun StatementComposerView(
 
             if (statementRoot.children.isEmpty()) {
                 Text(
-                    text = "NOTHING SAVED YET. COMPOSE A STATEMENT ABOVE AND TAP SAVE, " +
-                        "OR ADD A FOLDER TO GET ORGANIZED FIRST.",
+                    text = stringResource(R.string.composer_nothing_saved),
                     color = Color.DarkGray,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace
@@ -792,7 +902,7 @@ private fun SharedVariablePicker(
             .background(primaryColor.copy(alpha = 0.04f), CutCornerShape(8.dp))
             .padding(10.dp)
     ) {
-        TightSectionLabel("${category.uppercase()} VARIABLES")
+        TightSectionLabel(stringResource(R.string.composer_variables_title, poseHeading(category)))
         Spacer(modifier = Modifier.height(8.dp))
 
         listOf("A", "B", "C").forEach { tag ->
@@ -800,7 +910,7 @@ private fun SharedVariablePicker(
             val preview = if (slot?.enabled == true && slot.value.isNotBlank()) {
                 slot.value
             } else {
-                "(NOT SET)"
+                stringResource(R.string.composer_not_set)
             }
 
             Box(
@@ -816,7 +926,7 @@ private fun SharedVariablePicker(
             ) {
                 Column {
                     Text(
-                        text = "VAR $tag",
+                        text = stringFormatLabel(LabelKey.VARIABLE_TAG, tag),
                         color = primaryColor,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,
@@ -913,14 +1023,14 @@ private fun StatementFolderRow(
             if (isConfirmingDelete) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "DELETE ALL?",
+                        stringResource(R.string.composer_delete_all_q),
                         color = Color(0xFFFF4444),
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "[YES]",
+                        "[${stringResource(R.string.common_yes)}]",
                         color = Color(0xFFFF4444),
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -928,7 +1038,7 @@ private fun StatementFolderRow(
                         modifier = Modifier.clickable { onDeleteConfirm() }
                     )
                     Text(
-                        "[NO]",
+                        "[${stringResource(R.string.common_no)}]",
                         color = primaryColor,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -939,7 +1049,7 @@ private fun StatementFolderRow(
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "[+ SUB]",
+                        stringResource(R.string.composer_add_sub),
                         color = primaryColor,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -947,7 +1057,7 @@ private fun StatementFolderRow(
                         modifier = Modifier.clickable { onAddSubfolder() }
                     )
                     Text(
-                        "[DELETE]",
+                        "[${stringResource(R.string.common_delete)}]",
                         color = Color(0xFFFF4444),
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
@@ -1001,14 +1111,14 @@ private fun StatementLeafRow(
         if (isConfirmingDelete) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    "DELETE?",
+                    stringResource(R.string.composer_delete_q),
                     color = Color(0xFFFF4444),
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "[YES]",
+                    "[${stringResource(R.string.common_yes)}]",
                     color = Color(0xFFFF4444),
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -1016,7 +1126,7 @@ private fun StatementLeafRow(
                     modifier = Modifier.clickable { onDeleteConfirm() }
                 )
                 Text(
-                    "[NO]",
+                    "[${stringResource(R.string.common_no)}]",
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -1027,7 +1137,7 @@ private fun StatementLeafRow(
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    "[COPY]",
+                    "[${stringResource(R.string.common_copy)}]",
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -1035,7 +1145,7 @@ private fun StatementLeafRow(
                     modifier = Modifier.clickable { onCopy() }
                 )
                 Text(
-                    "[SPEAK]",
+                    "[${stringResource(R.string.common_speak)}]",
                     color = primaryColor,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -1043,7 +1153,7 @@ private fun StatementLeafRow(
                     modifier = Modifier.clickable { onSpeak() }
                 )
                 Text(
-                    "[DELETE]",
+                    "[${stringResource(R.string.common_delete)}]",
                     color = Color(0xFFFF4444),
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -1138,5 +1248,37 @@ private fun resolveStatementTemplate(
 private fun consumeSingleUseComputerTags(context: Context, template: String) {
     TemplateEngine.getComputerTags(template).distinct().forEach { categoryId ->
         ComputerRepository.consumeIfSingleUse(context, categoryId)
+    }
+}
+
+// The one-time offer for WORD SUGGESTIONS (its words are string resources, words_offer_*). Same shape as the PROFILES offer in SETTINGS: it says
+// what it is, that it is off, and that nothing is learned unless TURN ON is tapped. 12 sp text, 12 sp buttons, no animation.
+@Composable
+private fun WordSuggestionsOffer(
+    primaryColor: Color,
+    modifier: Modifier = Modifier,
+    onTurnOn: () -> Unit,
+    onNotNow: () -> Unit
+) {
+    val offerShape = CutCornerShape(8.dp)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, primaryColor.copy(alpha = 0.6f), offerShape)
+            .background(primaryColor.copy(alpha = 0.08f), offerShape)
+            .padding(12.dp)
+    ) {
+        Text(
+            stringResource(R.string.words_offer_text),
+            color = Color.LightGray,
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
+            fontFamily = FontFamily.Monospace
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NeonButton(stringResource(R.string.words_offer_turn_on), Modifier.weight(1f), mainColor = primaryColor) { onTurnOn() }
+            NeonButton(stringResource(R.string.words_offer_not_now), Modifier.weight(1f), mainColor = Color.White) { onNotNow() }
+        }
     }
 }

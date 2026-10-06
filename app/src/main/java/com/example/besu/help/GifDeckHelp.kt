@@ -2,46 +2,44 @@
 package com.example.besu.help
 
 import com.example.besu.*
+/** This family's words are string resources (helpmod_<module id>_..., core/HelpWalkthroughText.kt), read where a step is drawn or spoken. */
 object GifDeckHelp {
     val module = HelpModule(
         id = "deck_gif",
         category = HelpCategory.USING_DECKS,
-        title = "GIF DECK",
-        summary = "LOCAL GIF IMPORT, CATEGORIES, NAVIGATION, AND DISPLAY.",
+        title = "helpmod_deck_gif_title",
+        summary = "helpmod_deck_gif_summary",
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "LOCAL GIF LIBRARY",
-                body = "GIF decks use local files. Imported GIFs stay organized " +
-                    "by category and can be displayed full-screen."
+                title = "helpmod_deck_gif_intro_title",
+                body = "helpmod_deck_gif_intro_body"
             ),
             HelpStep(
                 id = "import",
-                title = "IMPORT A GIF",
-                body = "Choose IMPORT and select a local GIF file.",
+                title = "helpmod_deck_gif_import_title",
+                body = "helpmod_deck_gif_import_body",
                 action = HelpAction.Interact(AckTags.GIF_IMPORT),
                 targetTag = AckTags.GIF_IMPORT
             ),
             HelpStep(
                 id = "commit_import",
-                title = "NAME AND CATEGORIZE",
-                body = "Give the GIF a title, select or create a category, and " +
-                    "commit the import.",
+                title = "helpmod_deck_gif_commit_import_title",
+                body = "helpmod_deck_gif_commit_import_body",
                 action = HelpAction.CommitFile(AckTags.GIF_IMPORT_COMMIT),
                 targetTag = AckTags.GIF_IMPORT_COMMIT
             ),
             HelpStep(
                 id = "category",
-                title = "GIF CATEGORIES",
-                body = "Use the category selector to filter the active GIF wheel.",
+                title = "helpmod_deck_gif_category_title",
+                body = "helpmod_deck_gif_category_body",
                 action = HelpAction.Interact(AckTags.GIF_CATEGORY),
                 targetTag = AckTags.GIF_CATEGORY
             ),
             HelpStep(
                 id = "landscape",
-                title = "LANDSCAPE DISPLAY",
-                body = "Enable landscape display when a GIF benefits from a " +
-                    "wider full-screen presentation.",
+                title = "helpmod_deck_gif_landscape_title",
+                body = "helpmod_deck_gif_landscape_body",
                 action = HelpAction.Interact(AckTags.GIF_LANDSCAPE_TOGGLE),
                 targetTag = AckTags.GIF_LANDSCAPE_TOGGLE
             )

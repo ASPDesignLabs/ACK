@@ -2,48 +2,44 @@
 package com.example.besu.help
 
 import com.example.besu.*
+/** This family's words are string resources (helpmod_<module id>_..., core/HelpWalkthroughText.kt), read where a step is drawn or spoken. */
 object EmojiDeckHelp {
     val module = HelpModule(
         id = "deck_emoji",
         category = HelpCategory.USING_DECKS,
-        title = "EMOJI DECK",
-        summary = "VISUAL PROMPTS, TEXT, LIBRARY PICKS, AND RELATED PANELS.",
+        title = "helpmod_deck_emoji_title",
+        summary = "helpmod_deck_emoji_summary",
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "EMOJI EXPRESS",
-                body = "The Emoji deck displays visual communication prompts. " +
-                    "It can show an emoji alone or pair it with overlay text."
+                title = "helpmod_deck_emoji_intro_title",
+                body = "helpmod_deck_emoji_intro_body"
             ),
             HelpStep(
                 id = "slot",
-                title = "CONFIGURE A TILE",
-                body = "Hold an emoji tile to configure its emoji, label, and " +
-                    "optional display text.",
+                title = "helpmod_deck_emoji_slot_title",
+                body = "helpmod_deck_emoji_slot_body",
                 action = HelpAction.Interact(AckTags.EMOJI_SLOT),
                 targetTag = AckTags.EMOJI_SLOT
             ),
             HelpStep(
                 id = "library",
-                title = "EMOJI LIBRARY",
-                body = "Use the library for common communication symbols, or " +
-                    "enter a custom emoji directly.",
+                title = "helpmod_deck_emoji_library_title",
+                body = "helpmod_deck_emoji_library_body",
                 action = HelpAction.Interact(AckTags.EMOJI_LIBRARY),
                 targetTag = AckTags.EMOJI_LIBRARY
             ),
             HelpStep(
                 id = "related",
-                title = "RELATED PANELS",
-                body = "A configured emoji can open one related panel. This is " +
-                    "useful for grouping similar responses or needs.",
+                title = "helpmod_deck_emoji_related_title",
+                body = "helpmod_deck_emoji_related_body",
                 action = HelpAction.Interact(AckTags.EMOJI_RELATED_PANEL),
                 targetTag = AckTags.EMOJI_RELATED_PANEL
             ),
             HelpStep(
                 id = "clear",
-                title = "DISPLAY CLEARING",
-                body = "When you display an emoji, ACK may wait for its normal " +
-                    "timeout or your configured clearing behavior.",
+                title = "helpmod_deck_emoji_clear_title",
+                body = "helpmod_deck_emoji_clear_body",
                 action = HelpAction.OverlayCleared(AckTags.EMOJI_SLOT),
                 targetTag = AckTags.EMOJI_SLOT
             )

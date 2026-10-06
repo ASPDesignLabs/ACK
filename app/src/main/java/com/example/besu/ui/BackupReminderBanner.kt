@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.example.besu.R
 import com.example.besu.backup.BackupReminder
 import com.example.besu.core.BackupReminderText
 import com.example.besu.settings.ConfirmBodyText
@@ -51,6 +53,7 @@ fun BackupReminderBanner(
     modifier: Modifier = Modifier
 ) {
     val due = BackupReminder.due ?: return
+    val text = rememberText()
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -58,11 +61,11 @@ fun BackupReminderBanner(
             .background(Graphite, CutCornerShape(8.dp))
             .padding(12.dp)
     ) {
-        ConfirmBodyText(BackupReminderText.message(due.daysSince, due.neverBackedUp), bold = true)
+        ConfirmBodyText(BackupReminderText.message(text, due.daysSince, due.neverBackedUp), bold = true)
         Spacer(modifier = Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NeonButton(BackupReminderText.BACK_UP_NOW, mainColor = primaryColor) { onBackUpNow() }
-            NeonButton(BackupReminderText.NOT_NOW, isActive = false, mainColor = primaryColor) { onNotNow() }
+            NeonButton(text.get(BackupReminderText.BACK_UP_NOW), mainColor = primaryColor) { onBackUpNow() }
+            NeonButton(text.get(BackupReminderText.NOT_NOW), isActive = false, mainColor = primaryColor) { onNotNow() }
         }
     }
 }
@@ -79,6 +82,7 @@ val BackupIndicatorSlot = 24.dp
 @Composable
 fun BackupSaveIndicator(primaryColor: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val due = BackupReminder.due
+    val iconDescription = rememberText().get(BackupReminderText.ICON_DESCRIPTION)
     Box(modifier = modifier.size(BackupIndicatorSlot), contentAlignment = Alignment.Center) {
         if (due != null) {
             Box(
@@ -86,7 +90,7 @@ fun BackupSaveIndicator(primaryColor: Color, onClick: () -> Unit, modifier: Modi
                     .fillMaxSize()
                     .border(1.dp, primaryColor, CutCornerShape(4.dp))
                     .clickable(onClick = onClick)
-                    .semantics { contentDescription = BackupReminderText.ICON_DESCRIPTION },
+                    .semantics { contentDescription = iconDescription },
                 contentAlignment = Alignment.Center
             ) {
                 SaveGlyph(color = primaryColor, modifier = Modifier.size(12.dp))
@@ -125,19 +129,20 @@ fun BackupReminderDialog(
     onClose: () -> Unit
 ) {
     val due = BackupReminder.due
+    val text = rememberText()
     // It was snoozed, switched off or answered elsewhere while this was open: close it rather than show nothing.
     LaunchedEffect(due == null) { if (due == null) onClose() }
     if (due == null) return
     TightDialogSurface(
         onDismiss = onClose,
         primaryColor = primaryColor,
-        title = BackupReminderText.DIALOG_TITLE,
-        dismissLabel = "CLOSE"
+        title = text.get(BackupReminderText.DIALOG_TITLE),
+        dismissLabel = stringResource(R.string.common_close)
     ) {
-        ConfirmBodyText(BackupReminderText.message(due.daysSince, due.neverBackedUp), bold = true)
+        ConfirmBodyText(BackupReminderText.message(text, due.daysSince, due.neverBackedUp), bold = true)
         Spacer(modifier = Modifier.height(16.dp))
-        NeonButton(BackupReminderText.BACK_UP_NOW, Modifier.fillMaxWidth(), mainColor = primaryColor) { onBackUpNow() }
+        NeonButton(text.get(BackupReminderText.BACK_UP_NOW), Modifier.fillMaxWidth(), mainColor = primaryColor) { onBackUpNow() }
         Spacer(modifier = Modifier.height(8.dp))
-        NeonButton(BackupReminderText.NOT_NOW, Modifier.fillMaxWidth(), isActive = false, mainColor = primaryColor) { onNotNow() }
+        NeonButton(text.get(BackupReminderText.NOT_NOW), Modifier.fillMaxWidth(), isActive = false, mainColor = primaryColor) { onNotNow() }
     }
 }

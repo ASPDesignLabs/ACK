@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.example.besu
 
+import androidx.compose.ui.res.stringResource
+import com.example.besu.core.DeckMenuText
+import com.example.besu.core.LabelKey
 import com.example.besu.backup.BackupReminder
+import com.example.besu.core.ActiveScript
+import com.example.besu.core.HelpPlaceholders
+import com.example.besu.core.HelpWalkthroughText
+import com.example.besu.core.ProfileSwapDiff
+import com.example.besu.core.SlotChange
+import com.example.besu.core.TextInsertion
+import com.example.besu.core.VoiceListing
 import com.example.besu.composer.*
 import com.example.besu.computer.*
 import com.example.besu.data.*
@@ -88,6 +98,9 @@ private enum class BottomNavIcon {
 // restart guarantees everything reflects what was just written, the same
 // way a cold launch already does. Shared (rather than duplicated) since
 // both SettingsView and GifDeck need it.
+// A profile change waiting for the person's answer to the warning (see requestProfileChange).
+private data class PendingProfileChange(val profile: String, val changes: List<SlotChange>)
+
 fun restartApp(context: Context) {
     val intent = Intent(context, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -113,6 +126,12 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 addLog(msg, type, replayText)
             }
         }
+    }
+
+    // INTERFACE LANGUAGE (core/InterfaceLanguage.kt): the language of ACK's own words is applied here, before anything reads a string resource. It
+    // changes only after a restart, which is what a change of language does. If anything goes wrong it shows English and ACK still opens.
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(InterfaceLocale.wrap(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -152,10 +171,14 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             try {
-                val voices = ttsSystem?.voices?.filter { it.locale.language == "en" }?.sortedBy { it.name }
-                if (voices != null) {
+                // Every language, without voices that need the network or are not installed (core/VoiceListing.kt decides, tested), sorted
+                // by language and then by name. This used to keep English voices only.
+                val all = ttsSystem?.voices
+                if (all != null) {
+                    val byName = all.associateBy { it.name }
+                    val usable = VoiceListing.usable(all.map { it.toVoiceInfo() })
                     availableSystemVoices.clear()
-                    availableSystemVoices.addAll(voices)
+                    availableSystemVoices.addAll(usable.mapNotNull { byName[it.name] })
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
@@ -285,10 +308,11 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     LaunchedEffect(Unit) { BackupReminder.refresh(context) }
 
     fun insertIntoManualOverride(insertText: String) {
+        // The shared insertion rule (core/TextInsertion.kt). Manual Override used to add no space around an inserted word; it now
+        // adds one only where one is needed, like the composer and the Terminal (a PATCH_NOTES item).
         val selection = manualOverrideText.selection
-        val newText = manualOverrideText.text.replaceRange(selection.start, selection.end, insertText)
-        val newCursor = selection.start + insertText.length
-        manualOverrideText = TextFieldValue(newText, TextRange(newCursor))
+        val result = TextInsertion.insert(manualOverrideText.text, selection.start, selection.end, insertText)
+        manualOverrideText = TextFieldValue(result.text, TextRange(result.cursor))
         manualOverrideFocusRequester.requestFocus()
         manualOverrideKeyboardController?.show()
     }
@@ -379,6 +403,48 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
             context = context,
             deckId = currentDeckId
         )
+    }
+
+    // WARN BEFORE PROFILE CHANGES (core/ProfileSwapDiff.kt decides; ui/ProfileChangeDialog.kt asks). Only this in-app menu asks: the home-screen
+    // widget and the watch are deliberate remote controls with no screen to ask on, and a backup restore is already a confirmed action.
+    var pendingProfileChange by remember { mutableStateOf<PendingProfileChange?>(null) }
+    var profileWarningOn by remember { mutableStateOf(true) }
+
+    fun applyProfileChange(profile: String) {
+        CommandRepository.setActiveProfile(
+            context,
+            profile
+        )
+
+        currentProfile = profile
+        isProfileMenuOpen = false
+
+        WatchSync.sendProfileConfig(
+            context,
+            profile
+        )
+
+        helpManager.onEvent(
+            HelpEvent.ProfileWasSelected(AckTags.PROFILE_SELECTOR)
+        )
+    }
+
+    // Changes straight away if the warning is off or nothing would change (never interrupts for nothing); otherwise asks first.
+    fun requestProfileChange(profile: String) {
+        if (profile == currentProfile) {
+            applyProfileChange(profile)
+            return
+        }
+        val changes = ProfileSwapDiff.changes(
+            CommandRepository.profileSwapSlots(context, currentDeckId, currentProfile, profile)
+        )
+        if (ProfileSwapDiff.shouldWarn(AssistPrefs.isProfileChangeWarningOn(context), changes)) {
+            profileWarningOn = true
+            pendingProfileChange = PendingProfileChange(profile, changes)
+            isProfileMenuOpen = false
+        } else {
+            applyProfileChange(profile)
+        }
     }
 
     fun exitDeckManageMode() {
@@ -543,10 +609,16 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         val module = helpManager.activeModule ?: return@LaunchedEffect
         val step = helpManager.currentStep ?: return@LaunchedEffect
 
+        // The step's own text, in the wording the person sees (PLAIN WORDS): a placeholder must never be read aloud as braces. The translated step is spoken only when the voice speaks
+        // that language (SPEECH LANGUAGE follows the phone and the screens are in the phone's language); every other case speaks the English step, as before (core/HelpWalkthroughText.kt).
+        val speakTranslated = HelpWalkthroughText.speaksInterfaceLanguage(AssistPrefs.speechLanguage(context), ActiveScript.tag, Locale.getDefault().language)
+        val spokenContext = if (speakTranslated) context else EnglishResources.context(context)
+        val spokenWords = ResourceText(spokenContext)
+        fun spoken(nameOrText: String) = HelpPlaceholders.substitute(HelpWalkthroughText.read(spokenWords, nameOrText), PlainWordsState.on) { key, plain -> LabelText.resolveOrNull(spokenContext, key, plain) }
         val spokenText = buildString {
-            append(step.title)
+            append(spoken(step.title))
             append(". ")
-            append(step.body)
+            append(spoken(step.body))
         }
 
         val intent = Intent(context, OutputService::class.java).apply {
@@ -649,8 +721,12 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
         )
     }
 
+    // PLAIN WORDS (ui/PlainWords.kt): read once here, then every screen below redraws in place when the switch is flipped.
+    remember { PlainWordsState.load(context) }
+
     CompositionLocalProvider(
-        LocalHelpManager provides helpManager
+        LocalHelpManager provides helpManager,
+        LocalPlainWords provides PlainWordsState.on
     ) {
         Scaffold(
             containerColor = VoidBlack,
@@ -714,7 +790,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         fontSize = 28.sp,
                                         fontFamily = FontFamily.Monospace,
                                         fontWeight = FontWeight.Black,
-                                        letterSpacing = 4.sp
+                                        letterSpacing = looseSpacing(4.sp)
                                     )
 
                                     Spacer(modifier = Modifier.width(16.dp))
@@ -778,7 +854,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 }
 
                                 Text(
-                                    text = "AUGMENTED COMM LINK",
+                                    text = labelFor(LabelKey.APP_TAGLINE),
                                     color = if (isLiveLinkActive) {
                                         NeonPalette.SWATCHES[2]
                                     } else {
@@ -787,7 +863,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     fontSize = 8.sp,
                                     fontFamily = FontFamily.Monospace,
                                     fontWeight = FontWeight.Bold,
-                                    letterSpacing = 2.sp
+                                    letterSpacing = looseSpacing(2.sp)
                                 )
 
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -812,11 +888,11 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "DECK: ",
+                                        text = "${labelFor(LabelKey.DECK)}: ",
                                         color = Color.Gray,
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace,
-                                        letterSpacing = 1.sp
+                                        letterSpacing = looseSpacing(1.sp)
                                     )
 
                                     Text(
@@ -854,7 +930,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "PROFILE: ",
+                                            text = "${stringResource(R.string.header_profile)}: ",
                                             color = Color.Gray,
                                             fontSize = 10.sp,
                                             fontFamily = FontFamily.Monospace
@@ -895,14 +971,14 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "COMPUTER: ",
+                                        text = "${stringResource(R.string.header_computer)}: ",
                                         color = Color.Gray,
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace
                                     )
 
                                     Text(
-                                        text = if (computerActiveCount > 0) "$computerActiveCount ACTIVE" else "OFF",
+                                        text = if (computerActiveCount > 0) stringResource(R.string.header_computer_active, computerActiveCount) else stringResource(R.string.common_off),
                                         color = if (computerActiveCount > 0) primaryColor else Color.Gray,
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -987,7 +1063,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = "PROTOCOL",
+                                        text = labelFor(LabelKey.SETTINGS_ENTRY),
                                         color = if (viewMode == "SETTINGS") {
                                             Color.White
                                         } else {
@@ -1026,7 +1102,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                             .padding(horizontal = 8.dp, vertical = 4.dp)
                                     ) {
                                         Text(
-                                            text = "HELP",
+                                            text = stringResource(R.string.help_button),
                                             color = primaryColor,
                                             fontSize = 10.sp,
                                             fontFamily = FontFamily.Monospace
@@ -1052,7 +1128,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                             ) {
                                 if (!isDeckManageMode) {
                                     DeckItem(
-                                        name = "SYSTEM DEFAULT // MATRIX",
+                                        name = DeckMenuText.systemDefaultRow(rememberText(), deckTypeLabel(DeckType.MATRIX)),
                                         color = NeonPalette.DEFAULT_CYAN,
                                         isActive = currentDeckId == "DEFAULT"
                                     ) {
@@ -1061,13 +1137,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                                     decks.forEach { deck ->
                                         DeckItem(
-                                            name = buildString {
-                                                append(deck.name)
-                                                append(" // ")
-                                                append(
-                                                    deck.type.name.replace('_', ' ')
-                                                )
-                                            },
+                                            name = DeckMenuText.deckRow(deck.name, deckTypeLabel(deck.type)),
                                             color = NeonPalette.getColor(
                                                 deck.colorIndex
                                             ),
@@ -1089,7 +1159,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         )
                                     ) {
                                         DeckMenuAction(
-                                            text = "+ CREATE DECK",
+                                            text = "+ ${labelFor(LabelKey.DECK_CREATE)}",
                                             color = primaryColor,
                                             modifier = Modifier
                                                 .weight(1f)
@@ -1105,7 +1175,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         }
 
                                         DeckMenuAction(
-                                            text = "MANAGE",
+                                            text = stringResource(R.string.deckmenu_manage),
                                             color = Color.White,
                                             modifier = Modifier
                                                 .weight(1f)
@@ -1122,18 +1192,18 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     }
                                 } else {
                                     Text(
-                                        text = "MANAGE DECKS",
+                                        text = labelFor(LabelKey.DECK_MANAGE),
                                         color = Color.White,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
                                         fontWeight = FontWeight.Black,
-                                        letterSpacing = 1.sp
+                                        letterSpacing = looseSpacing(1.sp)
                                     )
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     Text(
-                                        text = "SELECT A DECK TO RENAME, RECOLOR, OR DELETE",
+                                        text = DeckMenuText.manageHint(rememberText(), labelFor(LabelKey.DECK)),
                                         color = Color.Gray,
                                         fontSize = 9.sp,
                                         fontFamily = FontFamily.Monospace
@@ -1142,7 +1212,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     Spacer(modifier = Modifier.height(10.dp))
 
                                     DeckManageItem(
-                                        name = "SYSTEM DEFAULT // MATRIX",
+                                        name = DeckMenuText.systemDefaultRow(rememberText(), deckTypeLabel(DeckType.MATRIX)),
                                         color = NeonPalette.DEFAULT_CYAN,
                                         selected = managedDeckId == "DEFAULT",
                                         locked = true
@@ -1152,13 +1222,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                                     decks.forEach { deck ->
                                         DeckManageItem(
-                                            name = buildString {
-                                                append(deck.name)
-                                                append(" // ")
-                                                append(
-                                                    deck.type.name.replace('_', ' ')
-                                                )
-                                            },
+                                            name = DeckMenuText.deckRow(deck.name, deckTypeLabel(deck.type)),
                                             color = NeonPalette.getColor(
                                                 deck.colorIndex
                                             ),
@@ -1177,7 +1241,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         Spacer(modifier = Modifier.height(12.dp))
 
                                         Text(
-                                            text = "SYSTEM MATRIX DECK LOCKED",
+                                            text = DeckMenuText.lockedTitle(rememberText(), deckTypeLabel(DeckType.MATRIX), labelFor(LabelKey.DECK)),
                                             color = Color.Gray,
                                             fontSize = 10.sp,
                                             fontFamily = FontFamily.Monospace,
@@ -1187,8 +1251,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         Spacer(modifier = Modifier.height(4.dp))
 
                                         Text(
-                                            text = "THE PERMANENT MATRIX DECK " +
-                                                    "CANNOT BE EDITED OR DELETED.",
+                                            text = DeckMenuText.lockedBody(rememberText(), deckTypeLabel(DeckType.MATRIX), labelFor(LabelKey.DECK)),
                                             color = Color.Gray,
                                             fontSize = 9.sp,
                                             fontFamily = FontFamily.Monospace
@@ -1238,7 +1301,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     Spacer(modifier = Modifier.height(12.dp))
 
                                     DeckMenuAction(
-                                        text = "EXIT MANAGE",
+                                        text = stringResource(R.string.deckmenu_exit_manage),
                                         color = Color.Gray,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
@@ -1267,22 +1330,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
-                                                CommandRepository.setActiveProfile(
-                                                    context,
-                                                    profile
-                                                )
-
-                                                currentProfile = profile
-                                                isProfileMenuOpen = false
-
-                                                WatchSync.sendProfileConfig(
-                                                    context,
-                                                    profile
-                                                )
-
-                                                helpManager.onEvent(
-                                                    HelpEvent.ProfileWasSelected(AckTags.PROFILE_SELECTOR)
-                                                )
+                                                requestProfileChange(profile)
                                             }
                                             .padding(vertical = 8.dp)
                                     ) {
@@ -1338,7 +1386,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     horizontalArrangement = Arrangement.End
                                 ) {
                                     Text(
-                                        text = "[CLOSE]",
+                                        text = stringResource(R.string.manual_close),
                                         color = Color.Gray,
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1444,7 +1492,15 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 context = context,
                                 primaryColor = primaryColor,
                                 isFullscreen = composerFullscreen,
-                                onToggleFullscreen = { composerFullscreen = !composerFullscreen }
+                                onToggleFullscreen = { composerFullscreen = !composerFullscreen },
+                                onShowManualOverride = {
+                                    // Classic Manual Override needs MainActivity's own header for its quick-insert takeover, so leave full screen first.
+                                    composerFullscreen = false
+                                    showLegacyManualOverride = true
+                                    helpManager.onEvent(
+                                        HelpEvent.WatchInput("MANUAL_OVERRIDE_OPENED")
+                                    )
+                                }
                             )
                             "AUDIO" -> AudioArchitectView(context, primaryColor, systemVoices)
                             "TARGETS" -> key(computerRevision) { TargetView(context, primaryColor) }
@@ -1467,7 +1523,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                         ) {
                             NeonIconButton(
                                 icon = BottomNavIcon.SPEAK,
-                                description = "Matrix",
+                                description = labelFor(LabelKey.NAV_MATRIX),
                                 modifier = Modifier.weight(1f),
                                 isActive = viewMode == "MATRIX",
                                 mainColor = primaryColor
@@ -1481,7 +1537,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             NeonIconButton(
                                 icon = BottomNavIcon.TERMINAL,
-                                description = "Logs",
+                                description = labelFor(LabelKey.NAV_LOGS),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag(AckTags.TERMINAL_VIEW)
@@ -1494,7 +1550,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             NeonIconButton(
                                 icon = BottomNavIcon.CROSSHAIR,
-                                description = "Targets",
+                                description = labelFor(LabelKey.NAV_TARGETS),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag(AckTags.TARGETS_VIEW)
@@ -1507,7 +1563,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             NeonIconButton(
                                 icon = BottomNavIcon.MAP,
-                                description = "Zones",
+                                description = labelFor(LabelKey.NAV_ZONES),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag(AckTags.GEO_VIEW)
@@ -1520,7 +1576,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             NeonIconButton(
                                 icon = BottomNavIcon.AUDIO,
-                                description = "Audio Architect",
+                                description = labelFor(LabelKey.NAV_AUDIO),
                                 modifier = Modifier.weight(1f),
                                 isActive = viewMode == "AUDIO",
                                 mainColor = primaryColor
@@ -1530,7 +1586,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                             NeonIconButton(
                                 icon = BottomNavIcon.KEYBOARD,
-                                description = "Type",
+                                description = labelFor(LabelKey.NAV_TYPE),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag(AckTags.MANUAL_INPUT_BTN)
@@ -1697,6 +1753,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
              */
                     if (showDeleteDeckConfirm) {
                         val deck = decks.find { it.id == managedDeckId }
+                        val deckMenuWords = rememberText()
+                        val deckWord = labelFor(LabelKey.DECK)
 
                         if (deck != null) {
                             AlertDialog(
@@ -1706,7 +1764,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 containerColor = Graphite,
                                 title = {
                                     Text(
-                                        text = "CONFIRM DECK DELETION",
+                                        text = DeckMenuText.deleteTitle(deckMenuWords, deckWord),
                                         color = Color.Red,
                                         fontSize = 14.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1715,7 +1773,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 },
                                 text = {
                                     Text(
-                                        text = "MARK ${deck.name} FOR DELETION?",
+                                        text = DeckMenuText.deleteQuestion(deckMenuWords, deck.name),
                                         color = Color.White,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace
@@ -1723,7 +1781,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 },
                                 confirmButton = {
                                     Text(
-                                        text = "[CONTINUE]",
+                                        text = stringResource(R.string.deckmenu_continue),
                                         color = Color.Red,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1738,7 +1796,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 },
                                 dismissButton = {
                                     Text(
-                                        text = "[CANCEL]",
+                                        text = stringResource(R.string.deckmenu_cancel),
                                         color = Color.Gray,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1763,6 +1821,24 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 onDismiss = { showComputerSummary = false }
                             )
                         }
+                    }
+
+                    pendingProfileChange?.let { pending ->
+                        ProfileChangeDialog(
+                            targetProfile = pending.profile,
+                            changes = pending.changes,
+                            dontShowAgain = !profileWarningOn,
+                            onDontShowAgainChanged = { checked ->
+                                AssistPrefs.setProfileChangeWarning(context, !checked)
+                                profileWarningOn = !checked
+                            },
+                            primaryColor = primaryColor,
+                            onStay = { pendingProfileChange = null },
+                            onChange = {
+                                pendingProfileChange = null
+                                applyProfileChange(pending.profile)
+                            }
+                        )
                     }
 
                     if (showCreateDeckDialog) {
@@ -1819,6 +1895,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
 
                     if (showDeleteDeckFinalConfirm) {
                         val deck = decks.find { it.id == managedDeckId }
+                        val deckMenuWords = rememberText()
+                        val deckWord = labelFor(LabelKey.DECK)
 
                         if (deck != null) {
                             AlertDialog(
@@ -1828,7 +1906,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 containerColor = Graphite,
                                 title = {
                                     Text(
-                                        text = "FINAL CONFIRMATION",
+                                        text = stringResource(R.string.deckmenu_final_title),
                                         color = Color.Red,
                                         fontSize = 14.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1836,9 +1914,21 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     )
                                 },
                                 text = {
+                                    val confirmation = DeckMenuText.finalConfirmation(
+                                        deckMenuWords,
+                                        deck.name,
+                                        deckWord,
+                                        deck.type == DeckType.GIF,
+                                        DeckMenuText.BackupWords(
+                                            exportJson = labelFor(LabelKey.EXPORT_JSON),
+                                            gifExportEntry = stringResource(R.string.gif_export_deck, deckWord),
+                                            gifBackupMenu = stringResource(R.string.gif_backup),
+                                            gifLabel = labelFor(LabelKey.DECK_TYPE_GIF)
+                                        )
+                                    )
                                     Column {
                                         Text(
-                                            text = "DELETE ${deck.name} PERMANENTLY?",
+                                            text = confirmation.question,
                                             color = Color.White,
                                             fontSize = 12.sp,
                                             fontFamily = FontFamily.Monospace
@@ -1847,29 +1937,36 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                         Spacer(modifier = Modifier.height(8.dp))
 
                                         Text(
-                                            text = "THIS REMOVES THE DECK AND ITS " +
-                                                    "LOCAL CONFIGURATION.",
+                                            text = confirmation.removes,
                                             color = Color.Gray,
                                             fontSize = 10.sp,
                                             fontFamily = FontFamily.Monospace
                                         )
 
-                                        if (deck.type == DeckType.GIF) {
+                                        if (confirmation.gifWarning != null) {
                                             Spacer(modifier = Modifier.height(8.dp))
 
                                             Text(
-                                                text = "GIF FILES BELONGING TO THIS " +
-                                                        "DECK WILL ALSO BE REMOVED.",
+                                                text = confirmation.gifWarning,
                                                 color = Color.Red.copy(alpha = 0.8f),
                                                 fontSize = 10.sp,
                                                 fontFamily = FontFamily.Monospace
                                             )
                                         }
+
+                                        Spacer(modifier = Modifier.height(10.dp))
+
+                                        Text(
+                                            text = confirmation.backupAdvice,
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontFamily = FontFamily.Monospace
+                                        )
                                     }
                                 },
                                 confirmButton = {
                                     Text(
-                                        text = "[DELETE PERMANENTLY]",
+                                        text = stringResource(R.string.deckmenu_delete_permanently),
                                         color = Color.Red,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -1908,7 +2005,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 },
                                 dismissButton = {
                                     Text(
-                                        text = "[CANCEL]",
+                                        text = stringResource(R.string.deckmenu_cancel),
                                         color = Color.Gray,
                                         fontSize = 12.sp,
                                         fontFamily = FontFamily.Monospace,
@@ -2009,7 +2106,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                letterSpacing = looseSpacing(1.sp)
             )
         }
     }
@@ -2057,7 +2154,7 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
             )
 
             Text(
-                text = if (locked) "[LOCKED]" else "[EDIT]",
+                text = DeckMenuText.rowTag(rememberText(), locked),
                 color = if (locked) Color.Gray else labelColor,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace
@@ -2511,7 +2608,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
                 .padding(10.dp)
         ) {
             Text(
-                text = "EDIT: ${deck.type.name.replace('_', ' ')}",
+                text = DeckMenuText.editTitle(rememberText(), deckTypeLabel(deck.type)),
                 color = primaryColor,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
@@ -2527,7 +2624,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
                 },
                 label = {
                     Text(
-                        text = "DECK NAME",
+                        text = labelFor(LabelKey.DECK_NAME),
                         fontFamily = FontFamily.Monospace
                     )
                 },
@@ -2539,7 +2636,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "UI COLOR",
+                text = stringResource(R.string.deckmenu_ui_color),
                 color = Color.Gray,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace
@@ -2587,7 +2684,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 DeckMenuAction(
-                    text = "SAVE",
+                    text = stringResource(R.string.common_save),
                     color = selectedColor,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -2598,7 +2695,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAudioArchitect(
                 }
 
                 DeckMenuAction(
-                    text = "DELETE",
+                    text = stringResource(R.string.common_delete),
                     color = Color.Red,
                     modifier = Modifier.weight(1f)
                 ) {

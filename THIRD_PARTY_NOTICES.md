@@ -96,3 +96,6 @@ The recordings you train on are your own voice: see `docs/DATA_SOVEREIGNTY.md` f
 * **Authorship note:** Freeform Studio and most recent changes were written with an AI coding assistant. No third-party code was
   copied in on purpose, and the only known derivation is the sherpa-onnx script credited in its own header, but similarity to
   existing code cannot be ruled out by anyone, and a maintainer should know that.
+* **Translations:** the Spanish, Portuguese, Hindi, Arabic and Afrikaans texts under `app/src/main/res/values-*` were written by an AI assistant
+  with no native speaker involved and not copied from any other app, dictionary or translation memory on purpose. They are drafts, each file says
+  so at the top, and they have not been reviewed by a native speaker or a speech-language pathologist (`docs/TRANSLATIONS.md`).

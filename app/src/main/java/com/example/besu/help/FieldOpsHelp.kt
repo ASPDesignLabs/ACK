@@ -4,93 +4,153 @@ package com.example.besu.help
 import com.example.besu.*
 import com.example.besu.training.*
 
+/** This family's words are string resources (helpmod_<module id>_..., core/HelpWalkthroughText.kt), read where a step is drawn or spoken. */
 object FieldOpsHelp {
 
-    private const val SYNC_INTRO = "Stand by for the physical command cycle: arm the " +
-        "system, lock a pose, apply a modifier, then fire. Make sure the watch app is " +
-        "open and its screen is active."
-
-    private fun poseCycleModule(
-        id: String,
-        poseLabel: String,
-        poseInstruction: String,
-        poseEventType: String
-    ): HelpModule = HelpModule(
-        id = id,
+    // Original module id preserved for continuity (was the only gesture-training
+    // entry before per-pose subcategories existed).
+    val identityModule = HelpModule(
+        id = "field_ops_gesture_training",
         category = HelpCategory.FIELD_OPS,
-        title = "$poseLabel POSE",
-        summary = "ARM, LOCK $poseLabel, MODIFY, AND FIRE USING THE WATCH.",
+        title = "helpmod_field_ops_gesture_training_title",
+        summary = "helpmod_field_ops_gesture_training_summary",
         steps = listOf(
             HelpStep(
                 id = "intro",
-                title = "PHYSICAL SYNC",
-                body = SYNC_INTRO
+                title = "helpmod_field_ops_gesture_training_intro_title",
+                body = "helpmod_field_ops_gesture_training_intro_body"
             ),
             HelpStep(
                 id = "wake_gesture",
-                title = "THE WAKE GESTURE",
-                body = "The watch is locked by default to prevent accidental commands.\n\n" +
-                    "Perform a TRIPLE WRIST TWIST (rotate wrist out/in three times fast) " +
-                    "to arm the system.",
+                title = "helpmod_field_ops_gesture_training_wake_gesture_title",
+                body = "helpmod_field_ops_gesture_training_wake_gesture_body",
                 action = HelpAction.WatchEvent("ARMED")
             ),
             HelpStep(
                 id = "system_armed",
-                title = "SYSTEM ARMED",
-                body = "The system is now ARMED. It's scanning for a dominant pose."
+                title = "helpmod_field_ops_gesture_training_system_armed_title",
+                body = "helpmod_field_ops_gesture_training_system_armed_body"
             ),
             HelpStep(
                 id = "pose_lock",
-                title = "POSE: $poseLabel",
-                body = poseInstruction + "\n\nThe watch starts listening fresh the moment " +
-                    "this step appears. (Test build: it gives this about five seconds -- " +
-                    "the shipped app will use a shorter window.)",
-                action = HelpAction.WatchEvent(poseEventType)
+                title = "helpmod_field_ops_gesture_training_pose_lock_title",
+                body = "helpmod_field_ops_gesture_training_pose_lock_body",
+                action = HelpAction.WatchEvent("POSE_ID")
             ),
             HelpStep(
                 id = "pose_locked",
-                title = "POSE LOCKED",
-                body = "$poseLabel pose detected.\n\nWhile holding the pose, perform ONE " +
-                    "TWIST to apply a modifier. The watch resets its modifier count fresh " +
-                    "as soon as this step appears.",
+                title = "helpmod_field_ops_gesture_training_pose_locked_title",
+                body = "helpmod_field_ops_gesture_training_pose_locked_body",
                 action = HelpAction.WatchEvent("MODIFIED")
             ),
             HelpStep(
                 id = "fire_command",
-                title = "FIRE COMMAND",
-                body = "Hold your arm steady again to FIRE the selected command.",
+                title = "helpmod_field_ops_gesture_training_fire_command_title",
+                body = "helpmod_field_ops_gesture_training_fire_command_body",
                 action = HelpAction.WatchEvent("FIRE")
             ),
             HelpStep(
                 id = "sync_complete",
-                title = "SYNC COMPLETE",
-                body = "You've executed a full physical command cycle: armed, posed, " +
-                    "modified, and fired."
+                title = "helpmod_field_ops_gesture_training_sync_complete_title",
+                body = "helpmod_field_ops_gesture_training_sync_complete_body"
             )
         )
     )
 
-    // Original module id preserved for continuity (was the only gesture-training
-    // entry before per-pose subcategories existed).
-    val identityModule = poseCycleModule(
-        id = "field_ops_gesture_training",
-        poseLabel = "IDENTITY",
-        poseInstruction = "Raise your arm straight up, like checking the time, and hold steady.",
-        poseEventType = "POSE_ID"
-    )
-
-    val defendModule = poseCycleModule(
+    val defendModule = HelpModule(
         id = "field_ops_pose_defend",
-        poseLabel = "DEFEND",
-        poseInstruction = "Hold your arm out flat, palm down, like signaling stop.",
-        poseEventType = "POSE_DEF"
+        category = HelpCategory.FIELD_OPS,
+        title = "helpmod_field_ops_pose_defend_title",
+        summary = "helpmod_field_ops_pose_defend_summary",
+        steps = listOf(
+            HelpStep(
+                id = "intro",
+                title = "helpmod_field_ops_pose_defend_intro_title",
+                body = "helpmod_field_ops_pose_defend_intro_body"
+            ),
+            HelpStep(
+                id = "wake_gesture",
+                title = "helpmod_field_ops_pose_defend_wake_gesture_title",
+                body = "helpmod_field_ops_pose_defend_wake_gesture_body",
+                action = HelpAction.WatchEvent("ARMED")
+            ),
+            HelpStep(
+                id = "system_armed",
+                title = "helpmod_field_ops_pose_defend_system_armed_title",
+                body = "helpmod_field_ops_pose_defend_system_armed_body"
+            ),
+            HelpStep(
+                id = "pose_lock",
+                title = "helpmod_field_ops_pose_defend_pose_lock_title",
+                body = "helpmod_field_ops_pose_defend_pose_lock_body",
+                action = HelpAction.WatchEvent("POSE_DEF")
+            ),
+            HelpStep(
+                id = "pose_locked",
+                title = "helpmod_field_ops_pose_defend_pose_locked_title",
+                body = "helpmod_field_ops_pose_defend_pose_locked_body",
+                action = HelpAction.WatchEvent("MODIFIED")
+            ),
+            HelpStep(
+                id = "fire_command",
+                title = "helpmod_field_ops_pose_defend_fire_command_title",
+                body = "helpmod_field_ops_pose_defend_fire_command_body",
+                action = HelpAction.WatchEvent("FIRE")
+            ),
+            HelpStep(
+                id = "sync_complete",
+                title = "helpmod_field_ops_pose_defend_sync_complete_title",
+                body = "helpmod_field_ops_pose_defend_sync_complete_body"
+            )
+        )
     )
 
-    val connectModule = poseCycleModule(
+    val connectModule = HelpModule(
         id = "field_ops_pose_connect",
-        poseLabel = "CONNECT",
-        poseInstruction = "Hold your arm out to the side, like offering a handshake.",
-        poseEventType = "POSE_CON"
+        category = HelpCategory.FIELD_OPS,
+        title = "helpmod_field_ops_pose_connect_title",
+        summary = "helpmod_field_ops_pose_connect_summary",
+        steps = listOf(
+            HelpStep(
+                id = "intro",
+                title = "helpmod_field_ops_pose_connect_intro_title",
+                body = "helpmod_field_ops_pose_connect_intro_body"
+            ),
+            HelpStep(
+                id = "wake_gesture",
+                title = "helpmod_field_ops_pose_connect_wake_gesture_title",
+                body = "helpmod_field_ops_pose_connect_wake_gesture_body",
+                action = HelpAction.WatchEvent("ARMED")
+            ),
+            HelpStep(
+                id = "system_armed",
+                title = "helpmod_field_ops_pose_connect_system_armed_title",
+                body = "helpmod_field_ops_pose_connect_system_armed_body"
+            ),
+            HelpStep(
+                id = "pose_lock",
+                title = "helpmod_field_ops_pose_connect_pose_lock_title",
+                body = "helpmod_field_ops_pose_connect_pose_lock_body",
+                action = HelpAction.WatchEvent("POSE_CON")
+            ),
+            HelpStep(
+                id = "pose_locked",
+                title = "helpmod_field_ops_pose_connect_pose_locked_title",
+                body = "helpmod_field_ops_pose_connect_pose_locked_body",
+                action = HelpAction.WatchEvent("MODIFIED")
+            ),
+            HelpStep(
+                id = "fire_command",
+                title = "helpmod_field_ops_pose_connect_fire_command_title",
+                body = "helpmod_field_ops_pose_connect_fire_command_body",
+                action = HelpAction.WatchEvent("FIRE")
+            ),
+            HelpStep(
+                id = "sync_complete",
+                title = "helpmod_field_ops_pose_connect_sync_complete_title",
+                body = "helpmod_field_ops_pose_connect_sync_complete_body"
+            )
+        )
     )
 
     // Not a guided walkthrough -- MainActivity intercepts this module's id before
@@ -99,14 +159,13 @@ object FieldOpsHelp {
     val trainingGroundModule = HelpModule(
         id = "field_ops_training_ground",
         category = HelpCategory.FIELD_OPS,
-        title = "TRAINING GROUND",
-        summary = "FREE-FORM PRACTICE. LIVE TELEMETRY, NORMAL PACING, NO REAL OUTPUT.",
+        title = "helpmod_field_ops_training_ground_title",
+        summary = "helpmod_field_ops_training_ground_summary",
         steps = listOf(
             HelpStep(
                 id = "live",
-                title = "TRAINING GROUND",
-                body = "Live telemetry only. Gesture freely and watch the readout -- " +
-                    "no steps to complete, no commands fire."
+                title = "helpmod_field_ops_training_ground_live_title",
+                body = "helpmod_field_ops_training_ground_live_body"
             )
         )
     )
@@ -119,15 +178,13 @@ object FieldOpsHelp {
     val deckTrainerModule = HelpModule(
         id = "field_ops_deck_trainer",
         category = HelpCategory.FIELD_OPS,
-        title = "DECK TRAINER",
-        summary = "SCORED PRACTICE AGAINST YOUR OWN MATRIX OR QUICK ACTIONS DECK.",
+        title = "helpmod_field_ops_deck_trainer_title",
+        summary = "helpmod_field_ops_deck_trainer_summary",
         steps = listOf(
             HelpStep(
                 id = "live",
-                title = "DECK TRAINER",
-                body = "Pick a deck (and, for Matrix, a profile) to train against. " +
-                    "Each round shows the real statement that pose/modifier combo " +
-                    "resolves to in your own configuration -- root variables included."
+                title = "helpmod_field_ops_deck_trainer_live_title",
+                body = "helpmod_field_ops_deck_trainer_live_body"
             )
         )
     )
@@ -150,13 +207,13 @@ object FieldOpsHelp {
     val poseTrainingEntryModule = HelpModule(
         id = "field_ops_pose_training",
         category = HelpCategory.FIELD_OPS,
-        title = "POSE TRAINING",
-        summary = "PICK A POSE, THEN WALK THROUGH ARM, LOCK, MODIFY, AND FIRE.",
+        title = "helpmod_field_ops_pose_training_title",
+        summary = "helpmod_field_ops_pose_training_summary",
         steps = listOf(
             HelpStep(
                 id = "select",
-                title = "POSE TRAINING",
-                body = "Choose a pose to train."
+                title = "helpmod_field_ops_pose_training_select_title",
+                body = "helpmod_field_ops_pose_training_select_body"
             )
         )
     )
