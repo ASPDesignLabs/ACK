@@ -1109,6 +1109,8 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="info_nr_language_2">- ये मसौदे हैं जिन्हें अभी मूल भाषा बोलने वालों ने जाँचा नहीं है। ACK के दूसरे हिस्सों द्वारा इस स्क्रीन पर लिखी गई पंक्तियाँ और कई डायलॉग अंग्रेज़ी में ही रहते हैं। देखें DOCS/TRANSLATIONS.MD</string>
     <string name="info_nr_about_head">-- ACK के बारे में --</string>
     <string name="info_nr_about_1">- नया: सेटिंग्स के अंत में ACK के बारे में बताता है कि ACK क्या नहीं है: यह पेशेवर AAC मूल्यांकन या वाक्-भाषा चिकित्सा का विकल्प नहीं है। यह भी कहता है कि संवाद का कोई दूसरा तरीका हमेशा तैयार रखें। यही शब्द टर्मिनल या सेटिंग्स स्क्रीन पर एक बार बैनर में दिखते हैं। समझ गया बैनर छिपाता है और कुछ और नहीं करता</string>
+    <string name="info_nr_log_head">-- लॉग सहेजना --</string>
+    <string name="info_nr_log_1">- नया: सेटिंग्स में संदेश लॉग को फ़ाइल में सहेजें बटन है, जो लॉग में बचे संदेशों को आपकी चुनी हुई फ़ाइल में सहेजता है: जो कहा गया, तारीख़, समय और स्रोत के साथ, और कुछ नहीं। यह पहले चेतावनी देता है और जब तक आप जगह नहीं चुनते कुछ नहीं सहेजता। फ़ाइल एन्क्रिप्टेड नहीं है। कोई नेटवर्क नहीं, कोई साझा करना नहीं</string>
     <string name="info_nr_fixes_head">-- सुधार --</string>
     <string name="info_nr_fixes_1">- ठीक किया: किसी वाक्य के वेरिएबल या प्रॉम्प्ट साफ़ करने से पहले की पुष्टि केवल उसका दूसरा वाक्य दिखाती थी। अब वह पूरा प्रश्न दिखाती है, पहले जैसे शब्दों में</string>
     <string name="info_b8_title">=== ACK v1.0-BETA.8 पैच नोट्स ===</string>
@@ -1862,4 +1864,22 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="about_limits_keep_another_way">संवाद करने का कोई दूसरा तरीका हमेशा तैयार रखें।</string>
     <string name="about_banner_where">आप इसे दोबारा %1$s में, %2$s के अंतर्गत पढ़ सकते हैं।</string>
     <string name="about_got_it">समझ गया</string>
+    <string name="log_export_button">संदेश लॉग को फ़ाइल में सहेजें</string>
+    <string name="log_export_button_desc">%1$s के संदेशों को आपकी चुनी हुई फ़ाइल में सहेजता है। कहाँ सहेजना है यह चुनने से पहले आप देख सकते हैं कि उसमें क्या होगा।</string>
+    <string name="log_export_contains_heading">फ़ाइल में यह होगा:</string>
+    <string name="log_export_cat_messages">%1$s में अभी जो भी संदेश रखे हैं, पूरे, तारीख़, समय और कहाँ से भेजे गए, इसके साथ</string>
+    <string name="log_export_cat_names">उन संदेशों में जो कुछ भी था, जैसे नाम, पते या नंबर, अगर आपने उनका उपयोग किया हो</string>
+    <string name="log_export_not_included">फ़ाइल में नहीं होगा: सिस्टम की पंक्तियाँ, कमांड, लोग और जगहें, आवाज़ की रिकॉर्डिंग और सेटिंग्स।</string>
+    <string name="log_export_copy_too">लॉग का स्क्रीनशॉट या फ़ोटो भी एक प्रति है।</string>
+    <string name="log_export_count_line">अभी लॉग में संदेश: %1$s</string>
+    <string name="log_export_none">अभी लॉग में सहेजने के लिए कोई संदेश नहीं है।</string>
+    <string name="log_export_done">संदेश लॉग सहेजा गया</string>
+    <string name="log_export_failed">संदेश लॉग सहेजा नहीं जा सका: %1$s। कुछ भी सहेजा नहीं गया।</string>
+    <string name="log_export_fail_prepare">लॉग तैयार नहीं हो सका</string>
+    <string name="log_export_file_title">ACK संदेश लॉग</string>
+    <string name="log_export_saved_at">सहेजा गया: %1$s</string>
+    <string name="log_export_summary">संदेश: %1$s। पहला: %2$s। आख़िरी: %3$s।</string>
+    <string name="log_export_file_warning">यह फ़ाइल एन्क्रिप्टेड नहीं है और इसमें पासवर्ड नहीं है। इसमें वही है जो कहा गया।</string>
+    <string name="log_export_escapes">किसी संदेश में \\n का मतलब नई पंक्ति, \\t का मतलब टैब और \\\\ का मतलब बैकस्लैश है; कोई और कंट्रोल अक्षर \\uXXXX लिखा जाता है। चारों कॉलम टैब से अलग किए गए हैं।</string>
+    <string name="log_export_columns">तारीख़ और समय\tप्रकार\tस्रोत\tसंदेश</string>
 </resources>

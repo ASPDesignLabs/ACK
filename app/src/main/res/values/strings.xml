@@ -1130,6 +1130,8 @@
     <string name="info_nr_language_2">- THESE ARE DRAFTS NOT YET CHECKED BY NATIVE SPEAKERS. LINES OTHER\nPARTS OF ACK WRITE INTO THIS SCREEN AND MANY DIALOGS STAY IN ENGLISH.\nSEE DOCS/TRANSLATIONS.MD</string>
     <string name="info_nr_about_head">-- ABOUT ACK --</string>
     <string name="info_nr_about_1">- NEW: ABOUT ACK, AT THE END OF SETTINGS, SAYS WHAT ACK IS NOT: NOT A\nSUBSTITUTE FOR PROFESSIONAL AAC EVALUATION OR SPEECH-LANGUAGE\nTHERAPY. IT ALSO ASKS YOU TO KEEP ANOTHER WAY TO COMMUNICATE. THE\nSAME WORDS SHOW ONCE IN A BANNER ON THE TERMINAL OR SETTINGS\nSCREEN. GOT IT HIDES THE BANNER AND DOES NOTHING ELSE</string>
+    <string name="info_nr_log_head">-- SAVING THE LOG --</string>
+    <string name="info_nr_log_1">- NEW: SAVE MESSAGE LOG TO A FILE, IN SETTINGS, SAVES THE MESSAGES THE\nLOG STILL KEEPS TO A FILE YOU CHOOSE: WHAT WAS SAID, WITH DATE, TIME\nAND SOURCE, NOTHING ELSE. IT WARNS FIRST AND SAVES NOTHING UNTIL YOU\nPICK WHERE. THE FILE IS NOT ENCRYPTED. NO NETWORK, NO SHARING</string>
     <string name="info_nr_fixes_head">-- FIXES --</string>
     <string name="info_nr_fixes_1">- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE\'S VARIABLES OR\nPROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE\nQUESTION, WORDED AS BEFORE</string>
     <string name="info_b8_title">=== ACK v1.0-BETA.8 PATCH NOTES ===</string>
@@ -1883,4 +1885,22 @@
     <string name="about_limits_keep_another_way">KEEP ANOTHER WAY TO COMMUNICATE AVAILABLE AT ALL TIMES.</string>
     <string name="about_banner_where">YOU CAN READ THIS AGAIN IN %1$s, UNDER %2$s.</string>
     <string name="about_got_it">GOT IT</string>
+    <string name="log_export_button">SAVE MESSAGE LOG TO A FILE</string>
+    <string name="log_export_button_desc">SAVES THE MESSAGES IN %1$s TO A FILE YOU CHOOSE. YOU SEE WHAT IT HOLDS BEFORE YOU PICK WHERE TO SAVE IT.</string>
+    <string name="log_export_contains_heading">THE FILE WILL CONTAIN:</string>
+    <string name="log_export_cat_messages">EVERY MESSAGE STILL KEPT IN %1$s, IN FULL, WITH ITS DATE, TIME AND WHERE IT WAS SENT FROM</string>
+    <string name="log_export_cat_names">WHATEVER WAS IN THOSE MESSAGES, SUCH AS NAMES, ADDRESSES OR NUMBERS, IF YOU USED THEM</string>
+    <string name="log_export_not_included">NOT IN THE FILE: SYSTEM LINES, COMMANDS, PEOPLE AND PLACES, VOICE AUDIO AND SETTINGS.</string>
+    <string name="log_export_copy_too">A SCREENSHOT OR PHOTO OF THE LOG IS A COPY TOO.</string>
+    <string name="log_export_count_line">MESSAGES IN THE LOG NOW: %1$s</string>
+    <string name="log_export_none">THE LOG HAS NO MESSAGES TO SAVE RIGHT NOW.</string>
+    <string name="log_export_done">MESSAGE LOG SAVED</string>
+    <string name="log_export_failed">SAVING THE MESSAGE LOG FAILED: %1$s. NOTHING WAS SAVED.</string>
+    <string name="log_export_fail_prepare">THE LOG COULD NOT BE PREPARED</string>
+    <string name="log_export_file_title">ACK MESSAGE LOG</string>
+    <string name="log_export_saved_at">SAVED: %1$s</string>
+    <string name="log_export_summary">MESSAGES: %1$s. FIRST: %2$s. LAST: %3$s.</string>
+    <string name="log_export_file_warning">THIS FILE IS NOT ENCRYPTED AND HAS NO PASSWORD. IT HOLDS WHAT WAS SAID.</string>
+    <string name="log_export_escapes">IN A MESSAGE, \\n MEANS A LINE BREAK, \\t A TAB AND \\\\ A BACKSLASH; ANY OTHER CONTROL CHARACTER IS WRITTEN \\uXXXX. THE FOUR COLUMNS ARE SEPARATED BY TABS.</string>
+    <string name="log_export_columns">DATE AND TIME\tTYPE\tFROM\tMESSAGE</string>
 </resources>

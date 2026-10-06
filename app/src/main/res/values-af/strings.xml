@@ -1109,6 +1109,8 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="info_nr_language_2">- HIERDIE IS KONSEPTE WAT NOG NIE DEUR MOEDERTAALSPREKERS NAGEKYK IS NIE. LYNE WAT ANDER DELE VAN ACK IN HIERDIE SKERM SKRYF EN BAIE DIALOË BLY IN ENGELS. SIEN DOCS/TRANSLATIONS.MD</string>
     <string name="info_nr_about_head">-- OOR ACK --</string>
     <string name="info_nr_about_1">- NUUT: OOR ACK, AAN DIE EINDE VAN INSTELLINGS, SÊ WAT ACK NIE IS NIE: DIT VERVANG NIE PROFESSIONELE AAC-EVALUERING OF SPRAAK-TAALTERAPIE NIE. DIT VRA JOU OOK OM ALTYD \'N ANDER MANIER OM TE KOMMUNIKEER BESKIKBAAR TE HOU. DIESELFDE WOORDE VERSKYN EENKEER IN \'N BANNER OP DIE TERMINAAL- OF INSTELLINGSSKERM. BEGRYP VERBERG DIE BANNER EN DOEN NIKS ANDERS NIE</string>
+    <string name="info_nr_log_head">-- STOOR DIE LOG --</string>
+    <string name="info_nr_log_1">- NUUT: STOOR DIE BOODSKAPLOG IN \'N LÊER, IN INSTELLINGS, STOOR DIE BOODSKAPPE WAT DIE LOG NOG HOU IN \'N LÊER WAT JY KIES: WAT GESÊ IS, MET DATUM, TYD EN BRON, EN NIKS ANDERS NIE. DIT WAARSKU EERS EN STOOR NIKS TOTDAT JY KIES WAAR NIE. DIE LÊER IS NIE ENKRIPTEER NIE. GEEN NETWERK, GEEN DEEL NIE</string>
     <string name="info_nr_fixes_head">-- REGSTELLINGS --</string>
     <string name="info_nr_fixes_1">- REGGEMAAK: DIE BEVESTIGING VOOR \'N FRASE SE VERANDERLIKES OF PROMPT GESKOON WORD, HET SLEGS DIE TWEEDE SIN GEWYS. DIT WYS NOU DIE HELE VRAAG, SOOS VOORHEEN GEFORMULEER</string>
     <string name="info_b8_title">=== ACK v1.0-BETA.8 VRYSTELLINGSNOTAS ===</string>
@@ -1862,4 +1864,22 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="about_limits_keep_another_way">HOU ALTYD \'N ANDER MANIER OM TE KOMMUNIKEER BESKIKBAAR.</string>
     <string name="about_banner_where">JY KAN DIT WEER LEES IN %1$s, ONDER %2$s.</string>
     <string name="about_got_it">BEGRYP</string>
+    <string name="log_export_button">STOOR DIE BOODSKAPLOG IN \'N LÊER</string>
+    <string name="log_export_button_desc">STOOR DIE BOODSKAPPE IN %1$s IN \'N LÊER WAT JY KIES. JY SIEN WAT DIT BEVAT VOORDAT JY KIES WAAR OM DIT TE STOOR.</string>
+    <string name="log_export_contains_heading">DIE LÊER SAL BEVAT:</string>
+    <string name="log_export_cat_messages">ELKE BOODSKAP WAT NOG IN %1$s IS, VOLLEDIG, MET DIE DATUM, TYD EN WAARVANDAAN DIT GESTUUR IS</string>
+    <string name="log_export_cat_names">WAT OOK AL IN DIE BOODSKAPPE WAS, SOOS NAME, ADRESSE OF NOMMERS, AS JY DIT GEBRUIK HET</string>
+    <string name="log_export_not_included">NIE IN DIE LÊER NIE: STELSELLYNE, OPDRAGTE, MENSE EN PLEKKE, STEMKLANK EN INSTELLINGS.</string>
+    <string name="log_export_copy_too">\'N SKERMOPNAME OF FOTO VAN DIE LOG IS OOK \'N KOPIE.</string>
+    <string name="log_export_count_line">BOODSKAPPE IN DIE LOG NOU: %1$s</string>
+    <string name="log_export_none">DIE LOG HET TANS GEEN BOODSKAPPE OM TE STOOR NIE.</string>
+    <string name="log_export_done">BOODSKAPLOG GESTOOR</string>
+    <string name="log_export_failed">DIE BOODSKAPLOG KON NIE GESTOOR WORD NIE: %1$s. NIKS IS GESTOOR NIE.</string>
+    <string name="log_export_fail_prepare">DIE LOG KON NIE VOORBEREI WORD NIE</string>
+    <string name="log_export_file_title">ACK-BOODSKAPLOG</string>
+    <string name="log_export_saved_at">GESTOOR: %1$s</string>
+    <string name="log_export_summary">BOODSKAPPE: %1$s. EERSTE: %2$s. LAASTE: %3$s.</string>
+    <string name="log_export_file_warning">HIERDIE LÊER IS NIE ENKRIPTEER NIE EN HET GEEN WAGWOORD NIE. DIT BEVAT WAT GESÊ IS.</string>
+    <string name="log_export_escapes">IN \'N BOODSKAP BEDUI \\n \'N LYNBREUK, \\t \'N TAB EN \\\\ \'N TERUGSLAG; ENIGE ANDER BEHEERKARAKTER WORD \\uXXXX GESKRYF. DIE VIER KOLOMME WORD DEUR TABS GESKEI.</string>
+    <string name="log_export_columns">DATUM EN TYD\tTIPE\tVANAF\tBOODSKAP</string>
 </resources>

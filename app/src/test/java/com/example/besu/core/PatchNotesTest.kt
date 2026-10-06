@@ -113,6 +113,11 @@ class PatchNotesTest {
         "  THERAPY. IT ALSO ASKS YOU TO KEEP ANOTHER WAY TO COMMUNICATE. THE",
         "  SAME WORDS SHOW ONCE IN A BANNER ON THE TERMINAL OR SETTINGS",
         "  SCREEN. GOT IT HIDES THE BANNER AND DOES NOTHING ELSE",
+        "-- SAVING THE LOG --",
+        "- NEW: SAVE MESSAGE LOG TO A FILE, IN SETTINGS, SAVES THE MESSAGES THE",
+        "  LOG STILL KEEPS TO A FILE YOU CHOOSE: WHAT WAS SAID, WITH DATE, TIME",
+        "  AND SOURCE, NOTHING ELSE. IT WARNS FIRST AND SAVES NOTHING UNTIL YOU",
+        "  PICK WHERE. THE FILE IS NOT ENCRYPTED. NO NETWORK, NO SHARING",
         "-- FIXES --",
         "- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE'S VARIABLES OR",
         "  PROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE",
@@ -361,6 +366,16 @@ class PatchNotesTest {
             assertTrue("$tag: the note names GOT IT as the button reads", note.contains(map.getValue("about_got_it")))
             assertTrue("$tag: the note names SETTINGS as the plain label reads", note.contains(map.getValue("label_settings_entry_plain")))
             assertTrue("$tag: the note names the Terminal", note.contains(map.getValue("label_terminal")))
+        }
+    }
+
+    @Test
+    fun theLogNoteNamesTheSaveButtonAndSettingsAsTheyReadInEveryLanguage() {
+        for ((tag, map) in mapOf("en" to english) + translations) {
+            val note = map.getValue("info_nr_log_1")
+            assertTrue("$tag: the note names the button as it reads", note.contains(map.getValue("log_export_button")))
+            assertTrue("$tag: the note names SETTINGS as the plain label reads", note.contains(map.getValue("label_settings_entry_plain")))
+            assertTrue("$tag: the heading", map.getValue("info_nr_log_head").let { it.startsWith("-- ") && it.endsWith(" --") })
         }
     }
 

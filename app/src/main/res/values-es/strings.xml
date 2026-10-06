@@ -1122,6 +1122,8 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="info_nr_language_2">- ESTOS SON BORRADORES QUE AÚN NO HAN REVISADO HABLANTES NATIVOS. LAS LÍNEAS QUE OTRAS PARTES DE ACK ESCRIBEN EN ESTA PANTALLA Y MUCHOS DIÁLOGOS SIGUEN EN INGLÉS. VER DOCS/TRANSLATIONS.MD</string>
     <string name="info_nr_about_head">-- ACERCA DE ACK --</string>
     <string name="info_nr_about_1">- NUEVO: ACERCA DE ACK, AL FINAL DE AJUSTES, DICE LO QUE ACK NO ES: NO SUSTITUYE UNA EVALUACIÓN PROFESIONAL DE AAC NI LA TERAPIA DEL HABLA Y EL LENGUAJE. TAMBIÉN PIDE QUE TENGAS SIEMPRE OTRA FORMA DE COMUNICARTE. LAS MISMAS PALABRAS SALEN UNA VEZ EN UN AVISO EN LA PANTALLA TERMINAL O EN AJUSTES. ENTENDIDO OCULTA EL AVISO Y NO HACE NADA MÁS</string>
+    <string name="info_nr_log_head">-- GUARDAR EL REGISTRO --</string>
+    <string name="info_nr_log_1">- NUEVO: GUARDAR EL REGISTRO DE MENSAJES EN UN ARCHIVO, EN AJUSTES, GUARDA LOS MENSAJES QUE EL REGISTRO AÚN CONSERVA EN UN ARCHIVO QUE ELIGES: LO QUE SE DIJO, CON FECHA, HORA Y ORIGEN, Y NADA MÁS. AVISA PRIMERO Y NO GUARDA NADA HASTA QUE ELIGES DÓNDE. EL ARCHIVO NO ESTÁ CIFRADO. SIN RED, SIN COMPARTIR</string>
     <string name="info_nr_fixes_head">-- CORRECCIONES --</string>
     <string name="info_nr_fixes_1">- CORREGIDO: LA CONFIRMACIÓN ANTES DE BORRAR LAS VARIABLES O EL MENSAJE DE UNA FRASE MOSTRABA SOLO SU SEGUNDA ORACIÓN. AHORA MUESTRA LA PREGUNTA ENTERA, CON LA REDACCIÓN DE ANTES</string>
     <string name="info_b8_title">=== NOTAS DE LA VERSIÓN ACK v1.0-BETA.8 ===</string>
@@ -1881,4 +1883,22 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="about_limits_keep_another_way">TEN SIEMPRE DISPONIBLE OTRA FORMA DE COMUNICARTE.</string>
     <string name="about_banner_where">PUEDES VOLVER A LEER ESTO EN %1$s, EN %2$s.</string>
     <string name="about_got_it">ENTENDIDO</string>
+    <string name="log_export_button">GUARDAR EL REGISTRO DE MENSAJES EN UN ARCHIVO</string>
+    <string name="log_export_button_desc">GUARDA LOS MENSAJES DE %1$s EN UN ARCHIVO QUE ELIGES. VES LO QUE CONTIENE ANTES DE ELEGIR DÓNDE GUARDARLO.</string>
+    <string name="log_export_contains_heading">EL ARCHIVO CONTENDRÁ:</string>
+    <string name="log_export_cat_messages">TODOS LOS MENSAJES QUE SIGUEN EN %1$s, COMPLETOS, CON SU FECHA, HORA Y DESDE DÓNDE SE ENVIARON</string>
+    <string name="log_export_cat_names">LO QUE HUBIERA EN ESOS MENSAJES, COMO NOMBRES, DIRECCIONES O NÚMEROS, SI LOS USASTE</string>
+    <string name="log_export_not_included">NO INCLUYE: LÍNEAS DEL SISTEMA, COMANDOS, PERSONAS Y LUGARES, AUDIO DE VOZ NI AJUSTES.</string>
+    <string name="log_export_copy_too">UNA CAPTURA O FOTO DEL REGISTRO TAMBIÉN ES UNA COPIA.</string>
+    <string name="log_export_count_line">MENSAJES EN EL REGISTRO AHORA: %1$s</string>
+    <string name="log_export_none">EL REGISTRO NO TIENE MENSAJES QUE GUARDAR AHORA.</string>
+    <string name="log_export_done">REGISTRO DE MENSAJES GUARDADO</string>
+    <string name="log_export_failed">NO SE PUDO GUARDAR EL REGISTRO DE MENSAJES: %1$s. NO SE GUARDÓ NADA.</string>
+    <string name="log_export_fail_prepare">NO SE PUDO PREPARAR EL REGISTRO</string>
+    <string name="log_export_file_title">REGISTRO DE MENSAJES DE ACK</string>
+    <string name="log_export_saved_at">GUARDADO: %1$s</string>
+    <string name="log_export_summary">MENSAJES: %1$s. PRIMERO: %2$s. ÚLTIMO: %3$s.</string>
+    <string name="log_export_file_warning">ESTE ARCHIVO NO ESTÁ CIFRADO Y NO TIENE CONTRASEÑA. CONTIENE LO QUE SE DIJO.</string>
+    <string name="log_export_escapes">EN UN MENSAJE, \\n SIGNIFICA UN SALTO DE LÍNEA, \\t UN TABULADOR Y \\\\ UNA BARRA INVERSA; CUALQUIER OTRO CARÁCTER DE CONTROL SE ESCRIBE \\uXXXX. LAS CUATRO COLUMNAS SE SEPARAN CON TABULADORES.</string>
+    <string name="log_export_columns">FECHA Y HORA\tTIPO\tORIGEN\tMENSAJE</string>
 </resources>

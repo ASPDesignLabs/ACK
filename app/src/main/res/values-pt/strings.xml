@@ -1122,6 +1122,8 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="info_nr_language_2">- ESTES SÃO RASCUNHOS AINDA NÃO REVISADOS POR FALANTES NATIVOS. AS LINHAS QUE OUTRAS PARTES DO ACK ESCREVEM NESTA TELA E MUITOS DIÁLOGOS CONTINUAM EM INGLÊS. VEJA DOCS/TRANSLATIONS.MD</string>
     <string name="info_nr_about_head">-- SOBRE O ACK --</string>
     <string name="info_nr_about_1">- NOVO: SOBRE O ACK, NO FIM DE CONFIGURAÇÕES, DIZ O QUE O ACK NÃO É: NÃO SUBSTITUI A AVALIAÇÃO PROFISSIONAL DE AAC NEM A TERAPIA DA FALA E DA LINGUAGEM. TAMBÉM PEDE QUE VOCÊ MANTENHA SEMPRE OUTRA FORMA DE SE COMUNICAR. AS MESMAS PALAVRAS APARECEM UMA VEZ EM UM AVISO NA TELA TERMINAL OU EM CONFIGURAÇÕES. ENTENDI OCULTA O AVISO E NÃO FAZ MAIS NADA</string>
+    <string name="info_nr_log_head">-- SALVAR O REGISTRO --</string>
+    <string name="info_nr_log_1">- NOVO: SALVAR O REGISTRO DE MENSAGENS EM UM ARQUIVO, EM CONFIGURAÇÕES, SALVA AS MENSAGENS QUE O REGISTRO AINDA GUARDA EM UM ARQUIVO QUE VOCÊ ESCOLHE: O QUE FOI DITO, COM DATA, HORA E ORIGEM, E MAIS NADA. AVISA PRIMEIRO E NÃO SALVA NADA ATÉ VOCÊ ESCOLHER ONDE. O ARQUIVO NÃO É CRIPTOGRAFADO. SEM REDE, SEM COMPARTILHAR</string>
     <string name="info_nr_fixes_head">-- CORREÇÕES --</string>
     <string name="info_nr_fixes_1">- CORRIGIDO: A CONFIRMAÇÃO ANTES DE LIMPAR AS VARIÁVEIS OU O PROMPT DE UMA FRASE MOSTRAVA SÓ A SEGUNDA FRASE. AGORA MOSTRA A PERGUNTA INTEIRA, COM O MESMO TEXTO DE ANTES</string>
     <string name="info_b8_title">=== NOTAS DA VERSÃO ACK v1.0-BETA.8 ===</string>
@@ -1881,4 +1883,22 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="about_limits_keep_another_way">MANTENHA SEMPRE DISPONÍVEL OUTRA FORMA DE SE COMUNICAR.</string>
     <string name="about_banner_where">VOCÊ PODE LER ISTO DE NOVO EM %1$s, EM %2$s.</string>
     <string name="about_got_it">ENTENDI</string>
+    <string name="log_export_button">SALVAR O REGISTRO DE MENSAGENS EM UM ARQUIVO</string>
+    <string name="log_export_button_desc">SALVA AS MENSAGENS DE %1$s EM UM ARQUIVO QUE VOCÊ ESCOLHE. VOCÊ VÊ O QUE ELE CONTÉM ANTES DE ESCOLHER ONDE SALVAR.</string>
+    <string name="log_export_contains_heading">O ARQUIVO VAI CONTER:</string>
+    <string name="log_export_cat_messages">TODAS AS MENSAGENS QUE AINDA ESTÃO EM %1$s, POR INTEIRO, COM DATA, HORA E DE ONDE FORAM ENVIADAS</string>
+    <string name="log_export_cat_names">O QUE HOUVER NESSAS MENSAGENS, COMO NOMES, ENDEREÇOS OU NÚMEROS, SE VOCÊ OS USOU</string>
+    <string name="log_export_not_included">NÃO INCLUI: LINHAS DO SISTEMA, COMANDOS, PESSOAS E LUGARES, ÁUDIO DE VOZ NEM CONFIGURAÇÕES.</string>
+    <string name="log_export_copy_too">UMA CAPTURA DE TELA OU FOTO DO REGISTRO TAMBÉM É UMA CÓPIA.</string>
+    <string name="log_export_count_line">MENSAGENS NO REGISTRO AGORA: %1$s</string>
+    <string name="log_export_none">O REGISTRO NÃO TEM MENSAGENS PARA SALVAR AGORA.</string>
+    <string name="log_export_done">REGISTRO DE MENSAGENS SALVO</string>
+    <string name="log_export_failed">NÃO FOI POSSÍVEL SALVAR O REGISTRO DE MENSAGENS: %1$s. NADA FOI SALVO.</string>
+    <string name="log_export_fail_prepare">NÃO FOI POSSÍVEL PREPARAR O REGISTRO</string>
+    <string name="log_export_file_title">REGISTRO DE MENSAGENS DO ACK</string>
+    <string name="log_export_saved_at">SALVO: %1$s</string>
+    <string name="log_export_summary">MENSAGENS: %1$s. PRIMEIRA: %2$s. ÚLTIMA: %3$s.</string>
+    <string name="log_export_file_warning">ESTE ARQUIVO NÃO É CRIPTOGRAFADO E NÃO TEM SENHA. ELE CONTÉM O QUE FOI DITO.</string>
+    <string name="log_export_escapes">EM UMA MENSAGEM, \\n SIGNIFICA UMA QUEBRA DE LINHA, \\t UMA TABULAÇÃO E \\\\ UMA BARRA INVERSA; QUALQUER OUTRO CARACTERE DE CONTROLE É ESCRITO \\uXXXX. AS QUATRO COLUNAS SÃO SEPARADAS POR TABULAÇÕES.</string>
+    <string name="log_export_columns">DATA E HORA\tTIPO\tORIGEM\tMENSAGEM</string>
 </resources>

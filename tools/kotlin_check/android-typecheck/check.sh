@@ -66,6 +66,8 @@ cp "$A/settings/BackupWarningDialog.kt" "$STAGE/com/example/besu/settings/"
 # The limits statement: the one-time banner and the ABOUT section (their words and rules are core/LimitsNotice.kt, staged with the rest of core/).
 cp "$A/ui/LimitsNoticeBanner.kt" "$STAGE/com/example/besu/ui/"
 cp "$A/settings/AboutSection.kt" "$STAGE/com/example/besu/settings/"
+# SAVE MESSAGE LOG TO A FILE: the warning dialog and its flow (the exporter is stubbed in stubs/app/LogExporter.kt; the words and the file format are core/LogExport*.kt, staged with the rest of core/).
+cp "$A/settings/LogExportDialog.kt" "$STAGE/com/example/besu/settings/"
 cp -r "$H/stubs/." "$STAGE/"
 cd "$H"
 gradle --no-daemon --console=plain -q -Pkotlin.compiler.execution.strategy=in-process compileKotlin > "$H/build/check.log" 2>&1 && status=0 || status=$?

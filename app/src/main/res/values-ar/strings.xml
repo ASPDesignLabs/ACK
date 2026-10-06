@@ -1161,6 +1161,8 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="info_nr_language_2">- هذه مسودات لم يراجعها بعد متحدثون أصليون. الأسطر التي تكتبها أجزاء أخرى من ACK في هذه الشاشة والكثير من مربعات الحوار تبقى بالإنجليزية. راجع DOCS/TRANSLATIONS.MD</string>
     <string name="info_nr_about_head">-- حول ACK --</string>
     <string name="info_nr_about_1">- جديد: قسم حول ACK في نهاية الإعدادات يوضح ما ليس عليه ACK: ليس بديلاً عن التقييم المهني لـ AAC ولا عن علاج النطق واللغة. كما يطلب أن تُبقي دائماً وسيلة أخرى للتواصل متاحة. تظهر الكلمات نفسها مرة واحدة في شريط على شاشة الطرفية أو الإعدادات. فهمت يخفي الشريط ولا يفعل شيئاً آخر</string>
+    <string name="info_nr_log_head">-- حفظ السجل --</string>
+    <string name="info_nr_log_1">- جديد: زر حفظ سجل الرسائل في ملف في الإعدادات يحفظ الرسائل التي لا يزال السجل يحتفظ بها في ملف تختاره: ما قيل، مع التاريخ والوقت والمصدر، ولا شيء آخر. يحذّر أولاً ولا يحفظ شيئاً حتى تختار المكان. الملف غير مشفّر. بلا شبكة وبلا مشاركة</string>
     <string name="info_nr_fixes_head">-- الإصلاحات --</string>
     <string name="info_nr_fixes_1">- تم الإصلاح: كان التأكيد قبل مسح متغيرات عبارة أو موجهها يعرض جملته الثانية فقط. وهو يعرض الآن السؤال كاملا بالصياغة السابقة نفسها</string>
     <string name="info_b8_title">=== ملاحظات إصدار ACK v1.0-BETA.8 ===</string>
@@ -1938,4 +1940,22 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="about_limits_keep_another_way">أبقِ دائماً وسيلة أخرى للتواصل متاحة.</string>
     <string name="about_banner_where">يمكنك قراءة هذا مرة أخرى في %1$s، تحت %2$s.</string>
     <string name="about_got_it">فهمت</string>
+    <string name="log_export_button">حفظ سجل الرسائل في ملف</string>
+    <string name="log_export_button_desc">يحفظ رسائل %1$s في ملف تختاره. ترى ما سيحتويه قبل أن تختار مكان الحفظ.</string>
+    <string name="log_export_contains_heading">سيحتوي الملف على:</string>
+    <string name="log_export_cat_messages">كل رسالة لا تزال محفوظة في %1$s، كاملة، مع تاريخها ووقتها ومن أين أُرسلت</string>
+    <string name="log_export_cat_names">كل ما كان في هذه الرسائل، مثل الأسماء أو العناوين أو الأرقام، إن استخدمتها</string>
+    <string name="log_export_not_included">لا يحتوي الملف على: أسطر النظام، الأوامر، الأشخاص والأماكن، تسجيلات الصوت، الإعدادات.</string>
+    <string name="log_export_copy_too">لقطة الشاشة أو صورة السجل نسخة أيضاً.</string>
+    <string name="log_export_count_line">الرسائل في السجل الآن: %1$s</string>
+    <string name="log_export_none">لا توجد رسائل في السجل لحفظها الآن.</string>
+    <string name="log_export_done">تم حفظ سجل الرسائل</string>
+    <string name="log_export_failed">تعذّر حفظ سجل الرسائل: %1$s. لم يتم حفظ أي شيء.</string>
+    <string name="log_export_fail_prepare">تعذّر تجهيز السجل</string>
+    <string name="log_export_file_title">سجل رسائل ACK</string>
+    <string name="log_export_saved_at">وقت الحفظ: %1$s</string>
+    <string name="log_export_summary">الرسائل: %1$s. الأولى: %2$s. الأخيرة: %3$s.</string>
+    <string name="log_export_file_warning">هذا الملف غير مشفّر وليس له كلمة مرور. يحتوي على ما قيل.</string>
+    <string name="log_export_escapes">في الرسالة، \\n تعني سطراً جديداً و\\t تعني مسافة جدولة و\\\\ تعني الشرطة المائلة العكسية؛ وأي حرف تحكم آخر يُكتب \\uXXXX. الأعمدة الأربعة مفصولة بعلامات جدولة.</string>
+    <string name="log_export_columns">التاريخ والوقت\tالنوع\tالمصدر\tالرسالة</string>
 </resources>

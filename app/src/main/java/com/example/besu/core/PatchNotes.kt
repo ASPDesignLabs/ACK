@@ -64,6 +64,8 @@ object PatchNotes {
         "info_nr_language_2",
         "info_nr_about_head",
         "info_nr_about_1",
+        "info_nr_log_head",
+        "info_nr_log_1",
         "info_nr_fixes_head",
         "info_nr_fixes_1",
         "info_b8_title",

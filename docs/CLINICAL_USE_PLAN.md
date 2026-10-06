@@ -3,7 +3,7 @@
 **Status: DRAFT for the developer to review. Nothing in the app has been changed.** Written on branch `claude/compassionate-hawking-bj1xap`
 (which starts level with `main`). Source: the AAC Readiness Tracker, Section 5 (rows C1 to C6), and the Speech-Language Pathology
 Evaluation it cites (R12, Q9, Q10, Q11). Each decision in section 6 is yours; a suggestion is a suggestion, not a decision.
-Six decisions were recorded on 2026-10-06 (section 6). Eight questions are still open.
+Eight decisions are recorded (section 6). Six questions are still open.
 
 ## 1. What Section 5 asks for
 
@@ -74,8 +74,8 @@ This order is a suggestion (Q8). Nothing is blocked on a decision any more excep
 
 | Task | State |
 |---|---|
-| C4 limits statement | **Built on this branch, using the three sentences proposed in C4.1.** The wording is not yet confirmed by you (Q11) and nothing has been seen on a phone. Automated tests: 1463 pass (31 new for C4). The new screens pass the type-check; `MainActivity.kt` and `SettingsView.kt` pass the syntax check. Phone checklist: `docs/CLINICAL_USE_DEVICE_TEST.md`, part A. |
-| C2 log file | Not started. Waits for Q4. |
+| C4 limits statement | **Built and pushed. Wording confirmed by you; the website now carries the third sentence too.** Not yet seen on a phone (C4.5 is yours). Phone checklist: `docs/CLINICAL_USE_DEVICE_TEST.md`, part A. |
+| C2 log file | **Built on this branch, not yet seen on a phone** (C2.6 is yours). Messages only, saved from a SETTINGS button. 1526 automated tests pass (63 new for C2); the dialog passes the type-check; `SettingsView.kt` and `LogExporter.kt` pass the syntax check. Ten deliberate breaks were each caught by a test. Phone checklist: part B. |
 | C1 usage summary | Not started. Waits for Q5 and Q6, then the written design. |
 | C3 partner card | Not started. Waits for the words and Q10. |
 | C5, C6 | Not started. Wait for Q7. |
@@ -97,20 +97,20 @@ another way to communicate available.
 - **C4.4** CHANGELOG, a `/info` note (English first), the device-test line, the tracker evidence.
 - **Verified by:** unit tests, syntax check, then your phone: read it at large font, check no button moves, check dismissal sticks.
 
-### C2: save the Terminal log to a file (P2, unblocked, needs Q4)
+### C2: save the Terminal log to a file (P2, built, waiting on a phone check)
 Built as an off-by-default, person-chosen action available to anyone. It is not described anywhere as a clinical feature (see DEC2 in section 6).
-- **C2.1 (you)** Decide what the file holds (Q4): exactly what is on screen after the HIDE filters, or everything kept; messages only or the
-  system lines too.
-- **C2.2** `core/LogExport.kt` (plain Kotlin): entries to text, one line each, with a full local date and time. A message with a line break
-  must not be able to look like a new log line. Tests: empty log, one entry, entries on the retention edge, text with line breaks, quotes, `%` and
-  Arabic.
-- **C2.3** `core/LogExportContents.kt`: one source for what the file contains (every message spoken, in full, with times), that it is **not
-  protected**, where to save it, and that a screenshot or photo of the log is a copy too. Words in six languages; tested like `ExportContents`.
-- **C2.4** The screen and the file: a warning first (the shape of `BackupWarningDialog`: 12 sp, CANCEL prominent, nothing happens on cancel), then
-  `CreateDocument`. A failed save deletes the half-made file and says nothing was saved. The typed command (`/backup` shape: asks, then
-  `CONFIRM`) and the Terminal button both call the same code.
-- **C2.5** Docs: DATA_SOVEREIGNTY, PRIVACY device test, CHANGELOG, `/info`. No new storage, so no new DELETE DATA area.
-- **Verified by:** unit tests and the sovereignty tests; on your phone: the picker against your own storage, a large log, the file opened on a PC.
+**Decided:** messages only (normal and Emergency), and a button in SETTINGS only: no typed command and no Terminal button.
+- **C2.1 (you)** Done: the file holds only messages, with date, time and where each was sent from. System, path-trace and command lines are left out.
+- **C2.2** `core/LogExport.kt` (plain Kotlin): messages only, oldest first, one line each, four tab-separated columns, the time in this phone's local time with its UTC
+  offset on every line and in Latin digits, and every line break, tab and backslash in a message escaped so a message can never look like a new line. Only messages the
+  retention window still keeps. 35 tests, including a seeded fuzz of 3,000 strings.
+- **C2.3** `core/LogExportContents.kt`: one source for the warning (the count, what the file holds, what it does not, not protected, a screenshot is a copy too, where to save).
+  Its two safety sentences are the EXPORT .JSON warning's own. Words in six languages (drafts). 10 tests.
+- **C2.4** `data/LogExporter.kt`, `settings/LogExportDialog.kt` and one button under the retention slider in SETTINGS. Warns first, saves nothing until a place is chosen with the
+  system picker (`CreateDocument`), cancelling opens no picker, an empty log shows a line and no button, a failed save deletes the half-made file and says nothing was saved,
+  nothing said is ever logged, reading the log changes nothing. 17 wiring tests.
+- **C2.5** Docs done: DATA_SOVEREIGNTY, CHANGELOG, `/info` (six languages), TRANSLATIONS, CLAUDE.md, device-test part B. No new storage, so no new DELETE DATA area.
+- **C2.6 (you)** The phone check: the picker against your own storage, a failed save, a large log, the file opened on a PC.
 
 ### C1: opt-in usage summary (P1, unblocked, needs Q5 and Q6)
 - **C1.1 (you, then me)** I write `docs/USAGE_SUMMARY_DESIGN.md`: exactly what is recorded and what never is, where it lives, who can see it,
@@ -172,13 +172,14 @@ a personal tool and give feedback. It is not described as a pilot programme or a
 | DEC2: scope | **Personal tool, shared as-is.** C1 and C2 are still built, as off-by-default, local-only features the person chooses. | Nothing in the app or the docs calls ACK a clinical or pilot tool. The tracker's DEC2 row still says "Needs decision" until you confirm an update (Q12). |
 | What can leave the phone | **Both**, only when the person chooses to save a file. The cheaper one first. | C2 (message text) is built first, then C1 (counts, no text). |
 | C4: where | An **ABOUT section** in SETTINGS plus a **one-time banner**. | Banner on the Terminal and Settings screens only; dismissing only flips a flag. |
-| C4: words | The website's short disclaimer **plus a line to keep another way to communicate**. | Exact English is confirmed in Q11. |
+| C4: words | The website's short disclaimer **plus a line to keep another way to communicate**. **Confirmed as built.** | The website got the third sentence too, in its own commit. A test keeps the app and the page identical. |
+| C2: contents | **Messages only** (normal and Emergency), with date, time and where each was sent from. | System, path-trace and command lines are never written. |
+| C2: how it is reached | **A button in SETTINGS only.** | No typed command and no Terminal button. A test fails if either appears. |
 | C3: form | A **playable message plus a printable page**. It follows the person's audio routing, and **is silent when silent output is on**. | It goes through the normal output path, never the Emergency path (C3.2). |
 | Tracker check | **Not now.** | I only report on Section 5. |
 
 ### Still open
 
-- **Q4** C2: does the file hold what is on screen (after the HIDE filters) or everything kept? Messages only, or the system lines too?
 - **Q5** C1: how a message's function is decided. (a) By channel only (deck, slot, watch, typed): simplest, nothing guessed. (b) Plus a function
   for slots that still hold their seeded starter phrase, OTHER for the rest. (c) Plus an optional function tag you or an SLP set on any slot
   (touches every editor and the backup).
@@ -187,7 +188,6 @@ a personal tool and give feedback. It is not described as a pilot programme or a
 - **Q8** Is the order in section 4 right?
 - **Q10** C3: where does the partner-card button live? A new small deck, a typed Terminal command, or a one-time offer that adds it to a deck you
   choose? (STARTERS is full.)
-- **Q11** C4: are the three sentences in C4.1 right? And does the website also get the third sentence?
 - **Q12** May I update the tracker's DEC2 row (Done, with this outcome in the Suggested column)? I will not edit it without a yes.
 
 ## 7. What I cannot do from here

@@ -1609,3 +1609,24 @@ nothing may claim an effect (the evaluation found no evidence yet that it helps)
   in fact reads every listed note in every language (`getValue`), so an untranslated one fails four tests. It also holds that the note names ABOUT ACK, GOT IT, SETTINGS and the
   Terminal as those screens read in each language. A new note also goes into that test's pinned English list (`oldPatchNotes`).
 - Not seen on a phone: how the banner sits at the largest font on a small screen (it can take a lot of room above the Terminal), and the Arabic mirrored layout.
+
+### Saving the Terminal log's messages to a file (C2) — `core/LogExport.kt`, `core/LogExportContents.kt`, `data/LogExporter.kt`, `settings/LogExportDialog.kt`
+The developer's decisions: **messages only**, and **a button in SETTINGS only (no typed command, no Terminal button)**.
+- **Messages only** (`LogExport.isMessage`): a line is a message when its type is exactly `OUT` or `EMERGENCY` **and** it carries `replayText` (only a real communicated phrase does:
+  OutputService leaves it null for tutorial narration). System, path-trace, command and tutorial lines are never written. The message's words come from `replayText`; the log line's own text is
+  used only to label where it came from (`LogExport.fromOf`: the tag before ` > "`, or `TERMINAL` plus any `[Q][S][E]` modifiers for a line typed at the prompt). A message's own words are in the file, so the warning says
+  names, addresses and numbers are too. Only messages the retention window still keeps are written (`keptSince`; one exactly on the edge is kept), even if the live buffer has not been pruned yet.
+- **The log is newest-first** (`logBuffer.add(0, ...)`), so `messages()` reverses it and sorts by time, which keeps equal times in the order they were written.
+- **The file is one record per line, by construction.** `escape` writes every line break (CRLF counts once, plus CR, NEL, LS, PS) as `\n`, a tab as `\t`, a backslash as `\\` and any other control character as
+  `\uXXXX`; columns are separated by tabs; header lines start with `# ` (a header translation with a line break is flattened). A seeded fuzz test checks no raw break survives and the text reads back.
+- **Time is local, with the offset on every line, in Latin digits** (`yyyy-MM-dd HH:mm:ss xxx`, `Locale.ROOT`, `DecimalStyle.STANDARD`): a time-zone or daylight-saving change cannot make two lines ambiguous. The count and
+  range are handed to the header text as strings, never as numbers, so an Arabic or Hindi phone cannot print other digits.
+- **Warn first, write nothing until a place is chosen.** `LogExportContents` is the one source of the warning (the count, what the file holds, what it does not, not protected, a screenshot is a copy, where to save);
+  its two safety sentences are the EXPORT .JSON warning's own constants so the two cannot disagree. The Terminal log's name is an argument (follows PLAIN WORDS). `CreateDocument("text/plain")` only: **no share sheet, no
+  `ACTION_SEND`, no network**; cancelling the warning or the picker does nothing; an empty log shows a line and no CHOOSE button.
+- **A failed save says nothing was saved and deletes the half-made file** (best effort), through one `failed(...)` path that every `catch` uses; a null output stream is a failure, not a silent success.
+- **Nothing said is ever logged**: the exporter's `Log` calls hold a fixed sentence, a reason, a count or a size. **Reading the log changes nothing** (no prune, no persist). **No new storage**: no preference file, folder or key,
+  so nothing to register in DELETE DATA or a backup; a file the person saved is theirs and DELETE DATA does not remove it. `LogExportWiringTest` holds all of this.
+- **One button, in one place**: under the retention slider in SETTINGS' Terminal section, 12 sp. `rememberLogExportFlow` is used only by `SettingsView`; a test fails if MainActivity, the Terminal or `TerminalText` start it.
+- The file's header is in the chosen language; the columns hold stored values (OUT, EMERGENCY, source tags) that are never translated. The five translations are drafts; the warning is safety text, so a native speaker should read it first.
+- Not seen on a phone: the picker against different storage providers, the layout at the largest font, a log at its 400-entry cap, the file opened on a PC.

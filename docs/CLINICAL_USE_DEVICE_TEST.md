@@ -1,11 +1,11 @@
 # Clinical use (Section 5): checking it on a real phone
 
-This list grows with each task in `docs/CLINICAL_USE_PLAN.md`. Today it holds one part: **A. The limits statement (C4)**.
+This list grows with each task in `docs/CLINICAL_USE_PLAN.md`. Today it holds two parts: **A. The limits statement (C4)** and **B. Saving the message log to a file (C2)**.
 
-The limits statement was built and tested **without an Android SDK or a phone**. What is tested is the plain-Kotlin part: the words in all six
-languages, that the first two sentences match the website, and where the banner may and may not appear (`tools/kotlin_check/run_unit_tests.sh`
+The limits statement and the message-log save were built and tested **without an Android SDK or a phone**. What is tested is the plain-Kotlin part: the words in all six
+languages, that the three sentences match the website, where the banner may and may not appear, and what the saved file holds and how it is escaped (`tools/kotlin_check/run_unit_tests.sh`
 passes). The Android files were type-checked and syntax-checked (`run_typecheck.sh`, `run_syntax_check.sh`). **What was never run is the Android
-part**: the build, how the banner and the section look and behave, and what a real phone does at a large font. This list is for you to work through
+part**: the build, how the banner, the section and the save button look and behave, the file picker, and what a real phone does at a large font. This list is for you to work through
 once. Each line is *do this → expect that*. If something does not match, say which line and what you saw.
 
 Use a debug build with sample data. Make a backup first anyway (PROTOCOL → DATA PORT → EXPORT .JSON). Nothing here is timed; stop whenever you like.
@@ -39,3 +39,38 @@ Use a debug build with sample data. Make a backup first anyway (PROTOCOL → DAT
 - [ ] `adb shell run-as com.example.besu cat shared_prefs/ack_assist_prefs.xml` before tapping GOT IT. → No `limits_notice_seen` line.
 - [ ] The same after tapping GOT IT. → `<boolean name="limits_notice_seen" value="true" />`.
 - [ ] `adb shell run-as com.example.besu cat shared_prefs/ack_assist_prefs.xml` on a freshly installed build. → The note is not there (nothing seeds it).
+
+## B. SAVE MESSAGE LOG TO A FILE
+
+Setup: send a handful of messages first, so there is something to save. Use a debug build with sample data only (a saved log holds whatever was said).
+
+- [ ] Send: one message from a Matrix gesture or button, one from a Quick Actions button, one typed at the Terminal prompt, one typed with `/q ` first (quiet),
+  one from an Emergency tile, one with a line break in it (the Statement Composer or Manual Override), one with an emoji, one in Arabic or another script, and one
+  that contains a made-up name and address. → All speak/show as usual and appear in the Terminal log.
+- [ ] PROTOCOL → scroll to the Terminal settings (the log's days slider). → Under the slider: a grey line saying it saves the messages in the log (**HISTORY**
+  once PLAIN WORDS is on, TERMINAL LOG otherwise) to a file you choose, and a **SAVE MESSAGE LOG TO A FILE** button. Both are easy to read at the largest font.
+- [ ] Tap it. → A warning opens: **MESSAGES IN THE LOG NOW: n**, where n is the number of messages you sent (not the number of log lines: system and command lines
+  are not counted); what the file will contain; that names, addresses or numbers you said are in it; what is **not** in it; that it is **not encrypted and has no
+  password**; that a screenshot or photo of the log is a copy too; where to save. Nothing else has happened yet. Press **CANCEL**. → The warning closes, **no file picker opened**,
+  no toast, no new Terminal line.
+- [ ] Tap the button, then **CHOOSE WHERE TO SAVE**. → The system picker opens with a suggested name like `ack_messages_2026-10-06_140302.txt`. Save it to the phone's own storage. →
+  A toast says **MESSAGE LOG SAVED** and the Terminal gets a line saying so.
+- [ ] Open the saved file in a text editor (on the phone, then on a PC after copying it by cable). → Header lines start with `# `: a title, when it was saved, **MESSAGES: n**
+  with the first and last times, that the file is not encrypted, what `\n`, `\t` and `\\` mean, and the four column names. Then one line per message, **oldest first**.
+- [ ] Look at the message lines. → Four columns separated by tabs (date and time with an offset such as `+02:00` that matches this phone's time zone, type OUT or EMERGENCY, where it was
+  sent from such as `MTX/...`, `QUICK_ACTION`, `TERMINAL`, `TERMINAL [Q]`, `EMERGENCY`, and the message). The message with a line break is **one** line with `\n` in it. The emoji and the Arabic
+  text are intact. The Emergency one is typed EMERGENCY. **No system, command or path-trace lines.** The count in the header equals the count the warning showed.
+- [ ] With the phone set to Arabic (and then Hindi), save again. → The warning and the header are in that language, and the dates, times and counts in the file are still **Latin digits**.
+- [ ] Clear the log (PROTOCOL → DATA PORT → DELETE DATA → TERMINAL LOG, or `/cls CONFIRM`), then open the warning again. → It says **THE LOG HAS NO MESSAGES TO SAVE RIGHT NOW** and has **no**
+  CHOOSE WHERE TO SAVE button.
+- [ ] Try saving to a place that refuses writes (a read-only location, or a storage provider you have switched off). → A toast and a Terminal line say the save failed and that
+  **NOTHING WAS SAVED**, and no half-made file is left behind.
+- [ ] Cancel the system picker itself (back out of it). → Nothing happens: no toast, no file.
+- [ ] Look at the Terminal log and the retention slider after all of this. → Unchanged: saving never edits, prunes or clears the log.
+- [ ] Optional, if you have messages older than the window: shorten the log's days so some are older than it, then save. → Messages older than the window are not in the file.
+- [ ] Optional: let the log fill to its limit (400 entries) and save. → It saves, in order, with no pause you notice.
+- [ ] DELETE DATA → TERMINAL LOG. → It clears the log; **the saved file is still where you put it** (ACK never tracks it). Delete it yourself when you no longer need it.
+
+### Optional: look at what ACK logs (debug build only; written from the code, not run)
+
+- [ ] `adb logcat -s ACK_LOG_EXPORT` while saving. → One line like `message log written: 6 messages, 612 bytes`. **Never any message text.**
