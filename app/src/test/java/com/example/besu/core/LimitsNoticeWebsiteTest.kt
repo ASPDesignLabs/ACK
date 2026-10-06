@@ -6,9 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The first two sentences of the in-app limits statement are the website's disclaimer, word for word (the app writes in capitals, the page does not, so the
- * match ignores case). If either is edited alone, this fails, so the app and the website cannot quietly say different things about what ACK is.
- * The third sentence (keep another way to communicate) is in the app only for now; it is not checked against the page.
+ * The three sentences of the in-app limits statement are the website's disclaimer, word for word (the app writes in capitals, the page does not, so the
+ * match ignores case). If either side is edited alone, this fails, so the app and the website cannot quietly say different things about what ACK is.
  */
 class LimitsNoticeWebsiteTest {
 
@@ -22,8 +21,8 @@ class LimitsNoticeWebsiteTest {
     }
 
     @Test
-    fun theFirstTwoSentencesInTheAppAreTheWebsitesDisclaimerWordForWord() {
-        val app = LimitsNotice.sentences(EnglishText).take(2).joinToString(" ")
+    fun theThreeSentencesInTheAppAreTheWebsitesDisclaimerWordForWord() {
+        val app = LimitsNotice.sentences(EnglishText).joinToString(" ")
         assertEquals(websiteDisclaimer().uppercase(), app)
     }
 
@@ -32,5 +31,6 @@ class LimitsNoticeWebsiteTest {
         val page = websiteDisclaimer()
         assertTrue(page.contains("professional AAC evaluation or speech-language therapy"))
         assertTrue(page.contains("shared as-is"))
+        assertTrue(page.contains("Keep another way to communicate available at all times."))
     }
 }

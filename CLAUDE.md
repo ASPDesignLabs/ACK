@@ -1592,10 +1592,9 @@ the opt-in, local-only clinical-review features (C1, C2): nothing in the app or 
 nothing may claim an effect (the evaluation found no evidence yet that it helps).
 
 ### The limits statement (C4) — `core/LimitsNotice.kt`
-- **Three sentences, three resources** (`about_limits_*`), joined with a space in code (Android trims a trailing space). The first two are the website's disclaimer
+- **Three sentences, three resources** (`about_limits_*`), joined with a space in code (Android trims a trailing space). All three are the website's disclaimer
   (`index.html`, the `<p class="disclaimer">`) **word for word**; `LimitsNoticeWebsiteTest` compares them ignoring case (the app is in capitals, the page is not), so
-  editing one side alone fails. The third (keep another way to communicate available at all times) is app-only for now: the developer has not yet said whether the
-  website gets it.
+  editing one side alone fails. The developer confirmed the wording and chose to add the third sentence (keep another way to communicate available at all times) to the page.
 - **Two places:** a permanent ABOUT ACK section at the end of SETTINGS (`settings/AboutSection.kt`, words only: no switch, button or link), and a one-time banner
   (`ui/LimitsNoticeBanner.kt`) drawn above the header **on the Terminal and Settings screens only** (`LimitsNotice.BANNER_SCREENS`; the Terminal is the screen ACK
   opens on). **Never on a deck, Emergency or Type screen**, where it could move a button about to be tapped. Do not add it elsewhere without asking.

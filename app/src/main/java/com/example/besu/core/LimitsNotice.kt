@@ -8,7 +8,7 @@ package com.example.besu.core
  * (`about_*` in strings.xml, in the chosen language) supplied through a [TextSource].
  *
  * Rules that must stay true:
- *  - **The first two sentences are the website's disclaimer, word for word** (index.html), so the app and the website say the same. LimitsNoticeTest holds it.
+ *  - **The three sentences are the website's disclaimer, word for word** (index.html), so the app and the website say the same. LimitsNoticeWebsiteTest holds it.
  *  - **It is only a notice.** It never blocks speech, never asks a question, never starts HELP and never navigates. Dismissing the banner only remembers that it
  *    was seen (data/AssistPrefs.kt); the ABOUT section stays.
  *  - **The banner never appears on a deck, Emergency or Type screen**, where it could move a button that is about to be tapped ([BANNER_SCREENS]).
