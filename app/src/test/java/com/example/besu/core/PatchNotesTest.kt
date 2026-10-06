@@ -127,6 +127,12 @@ class PatchNotesTest {
         "  SENT ANYWHERE. SAVE USAGE SUMMARY TO A FILE KEEPS A COPY WHERE YOU",
         "  CHOOSE (IT STILL SHOWS WHEN YOU COMMUNICATE, SO KEEP IT LIKE A",
         "  DIARY). FORGET USAGE SUMMARY DELETES IT, AFTER TWO QUESTIONS",
+        "-- PARTNER CARD --",
+        "- NEW: A PARTNER CARD ICON (A SPEECH BUBBLE) IN THE HEADER",
+        "  NEXT TO HELP. A TAP ASKS FIRST. IF YOU PLAY IT, ACK SAYS AND SHOWS",
+        "  FIVE SHORT SENTENCES TELLING SOMEONE HOW YOU TALK, LIKE ANY MESSAGE:",
+        "  YOUR VOICE AND YOUR OUTPUT, SHOWN BUT NOT SPOKEN IF OUTPUT IS SILENT.",
+        "  THE WORDS ARE DRAFTS. ON PAPER: DOCS/PARTNER_CARD.MD",
         "-- FIXES --",
         "- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE'S VARIABLES OR",
         "  PROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE",
@@ -404,6 +410,18 @@ class PatchNotesTest {
             assertTrue("$tag: it names the forget button as it reads", second.contains(map.getValue("usage_forget_button")))
             assertTrue("$tag: it says the days the app really keeps", second.contains(UsageTally.RETENTION_DAYS.toString()))
             assertTrue("$tag: the typed command stays exactly as typed", Regex("(?<![A-Za-z0-9_])/n(?![A-Za-z0-9_])").containsMatchIn(first))
+        }
+    }
+
+    @Test
+    fun thePartnerCardNoteNamesTheCardAndTheHelpButtonAsTheyReadInEveryLanguage() {
+        for ((tag, map) in mapOf("en" to english) + translations) {
+            val head = map.getValue("info_nr_partner_head")
+            val note = map.getValue("info_nr_partner_1")
+            assertTrue("$tag: the heading", head.startsWith("-- ") && head.endsWith(" --"))
+            assertTrue("$tag: the heading names the card as the screen does", head.contains(map.getValue("partner_card_name")))
+            assertTrue("$tag: the note names the card", note.contains(map.getValue("partner_card_name")))
+            assertTrue("$tag: the note names the HELP button as it reads", note.contains(map.getValue("help_button")))
         }
     }
 

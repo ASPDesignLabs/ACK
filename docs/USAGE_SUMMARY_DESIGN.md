@@ -33,7 +33,7 @@ One number per combination of five things. Nothing else.
 **Channels** (read from the tag the message already carries, `OutputService`'s `source`): MATRIX (`MTX/...`, whatever the deck's name), QUICK_ACTIONS,
 EMERGENCY, TERMINAL (typed at the Terminal prompt), MANUAL_OVERRIDE (`TERM/INPUT`, and `BANK/...`, a saved phrase played from Manual Override: the tag after
 `BANK/` is the person's own and is never kept), COMPOSER (`COMPOSER/...`), REPLAY (`LOG/REPLAY`, `CACHE/REPLAY`), WATCH
-(`HW/WATCH`), SHORTCUT (`M-KEY`), PEOPLE (`COMPUTER/CONTACT`), and OTHER for any tag not on this list. A test reads the app's source and fails if a
+(`HW/WATCH`), SHORTCUT (`M-KEY`), PEOPLE (`COMPUTER/CONTACT`), PARTNER_CARD (`PARTNER/CARD`, the header's partner card, added with that feature so a reader can ignore it), and OTHER for any tag not on this list. A test reads the app's source and fails if a
 tag the app sends is not in this table, which is how the `BANK/...` one was found.
 
 **Kinds**: YES, NO, UNSURE, HELP, REPAIR, TURN_HOLDING, NAME_OR_ID, BREAK, BOUNDARY, SOCIAL (the ten in `core/StarterSets.kt`), and OTHER.

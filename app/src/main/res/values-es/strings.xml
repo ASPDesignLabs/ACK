@@ -1127,6 +1127,8 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="info_nr_usage_head">-- RESUMEN DE USO --</string>
     <string name="info_nr_usage_1">- NUEVO: RESUMEN DE USO, EN AJUSTES, CUENTA CON QUÉ FRECUENCIA Y A QUÉ HORA SE ENVÍAN MENSAJES, POR HORA Y POR ORIGEN, NUNCA LAS PALABRAS. ESTÁ DESACTIVADO HASTA QUE LO ACTIVAS Y LO CONFIRMAS, Y LA TERMINAL MUESTRA UNA LÍNEA MIENTRAS ESTÁ ACTIVADO. LOS MENSAJES CON /n Y LA NARRACIÓN DE LA AYUDA NO SE CUENTAN</string>
     <string name="info_nr_usage_2">- SE CONSERVA 90 DÍAS SOLO EN ESTE TELÉFONO Y NO ESTÁ EN NINGUNA COPIA DE SEGURIDAD. NO SE ENVÍA NADA A NINGÚN LADO. GUARDAR EL RESUMEN DE USO EN UN ARCHIVO GUARDA UNA COPIA DONDE ELIGES (SIGUE MOSTRANDO CUÁNDO TE COMUNICAS, ASÍ QUE GUÁRDALO COMO UN DIARIO). OLVIDAR EL RESUMEN DE USO LO BORRA, DESPUÉS DE DOS PREGUNTAS</string>
+    <string name="info_nr_partner_head">-- TARJETA PARA INTERLOCUTORES --</string>
+    <string name="info_nr_partner_1">- NUEVO: UN ICONO DE LA TARJETA PARA INTERLOCUTORES (UN GLOBO DE DIÁLOGO) EN LA CABECERA, JUNTO A AYUDA. UN TOQUE PREGUNTA PRIMERO. SI LA REPRODUCES, ACK DICE Y MUESTRA CINCO FRASES CORTAS QUE LE EXPLICAN A QUIEN HABLA CONTIGO CÓMO TE COMUNICAS, COMO CUALQUIER MENSAJE: TU VOZ Y TU SALIDA, Y SE MUESTRA PERO NO SE DICE SI LA SALIDA ES SILENCIOSA. LAS PALABRAS SON BORRADORES. EN PAPEL: DOCS/PARTNER_CARD.MD</string>
     <string name="info_nr_fixes_head">-- CORRECCIONES --</string>
     <string name="info_nr_fixes_1">- CORREGIDO: LA CONFIRMACIÓN ANTES DE BORRAR LAS VARIABLES O EL MENSAJE DE UNA FRASE MOSTRABA SOLO SU SEGUNDA ORACIÓN. AHORA MUESTRA LA PREGUNTA ENTERA, CON LA REDACCIÓN DE ANTES</string>
     <string name="info_b8_title">=== NOTAS DE LA VERSIÓN ACK v1.0-BETA.8 ===</string>
@@ -1967,5 +1969,19 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="usage_channel_watch">RELOJ</string>
     <string name="usage_channel_shortcut">ACCESO DIRECTO DEL ENCABEZADO</string>
     <string name="usage_channel_people">FICHA DE PERSONAS Y LUGARES</string>
+    <string name="usage_channel_partner_card">TARJETA PARA INTERLOCUTORES</string>
     <string name="usage_channel_other">OTRO</string>
+
+    <!-- PARTNER CARD (tracker row C3): the header icon, its ask-first question, and the five sentences it says. The sentences are spoken and shown as one message; they are DRAFTS for a speech-language pathologist and a native speaker to check. -->
+    <string name="partner_card_name">TARJETA PARA INTERLOCUTORES</string>
+    <string name="partner_card_icon">TARJETA PARA INTERLOCUTORES. DICE CÓMO TE COMUNICAS, PARA QUIEN HABLA CONTIGO. PREGUNTA ANTES DE REPRODUCIRSE.</string>
+    <string name="partner_card_ask_title">¿REPRODUCIR LA TARJETA PARA INTERLOCUTORES?</string>
+    <string name="partner_card_ask_intro">ACK DIRÁ ESTO EN VOZ ALTA Y LO MOSTRARÁ EN LA PANTALLA, COMO CUALQUIER OTRO MENSAJE:</string>
+    <string name="partner_card_ask_silent">USA TU SALIDA NORMAL. SI %1$s ESTÁ ACTIVADO, SE MUESTRA Y NO SE DICE.</string>
+    <string name="partner_card_ask_play">REPRODUCIR</string>
+    <string name="partner_card_1">Uso esta aplicación para hablar.</string>
+    <string name="partner_card_2">Te oigo y te entiendo.</string>
+    <string name="partner_card_3">Por favor, espera mientras respondo.</string>
+    <string name="partner_card_4">Por favor, no me quites el teléfono.</string>
+    <string name="partner_card_5">Si no sabes lo que necesito, pregúntame y te lo mostraré.</string>
 </resources>

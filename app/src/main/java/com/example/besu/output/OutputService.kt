@@ -149,7 +149,9 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         // general enough that any future caller could use them too.
         val quiet: Boolean = false,
         val skipLog: Boolean = false,
-        val sticky: Boolean = false
+        val sticky: Boolean = false,
+        // Show the whole message on screen whatever the active display preset says (the partner card: it must never be cut to a few words while it is spoken in full).
+        val fullText: Boolean = false
     )
 
 
@@ -345,6 +347,7 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 val quiet = intent.getBooleanExtra("quiet", false)
                 val skipLog = intent.getBooleanExtra("skip_log", false)
                 val sticky = intent.getBooleanExtra("sticky", false)
+                val fullText = intent.getBooleanExtra("full_text", false)
 
                 // A Quick Actions slot with a recording attached tries that
                 // first; playRecording() returns false (metadata present
@@ -374,7 +377,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                         emergency = emergency,
                         quiet = quiet,
                         skipLog = skipLog,
-                        sticky = sticky
+                        sticky = sticky,
+                        fullText = fullText
                     )
 
                     if (isTtsReady) {
@@ -385,7 +389,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                             emergency = request.emergency,
                             quiet = request.quiet,
                             skipLog = request.skipLog,
-                            sticky = request.sticky
+                            sticky = request.sticky,
+                            fullText = request.fullText
                         )
                     } else {
                         speechQueue.add(request)
@@ -444,7 +449,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 emergency = item.emergency,
                 quiet = item.quiet,
                 skipLog = item.skipLog,
-                sticky = item.sticky
+                sticky = item.sticky,
+                fullText = item.fullText
             )
         }
     }
@@ -485,7 +491,9 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         // message gets, independent of emergency mode itself.
         sticky: Boolean = false,
         // Whether this message will also be spoken. Used only to word the notice below.
-        willSpeak: Boolean = true
+        willSpeak: Boolean = true,
+        // The partner card asks for the whole message to be shown whatever the preset says; every other message follows the person's own preset.
+        fullText: Boolean = false
     ) {
         if (!android.provider.Settings.canDrawOverlays(this)) {
             // Audio still plays but nothing can be shown, and nothing else tells the person.
@@ -494,7 +502,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
             return
         }
 
-        val preset = VisualPresetRepository.getActivePreset(this)
+        val activePreset = VisualPresetRepository.getActivePreset(this)
+        val preset = if (fullText) activePreset.copy(bypassTruncation = true) else activePreset
         val visualText = VisualLogicEngine.resolveDisplayPrompt(
             rawText,
             null,
@@ -553,7 +562,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
         emergency: EmergencyOptions = EmergencyOptions(),
         quiet: Boolean = false,
         skipLog: Boolean = false,
-        sticky: Boolean = false
+        sticky: Boolean = false,
+        fullText: Boolean = false
     ) {
         val targetId = if (isTutorialOverride) {
             tutorialProfileId
@@ -600,7 +610,8 @@ class OutputService : Service(), TextToSpeech.OnInitListener {
                 rawText = rawText,
                 emergency = emergency,
                 sticky = sticky,
-                willSpeak = !speechIsSilenced(quiet, emergency)
+                willSpeak = !speechIsSilenced(quiet, emergency),
+                fullText = fullText
                         )
             }
 

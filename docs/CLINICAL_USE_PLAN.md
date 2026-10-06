@@ -1,9 +1,9 @@
 # Clinical use (Section 5): plan
 
-**Status: in progress.** C4, C2 and C1 are built on branch `claude/compassionate-hawking-bj1xap` (not yet tried on a phone); C3 is next. Written on that branch
+**Status: in progress.** C4, C2, C1 and C3 are built on branch `claude/compassionate-hawking-bj1xap` (none yet tried on a phone); C5 and C6 wait on Q7. Written on that branch
 (which started level with `main`). Source: the AAC Readiness Tracker, Section 5 (rows C1 to C6), and the Speech-Language Pathology
 Evaluation it cites (R12, Q9, Q10, Q11). Each decision in section 6 is yours; a suggestion is a suggestion, not a decision.
-Eighteen decisions are recorded (section 6). Three questions are still open (Q7, Q8, Q12).
+Nineteen decisions are recorded (section 6). Three questions are still open (Q7, Q8, Q12).
 
 ## 1. What Section 5 asks for
 
@@ -77,7 +77,7 @@ This order is a suggestion (Q8). Nothing is blocked on a decision any more excep
 | C4 limits statement | **Built and pushed. Wording confirmed by you; the website now carries the third sentence too.** Not yet seen on a phone (C4.5 is yours). Phone checklist: `docs/CLINICAL_USE_DEVICE_TEST.md`, part A. |
 | C2 log file | **Built on this branch, not yet seen on a phone** (C2.6 is yours). Messages only, saved from a SETTINGS button. 1526 automated tests pass (63 new for C2); the dialog passes the type-check; `SettingsView.kt` and `LogExporter.kt` pass the syntax check. Ten deliberate breaks were each caught by a test. Phone checklist: part B. |
 | C1 usage summary | **Built on this branch, not yet seen on a phone** (C1.8 is yours). Design approved as written (`docs/USAGE_SUMMARY_DESIGN.md`). Off for everyone; turning on asks first; counts only, never a word. Phone checklist: part C. |
-| C3 partner card | Not started. Form, home and the three design questions are decided (section 6); waits for the words. |
+| C3 partner card | **Built on this branch, not yet seen on a phone** (C3.6 is yours). Words chosen by you (option C), all six languages drafted. Header icon next to HELP, asks first, normal output path, shows in full. Phone checklist: part D. |
 | C5, C6 | Not started. Wait for Q7. |
 
 ## 5. Tasks
@@ -128,22 +128,18 @@ Terminal while it is on; kept 90 days, by day and hour of day; a replay is count
 - **C1.8 (you)** The phone check (part C): turning on and cancelling, the Terminal line, what gets counted and what does not, the saved file opened on a PC, forgetting, and that speech is not slowed.
 - **Verified by:** unit tests and thirteen deliberate breaks, each caught by a test; on your phone: a day of real use, and that speech is not slowed.
 
-### C3: partner card (P1, form, home and design decided, needs the words)
-**Decided:** a playable message (shown full screen and spoken) plus a printable page. It must follow the person's audio routing, and when silent output is on it must be silent too.
-**The button lives in the header, in the slot where the backup reminder's save icon shows.** When no backup is due, the partner-card icon is in that slot. When a backup is due, the save
-icon appears to its left.
-- **C3.1 (you and an SLP)** The words. I will draft candidates at a plain reading level for you to choose from, and mark them as drafts for an SLP.
-- **C3.2** Send it through the **normal** output path, never the Emergency path. That is what makes both of your rules hold: Silent Mode shows the text and does not speak it, and the
-  chosen output device (phone, Bluetooth, ACK WATCH, FORCE SPEAKER) applies as it does for any message. The Emergency path always speaks on the phone and ignores Silent Mode, so using it
-  would break your rule. A test pins that the card never sets the emergency flag. It would appear in the Terminal log as a normal message, since that is what it is.
-- **C3.3** The header icon. What I found in `MainActivity.kt`: under the PROTOCOL button there is a row, `[save-icon slot, 24 dp, always laid out] [4 dp] [HELP]`. The save icon's slot is always
-  reserved so that nothing in the header moves when the icon comes and goes. To put the partner-card icon in that slot **and** keep the save icon from shifting anything, the save icon needs a
-  **second reserved slot to its left**, so the header gets about 28 dp wider on every screen, which narrows the deck and profile text on the left. It would need a phone check on a small
-  screen. The icon would be drawn like the save icon (an outline glyph in the theme colour) with a screen-reader name in six languages.
-- **C3.4** Decided: **a tap asks first** (a small box with CANCEL prominent, so an accidental tap cannot speak a long message in front of people); the icon is **about 24 dp like its neighbours**
-  (the header does not grow taller); **there is no switch to hide it**, it is always shown.
-- **C3.5** Words in six languages. The printable copy in `docs/` is kept identical to the app's text by a test.
-- **Verified by:** unit tests; your phone (the header on a small screen especially); the done-when ("tried with real partners") happens in C5's trials.
+### C3: partner card (P1, built, waiting on a phone check)
+**Decided:** a playable message (shown full screen and spoken) plus a printable page. It follows the person's audio routing, and when silent output is on it is silent too. **The button lives in the header, in the slot next to HELP, with the backup
+reminder's save icon moved to its left.** A tap asks first; the icon is about 24 dp; it is always shown. **The words are option C** (your choice from three drafts).
+- **C3.1** Done: the words. *I use this app to talk. I can hear you and I understand you. Please wait while I answer. Please do not take my phone. If you are not sure what I need, ask me and I will show you.* They are drafts for a speech-language
+  pathologist; the five translations are drafts for a native speaker, written to avoid verb forms and words that depend on anyone's gender.
+- **C3.2** `core/PartnerCard.kt` (plain Kotlin) and the six-language words. The card is sent through the **normal** output path, never Emergency (a test fails on the word "emergency" in the sender), so both of your rules hold. 12 tests.
+- **C3.3** The header icon (`ui/PartnerCardButton.kt`), the question that asks first (CANCEL prominent, shows the exact words), and `output/PartnerCardPlayer.kt`. The save icon keeps its own reserved slot to the left, so the header is about 28 dp wider on every screen.
+- **C3.4** **One engine change you did not ask for, and why:** `OutputService` takes a `full_text` request that makes the screen show the whole message whatever the preset says. Without it, a phone whose preset still cuts long messages would show "ALERT:" and
+  three words while speaking all five sentences. Only the card asks for it; every other message is unchanged. It travels through the speech queue too, and a test pins both routes.
+- **C3.5** Printable page `docs/PARTNER_CARD.md` (all six languages), kept identical to the app by a test. CHANGELOG, `/info` (six languages), TRANSLATIONS, CLAUDE.md and device-test part D done. The usage summary counts the card as its own place.
+- **C3.6 (you)** The phone check (part D): the header on your smallest phone, the bubble as a tap target, that PLAY IT shows all five sentences, **whether about 10 seconds on screen is long enough to read them**, Silent Mode, your output devices, Arabic.
+- **Verified by:** unit tests and thirteen deliberate breaks, each caught by a test; the type-check covers the icon file. The done-when ("tried with real partners") happens in C5's trials.
 
 ### C5: outside feedback (P1, in progress, mostly people)
 Because the scope is "personal tool, shared as-is" (DEC2), the pack is framed as *trying ACK with a clinician*: for people who choose to try
@@ -191,6 +187,7 @@ a personal tool and give feedback. It is not described as a pilot programme or a
 | C3: a tap | **Asks first** (CANCEL prominent). | An accidental tap cannot speak a long message. |
 | C3: tap area | **About 24 dp, like its neighbours.** | The header does not grow taller. Needs a small-screen phone check. |
 | C3: hiding the icon | **No switch: it is always shown.** | One less setting; the icon is a normal output, not an alarm. |
+| C3: the words | **Option C**: five sentences, with a request not to take the phone and an offer to show what you need. | Drafts for a speech-language pathologist; `docs/PARTNER_CARD.md` holds all six languages. |
 
 ### Still open
 

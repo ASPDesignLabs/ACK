@@ -149,6 +149,8 @@ class UsageSummaryWiringTest {
         }
         // The terminal prompt's tag is a constant: putExtra("source", OutputService.SOURCE_TERMINAL_PROMPT).
         found += Regex("""const val SOURCE_TERMINAL_PROMPT = "([^"]+)"""").find(source("output/OutputService.kt"))!!.groupValues[1]
+        // The partner card's tag is a constant too: putExtra("source", PartnerCard.SOURCE).
+        found += PartnerCard.SOURCE
         assertTrue("the scan should find the app's tags (found $found)", found.size >= 10)
         val known = UsageKinds.KNOWN_SOURCES.keys
         for (tag in found) {

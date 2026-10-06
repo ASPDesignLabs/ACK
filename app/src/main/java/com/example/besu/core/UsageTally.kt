@@ -6,7 +6,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /** Where a counted message came from. A fixed list: a deck's or a button's own name is never kept (see [UsageKinds.channelOf]). */
-enum class UsageChannel { MATRIX, QUICK_ACTIONS, EMERGENCY, TERMINAL, MANUAL_OVERRIDE, COMPOSER, REPLAY, WATCH, SHORTCUT, PEOPLE, OTHER }
+enum class UsageChannel { MATRIX, QUICK_ACTIONS, EMERGENCY, TERMINAL, MANUAL_OVERRIDE, COMPOSER, REPLAY, WATCH, SHORTCUT, PEOPLE, PARTNER_CARD, OTHER }
 
 /** What kind of message was sent: the ten kinds of ACK's own starter phrases (core/StarterSets.kt), or OTHER. A fixed list. */
 enum class UsageKind { YES, NO, UNSURE, HELP, REPAIR, TURN_HOLDING, NAME_OR_ID, BREAK, BOUNDARY, SOCIAL, OTHER }

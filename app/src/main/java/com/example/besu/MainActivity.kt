@@ -307,6 +307,8 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
     // reminder could actually be due -- never on a timer. The banner (Terminal and Settings only), the save icon left of HELP
     // and the dialog it opens all read BackupReminder.due. BACK UP NOW starts the same flow as EXPORT .JSON (its warning first).
     var showBackupReminderDialog by remember { mutableStateOf(false) }
+    // The partner card (core/PartnerCard.kt): the header icon only opens a question; nothing is spoken until PLAY IT is tapped there.
+    var showPartnerCardDialog by remember { mutableStateOf(false) }
     val startBackupExport = rememberBackupExportFlow(context, primaryColor)
     LaunchedEffect(Unit) { BackupReminder.refresh(context) }
 
@@ -1104,6 +1106,13 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
 
+                                    // The partner card, in the slot next to HELP, always shown (no setting hides it), about 24 dp like its neighbours. A tap asks first.
+                                    PartnerCardIndicator(
+                                        primaryColor = primaryColor,
+                                        onClick = { showPartnerCardDialog = true }
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+
                                     Box(
                                         modifier = Modifier
                                             .testTag(AckTags.HELP_BUTTON)
@@ -1640,6 +1649,19 @@ fun MainScreen(logs: androidx.compose.runtime.snapshots.SnapshotStateList<LogEnt
                                 showBackupReminderDialog = false
                             },
                             onClose = { showBackupReminderDialog = false }
+                        )
+                    }
+
+                    if (showPartnerCardDialog) {
+                        PartnerCardDialog(
+                            primaryColor = primaryColor,
+                            lines = PartnerCardPlayer.lines(context),
+                            silentModeName = labelFor(LabelKey.SILENT_MODE),
+                            onCancel = { showPartnerCardDialog = false },
+                            onPlay = {
+                                showPartnerCardDialog = false
+                                PartnerCardPlayer.play(context)
+                            }
                         )
                     }
 

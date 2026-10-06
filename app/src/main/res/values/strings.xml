@@ -1135,6 +1135,8 @@
     <string name="info_nr_usage_head">-- USAGE SUMMARY --</string>
     <string name="info_nr_usage_1">- NEW: USAGE SUMMARY, IN SETTINGS, COUNTS HOW OFTEN AND WHEN MESSAGES\nARE SENT, BY HOUR AND BY WHERE FROM, NEVER THE WORDS. IT IS OFF UNTIL\nYOU TURN IT ON AND CONFIRM, AND THE TERMINAL SHOWS A LINE WHILE IT IS\nON. /n MESSAGES AND HELP NARRATION ARE NOT COUNTED</string>
     <string name="info_nr_usage_2">- KEPT 90 DAYS ON THIS PHONE ONLY AND NOT IN ANY BACKUP. NOTHING IS\nSENT ANYWHERE. SAVE USAGE SUMMARY TO A FILE KEEPS A COPY WHERE YOU\nCHOOSE (IT STILL SHOWS WHEN YOU COMMUNICATE, SO KEEP IT LIKE A\nDIARY). FORGET USAGE SUMMARY DELETES IT, AFTER TWO QUESTIONS</string>
+    <string name="info_nr_partner_head">-- PARTNER CARD --</string>
+    <string name="info_nr_partner_1">- NEW: A PARTNER CARD ICON (A SPEECH BUBBLE) IN THE HEADER\nNEXT TO HELP. A TAP ASKS FIRST. IF YOU PLAY IT, ACK SAYS AND SHOWS\nFIVE SHORT SENTENCES TELLING SOMEONE HOW YOU TALK, LIKE ANY MESSAGE:\nYOUR VOICE AND YOUR OUTPUT, SHOWN BUT NOT SPOKEN IF OUTPUT IS SILENT.\nTHE WORDS ARE DRAFTS. ON PAPER: DOCS/PARTNER_CARD.MD</string>
     <string name="info_nr_fixes_head">-- FIXES --</string>
     <string name="info_nr_fixes_1">- FIXED: THE CONFIRMATION BEFORE CLEARING A PHRASE\'S VARIABLES OR\nPROMPT SHOWED ONLY ITS SECOND SENTENCE. IT NOW SHOWS THE WHOLE\nQUESTION, WORDED AS BEFORE</string>
     <string name="info_b8_title">=== ACK v1.0-BETA.8 PATCH NOTES ===</string>
@@ -1969,5 +1971,19 @@
     <string name="usage_channel_watch">WATCH</string>
     <string name="usage_channel_shortcut">HEADER SHORTCUT</string>
     <string name="usage_channel_people">PEOPLE AND PLACES CARD</string>
+    <string name="usage_channel_partner_card">PARTNER CARD</string>
     <string name="usage_channel_other">OTHER</string>
+
+    <!-- PARTNER CARD (tracker row C3): the header icon, its ask-first question, and the five sentences it says. The sentences are spoken and shown as one message; they are DRAFTS for a speech-language pathologist and a native speaker to check. -->
+    <string name="partner_card_name">PARTNER CARD</string>
+    <string name="partner_card_icon">PARTNER CARD. SAYS HOW YOU TALK, FOR SOMEONE TALKING WITH YOU. ASKS BEFORE IT PLAYS.</string>
+    <string name="partner_card_ask_title">PLAY THE PARTNER CARD?</string>
+    <string name="partner_card_ask_intro">ACK WILL SAY THIS OUT LOUD AND SHOW IT ON THE SCREEN, LIKE ANY OTHER MESSAGE:</string>
+    <string name="partner_card_ask_silent">IT USES YOUR NORMAL OUTPUT. IF %1$s IS ON, IT IS SHOWN AND NOT SPOKEN.</string>
+    <string name="partner_card_ask_play">PLAY IT</string>
+    <string name="partner_card_1">I use this app to talk.</string>
+    <string name="partner_card_2">I can hear you and I understand you.</string>
+    <string name="partner_card_3">Please wait while I answer.</string>
+    <string name="partner_card_4">Please do not take my phone.</string>
+    <string name="partner_card_5">If you are not sure what I need, ask me and I will show you.</string>
 </resources>

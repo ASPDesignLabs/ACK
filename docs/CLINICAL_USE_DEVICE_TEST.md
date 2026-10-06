@@ -1,8 +1,8 @@
 # Clinical use (Section 5): checking it on a real phone
 
-This list grows with each task in `docs/CLINICAL_USE_PLAN.md`. Today it holds three parts: **A. The limits statement (C4)**, **B. Saving the message log to a file (C2)** and **C. The usage summary (C1)**.
+This list grows with each task in `docs/CLINICAL_USE_PLAN.md`. Today it holds four parts: **A. The limits statement (C4)**, **B. Saving the message log to a file (C2)**, **C. The usage summary (C1)** and **D. The partner card (C3)**.
 
-The limits statement, the message-log save and the usage summary were built and tested **without an Android SDK or a phone**. What is tested is the plain-Kotlin part: the words in all six
+The limits statement, the message-log save, the usage summary and the partner card were built and tested **without an Android SDK or a phone**. What is tested is the plain-Kotlin part: the words in all six
 languages, that the three sentences match the website, where the banner may and may not appear, and what the saved file holds and how it is escaped (`tools/kotlin_check/run_unit_tests.sh`
 passes). The Android files were type-checked and syntax-checked (`run_typecheck.sh`, `run_syntax_check.sh`). **What was never run is the Android
 part**: the build, how the banner, the section and the save button look and behave, the file picker, and what a real phone does at a large font. This list is for you to work through
@@ -138,3 +138,37 @@ The summary is **not** in that backup (it describes this phone), so to keep one 
 - [ ] `adb logcat -s ACK_USAGE ACK_USAGE_EXPORT` while using it. → Only fixed sentences such as `a count could not be saved` and `usage summary written: 14 rows, 560 bytes`. **Never any message text.**
 - [ ] `adb shell run-as <the debug app id> ls shared_prefs` before turning it on. → **No** `ack_usage_tally.xml` yet. After a message is counted it exists, and holds only names like
   `2026-10-06|14|MATRIX|YES` with a number each (open it to check: no words).
+
+## D. PARTNER CARD (the header icon)
+
+The card is five short sentences in your voice for someone talking with you. The wording is a draft: **only use it if every sentence is true for you** (the words are in `docs/PARTNER_CARD.md`; tell me
+what to change). Use a debug build. Nothing here is timed; stop whenever you like.
+
+- [ ] Look at the header on each screen (Terminal, a Matrix deck, Quick Actions, Emergency, TYPE, SETTINGS), at the normal font and then the largest font, **on the smallest phone you have**. → Under PROTOCOL
+  there is one row: an empty slot for the backup save icon, then a **speech-bubble icon**, then **HELP**. The bubble is about the same size as the save icon and HELP (about 24 dp) and is always there. The
+  deck and profile names on the left have about one icon's width less room than before: **say if any name is cut off that was not before, if the header looks crowded, or if the bubble is too small to hit with a thumb.**
+- [ ] Make a backup due (or wait until the reminder shows). → The **save icon appears to the left of the bubble**. Nothing else moves: the bubble and HELP stay where they were.
+- [ ] Tap the bubble. → A question opens: **PLAY THE PARTNER CARD?**; a line saying ACK will say this out loud and show it on the screen; the five sentences in bold; a line saying it uses your normal output and
+  is only shown if Silent Mode is on; **CANCEL** (the prominent button) and below it **PLAY IT** (plainer). **Nothing has been spoken yet.**
+- [ ] Press **CANCEL**. → It closes; nothing is spoken or shown; no Terminal line. Open it again and use the back gesture, then open it again and tap outside the box. → Same each time.
+- [ ] Open it and press **PLAY IT**. → ACK says all five sentences in your current voice and shows them on the full screen like any message: **all five sentences are visible (shrunk to fit, or scrollable), not
+  cut to a few words.** The Terminal gets one line like `PARTNER/CARD > "I use this app to talk. I can hear you ..."`.
+- [ ] Note how long the card stays on the screen. → It clears by itself after about 10 seconds, like any message, or when you tap it. **Say whether that is long enough for someone to read all five
+  sentences.** (If it is not, a hold-until-I-clear option is possible; I have not added one.)
+- [ ] If your display preset still cuts long messages (the visual editor's SHOW FULL MESSAGE is off), play the card, then send an ordinary long message. → The card is shown in full; the long message is cut as it
+  always was (the card did not change your preset).
+- [ ] Turn Silent Mode on, then play the card. → It is **shown and not spoken**. Turn Silent Mode off again.
+- [ ] Choose another output (Bluetooth, ACK WATCH or FORCE SPEAKER) and play the card. → It comes out of the output you chose, as any message does.
+- [ ] Choose another voice (and MY VOICE if you have one installed) and play the card. → It uses that voice.
+- [ ] Open the Emergency screen, tap the bubble and play the card. → It plays as an ordinary message: no emergency tone, no forced phone speaker.
+- [ ] Play the card, then replay it from the Terminal log. → It plays again, like any message.
+- [ ] With the usage summary on, play the card. → It is counted under **PARTNER CARD** (kind OTHER). With it off, nothing is counted.
+- [ ] Set the phone and ACK to Spanish with SPEECH LANGUAGE at THIS PHONE'S LANGUAGE. → The question and the card are in Spanish (and the voice speaks Spanish). Then set SPEECH LANGUAGE to ENGLISH (US). → The buttons are
+  Spanish, but the card shown and spoken is **English**. Try Arabic too: **look at the mirrored header and the question.**
+- [ ] Tap HELP and the bubble in turn, ten times each, quickly. → Each opens its own thing and never the other. **Say if you ever hit the wrong one.**
+- [ ] With TalkBack on, move to the bubble. → It reads **PARTNER CARD** and says it asks before it plays.
+- [ ] Open `docs/PARTNER_CARD.md` (or print it). → The English card is the same words you heard.
+
+### Optional: look at what ACK logs (debug build only; written from the code, not run)
+
+- [ ] `adb logcat` while playing the card. → Nothing from the card's own code is logged; the message appears only as any message does.

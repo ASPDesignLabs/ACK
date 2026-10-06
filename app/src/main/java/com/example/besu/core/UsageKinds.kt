@@ -26,6 +26,7 @@ object UsageKinds {
         source == "HW/WATCH" -> UsageChannel.WATCH
         source == "M-KEY" -> UsageChannel.SHORTCUT
         source == "COMPUTER/CONTACT" -> UsageChannel.PEOPLE
+        source == PartnerCard.SOURCE -> UsageChannel.PARTNER_CARD
         else -> UsageChannel.OTHER
     }
 
@@ -44,6 +45,7 @@ object UsageKinds {
         "HW/WATCH" to UsageChannel.WATCH,
         "M-KEY" to UsageChannel.SHORTCUT,
         "COMPUTER/CONTACT" to UsageChannel.PEOPLE,
+        "PARTNER/CARD" to UsageChannel.PARTNER_CARD,
     )
 
     /** The kind a starter function counts as. An exhaustive `when`: a new function fails the build until it is mapped here. */

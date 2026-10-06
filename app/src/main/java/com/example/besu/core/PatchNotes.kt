@@ -69,6 +69,8 @@ object PatchNotes {
         "info_nr_usage_head",
         "info_nr_usage_1",
         "info_nr_usage_2",
+        "info_nr_partner_head",
+        "info_nr_partner_1",
         "info_nr_fixes_head",
         "info_nr_fixes_1",
         "info_b8_title",

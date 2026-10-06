@@ -1166,6 +1166,8 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="info_nr_usage_head">-- ملخص الاستخدام --</string>
     <string name="info_nr_usage_1">- جديد: ملخص الاستخدام في الإعدادات يحسب عدد مرات إرسال الرسائل ووقتها، بحسب الساعة وبحسب المصدر، ولا يحفظ الكلمات أبداً. هو متوقف حتى تشغّله وتؤكد، وتعرض الطرفية سطراً أثناء تشغيله. الرسائل المرسلة بـ /n وسرد المساعدة لا تُحسب</string>
     <string name="info_nr_usage_2">- يُحفظ 90 يوماً على هذا الهاتف فقط وليس في أي نسخة احتياطية. لا يُرسل شيء إلى أي مكان. حفظ ملخص الاستخدام في ملف يحفظ نسخة في المكان الذي تختاره (وما زال يُظهر متى تتواصل، فاحفظه كما تحفظ يومياتك). نسيان ملخص الاستخدام يحذفه بعد سؤالين</string>
+    <string name="info_nr_partner_head">-- بطاقة الشريك --</string>
+    <string name="info_nr_partner_1">- جديد: أيقونة بطاقة الشريك (فقاعة كلام) في الترويسة بجانب مساعدة. النقرة تسأل أولاً. إذا شغّلتها يقول ACK ويعرض خمس جمل قصيرة تخبر من يتحدث معك كيف يتواصل معك، مثل أي رسالة: صوتك ومخرجك، وتُعرض ولا تُنطق إذا كان الإخراج صامتاً. الكلمات مسودات. على الورق: DOCS/PARTNER_CARD.MD</string>
     <string name="info_nr_fixes_head">-- الإصلاحات --</string>
     <string name="info_nr_fixes_1">- تم الإصلاح: كان التأكيد قبل مسح متغيرات عبارة أو موجهها يعرض جملته الثانية فقط. وهو يعرض الآن السؤال كاملا بالصياغة السابقة نفسها</string>
     <string name="info_b8_title">=== ملاحظات إصدار ACK v1.0-BETA.8 ===</string>
@@ -2024,5 +2026,19 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="usage_channel_watch">الساعة</string>
     <string name="usage_channel_shortcut">اختصار الرأس</string>
     <string name="usage_channel_people">بطاقة الأشخاص والأماكن</string>
+    <string name="usage_channel_partner_card">بطاقة الشريك</string>
     <string name="usage_channel_other">أخرى</string>
+
+    <!-- PARTNER CARD (tracker row C3): the header icon, its ask-first question, and the five sentences it says. The sentences are spoken and shown as one message; they are DRAFTS for a speech-language pathologist and a native speaker to check. -->
+    <string name="partner_card_name">بطاقة الشريك</string>
+    <string name="partner_card_icon">بطاقة الشريك. تخبر من يتحدث معك كيف يتواصل معك. تسأل قبل أن تعمل.</string>
+    <string name="partner_card_ask_title">تشغيل بطاقة الشريك؟</string>
+    <string name="partner_card_ask_intro">سيقول ACK هذا بصوت عالٍ ويعرضه على الشاشة، مثل أي رسالة أخرى:</string>
+    <string name="partner_card_ask_silent">تستخدم مخرجك المعتاد. إذا كان %1$s مفعّلاً فتُعرض ولا تُنطق.</string>
+    <string name="partner_card_ask_play">تشغيل</string>
+    <string name="partner_card_1">أستخدم هذا التطبيق لأتحدث.</string>
+    <string name="partner_card_2">أسمعك وأفهمك.</string>
+    <string name="partner_card_3">أرجو الانتظار حتى أجيب.</string>
+    <string name="partner_card_4">أرجو عدم أخذ هاتفي.</string>
+    <string name="partner_card_5">إن لم يكن واضحاً ما أحتاجه، يمكنك أن تسألني وسأُريك.</string>
 </resources>
