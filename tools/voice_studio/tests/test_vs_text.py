@@ -14,7 +14,7 @@ import pytest
 
 from vs_fakes import (DEBIAN_12, MEM_4G, PROC_WSL1, SMI_6G, SMI_DRIVER_DOWN, UBUNTU_2004, FakeSystem, wsl2)
 from voice_studio.core import describe as ds
-from voice_studio.core import diskbudget, fetch, jobs, preflight, project, report, scratch, text
+from voice_studio.core import diskbudget, envbuild, envspec, fetch, jobs, preflight, project, report, scratch, text
 from voice_studio.core.registry import load_registry
 from voice_studio.core.system import CommandResult
 from voice_studio.core.text import Catalog, TextError
@@ -22,7 +22,7 @@ from voice_studio.core.text import Catalog, TextError
 PKG = Path(__file__).resolve().parents[1]
 CAT = text.load_catalog("en")
 SHIPPED_PY = sorted(p for p in (PKG / "core").glob("*.py") if p.name not in {"text.py", "describe.py"})
-NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup")
+NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup", "env")
 KEY = re.compile(r"^(%s)\.[a-z0-9_]+(\.[a-z0-9_]+)*$" % "|".join(NAMESPACES))
 
 
@@ -189,7 +189,7 @@ def test_the_wording_rules_can_actually_fail():          # mutation guards: each
 
 def test_the_three_parts_of_a_failure_are_not_the_same_sentence_and_the_middle_one_says_what_happened_to_the_files():
     says_something_about_change = ("nothing", "kept", "deleted", "left", "no project", "not opened", "not changed", "not saved")
-    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES)):
+    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("env", envbuild.ERROR_CODES)):
         for code in codes:
             parts = ds.error_text(CAT, ns, code)
             assert len({parts.what, parts.changed, parts.next}) == 3 and all(p and "." in p for p in (parts.what, parts.changed, parts.next)), (ns, code)
@@ -213,13 +213,16 @@ def code_keys():
 
 def derived_keys():
     keys = set()
-    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES)):
+    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("env", envbuild.ERROR_CODES)):
         keys |= {"%s.error.%s.%s" % (ns, code, part) for code in codes for part in ("what", "changed", "next")}
     keys |= {"scratch.refuse." + c for c in scratch.REFUSAL_CODES} | {"scratch.warn." + c for c in scratch.WARNING_CODES}
     keys |= {"scratch.speed." + c for c in scratch.SPEED_CODES} | {"job.status." + s.value for s in jobs.JobStatus}
     keys |= {"budget.level." + l.value for l in diskbudget.Level} | {"budget.watch." + w.value for w in diskbudget.Watch}
     keys |= {"project.consent.missing." + c for c in project.CONSENT_PROBLEM_CODES} | {"project.how_given." + h for h in project.HOW_GIVEN}
     keys |= {"setup.tag." + s.value for s in preflight.Status}
+    keys |= {"env.step." + a for a in envbuild.ACTION_IDS} | {"env.state." + s for s in envbuild.INSPECTION_STATES}
+    for spec in envspec.load_environments():
+        keys |= {spec.why_key} | {"env.probe." + probe.id for probe in spec.probes}
     keys |= {"report.label." + n for n in report.LABELS} | {"report.section." + s for s in report.SECTIONS} | {"report.platform." + p.value for p in preflight.Platform}
     return keys
 
@@ -262,7 +265,8 @@ def codes_in_calls(path, callee):
 
 def test_every_error_the_modules_raise_is_in_its_list_and_every_listed_one_is_raised():
     for path, callee, listed in ((PKG / "core/fetch.py", "FetchError", fetch.ERROR_CODES), (PKG / "core/jobs.py", "JobError", jobs.ERROR_CODES),
-                                 (PKG / "core/project.py", "ProjectError", project.ERROR_CODES)):
+                                 (PKG / "core/project.py", "ProjectError", project.ERROR_CODES),
+                                 (PKG / "core/envbuild.py", "EnvError", envbuild.ERROR_CODES)):
         raised = codes_in_calls(path, callee) - {"consent_problems"}
         assert raised <= set(listed), (callee, sorted(raised - set(listed)))
         assert set(listed) <= raised, (callee, "listed but never raised", sorted(set(listed) - raised))

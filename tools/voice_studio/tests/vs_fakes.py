@@ -60,7 +60,7 @@ class FakeSystem:
     def read_text(self, path):
         return self.files.get(path)
 
-    def run(self, argv, timeout=15.0):
+    def run(self, argv, timeout=15.0, cwd=None, env=None):
         self.ran.append(tuple(argv))
         exe = os.path.basename(argv[0])
         if exe == "dpkg-query":

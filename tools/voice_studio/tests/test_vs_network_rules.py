@@ -138,3 +138,17 @@ def test_system_run_still_runs_a_local_command():
 def test_the_bootstrap_script_holds_exactly_one_web_address_and_it_is_the_source_repository():
     lines = [l for l in (PKG / "get.sh").read_text().splitlines() if re.search(r"(?:https?|wss?|ftp)://", l)]
     assert len(lines) == 1 and lines[0].startswith('REPO_URL="https://github.com/')
+
+
+def test_system_run_can_be_given_a_folder_and_extra_settings_and_still_refuses_network_programs(tmp_path):
+    result = RealSystem().run([sys.executable, "-c", "import os; print(os.getcwd()); print(os.environ['ACK_TEST_EXTRA']); print(os.environ['LC_ALL'])"],
+                              cwd=str(tmp_path), env={"ACK_TEST_EXTRA": "yes"})
+    assert result is not None and result.stdout.split() == [str(tmp_path.resolve()), "yes", "C"]
+    with pytest.raises(NetworkBlocked):
+        RealSystem().run(["pip", "install", "x"], cwd=str(tmp_path), env={"A": "b"})
+
+
+def test_system_run_extra_settings_can_replace_the_path_but_not_remove_the_language_setting_by_accident(tmp_path):
+    result = RealSystem().run([sys.executable, "-c", "import os; print(os.environ['PATH'])"], env={"PATH": "/a/b"})
+    assert result is not None and result.stdout.strip() == "/a/b"
+    assert RealSystem().run([sys.executable, "-c", "print(1)"], cwd=str(tmp_path / "missing")) is None            # a folder that is not there: could not run

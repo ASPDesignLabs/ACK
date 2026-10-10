@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "note": "The Python environments the guided setup builds, and nothing it does not list. Each one is built from a lock file (every package pinned with its checksums) and, for the trainer, from one pinned archive of its source in data/sources.json. An environment with no lock checksum is listed and sized for the disk estimate but cannot be built yet: the lock files are made, and the fixes below confirmed, on a real machine (plan task VS-0.2). Sizes are guesses until then. The 'prelude' lines are the documented workarounds from docs/VOICE_TRAINING_GUIDE.md, applied by a launcher so no source file is edited.",
+  "environments": [
+    {
+      "id": "training",
+      "why_key": "env.why.training",
+      "python_min": [3, 10],
+      "approx_size_bytes": 8589934592,
+      "lock": {"filename": "training.lock.txt", "sha256": null},
+      "source": {"item_id": "piper1-gpl-source", "install": true, "dist": "piper-tts",
+                 "native_build": "build_monotonic_align.sh",
+                 "native_artifact": "src/piper/train/vits/monotonic_align/monotonic_align/core*.so"},
+      "prelude": [
+        "import pathlib, torch",
+        "torch.serialization.add_safe_globals([pathlib.PosixPath]) if hasattr(torch.serialization, 'add_safe_globals') else None",
+        "import functools, torch.onnx",
+        "torch.onnx.export = functools.partial(torch.onnx.export, dynamo=False)"
+      ],
+      "patches": [],
+      "probes": [
+        {"id": "trainer-imports", "code": "import piper.train", "needs_gpu": false},
+        {"id": "trainer-graphics-card", "code": "import torch; assert torch.cuda.is_available()", "needs_gpu": true}
+      ]
+    },
+    {
+      "id": "studio",
+      "why_key": "env.why.studio",
+      "python_min": [3, 10],
+      "approx_size_bytes": 1073741824,
+      "lock": {"filename": "studio.lock.txt", "sha256": null},
+      "source": null,
+      "prelude": [],
+      "patches": [],
+      "probes": [
+        {"id": "studio-imports", "code": "import quart, hypercorn, numpy, huggingface_hub, faster_whisper", "needs_gpu": false}
+      ]
+    }
+  ]
+}

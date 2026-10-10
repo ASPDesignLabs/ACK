@@ -50,7 +50,8 @@ class CommandResult:
 
 class System(Protocol):
     def read_text(self, path: str) -> Optional[str]: ...
-    def run(self, argv: Sequence[str], timeout: float = 15.0) -> Optional[CommandResult]: ...   # None: could not run it at all
+    def run(self, argv: Sequence[str], timeout: float = 15.0, cwd: Optional[str] = None,
+            env: Optional[Mapping[str, str]] = None) -> Optional[CommandResult]: ...         # None: could not run it at all; `env` adds to the usual
     def which(self, name: str) -> Optional[str]: ...
     def environ(self) -> Mapping[str, str]: ...
     def exists(self, path: str) -> bool: ...
@@ -76,12 +77,15 @@ class RealSystem:
         except OSError:
             return None
 
-    def run(self, argv: Sequence[str], timeout: float = 15.0) -> Optional[CommandResult]:
+    def run(self, argv: Sequence[str], timeout: float = 15.0, cwd: Optional[str] = None,
+            env: Optional[Mapping[str, str]] = None) -> Optional[CommandResult]:
         if is_network_command(argv):
             raise NetworkBlocked(os.path.basename(argv[0]))
-        env = dict(os.environ, LC_ALL="C", LANG="C")
+        full_env = dict(os.environ, LC_ALL="C", LANG="C")
+        full_env.update(env or {})
         try:
-            done = subprocess.run(list(argv), capture_output=True, text=True, errors="replace", timeout=timeout, env=env, stdin=subprocess.DEVNULL)
+            done = subprocess.run(list(argv), capture_output=True, text=True, errors="replace", timeout=timeout, env=full_env, cwd=cwd,
+                                  stdin=subprocess.DEVNULL)
         except (OSError, subprocess.SubprocessError):
             return None
         return CommandResult(done.returncode, done.stdout, done.stderr)

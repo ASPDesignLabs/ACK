@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 SCHEMA = 1
-KINDS = ("voice", "model", "file")
+KINDS = ("voice", "model", "file", "source")          # source: a program's own files at one commit, unpacked and installed from the archive
 ALLOWED_HOSTS = ("huggingface.co", "github.com")        # where a registry address may point; a download may be redirected to a CDN over https
 SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._=+-]{0,149}$")
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
