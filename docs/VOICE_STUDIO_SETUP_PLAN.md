@@ -38,6 +38,12 @@ is, can do: set it up, help a client or family member record a voice, run the tr
    24.04 has 4.14. The window code is written to the older API on purpose.
 8. **Not testable from the build sandbox:** a real GPU, Windows/WSL, WSLg, GTK on a real desktop, a real phone, a screen reader. Every
    stage ends with a device-test checklist (the other `*_DEVICE_TEST.md` files are the model) and results from those come only from the developer.
+9. **Training is the biggest disk user, and most of it is easy to miss.** The guides give rough figures, none measured yet: a checkpoint is about
+   1 GB, a run keeps up to about eleven, and `lightning_logs/version_N` folders pile up; Freeform Studio's decoded copies take about 350 MB per hour
+   of recording; every distinct audio state wants its own training cache; pip and Hugging Face keep their own download caches (the torch wheels alone
+   are large). On WSL the Linux virtual disk grows with use and does not shrink by itself, so the Windows drive that holds it can fill first.
+   Freeform Studio already refuses new audio below `--min-free-mb` (500 MB) and ACK's own capture screens stop before the last 100 MB; P11 extends
+   the same habit, stop before the write fails, to the whole path.
 
 ## 3. Rules that apply to every task below
 
@@ -50,6 +56,8 @@ is, can do: set it up, help a client or family member record a voice, run the tr
   in modules that import no GTK, so a plain Python test run covers them in the sandbox. The GTK files stay small.
 - Each new source file: SPDX line. Each new dependency: `THIRD_PARTY_NOTICES.md` with how its license was checked. Each new download: in the
   registry (VS-1.3), sized, licensed, asked about first.
+- Disk space is observed, never discovered by a failed write (P11): a budget before each big step, a watch while a job runs, and training stops
+  before the recorder is ever refused.
 - Wording: everyday words, details on demand (D19). A failed step says what happened, **whether anything was changed**, and the next step.
 - Accessibility rules in section 6 (P6) apply to every screen.
 - Every stage ends with the same four things: tests that pass in the sandbox, the device-test checklist items it adds, the docs it changes,
@@ -96,7 +104,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   WSLg, and what to tell Windows users who rely on a screen reader.
 - **VS-0.2 Pinned training environment on the GPU (L, dev).** Build a venv from a proposed lock (exact torch, setuptools, onnx and friends) and
   a fixed `piper1-gpl` commit on both 22.04 and 24.04. Train a few minutes from a candidate base voice on a small dataset, export,
-  patch, synthesize with sherpa-onnx on the PC, import the zip into ACK on the phone. Record exact versions, wheel and disk sizes, GPU
+  patch, synthesize with sherpa-onnx on the PC, import the zip into ACK on the phone. Record exact versions, wheel and disk sizes, the disk cost per hour of recording, per checkpoint and per round (for P11), GPU
   memory used at each batch size, the minimum driver, build time, and which upstream problems needed a wrapper versus a source patch.
   Done when: a lock file, a list of at least one base voice that works, a batch-size-by-memory table and the wrapper list exist.
 - **VS-0.3 Phone HTTPS (M, dev + phone, after nothing).** Generate a CA restricted by name constraints to one LAN address and a leaf for
@@ -111,7 +119,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   `run_tests.sh`, `THIRD_PARTY_NOTICES.md` rows for every planned dependency (PyGObject/GTK, a QR library, `cryptography`, sherpa-onnx,
   torch and the training stack) with how each license was read.
 - **VS-1.2 Preflight (M, sandbox).** Pure functions that read command output and say: Ubuntu release (22.04/24.04 or "unsupported, here is
-  why"), WSL or native (and WSL version), a display is available, GPU and memory (`nvidia-smi`), free disk, RAM, Python and `venv`, git,
+  why"), WSL or native (and WSL version), a display is available, GPU and memory (`nvidia-smi`), free disk (on WSL, both inside Linux and on the Windows drive that holds its virtual disk), RAM, Python and `venv`, git,
   ffmpeg, and which system packages are missing. Fixtures are real captured outputs. Returns a result the bootstrap prints and the window
   shows. No GPU is a *state*, not an error (D4).
 - **VS-1.3 Download registry and consent (M, sandbox).** One file lists every download (name, source, size, checksum, license, why).
@@ -139,15 +147,21 @@ Gate: the findings are written into section 6, and any decision they contradict 
   Applies fixes by wrapper; a source patch (if VS-0.2 found one unavoidable) is shown, backed up and applied only on confirmation.
   After: VS-0.2.
 
+- **VS-1.10 Disk budget (M, sandbox).** Pure functions for P11: the three kinds of files (precious, rebuildable, disposable), an estimate from the
+  planned recording time, the floors, a check before every step that writes a lot, a monitor decision while a job runs (fine, low, stop
+  gracefully), and a proposal of what could be freed, with sizes. The numbers come from one table filled in by VS-0.2; until then it carries the
+  guides' rough figures marked unmeasured. Boundary tests: exactly at a floor, one MB either side, a drive that fills during a round, a drive that
+  reports nothing, and that training always stops before the recorder would refuse new audio.
+
 ### Stage 2: Thin slice (an ACK package in, one `.zip` out, plain screens)
 
 - **VS-2.1 Window shell (M, dev).** `Gtk.Application`, main window, navigation (Setup, Projects, one project), the accessibility baseline
   (P6), the `.desktop` entry and an icon with no binary-asset problem. The widget code uses GTK 4.6 API only (finding 7). After: VS-0.1.
-- **VS-2.2 Setup flow (L, sandbox for logic, dev for the screens).** Preflight results → one consent list for every download (sizes, sources,
+- **VS-2.2 Setup flow (L, sandbox for logic, dev for the screens).** Preflight results → the disk it will need against what is free (P11) → one consent list for every download (sizes, sources,
   licenses) → environment build with progress → self-test → done. Resumable after a closed window or a lost connection; a Show details
   expander with the real commands and log; a GPU-locked state that still lets everything else proceed. After: VS-1.2, 1.3, 1.9, 2.1.
 - **VS-2.3 Projects (M, sandbox + dev).** List and create: whose voice (mine, someone else's); for someone else's, the consent note
-  (who agreed, what to, when, how it can be withdrawn, how it was given) is required to continue (D21). After: VS-1.5, 2.1.
+  (who agreed, what to, when, how it can be withdrawn, how it was given) is required to continue (D21). It also asks roughly how long the recording will be, which sets the project's disk budget (P11). After: VS-1.5, 2.1.
 - **VS-2.4 Import an ACK package (M, sandbox + dev).** File chooser → `freeform_studio.ack_import` → counts, minutes, any problems in plain
   words. The package is never deleted. After: VS-2.3.
 - **VS-2.5 Dataset (M, sandbox + dev).** A friendly wrapper over `build_dataset`: preview, build, show minutes and what was left out and
@@ -176,7 +190,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   `openssl` in tests. After: VS-0.3.
 - **VS-3.6 WSL network guidance (M, dev).** Detect the networking mode and the firewall state; explain; on a yes write `.wslconfig` (keeping
   `.bak`); show the firewall command to run as administrator; never restart WSL, and warn that training must be paused first (D17).
-- **VS-3.7 Recording progress (S, sandbox).** "About X of 60 minutes", quality hints from the existing `ack_checks`, and what to do next.
+- **VS-3.7 Recording progress (S, sandbox).** "About X of 60 minutes", quality hints from the existing `ack_checks`, the disk left for the rest of the plan (P11), and what to do next.
 - **VS-3.8 Retire the old recorder from the guided path (S).** Not installed or offered; the manual guides keep it (D23).
 
 ### Stage 4: Training rounds, in full
@@ -186,11 +200,15 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-4.2 Rounds engine (L, sandbox).** Many rounds; always resume from the person's latest checkpoint, never the base; go back to a
   previous round; rotate the cache folder whenever the audio changes; find `lightning_logs/version_N`. A state machine with boundary tests.
 - **VS-4.3 Automatic settings and guards (M, sandbox + dev).** Batch size from the VRAM table (VS-0.2), free the speech model before
-  training (the 8 GB rule), a disk guard (checkpoints pile up), refuse a second GPU job.
+  training (the 8 GB rule), the disk guard from P11 (check before a round, watch during it, stop gracefully before a write can fail), refuse a second GPU job.
 - **VS-4.4 Survive closing and rebooting (M, dev).** Reopen shows the true state; a silent desktop notification when a round ends
   (no sound, no vibration, no auto-advance: it only tells).
 - **VS-4.5 Listening UX (M, dev).** Compare rounds, a note per round, "use this round", "go back".
 - **VS-4.6 Plain failure messages (M, sandbox).** Map each failure in the guide's troubleshooting table to a plain message plus the safe next step.
+
+- **VS-4.7 Free up space (M, sandbox + dev).** A screen that lists what could be removed, grouped as in P11 (older rounds' checkpoints, temporary
+  listening files, old caches, download caches), with sizes, and one confirmation for exactly what is ticked. It never lists, and cannot remove,
+  recordings, transcripts, the consent note, a backup, or the chosen round's checkpoint and the one before it.
 
 ### Stage 5: Send over Wi-Fi, export hardening
 
@@ -205,11 +223,12 @@ Gate: the findings are written into section 6, and any decision they contradict 
 ### Stage 6: Safety net
 
 - **VS-6.1 Backup now (M, sandbox + dev).** A checked archive to a folder outside OneDrive/Documents (on WSL, the Windows side), a hard
-  nudge after recording and before training, additive restore. Reuse `freeform_studio/privacy.py`'s sync warnings.
+  nudge after recording and before training, additive restore. Reuse `freeform_studio/privacy.py`'s sync warnings. Checks there is room, here and at the destination, before it starts, and leaves out the
+  rebuildable and disposable kinds (P11).
 - **VS-6.2 Update (M, sandbox + dev).** A button that asks before contacting the internet, fetches a tagged release, shows what changes,
   builds the new environment beside the old one and switches only after the self-test passes. Never automatic (P4).
 - **VS-6.3 Uninstall and delete (M, sandbox).** Uninstall removes the tool and environments, never a project. Deleting a person's data asks
-  twice, names a backup first, and is driven by a storage catalogue with a test that fails if a new folder is in no area (the `StorageCatalogue` idea).
+  twice, names a backup first, and is driven by a storage catalogue with a test that fails if a new folder is in no area (the `StorageCatalogue` idea). Each area is also marked precious, rebuildable or disposable (P11).
 - **VS-6.4 Problem report everywhere (S, dev).** The button on every failure screen, content shown first, saved only where the helper chooses.
 
 ### Stage 7: Windows helper
@@ -274,12 +293,52 @@ Gate: the findings are written into section 6, and any decision they contradict 
 | P8 | Hardware floor | NVIDIA with at least 8 GB of GPU memory (the size the guide was verified on), plus RAM and disk numbers measured in VS-0.2. Less is "unverified", not "refused". |
 | P9 | Python | The window runs on the system Python with Ubuntu's PyGObject; training and Freeform Studio run in their own venvs. The lock must cover Python 3.10 (22.04) and 3.12 (24.04); if torch cannot, VS-0.2 reopens D8. |
 | P10 | Windows support | Windows 11 supported; Windows 10 (build 19044+, WSLg) best-effort, and past its standard support. |
+| P11 | Disk space | Observed, never discovered by a failed write. A **budget** (an estimate from how long the person plans to record, checked before each big step and watched while a job runs), with all the churn kept in a separate **scratch** folder inside the project rather than asking for a scratch drive. Details below the table. |
+
+### P11 in detail (disk space)
+
+You offered two ways: a scratch space, or a default minimum plus a recording budget. This proposes both in their simplest form, because
+they answer different questions: the **budget** decides *how much room is needed*, the **scratch folder** decides *where the churn goes*.
+Letting the person point scratch at another drive is not in the first version (see Still open).
+
+| Kind | What it is | Rule |
+|---|---|---|
+| Precious | Recordings and ACK packages, transcripts and edits, `project.json` and the consent note, the chosen round's checkpoint and the one before it (going back needs it), finished exports, backups | Never removed by the tool. Counted in the budget. Backed up. |
+| Rebuildable | The dataset (`wav/` and `metadata.csv`) and the training caches | Can be made again from the precious files. Removed only through *Free up space*. Not backed up. |
+| Disposable | Older rounds' checkpoints, temporary `.onnx` files and listening clips, logs | Removed only through *Free up space*, after one confirmation. Not backed up. |
+
+Rebuildable and disposable files live in `<project>/scratch/`, so the clean-up and budget rules apply to that folder and nothing else. A round's
+checkpoint is moved there (a rename on the same disk, not a copy) once it is no longer the chosen round or the one before it. The
+tool's own environments and download caches (pip, Hugging Face) are not per person; they are counted once, as "the tool", and the pip cache is
+offered for clean-up after a successful build, never removed on its own.
+
+- **The estimate.** One number, in plain words, shown before setup and again whenever the plan changes: the tool and its environments, the
+  recordings (planned hours × the measured cost per hour, including the decoded copy Freeform Studio keeps), the dataset and cache, the
+  checkpoints the tool will keep, room for one backup copy of the precious kind, and a safety margin. Three answers: *enough*, *tight* (a
+  warning that can be acknowledged and continued past), or *not enough* (that step does not start; nothing is changed; the message says how much
+  is missing).
+- **Before each big step** (import a package, build the dataset, start a round, make an export, make a backup) the same check runs against the
+  room that step will need, including at a backup's destination.
+- **While a job runs** the free space is read on a timer. *Low* shows a quiet banner and a silent notification. *Stop* stops the job
+  gracefully (the guide's single Ctrl+C) while there is still room to write whatever a stop keeps, never at the last moment, and says that
+  nothing was lost. What a stop keeps is measured in VS-0.2, not assumed.
+- **The order of the floors protects the recordings.** Training stops at a higher floor than the one at which Freeform Studio refuses new audio
+  (500 MB today), so a full disk can end a training round but never costs a recording.
+- **Nothing is deleted automatically.** *Free up space* (VS-4.7) lists disposable items with sizes, removes only what is ticked after one
+  confirmation, and never offers the chosen round's checkpoint or the one before it.
+- **On WSL** it checks both the Linux disk and the Windows drive that holds its virtual disk, and explains that the virtual disk does not
+  shrink by itself when files are deleted. How to reclaim that space is checked on the developer's WSL before it goes into any guide, because
+  the right command depends on the WSL version.
+- **The numbers** (margin, cost per hour, checkpoint size, the two floors) come from one table that VS-0.2 measures. Until then the guides'
+  rough figures are used and are labelled unmeasured on screen.
 
 ### Still open
 
 - Anything in the proposed defaults you want changed.
 - Which candidate base voices to try in VS-0.2 (your choice, since the licenses differ).
 - Whether the first release needs a translation of the window, or English only until the app's drafts are reviewed (D19 leaves the door open).
+- P11: the real numbers (cost per hour, checkpoint size, margin, the two floors) wait for VS-0.2; and whether scratch may later be pointed at
+  another drive (native Ubuntu only, not WSL, where a Windows drive is much slower).
 
 ## 7. What I cannot do from here
 
