@@ -285,3 +285,80 @@ def test_pieces_already_in_a_merged_dataset_made_from_the_export_are_not_counted
     assert (dest / "excluded.txt").read_text().count("already in split") == 1
     assert "already in split" in capsys.readouterr().out
     assert bd.validate(dest) == []
+
+
+# ---------------------------------------------------------------- --json: the same facts as one object, for a program
+
+def json_run(capsys, out_dir, dest, *extra):
+    code = run(out_dir, dest, "--json", *extra)
+    out = capsys.readouterr().out.strip().splitlines()
+    assert len(out) == 1, "exactly one line of JSON and nothing else"
+    return code, json.loads(out[0])
+
+
+def standard_take(out_dir):
+    write_take(out_dir, "t20260930-000001-aaaa", [seg(1, 0.0, 3.0), seg(2, 3.0, 6.0, flags=["low_confidence"]), seg(3, 6.0, 9.0, flags=["has_digits", "x"]),
+                                                  seg(4, 9.0, 12.0, status="dropped"), seg(5, 12.0, 12.4)])
+
+
+def test_json_for_a_build_gives_the_counts_the_report_prints_and_writes_the_same_files(out_dir, tmp_path, capsys):
+    standard_take(out_dir)
+    dest = tmp_path / "ds"
+    code, result = json_run(capsys, out_dir, dest)
+    assert code == 0 and result["result"] == "built" and result["out"] == str(dest)
+    assert result["takes"] == 1 and result["pieces_considered"] == 5 and result["skipped_takes"] == []
+    assert result["included"]["pieces"] == 1 and abs(result["included"]["minutes"] - 0.05) < 0.001 and result["included"]["shortest"] == result["included"]["longest"]
+    assert result["left_out"]["pieces"] == 4
+    assert result["left_out"]["by_reason"] == {"flagged": 2, "you dropped it": 1, "too short": 1}
+    assert result["left_out"]["by_flag"] == {"low_confidence": 1, "x": 1}
+    assert result["policy"]["include"] == "clean" and result["policy"]["allow"] == ["has_digits"] and result["problems"] == [] and result["merged"] == 0
+    assert (dest / "metadata.csv").exists() and len(rows(dest)) == 1
+
+
+def test_json_for_a_dry_run_writes_nothing(out_dir, tmp_path, capsys):
+    standard_take(out_dir)
+    dest = tmp_path / "ds"
+    code, result = json_run(capsys, out_dir, dest, "--dry-run")
+    assert code == 0 and result["result"] == "dry_run" and result["included"]["pieces"] == 1 and not dest.exists()
+
+
+def test_json_says_so_when_nothing_qualified_and_creates_nothing(out_dir, tmp_path, capsys):
+    write_take(out_dir, "t20260930-000001-aaaa", [seg(1, 0.0, 0.4)])
+    dest = tmp_path / "ds"
+    code, result = json_run(capsys, out_dir, dest)
+    assert code == 1 and result["result"] == "nothing_qualified" and result["included"]["pieces"] == 0 and result["left_out"]["by_reason"] == {"too short": 1}
+    assert not dest.exists()
+
+
+def test_json_refuses_an_existing_dataset_and_a_missing_takes_folder(out_dir, tmp_path, capsys):
+    standard_take(out_dir)
+    dest = tmp_path / "ds"
+    dest.mkdir()
+    (dest / "keep.txt").write_text("mine")
+    code, result = json_run(capsys, out_dir, dest)
+    assert code == 2 and result == {"result": "refused_existing", "out": str(dest)} and (dest / "keep.txt").read_text() == "mine"
+    other = tmp_path / "empty-output"
+    other.mkdir()
+    code = bd.main(["--output", str(other), "--out", str(tmp_path / "ds2"), "--json"])
+    printed = json.loads(capsys.readouterr().out)
+    assert code == 2 and printed["result"] == "no_takes_folder" and printed["out"].endswith("takes")
+
+
+def test_json_lists_the_takes_that_were_skipped_because_they_are_not_finished(out_dir, tmp_path, capsys):
+    standard_take(out_dir)
+    write_take(out_dir, "t20260930-000002-bbbb", [seg(1, 0.0, 3.0)], status="transcribing")
+    code, result = json_run(capsys, out_dir, tmp_path / "ds")
+    assert code == 0 and result["skipped_takes"] == [["t20260930-000002-bbbb", "transcribing"]] and result["takes"] == 2
+
+
+def test_without_json_the_report_is_exactly_what_it_was(out_dir, tmp_path, capsys):
+    standard_take(out_dir)
+    assert run(out_dir, tmp_path / "ds") == 0
+    text = capsys.readouterr().out
+    assert "INCLUDED: 1 piece" in text and "LEFT OUT: 4 pieces" in text and "Train on it" in text and not text.lstrip().startswith("{")
+
+
+def test_the_summary_counts_a_flag_once_per_piece_that_carries_it(out_dir):
+    excluded = [{"reason": "flagged: low_confidence, has_digits"}, {"reason": "flagged: low_confidence"}, {"reason": "too short (0.4s)"}]
+    by_reason, by_flag = bd._reasons(excluded)
+    assert by_reason == {"flagged": 2, "too short": 1} and by_flag == {"low_confidence": 2, "has_digits": 1}

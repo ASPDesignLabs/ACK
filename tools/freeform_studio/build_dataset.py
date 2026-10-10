@@ -237,15 +237,20 @@ def build(args: argparse.Namespace) -> int:
     policy = Policy(include=args.include, allow=parse_allow(args.allow),
                     exclude_tags=set() if args.exclude_tags == "none" else {t for t in args.exclude_tags.split(",") if t},
                     min_s=args.min_seconds, max_s=args.max_seconds, normalize=not args.no_normalize)
+    as_json = bool(getattr(args, "json", False))
     takes_dir = Path(args.output).expanduser() / "_freeform" / args.code / "takes"
     out = Path(args.out).expanduser() if args.out else Path("~/piper").expanduser() / f"freeform-dataset-{datetime.now():%Y%m%d-%H%M%S}"
     if out.exists() and any(out.iterdir()) and not args.dry_run:
+        if as_json:
+            return _json_exit(2, result="refused_existing", out=str(out))
         print(f"\nCan't continue: {out} already exists and isn't empty. This tool never overwrites a dataset; "
               f"choose a new name with --out.\n", file=sys.stderr)
         return 2
 
     chosen, excluded, stats = scan(takes_dir, policy)
     if not takes_dir.is_dir():
+        if as_json:
+            return _json_exit(2, result="no_takes_folder", out=str(takes_dir))
         print(f"\nCan't continue: no takes folder at {takes_dir}. Check --output and --code.\n", file=sys.stderr)
         return 2
 
@@ -298,9 +303,10 @@ def build(args: argparse.Namespace) -> int:
             shutil.copy2(path, out / "wav" / name)
         merged.append({"file": name, "text": text, "seconds": None})
 
-    report(args, policy, stats, rendered, merged, excluded, warnings, out)
+    if not as_json:
+        report(args, policy, stats, rendered, merged, excluded, warnings, out)
     if args.dry_run:
-        return 0
+        return _json_exit(0, **summary_dict("dry_run", policy, stats, rendered, merged, excluded, warnings, out)) if as_json else 0
     if not rendered and not merged:
         if made_dirs:  # only ever remove folders this run created, and only if empty
             for d in (out / "wav", out):
@@ -308,6 +314,8 @@ def build(args: argparse.Namespace) -> int:
                     d.rmdir()
                 except OSError:
                     pass
+        if as_json:
+            return _json_exit(1, **summary_dict("nothing_qualified", policy, stats, rendered, merged, excluded, warnings, out))
         print("Nothing qualified, so no dataset was written. See the list above for why.\n")
         return 1
 
@@ -322,11 +330,15 @@ def build(args: argparse.Namespace) -> int:
         for e in excluded:
             f.write(f"{e['reason']}\t{e['take']}/{e['seg']}\t{e['seconds']}s\t{e['text']}\n")
     problems = validate(out)
+    if problems and as_json:
+        return _json_exit(1, **summary_dict("problems", policy, stats, rendered, merged, excluded, warnings, out, problems[:20]))
     if problems:
         print("Checks on the finished dataset found problems:")
         for line in problems[:20]:
             print("  PROBLEM", line)
         return 1
+    if as_json:
+        return _json_exit(0, **summary_dict("built", policy, stats, rendered, merged, excluded, warnings, out))
     print(f"Checked like the trainer reads it: {len(rendered) + len(merged)} rows, every wav present and 22050 Hz mono.\n")
     print_training_command(out)
     return 0
@@ -356,6 +368,38 @@ def validate(folder: Path) -> List[str]:
     return problems
 
 
+def _reasons(excluded: List[Dict[str, Any]]) -> Tuple[Dict[str, int], Dict[str, int]]:
+    """(left-out pieces counted by reason, and the flagged ones counted by flag)."""
+    by_reason: Dict[str, int] = {}
+    flagged: Dict[str, int] = {}
+    for e in excluded:
+        key = "flagged" if e["reason"].startswith("flagged:") else e["reason"].split(" (")[0]
+        by_reason[key] = by_reason.get(key, 0) + 1
+        if e["reason"].startswith("flagged:"):
+            for fl in e["reason"][len("flagged: "):].split(", "):
+                flagged[fl] = flagged.get(fl, 0) + 1
+    return by_reason, flagged
+
+
+def summary_dict(result: str, p: Policy, stats: Dict[str, Any], rendered: List[Dict[str, Any]], merged: List[Dict[str, Any]],
+                 excluded: List[Dict[str, Any]], warnings: List[str], out: Path, problems: Optional[List[str]] = None) -> Dict[str, Any]:
+    """The same facts the report prints, as plain data for a program (--json)."""
+    secs = sorted(r["seconds"] for r in rendered if r.get("seconds"))
+    by_reason, flagged = _reasons(excluded)
+    return {"result": result, "out": str(out), "takes": stats["takes"], "pieces_considered": stats["segments"],
+            "skipped_takes": [[name, status] for name, status in stats["skipped_takes"]],
+            "included": {"pieces": len(rendered), "minutes": round(sum(secs) / 60.0, 2), "shortest": secs[0] if secs else None,
+                         "median": secs[len(secs) // 2] if secs else None, "longest": secs[-1] if secs else None},
+            "merged": len(merged), "left_out": {"pieces": len(excluded), "by_reason": by_reason, "by_flag": flagged},
+            "warnings": warnings[:10], "problems": problems or [],
+            "policy": {"include": p.include, "allow": sorted(p.allow), "min_seconds": p.min_s, "max_seconds": p.max_s, "normalize": p.normalize}}
+
+
+def _json_exit(code: int, **fields: Any) -> int:
+    print(json.dumps(fields, ensure_ascii=False), flush=True)
+    return code
+
+
 def report(args: argparse.Namespace, p: Policy, stats: Dict[str, Any], rendered: List[Dict[str, Any]],
            merged: List[Dict[str, Any]], excluded: List[Dict[str, Any]], warnings: List[str], out: Path) -> None:
     secs = sorted(r["seconds"] for r in rendered if r.get("seconds"))
@@ -370,19 +414,11 @@ def report(args: argparse.Namespace, p: Policy, stats: Dict[str, Any], rendered:
           (f", {secs[0]:.1f}s to {secs[-1]:.1f}s, median {secs[len(secs) // 2]:.1f}s" if secs else ""))
     if merged:
         print(f"  MERGED IN from other datasets: {len(merged)} rows")
-    by_reason: Dict[str, int] = {}
-    for e in excluded:
-        key = "flagged" if e["reason"].startswith("flagged:") else e["reason"].split(" (")[0]
-        by_reason[key] = by_reason.get(key, 0) + 1
+    by_reason, flagged = _reasons(excluded)
     if excluded:
         print(f"  LEFT OUT: {_pieces(len(excluded))}")
         for key, count in sorted(by_reason.items(), key=lambda kv: -kv[1]):
             print(f"      {count:4d}  {key}")
-        flagged = {}
-        for e in excluded:
-            if e["reason"].startswith("flagged:"):
-                for fl in e["reason"][len("flagged: "):].split(", "):
-                    flagged[fl] = flagged.get(fl, 0) + 1
         if flagged:
             print("      of the flagged ones, by flag: " + ", ".join(f"{k} {v}" for k, v in sorted(flagged.items(), key=lambda kv: -kv[1])))
             print("      Read them in excluded.txt. If the text is right, bring a kind back with e.g. --allow low_confidence")
@@ -450,6 +486,7 @@ def _main(argv: Optional[list] = None) -> int:
     ap.add_argument("--no-normalize", action="store_true", help="keep each clip's original loudness")
     ap.add_argument("--show-excluded", type=int, default=10, help="how many left-out examples to print (0 = none)")
     ap.add_argument("--dry-run", action="store_true", help="show the plan and write nothing")
+    ap.add_argument("--json", action="store_true", help="print the result as one JSON object instead of the report (for a program to read)")
     return build(ap.parse_args(argv))
 
 

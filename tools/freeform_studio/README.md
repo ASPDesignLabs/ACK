@@ -228,6 +228,11 @@ What happens:
   unclear, laugh or cough become tags, which keep a piece out of training until you clear them. Nothing is dropped or edited
   for you: a flagged piece waits for you.
 
+**Finishing recordings without the server.** The server decodes, listens to and cuts a recording as soon as it arrives. If you would rather not start it
+(a program such as ACK Voice Studio does this), `python -m freeform_studio.process --output <recordings folder>` does the same work for every recording
+that is waiting, then stops. It needs the speech model to be on this computer already (it never downloads one), it can be stopped and run again, and it
+changes nothing but the recordings that were waiting. `--json` prints one JSON object per line instead of sentences.
+
 The package format is written down in `docs/ACK_TRAINING_CAPTURE_FORMAT.md`, and both programs are tested against the same
 shared test cases, so a rule can not quietly differ between the phone and this computer.
 
@@ -286,7 +291,8 @@ python -m freeform_studio.build_dataset               # builds a NEW folder, nev
 It reads the takes (and never changes them), keeps the pieces that are safe to train on, and writes `wav/` plus
 `metadata.csv`, exactly what `piper.train fit` reads, along with `manifest.json` (where every clip came from) and
 `excluded.txt` (everything left out, with the reason and the text, so you can judge the choices yourself). It then
-prints the training command to run, including a fresh cache folder.
+prints the training command to run, including a fresh cache folder. `--json` prints the same facts (counts, minutes, what was left out and why) as one
+JSON object, for a program to read.
 
 | Option | What it does |
 |---|---|
