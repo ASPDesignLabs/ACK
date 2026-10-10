@@ -1,6 +1,6 @@
 # Guided voice setup (ACK Voice Studio): plan
 
-**Status: DRAFT for review.** The question-and-answer session is done (26 decisions, section 6); nothing is built yet. Branch:
+**Status: DRAFT for review.** The question-and-answer session is done (27 decisions, section 6); nothing is built yet. Branch:
 `claude/voice-studio-guided-setup` (started from `claude/nice-johnson-38v0sw`). Each decision in section 6 is the developer's; the
 "proposed defaults" in section 6 were **not** asked about and are there to be vetoed. Tasks are cut so that one session can finish one
 or two of them; the `Where tested` tag says what can be checked from the build sandbox and what only the developer's machines can.
@@ -44,6 +44,12 @@ is, can do: set it up, help a client or family member record a voice, run the tr
    are large). On WSL the Linux virtual disk grows with use and does not shrink by itself, so the Windows drive that holds it can fill first.
    Freeform Studio already refuses new audio below `--min-free-mb` (500 MB) and ACK's own capture screens stop before the last 100 MB; P11 extends
    the same habit, stop before the write fails, to the whole path.
+10. **The starting voices carry a license chain.** Both `mike` and `amy` were fine-tuned from the lessac voice, which was trained on the Blizzard 2013
+   Lessac data. A separate review of that data's license (summarised by another session; **not verified here**) says: research and exploration only,
+   commercial use excluded, no redistribution, personal to the registered person and not sublicensable, revocable on written notice, Massachusetts
+   law. Not hosting the data settles redistribution of the data. The research-only scope, and whether anything reaches a model trained from the data,
+   are **unsettled**, and a declaration cannot settle them (D27). This repo holds none of it: no audio or model file has ever been committed on any
+   branch (checked 2026-10-10).
 
 ## 3. Rules that apply to every task below
 
@@ -125,7 +131,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   shows. No GPU is a *state*, not an error (D4).
 - **VS-1.3 Download registry and consent (M, sandbox).** One file lists every download (name, source, size, checksum, license, why).
   One module is the only code allowed to touch the network and it refuses without a consent record. Tests: no web address anywhere else,
-  no socket/urllib/subprocess-to-curl anywhere else, a consent record must name each item. The no-network test style from
+  no socket/urllib/subprocess-to-curl anywhere else, a consent record must name each item, every entry is pinned to a revision and a checksum, and a test fails if any starting-voice or dataset file is committed to the repo (D27). The no-network test style from
   `freeform_studio/tests/test_no_network.py` is the model, extended to this package.
 - **VS-1.4 Bootstrap scripts (M, sandbox).** `setup.sh` (the `git clone ... && run` route) and `get.sh` (the `curl` route, D14): preflight, list
   of `apt` packages with a one-line reason each, ask yes/no, `sudo apt-get install`, then hand over to the window; also `--check` and
@@ -180,7 +186,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-2.7 Listen (M, dev).** Export the latest checkpoint to a temporary `.onnx`, patch it (reusing `patch_voice_for_sherpa_onnx.py`),
   synthesize three test sentences with sherpa-onnx, play them. What you hear is what the phone will say. After: VS-2.6.
 - **VS-2.8 Export and "what now" (M, sandbox for the zip, dev for the screen).** Write `my_voice_backup.zip` in ACK's layout, open its
-  folder, show picture-style steps (copy to the phone, ACK → Audio Architect → IMPORT VOICE BACKUP). After: VS-2.7.
+  folder, show picture-style steps (copy to the phone, ACK → Audio Architect → IMPORT VOICE BACKUP). The screen also says what the voice descends from and that publishing it is a separate decision (D27). After: VS-2.7.
 - **VS-2.9 Thin-slice device test (M, dev + phone).** The whole path on the developer's Ubuntu and WSL machines, then in ACK. Written up in
   `docs/VOICE_STUDIO_DEVICE_TEST.md`. Gate: findings reopen decisions before widening.
 
@@ -207,7 +213,8 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-4.1 Base voice list (M, sandbox + dev).** Mike and Amy (D25), as judged in VS-0.2: each with its license text shown before download (its dataset and license, and that it was itself fine-tuned from lessac, as its model card says) and a consent-gated fetch (both are on the setup
   consent list, and either can be declined and fetched later), the plain male-voice or female-voice choice with one line saying the starting
   voice only gives training a head start,
-  checksum, and a compatibility check (the guide's old-checkpoint test) so an unusable file is explained, not crashed on. Never bundled.
+  checksum, and a compatibility check (the guide's old-checkpoint test) so an unusable file is explained, not crashed on. Never bundled or mirrored. The acknowledgment of D27 is part of the fetch: one click per voice, recorded with the
+  date and revision, on a screen that never says or implies that use is permitted. The downloaded file is kept as a checked copy (see P11).
 - **VS-4.2 Rounds engine (L, sandbox).** Many rounds; always resume from the person's latest checkpoint, never the base; go back to a
   previous round; rotate the cache folder whenever the audio changes; find `lightning_logs/version_N`. A state machine with boundary tests.
 - **VS-4.3 Automatic settings and guards (M, sandbox + dev).** Batch size from the VRAM table (VS-0.2), free the speech model before
@@ -227,7 +234,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   The phone saves it to Downloads; the screen then shows the ACK import steps. Reuses the certificates from VS-3.5 (D10, D16).
 - **VS-5.2 Export hardening (M, sandbox + dev).** The `dynamo=False` problem handled by wrapper; config copy; patch with its backup; a
   sherpa-onnx round-trip on the PC that mirrors ACK's rules (single-codepoint tokens, metadata present, size ceilings) so a bad file is
-  caught before the phone sees it; a model card (base voice, its license and the chain behind it (for example mike, fine-tuned from lessac), project, date, versions, a consent summary without personal detail).
+  caught before the phone sees it; a model card (base voice, its license and the chain behind it (for example mike, fine-tuned from lessac), the acknowledgment made for it (date and revision), project, date, versions, a consent summary without personal detail).
 - **VS-5.3 Zip contract check (S, sandbox).** A test pins the zip's entry names and limits to `CustomVoiceBackupManager` /
   `CustomVoiceRepository` so a change on the Android side fails here.
 
@@ -264,6 +271,10 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-8.6 Release and "bump the pin" runbook (S).** How a tag is cut, how the lock and the base-voice list are re-verified (VS-0.2 repeated), how the clone command's tag is updated.
 - **VS-8.7 Optional: an ACK HELP pointer (S).** A HELP walkthrough step that says where the desktop tool is. Only if wanted; HELP is translated into five languages, so it is not free.
 
+- **VS-8.8 Licensor letter and the licenses as read (S, developer).** Send the draft letter (kept outside the repo) to the holders of the Blizzard 2013
+  Lessac data, file any written answer, and revisit the D27 wording when it comes. Also read Amy's license ("See URL") and keep a dated note of each
+  starting voice's license as read. Nothing else waits on the reply.
+
 ## 6. Decisions
 
 ### Decided (2026-10-10)
@@ -296,6 +307,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 | D24 | Scratch location | **Scratch defaults to a folder inside the project, and an Advanced option lets the person choose another drive or folder**, on native Ubuntu and on WSL. A chosen place is checked before it is used, the tool never writes into the empty mount point of an unplugged drive, and the place is covered by backup, clean-up and delete ("Choosing another drive" under P11 in detail; VS-1.11, VS-6.5). |
 | D25 | Starting voices | **Mike and Amy** (`rhasspy/piper-checkpoints`, `en/en_US`) are the default install's two starting voices. Both are fetched during setup (each is its own line on the consent list, with its license shown, D15), and the helper chooses **male or female** for each person. The thin slice uses Mike, which the developer has found works best across the voices tried. **Confirmed from the developer's screenshot of `en/en_US` (2026-10-10):** the folders are `mike` ("Add mike (en_US)", about 3 months old) and `amy` (last changed by "Fix model cards", about 2 months old). The developer reports both were trained recently and will work. VS-0.2 still checks that each loads and trains with the pinned trainer, because the guide records that older-format checkpoints fail and the listing shows only each folder's last change, not when its checkpoint was trained. Each voice's own model card license is read before it ships: the dataset's page says MIT, which may not be the voice's own license. **From the model cards (developer's screenshots, 2026-10-10):** each is one speaker, medium quality, 22,050 Hz, and **fine-tuned from the lessac voice**. `mike`'s dataset is OHF-Voice/voice-datasets under CC0; `amy`'s is MycroftAI/mimic3-voices with its license listed only as "See URL". **Each checkpoint is 846 MB**, so about 1.7 GB for both. |
 | D26 | Disk needed to start | The number shown before setup, and the check that gates it, **counts both starting voices and a budget for at least two people** (a person's project is the "profile" here), not just the tool. |
+| D27 | Starting-voice licensing | **Declare, don't host.** The project hosts, mirrors or sublicenses none of the starting voices or the data behind them. Before each voice is fetched the person sees the chain (mike or amy, then lessac, then the Blizzard 2013 data) and each license as its own page states it, with the plain statement that this project gives no legal advice and that whether their use is allowed is theirs to decide. One click per voice, recorded in the project's model card with the date and the exact revision. The registry points only at the original host, pinned to a revision and a checksum, and a test fails if any starting-voice or dataset file is committed to the repo or put in a release or an exported package. A downloaded starting voice is kept (a checked copy that *Free up space* never offers), because it cannot be re-downloaded if the host removes it; a different base later is a registry entry, not a rewrite. The exported voice is the person's own, and the export screen and model card say what it descends from and that publishing it is a separate decision. No wording anywhere says or implies that use is permitted ("free for personal use" is not used). The developer is also asking the licensors for a written answer (the draft letter is kept outside the repo); nothing waits on the reply. |
 
 ### Proposed defaults (not asked: veto any of these)
 
@@ -329,7 +341,8 @@ Rebuildable and disposable files live in the project's scratch folder (`<project
 budget rules apply to that folder and nothing else. A round's
 checkpoint is moved there (a rename on the same disk, not a copy) once it is no longer the chosen round or the one before it. The
 tool's own environments and download caches (pip, Hugging Face) are not per person; they are counted once, as "the tool", and the pip cache is
-offered for clean-up after a successful build, never removed on its own.
+offered for clean-up after a successful build, never removed on its own. The downloaded starting voices belong to the tool too: kept once, never offered by
+*Free up space* (they cannot be re-downloaded if the host removes them), left out of project backups, and checked against their checksum before each use (D27).
 
 - **The estimate.** One number, in plain words, shown before setup and again whenever the plan changes: the tool and its environments, the
   recordings (planned hours × the measured cost per hour, including the decoded copy Freeform Studio keeps), the dataset and cache, the
@@ -390,9 +403,9 @@ my proposals (veto any). Each is a pure function in VS-1.11, tested in the sandb
 ### Still open
 
 - Anything in the proposed defaults you want changed.
-- The licenses behind the starting voices. Mike's dataset is CC0; Amy's card says "See URL" (the MycroftAI/mimic3-voices repository); both were
-  fine-tuned from the lessac voice, whose terms are not read yet. A voice trained from either carries that chain. They are read before the default
-  install ships (VS-4.1, VS-8.4), and the developer decides what the wizard says about sharing a voice. The sandbox cannot reach those pages.
+- The licensor reply (D27): the developer is asking the holders of the Blizzard 2013 Lessac data for a written answer. Nothing blocks on it, but the
+  wording of the acknowledgment (VS-4.1) is revisited when it comes. Amy's license ("See URL", the MycroftAI/mimic3-voices repository) is still
+  unread; Mike's dataset is CC0.
 - Whether Mike is preselected on the male/female choice screen, or neither is.
 - Whether the first release needs a translation of the window, or English only until the app's drafts are reviewed (D19 leaves the door open).
 - P11 and D26: the real numbers (cost per hour, the size of a checkpoint a run saves, margin, the floors, the slow-drive cutoff) wait for VS-0.2.
