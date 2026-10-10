@@ -91,8 +91,7 @@ may behave differently under WSL, so **do it on both**. The job here only prints
 - [ ] Start it:
   <!-- snippet: jobs-start -->
   ```bash
-  cd ~/ack-tools/tools
-  python3 - <<'EOF'
+  PYTHONPATH=~/ack-tools/tools python3 - <<'EOF'
   import os, sys
   from voice_studio.core import jobs
 
@@ -106,8 +105,7 @@ may behave differently under WSL, so **do it on both**. The job here only prints
 - [ ] Look at it:
   <!-- snippet: jobs-list -->
   ```bash
-  cd ~/ack-tools/tools
-  python3 - <<'EOF'
+  PYTHONPATH=~/ack-tools/tools python3 - <<'EOF'
   import os
   from voice_studio.core import jobs
 
@@ -140,8 +138,7 @@ may behave differently under WSL, so **do it on both**. The job here only prints
 - [ ] Ask it to stop, then look again after a few seconds:
   <!-- snippet: jobs-stop -->
   ```bash
-  cd ~/ack-tools/tools
-  python3 - <<'EOF'
+  PYTHONPATH=~/ack-tools/tools python3 - <<'EOF'
   import os
   from voice_studio.core import jobs
 
@@ -179,8 +176,8 @@ computer. On WSL a Windows folder works (`/mnt/c/Users/<you>/Downloads/…`); no
   Answer **no** the first time:
   <!-- snippet: package-summary -->
   ```bash
-  cd ~/ack-tools/tools && source ~/freeform-studio-venv/bin/activate
-  python3 - ~/Downloads/ack-training-XXXX.zip ~/ack-voice-check/recordings <<'EOF'
+  source ~/freeform-studio-venv/bin/activate
+  PYTHONPATH=~/ack-tools/tools python3 - ~/Downloads/ack-training-XXXX.zip ~/ack-voice-check/recordings <<'EOF'
   import sys
   from voice_studio.core import ackimport
   from voice_studio.core.text import load_catalog
@@ -311,8 +308,7 @@ round).
 - [ ] Make the file for the phone. It checks what ACK would refuse **before** writing, asks nothing, and never replaces a file:
   <!-- snippet: voice-zip -->
   ```bash
-  cd ~/ack-tools/tools
-  python3 - ~/piper/voice-check/my_voice.onnx ~/piper/voice-check/my_voice.onnx.json ~/ack-voice-check/my_voice_backup.zip <<'EOF'
+  PYTHONPATH=~/ack-tools/tools python3 - ~/piper/voice-check/my_voice.onnx ~/piper/voice-check/my_voice.onnx.json ~/ack-voice-check/my_voice_backup.zip <<'EOF'
   import sys
   from pathlib import Path
   from voice_studio.core import voicezip

@@ -50,9 +50,14 @@ def heredoc(marker):
     block = fenced_after(marker)
     head = next(i for i, line in enumerate(block) if "<<'EOF'" in line)
     call = shlex.split(block[head].split("<<")[0])
-    assert call[:2] == ["python3", "-"], marker
     end = block.index("EOF", head)
-    return call[2:], "\n".join(block[head + 1:end]) + "\n"
+    program = "\n".join(block[head + 1:end]) + "\n"
+    found = False
+    if call[0] == "PYTHONPATH=~/ack-tools/tools":
+        call, found = call[1:], True
+    assert call[:2] == ["python3", "-"], marker
+    assert found or "voice_studio" not in program, (marker, "a snippet that uses the tool must find it from any folder, as the person's terminal may be anywhere")
+    return call[2:], program
 
 
 @pytest.fixture
@@ -75,11 +80,14 @@ _v.verify_voice_zip = _spy
 
 
 def run_snippet(marker, home, *args, stdin="", use_doc_args=True, preamble=""):
-    """Run the block's python the way the heredoc does (`python3 - ARGS`, from the tools folder), with `-c` so that standard input can carry the answers."""
+    """Run the block's python the way the heredoc does (`PYTHONPATH=… python3 - ARGS`, from a folder that is not the tools folder), with `-c` so that standard input can carry the answers."""
     doc_args, program = heredoc(marker)
     given = [os.path.expanduser(a) for a in (doc_args if use_doc_args else [])] + [str(a) for a in args]
     env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
-    return subprocess.run([sys.executable, "-c", preamble + program, *given], input=stdin, cwd=str(TOOLS), env=env, text=True, capture_output=True, timeout=60)
+    env["PYTHONPATH"] = str(TOOLS)                       # the doc's `PYTHONPATH=~/ack-tools/tools`, pointed at this checkout
+    elsewhere = Path(home) / "somewhere-else"            # not the tools folder: the person's terminal may be in any folder
+    elsewhere.mkdir(exist_ok=True)
+    return subprocess.run([sys.executable, "-c", preamble + program, *given], input=stdin, cwd=str(elsewhere), env=env, text=True, capture_output=True, timeout=60)
 
 
 # ---------------------------------------------------------------- the checklist's promises that need no input
