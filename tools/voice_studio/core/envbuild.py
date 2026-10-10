@@ -54,7 +54,7 @@ TAIL_LINES = 12                        # how much of a failed command's output i
 STEP_TIMEOUT_S = {"venv": 600.0, "native_build": 3600.0, "probe": 600.0, "verify": 120.0}
 
 # Each has words in the text catalog (env.error.<code>.what / .changed / .next).
-ERROR_CODES = ("not_pinned", "lock_missing", "lock_changed", "lock_invalid", "python_old", "not_ours", "newer_record", "damaged_record", "busy",
+ERROR_CODES = ("not_pinned", "lock_missing", "lock_changed", "lock_invalid", "python_old", "python_new", "not_ours", "newer_record", "damaged_record", "busy",
                "no_room", "consent", "source_fetch", "unpack_unsafe", "unpack_failed", "venv_failed", "pip_failed", "native_failed",
                "patch_declined", "patch_changed", "launcher_failed", "self_test_failed", "write_failed")
 STEP_IDS = ("source_unpack", "patches", "venv", "pip_lock", "pip_source", "native_build", "wrapper")      # the recorded steps, in order
@@ -497,6 +497,8 @@ def _resolve(spec: EnvSpec, ctx: Context) -> Tuple[bytes, str, List[Pin], Option
     minor = (version[0], version[1])
     if minor < spec.python_min:
         raise EnvError("python_old", "%d.%d" % minor)
+    if spec.python_max is not None and minor > spec.python_max:
+        raise EnvError("python_new", "%d.%d" % minor)
     item = ctx.registry.get(spec.source.item_id) if spec.source is not None else None
     return lock_bytes, sha, pins, item, minor
 

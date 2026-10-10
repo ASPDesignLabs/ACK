@@ -106,6 +106,12 @@ def test_a_good_entry_is_read_completely():
     assert spec.probes == (es.Probe("imports", "import os", False),)
 
 
+def test_the_newest_python_is_optional_and_may_equal_the_oldest():
+    assert parse_one().python_max is None
+    assert parse_one(python_max=[3, 12]).python_max == (3, 12)
+    assert parse_one(python_max=[3, 10]).python_max == (3, 10)
+
+
 def test_an_entry_with_no_source_is_allowed():
     raw = copy.deepcopy(GOOD)
     raw["source"], raw["patches"] = None, []
@@ -115,6 +121,8 @@ def test_an_entry_with_no_source_is_allowed():
 BAD = [
     ("id", "Not A Slug", "bad or repeated id"), ("id", "", "bad or repeated id"), ("why_key", None, "why_key"),
     ("python_min", [3], "python_min"), ("python_min", [3, "10"], "python_min"), ("python_min", [True, 10], "python_min"), ("python_min", "3.10", "python_min"),
+    ("python_max", [3], "python_max must be"), ("python_max", [3, "12"], "python_max must be"), ("python_max", [True, 12], "python_max must be"),
+    ("python_max", "3.12", "python_max must be"), ("python_max", [3, 100], "python_max must be"), ("python_max", [3, 9], "python_max is older than python_min"),
     ("approx_size_bytes", 0, "out of range"), ("approx_size_bytes", -5, "out of range"), ("approx_size_bytes", True, "approx_size_bytes"),
     ("approx_size_bytes", 2**41, "out of range"),
     ("lock", {"filename": "../x.txt", "sha256": None}, "unsafe lock file name"), ("lock", {"filename": "/etc/x.txt", "sha256": None}, "unsafe lock file name"),
@@ -221,6 +229,33 @@ def test_every_shipped_lock_file_is_listed_and_the_names_are_unique():
     assert len(names) == len(set(names))
     on_disk = {p.name for p in es.LOCKS_DIR.glob("*.txt")}
     assert on_disk <= set(names), "a lock file nothing lists: %s" % (on_disk - set(names))
+
+
+TRAINING_LOCK = next(s for s in SHIPPED if s.id == "training")
+
+
+def test_the_shipped_training_lock_is_pinned_and_covers_the_build_tools_and_the_trainer_stack():
+    """Plan VS-0.2: the builder installs with --no-deps, so a package missing here is missing in the environment. The build tools the
+    trainer's setup.py needs (and the setuptools ceiling the guide gives) must be in it."""
+    assert TRAINING_LOCK.lock_sha256 is not None
+    pins, problems = es.parse_lock(TRAINING_LOCK.lock_path.read_text(encoding="utf-8"))
+    assert problems == []
+    by_name = {p.name: p for p in pins}
+    needed = ("setuptools", "wheel", "scikit-build", "cmake", "ninja", "cython", "torch", "lightning", "pytorch-lightning", "tensorboard", "tensorboardx",
+              "jsonargparse", "docstring-parser", "typeshed-client", "onnx", "onnxruntime", "pysilero-vad", "librosa", "numpy", "pathvalidate", "numba", "soxr",
+              "nvidia-cudnn-cu13", "triton")
+    assert [n for n in needed if n not in by_name] == []
+    assert int(by_name["setuptools"].version.split(".")[0]) < 82
+    assert "piper-tts" not in by_name, "the trainer itself is installed from the pinned source, not from the package site"
+    assert all(p.marker == "" and p.hashes for p in pins)
+
+
+def test_the_shipped_training_lock_holds_wheels_for_every_python_the_entry_allows_and_none_the_entry_refuses():
+    """The lock's header says which Pythons its checksums are for; the entry's python_min / python_max must say the same, or a Python is allowed
+    that pip cannot install for (a confusing hash error) or refused that would work."""
+    header = [l for l in TRAINING_LOCK.lock_path.read_text(encoding="utf-8").splitlines() if l.startswith("# Python versions covered")]
+    assert header == ["# Python versions covered: 3.10, 3.11, 3.12. Linux x86_64 wheels only; Python 3.13 and newer are not covered."]
+    assert TRAINING_LOCK.python_min == (3, 10) and TRAINING_LOCK.python_max == (3, 12)
 
 
 def test_the_shipped_trainer_workarounds_are_the_guides_and_are_one_line_each():

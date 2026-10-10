@@ -221,6 +221,21 @@ def test_the_python_must_be_new_enough_at_the_exact_edge(tmp_path, version, ok):
         assert not rig.environments.exists()
 
 
+@pytest.mark.parametrize("version, ok", [((3, 9, 18), False), ((3, 10, 0), True), ((3, 12, 9), True), ((3, 13, 0), False), ((3, 14, 1), False)])
+def test_the_python_must_not_be_newer_than_the_lock_covers_at_the_exact_edge(tmp_path, version, ok):
+    """A Python newer than the lock's checksums would fail inside pip with a confusing hash message; it is refused first, in plain words."""
+    rig = make_rig(tmp_path, spec_over={"python_max": [3, 12]}, system_kw={"python": version})
+    result = rig.build()
+    assert result.ok if ok else code_of(result) in ("python_old", "python_new")
+    if not ok:
+        assert code_of(result) == ("python_old" if version[1] < 10 else "python_new")
+        assert not rig.environments.exists() and rig.doors.pip_runs == []
+
+
+def test_an_entry_with_no_newest_python_accepts_any_new_one(tmp_path):
+    assert make_rig(tmp_path, system_kw={"python": (3, 14, 1)}).build().ok
+
+
 # ---------------------------------------------------------------- what is already there
 
 def test_a_folder_with_the_name_but_no_record_is_never_touched(tmp_path):

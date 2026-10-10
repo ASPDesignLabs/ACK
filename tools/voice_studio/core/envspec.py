@@ -69,6 +69,7 @@ class EnvSpec:
     prelude: Tuple[str, ...]
     patches: Tuple[SourcePatch, ...]
     probes: Tuple[Probe, ...]
+    python_max: Optional[Tuple[int, int]] = None    # the newest Python the lock has checksums for (and has been tried on); newer is refused plainly, not left to pip
 
     @property
     def lock_path(self) -> Path:
@@ -220,6 +221,12 @@ def parse_environments(text: str) -> Tuple[EnvSpec, ...]:
         python_min = raw.get("python_min")
         if not (isinstance(python_min, list) and len(python_min) == 2 and all(isinstance(n, int) and not isinstance(n, bool) and 0 <= n < 100 for n in python_min)):
             raise EnvSpecError("%s: python_min must be [major, minor]" % where)
+        python_max = raw.get("python_max")
+        if python_max is not None:
+            if not (isinstance(python_max, list) and len(python_max) == 2 and all(isinstance(n, int) and not isinstance(n, bool) and 0 <= n < 100 for n in python_max)):
+                raise EnvSpecError("%s: python_max must be [major, minor]" % where)
+            if (python_max[0], python_max[1]) < (python_min[0], python_min[1]):
+                raise EnvSpecError("%s: python_max is older than python_min" % where)
         size = _need(raw, "approx_size_bytes", int, where)
         if not 0 < size <= 2**40:
             raise EnvSpecError("%s: approx_size_bytes out of range" % where)
@@ -266,7 +273,8 @@ def parse_environments(text: str) -> Tuple[EnvSpec, ...]:
         source = _parse_source(raw.get("source"), where)
         if patches and source is None:
             raise EnvSpecError("%s: patches need a source" % where)
-        specs.append(EnvSpec(env_id, why, (python_min[0], python_min[1]), size, filename, digest, source, tuple(prelude), tuple(patches), tuple(probes)))
+        specs.append(EnvSpec(env_id, why, (python_min[0], python_min[1]), size, filename, digest, source, tuple(prelude), tuple(patches), tuple(probes),
+                         (python_max[0], python_max[1]) if python_max is not None else None))
     return tuple(specs)
 
 

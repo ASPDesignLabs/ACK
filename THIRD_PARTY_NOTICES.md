@@ -92,7 +92,7 @@ The recordings you train on are your own voice: see `docs/DATA_SOVEREIGNTY.md` f
   with GPLv3, not with GPLv2-only; that is why the project is not "GPLv2".) LGPL libraries can be linked.
 * GPL components here (espeak-ng, piper1-gpl, FFmpeg's GPL build) are either the same family as ACK or separate programs.
 * Open items, each needing a decision rather than a quiet change: **the font** (section 1), **the two Play Services libraries**
-  (section 2), **the base checkpoint's license** (section 5; the two starting voices ACK Voice Studio offers are in section 7), and the **provenance of the images** (section 1).
+  (section 2), **the base checkpoint's license** (section 5; the two starting voices ACK Voice Studio offers are in section 7), **NVIDIA's licence on the training environment** (section 7), and the **provenance of the images** (section 1).
 * **Authorship note:** Freeform Studio and most recent changes were written with an AI coding assistant. No third-party code was
   copied in on purpose, and the only known derivation is the sherpa-onnx script credited in its own header, but similarity to
   existing code cannot be ruled out by anyone, and a maintainer should know that.
@@ -111,7 +111,31 @@ is shipped in the repository: the person's own computer installs or fetches it.
 | segno (QR codes) | BSD (PyPI classifier "BSD License"; which BSD variant was not checked) | PyPI metadata | |
 | cryptography (the phone-recording certificate authority) | Apache-2.0 OR BSD-3-Clause | PyPI metadata (license expression) | |
 | sherpa-onnx (Python package, to check a finished voice on the PC with the engine the phone uses) | Apache-2.0 (PyPI: "Apache licensed, as found in the LICENSE file"; section 2 read its repository) | PyPI metadata | |
-| The training stack (piper1-gpl, torch and the rest) | see section 5 | | The guided setup pins exact versions; each pinned package is re-checked when the lock file is made. |
+| The training stack (piper1-gpl, torch and the rest) | see section 5 and the lock's table below | PyPI metadata (training lock, 2026-10-10) | The guided setup pins exact versions; each pinned package is re-checked when the lock file is made. `studio.lock.txt` is not made yet. |
+
+**The training environment's lock** (`tools/voice_studio/data/locks/training.lock.txt`, 96 packages, made 2026-10-10). Each package's licence was read from the package
+site's own metadata for the exact pinned version (setuptools and wheel included); the licence *texts* were not read. Nothing is GPL-only or AGPL. The packages are installed by the person's own
+computer from the package site; none is part of this repository.
+
+| License (as the package states it) | Packages |
+|---|---|
+| MIT | attrs, audioread, charset-normalizer, coloredlogs, docstring_parser, filelock, humanfriendly, jsonargparse, onnxruntime, pathvalidate, platformdirs, pysilero_vad, PyYAML, scikit-build, setuptools, tensorboardX, tomli, triton, typeshed_client, urllib3, wheel |
+| MIT-0 | cffi |
+| BSD-2-Clause / BSD-3-Clause / "BSD" | cloudpickle, decorator, fsspec, idna, Jinja2, joblib, Lazy-loader, Markdown, MarkupSafe, mpmath, networkx, numba, numpy, pooch, protobuf, pycparser, scikit-learn, scipy, soundfile, sympy, threadpoolctl, Werkzeug (numpy and scipy also bundle other permissive parts) |
+| Apache-2.0 | absl-py, aiosignal, async-timeout, cmake (also BSD), cuda-bindings, cuda-pathfinder, Cython, distro, flatbuffers, frozenlist, grpcio, lightning, Lightning-utilities, ml_dtypes, msgpack, multidict, ninja, onnx, propcache, pytorch-lightning, requests, tensorboard, tensorboard-data-server, torchmetrics, yarl |
+| Apache-2.0 AND MIT | aiohttp |
+| Apache-2.0 OR BSD-2-Clause | packaging |
+| BSD-2-Clause AND Apache-2.0 WITH LLVM-exception | llvmlite |
+| torch's own expression | Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT |
+| ISC | librosa |
+| PSF-2.0 | aiohappyeyeballs, typing_extensions |
+| MPL-2.0 | certifi; tqdm (MPL-2.0 AND MIT) |
+| MIT-CMU | pillow |
+| **LGPL-2.1-or-later** | soxr (a dependency of librosa; the wheel carries the libsoxr library). Fine to link from GPL-3.0-or-later code; the person's computer installs it. |
+| **NVIDIA proprietary, or no licence stated** | The 15 `nvidia-*` CUDA libraries (cuBLAS, cuDNN, NCCL, cuFFT, cuRAND, cuSOLVER, cuSPARSE, cuSPARSELt, NVSHMEM, NVTX, nvJitLink, cuFile, CUDA runtime, NVRTC, CUPTI) that `torch` needs, and the `cuda-toolkit` meta-package. Ten say proprietary (`LicenseRef-NVIDIA-Proprietary` or "NVIDIA Proprietary Software"); `nvidia-nvtx` says "Apache 2.0" but carries the proprietary classifier; `nvidia-cuda-runtime`, `nvidia-cudnn-cu13`, `nvidia-nccl-cu13`, `nvidia-nvshmem-cu13` and `cuda-toolkit` state nothing. **NVIDIA's licence text was not read** (not reachable from where this was checked). |
+
+**Open item (a decision, not a quiet change):** the setup screen's agreement for the training environment does not yet say that it includes NVIDIA's CUDA libraries under NVIDIA's own licence
+(plan: "NVIDIA's licence on the training environment"). The trainer's own source, `piper1-gpl`, is GPL-3.0-or-later (section 5) and is installed from its pinned archive, not from this lock.
 
 **The two starting voices** (`rhasspy/piper-checkpoints`, `en/en_US`, medium quality, 22,050 Hz, 846 MB each). Fetched by the person after
 a screen that shows this chain and asks; the project hosts, mirrors and sublicenses none of it (plan decision D27). This is not legal advice.

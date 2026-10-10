@@ -75,7 +75,7 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
 
 - **F5 (2026-10-10), speech recognition runs on the processor with and without the network; downloads are slow on this connection.** `models list` showed `small.en` already on the machine, so the
   fetch step itself was not run, and `asr_smoke` gave the same result online and offline. The developer's downloads run at roughly 1.5 MB/s (a 150 Mbit carrier line). At that speed the 480 MB speech
-  model takes about 5 minutes, one 846 MB starting checkpoint about 10 minutes, and the training environment (a download the size table only guesses at, about 4 GB) about 45 minutes. So the setup
+  model takes about 5 minutes and one 846 MB starting checkpoint about 10 minutes. (The first version of this note also said the training environment would take about 45 minutes at that speed. **That was wrong:** see F9, the package site's downloads ran several times faster than Hugging Face's.) So the setup
   screens must not promise "a few minutes": show an estimate from the speed actually measured so far, say plainly that it can take a long time, keep every download resumable (it already is) and never
   freeze the window while one runs.
 
@@ -92,6 +92,23 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   and the summary say how far clips were turned up, a warning says when some are still softer than full level, and the limit is kept in `manifest.json`. Voice Studio's command builder takes the limit and
   its reader reports the gain. Open: the right limit for the developer's phone (the measured peaks will say), and whether the window should offer it by itself when the only reason pieces were left out is
   `quiet` (it should explain and ask, never change anything silently).
+
+- **F9 (2026-10-10), the trainer environment builds by hand on the developer's machine, and what the lock must therefore hold.** Ubuntu 22.04.5 on WSL2, Python 3.10.12, piper1-gpl at commit
+  `5b355b110aecf3de8f4e000ede1ce06831acff35`, `pip install -e '.[train]'` plus the build tools: **6 minutes 17 seconds** from nothing (some wheels may have come from pip's cache, so this is a floor
+  on the speed, not a promise: the files total about 3.2 GB, which is at least 8.6 MB/s if none were cached; Hugging Face's 1.5 MB/s was a different host). **94 packages** besides the trainer; the
+  environment is **6.1 GiB** installed; pip's cache on that machine was 7.6 GiB afterwards (more than this install's own 3.2 GB of files, so it holds earlier installs too; it is disposable). torch is
+  **2.14.1 with CUDA 13** straight from the package site (no separate index needed), the driver (596.49) is new enough, `torch.cuda.is_available()` is true on the RTX 4060 and `piper.train fit --help`
+  runs. Facts for the lock: `pip freeze` hides **setuptools** (forced below 82: 81.0.0) and **wheel**, which the build needs (scikit-build depends on wheel), so the lock names them; the trainer itself
+  (`piper-tts`, installed editable from the source) is not in the lock; `monotonic_align`'s native part built (`core.cpython-310-x86_64-linux-gnu.so`) and so did `espeakbridge`. `torch.jit.script`
+  prints a harmless deprecation warning. The trainer's real requirements are `setup.py`'s `train` extra (torch, lightning, tensorboard, tensorboardX, jsonargparse[signatures], onnx, pysilero-vad,
+  cython, librosa<1) plus onnxruntime and pathvalidate; `pyproject.toml` lists only the build tools. **`onnxscript` is not in the tested set**: the export workaround (`dynamo=False`) should not need
+  it; if the export in the checklist's section J says otherwise, it is added to the lock.
+  **What the same set does on other Pythons** (checked here against the package site's own listings, not on a machine): every one of the 94 releases has a Linux x86_64 wheel for Python 3.10, 3.11
+  and 3.12, so one lock serves Ubuntu 22.04 and 24.04 with no change of versions (the 3.10 resolution is the older one: a fresh resolve on 3.11 and later would pick newer numpy, scipy,
+  scikit-learn, networkx and onnxruntime, which the lock deliberately does not); with exactly these versions the dependency resolver adds nothing on 3.11 or 3.12. **Python 3.13 is not covered**
+  (four more packages are needed: audioop-lts, standard-aifc, standard-chunk, standard-sunau), and **3.14** (which Ubuntu 26.04 is expected to ship) has no wheel for numpy 2.2.6, scipy 1.15.3 or
+  onnxruntime 1.23.2: it needs its own lock, made and tried on a machine that has that Python. The entry therefore carries `python_max` (3.12), so a newer Python is refused in plain words instead of
+  failing inside pip with a hash message. **Not yet run on 24.04**: the cp312 wheels exist and resolve, but nothing was trained there.
 
 ## 3. Rules that apply to every task below
 
@@ -158,6 +175,16 @@ Gate: the findings are written into section 6, and any decision they contradict 
   setup consent list, fetched at setup and not at the first training. Also time the training cache and a checkpoint write on the Linux disk, on a
   Windows drive seen from WSL, and on a USB drive, to set D24's slow-drive warning.
   Done when: a lock file, a verdict on each starting voice (does its checkpoint load and train with the pinned trainer; both are expected to, and a replacement is named for any that does not), a batch-size-by-memory table and the wrapper list exist.
+  **Progress (2026-10-10), first half: the lock.** `data/locks/training.lock.txt` (96 packages, 159 checksums, Python 3.10 to 3.12, Linux x86_64) is written by `tools/voice_studio_maint/
+  make_lock.py` from the developer's `pip freeze` plus setuptools and wheel, and its checksum is in `data/environments.json`; the same file is installed with `--require-hashes --only-binary=:all:
+  --no-deps` in a dry run on 3.11 and 3.12 here (a 3.13 run is refused, as it should be). The generator is a maintainers' tool outside the app (it reads the package site's public listing, so it needs a
+  network; the app never runs it), writes nothing until every package has a wheel for every Python asked for, keeps an old lock beside the new one, and is tested (71 tests, with mutation checks).
+  **Still to do for the first half:** (a) the developer confirms the installed `wheel` version (the lock names the newest, 0.48.0, and its header says so; the file is made again if it differs); (b)
+  the pinned archive of the trainer's source (address, file name, size, SHA-256) for `data/sources.json`, which must be measured on the developer's machine because the sandbox cannot reach GitHub, and
+  whether CMake fetches anything at build time (the builder installs the source with `--no-index`); (c) a **rebuild with the tool's own builder** on that machine, which is the real proof of the lock,
+  of `native_build`/`native_artifact` and of the prelude; (d) the same on Ubuntu 24.04 (a second WSL distribution is enough); (e) `studio.lock.txt` from the Freeform Studio environment; (f) the
+  decision on NVIDIA's licence (below). **Second half (not started):** training rounds, memory by batch size, `--trainer.max_time`, export, the workarounds' necessity, the network-off run, the
+  slow-drive timings.
   **What VS-1.9 now waits for from this task** (the builder and its rules exist; these are the facts to put into the data files): (1) `data/locks/training.lock.txt` and `studio.lock.txt`, made with a resolver that writes
   hashes for every package including the build tools the trainer's `setup.py` needs (`setuptools<82`, `wheel`, `scikit-build`, `cmake`, `ninja`, `Cython`), and proved to install with `--require-hashes --only-binary=:all: --no-deps`
   from the ordinary package index on both Ubuntu releases (if a dependency has no wheel, say so; the answer is a decision, not a quiet change to the install flags); (2) the checksum of each lock written into `data/environments.json`;
@@ -253,7 +280,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   Studio's recorder and review tools); anything not listed is not built. **A lock is a file of `name==version` lines, each with at least one `--hash=sha256:`**, and nothing else (no range,
   address, option, editable install or repeat; a test per case), and its own SHA-256 is written in the list, so a changed lock is refused even by one byte. An environment whose lock has no checksum
   yet, or whose source archive is unpinned in the registry, is listed and sized for the disk estimate but **cannot be built** (`not_pinned`): both shipped environments are in that state until VS-0.2
-  makes the locks. The trainer's source is the pinned archive from `data/sources.json` (new kind `source`, entry `piper1-gpl-source`, unpinned), downloaded through the one agreement-checked
+  makes the locks (**update:** the training lock exists now, see VS-0.2; its source archive is still unpinned). An entry may carry `python_max`: a Python newer than the lock's checksums cover is refused first as `python_new` ("newer than this part has been tried with"), never left to fail inside pip. The trainer's source is the pinned archive from `data/sources.json` (new kind `source`, entry `piper1-gpl-source`, unpinned), downloaded through the one agreement-checked
   door, unpacked safely (no `..`, absolute, backslash, device, hard link or outward link; a link is judged by where it really lands; size and count caps; one top folder dropped; built as `.part` and renamed), then
   installed editable with `--no-deps --no-build-isolation --no-index`. **Each build lives in its own folder, `environments/<id>-<10 hex of a fingerprint>/`**, where the fingerprint covers the Python
   minor version, the lock, the source archive, the install and native-build settings and the source patches; a new lock or Python makes a new folder beside the old (nothing deleted). A folder with no
@@ -565,6 +592,16 @@ my proposals (veto any). Each is a pure function in VS-1.11, tested in the sandb
 - Whether the first release needs a translation of the window, or English only until the app's drafts are reviewed (D19 leaves the door open).
 - Needed from VS-0.2 for Stage 2: the speech model's real files (names, sizes, checksums, revision) for D29; whether `--trainer.max_time` stops a round cleanly and leaves a usable `last.ckpt`; where the training run's `lightning_logs` land; `onnx` and `onnxscript` in the training lock (the export and the patcher need them); and where sherpa-onnx lives for Listen.
 - P11 and D26: the real numbers (cost per hour, the size of a checkpoint a run saves, margin, the floors, the slow-drive cutoff) wait for VS-0.2.
+- **NVIDIA's licence on the training environment (new, 2026-10-10; your call).** Fifteen of the locked packages are NVIDIA's CUDA libraries (`nvidia-*`: cuBLAS, cuDNN, NCCL and the rest) and `torch` pulls them in. Ten of
+  them say **proprietary** in their package metadata (`LicenseRef-NVIDIA-Proprietary` or "NVIDIA Proprietary Software"), one contradicts itself (`nvidia-nvtx` says "Apache 2.0" and carries the
+  proprietary classifier), and four state no licence at all (`nvidia-cuda-runtime`, `nvidia-cudnn-cu13`, `nvidia-nccl-cu13`, `nvidia-nvshmem-cu13`; the `cuda-toolkit` meta-package states none either). They are not part of this repository and are
+  installed from the package site by the person's own computer, but they are named in the lock and the setup screen's agreement lists `pip:training` as a download. I have **not read NVIDIA's licence
+  text** (not reachable from here). Proposal: the agreement line for the training environment says in one sentence that it includes NVIDIA's CUDA libraries under NVIDIA's own licence, and
+  `THIRD_PARTY_NOTICES.md` section 7 records it (done). Nothing on the screen has changed yet.
+- **A lock for Python 3.13 and 3.14** (Ubuntu 26.04): wanted for "a wider variety of Ubuntu configurations", needs a machine that has that Python (see F9). Until then those Pythons are refused with `python_new`.
+- **GitHub's archive bytes are not promised to stay the same.** The source pin will hold a SHA-256 of a GitHub-generated `.tar.gz`; GitHub has said such archives can change if its compression changes, which
+  would make the checksum fail (safely: the builder refuses) until the pin is remade. A mirror on the project's own release page would avoid it but would host the trainer's source (D27 says host no data;
+  source code is not data, but it is your call).
 
 ## 7. What I cannot do from here
 

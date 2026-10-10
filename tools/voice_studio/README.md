@@ -30,6 +30,13 @@ this program never sees it.
 - The only module that may use the network is the download module, and only after the person has agreed to each download by name.
 - Every source file carries `SPDX-License-Identifier: GPL-3.0-or-later`.
 
+## Lock files (maintainers)
+
+The environments the setup builds are installed from lock files in `data/locks/` (every package at an exact version, with checksums), and each lock's own checksum is in
+`data/environments.json`. A lock is made with `tools/voice_studio_maint/make_lock.py` (outside this package on purpose: it reads the package site's public listing, so it needs a network, and
+the app never runs it). Its header says which Pythons it covers; the environment's `python_min` and `python_max` must say the same. After making one, put its checksum into `environments.json`;
+a test fails until the two agree. See `docs/VOICE_STUDIO_SETUP_PLAN.md`, finding F9 and task VS-0.2.
+
 ## Tests
 
 ```bash
