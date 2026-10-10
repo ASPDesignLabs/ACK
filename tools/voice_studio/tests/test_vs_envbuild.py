@@ -559,6 +559,81 @@ def test_too_much_data_or_too_many_files_is_refused(tmp_path, monkeypatch):
     eb.unpack_archive(archive, shutil_target, "m")
 
 
+def member(name, kind=tarfile.REGTYPE, size=0, linkname=""):
+    info = tarfile.TarInfo(name)
+    info.type, info.size, info.linkname = kind, size, linkname
+    return info
+
+
+@pytest.mark.parametrize("members, fragment", [
+    ([member("top/"), member("top/../x")], "unsafe name"),
+    ([member("top/a"), member("/abs/x")], "unsafe name"),
+    ([member("top/a\\b")], "unsafe name"),
+    ([member("")], "unsafe name"),
+    ([member("top/dev", tarfile.CHRTYPE)], "not an ordinary"),
+    ([member("top/blk", tarfile.BLKTYPE)], "not an ordinary"),
+    ([member("top/hard", tarfile.LNKTYPE, linkname="top/a")], "not an ordinary"),
+    ([member("top/s", tarfile.SYMTYPE)], "no usable link target"),
+    ([member("one/a"), member("two/b")], "one top folder"),
+    ([], "empty"),
+])
+def test_each_rule_about_what_may_be_in_an_archive_is_enforced_on_its_own(members, fragment):
+    with pytest.raises(eb.EnvError) as caught:
+        eb._check_members(members)
+    assert fragment in caught.value.detail
+
+
+def test_the_list_of_members_accepts_an_ordinary_archive_and_the_edges_of_its_limits(monkeypatch):
+    ordinary = [member("top/", tarfile.DIRTYPE), member("top/a", size=5), member("top/s", tarfile.SYMTYPE, linkname="a")]
+    eb._check_members(ordinary)
+    monkeypatch.setattr(eb, "MAX_UNPACK_BYTES", 5)
+    eb._check_members(ordinary)
+    monkeypatch.setattr(eb, "MAX_UNPACK_BYTES", 4)
+    with pytest.raises(eb.EnvError, match="too large"):
+        eb._check_members(ordinary)
+    monkeypatch.setattr(eb, "MAX_UNPACK_BYTES", 5)
+    monkeypatch.setattr(eb, "MAX_UNPACK_FILES", 3)
+    eb._check_members(ordinary)
+    monkeypatch.setattr(eb, "MAX_UNPACK_FILES", 2)
+    with pytest.raises(eb.EnvError, match="too many"):
+        eb._check_members(ordinary)
+
+
+def test_a_name_that_climbs_out_is_stopped_again_at_the_moment_of_writing_even_if_the_list_check_were_skipped(tmp_path, monkeypatch):
+    monkeypatch.setattr(eb, "_check_members", lambda members: None)
+    archive = make_archive(tmp_path / "a.tar.gz", extra=[(special(TOP + "/../../escaped", tarfile.REGTYPE), b"x")])
+    dest = tmp_path / "work" / "out" / "source"
+    dest.parent.mkdir(parents=True)
+    with pytest.raises(eb.EnvError) as caught:
+        eb.unpack_archive(archive, dest, "m")
+    assert caught.value.code == "unpack_unsafe" and not (tmp_path / "work" / "escaped").exists() and not (tmp_path / "escaped").exists()
+    assert os.listdir(dest.parent) == []
+
+
+def test_two_files_of_the_same_name_in_an_archive_are_not_allowed_to_overwrite_each_other(tmp_path):
+    archive = make_archive(tmp_path / "a.tar.gz", extra=[(special(TOP + "/README", tarfile.REGTYPE), b"")])
+    dest = tmp_path / "out" / "source"
+    dest.parent.mkdir()
+    with pytest.raises(eb.EnvError) as caught:
+        eb.unpack_archive(archive, dest, "m")
+    assert caught.value.code == "unpack_failed" and os.listdir(dest.parent) == []
+
+
+@pytest.mark.parametrize("kind", ["empty folder", "link"])
+def test_not_even_an_empty_folder_or_a_link_in_the_way_is_replaced(tmp_path, kind):
+    archive = make_archive(tmp_path / "a.tar.gz")
+    dest = tmp_path / "source"
+    if kind == "empty folder":
+        dest.mkdir()
+    else:
+        (tmp_path / "elsewhere").mkdir()
+        dest.symlink_to(tmp_path / "elsewhere")
+    with pytest.raises(eb.EnvError) as caught:
+        eb.unpack_archive(archive, dest, "m")
+    assert caught.value.code == "unpack_failed" and (dest.is_symlink() if kind == "link" else dest.is_dir())
+    assert os.listdir(tmp_path / "elsewhere") == [] if kind == "link" else os.listdir(dest) == []
+
+
 def test_an_archive_that_is_not_an_archive_or_is_empty_is_a_plain_failure(tmp_path):
     bad = tmp_path / "bad.tar.gz"
     bad.write_bytes(b"this is not a tar file at all")
@@ -698,6 +773,20 @@ def test_a_native_build_that_fails_or_builds_nothing_is_not_called_done(tmp_path
         assert "could not run" in result.error.detail
 
 
+def test_a_native_build_that_exits_with_an_error_is_failed_even_though_it_left_a_file_behind(tmp_path):
+    rig = make_rig(tmp_path)
+    rig.system.native_makes_then_fails = True
+    result = rig.build()
+    assert code_of(result) == "native_failed" and result.error.detail == "exit 2" and any("Error 2" in line for line in result.error.tail)
+
+
+def test_a_python_that_is_not_a_virtual_environment_is_not_accepted_as_one(tmp_path):
+    rig = make_rig(tmp_path)
+    assert rig.build().ok
+    rig.system.venv_flag = "0"
+    assert list(rig.build().did)[:1] == ["venv"]
+
+
 def test_a_failed_probe_names_itself_and_the_build_is_not_ready(tmp_path):
     rig = make_rig(tmp_path)
     rig.system.bad_probe_codes = {"import os"}
@@ -721,6 +810,15 @@ def test_after_a_failed_self_test_the_next_build_only_repeats_the_test(tmp_path)
     rig.doors.pip_runs.clear()
     again = rig.build()
     assert again.ok and again.did == () and rig.record()["state"] == "ready" and rig.doors.pip_runs == []
+
+
+def test_only_the_end_of_a_long_output_is_kept_with_the_error(tmp_path):
+    rig = make_rig(tmp_path)
+    rig.doors.pip_lines = ["line %02d" % n for n in range(40)]
+    rig.doors.pip_fail["lock"] = 1
+    tail = rig.build().error.tail
+    assert len(tail) == eb.TAIL_LINES and tail[-1] == "ERROR: No matching distribution" and tail[0] == "line 29"
+    assert "line 00" in Path(rig.paths.log).read_text(), "the whole output is in the log"
 
 
 def test_every_failure_is_written_to_the_record_with_a_short_detail(tmp_path):
@@ -934,6 +1032,32 @@ def test_a_change_to_a_file_that_is_not_text_is_refused(tmp_path):
     assert code_of(rig.build()) == "patch_changed"
 
 
+def test_a_file_that_was_edited_by_hand_but_still_holds_the_old_text_is_never_overwritten(tmp_path):
+    rig = patched_rig(tmp_path)
+    assert rig.build().ok
+    target = Path(rig.paths.source, PATCH["file"])
+    target.write_text(GOOD_FILES[PATCH["file"]][0].decode() + "# my own notes\n")          # the old line is back, with more beside it
+    mine = target.read_bytes()
+    result = rig.build()
+    assert code_of(result) == "patch_changed" and target.read_bytes() == mine
+
+
+def test_a_second_try_after_declining_one_change_does_not_ask_about_the_first_again(tmp_path):
+    second = dict(PATCH, id="second", file="src/demo/__init__.py", old="VALUE = 1", new="VALUE = 2")
+    asked = []
+    answers = iter([True, False, True])
+
+    def confirm(proposal):
+        asked.append(proposal.patch.id)
+        return next(answers)
+
+    rig = make_rig(tmp_path, spec_over={"patches": [PATCH, second]}, confirm=confirm)
+    assert code_of(rig.build()) == "patch_declined"
+    assert rig.build().ok
+    assert asked == ["fix-it", "second", "second"]
+    assert b"VALUE = 2" in Path(rig.paths.source, "src/demo/__init__.py").read_bytes() and b"return 'new'" in Path(rig.paths.source, PATCH["file"]).read_bytes()
+
+
 def test_two_changes_are_each_asked_for_and_each_can_be_declined_after_the_first_is_made(tmp_path):
     second = dict(PATCH, id="second", file="src/demo/__init__.py", old="VALUE = 1", new="VALUE = 2")
     answers = iter([True, False])
@@ -989,6 +1113,15 @@ def test_inspecting_a_folder_that_is_not_usable_says_which_kind(tmp_path, state)
     elif state == "damaged":
         (target / eb.RECORD_NAME).write_text("garbage")
     assert eb.inspect(rig.spec, rig.ctx).state == state
+
+
+def test_inspecting_after_a_failed_check_never_says_ready_even_though_every_step_is_in_place(tmp_path):
+    rig = make_rig(tmp_path)
+    rig.system.bad_probe_codes = {"import os"}
+    assert not rig.build().ok
+    assert eb.inspect(rig.spec, rig.ctx).state == "needs_work"
+    rig.system.bad_probe_codes = set()
+    assert rig.build().ok and eb.inspect(rig.spec, rig.ctx).state == "ready"
 
 
 def test_inspecting_a_folder_whose_record_belongs_to_another_environment_says_damaged(tmp_path):

@@ -338,8 +338,6 @@ def unpack_archive(archive: Path, dest: Path, marker_text: str) -> None:
                     os.makedirs(target, mode=0o755, exist_ok=True)
                 elif member.isreg():
                     os.makedirs(os.path.dirname(target), mode=0o755, exist_ok=True)
-                    if not _inside(root, os.path.dirname(target)):
-                        raise EnvError("unpack_unsafe", "%s leaves the folder" % member.name)
                     source = tar.extractfile(member)
                     if source is None:
                         raise EnvError("unpack_failed", "%s cannot be read" % member.name)

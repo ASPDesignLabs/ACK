@@ -53,9 +53,10 @@ class InstallingDoors(Doors):
                 version = {"thing": "1.0", "plain-name": "2.5"}.get(pin.name, pin.version)       # "1.0" is the same version as "1.0.0"
                 if pin.marker and "< \"3.0\"" in pin.marker:
                     continue                                                                        # not for this Python: a real install skips it
-                folder = site / ("%s-%s.dist-info" % (pin.name.replace("-", "_"), version))
+                shown = {"plain-name": "Plain_Name"}.get(pin.name, pin.name)                           # as the package spells itself, capitals and all
+                folder = site / ("%s-%s.dist-info" % (shown, version))
                 folder.mkdir(exist_ok=True)
-                (folder / "METADATA").write_text("Metadata-Version: 2.1\nName: %s\nVersion: %s\n" % (pin.name, version))
+                (folder / "METADATA").write_text("Metadata-Version: 2.1\nName: %s\nVersion: %s\n" % (shown, version))
             return CommandResult(0, "Successfully installed\n")
         source = Path(argv[argv.index("-e") + 1])
         (site / "__editable__.fakedemo.pth").write_text(str(source / "src") + "\n")
@@ -112,17 +113,26 @@ def test_a_package_removed_from_the_real_environment_is_found_and_put_back_alone
     result = eb.build(spec, ctx)
     paths = eb.EnvPaths(result.env_dir)
     site = doors._site_packages(paths.python)
-    shutil.rmtree(site / "plain_name-2.5.dist-info")
+    shutil.rmtree(site / "Plain_Name-2.5.dist-info")
     assert eb.inspect(spec, ctx).stale == ("pip_lock",)
     again = eb.build(spec, ctx)
-    assert again.ok and list(again.did) == ["pip_lock"] and "plain_name-2.5.dist-info" in installed_names(site)
+    assert again.ok and list(again.did) == ["pip_lock"] and "Plain_Name-2.5.dist-info" in installed_names(site)
+
+
+def test_a_package_whose_pin_has_a_marker_for_this_python_is_required_and_found_missing(tmp_path):
+    spec, ctx, doors = make_real(tmp_path)
+    result = eb.build(spec, ctx)
+    site = doors._site_packages(eb.EnvPaths(result.env_dir).python)
+    shutil.rmtree(site / "thing-1.0.dist-info")
+    assert eb.inspect(spec, ctx).stale == ("pip_lock",)
+    assert list(eb.build(spec, ctx).did) == ["pip_lock"]
 
 
 def test_a_package_at_a_different_version_is_found_by_the_real_check(tmp_path):
     spec, ctx, doors = make_real(tmp_path)
     result = eb.build(spec, ctx)
     site = doors._site_packages(eb.EnvPaths(result.env_dir).python)
-    meta = site / "plain_name-2.5.dist-info" / "METADATA"
+    meta = site / "Plain_Name-2.5.dist-info" / "METADATA"
     meta.write_text(meta.read_text().replace("2.5", "2.6"))
     assert eb.inspect(spec, ctx).stale == ("pip_lock",)
 

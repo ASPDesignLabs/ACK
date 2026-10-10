@@ -98,6 +98,8 @@ class BuildSystem(FakeSystem):
         self.fail_venv = None           # a CommandResult, or "none" for "could not run at all"
         self.fail_native = None
         self.native_makes = True
+        self.native_makes_then_fails = False
+        self.venv_flag = "1"                # what the check inside the environment reports for "this is a virtual environment"
         self.bad_probe_codes = set()
         self.fail_launcher = False
         self.probe_runs = []
@@ -128,7 +130,7 @@ class BuildSystem(FakeSystem):
             if len(argv) >= 3 and argv[1] == "-c":
                 code = argv[2]
                 if code == eb._MINOR_CODE:
-                    return CommandResult(0, "%s\n1\n" % self.venv_minor)
+                    return CommandResult(0, "%s\n%s\n" % (self.venv_minor, self.venv_flag))
                 if code == eb._VERIFY_CODE:
                     want = json.loads(argv[3])
                     bad = []
@@ -150,6 +152,11 @@ class BuildSystem(FakeSystem):
                 return CommandResult(1, "", "boom\n") if self.fail_launcher else CommandResult(0, "Linux\n")
         if argv[0] == "bash":
             self.native_runs.append((argv, cwd, dict(env or {})))
+            if self.native_makes_then_fails:
+                target = Path(cwd) / "src"
+                target.mkdir(parents=True, exist_ok=True)
+                (target / "core.cpython-312.so").write_bytes(b"\x7fELF")
+                return CommandResult(2, "", "make: *** [all] Error 2\n")
             if self.fail_native is not None:
                 return self.fail_native
             if self.native_makes:
