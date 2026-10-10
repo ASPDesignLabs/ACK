@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1 |
+| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2 |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -125,9 +125,9 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-1.1 Skeleton, licenses, test runner (S, sandbox). Done 2026-10-10.** `tools/voice_studio/` package (name subject to P1), SPDX test for it,
   `run_tests.sh`, `THIRD_PARTY_NOTICES.md` rows for every planned dependency (PyGObject/GTK, a QR library, `cryptography`, sherpa-onnx,
   torch and the training stack) with how each license was read.
-- **VS-1.2 Preflight (M, sandbox).** Pure functions that read command output and say: Ubuntu release (22.04/24.04 or "unsupported, here is
+- **VS-1.2 Preflight (M, sandbox). Done 2026-10-10.** Pure functions that read command output and say: Ubuntu release (22.04/24.04 or "unsupported, here is
   why"), WSL or native (and WSL version), a display is available, GPU and memory (`nvidia-smi`), free disk (on WSL, both inside Linux and on the Windows drive that holds its virtual disk), RAM, Python and `venv`, git,
-  ffmpeg, which system packages are missing, and the drives that could hold scratch (mount point, filesystem, free space, removable or not). Fixtures are real captured outputs. Returns a result the bootstrap prints and the window
+  ffmpeg, which system packages are missing, and the drives that could hold scratch (mount point, filesystem, free space, removable or not). Fixtures are written from the documented formats (the sandbox has no GPU or WSL) and are to be replaced with captures from your machines during the spikes; the thresholds marked PROVISIONAL in the code (GPU 7,900 MiB, RAM 7,000 MiB) are guesses until VS-0.2 measures them. Returns a result the bootstrap prints and the window
   shows. No GPU is a *state*, not an error (D4).
 - **VS-1.3 Download registry and consent (M, sandbox).** One file lists every download (name, source, size, checksum, license, why).
   One module is the only code allowed to touch the network and it refuses without a consent record. Tests: no web address anywhere else,
