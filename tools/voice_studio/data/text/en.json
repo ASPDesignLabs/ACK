@@ -282,6 +282,12 @@
     "preflight.root.blocked": "This was started with administrator rights. Please close it and start it again as your normal user, so that your files belong to you.",
     "preflight.root.ok": "This is running as your normal user.",
     "preflight.sudo.missing": "Installing programs needs administrator rights, and this computer cannot ask for them. Ask whoever looks after this computer to install them.",
+    "progress.minutes": "About {minutes} of {target} minutes of speech you can use so far.",
+    "progress.next.build_training_set": "You have enough to go on. You can make the training set now.",
+    "progress.next.finish_recordings": "Let the computer finish listening to the recordings. Then this count will be right.",
+    "progress.next.record_first": "Record your first few sentences. A few minutes is enough to try things out.",
+    "progress.next.record_more": "Record some more. Every minute helps the voice sound steadier.",
+    "progress.next.review": "Look over the pieces that were left out. Some of them may be fine to keep.",
     "project.consent.missing.given_by": "Who agreed?",
     "project.consent.missing.how_given": "How was it given?",
     "project.consent.missing.how_given_other": "Describe how it was given.",
@@ -463,6 +469,18 @@
     "preflight.packages.missing": {
       "one": "{count} extra program needs to be installed.",
       "other": "{count} extra programs need to be installed."
+    },
+    "progress.takes.failed": {
+      "one": "{count} recording could not be finished. Look at it on the Review page.",
+      "other": "{count} recordings could not be finished. Look at them on the Review page."
+    },
+    "progress.takes.other": {
+      "one": "{count} recording is still being made or brought in.",
+      "other": "{count} recordings are still being made or brought in."
+    },
+    "progress.takes.waiting": {
+      "one": "{count} recording is still being listened to.",
+      "other": "{count} recordings are still being listened to."
     },
     "setup.still_missing": {
       "one": "{count} extra program is still missing after installing. Look at the messages above, then try again.",

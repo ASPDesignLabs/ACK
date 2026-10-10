@@ -179,9 +179,7 @@ def dataset_summary(lines: Iterable[str]) -> Optional[DatasetSummary]:
     flags = {str(k): v for k, v in (left.get("by_flag") or {}).items() if isinstance(v, int) and not isinstance(v, bool)} if isinstance(left.get("by_flag"), dict) else {}
     pieces = int(included.get("pieces") or 0) if isinstance(included.get("pieces"), int) else 0
     minutes = _num(included.get("minutes")) or 0.0
-    advice = None
-    if result["result"] in ("built", "dry_run") and pieces:
-        advice = "short" if minutes < SHORT_MINUTES else ("comfortable" if minutes >= COMFORTABLE_MINUTES else None)
+    advice = advice_for(minutes, pieces) if result["result"] in ("built", "dry_run") else None
     skipped = tuple((str(a), str(b)) for a, b in (result.get("skipped_takes") or []) if isinstance(a, str) and isinstance(b, str)) if isinstance(result.get("skipped_takes"), list) else ()
     return DatasetSummary(
         result["result"], _text(result.get("out")), int(result.get("takes") or 0) if isinstance(result.get("takes"), int) else 0,
@@ -190,6 +188,13 @@ def dataset_summary(lines: Iterable[str]) -> Optional[DatasetSummary]:
         int(result.get("merged") or 0) if isinstance(result.get("merged"), int) else 0, int(left.get("pieces") or 0) if isinstance(left.get("pieces"), int) else 0,
         _ranked(kinds), _ranked(flags), tuple(str(w) for w in (result.get("warnings") or []))[:10] if isinstance(result.get("warnings"), list) else (),
         tuple(str(p) for p in (result.get("problems") or []))[:20] if isinstance(result.get("problems"), list) else (), advice)
+
+
+def advice_for(minutes: float, pieces: int) -> Optional[str]:
+    """Freeform Studio's own note about length: "short" under about ten minutes of speech, "comfortable" from thirty, nothing in between or with no pieces."""
+    if pieces <= 0:
+        return None
+    return "short" if minutes < SHORT_MINUTES else ("comfortable" if minutes >= COMFORTABLE_MINUTES else None)
 
 
 def flag_name(flag: str) -> str:

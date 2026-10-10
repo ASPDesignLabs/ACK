@@ -303,6 +303,12 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-3.6 WSL network guidance (M, dev).** Detect the networking mode and the firewall state; explain; on a yes write `.wslconfig` (keeping
   `.bak`); show the firewall command to run as administrator; never restart WSL, and warn that training must be paused first (D17).
 - **VS-3.7 Recording progress (S, sandbox).** "About X of 60 minutes", quality hints from the existing `ack_checks`, the disk left for the rest of the plan (P11), and what to do next.
+  **As built (the decisions; the screen waits for VS-2.1):** `core/progress.py` turns the dataset builder's preview (already read by `core/joblines.py`), the project's planned hours and the free room into one picture:
+  usable minutes against the target (the planned hours as minutes of usable speech, a guide and never a gate), the recordings still being listened to, failed or still being made, why pieces were left out,
+  Freeform Studio's own length advice, whether the rest of the plan fits on the disk (judged with the same floors and edges as every other big step), and **one suggested next step**.
+  The order is fixed and proposed (veto any): nothing recorded yet → record the first sentences; recordings still being listened to → let that finish (the count would mislead); under the target → record more;
+  at the target with pieces a person can clear by looking (flagged, not approved, tagged, cut inside a word) → look them over; otherwise → make the training set. Nothing starts by itself.
+  It reads no audio and runs no program, so Voice Studio's own Python needs no numpy for it; the preview comes from a job (`commands.dataset_command(..., dry_run=True)`).
 - **VS-3.8 Retire the old recorder from the guided path (S).** Not installed or offered; the manual guides keep it (D23).
 
 ### Stage 4: Training rounds, in full

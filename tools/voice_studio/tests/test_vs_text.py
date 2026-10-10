@@ -14,7 +14,7 @@ import pytest
 
 from vs_fakes import (DEBIAN_12, MEM_4G, PROC_WSL1, SMI_6G, SMI_DRIVER_DOWN, UBUNTU_2004, FakeSystem, wsl2)
 from voice_studio.core import describe as ds
-from voice_studio.core import ackimport, commands, diskbudget, envbuild, envspec, fetch, joblines, jobs, newproject, preflight, project, report, scratch, setupplan, setuprun, text, voicezip
+from voice_studio.core import ackimport, commands, diskbudget, envbuild, envspec, fetch, joblines, jobs, newproject, preflight, progress, project, report, scratch, setupplan, setuprun, text, voicezip
 from voice_studio.core.registry import load_registry
 from voice_studio.core.system import CommandResult
 from voice_studio.core.text import Catalog, TextError
@@ -22,7 +22,7 @@ from voice_studio.core.text import Catalog, TextError
 PKG = Path(__file__).resolve().parents[1]
 CAT = text.load_catalog("en")
 SHIPPED_PY = sorted(p for p in (PKG / "core").glob("*.py") if p.name not in {"text.py", "describe.py"})
-NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup", "env", "newproject", "ackimport", "voicezip", "dataset", "commands")
+NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup", "env", "newproject", "ackimport", "voicezip", "dataset", "commands", "progress")
 KEY = re.compile(r"^(%s)\.[a-z0-9_]+(\.[a-z0-9_]+)*$" % "|".join(NAMESPACES))
 
 
@@ -224,6 +224,7 @@ def derived_keys():
     keys |= {"voicezip.problem." + c for c in voicezip.PROBLEM_CODES}
     keys |= {"dataset.reason." + k for k in joblines.REASON_KINDS} | {"dataset.flag." + f for f in joblines.KNOWN_FLAGS}
     keys |= {"dataset.advice." + a for a in joblines.ADVICE_CODES} | {"dataset.result." + r for r in joblines.RESULTS}
+    keys |= {"progress.next." + n for n in progress.NEXT_STEPS}
     keys |= {"ackimport.state." + s for s in ("new", "already", "aborted")} | {"ackimport.mode." + m for m in ("script", "free")}
     keys |= {"setup.refuse." + c for c in setuprun.REFUSAL_CODES} | {"setup.status." + s for s in setuprun.STATUSES}
     keys |= {"setup.problem." + p for p in ("not_ready", "broken")} | {"setup.kind." + k for k in setupplan.KINDS}
