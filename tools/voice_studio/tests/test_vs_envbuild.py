@@ -325,6 +325,64 @@ def test_the_build_lock_is_released_after_success_and_after_failure(tmp_path):
     assert code_of(other.build()) == "pip_failed" and not Path(other.env_dir, eb.BUILD_LOCK_NAME).exists()
 
 
+def test_the_build_lock_appears_complete_or_not_at_all_and_leaves_no_temporary_file(tmp_path, monkeypatch):
+    rig = make_rig(tmp_path)
+    seen = []
+    real_link = os.link
+
+    def watching(src, dst, *args, **kwargs):
+        seen.append(json.loads(Path(src).read_text()))              # the file being linked in is already complete
+        return real_link(src, dst, *args, **kwargs)
+
+    monkeypatch.setattr(eb.os, "link", watching)
+    assert rig.build().ok
+    assert len(seen) == 1 and seen[0]["pid"] == os.getpid() and set(seen[0]) == {"pid", "starttime", "boot"}
+    assert [n for n in os.listdir(rig.env_dir) if n.startswith(eb.BUILD_LOCK_NAME)] == []
+
+
+def test_a_drive_that_cannot_make_hard_links_still_gets_a_lock(tmp_path, monkeypatch):
+    import errno
+    rig = make_rig(tmp_path)
+
+    def refuse(src, dst, *args, **kwargs):
+        raise OSError(errno.EPERM, "Operation not permitted")
+
+    monkeypatch.setattr(eb.os, "link", refuse)
+    held_during = []
+    original = rig.ctx.fetcher
+
+    def watching(item, dest, consent):
+        held_during.append(Path(rig.env_dir, eb.BUILD_LOCK_NAME).exists())
+        return original(item, dest, consent)
+
+    rig.ctx.fetcher = watching
+    assert rig.build().ok and held_during == [True] and not Path(rig.env_dir, eb.BUILD_LOCK_NAME).exists()
+
+
+def test_without_hard_links_a_second_build_is_still_kept_out(tmp_path, monkeypatch):
+    import errno
+    rig = make_rig(tmp_path)
+    assert rig.build().ok
+    mine = {"pid": os.getpid(), "starttime": parse_proc_starttime(read_text_file("/proc/self/stat")), "boot": boot_id()}
+    if mine["starttime"] is None or not mine["boot"]:
+        pytest.skip("needs /proc")
+    write_lock(rig, **mine)
+    monkeypatch.setattr(eb.os, "link", lambda *a, **k: (_ for _ in ()).throw(OSError(errno.EPERM, "no links")))
+    assert code_of(rig.build()) == "busy"
+
+
+def test_unexpected_trouble_with_files_is_a_plain_failure_and_the_lock_is_still_released(tmp_path):
+    rig = make_rig(tmp_path)
+
+    def broken(item, dest, consent):
+        raise OSError(28, "No space left on device")
+
+    rig.ctx.fetcher = broken
+    result = rig.build()
+    assert code_of(result) == "write_failed" and result.error.detail == "No space left on device"
+    assert rig.record()["state"] == "failed" and not Path(rig.env_dir, eb.BUILD_LOCK_NAME).exists()
+
+
 def test_the_lock_file_is_owner_only_while_held(tmp_path):
     rig = make_rig(tmp_path)
     seen = []

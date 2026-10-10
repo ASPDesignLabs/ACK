@@ -221,27 +221,52 @@ def _save_record(env_dir: str, record: dict, stamp: str) -> None:
 # ---------------------------------------------------------------- one build at a time
 
 def _acquire(env_dir: str) -> str:
-    """Create the build lock, or take over one whose owner is gone. Returns its path. Raises EnvError("busy")."""
+    """Create the build lock, or take over one whose owner is gone. Returns its path. Raises EnvError("busy").
+
+    The lock is written to a private file first and then linked into place, so another build never sees a lock that is half written (an
+    unreadable lock counts as left behind). Known limit: two builds that both find the same stale lock in the same instant can both take over."""
     path = env_dir + "/" + BUILD_LOCK_NAME
     mine = {"pid": os.getpid(), "starttime": parse_proc_starttime(read_text_file("/proc/self/stat")), "boot": boot_id()}
-    for _ in range(2):
-        try:
-            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        except FileExistsError:
-            held = read_json(path)
-            if isinstance(held, dict) and process_alive(held.get("pid"), held.get("starttime"), str(held.get("boot", ""))):
-                raise EnvError("busy", "process %s" % held.get("pid"))
-            try:
-                os.unlink(path)                                  # its owner is gone (or the file is unreadable): the lock is stale
-            except FileNotFoundError:
-                pass
-            continue
-        except OSError as exc:
-            raise EnvError("write_failed", exc.strerror or type(exc).__name__)
+    temp = "%s.%d.tmp" % (path, os.getpid())
+    try:
+        fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(mine, handle)
-        return path
-    raise EnvError("busy", "could not take the lock")
+    except OSError as exc:
+        raise EnvError("write_failed", exc.strerror or type(exc).__name__)
+    try:
+        for _ in range(2):
+            try:
+                os.link(temp, path)                              # all or nothing: fails if a lock is already there
+                return path
+            except FileExistsError:
+                held = read_json(path)
+                if isinstance(held, dict) and process_alive(held.get("pid"), held.get("starttime"), str(held.get("boot", ""))):
+                    raise EnvError("busy", "process %s" % held.get("pid"))
+                try:
+                    os.unlink(path)                              # its owner is gone (or the file is unreadable): the lock is stale
+                except FileNotFoundError:
+                    pass
+            except OSError:
+                return _acquire_without_links(path, mine)        # a drive that cannot make hard links
+        raise EnvError("busy", "could not take the lock")
+    finally:
+        try:
+            os.unlink(temp)
+        except OSError:
+            pass
+
+
+def _acquire_without_links(path: str, mine: dict) -> str:
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        raise EnvError("busy", "another build holds the lock")
+    except OSError as exc:
+        raise EnvError("write_failed", exc.strerror or type(exc).__name__)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        json.dump(mine, handle)
+    return path
 
 
 def _release(path: str) -> None:
@@ -563,7 +588,8 @@ def build(spec: EnvSpec, ctx: Context) -> BuildResult:
         _save_record(env_dir, plan.record, utc_stamp(ctx.now()))
         ctx.on_event(Event("done", "self_test"))
         return BuildResult(True, env_dir, None, tuple(did), tuple(kept), tuple(skipped))
-    except EnvError as error:
+    except (EnvError, OSError) as caught:
+        error = caught if isinstance(caught, EnvError) else EnvError("write_failed", caught.strerror or type(caught).__name__)
         plan.record["state"] = "failed"
         plan.record["failed"] = {"code": error.code, "detail": error.detail[:200], "at": utc_stamp(ctx.now())}
         try:
