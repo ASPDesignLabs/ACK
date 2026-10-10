@@ -32,6 +32,7 @@
       "why_key": "fetch.why.speech_model",
       "license_id": "whisper-mit",
       "approx_size_bytes": 480000000,
+      "folder": "speech-small-en",
       "filename": null, "url": null, "revision": null, "size_bytes": null, "sha256": null
     }
   ]

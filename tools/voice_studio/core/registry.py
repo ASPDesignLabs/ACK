@@ -42,6 +42,7 @@ class Item:
     revision: Optional[str] = None
     size_bytes: Optional[int] = None
     sha256: Optional[str] = None
+    folder: Optional[str] = None                  # items that share a folder are one thing in the download area (a model made of several files)
 
     @property
     def any_pin_field(self) -> bool:
@@ -127,7 +128,9 @@ def parse_registry(text: str) -> Registry:
             raise RegistryError("%s: bad license_id" % item_id)
         item = Item(item_id, kind, raw["why_key"], raw["license_id"], _optional(raw, "approx_size_bytes", int),
                     _optional(raw, "url", str), _optional(raw, "filename", str), _optional(raw, "revision", str),
-                    _optional(raw, "size_bytes", int), _optional(raw, "sha256", str))
+                    _optional(raw, "size_bytes", int), _optional(raw, "sha256", str), _optional(raw, "folder", str))
+        if item.folder is not None and not SLUG.match(item.folder):
+            raise RegistryError("%s: bad folder" % item_id)
         if item.any_pin_field and item.pin_problems():
             raise RegistryError("%s is half pinned or wrongly pinned: %s" % (item_id, ", ".join(item.pin_problems())))
         items.append(item)

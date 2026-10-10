@@ -135,7 +135,7 @@ def _source(item: SetupItem, specs: Dict[str, EnvSpec], built: Dict[str, envbuil
 
 def _download(item: SetupItem, ctx: envbuild.Context, say: Callable[[SetupEvent], None], cancelled: Optional[Callable[[], bool]]) -> ItemResult:
     pinned = ctx.registry.get(item.id)
-    folder = Path(ctx.home.downloads) / MODELS_FOLDER
+    folder = Path(ctx.home.downloads) / MODELS_FOLDER / (pinned.folder or "")          # a model of several files keeps them together in its own folder
     if fetch.is_fetched(pinned, folder):
         return ItemResult(item.id, "kept")
     try:

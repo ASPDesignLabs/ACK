@@ -125,3 +125,24 @@ def test_a_good_file_loads_and_an_unpinned_entry_is_allowed():
 def test_a_missing_file_is_a_plain_error(tmp_path):
     with pytest.raises(RegistryError, match="cannot read"):
         reg.load_registry(tmp_path / "nothing.json")
+
+
+# ---------------------------------------------------------------- a model of several files shares a folder
+
+def test_an_item_may_name_the_folder_it_shares_with_others_and_defaults_to_none():
+    item = reg.parse_registry(doc(dict(GOOD, folder="speech-small-en"))).items[0]
+    assert item.folder == "speech-small-en" and reg.parse_registry(doc(GOOD)).items[0].folder is None
+
+
+@pytest.mark.parametrize("folder", ["../x", "a/b", "A", "", "-x", "a b", "x" * 70])
+def test_a_folder_that_is_not_a_plain_lower_case_name_is_refused(folder):
+    with pytest.raises(reg.RegistryError, match="bad folder|folder"):
+        reg.parse_registry(doc(dict(GOOD, folder=folder)))
+
+
+def test_the_folder_is_not_part_of_what_makes_an_item_pinned():
+    assert reg.Item("a", "model", "k", "l", approx_size_bytes=5, folder="f").pin_problems() == ["unpinned"]
+
+
+def test_the_shipped_speech_model_has_a_folder_of_its_own():
+    assert reg.load_registry().get("speech-model-small-en").folder == "speech-small-en"

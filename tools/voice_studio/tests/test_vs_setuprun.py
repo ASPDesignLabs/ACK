@@ -337,3 +337,20 @@ def test_agreed_is_false_without_a_record_and_for_a_record_missing_one_item(tmp_
 def test_a_plan_whose_only_unavailable_item_is_declined_is_agreed_without_it(tmp_path):
     run = make_run(tmp_path, unpinned_voice=True, declined=["voice-amy"], agree=False)
     assert sp.agreed(run.plan, run.registry, run.plan.agreement(run.registry, NOW))
+
+
+def test_a_model_of_several_files_keeps_them_together_in_a_folder_of_its_own(tmp_path):
+    run = make_run(tmp_path)
+    second = tmp_path / "tokenizer.json"
+    second.write_bytes(b"{}" * 10)
+    extra = Item(**{**file_item("speech-model-small-en-tokenizer", "model", second, "whisper-mit").__dict__, "folder": "speech-small-en"})
+    model = run.registry.get("speech-model-small-en")
+    registry = Registry(tuple(Item(**{**i.__dict__, "folder": "speech-small-en"}) if i.id == model.id else i for i in run.registry.items) + (extra,))
+    run.ctx.registry = run.registry = registry
+    run.doors.files["speech-model-small-en-tokenizer"] = second
+    run.plan = sp.plan_setup(registry, run.envs, free={"home": 500 * GIB})
+    run.agree_all()
+    assert run.go().ok
+    folder = Path(run.ctx.home.downloads) / "models" / "speech-small-en"
+    assert sorted(os.listdir(folder)) == ["small-en.bin", "tokenizer.json"]
+    assert not (Path(run.ctx.home.downloads) / "models" / "small-en.bin").exists()
