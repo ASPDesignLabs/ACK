@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.10, VS-1.11 |
+| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.5, VS-1.10, VS-1.11 |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -144,9 +144,16 @@ Gate: the findings are written into section 6, and any decision they contradict 
   of `apt` packages with a one-line reason each, ask yes/no, `sudo apt-get install`, then hand over to the window; also `--check` and
   `--dry-run` like `install.sh`. Never edits shell settings. Driven by stand-in commands in tests, as `test_install_scripts.py` does.
   Prints a plain message and stops if no display is available (P7).
-- **VS-1.5 Project model (M, sandbox).** `project.json` (versioned), folder layout (recordings, dataset, checkpoints, rounds, exports,
+- **VS-1.5 Project model (M, sandbox). Done 2026-10-10.** `project.json` (versioned), folder layout (recordings, dataset, checkpoints, rounds, exports,
   backups), the consent note, "whose voice", and a read-only detector for old setups (`~/piper-recording-studio`, `~/piper1-gpl`,
-  `~/freeform-studio-venv`, `~/piper`). Schema evolves the way `AckBackup` does: unknown fields are ignored, missing ones are "no change".
+  `~/freeform-studio-venv`, `~/piper`). Schema evolves the way `AckBackup` does: unknown fields are ignored, missing ones are "no change". **As built:** everything lives under `~/ack-voice-studio/`
+  (`projects/<id>/` with `recordings/`, `rounds/`, `exports/`, `scratch/`; `tool/` for downloads and environments; `state/` for the consent record: `core/paths.py`). A
+  project is `project.json` (schema 1): name, whose voice, the consent note (required to continue for someone else's voice: who agreed, what to, when, how to withdraw, and
+  how it was given, which includes spoken, through a guardian and using AAC), planned hours, starting voice, scratch place and the D27 acknowledgments. Fields a newer
+  version added are kept when this one saves; a file from a newer version is refused for writing, a damaged one is reported and never touched, and each save keeps the
+  version it replaces, byte for byte, as `project.json.previous`. Typed text keeps zero-width joiners (Hindi, Persian, emoji). The folder name comes from the person's
+  name (a non-Latin name becomes `person`, a repeat gets `-2`). `core/legacy.py` looks for the old setup and counts what is there without changing anything; the copy-in
+  itself is VS-3.4.
 - **VS-1.6 Job supervisor (M, sandbox).** Start a long job detached (training, dataset build, speech recognition), write a pid file and log,
   report status after the window closes or the computer restarts, stop gracefully (the guide's single Ctrl+C), refuse to start a second
   GPU job. Check what `freeform_studio/jobs.py` already offers before writing anything.
