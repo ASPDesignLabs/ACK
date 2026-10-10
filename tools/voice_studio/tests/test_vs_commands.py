@@ -50,6 +50,18 @@ def test_the_processor_holds_the_graphics_card_only_when_it_is_asked_to_use_it()
     assert code_of(cm.process_command, STUDIO, TOOLS, "/p/r", "m", "tpu") == "bad_value"
 
 
+def test_the_device_that_was_asked_for_is_the_device_named_in_the_command():
+    assert cm.process_command(STUDIO, TOOLS, "/p/r", "m", "cuda").argv[-2:-1] == ("cuda",)
+    assert cm.process_command(STUDIO, TOOLS, "/p/r", "m", "cpu").argv[-2:-1] == ("cpu",)
+
+
+def test_a_path_is_written_in_its_plain_form_so_two_spellings_of_one_folder_make_one_command():
+    c = cm.process_command(STUDIO, TOOLS + "/", "/p/anna//recordings/../recordings/", "m")
+    assert c.argv[c.argv.index("--output") + 1] == "/p/anna/recordings" and c.cwd == TOOLS
+    d = cm.dataset_command(STUDIO, TOOLS, "/p/./r", "/p/a/../out", dry_run=True)
+    assert d.argv[d.argv.index("--out") + 1] == "/p/out" and d.argv[d.argv.index("--output") + 1] == "/p/r"
+
+
 @pytest.mark.parametrize("recordings", ["relative/path", "", "recordings", "~/recordings", "/p/r\nrm -rf /", "/p/r\x00"])
 def test_a_recordings_path_that_is_not_an_absolute_plain_path_is_refused(recordings):
     assert code_of(cm.process_command, STUDIO, TOOLS, recordings, "m") == "bad_path"
@@ -81,6 +93,9 @@ def test_each_dataset_gets_a_new_name_from_the_time():
     assert cm.dataset_folder_name("2026-10-10T12:00:00Z") == "dataset-20261010-120000"
     assert cm.dataset_folder_name("2026-10-10T12:00:01Z") != cm.dataset_folder_name("2026-10-10T12:00:00Z")
     assert code_of(cm.dataset_folder_name, "2026") == "bad_value"
+    assert code_of(cm.dataset_folder_name, "2026-10-10T12:00:0") == "bad_value", "13 digits is one short of a whole second"
+    assert cm.dataset_folder_name("20261010120000") == "dataset-20261010-120000"
+    assert cm.dataset_folder_name("2026-10-10T12:00:00.123456Z") == "dataset-20261010-120000", "digits after the second are not part of the name"
 
 
 def test_a_finished_dataset_is_counted_and_an_incomplete_one_is_named(tmp_path):
@@ -99,6 +114,42 @@ def test_a_finished_dataset_is_counted_and_an_incomplete_one_is_named(tmp_path):
     noname = make_dataset(tmp_path, name="z")
     (noname / "metadata.csv").write_text("|text\n")
     assert code_of(cm.check_dataset, str(noname)) == "dataset_incomplete"
+
+
+def test_an_incomplete_dataset_is_named_by_what_is_missing_never_by_a_crash(tmp_path):
+    no_meta = make_dataset(tmp_path, name="m")
+    (no_meta / "metadata.csv").unlink()
+    with pytest.raises(cm.CommandError) as caught:
+        cm.check_dataset(str(no_meta))
+    assert caught.value.code == "dataset_incomplete" and caught.value.detail == "m"
+    no_wav = make_dataset(tmp_path, name="w")
+    for f in (no_wav / "wav").iterdir():
+        f.unlink()
+    (no_wav / "wav").rmdir()
+    with pytest.raises(cm.CommandError) as caught:
+        cm.check_dataset(str(no_wav))
+    assert caught.value.code == "dataset_incomplete" and caught.value.detail == "w", "a missing wav folder is named as such, not as its first file"
+    noname = make_dataset(tmp_path, name="z")
+    (noname / "metadata.csv").write_text("|text\n")
+    with pytest.raises(cm.CommandError) as caught:
+        cm.check_dataset(str(noname))
+    assert caught.value.detail == "empty name"
+
+
+def test_blank_lines_in_the_list_of_recordings_are_not_rows_and_do_not_spoil_it(tmp_path):
+    d = make_dataset(tmp_path, name="blank")
+    (d / "metadata.csv").write_text("\na.wav|one\n\n   \nb.wav|two\n\n")
+    assert cm.check_dataset(str(d)) == 2
+
+
+def test_a_file_in_a_folder_inside_the_wav_folder_is_not_where_the_trainer_looks(tmp_path):
+    d = make_dataset(tmp_path, name="deep")
+    (d / "wav" / "sub").mkdir()
+    (d / "wav" / "sub" / "a.wav").write_bytes(b"RIFFxxxx")
+    (d / "metadata.csv").write_text("sub/a.wav|text\n")
+    with pytest.raises(cm.CommandError) as caught:
+        cm.check_dataset(str(d))
+    assert caught.value.code == "dataset_incomplete" and caught.value.detail == "sub/a.wav"
 
 
 # ---------------------------------------------------------------- one round
@@ -209,6 +260,15 @@ def test_versions_without_a_last_checkpoint_or_with_other_names_are_not_listed(t
     assert [x.version for x in cm.find_checkpoints(str(run))] == [1]
 
 
+def test_a_folder_whose_name_only_starts_like_a_version_is_not_one(tmp_path):
+    run = tmp_path / "run"
+    write_version(run, 1)
+    for name in ("version_2_old", "version_3.bak", "version_4x"):
+        (run / "lightning_logs" / name / "checkpoints").mkdir(parents=True)
+        (run / "lightning_logs" / name / "checkpoints" / "last.ckpt").write_bytes(b"x")
+    assert [x.version for x in cm.find_checkpoints(str(run))] == [1] and cm.latest_checkpoint(str(run)).version == 1
+
+
 def test_no_run_folder_or_no_logs_means_no_checkpoint(tmp_path):
     assert cm.find_checkpoints(str(tmp_path / "nope")) == [] and cm.latest_checkpoint(str(tmp_path / "nope")) is None
     (tmp_path / "empty").mkdir()
@@ -235,6 +295,16 @@ def test_export_never_replaces_a_model_that_is_there_and_wants_a_ckpt_and_a_safe
     assert code_of(cm.export_command, TRAINING, str(tmp_path / "gone.ckpt"), str(out), "other") == "bad_checkpoint"
     for bad in ("../x", "a b", "", "a/b", "-x"):
         assert code_of(cm.export_command, TRAINING, str(ckpt), str(out), bad) == "bad_value", bad
+
+
+def test_export_starts_only_from_a_ckpt_file_and_not_over_a_link_that_leads_nowhere(tmp_path):
+    out = tmp_path / "export"
+    out.mkdir()
+    not_ckpt = make_checkpoint(tmp_path, "last.pt")
+    assert code_of(cm.export_command, TRAINING, str(not_ckpt), str(out)) == "bad_checkpoint", "a file that is there but is not a checkpoint"
+    ckpt = make_checkpoint(tmp_path, "last.ckpt")
+    (out / "my_voice.onnx").symlink_to(tmp_path / "nowhere")
+    assert code_of(cm.export_command, TRAINING, str(ckpt), str(out)) == "exists", "a dangling link is still something in the way"
 
 
 def test_the_settings_file_is_named_exactly_like_the_model_plus_json():

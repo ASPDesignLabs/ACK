@@ -164,7 +164,7 @@ def _config_problems(raw: bytes) -> Tuple[List[str], Optional[dict]]:
         return ["config_too_big"], None
     try:
         data = json.loads(raw.decode("utf-8"))
-    except (ValueError, UnicodeDecodeError):
+    except (ValueError, UnicodeDecodeError, RecursionError):      # a settings file nested far too deep is not JSON a phone could read either
         return ["config_not_json"], None
     if not isinstance(data, dict) or not all(k in data for k in CONFIG_KEYS):
         return ["config_not_piper"], None

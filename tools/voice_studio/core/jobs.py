@@ -110,7 +110,7 @@ def read_json(path: str) -> Optional[dict]:
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
         return data if isinstance(data, dict) else None
-    except (OSError, ValueError):
+    except (OSError, ValueError, RecursionError):                 # RecursionError: a file nested far too deep is damaged too
         return None
 
 

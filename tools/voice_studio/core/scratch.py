@@ -168,7 +168,7 @@ def check_marker(text: Optional[str], project_id: str) -> MarkerState:
         data = json.loads(text)
         if data["schema"] != MARKER_SCHEMA or not isinstance(data["project"], str):
             return MarkerState.DAMAGED
-    except (ValueError, KeyError, TypeError):
+    except (ValueError, KeyError, TypeError, RecursionError):        # it was read from another drive; one nested far too deep is damaged too
         return MarkerState.DAMAGED
     return MarkerState.OK if data["project"] == project_id else MarkerState.OTHER_PROJECT
 

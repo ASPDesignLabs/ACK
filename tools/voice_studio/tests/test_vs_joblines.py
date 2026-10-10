@@ -39,6 +39,21 @@ def test_only_json_objects_are_read_and_everything_else_is_skipped():
     assert jl.json_objects([]) == [] and jl.json_objects(iter([line(z=1)])) == [{"z": 1}]
 
 
+def test_a_line_that_is_too_long_is_skipped_even_when_it_is_valid_and_one_exactly_at_the_limit_is_kept():
+    def padded(total):
+        head, tail = '{"a":"', '"}'
+        return head + "x" * (total - len(head) - len(tail)) + tail
+    assert len(padded(jl.MAX_LINE)) == jl.MAX_LINE
+    assert jl.json_objects([padded(jl.MAX_LINE)])[0]["a"].startswith("xxx")
+    assert jl.json_objects([padded(jl.MAX_LINE + 1)]) == []
+
+
+def test_a_line_nested_far_too_deep_is_skipped_not_a_crash():
+    deep = '{"a":' + "[" * 90_000 + "]" * 90_000 + "}"
+    assert len(deep) < jl.MAX_LINE
+    assert jl.json_objects([deep, line(after=1)]) == [{"after": 1}]
+
+
 # ---------------------------------------------------------------- finishing recordings
 
 def take(name, status, progress=None, error=None, label="", duration=None):
@@ -53,6 +68,27 @@ def test_a_log_with_no_result_yet_reads_as_still_going_not_as_failed():
 def test_each_recording_shows_the_last_thing_said_about_it_in_the_order_they_appeared():
     state = jl.process_state([take("t1", "finishing"), take("t2", "finishing"), take("t1", "queued"), take("t1", "transcribing", 0.5), take("t2", "queued")])
     assert [(t.take, t.status, t.progress) for t in state.takes] == [("t1", "transcribing", 0.5), ("t2", "queued", None)] and not state.finished
+
+
+def test_a_recording_is_first_listed_where_it_first_appeared_however_often_it_is_mentioned_after():
+    state = jl.process_state([take("a", "queued"), take("b", "queued"), take("c", "queued"), take("a", "transcribing", 0.2), take("b", "transcribing", 0.2)])
+    assert [t.take for t in state.takes] == ["a", "b", "c"]
+
+
+def test_only_the_closing_line_has_done_set_to_true_itself():
+    for odd in (1, "yes", "true", [True], {"x": 1}):
+        assert not jl.process_state([take("a", "ready"), line(done=odd)]).finished, odd
+    assert jl.process_state([take("a", "ready"), line(done=True)]).finished
+
+
+def test_a_failed_recording_is_one_whose_status_is_error_whatever_it_says_about_it():
+    state = jl.process_state([take("a", "error"), take("b", "queued", error="will retry"), take("c", "ready", error="")])
+    assert [t.take for t in state.failed] == ["a"] and state.ready == 1
+
+
+def test_the_fraction_is_rounded_to_three_places():
+    assert jl.process_state([take("a", "queued", 0.5), take("b", "ready"), take("c", "ready")]).fraction == 0.833
+    assert jl.process_state([take("a", "queued", 0.0), take("b", "queued", 0.0), take("c", "ready")]).fraction == 0.333
 
 
 def test_the_fraction_counts_a_ready_recording_whole_and_never_reaches_one_before_the_end():
@@ -152,6 +188,27 @@ def test_only_a_built_dataset_or_a_preview_counts_as_a_success(name, ok):
 @pytest.mark.parametrize("minutes, advice", [(0.5, "short"), (9.99, "short"), (10.0, None), (29.99, None), (30.0, "comfortable"), (200.0, "comfortable")])
 def test_the_advice_follows_freeform_studios_own_thresholds_at_the_exact_edges(minutes, advice):
     assert jl.dataset_summary([result(included={"pieces": 5, "minutes": minutes})]).advice == advice
+
+
+def test_a_detail_that_is_not_one_of_freeform_studios_known_reasons_is_cut_to_a_sensible_length():
+    kind, detail = jl.reason_kind("something new " + "x" * 500)
+    assert kind == "other" and len(detail) == 200 and detail.startswith("something new")
+
+
+def test_a_count_that_is_true_or_false_is_not_a_count():
+    s = jl.dataset_summary([result(left_out={"pieces": 3, "by_reason": {"you dropped it": True, "no text": 2}, "by_flag": {"low_confidence": False, "x": 1}})])
+    assert s.reasons == (("no_text", 2),) and s.flags == (("x", 1),)
+
+
+def test_notes_and_problems_are_capped_so_one_odd_run_cannot_fill_the_screen():
+    s = jl.dataset_summary([result(warnings=["w%d" % i for i in range(30)], problems=["p%d" % i for i in range(50)])])
+    assert s.warnings == tuple("w%d" % i for i in range(10)) and s.problems == tuple("p%d" % i for i in range(20))
+
+
+def test_there_is_no_advice_about_length_for_a_run_that_did_not_build_even_with_pieces_counted():
+    for name in ("problems", "nothing_qualified", "refused_existing", "no_takes_folder"):
+        assert jl.dataset_summary([result(result=name, included={"pieces": 5, "minutes": 3.0})]).advice is None, name
+    assert jl.dataset_summary([result(result="dry_run", included={"pieces": 5, "minutes": 3.0})]).advice == "short"
 
 
 def test_there_is_no_advice_about_length_when_nothing_was_included_or_it_did_not_work():

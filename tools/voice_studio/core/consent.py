@@ -92,5 +92,5 @@ def load_consent(path: Path) -> Optional[ConsentRecord]:
                 return None
             entries.append(ConsentEntry(raw["id"], raw.get("url"), size, raw.get("sha256")))
         return ConsentRecord(tuple(entries), str(data["given_at"]))
-    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, RecursionError):        # RecursionError: a file nested far too deep is damaged too
         return None

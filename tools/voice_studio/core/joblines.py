@@ -30,7 +30,7 @@ def json_objects(lines: Iterable[str]) -> List[Dict[str, Any]]:
             continue
         try:
             obj = json.loads(text)
-        except ValueError:
+        except (ValueError, RecursionError):          # a line nested a hundred thousand deep is not one of ours either
             continue
         if isinstance(obj, dict):
             found.append(obj)

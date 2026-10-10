@@ -164,7 +164,7 @@ def _text(raw: Mapping, key: str, limit: int, default: str = "") -> str:
 def project_from_text(text: str) -> Project:
     try:
         raw = json.loads(text)
-    except ValueError:
+    except (ValueError, RecursionError):                          # RecursionError: a file nested far too deep is damaged too
         raise ProjectError("damaged", "not JSON")
     if not isinstance(raw, dict):
         raise ProjectError("damaged", "not an object")
