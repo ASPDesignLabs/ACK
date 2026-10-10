@@ -5,6 +5,7 @@
         projects/<id>/     one folder per person (core/project.py)
         tool/              the tool's own downloads and Python environments (shared by every project)
         state/             small records: the consent record, settings
+        backups/           checked backups the tool makes before it copies anything in (outside every project)
 
 Nothing here touches the disk; it only names places.
 """
@@ -43,6 +44,10 @@ class DataHome:
     @property
     def state(self) -> str:
         return self.root + "/state"
+
+    @property
+    def backups(self) -> str:
+        return self.root + "/backups"
 
     @property
     def consent_file(self) -> str:

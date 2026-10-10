@@ -45,7 +45,7 @@ class CommandError(Exception):
 
 @dataclass(frozen=True)
 class Command:
-    kind: str                           # the job kind: process, dataset, train, export, patch
+    kind: str                           # the job kind: process, repair, dataset, train, export, patch
     argv: Tuple[str, ...]
     cwd: str
     gpu: bool = False                   # holds the graphics card while it runs (only one such job at a time)
@@ -71,6 +71,12 @@ def process_command(studio: EnvPaths, tools_dir: str, recordings: str, asr_model
     argv = (studio.python, "-m", "freeform_studio.process", "--output", _absolute(recordings, "recordings"), "--code", CODE, "--asr-model", asr_model,
             "--asr-device", device, "--json")
     return Command("process", argv, _absolute(tools_dir, "tools"), gpu=(device == "cuda"))
+
+
+def repair_command(studio: EnvPaths, tools_dir: str, recordings: str) -> Command:
+    """Rebuild the decoded audio of recordings that were copied in (a backup holds the raw audio only). Changes nothing but what is missing; never touches the raw audio."""
+    argv = (studio.python, "-m", "freeform_studio.repair", "--output", _absolute(recordings, "recordings"), "--code", CODE)
+    return Command("repair", argv, _absolute(tools_dir, "tools"))
 
 
 def dataset_command(studio: EnvPaths, tools_dir: str, recordings: str, out_dir: str, *, dry_run: bool = False) -> Command:

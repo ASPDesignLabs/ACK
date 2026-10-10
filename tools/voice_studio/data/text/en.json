@@ -64,6 +64,24 @@
     "commands.error.exists.changed": "It was left as it is, and nothing new was written.",
     "commands.error.exists.next": "Use a new name, or move the old one yourself first.",
     "commands.error.exists.what": "Something with that name is already there.",
+    "copyin.error.backup_failed.changed": "Nothing was copied. Your older recordings were left as they were, and a half-made backup was removed.",
+    "copyin.error.backup_failed.next": "Choose a different place for the backup, then try again. The details are under Show details.",
+    "copyin.error.backup_failed.what": "The backup could not be made and checked, so nothing was copied.",
+    "copyin.error.copy_failed.changed": "Your older recordings and the backup were left as they were. Files already copied stay where they are.",
+    "copyin.error.copy_failed.next": "Check the free space, then try again. Copying again skips what is already there.",
+    "copyin.error.copy_failed.what": "The recordings could not be copied into the project.",
+    "copyin.error.no_recordings.changed": "Nothing was copied and nothing was changed.",
+    "copyin.error.no_recordings.next": "Check that you chose the folder your older recorder saved to, then try again.",
+    "copyin.error.no_recordings.what": "There are no recordings in that folder to bring in.",
+    "copyin.error.no_room.changed": "Nothing was copied. The older folder was left as it was.",
+    "copyin.error.no_room.next": "Free some space or choose another drive for the backup, then try again.",
+    "copyin.error.no_room.what": "There is not enough free room to make the backup and the copy.",
+    "copyin.error.same_place.changed": "Nothing was copied and nothing was changed.",
+    "copyin.error.same_place.next": "Choose the older folder your recordings were in before.",
+    "copyin.error.same_place.what": "That folder is the project's own, or is inside it, so there is nothing to copy.",
+    "copyin.error.verify_failed.changed": "Your older recordings and the backup were left as they were.",
+    "copyin.error.verify_failed.next": "Try the copy again. If it keeps failing, the drive may be having trouble. The details are under Show details.",
+    "copyin.error.verify_failed.what": "Some copied files did not match the backup when they were checked.",
     "dataset.advice.comfortable": "That is a comfortable amount to train on.",
     "dataset.advice.short": "Under about ten minutes of speech tends to give an uneven voice. More recording will help.",
     "dataset.flag.bracket_tag": "it contains something in brackets",
@@ -462,6 +480,10 @@
     "voicezip.problem.zip_wrong_entries": "The zip does not hold the two files ACK looks for, under the names ACK expects."
   },
   "plurals": {
+    "copyin.found": {
+      "one": "Found {count} recording ({size}, about {hours} hours) in {where}.",
+      "other": "Found {count} recordings ({size}, about {hours} hours) in {where}."
+    },
     "preflight.disk.facts": {
       "one": "Free space was checked in {count} place.",
       "other": "Free space was checked in {count} places."
