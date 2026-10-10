@@ -5,7 +5,7 @@
 # Uses the Python in PYTHON (default: python3), which needs pytest. A throwaway environment is enough:
 #   python3 -m venv ~/voice-studio-test-venv && ~/voice-studio-test-venv/bin/pip install pytest
 #   PYTHON=~/voice-studio-test-venv/bin/python ./run_tests.sh
-# Nothing here uses the network, a GPU or a display.
+# Warnings are errors, so a leaked file or a deprecated call cannot hide. Nothing here uses the network, a GPU or a display.
 set -u
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,4 +20,4 @@ if ! "$PYTHON" -c 'import pytest' >/dev/null 2>&1; then
 fi
 
 cd "$TOOLS" || exit 2
-exec "$PYTHON" -m pytest voice_studio/tests -q "$@"
+exec "$PYTHON" -m pytest voice_studio/tests -q -W error "$@"

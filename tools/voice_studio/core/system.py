@@ -59,6 +59,11 @@ class System(Protocol):
     def python_executable(self) -> str: ...
     def geteuid(self) -> int: ...
     def home(self) -> str: ...
+    def realpath(self, path: str) -> str: ...                 # symbolic links resolved; works for a path that does not exist yet
+    def is_dir(self, path: str) -> bool: ...
+    def writable(self, path: str) -> bool: ...
+    def device_of(self, path: str) -> Optional[int]: ...      # which filesystem a path is on (st_dev); None if it does not exist
+    def listdir(self, path: str) -> Optional[list]: ...       # names in a folder; None if it cannot be read
 
 
 class RealSystem:
@@ -107,3 +112,24 @@ class RealSystem:
 
     def home(self) -> str:
         return str(Path.home())
+
+    def realpath(self, path: str) -> str:
+        return os.path.realpath(path)
+
+    def is_dir(self, path: str) -> bool:
+        return os.path.isdir(path)
+
+    def writable(self, path: str) -> bool:
+        return os.access(path, os.W_OK)
+
+    def device_of(self, path: str) -> Optional[int]:
+        try:
+            return os.stat(path).st_dev
+        except OSError:
+            return None
+
+    def listdir(self, path: str) -> Optional[list]:
+        try:
+            return os.listdir(path)
+        except OSError:
+            return None

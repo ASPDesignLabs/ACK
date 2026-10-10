@@ -209,15 +209,15 @@ def run_networked(consent: Optional[ConsentRecord], argv: Sequence[str], item_id
                 on_line(line)
         return result
     env = dict(os.environ, LC_ALL="C", LANG="C")
+    lines = []
     try:
-        proc = subprocess.Popen(list(argv), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, errors="replace",
-                                cwd=str(cwd) if cwd else None, env=env)
+        with subprocess.Popen(list(argv), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, errors="replace",
+                              cwd=str(cwd) if cwd else None, env=env) as proc:          # the with closes the pipe and waits for the process
+            assert proc.stdout is not None
+            for line in proc.stdout:
+                lines.append(line)
+                if on_line:
+                    on_line(line.rstrip("\n"))
+        return CommandResult(proc.returncode, "".join(lines), "")
     except OSError as exc:
         raise FetchError("http", exc.strerror or type(exc).__name__)
-    lines = []
-    assert proc.stdout is not None
-    for line in proc.stdout:
-        lines.append(line)
-        if on_line:
-            on_line(line.rstrip("\n"))
-    return CommandResult(proc.wait(), "".join(lines), "")

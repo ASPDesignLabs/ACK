@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.10 |
+| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.10, VS-1.11 |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -172,11 +172,17 @@ Gate: the findings are written into section 6, and any decision they contradict 
   not enough) are judged per drive, the worst deciding, so an enormous project drive cannot hide a too-small scratch drive; training's stop floor is the recorder's floor
   plus one checkpoint plus slack, so a full disk can end a round but never costs a recording; the clean-up list can never include precious, protected or tool items.
 
-- **VS-1.11 Scratch location rules (M, sandbox).** Pure functions for D24: take a candidate place plus captured `/proc/mounts`, `df` and `lsblk`
+- **VS-1.11 Scratch location rules (M, sandbox). Done 2026-10-10.** Pure functions for D24: take a candidate place plus captured `/proc/mounts`, `df` and `lsblk`
   output and say accept, accept-with-warning (and which warning) or refuse (and the plain reason), for the filesystem groups, synced folders,
   read-only and unwritable places, the same-device check and the marker file. A quick speed test is a separate function around a stand-in
   writer. Boundary tests: each filesystem name, a mount point that is not mounted, a marker holding another project's id, a path through a
-  symbolic link, and a candidate inside another project's folder.
+  symbolic link, and a candidate inside another project's folder. **As built** (`core/scratch.py`): the person chooses a *place* and the tool makes
+  `<place>/ack-voice-scratch/<project id>/` with a `.ack-voice-scratch` marker naming the project; every job start checks the marker, so an unplugged USB drive (an
+  empty folder on the main disk) can never be written into. A place is refused if it is FAT, a network drive, a RAM disk, read-only, unwritable, a system folder or `/`,
+  cloud-synced, inside this or another project, a folder under `/media`, `/run/media` or `/mnt` that is really on the main disk (not mounted), or already holds someone
+  else's or an unmarked scratch. It is accepted with warnings for NTFS or exFAT, a Windows drive on WSL (slow, loose permissions), an unknown filesystem, a removable
+  drive, or the same drive as the project. The slow-drive cutoffs (30 MB/s, 200 small files a second) are provisional until VS-0.2. `System` gained `realpath`, `is_dir`,
+  `writable`, `device_of` and `listdir`. The mount tables are written from the documented formats until the spikes capture real ones.
 
 ### Stage 2: Thin slice (an ACK package in, one `.zip` out, plain screens)
 

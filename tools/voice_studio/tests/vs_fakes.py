@@ -39,7 +39,9 @@ class FakeSystem:
                  environ: Optional[Dict[str, str]] = None, tools: Optional[Dict[str, str]] = None, present: Iterable[str] = (),
                  disks: Optional[Dict[str, Tuple[int, int]]] = None, python: Tuple[int, int, int] = (3, 12, 3), euid: int = 1000,
                  home: str = "/home/user", python_exe: str = "/usr/bin/python3", installed: Optional[Iterable[str]] = None,
-                 failing_probes: Sequence[str] = (), smi: Optional[CommandResult] = CommandResult(0, SMI_4060)):
+                 failing_probes: Sequence[str] = (), smi: Optional[CommandResult] = CommandResult(0, SMI_4060),
+                 dirs: Iterable[str] = (), unwritable: Iterable[str] = (), devices: Optional[Dict[str, int]] = None,
+                 symlinks: Optional[Dict[str, str]] = None, lsblk: Optional[CommandResult] = None, listings: Optional[Dict[str, list]] = None):
         self.files = {"/etc/os-release": os_release, "/proc/version": proc_version, "/proc/meminfo": meminfo}
         self._environ = {"DISPLAY": ":0"} if environ is None else dict(environ)
         self.tools = dict(ALL_TOOLS) if tools is None else dict(tools)
@@ -49,6 +51,8 @@ class FakeSystem:
         self.installed = set(ALL_PACKAGES if installed is None else installed)
         self.failing_probes = tuple(failing_probes)
         self.smi = smi
+        self.dirs, self.unwritable = set(dirs), set(unwritable)
+        self.devices, self.symlinks, self.lsblk, self.listings = dict(devices or {}), dict(symlinks or {}), lsblk, dict(listings or {})
         self.ran = []
 
     def read_text(self, path):
@@ -63,6 +67,8 @@ class FakeSystem:
             return CommandResult(0, "\n".join(lines) + "\n")
         if exe == "nvidia-smi":
             return self.smi
+        if exe == "lsblk":
+            return self.lsblk
         if argv[0] == self._python_exe and len(argv) >= 3 and argv[1] == "-c":
             return CommandResult(1 if any(f in argv[2] for f in self.failing_probes) else 0)
         return None
@@ -74,7 +80,7 @@ class FakeSystem:
         return dict(self._environ)
 
     def exists(self, path):
-        return path in self.present
+        return path in self.present or path in self.dirs
 
     def disk_free(self, path):
         return self.disks.get(path)
@@ -90,6 +96,21 @@ class FakeSystem:
 
     def home(self):
         return self._home
+
+    def realpath(self, path):
+        return self.symlinks.get(path, os.path.normpath(path))
+
+    def is_dir(self, path):
+        return path in self.dirs
+
+    def writable(self, path):
+        return path in self.dirs and path not in self.unwritable
+
+    def device_of(self, path):
+        return self.devices.get(path)
+
+    def listdir(self, path):
+        return self.listings.get(path)
 
 
 def wsl2(**overrides):
