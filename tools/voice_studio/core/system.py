@@ -64,6 +64,7 @@ class System(Protocol):
     def writable(self, path: str) -> bool: ...
     def device_of(self, path: str) -> Optional[int]: ...      # which filesystem a path is on (st_dev); None if it does not exist
     def listdir(self, path: str) -> Optional[list]: ...       # names in a folder; None if it cannot be read
+    def hostname(self) -> str: ...
 
 
 class RealSystem:
@@ -133,3 +134,6 @@ class RealSystem:
             return os.listdir(path)
         except OSError:
             return None
+
+    def hostname(self) -> str:
+        return os.uname().nodename if hasattr(os, "uname") else ""

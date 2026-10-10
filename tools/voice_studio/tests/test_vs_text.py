@@ -14,7 +14,7 @@ import pytest
 
 from vs_fakes import (DEBIAN_12, MEM_4G, PROC_WSL1, SMI_6G, SMI_DRIVER_DOWN, UBUNTU_2004, FakeSystem, wsl2)
 from voice_studio.core import describe as ds
-from voice_studio.core import diskbudget, fetch, jobs, preflight, project, scratch, text
+from voice_studio.core import diskbudget, fetch, jobs, preflight, project, report, scratch, text
 from voice_studio.core.registry import load_registry
 from voice_studio.core.system import CommandResult
 from voice_studio.core.text import Catalog, TextError
@@ -22,7 +22,7 @@ from voice_studio.core.text import Catalog, TextError
 PKG = Path(__file__).resolve().parents[1]
 CAT = text.load_catalog("en")
 SHIPPED_PY = sorted(p for p in (PKG / "core").glob("*.py") if p.name not in {"text.py", "describe.py"})
-NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget")
+NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report")
 KEY = re.compile(r"^(%s)\.[a-z0-9_]+(\.[a-z0-9_]+)*$" % "|".join(NAMESPACES))
 
 
@@ -140,7 +140,7 @@ def wording_problems(key, value):
     if key.endswith(".detail"):
         return []
     problems = []
-    for term in JARGON:
+    for term in () if key.startswith("report.") else JARGON:       # the report is for whoever helps, so it may name Python and the like
         if re.search(r"\b%s\b" % re.escape(term), value, re.IGNORECASE):
             problems.append("jargon:" + term)
     for sentence in re.split(r"(?<=[.!?])\s+", value):
@@ -177,6 +177,7 @@ def test_every_text_is_plain_short_and_safe_to_fill_in():
 def test_the_wording_rules_can_actually_fail():          # mutation guards: each rule is shown to catch what it is for
     assert "jargon:checkpoint" in wording_problems("a.b", "The checkpoint was saved.") and "jargon:gpu" in wording_problems("a.b", "Your GPU is busy.")
     assert wording_problems("a.b.detail", "The checkpoint was saved by python on the GPU.") == []
+    assert wording_problems("report.label.python", "Python") == [] and "jargon:python" in wording_problems("a.b", "Python")
     assert "long_sentence" in wording_problems("a.b", " ".join(["word"] * 26) + ".") and wording_problems("a.b", " ".join(["word"] * 25) + ".") == []
     assert "whitespace" in wording_problems("a.b", "two  spaces") and "whitespace" in wording_problems("a.b", "trailing ") and "whitespace" in wording_problems("a.b", "a\nb")
     assert "web_address" in wording_problems("a.b", "see https://example.org") and "shouting" in wording_problems("a.b", "STOP NOW")
@@ -218,6 +219,7 @@ def derived_keys():
     keys |= {"scratch.speed." + c for c in scratch.SPEED_CODES} | {"job.status." + s.value for s in jobs.JobStatus}
     keys |= {"budget.level." + l.value for l in diskbudget.Level} | {"budget.watch." + w.value for w in diskbudget.Watch}
     keys |= {"project.consent.missing." + c for c in project.CONSENT_PROBLEM_CODES} | {"project.how_given." + h for h in project.HOW_GIVEN}
+    keys |= {"report.label." + n for n in report.LABELS} | {"report.section." + s for s in report.SECTIONS} | {"report.platform." + p.value for p in preflight.Platform}
     return keys
 
 
@@ -263,6 +265,16 @@ def test_every_error_the_modules_raise_is_in_its_list_and_every_listed_one_is_ra
         raised = codes_in_calls(path, callee) - {"consent_problems"}
         assert raised <= set(listed), (callee, sorted(raised - set(listed)))
         assert set(listed) <= raised, (callee, "listed but never raised", sorted(set(listed) - raised))
+
+
+def test_every_label_and_section_the_report_writes_is_declared_and_every_declared_one_is_written():
+    tree = ast.parse((PKG / "core/report.py").read_text())
+    written = {"labelled": set(), "section": set()}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in written and node.args and isinstance(node.args[0], ast.Constant):
+            written[node.func.id].add(node.args[0].value)
+    assert written["labelled"] <= set(report.LABELS) and written["section"] == set(report.SECTIONS)
+    assert set(report.LABELS) - written["labelled"] <= {"time"}          # the time is written as a heading line, not through labelled()
 
 
 def appended_codes(path, receivers):

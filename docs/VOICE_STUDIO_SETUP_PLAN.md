@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.5, VS-1.6, VS-1.7, VS-1.10, VS-1.11 |
+| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.5, VS-1.6, VS-1.7, VS-1.8, VS-1.10, VS-1.11 |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -174,9 +174,16 @@ Gate: the findings are written into section 6, and any decision they contradict 
   lint covers jargon (checkpoint, GPU, cache, dataset, sudo, apt...), sentences over 25 words, shouting, web addresses and stray template syntax; text under a `.detail`
   key may be technical. 164 strings so far (preflight, the reasons for each program and download, every failure, every status, every refusal and warning). What is not
   checked by a test: that a `Show details` partner exists wherever a command runs; that is a screen-level rule for Stage 2.
-- **VS-1.8 Problem report builder (M, sandbox).** Builds the text the helper sees *before* saving: versions, step names, error text.
+- **VS-1.8 Problem report builder (M, sandbox). Done 2026-10-10.** Builds the text the helper sees *before* saving: versions, step names, error text.
   Redacts user name, home folder, project and person names. Tests plant canary strings and fail if one survives. Never includes
-  recordings, transcripts or phrases.
+  recordings, transcripts or phrases. **As built** (`core/report.py`): the report has no field that could hold a recording, a transcript, a phrase or a consent note (a test
+  pins the input's fields); the end of a job's log is included only if asked for, and is said to possibly contain words from recordings. Everything that comes from the computer or
+  the person's data is redacted in one pass with private sentinels, so a login name of "user" cannot damage `<windows-user>`: the login, home folder, data folder, computer name,
+  every Windows profile, every person's name and folder name (case-insensitive, NFC and NFD), emails, IP and MAC addresses, access tokens, and the labels of drives under
+  `/media` and `/mnt`. What is shown is exactly the file's bytes; saving never replaces an existing file unless told to. **Stated limits:** a one-character name is not hidden (it
+  would blank every such letter); names of four letters or fewer are hidden only as whole words (so "Users" survives a login of "user"); the redactor knows only the names it is given,
+  which is why the log is opt-in. **Found by testing:** an email pattern that took quadratic time on a long message; the pattern is bounded and every piece is cut to 4,000
+  characters before it is read.
 - **VS-1.9 Environment builder (L, sandbox with stand-ins, real run in dev).** Creates the venvs from the lock with hashes, builds
   `piper1-gpl`'s native part, runs a self-test, is idempotent and resumable, never touches an existing environment, and writes what it did.
   Applies fixes by wrapper; a source patch (if VS-0.2 found one unavoidable) is shown, backed up and applied only on confirmation.

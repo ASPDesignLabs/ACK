@@ -41,13 +41,15 @@ class FakeSystem:
                  home: str = "/home/user", python_exe: str = "/usr/bin/python3", installed: Optional[Iterable[str]] = None,
                  failing_probes: Sequence[str] = (), smi: Optional[CommandResult] = CommandResult(0, SMI_4060),
                  dirs: Iterable[str] = (), unwritable: Iterable[str] = (), devices: Optional[Dict[str, int]] = None,
-                 symlinks: Optional[Dict[str, str]] = None, lsblk: Optional[CommandResult] = None, listings: Optional[Dict[str, list]] = None):
+                 symlinks: Optional[Dict[str, str]] = None, lsblk: Optional[CommandResult] = None, listings: Optional[Dict[str, list]] = None,
+                 hostname: str = "testhost"):
         self.files = {"/etc/os-release": os_release, "/proc/version": proc_version, "/proc/meminfo": meminfo}
         self._environ = {"DISPLAY": ":0"} if environ is None else dict(environ)
         self.tools = dict(ALL_TOOLS) if tools is None else dict(tools)
         self.present: Set[str] = set(present)
         self.disks = {"/home/user": (500 * 2**30, 300 * 2**30)} if disks is None else dict(disks)
         self._python, self._euid, self._home, self._python_exe = python, euid, home, python_exe
+        self._hostname = hostname
         self.installed = set(ALL_PACKAGES if installed is None else installed)
         self.failing_probes = tuple(failing_probes)
         self.smi = smi
@@ -111,6 +113,9 @@ class FakeSystem:
 
     def listdir(self, path):
         return self.listings.get(path)
+
+    def hostname(self):
+        return self._hostname
 
 
 def wsl2(**overrides):
