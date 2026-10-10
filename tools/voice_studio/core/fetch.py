@@ -198,8 +198,10 @@ def fetch(item: Item, dest_dir: Path, consent: Optional[ConsentRecord], *, opene
 # ---------------------------------------------------------------- door two: a command that reaches the network
 
 def run_networked(consent: Optional[ConsentRecord], argv: Sequence[str], item_ids: Iterable[str], *, cwd: Optional[Path] = None,
-                  on_line: Optional[Callable[[str], None]] = None, runner: Optional[Callable[[Sequence[str]], CommandResult]] = None) -> CommandResult:
-    """Run pip, apt or git for the named things, but only if the person agreed to each by name. Output is passed on line by line."""
+                  on_line: Optional[Callable[[str], None]] = None, runner: Optional[Callable[[Sequence[str]], CommandResult]] = None,
+                  inherit_stdio: bool = False) -> CommandResult:
+    """Run pip, apt or git for the named things, but only if the person agreed to each by name. Output is passed on line by line, or, with
+    `inherit_stdio`, goes straight to the person's own terminal (so `sudo` asks for the password there and this program never sees it)."""
     ids = list(item_ids)
     if consent is None or not ids or not all(consent.covers_id(i) for i in ids):
         raise FetchError("consent", ",".join(ids))
@@ -209,6 +211,11 @@ def run_networked(consent: Optional[ConsentRecord], argv: Sequence[str], item_id
             if on_line:
                 on_line(line)
         return result
+    if inherit_stdio:
+        try:
+            return CommandResult(subprocess.run(list(argv), cwd=str(cwd) if cwd else None).returncode, "", "")
+        except OSError as exc:
+            raise FetchError("http", exc.strerror or type(exc).__name__)
     env = dict(os.environ, LC_ALL="C", LANG="C")
     lines = []
     try:

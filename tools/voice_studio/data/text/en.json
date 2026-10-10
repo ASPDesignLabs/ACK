@@ -192,6 +192,32 @@
     "scratch.warn.removable": "This drive can be unplugged. If it is unplugged during training, training stops until it is back.",
     "scratch.warn.same_device_as_project": "This is the same drive as the project, so it will not save any room.",
     "scratch.warn.windows_drive": "This is a Windows drive seen from WSL. It is much slower than Ubuntu's own disk.",
+    "setup.admin_note": "Installing programs needs administrator rights. Ubuntu will ask for your password here, in this window. This tool never sees it.",
+    "setup.bad_option": "Unknown option: {option}. The options are --check, --dry-run and --yes.",
+    "setup.cannot_ask": "This cannot ask you a question here, so it did nothing. To go ahead, run it again and add --yes.",
+    "setup.cannot_continue": "Nothing was changed. Fix the problems above, then run this again.",
+    "setup.check_not_ready": "Not ready yet: see the lines above.",
+    "setup.check_ready": "Ready: nothing needs fixing.",
+    "setup.declined": "Nothing was installed and nothing was changed. Run this again when you are ready.",
+    "setup.dry_run_command": "Would run: {command}",
+    "setup.dry_run_header": "Dry run: nothing will be changed. This is what would happen:",
+    "setup.dry_run_none": "Nothing needs to be run.",
+    "setup.install_failed": "The installation did not finish. Your files were not changed. Look at the messages above, then try again.",
+    "setup.installed": "The extra programs are installed.",
+    "setup.installing": "Installing. This can take a few minutes.",
+    "setup.looking": "Looking at this computer. Nothing is changed at this step.",
+    "setup.needs_install": "These extra programs need to be installed:",
+    "setup.notes": "Worth knowing:",
+    "setup.package_line": "{package}: {reason}",
+    "setup.problems": "These things need fixing first:",
+    "setup.question": "Install these now? Type y for yes, or press Enter for no:",
+    "setup.ready": "This computer is ready.",
+    "setup.tag.block": "FIX",
+    "setup.tag.info": "info",
+    "setup.tag.ok": "ok",
+    "setup.tag.warn": "note",
+    "setup.title": "ACK Voice Studio: getting this computer ready",
+    "setup.window_not_built": "The setup window is not built yet, so there is nothing more to start. This computer is ready for it.",
     "ui.back": "Back",
     "ui.cancel": "Cancel",
     "ui.close": "Close",
@@ -208,6 +234,10 @@
     "preflight.packages.missing": {
       "one": "{count} extra program needs to be installed.",
       "other": "{count} extra programs need to be installed."
+    },
+    "setup.still_missing": {
+      "one": "{count} extra program is still missing after installing. Look at the messages above, then try again.",
+      "other": "{count} extra programs are still missing after installing. Look at the messages above, then try again."
     }
   }
 }

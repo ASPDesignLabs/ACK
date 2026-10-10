@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.5, VS-1.6, VS-1.7, VS-1.8, VS-1.10, VS-1.11 |
+| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.4, VS-1.5, VS-1.6, VS-1.7, VS-1.8, VS-1.10, VS-1.11 |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -140,10 +140,25 @@ Gate: the findings are written into section 6, and any decision they contradict 
   consent record that covers *exactly* the address, size and checksum that were shown. An entry with no address is listed and sized for the disk estimate but cannot
   be fetched until it is pinned; nothing is half pinned. The two starting voices and the speech model are in the registry unpinned: their addresses, revisions and
   checksums come from VS-0.2 and VS-4.1. The loopback-only egress test (as Freeform Studio has) comes when there is a whole flow to run (VS-2.9).
-- **VS-1.4 Bootstrap scripts (M, sandbox).** `setup.sh` (the `git clone ... && run` route) and `get.sh` (the `curl` route, D14): preflight, list
+- **VS-1.4 Bootstrap scripts (M, sandbox). Done 2026-10-10.** `setup.sh` (the `git clone ... && run` route) and `get.sh` (the `curl` route, D14): preflight, list
   of `apt` packages with a one-line reason each, ask yes/no, `sudo apt-get install`, then hand over to the window; also `--check` and
   `--dry-run` like `install.sh`. Never edits shell settings. Driven by stand-in commands in tests, as `test_install_scripts.py` does.
-  Prints a plain message and stops if no display is available (P7).
+  Prints a plain message and stops if no display is available (P7). **As built:** `setup.sh` checks only that Python 3.10 or newer exists, then runs
+  `python3 -m voice_studio` (`__main__.py`) with the tools folder on the path; everything else is `core/setup_flow.py`, which is plain Python decided from a `System`
+  and an `IO`, so it is tested without a terminal. It looks, shows blockers (including no display, administrator rights, an unsupported Ubuntu) and notes, lists each
+  missing program with its reason, explains the password, asks **once** and runs exactly `sudo apt-get update` then `sudo apt-get install -y <the missing ones>`.
+  Only a plain `y` or `yes` is a yes; with nobody to ask (input is not a terminal) it does nothing and says to add `--yes`. The agreement it records names `apt:update` and
+  each program, and `fetch.run_networked` refuses a command the agreement does not cover; the command runs in the person's own terminal
+  (`inherit_stdio`), so `sudo` asks for the password itself and this program never sees it. After installing it looks again and does not call the computer ready if anything
+  is still missing. Exit codes: 0 ready, 1 blocked or failed, 2 nothing was done. `--check` changes nothing (0 ready, 1 not), `--dry-run` prints the exact commands.
+  `get.sh` needs `ACK_VOICE_TAG` (a release name; **there are no releases yet, so it fetches nothing until one is tagged**), asks before installing git, clones that
+  tag with `--depth 1` into `~/ack-tools` (or `ACK_VOICE_DIR`), reuses an existing copy, **never touches a non-empty folder that is not ACK**, reads its answer from
+  `/dev/tty` because when piped into bash its own input is the script, and holds the project's one bootstrap web address (`REPO_URL`; the network-rules test allows it
+  there and nowhere else). Neither script edits shell settings, removes anything or runs `sudo` for anything but those two commands (tests read the source for it). **Mutation
+  testing:** 70 deliberate breaks (a yes that accepts anything, a skipped update, an ignored failure, no recheck, a clone of a moving branch, an unquoted folder name, a Python
+  check one minor off, a reply read from the wrong input...) are each caught; one more was equivalent (`>` for `>=` on a version tuple that is always longer than `(3, 10)`).
+  One mutant wrote a folder into the repository, so the script tests now run from a scratch folder. Not run for real: `apt` and `sudo` on Ubuntu (stand-ins only), a real
+  terminal's password prompt, WSL; the device checks come with VS-0.1.
 - **VS-1.5 Project model (M, sandbox). Done 2026-10-10.** `project.json` (versioned), folder layout (recordings, dataset, checkpoints, rounds, exports,
   backups), the consent note, "whose voice", and a read-only detector for old setups (`~/piper-recording-studio`, `~/piper1-gpl`,
   `~/freeform-studio-venv`, `~/piper`). Schema evolves the way `AckBackup` does: unknown fields are ignored, missing ones are "no change". **As built:** everything lives under `~/ack-voice-studio/`

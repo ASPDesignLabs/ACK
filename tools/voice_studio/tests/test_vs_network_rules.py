@@ -20,7 +20,7 @@ PY = [p for p in SHIPPED if p.suffix == ".py"]
 
 DOWNLOAD_MODULE = "core/fetch.py"
 MAY_START_PROGRAMS = {"core/system.py", "core/fetch.py", "core/jobs.py", "core/jobrunner.py"}     # the job supervisor and its runner
-WEB_ADDRESS_ALLOWED = {"data/sources.json"}                          # and get.sh, when it exists (VS-1.4)
+WEB_ADDRESS_ALLOWED = {"data/sources.json", "get.sh"}                # get.sh: the one address the person is shown before the first fetch of ACK itself
 NETWORK_ROOTS = {"socket", "ssl", "http", "ftplib", "smtplib", "telnetlib", "xmlrpc", "poplib", "imaplib", "nntplib", "socketserver",
                  "requests", "httpx", "aiohttp", "websockets", "paramiko", "urllib3", "huggingface_hub", "asyncio"}
 
@@ -86,7 +86,7 @@ def test_only_two_modules_may_start_a_program_and_neither_may_use_a_shell():
         assert "shell=True" not in source and "os.system" not in source, name
 
 
-def test_no_web_address_is_written_anywhere_but_the_registry():
+def test_no_web_address_is_written_anywhere_but_the_registry_and_the_bootstrap_script():
     pattern = re.compile(r"(?:https?|wss?|ftp)://")
     offenders = []
     for p in SHIPPED:
@@ -133,3 +133,8 @@ def test_ordinary_local_commands_are_not_mistaken_for_network_ones(argv):
 def test_system_run_still_runs_a_local_command():
     result = RealSystem().run([sys.executable, "-c", "print('ok')"])
     assert result is not None and result.returncode == 0 and result.stdout.strip() == "ok"
+
+
+def test_the_bootstrap_script_holds_exactly_one_web_address_and_it_is_the_source_repository():
+    lines = [l for l in (PKG / "get.sh").read_text().splitlines() if re.search(r"(?:https?|wss?|ftp)://", l)]
+    assert len(lines) == 1 and lines[0].startswith('REPO_URL="https://github.com/')

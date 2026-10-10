@@ -299,3 +299,43 @@ def test_a_real_process_is_run_and_streamed_and_its_exit_status_is_kept():
     assert ok.returncode == 0 and lines == ["a", "b"] and ok.stdout == "a\nb\n"
     assert fx.run_networked(consent, [sys.executable, "-c", "import sys; sys.exit(3)"], ["pip:lock"]).returncode == 3
     assert code_of(lambda: fx.run_networked(consent, ["/definitely/not/a/program"], ["pip:lock"])) == "http"
+
+
+def test_a_command_run_in_the_persons_own_terminal_is_still_refused_without_agreement(capfd):
+    consent = cs.make_consent([], ["apt:git"])
+    code = code_of(lambda: fx.run_networked(None, [sys.executable, "-c", "print('ran')"], ["apt:git"], inherit_stdio=True))
+    assert code == "consent"
+    assert code_of(lambda: fx.run_networked(consent, [sys.executable, "-c", "print('ran')"], ["apt:cmake"], inherit_stdio=True)) == "consent"
+    assert code_of(lambda: fx.run_networked(consent, [sys.executable, "-c", "print('ran')"], [], inherit_stdio=True)) == "consent"
+    assert "ran" not in capfd.readouterr().out
+
+
+def test_with_inherited_terminal_the_output_goes_straight_to_the_person_and_this_program_never_sees_it(capfd):
+    consent = cs.make_consent([], ["apt:git"])
+    result = fx.run_networked(consent, [sys.executable, "-c", "import sys; print('shown to you'); print('also', file=sys.stderr); sys.exit(4)"],
+                              ["apt:git"], inherit_stdio=True)
+    shown = capfd.readouterr()
+    assert "shown to you" in shown.out and "also" in shown.err
+    assert (result.returncode, result.stdout, result.stderr) == (4, "", "")
+
+
+def test_with_inherited_terminal_the_program_can_read_what_the_person_types(tmp_path):
+    consent = cs.make_consent([], ["apt:git"])
+    script = tmp_path / "ask.py"
+    script.write_text("import sys\nsys.exit(0 if sys.stdin.readline().strip() == 'typed' else 7)\n")
+    stdin_path = tmp_path / "stdin.txt"
+    stdin_path.write_text("typed\n")
+    fd = os.open(str(stdin_path), os.O_RDONLY)
+    saved = os.dup(0)
+    try:
+        os.dup2(fd, 0)
+        assert fx.run_networked(consent, [sys.executable, str(script)], ["apt:git"], inherit_stdio=True).returncode == 0
+    finally:
+        os.dup2(saved, 0)
+        os.close(saved)
+        os.close(fd)
+
+
+def test_with_inherited_terminal_a_program_that_is_not_there_is_a_plain_error():
+    consent = cs.make_consent([], ["apt:git"])
+    assert code_of(lambda: fx.run_networked(consent, ["/definitely/not/a/program"], ["apt:git"], inherit_stdio=True)) == "http"

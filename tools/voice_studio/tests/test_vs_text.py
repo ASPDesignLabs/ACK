@@ -22,7 +22,7 @@ from voice_studio.core.text import Catalog, TextError
 PKG = Path(__file__).resolve().parents[1]
 CAT = text.load_catalog("en")
 SHIPPED_PY = sorted(p for p in (PKG / "core").glob("*.py") if p.name not in {"text.py", "describe.py"})
-NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report")
+NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup")
 KEY = re.compile(r"^(%s)\.[a-z0-9_]+(\.[a-z0-9_]+)*$" % "|".join(NAMESPACES))
 
 
@@ -219,6 +219,7 @@ def derived_keys():
     keys |= {"scratch.speed." + c for c in scratch.SPEED_CODES} | {"job.status." + s.value for s in jobs.JobStatus}
     keys |= {"budget.level." + l.value for l in diskbudget.Level} | {"budget.watch." + w.value for w in diskbudget.Watch}
     keys |= {"project.consent.missing." + c for c in project.CONSENT_PROBLEM_CODES} | {"project.how_given." + h for h in project.HOW_GIVEN}
+    keys |= {"setup.tag." + s.value for s in preflight.Status}
     keys |= {"report.label." + n for n in report.LABELS} | {"report.section." + s for s in report.SECTIONS} | {"report.platform." + p.value for p in preflight.Platform}
     return keys
 
