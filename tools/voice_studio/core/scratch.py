@@ -179,6 +179,35 @@ def scratch_dir_for(place: str, project_id: str) -> str:
     return str(PurePosixPath(place) / SCRATCH_DIRNAME / project_id)
 
 
+def create_scratch(place: str, project_id: str) -> str:
+    """Make `<place>/ack-voice-scratch/<project id>/` with its marker, and return that folder. The place must already be a folder (the tool makes
+    its own folder inside it, never the place itself). Safe to repeat: an existing folder with this project's marker is reused; one with any other
+    marker, or one that is not empty and has none, is refused. Raises ValueError for a name or place that is not usable and OSError when writing fails."""
+    if not PROJECT_ID.match(project_id) or not place.startswith("/") or not os.path.isdir(place):
+        raise ValueError("not a usable place or project name")
+    folder = scratch_dir_for(place, project_id)
+    parent = os.path.dirname(folder)
+    for path in (parent, folder):
+        try:
+            os.mkdir(path, 0o700)
+        except FileExistsError:
+            pass
+    marker_path = folder + "/" + MARKER_NAME
+    try:
+        with open(marker_path, encoding="utf-8") as handle:
+            state = check_marker(handle.read(), project_id)
+    except FileNotFoundError:
+        if os.listdir(folder):
+            raise ValueError("a folder with other files in it and no marker is already there")
+        fd = os.open(marker_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(marker_text(project_id))
+        return folder
+    if state is not MarkerState.OK:
+        raise ValueError("a folder with another marker is already there")
+    return folder
+
+
 def may_start_job(marker: MarkerState) -> bool:
     """Every job start: only a marker that names this project proves the folder is the person's own scratch and not an empty mount point."""
     return marker is MarkerState.OK

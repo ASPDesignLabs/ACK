@@ -14,7 +14,7 @@ import pytest
 
 from vs_fakes import (DEBIAN_12, MEM_4G, PROC_WSL1, SMI_6G, SMI_DRIVER_DOWN, UBUNTU_2004, FakeSystem, wsl2)
 from voice_studio.core import describe as ds
-from voice_studio.core import diskbudget, envbuild, envspec, fetch, jobs, preflight, project, report, scratch, setupplan, setuprun, text
+from voice_studio.core import diskbudget, envbuild, envspec, fetch, jobs, newproject, preflight, project, report, scratch, setupplan, setuprun, text
 from voice_studio.core.registry import load_registry
 from voice_studio.core.system import CommandResult
 from voice_studio.core.text import Catalog, TextError
@@ -189,7 +189,7 @@ def test_the_wording_rules_can_actually_fail():          # mutation guards: each
 
 def test_the_three_parts_of_a_failure_are_not_the_same_sentence_and_the_middle_one_says_what_happened_to_the_files():
     says_something_about_change = ("nothing", "kept", "deleted", "left", "no project", "not opened", "not changed", "not saved")
-    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("env", envbuild.ERROR_CODES)):
+    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("env", envbuild.ERROR_CODES), ("newproject", newproject.ERROR_CODES)):
         for code in codes:
             parts = ds.error_text(CAT, ns, code)
             assert len({parts.what, parts.changed, parts.next}) == 3 and all(p and "." in p for p in (parts.what, parts.changed, parts.next)), (ns, code)
@@ -213,13 +213,14 @@ def code_keys():
 
 def derived_keys():
     keys = set()
-    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("env", envbuild.ERROR_CODES)):
+    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("env", envbuild.ERROR_CODES), ("newproject", newproject.ERROR_CODES)):
         keys |= {"%s.error.%s.%s" % (ns, code, part) for code in codes for part in ("what", "changed", "next")}
     keys |= {"scratch.refuse." + c for c in scratch.REFUSAL_CODES} | {"scratch.warn." + c for c in scratch.WARNING_CODES}
     keys |= {"scratch.speed." + c for c in scratch.SPEED_CODES} | {"job.status." + s.value for s in jobs.JobStatus}
     keys |= {"budget.level." + l.value for l in diskbudget.Level} | {"budget.watch." + w.value for w in diskbudget.Watch}
     keys |= {"project.consent.missing." + c for c in project.CONSENT_PROBLEM_CODES} | {"project.how_given." + h for h in project.HOW_GIVEN}
     keys |= {"setup.tag." + s.value for s in preflight.Status}
+    keys |= {"newproject.problem.%s.%s" % pair for pair in newproject.PROBLEMS}
     keys |= {"setup.refuse." + c for c in setuprun.REFUSAL_CODES} | {"setup.status." + s for s in setuprun.STATUSES}
     keys |= {"setup.problem." + p for p in ("not_ready", "broken")} | {"setup.kind." + k for k in setupplan.KINDS}
     keys |= {"env.step." + a for a in envbuild.ACTION_IDS} | {"env.state." + s for s in envbuild.INSPECTION_STATES}
