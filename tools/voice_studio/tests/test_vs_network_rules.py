@@ -19,7 +19,7 @@ SHIPPED = sorted(p for p in PKG.rglob("*") if p.is_file() and "tests" not in p.r
 PY = [p for p in SHIPPED if p.suffix == ".py"]
 
 DOWNLOAD_MODULE = "core/fetch.py"
-MAY_START_PROGRAMS = {"core/system.py", "core/fetch.py"}            # extended when the job supervisor lands (plan task VS-1.6)
+MAY_START_PROGRAMS = {"core/system.py", "core/fetch.py", "core/jobs.py", "core/jobrunner.py"}     # the job supervisor and its runner
 WEB_ADDRESS_ALLOWED = {"data/sources.json"}                          # and get.sh, when it exists (VS-1.4)
 NETWORK_ROOTS = {"socket", "ssl", "http", "ftplib", "smtplib", "telnetlib", "xmlrpc", "poplib", "imaplib", "nntplib", "socketserver",
                  "requests", "httpx", "aiohttp", "websockets", "paramiko", "urllib3", "huggingface_hub", "asyncio"}

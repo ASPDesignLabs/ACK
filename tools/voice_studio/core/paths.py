@@ -48,6 +48,10 @@ class DataHome:
     def consent_file(self) -> str:
         return self.state + "/consent.json"
 
+    @property
+    def jobs(self) -> str:
+        return self.state + "/jobs"
+
 
 @dataclass(frozen=True)
 class ProjectPaths:

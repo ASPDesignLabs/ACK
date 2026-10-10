@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.5, VS-1.10, VS-1.11 |
+| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.5, VS-1.6, VS-1.10, VS-1.11 |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -154,9 +154,16 @@ Gate: the findings are written into section 6, and any decision they contradict 
   version it replaces, byte for byte, as `project.json.previous`. Typed text keeps zero-width joiners (Hindi, Persian, emoji). The folder name comes from the person's
   name (a non-Latin name becomes `person`, a repeat gets `-2`). `core/legacy.py` looks for the old setup and counts what is there without changing anything; the copy-in
   itself is VS-3.4.
-- **VS-1.6 Job supervisor (M, sandbox).** Start a long job detached (training, dataset build, speech recognition), write a pid file and log,
+- **VS-1.6 Job supervisor (M, sandbox). Done 2026-10-10.** Start a long job detached (training, dataset build, speech recognition), write a pid file and log,
   report status after the window closes or the computer restarts, stop gracefully (the guide's single Ctrl+C), refuse to start a second
-  GPU job. Check what `freeform_studio/jobs.py` already offers before writing anything.
+  GPU job. Check what `freeform_studio/jobs.py` already offers before writing anything. **Checked:** it is an in-process asyncio queue for transcription takes, so nothing
+  in it can run a command that outlives the window; this is new code. **As built** (`core/jobs.py`, `core/jobrunner.py`): a job is a folder under `state/jobs/` of plain files
+  (`job.json`, `runner.json`, `log.txt`, `stop.json`, `result.json`), so its state can be read after the window closes or the computer restarts. A small detached runner (started by
+  a double fork, so the window holds no child) runs the command in its own process group and writes the result last. Whether the runner is still the runner is decided from its
+  pid, its start time and the boot id, so a reused pid or one from before a restart is never mistaken for it, and a zombie does not count. A stop is a file the runner polls: it
+  sends **one** Ctrl+C-equivalent however often it is asked, and only an explicit force stop sends terminate and then, after a grace time, kill. A command that dies or fails has
+  its leftover workers killed. One GPU job at a time, and a stopping job still holds the GPU. A job gets Hugging Face's libraries in offline mode and network programs are
+  refused. `core/jobs.py` and `core/jobrunner.py` joined `system.py` and `fetch.py` as the only files that may start a program (held by the network-rules test).
 - **VS-1.7 Text catalog and wording lint (S, sandbox).** All visible text in one catalog (gettext) so translations can follow; a test fails
   on jargon in default labels (checkpoint, epoch, venv, tensor, ONNX... except under Show details) and on a string with no Show-details
   partner where a command runs.
