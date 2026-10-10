@@ -14,7 +14,7 @@ import pytest
 
 from vs_fakes import (DEBIAN_12, MEM_4G, PROC_WSL1, SMI_6G, SMI_DRIVER_DOWN, UBUNTU_2004, FakeSystem, wsl2)
 from voice_studio.core import describe as ds
-from voice_studio.core import ackimport, diskbudget, envbuild, envspec, fetch, jobs, newproject, preflight, project, report, scratch, setupplan, setuprun, text
+from voice_studio.core import ackimport, diskbudget, envbuild, envspec, fetch, jobs, newproject, preflight, project, report, scratch, setupplan, setuprun, text, voicezip
 from voice_studio.core.registry import load_registry
 from voice_studio.core.system import CommandResult
 from voice_studio.core.text import Catalog, TextError
@@ -22,7 +22,7 @@ from voice_studio.core.text import Catalog, TextError
 PKG = Path(__file__).resolve().parents[1]
 CAT = text.load_catalog("en")
 SHIPPED_PY = sorted(p for p in (PKG / "core").glob("*.py") if p.name not in {"text.py", "describe.py"})
-NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup", "env", "newproject", "ackimport")
+NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup", "env", "newproject", "ackimport", "voicezip")
 KEY = re.compile(r"^(%s)\.[a-z0-9_]+(\.[a-z0-9_]+)*$" % "|".join(NAMESPACES))
 
 
@@ -189,7 +189,7 @@ def test_the_wording_rules_can_actually_fail():          # mutation guards: each
 
 def test_the_three_parts_of_a_failure_are_not_the_same_sentence_and_the_middle_one_says_what_happened_to_the_files():
     says_something_about_change = ("nothing", "kept", "deleted", "left", "no project", "not opened", "not changed", "not saved")
-    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("env", envbuild.ERROR_CODES), ("newproject", newproject.ERROR_CODES), ("ackimport", ackimport.ERROR_CODES)):
+    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("env", envbuild.ERROR_CODES), ("newproject", newproject.ERROR_CODES), ("ackimport", ackimport.ERROR_CODES), ("voicezip", voicezip.ERROR_CODES)):
         for code in codes:
             parts = ds.error_text(CAT, ns, code)
             assert len({parts.what, parts.changed, parts.next}) == 3 and all(p and "." in p for p in (parts.what, parts.changed, parts.next)), (ns, code)
@@ -213,7 +213,7 @@ def code_keys():
 
 def derived_keys():
     keys = set()
-    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("env", envbuild.ERROR_CODES), ("newproject", newproject.ERROR_CODES), ("ackimport", ackimport.ERROR_CODES)):
+    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("env", envbuild.ERROR_CODES), ("newproject", newproject.ERROR_CODES), ("ackimport", ackimport.ERROR_CODES), ("voicezip", voicezip.ERROR_CODES)):
         keys |= {"%s.error.%s.%s" % (ns, code, part) for code in codes for part in ("what", "changed", "next")}
     keys |= {"scratch.refuse." + c for c in scratch.REFUSAL_CODES} | {"scratch.warn." + c for c in scratch.WARNING_CODES}
     keys |= {"scratch.speed." + c for c in scratch.SPEED_CODES} | {"job.status." + s.value for s in jobs.JobStatus}
@@ -221,6 +221,7 @@ def derived_keys():
     keys |= {"project.consent.missing." + c for c in project.CONSENT_PROBLEM_CODES} | {"project.how_given." + h for h in project.HOW_GIVEN}
     keys |= {"setup.tag." + s.value for s in preflight.Status}
     keys |= {"newproject.problem.%s.%s" % pair for pair in newproject.PROBLEMS}
+    keys |= {"voicezip.problem." + c for c in voicezip.PROBLEM_CODES}
     keys |= {"ackimport.state." + s for s in ("new", "already", "aborted")} | {"ackimport.mode." + m for m in ("script", "free")}
     keys |= {"setup.refuse." + c for c in setuprun.REFUSAL_CODES} | {"setup.status." + s for s in setuprun.STATUSES}
     keys |= {"setup.problem." + p for p in ("not_ready", "broken")} | {"setup.kind." + k for k in setupplan.KINDS}
@@ -271,7 +272,8 @@ def test_every_error_the_modules_raise_is_in_its_list_and_every_listed_one_is_ra
     for path, callee, listed in ((PKG / "core/fetch.py", "FetchError", fetch.ERROR_CODES), (PKG / "core/jobs.py", "JobError", jobs.ERROR_CODES),
                                  (PKG / "core/project.py", "ProjectError", project.ERROR_CODES),
                                  (PKG / "core/envbuild.py", "EnvError", envbuild.ERROR_CODES),
-                                 (PKG / "core/ackimport.py", "AckImportError", ackimport.ERROR_CODES)):
+                                 (PKG / "core/ackimport.py", "AckImportError", ackimport.ERROR_CODES),
+                                 (PKG / "core/voicezip.py", "VoiceZipError", voicezip.ERROR_CODES)):
         raised = codes_in_calls(path, callee) - {"consent_problems"}
         assert raised <= set(listed), (callee, sorted(raised - set(listed)))
         assert set(listed) <= raised, (callee, "listed but never raised", sorted(set(listed) - raised))

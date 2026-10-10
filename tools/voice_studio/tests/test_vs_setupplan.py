@@ -131,6 +131,7 @@ def test_the_verdict_decides_whether_the_setup_may_start(have, level, can):
     registry, envs = full(True)
     plan = sp.plan_setup(registry, envs, free=free(have))
     assert plan.verdict.level is level and plan.can_start is can and (plan.blockers == () if can else plan.blockers == ("no_room",))
+    assert plan.needs_warning is False, "a warning is for a disk that is tight, not one that is plainly enough or plainly not"
 
 
 def test_a_tight_disk_goes_on_only_after_a_warning():
@@ -187,6 +188,14 @@ def test_one_unavailable_item_is_enough_to_stop_it_even_if_the_rest_are_fine():
     assert [i.id for i in plan.unavailable] == ["voice-amy"] and not plan.can_start
     declined = sp.plan_setup(registry, envs, free=free(500 * GIB), declined=["voice-amy"])
     assert declined.can_start, "declining the unavailable starting voice leaves a plan that can go"
+
+
+def test_a_plan_with_an_unavailable_item_is_agreed_when_everything_that_can_be_fetched_is():
+    registry, envs = full(True)
+    registry = Registry(tuple(i if i.id != "voice-amy" else item("voice-amy", "voice", False, 846) for i in registry.items))
+    plan = sp.plan_setup(registry, envs, free=free(500 * GIB))
+    assert [i.id for i in plan.unavailable] == ["voice-amy"]
+    assert sp.agreed(plan, registry, plan.agreement(registry, NOW)), "the unavailable one cannot be agreed to yet, and does not stop the rest being agreed"
 
 
 def test_the_total_is_exact_only_when_every_size_is():
