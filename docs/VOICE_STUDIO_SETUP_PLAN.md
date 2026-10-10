@@ -79,6 +79,13 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   screens must not promise "a few minutes": show an estimate from the speed actually measured so far, say plainly that it can take a long time, keep every download resumable (it already is) and never
   freeze the window while one runs.
 
+- **F6 (2026-10-10), a real phone package comes in as designed.** A package made by ACK 1.0 (one script session, 54 s) was looked at first with nothing written, copied into the project and checked, added
+  only when the command ended with `add`, recognised as already added the next time, and a copy with one byte changed was refused with the three plain sentences, named the damaged clip, left nothing
+  in `incoming/` and left the original untouched. The details line repeats part of the third sentence (Freeform Studio's own wording); it sits under Show details, so it stays for now.
+- **F7 (2026-10-10), finishing a recording on the processor is fast enough.** `freeform_studio.process` took 6.5 s (about 25 s of processor time across cores) for the 54 s of speech, including loading
+  the speech model: roughly an eighth of real time. A missing model folder was refused with exit 3 and a plain sentence before anything started, and a second run found nothing waiting. Listening to
+  an hour of recordings should take on the order of ten minutes on this machine, to be confirmed on a longer one.
+
 ## 3. Rules that apply to every task below
 
 - Backups are encouraged and every edit to a person's files is confirmed first (the developer's standing preference). Nothing is moved or
