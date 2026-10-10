@@ -991,6 +991,15 @@ def test_inspecting_a_folder_that_is_not_usable_says_which_kind(tmp_path, state)
     assert eb.inspect(rig.spec, rig.ctx).state == state
 
 
+def test_inspecting_a_folder_whose_record_belongs_to_another_environment_says_damaged(tmp_path):
+    rig = make_rig(tmp_path)
+    assert rig.build().ok
+    data = rig.record()
+    for field, value in (("id", "something-else"), ("fingerprint", "0" * 64)):
+        Path(rig.paths.record).write_text(json.dumps(dict(data, **{field: value})))
+        assert eb.inspect(rig.spec, rig.ctx).state == "damaged", field
+
+
 def test_inspecting_something_that_cannot_be_built_gives_the_reason(tmp_path):
     rig = make_rig(tmp_path)
     rig.ctx.read_lock = lambda s: LOCK + b"x"
