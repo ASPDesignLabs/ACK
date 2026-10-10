@@ -107,7 +107,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   patch, synthesize with sherpa-onnx on the PC, import the zip into ACK on the phone. Record exact versions, wheel and disk sizes, the disk cost per hour of recording, per checkpoint and per round (for P11), GPU
   memory used at each batch size, the minimum driver, build time, and which upstream problems needed a wrapper versus a source patch. Also time the training cache and a checkpoint write on the Linux disk, on a
   Windows drive seen from WSL, and on a USB drive, to set D24's slow-drive warning.
-  Done when: a lock file, a verdict on each starting voice (does its checkpoint load and train with the pinned trainer; if Amy's does not, a replacement), a batch-size-by-memory table and the wrapper list exist.
+  Done when: a lock file, a verdict on each starting voice (does its checkpoint load and train with the pinned trainer; both are expected to, and a replacement is named for any that does not), a batch-size-by-memory table and the wrapper list exist.
 - **VS-0.3 Phone HTTPS (M, dev + phone, after nothing).** Generate a CA restricted by name constraints to one LAN address and a leaf for
   that address; install the CA on the developer's Android phone(s); confirm the browser can use the microphone at `https://<ip>:port`;
   change the computer's address and re-issue the leaf without touching the phone. Also try WSL mirrored mode and the firewall allowance.
@@ -294,7 +294,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 | D22 | Failures | **Plain cause, what is safe, a report file**: a message in everyday words saying what happened, whether anything was changed, and the next step. *Save problem report* writes a text file the helper can read first (versions, step names, error text; names and folders blanked; no recordings or text), never sent anywhere. |
 | D23 | Old recorder | **Retired from the guided path.** Each project gets its own output folder that Freeform Studio uses; the old guides stay as the manual route. |
 | D24 | Scratch location | **Scratch defaults to a folder inside the project, and an Advanced option lets the person choose another drive or folder**, on native Ubuntu and on WSL. A chosen place is checked before it is used, the tool never writes into the empty mount point of an unplugged drive, and the place is covered by backup, clean-up and delete ("Choosing another drive" under P11 in detail; VS-1.11, VS-6.5). |
-| D25 | Starting voices | **Mike and Amy** (`rhasspy/piper-checkpoints`, `en/en_US`) are the default install's two starting voices. Both are fetched during setup (each is its own line on the consent list, with its license shown, D15), and the helper chooses **male or female** for each person. The thin slice uses Mike, which the developer has found works best across the voices tried. **To confirm in VS-0.2:** the exact folder name for Mike (the build sandbox cannot reach Hugging Face), and that each checkpoint loads and trains with the pinned trainer; Amy's may be an older format, and the guide records that older ones fail. |
+| D25 | Starting voices | **Mike and Amy** (`rhasspy/piper-checkpoints`, `en/en_US`) are the default install's two starting voices. Both are fetched during setup (each is its own line on the consent list, with its license shown, D15), and the helper chooses **male or female** for each person. The thin slice uses Mike, which the developer has found works best across the voices tried. **Confirmed from the developer's screenshot of `en/en_US` (2026-10-10):** the folders are `mike` ("Add mike (en_US)", about 3 months old) and `amy` (last changed by "Fix model cards", about 2 months old). The developer reports both were trained recently and will work. VS-0.2 still checks that each loads and trains with the pinned trainer, because the guide records that older-format checkpoints fail and the listing shows only each folder's last change, not when its checkpoint was trained. Each voice's own model card license is read before it ships: the dataset's page says MIT, which may not be the voice's own license. |
 | D26 | Disk needed to start | The number shown before setup, and the check that gates it, **counts both starting voices and a budget for at least two people** (a person's project is the "profile" here), not just the tool. |
 
 ### Proposed defaults (not asked: veto any of these)
@@ -389,8 +389,8 @@ my proposals (veto any). Each is a pure function in VS-1.11, tested in the sandb
 ### Still open
 
 - Anything in the proposed defaults you want changed.
-- Mike: the exact folder name under `en/en_US` (the nearest I know of is `hfc_male`, which the guide already records as working with the current
-  trainer, but the listing could not be read from here). If Amy's checkpoint is an older format, which female voice replaces it.
+- Mike and Amy: which quality folders each has (the guide's tier is `medium`, 22050 Hz) and the checkpoint sizes, for D26's numbers. The sandbox
+  cannot reach Hugging Face, so these come from a screenshot of each voice's folder, or from VS-0.2.
 - Whether Mike is preselected on the male/female choice screen, or neither is.
 - Whether the first release needs a translation of the window, or English only until the app's drafts are reviewed (D19 leaves the door open).
 - P11 and D26: the real numbers (cost per hour, checkpoint size, both starting voices, margin, the floors, the slow-drive cutoff) wait for VS-0.2.
