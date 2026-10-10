@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Finishing waiting recordings with no server: decoded, listened to, cut into pieces, ready for Review and for the dataset; nothing else is touched."""
+import asyncio
 import json
 import os
 import stat
+import sys
 from pathlib import Path
 
 import pytest
@@ -181,3 +183,202 @@ def test_only_unfinished_recordings_are_waiting(tmp_path, out_dir):
     store = store_of(out_dir)
     ids = {s: store.create({"label": s, "status": s, "mime": "audio/wav"})["id"] for s in ("finishing", "queued", "transcribing", "ready", "error", "decoded", "importing")}
     assert sorted(proc.waiting_takes(store)) == sorted([ids["finishing"], ids["queued"], ids["transcribing"]])
+
+
+# ---------------------------------------------------------------- the settings, the progress lines, and what is said about each
+
+class Recorder:
+    """Stands in for standard output and remembers every flush, so a program reading the lines as they come is not kept waiting for a full buffer."""
+
+    def __init__(self):
+        self.parts, self.flushes = [], 0
+
+    def write(self, text):
+        self.parts.append(text)
+        return len(text)
+
+    def flush(self):
+        self.flushes += 1
+
+    def isatty(self):
+        return False
+
+    @property
+    def lines(self):
+        return "".join(self.parts).splitlines()
+
+
+def capture_config(monkeypatch):
+    seen = {}
+
+    async def fake_process(cfg, store, engines, report, poll_s=0.5):
+        seen["cfg"] = cfg
+        return {}
+
+    monkeypatch.setattr(proc, "process", fake_process)
+    monkeypatch.setattr(proc, "is_available", lambda name: True)
+    return seen
+
+
+def test_the_settings_come_from_the_options_and_a_download_is_never_allowed(tmp_path, out_dir, monkeypatch):
+    seen = capture_config(monkeypatch)
+    TakeStore(Config(output_dir=out_dir, code="en-GB").takes_dir).create({"label": "x", "status": "finishing", "mime": "audio/wav"})
+    code = proc.main(["--output", str(out_dir), "--code", "en-GB", "--asr-engine", "fake", "--asr-model", "m", "--asr-device", "cuda", "--asr-compute-type", "int8"])
+    cfg = seen["cfg"]
+    assert code == 0 and (cfg.code, cfg.asr_engine, cfg.asr_model, cfg.asr_device, cfg.asr_compute_type) == ("en-GB", "fake", "m", "cuda", "int8")
+    assert cfg.asr_allow_download is False and cfg.asr_idle_unload_s == 0
+
+
+def test_the_defaults_are_this_computers_processor_and_the_small_english_model(tmp_path, out_dir, monkeypatch):
+    seen = capture_config(monkeypatch)
+    store_of(out_dir).create({"label": "x", "status": "finishing", "mime": "audio/wav"})
+    assert proc.main(["--output", str(out_dir)]) == 0
+    cfg = seen["cfg"]
+    assert (cfg.code, cfg.asr_engine, cfg.asr_model, cfg.asr_device, cfg.asr_compute_type) == ("en-US", "faster-whisper", "small.en", "cpu", "auto")
+    assert cfg.asr_allow_download is False
+
+
+class ScriptedRunner:
+    """Stands in for the job runner: changes a recording the way the real one does, and waits until the watcher has reported each step before the next."""
+    reports = []
+    steps = []
+    instances = []
+
+    def __init__(self, cfg, store, engines):
+        self.store, self.stopped = store, False
+        ScriptedRunner.instances.append(self)
+
+    async def start(self):
+        pass
+
+    async def stop(self):
+        self.stopped = True
+
+    async def wait_idle(self):
+        for take_id, fields, expect, linger in self.steps:
+            if take_id:
+                self.store.update(take_id, **fields)
+            await asyncio.wait_for(self._until(expect), 3)
+            await asyncio.sleep(linger)             # long enough for a watcher that repeats itself to show it
+
+    async def _until(self, count):
+        while len(self.reports) < count:
+            await asyncio.sleep(0.001)
+
+
+class Engines:
+    unloaded = 0
+
+    def unload(self):
+        self.unloaded += 1
+
+
+def drive(monkeypatch, out_dir, steps, runner=ScriptedRunner):
+    store = store_of(out_dir)
+    take = store.create({"label": "x", "status": "finishing", "mime": "audio/wav"})["id"]
+    reports = []
+    ScriptedRunner.reports, ScriptedRunner.instances = reports, []
+    ScriptedRunner.steps = [(take if t else None, f, e, l) for t, f, e, l in steps]
+    monkeypatch.setattr(proc, "JobRunner", runner)
+    engines = Engines()
+    final = asyncio.run(proc.process(Config(output_dir=out_dir), store, engines, lambda state: reports.append((state["status"], state["progress"])), poll_s=0.002))
+    return take, reports, final, engines
+
+
+def test_each_change_of_status_or_of_progress_is_reported_once_and_in_order(tmp_path, out_dir, monkeypatch):
+    steps = [(False, {}, 1, 0.03),
+             (True, {"status": "queued"}, 2, 0.03),                              # the status changes and the progress does not
+             (True, {"status": "transcribing", "progress": 0.25}, 3, 0.03),
+             (True, {"progress": 0.5}, 4, 0.03),                                # the progress changes and the status does not
+             (True, {"status": "ready", "progress": 1.0}, 5, 0.03)]
+    take, reports, final, engines = drive(monkeypatch, out_dir, steps)
+    assert reports == [("finishing", 0.0), ("queued", 0.0), ("transcribing", 0.25), ("transcribing", 0.5), ("ready", 1.0)]
+    assert final[take]["status"] == "ready" and ScriptedRunner.instances[0].stopped and engines.unloaded == 1
+
+
+def test_a_change_made_just_before_the_end_is_still_reported_exactly_once(tmp_path, out_dir, monkeypatch):
+    steps = [(False, {}, 1, 0.03), (True, {"status": "ready", "progress": 1.0}, 1, 0.0)]          # the watcher may never see "ready" itself
+    take, reports, final, engines = drive(monkeypatch, out_dir, steps)
+    assert reports == [("finishing", 0.0), ("ready", 1.0)] and final[take]["status"] == "ready"
+
+
+def test_the_runner_is_stopped_and_the_engine_unloaded_even_when_the_run_fails(tmp_path, out_dir, monkeypatch):
+    class Exploding(ScriptedRunner):
+        async def wait_idle(self):
+            raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError):
+        drive(monkeypatch, out_dir, [], runner=Exploding)
+    assert ScriptedRunner.instances[0].stopped
+
+
+def test_with_nothing_waiting_no_runner_is_made_and_nothing_is_reported(tmp_path, out_dir, monkeypatch):
+    class Never:
+        def __init__(self, *a):
+            raise AssertionError("a runner was made with nothing to do")
+
+    monkeypatch.setattr(proc, "JobRunner", Never)
+    store_of(out_dir).create({"label": "x", "status": "ready", "mime": "audio/wav"})
+    reports = []
+    assert asyncio.run(proc.process(Config(output_dir=out_dir), store_of(out_dir), Engines(), reports.append)) == {} and reports == []
+
+
+def test_what_is_said_about_a_recording_is_what_the_store_holds_and_a_missing_one_reads_as_unknown(tmp_path, out_dir):
+    store = store_of(out_dir)
+    take = store.create({"label": "Café 日本", "status": "queued", "mime": "audio/wav", "error": "e", "progress": 0.4, "duration": 12.5})["id"]
+    gone = "t20200101-000000-0000"
+    snap = proc.snapshot(store, [take, gone])
+    assert snap[take] == {"take": take, "status": "queued", "progress": 0.4, "error": "e", "label": "Café 日本", "duration": 12.5}
+    assert snap[gone] == {"take": gone, "status": "unknown", "progress": None, "error": None, "label": "", "duration": None}
+
+
+def scripted_main(monkeypatch, out_dir, reports=(), final=None, *extra):
+    async def fake_process(cfg, store, engines, report, poll_s=0.5):
+        for state in reports:
+            report(state)
+        return final if final is not None else {}
+
+    monkeypatch.setattr(proc, "process", fake_process)
+    store_of(out_dir).create({"label": "x", "status": "finishing", "mime": "audio/wav"})
+    return proc.main(["--output", str(out_dir), "--asr-engine", "fake", *extra])
+
+
+def test_a_recording_still_not_ready_at_the_end_counts_as_not_finished(tmp_path, out_dir, monkeypatch, capsys):
+    final = {"a": {"take": "a", "status": "queued", "progress": None, "error": None, "label": "", "duration": None},
+             "b": {"take": "b", "status": "ready", "progress": 1.0, "error": None, "label": "", "duration": 3.0},
+             "c": {"take": "c", "status": "error", "progress": None, "error": "no audio", "label": "", "duration": None}}
+    assert scripted_main(monkeypatch, out_dir, (), final, "--json") == 1
+    assert lines(capsys)[-1] == {"done": True, "ready": 1, "error": 2, "failed": [{"take": "a", "status": "queued", "error": None},
+                                                                                  {"take": "c", "status": "error", "error": "no audio"}]}
+
+
+def test_names_and_text_are_written_as_they_are_and_every_line_is_flushed(tmp_path, out_dir, monkeypatch):
+    state = {"take": "t1", "status": "transcribing", "progress": 0.5, "error": None, "label": "Café 日本", "duration": 4.0}
+    rec = Recorder()
+    monkeypatch.setattr(sys, "stdout", rec)
+    assert scripted_main(monkeypatch, out_dir, (state,), {}, "--json") == 0
+    assert any("Café 日本" in line for line in rec.lines), "not escaped into \\u sequences"
+    assert rec.flushes == len(rec.lines) == 2
+    assert [json.loads(line) for line in rec.lines][0]["label"] == "Café 日本"
+
+
+@pytest.mark.parametrize("name, says_path", [("/models/m", True), ("~/models/m", True), ("./m", True), ("../m", True), ("small.en", False), ("medium", False)])
+def test_a_model_given_as_a_path_is_told_to_check_the_path_and_a_name_is_told_what_to_fetch(name, says_path):
+    text = proc._sentence({"done": True, "ready": 0, "error": 0, "model_missing": name, "size": "about 1 GB"})
+    assert ("does not exist" in text and "Check the path" in text) is says_path
+    assert ("models fetch " + name in text and "about 1 GB" in text) is (not says_path)
+
+
+def test_the_closing_sentence_tells_how_many_could_not_be_finished():
+    assert proc._sentence({"done": True, "ready": 1, "error": 0}) == "Finished 1 recording(s)."
+    assert proc._sentence({"done": True, "ready": 1, "error": 2}) == "Finished 1 recording(s); 2 could not be finished."
+
+
+def test_a_progress_line_shows_a_whole_percent_and_the_reason_only_when_there_is_one():
+    base = {"take": "t1", "status": "transcribing", "error": None}
+    assert proc._sentence({**base, "progress": 0.5}) == "  t1: transcribing 50%"
+    assert proc._sentence({**base, "progress": 1}) == "  t1: transcribing 100%"
+    assert proc._sentence({**base, "progress": 0.999}) == "  t1: transcribing 99%"
+    assert proc._sentence({**base, "progress": None}) == "  t1: transcribing"
+    assert proc._sentence({**base, "progress": "half"}) == "  t1: transcribing", "a value that is not a number is not shown, and does not stop the line"
+    assert proc._sentence({**base, "status": "error", "progress": None, "error": "no audio"}) == "  t1: error (no audio)"

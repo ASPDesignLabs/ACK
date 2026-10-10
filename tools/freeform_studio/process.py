@@ -29,16 +29,16 @@ from .models import is_available, size_phrase
 from .privacy import apply_offline_defaults, private_umask
 from .storage import TakeStore
 
-WAITING = ("finishing", "queued", "transcribing", "importing")      # statuses that mean "not finished yet"
+WAITING = ("finishing", "queued", "transcribing")      # statuses that mean "not finished yet"; one still "importing" is not waiting, its import is not complete
 Reporter = Callable[[Dict[str, Any]], None]
 
 
 def waiting_takes(store: TakeStore) -> List[str]:
-    """Recordings that still need work: not finished, or finished but missing their decoded copy."""
+    """Recordings that still need work: their status is one of WAITING. One that is still being imported is left alone, and so is one that failed or is ready."""
     found = []
     for take_id in store.ids():
         doc = store.get(take_id) or {}
-        if doc.get("status") in ("finishing", "queued", "transcribing"):
+        if doc.get("status") in WAITING:
             found.append(take_id)
     return found
 

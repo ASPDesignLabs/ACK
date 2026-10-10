@@ -362,3 +362,60 @@ def test_the_summary_counts_a_flag_once_per_piece_that_carries_it(out_dir):
     excluded = [{"reason": "flagged: low_confidence, has_digits"}, {"reason": "flagged: low_confidence"}, {"reason": "too short (0.4s)"}]
     by_reason, by_flag = bd._reasons(excluded)
     assert by_reason == {"flagged": 2, "too short": 1} and by_flag == {"low_confidence": 2, "has_digits": 1}
+
+
+# ---------------------------------------------------------------- --json: how each fact is worked out
+
+def test_left_out_pieces_are_counted_by_reason_without_the_numbers_and_by_each_flag():
+    reasons, flags = bd._reasons([{"reason": "flagged: low_confidence, x"}, {"reason": "flagged: low_confidence"}, {"reason": "too short (0.4s)"},
+                                  {"reason": "too short (0.2s)"}, {"reason": "flaggedly odd"}])
+    assert reasons == {"flagged": 2, "too short": 2, "flaggedly odd": 1}, "only the exact word 'flagged:' starts the flag list"
+    assert flags == {"low_confidence": 2, "x": 1}
+
+
+def test_the_summary_works_out_its_numbers_from_the_pieces_that_were_written_not_the_merged_ones():
+    rendered = [{"file": "a%d.wav" % i, "text": "t", "seconds": s} for i, s in enumerate((3.0, 1.0, 2.0, 5.0, 4.0))]
+    merged = [{"file": "m1.wav", "text": "t", "seconds": None}, {"file": "m2.wav", "text": "t", "seconds": None}]
+    excluded = [{"reason": "no text"}] * 3
+    stats = {"takes": 4, "segments": 9, "skipped_takes": [("t9", "queued")]}
+    out = bd.summary_dict("built", bd.Policy(min_s=1.5, max_s=9.5), stats, rendered, merged, excluded, ["w%d" % i for i in range(15)], Path("/s/ds"))
+    assert out["included"] == {"pieces": 5, "minutes": 0.25, "shortest": 1.0, "median": 3.0, "longest": 5.0}
+    assert out["merged"] == 2 and out["takes"] == 4 and out["pieces_considered"] == 9 and out["skipped_takes"] == [["t9", "queued"]]
+    assert out["left_out"] == {"pieces": 3, "by_reason": {"no text": 3}, "by_flag": {}}
+    assert out["warnings"] == ["w%d" % i for i in range(10)] and out["problems"] == []
+    assert out["policy"]["min_seconds"] == 1.5 and out["policy"]["max_seconds"] == 9.5
+    assert bd.summary_dict("problems", bd.Policy(), stats, rendered, merged, excluded, [], Path("/s/ds"), ["p"])["problems"] == ["p"]
+
+
+def test_with_no_pieces_the_lengths_are_none_not_a_crash():
+    out = bd.summary_dict("nothing_qualified", bd.Policy(), {"takes": 0, "segments": 0, "skipped_takes": []}, [], [], [], [], Path("/s/ds"))
+    assert out["included"] == {"pieces": 0, "minutes": 0.0, "shortest": None, "median": None, "longest": None}
+
+
+def test_json_when_the_finished_dataset_fails_its_own_checks_it_says_so_in_twenty_lines_and_exits_one(out_dir, tmp_path, capsys, monkeypatch):
+    standard_take(out_dir)
+    monkeypatch.setattr(bd, "validate", lambda folder: ["row %d is wrong" % i for i in range(30)])
+    code, result = json_run(capsys, out_dir, tmp_path / "ds")
+    assert code == 1 and result["result"] == "problems" and result["problems"] == ["row %d is wrong" % i for i in range(20)]
+
+
+class Recorder:
+    def __init__(self):
+        self.parts, self.flushes = [], 0
+
+    def write(self, text):
+        self.parts.append(text)
+        return len(text)
+
+    def flush(self):
+        self.flushes += 1
+
+    def isatty(self):
+        return False
+
+
+def test_the_json_line_keeps_other_alphabets_as_they_are_and_is_flushed_at_once(monkeypatch):
+    rec = Recorder()
+    monkeypatch.setattr(sys, "stdout", rec)
+    assert bd._json_exit(3, text="Café 日本") == 3
+    assert "".join(rec.parts) == '{"text": "Café 日本"}\n' and rec.flushes == 1
