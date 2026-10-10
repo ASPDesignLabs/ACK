@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3 |
+| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.10 |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -161,12 +161,16 @@ Gate: the findings are written into section 6, and any decision they contradict 
   Applies fixes by wrapper; a source patch (if VS-0.2 found one unavoidable) is shown, backed up and applied only on confirmation.
   After: VS-0.2.
 
-- **VS-1.10 Disk budget (M, sandbox).** Pure functions for P11: the three kinds of files (precious, rebuildable, disposable), an estimate from the
+- **VS-1.10 Disk budget (M, sandbox). Done 2026-10-10.** Pure functions for P11: the three kinds of files (precious, rebuildable, disposable), an estimate from the
   planned recording time, the floors, a check before every step that writes a lot, a monitor decision while a job runs (fine, low, stop
   gracefully), and a proposal of what could be freed, with sizes; all of it per drive, since scratch can be elsewhere (D24), and with the start number of D26
   (both starting voices, two people). The numbers come from one table filled in by VS-0.2; until then it carries the
   guides' rough figures marked unmeasured. Boundary tests: exactly at a floor, one MB either side, a drive that fills during a round, a drive that
-  reports nothing, and that training always stops before the recorder would refuse new audio.
+  reports nothing, and that training always stops before the recorder would refuse new audio. **As built:** `core/diskbudget.py`, with every figure in the size table labelled by
+  where it came from (listing, Freeform Studio's own, computed, guess) so the screens can say the estimate is rough until VS-0.2 measures it. The 400 MB per recorded hour
+  and the 500 MB recorder floor are Freeform Studio's own, held equal by tests. The start estimate always counts at least two people (D26); three answers (enough, tight,
+  not enough) are judged per drive, the worst deciding, so an enormous project drive cannot hide a too-small scratch drive; training's stop floor is the recorder's floor
+  plus one checkpoint plus slack, so a full disk can end a round but never costs a recording; the clean-up list can never include precious, protected or tool items.
 
 - **VS-1.11 Scratch location rules (M, sandbox).** Pure functions for D24: take a candidate place plus captured `/proc/mounts`, `df` and `lsblk`
   output and say accept, accept-with-warning (and which warning) or refuse (and the plain reason), for the filesystem groups, synced folders,
