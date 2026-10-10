@@ -122,6 +122,21 @@ may behave differently under WSL, so **do it on both**. The job here only prints
   terminal and run the "look at it" step again. → Still `running`. **This is the finding that matters here:** if it says `interrupted`, or
   the runner is gone, WSL stopped the job when the last terminal closed. Write down your Windows and WSL versions
   (`wsl.exe --version` in PowerShell) and whether anything else was open.
+- [ ] **If it said `interrupted`:** find out whether WSL stopped its whole virtual machine or only killed the job. These only read (put your Windows user name where
+  `<you>` is; the last one may say there is no such file, which is an answer too):
+  ```bash
+  cat ~/ack-voice-check/jobs/*-check-*/runner.json
+  cat /proc/sys/kernel/random/boot_id
+  uptime -s
+  ps -p 1 -o comm=
+  cat /etc/wsl.conf
+  cat /mnt/c/Users/<you>/.wslconfig
+  ```
+  → `runner.json` holds the `boot_id` the job started under. **If it differs from the current one, WSL stopped its whole virtual machine** (every process, without a
+  warning); if it is the same, only the job was killed. `uptime -s` is when this WSL started; `ps -p 1` says `systemd` or `init`. Keep all of it with your notes.
+- [ ] **Does a session you leave open keep jobs alive?** (Only if it said `interrupted`.) Start a new check job. In PowerShell run `wsl.exe -l -v` and note the distribution's
+  name, then `wsl.exe -d <name> --exec sleep infinity` and **leave that PowerShell window open**. Close every Ubuntu terminal window, wait a minute, open a new one and look
+  again. → `running` means a session held open from Windows keeps jobs alive. Ask the job to stop (next step) **before** you close the PowerShell window.
 - [ ] Ask it to stop, then look again after a few seconds:
   <!-- snippet: jobs-stop -->
   ```bash

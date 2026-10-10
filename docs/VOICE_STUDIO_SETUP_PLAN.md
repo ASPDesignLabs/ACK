@@ -51,6 +51,21 @@ is, can do: set it up, help a client or family member record a voice, run the tr
    are **unsettled**, and a declaration cannot settle them (D27). This repo holds none of it: no audio or model file has ever been committed on any
    branch (checked 2026-10-10).
 
+### Findings from the developer's own machines (device tests)
+
+These come only from the developer's runs of `docs/VOICE_STUDIO_DEVICE_TEST.md`. Machine: Windows 10.0.26200.9457, WSL 2.7.14.0 (kernel 6.18.33.2, WSLg 1.0.73.2),
+Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with 8188 MiB, driver 596.49.
+
+- **F1 (2026-10-10), the tests pass on the Python 3.10 floor under WSL2:** 1406 passed in 37 s, including the 10 that build real virtual environments.
+- **F2 (2026-10-10), the first terminal step behaves as designed on WSL2:** `--check` finds the desktop (WSLg) and the graphics card, lists only the one missing program, `--dry-run` shows
+  exactly the two apt commands, a run under `sudo` is refused with the administrator-rights `[FIX]`, and after the developer said yes `--check` reports ready.
+- **F3 (2026-10-10), a job does not outlive the last WSL terminal.** A job started with `start_job` and left running was `interrupted` after every terminal window was closed for a minute
+  (its log still held the line it printed). The supervisor told the truth (not "running", not an error), but **D12's "training keeps running if the window closes" does not hold on WSL by
+  default**, and no gentle stop was given: the runner handles SIGTERM by stopping the command with one Ctrl+C-equivalent and writing a result, and there was no result, so the runner was
+  killed outright or the whole virtual machine stopped. Consequence: a closed window can end a training round at the last checkpoint with no warning. Open: whether the whole virtual
+  machine restarted (`boot_id`), what `/etc/wsl.conf` and `.wslconfig` say, and whether a session held open from Windows (`wsl.exe -d <name> --exec sleep infinity`) keeps jobs alive.
+  The device test now asks for exactly these. Until they are known, VS-4.4 (below) must not claim jobs survive on WSL.
+
 ## 3. Rules that apply to every task below
 
 - Backups are encouraged and every edit to a person's files is confirmed first (the developer's standing preference). Nothing is moved or
@@ -327,7 +342,9 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-4.3 Automatic settings and guards (M, sandbox + dev).** Batch size from the VRAM table (VS-0.2), free the speech model before
   training (the 8 GB rule), the disk guard from P11 (check before a round, watch during it, stop gracefully before a write can fail), refuse a second GPU job.
 - **VS-4.4 Survive closing and rebooting (M, dev).** Reopen shows the true state; a silent desktop notification when a round ends
-  (no sound, no vibration, no auto-advance: it only tells).
+  (no sound, no vibration, no auto-advance: it only tells). **On WSL this is not free (finding F3):** closing the last window or terminal can stop every job, so before this task is
+  built the options are tested on the developer's machine: a session held open from Windows, `systemd` in `wsl.conf`, `vmIdleTimeout` in `.wslconfig` (a Windows-side edit, so D17's
+  explain-then-confirm rule applies), or, if none holds, a plain warning when the window closes while a job runs.
 - **VS-4.5 Listening UX (M, dev).** Compare rounds, a note per round, "use this round", "go back".
 - **VS-4.6 Plain failure messages (M, sandbox).** Map each failure in the guide's troubleshooting table to a plain message plus the safe next step.
 
