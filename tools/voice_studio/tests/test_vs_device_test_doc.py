@@ -215,19 +215,30 @@ def takes_of(home):
     return sorted(p.name for p in folder.iterdir()) if folder.is_dir() else []
 
 
-def test_a_package_is_looked_at_first_added_only_when_asked_and_recognised_the_next_time(home, phone_package):
+def test_a_package_is_looked_at_first_added_only_when_told_to_and_recognised_the_next_time(home, phone_package):
     before = phone_package.read_bytes()
-    looked = run_snippet("package-summary", home, stdin="no\n")
+    looked = run_snippet("package-summary", home)
     assert looked.returncode == 0, (looked.stdout, looked.stderr)
-    assert "to add: 1" in looked.stdout and "Nothing was added." in looked.stdout and "(new copy)" in looked.stdout
-    assert takes_of(home) == [], "answering no adds nothing"
+    assert "to add: 1" in looked.stdout and "(new copy)" in looked.stdout and "run this again with the word add at the end" in looked.stdout
+    assert takes_of(home) == [], "without the word add, nothing is added"
     assert (home / "ack-voice-check" / "recordings" / "_freeform" / "en-US" / "incoming" / "ack-training-XXXX.zip").is_file()
-    added = run_snippet("package-summary", home, stdin="yes\n")
+    added = run_snippet("package-summary", home, "add")
     assert added.returncode == 0 and added.stdout.count("  added ") == 1 and len(takes_of(home)) == 1, (added.stdout, added.stderr)
-    again = run_snippet("package-summary", home, stdin="yes\n")
+    again = run_snippet("package-summary", home, "add")
     assert "to add: 0" in again.stdout and "Already added" in again.stdout and "(already there)" in again.stdout and len(takes_of(home)) == 1
+    assert "Nothing to add: everything in this package is already in." in again.stdout and again.stdout.count("  added ") == 0
     assert phone_package.read_bytes() == before, "the package on the computer is never changed"
     assert "Traceback" not in looked.stderr + added.stderr + again.stderr
+
+
+def test_the_package_snippet_never_waits_for_an_answer_because_a_heredoc_leaves_it_nothing_to_read(home, phone_package):
+    """The doc runs it as `python3 - ARGS <<'EOF'`, so the program is what standard input carries: an `input()` in it fails with EOFError. Run it exactly that way."""
+    doc_args, program = heredoc("package-summary")
+    env = dict(os.environ, HOME=str(home), PYTHONPATH=str(TOOLS), PYTHONDONTWRITEBYTECODE="1")
+    given = [os.path.expanduser(a) for a in doc_args]
+    done = subprocess.run([sys.executable, "-", *given], input=program, cwd=str(home), env=env, text=True, capture_output=True, timeout=60)
+    assert done.returncode == 0 and "Nothing was added." in done.stdout and "EOFError" not in done.stderr, (done.stdout, done.stderr)
+    assert "input(" not in program
 
 
 def test_a_package_with_one_byte_changed_is_refused_in_plain_words_and_leaves_nothing(home, phone_package):
@@ -236,7 +247,7 @@ def test_a_package_with_one_byte_changed_is_refused_in_plain_words_and_leaves_no
     damaged.write_bytes(phone_package.read_bytes())
     flipped = run_snippet("flip-a-byte", home)
     assert flipped.returncode == 0 and damaged.read_bytes() != phone_package.read_bytes() and len(damaged.read_bytes()) == len(phone_package.read_bytes())
-    refused = run_snippet("package-summary", home, damaged, home / "ack-voice-check" / "recordings", stdin="yes\n", use_doc_args=False)
+    refused = run_snippet("package-summary", home, damaged, home / "ack-voice-check" / "recordings", "add", use_doc_args=False)
     assert refused.returncode == 1, (refused.stdout, refused.stderr)
     assert "This file is not a complete ACK package, so it was not used." in refused.stdout
     assert "Nothing was added. The original file was not changed." in refused.stdout and "Copy the file from the phone again" in refused.stdout

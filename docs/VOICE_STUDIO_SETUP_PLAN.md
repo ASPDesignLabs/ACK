@@ -73,6 +73,12 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   on it: the `.wslconfig` edit (D17) is a file write through `/mnt/c` and does not need interop, and the folder can be opened from Windows through `\\wsl.localhost\<distribution>\…`. The usual
   repair when it is down is a restart of WSL, or a one-line `binfmt.d` file with a restart of `systemd-binfmt` (a change inside Ubuntu that needs `sudo` and the person's yes).
 
+- **F5 (2026-10-10), speech recognition runs on the processor with and without the network; downloads are slow on this connection.** `models list` showed `small.en` already on the machine, so the
+  fetch step itself was not run, and `asr_smoke` gave the same result online and offline. The developer's downloads run at roughly 1.5 MB/s (a 150 Mbit carrier line). At that speed the 480 MB speech
+  model takes about 5 minutes, one 846 MB starting checkpoint about 10 minutes, and the training environment (a download the size table only guesses at, about 4 GB) about 45 minutes. So the setup
+  screens must not promise "a few minutes": show an estimate from the speed actually measured so far, say plainly that it can take a long time, keep every download resumable (it already is) and never
+  freeze the window while one runs.
+
 ## 3. Rules that apply to every task below
 
 - Backups are encouraged and every edit to a person's files is confirmed first (the developer's standing preference). Nothing is moved or

@@ -186,8 +186,8 @@ computer. On WSL a Windows folder works (`/mnt/c/Users/<you>/Downloads/…`); no
 - [ ] Look first, with Freeform Studio's own command, writing nothing:
   `python -m freeform_studio.ack_import ~/Downloads/ack-training-….zip --output ~/ack-voice-check/recordings --dry-run`
   → The sessions, minutes, whether there is room, and "nothing was written". `ls ~/ack-voice-check` shows **no** `recordings` folder yet.
-- [ ] Now the tool's own wrapper, which copies the package into the project first, checks the copy byte for byte, and **asks before adding**.
-  Answer **no** the first time:
+- [ ] Now the tool's own wrapper, which copies the package into the project first, checks the copy byte for byte, and **only adds when you put the word `add` at the end of the command**.
+  Run it exactly as it is the first time (it only looks):
   <!-- snippet: package-summary -->
   ```bash
   source ~/freeform-studio-venv/bin/activate
@@ -214,17 +214,22 @@ computer. On WSL a Windows folder works (`/mnt/c/Users/<you>/Downloads/…`); no
   print("to add:", s.to_add, "| new minutes: %.1f" % s.minutes_new, "| room: need %.0f MB, free %.0f MB" % (s.need_mb, s.free_mb))
   for note in s.warnings:
       print("  note:", note)
-  if s.to_add and s.enough_room and input("Add them now? (yes/no) ").strip().lower() == "yes":
+  adding = len(sys.argv) > 3 and sys.argv[3] == "add"
+  if not s.to_add:
+      print("Nothing to add: everything in this package is already in.")
+  elif not s.enough_room:
+      print("There is not enough room, so nothing was added.")
+  elif adding:
       for made in ackimport.add(prepared):
           print("  added", made.take_id)
   else:
-      print("Nothing was added.")
+      print("Nothing was added. To add them, run this again with the word add at the end.")
   EOF
   ```
   → The sessions and minutes match what you recorded; then "Nothing was added." The copy is kept in
   `~/ack-voice-check/recordings/_freeform/en-US/incoming/`, and `ls ~/ack-voice-check/recordings/_freeform/en-US/takes` shows nothing.
-- [ ] Run it again and answer **yes**. → "added …" once per session. Run it a third time. → The sessions now read "Already added", and
-  "to add: 0".
+- [ ] Run it again with `add` after the recordings folder (`… ~/ack-voice-check/recordings add`). → "added …" once per session. Run it a third time, still with `add`. →
+  The sessions now read "Already added", it says there is nothing to add, and "to add: 0".
 - [ ] **A damaged package must be refused in plain words, and leave nothing behind.** Make a copy and change one byte in the middle of it:
   <!-- snippet: flip-a-byte -->
   ```bash
