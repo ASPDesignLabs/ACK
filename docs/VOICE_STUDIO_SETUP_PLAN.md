@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2 |
+| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3 |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -111,7 +111,9 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-0.2 Pinned training environment on the GPU (L, dev).** Build a venv from a proposed lock (exact torch, setuptools, onnx and friends) and
   a fixed `piper1-gpl` commit on both 22.04 and 24.04. Train a few minutes from each starting voice (Mike first, then Amy; D25) on a small dataset, export,
   patch, synthesize with sherpa-onnx on the PC, import the zip into ACK on the phone. Record exact versions, wheel and disk sizes, the disk cost per hour of recording, per checkpoint and per round (for P11), GPU
-  memory used at each batch size, the minimum driver, build time, and which upstream problems needed a wrapper versus a source patch. Also time the training cache and a checkpoint write on the Linux disk, on a
+  memory used at each batch size, the minimum driver, build time, and which upstream problems needed a wrapper versus a source patch. **Run the trainer with the network off** (for example in a loopback-only namespace) after setup: the trainer fetches its `val_mos` quality scorer from GitHub on the
+  first run (`DATA_SOVEREIGNTY.md` section 2), which would break "the server never goes online". If it needs that fetch, the scorer goes into the registry and onto the
+  setup consent list, fetched at setup and not at the first training. Also time the training cache and a checkpoint write on the Linux disk, on a
   Windows drive seen from WSL, and on a USB drive, to set D24's slow-drive warning.
   Done when: a lock file, a verdict on each starting voice (does its checkpoint load and train with the pinned trainer; both are expected to, and a replacement is named for any that does not), a batch-size-by-memory table and the wrapper list exist.
 - **VS-0.3 Phone HTTPS (M, dev + phone, after nothing).** Generate a CA restricted by name constraints to one LAN address and a leaf for
@@ -129,10 +131,15 @@ Gate: the findings are written into section 6, and any decision they contradict 
   why"), WSL or native (and WSL version), a display is available, GPU and memory (`nvidia-smi`), free disk (on WSL, both inside Linux and on the Windows drive that holds its virtual disk), RAM, Python and `venv`, git,
   ffmpeg, which system packages are missing, and the drives that could hold scratch (mount point, filesystem, free space, removable or not). Fixtures are written from the documented formats (the sandbox has no GPU or WSL) and are to be replaced with captures from your machines during the spikes; the thresholds marked PROVISIONAL in the code (GPU 7,900 MiB, RAM 7,000 MiB) are guesses until VS-0.2 measures them. Returns a result the bootstrap prints and the window
   shows. No GPU is a *state*, not an error (D4).
-- **VS-1.3 Download registry and consent (M, sandbox).** One file lists every download (name, source, size, checksum, license, why).
+- **VS-1.3 Download registry and consent (M, sandbox). Done 2026-10-10.** One file lists every download (name, source, size, checksum, license, why).
   One module is the only code allowed to touch the network and it refuses without a consent record. Tests: no web address anywhere else,
   no socket/urllib/subprocess-to-curl anywhere else, a consent record must name each item, every entry is pinned to a revision and a checksum, and a test fails if any starting-voice or dataset file is committed to the repo (D27). The no-network test style from
-  `freeform_studio/tests/test_no_network.py` is the model, extended to this package.
+  `freeform_studio/tests/test_no_network.py` is the model, extended to this package. **As built:** three kinds of proof. The source of every file is read (only
+  `core/fetch.py` imports a network library; only it and `core/system.py` start a program; a web address is allowed only in `data/sources.json` and, later, `get.sh`);
+  `System.run` refuses network programs at run time (curl, pip, git, apt, ssh, `python -m pip`, also behind sudo or env); and `fetch` refuses without a
+  consent record that covers *exactly* the address, size and checksum that were shown. An entry with no address is listed and sized for the disk estimate but cannot
+  be fetched until it is pinned; nothing is half pinned. The two starting voices and the speech model are in the registry unpinned: their addresses, revisions and
+  checksums come from VS-0.2 and VS-4.1. The loopback-only egress test (as Freeform Studio has) comes when there is a whole flow to run (VS-2.9).
 - **VS-1.4 Bootstrap scripts (M, sandbox).** `setup.sh` (the `git clone ... && run` route) and `get.sh` (the `curl` route, D14): preflight, list
   of `apt` packages with a one-line reason each, ask yes/no, `sudo apt-get install`, then hand over to the window; also `--check` and
   `--dry-run` like `install.sh`. Never edits shell settings. Driven by stand-in commands in tests, as `test_install_scripts.py` does.

@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "note": "Every download the guided setup can make is listed here, and only here: this file is the one place (with get.sh) allowed to hold a web address. An entry with no address is not fetchable yet: it is filled in, pinned to a revision, a size and a checksum, once it has been checked on a real machine (plan tasks VS-0.2 and VS-4.1). Sizes marked approx are the sizes the hosts show, used only for the disk estimate.",
+  "items": [
+    {
+      "id": "voice-mike",
+      "kind": "voice",
+      "why_key": "fetch.why.voice_mike",
+      "license_id": "voice-mike-card",
+      "approx_size_bytes": 846000000,
+      "filename": null, "url": null, "revision": null, "size_bytes": null, "sha256": null
+    },
+    {
+      "id": "voice-amy",
+      "kind": "voice",
+      "why_key": "fetch.why.voice_amy",
+      "license_id": "voice-amy-card",
+      "approx_size_bytes": 846000000,
+      "filename": null, "url": null, "revision": null, "size_bytes": null, "sha256": null
+    },
+    {
+      "id": "speech-model-small-en",
+      "kind": "model",
+      "why_key": "fetch.why.speech_model",
+      "license_id": "whisper-mit",
+      "approx_size_bytes": 480000000,
+      "filename": null, "url": null, "revision": null, "size_bytes": null, "sha256": null
+    }
+  ]
+}

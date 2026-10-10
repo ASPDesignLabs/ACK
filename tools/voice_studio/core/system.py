@@ -15,6 +15,32 @@ from pathlib import Path
 from typing import Mapping, Optional, Protocol, Sequence, Tuple
 
 
+# Programs that can reach the network. `System.run` refuses them: the only code allowed to start one is core/fetch.py, and only after
+# the person has agreed to that download by name (plan decisions D5, D27; tests/test_vs_network_rules.py).
+NETWORK_PROGRAMS = frozenset({"curl", "wget", "git", "pip", "pip3", "apt", "apt-get", "aptitude", "snap", "flatpak", "ssh", "scp", "sftp",
+                              "rsync", "nc", "ncat", "netcat", "ftp", "telnet"})
+WRAPPER_PROGRAMS = frozenset({"sudo", "env", "nice", "nohup", "time", "timeout", "ionice", "stdbuf", "setsid"})
+
+
+class NetworkBlocked(RuntimeError):
+    """A command that can reach the network was asked for outside the download module."""
+
+
+def is_network_command(argv: Sequence[str]) -> bool:
+    """Best effort: the program itself, behind any wrappers (sudo, env, timeout...), or `python -m pip`. The static checks are the main guard."""
+    names = [os.path.basename(a) for a in argv]
+    i = 0
+    while i < len(names) and names[i] in WRAPPER_PROGRAMS:
+        i += 1
+        while i < len(names) and (names[i].startswith("-") or "=" in names[i] or names[i].isdigit()):
+            i += 1
+    if i >= len(names):
+        return False
+    if names[i] in NETWORK_PROGRAMS:
+        return True
+    return names[i].startswith("python") and names[i + 1:i + 3] == ["-m", "pip"]
+
+
 @dataclass(frozen=True)
 class CommandResult:
     returncode: int
@@ -45,6 +71,8 @@ class RealSystem:
             return None
 
     def run(self, argv: Sequence[str], timeout: float = 15.0) -> Optional[CommandResult]:
+        if is_network_command(argv):
+            raise NetworkBlocked(os.path.basename(argv[0]))
         env = dict(os.environ, LC_ALL="C", LANG="C")
         try:
             done = subprocess.run(list(argv), capture_output=True, text=True, errors="replace", timeout=timeout, env=env, stdin=subprocess.DEVNULL)
