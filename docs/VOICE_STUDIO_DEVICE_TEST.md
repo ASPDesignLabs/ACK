@@ -16,11 +16,34 @@ The folders and names used below (change them if yours differ):
 
 | What | Where |
 |---|---|
-| This tool's files (a checkout of this branch) | `~/ack-tools` |
+| This tool's files (a checkout of the branch `claude/voice-studio-guided-setup`: **section 0**) | `~/ack-tools` |
 | Freeform Studio's environment (from its own `install.sh`) | `~/freeform-studio-venv` |
 | The trainer and its environment (from the training guide) | `~/piper1-gpl` (with `.venv`) |
 | The base checkpoint (from the training guide) | `~/piper/checkpoints/base.ckpt` |
 | Recordings folder used by this list | `~/ack-voice-check/recordings` |
+
+## 0. Get this branch (a clone of the main branch does not have this tool)
+
+Voice Studio is only on the branch `claude/voice-studio-guided-setup` until it is merged. A `~/ack-tools` you made from the main branch (the Freeform Studio
+install steps do that) has no `tools/voice_studio` folder, and the first command in section B then says "No such file or directory". Start every section in
+your own home folder (`cd ~`), not in a Windows folder under `/mnt/c`: it is much faster there, and the paths below assume it.
+
+- [ ] Look first. These only read:
+  ```bash
+  cd ~
+  git -C ~/ack-tools branch --show-current
+  ls ~/ack-tools/tools/voice_studio/run_tests.sh
+  ```
+  → On the right branch: the branch name `claude/voice-studio-guided-setup` and the file name printed. On a clone of main: `main`, then "No such file or directory".
+- [ ] If it is not the right branch, **move the old folder aside (it keeps everything, and your Freeform Studio install in `~/freeform-studio-venv` does not live in
+  it), then clone this branch.** This is the same advice Freeform Studio's own README gives for a clone from another branch:
+  ```bash
+  mv ~/ack-tools ~/ack-tools.old
+  git clone --branch claude/voice-studio-guided-setup https://github.com/ASPDesignLabs/ACK.git ~/ack-tools
+  ls ~/ack-tools/tools/voice_studio/run_tests.sh
+  ```
+  → The last line prints the file's name. If `mv` says `~/ack-tools.old` exists, choose another name; nothing is replaced. If you had changed files inside the old
+  folder, they are still in `~/ack-tools.old`.
 
 ## A. Write down the computer first
 
