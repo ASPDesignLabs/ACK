@@ -626,12 +626,11 @@ def test_not_even_an_empty_folder_or_a_link_in_the_way_is_replaced(tmp_path, kin
     if kind == "empty folder":
         dest.mkdir()
     else:
-        (tmp_path / "elsewhere").mkdir()
-        dest.symlink_to(tmp_path / "elsewhere")
+        dest.symlink_to(tmp_path / "elsewhere")                        # a link to nowhere: it does not "exist", but it is in the way
     with pytest.raises(eb.EnvError) as caught:
         eb.unpack_archive(archive, dest, "m")
     assert caught.value.code == "unpack_failed" and (dest.is_symlink() if kind == "link" else dest.is_dir())
-    assert os.listdir(tmp_path / "elsewhere") == [] if kind == "link" else os.listdir(dest) == []
+    assert (not (tmp_path / "elsewhere").exists()) if kind == "link" else os.listdir(dest) == []
 
 
 def test_an_archive_that_is_not_an_archive_or_is_empty_is_a_plain_failure(tmp_path):

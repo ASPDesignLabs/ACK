@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.4, VS-1.5, VS-1.6, VS-1.7, VS-1.8, VS-1.10, VS-1.11 |
+| 1 | Foundations (sandbox-testable) | Done 2026-10-10 (VS-1.1 to VS-1.11). What still needs the developer's machine is listed under VS-0.2: the lock files, the pinned archive and the measured sizes. |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -116,6 +116,11 @@ Gate: the findings are written into section 6, and any decision they contradict 
   setup consent list, fetched at setup and not at the first training. Also time the training cache and a checkpoint write on the Linux disk, on a
   Windows drive seen from WSL, and on a USB drive, to set D24's slow-drive warning.
   Done when: a lock file, a verdict on each starting voice (does its checkpoint load and train with the pinned trainer; both are expected to, and a replacement is named for any that does not), a batch-size-by-memory table and the wrapper list exist.
+  **What VS-1.9 now waits for from this task** (the builder and its rules exist; these are the facts to put into the data files): (1) `data/locks/training.lock.txt` and `studio.lock.txt`, made with a resolver that writes
+  hashes for every package including the build tools the trainer's `setup.py` needs (`setuptools<82`, `wheel`, `scikit-build`, `cmake`, `ninja`, `Cython`), and proved to install with `--require-hashes --only-binary=:all: --no-deps`
+  from the ordinary package index on both Ubuntu releases (if a dependency has no wheel, say so; the answer is a decision, not a quiet change to the install flags); (2) the checksum of each lock written into `data/environments.json`;
+  (3) the chosen `piper1-gpl` commit's archive address, file name, size and SHA-256 written into `data/sources.json` (`piper1-gpl-source`); (4) whether `build_monotonic_align.sh` builds from inside the environment as `native_build` expects and what file proves it
+  (`native_artifact` is a guess from the guide); (5) which of the guide's workarounds in the launcher's `prelude` are really needed, and whether any needs a source `patches` entry instead; (6) the real installed sizes, to replace the 8 GiB and 1 GiB guesses.
 - **VS-0.3 Phone HTTPS (M, dev + phone, after nothing).** Generate a CA restricted by name constraints to one LAN address and a leaf for
   that address; install the CA on the developer's Android phone(s); confirm the browser can use the microphone at `https://<ip>:port`;
   change the computer's address and re-issue the leaf without touching the phone. Also try WSL mirrored mode and the firewall allowance.
@@ -199,11 +204,30 @@ Gate: the findings are written into section 6, and any decision they contradict 
   would blank every such letter); names of four letters or fewer are hidden only as whole words (so "Users" survives a login of "user"); the redactor knows only the names it is given,
   which is why the log is opt-in. **Found by testing:** an email pattern that took quadratic time on a long message; the pattern is bounded and every piece is cut to 4,000
   characters before it is read.
-- **VS-1.9 Environment builder (L, sandbox with stand-ins, real run in dev).** Creates the venvs from the lock with hashes, builds
+- **VS-1.9 Environment builder (L, sandbox with stand-ins, real run in dev). Done 2026-10-10, except the real lock files, which wait for VS-0.2.** Creates the venvs from the lock with hashes, builds
   `piper1-gpl`'s native part, runs a self-test, is idempotent and resumable, never touches an existing environment, and writes what it did.
   Applies fixes by wrapper; a source patch (if VS-0.2 found one unavoidable) is shown, backed up and applied only on confirmation.
-  After: VS-0.2.
-
+  After: VS-0.2. **As built** (`core/envspec.py`, `core/envbuild.py`, `data/environments.json`, `data/locks/`): two environments are listed, `training` (the trainer) and `studio` (Freeform
+  Studio's recorder and review tools); anything not listed is not built. **A lock is a file of `name==version` lines, each with at least one `--hash=sha256:`**, and nothing else (no range,
+  address, option, editable install or repeat; a test per case), and its own SHA-256 is written in the list, so a changed lock is refused even by one byte. An environment whose lock has no checksum
+  yet, or whose source archive is unpinned in the registry, is listed and sized for the disk estimate but **cannot be built** (`not_pinned`): both shipped environments are in that state until VS-0.2
+  makes the locks. The trainer's source is the pinned archive from `data/sources.json` (new kind `source`, entry `piper1-gpl-source`, unpinned), downloaded through the one agreement-checked
+  door, unpacked safely (no `..`, absolute, backslash, device, hard link or outward link; a link is judged by where it really lands; size and count caps; one top folder dropped; built as `.part` and renamed), then
+  installed editable with `--no-deps --no-build-isolation --no-index`. **Each build lives in its own folder, `environments/<id>-<10 hex of a fingerprint>/`**, where the fingerprint covers the Python
+  minor version, the lock, the source archive, the install and native-build settings and the source patches; a new lock or Python makes a new folder beside the old (nothing deleted). A folder with no
+  record of ours is refused (`not_ours`), as is one from a newer version or with a damaged record, and none of them is changed. The record (`ack-env.json`, atomic, owner-only) keeps each step with
+  the input it was built from; **every step is verified against the folder itself, not the record alone** (the Python reports its own minor version and that it is a virtual environment; the installed packages and
+  the trainer's package are compared with the lock, markers and version spelling judged by pip's own vendored rules; the native part must exist; the launcher must be byte for byte what is wanted),
+  so a removed piece is rebuilt and a good one kept, and a failed step is the first tried next time. Packages install with `--require-hashes --only-binary=:all: --no-deps`. One build per environment at a time (a lock
+  file linked into place whole, owner checked by pid, start time and boot like a job). Room is checked before work starts (the estimate plus 1 GiB; a resume with only small steps left needs less). **Fixes are by wrapper:** `ack_run.py` runs the
+  documented workarounds (the `torch.load` safe-globals one and `dynamo=False`, from the guide, unverified until VS-0.2) and then starts a module, so no program file is edited. A **source patch** is
+  listed in the environment's data (none now); it is shown with the lines around it, needs a yes (the default answer is no), keeps the original beside the file first (never overwriting an earlier backup), refuses a file
+  that something else changed since, and is asked for before anything is installed. The **self-test** runs each probe inside the finished environment with the network off; probes that need a graphics card are skipped, and
+  said to be skipped, when there is none. 22 three-part error codes, step names, state words and probe names are in the catalog. `System.run` gained `cwd` and `env`. **Tests:** 164 with stand-ins, 74 for the list and the lock rules, and 10 that
+  build a real Python environment (a real native-build script, the real checks inside it, pip's own marker and version rules; only the download is faked). **Mutation testing:** about 135 deliberate breaks over two rounds
+  (a missing check, a boundary, a mode, a skipped confirmation...); the first round missed 13, each now has a test, and the survivors are equivalent (a link in the way is also refused by the operating system's rename, a missing
+  package makes the checking script crash and so counts as "not good" either way). **Not done, and why:** the real lock files and the real archive address, revision and checksum (VS-0.2, on the developer's machine, to be made with a hash-generating
+  resolver and tried with `--only-binary=:all:`, which assumes every dependency has a wheel); the sizes in the list are guesses (8 GiB, 1 GiB); no command line or window starts a build yet (VS-2.x), so nothing calls `build()` outside the tests.
 - **VS-1.10 Disk budget (M, sandbox). Done 2026-10-10.** Pure functions for P11: the three kinds of files (precious, rebuildable, disposable), an estimate from the
   planned recording time, the floors, a check before every step that writes a lot, a monitor decision while a job runs (fine, low, stop
   gracefully), and a proposal of what could be freed, with sizes; all of it per drive, since scratch can be elsewhere (D24), and with the start number of D26

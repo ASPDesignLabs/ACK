@@ -23,7 +23,8 @@ import json
 H = "a" * 64
 LOCK = ("thing==1.0.0 ; python_version >= \"3.8\" --hash=sha256:%s\n"
         "onlyold==1.0 ; python_version < \"3.0\" --hash=sha256:%s\n"
-        "Plain_Name==2.5 --hash=sha256:%s\n" % (H, H, H)).encode()
+        "Plain_Name==2.5 --hash=sha256:%s\n"
+        "zope.interface==6.0 --hash=sha256:%s\n" % (H, H, H, H)).encode()
 BUILD_SH = (b"#!/bin/sh\n"
             b"test \"$(command -v python)\" = \"$VIRTUAL_ENV/bin/python\" || exit 7\n"          # the environment's own python must come first
             b"mkdir -p src && echo built > src/core.cpython-312.so\n")
@@ -53,7 +54,7 @@ class InstallingDoors(Doors):
                 version = {"thing": "1.0", "plain-name": "2.5"}.get(pin.name, pin.version)       # "1.0" is the same version as "1.0.0"
                 if pin.marker and "< \"3.0\"" in pin.marker:
                     continue                                                                        # not for this Python: a real install skips it
-                shown = {"plain-name": "Plain_Name"}.get(pin.name, pin.name)                           # as the package spells itself, capitals and all
+                shown = {"plain-name": "Plain_Name", "zope-interface": "zope.interface"}.get(pin.name, pin.name)   # as the package spells itself
                 folder = site / ("%s-%s.dist-info" % (shown, version))
                 folder.mkdir(exist_ok=True)
                 (folder / "METADATA").write_text("Metadata-Version: 2.1\nName: %s\nVersion: %s\n" % (shown, version))
@@ -126,6 +127,24 @@ def test_a_package_whose_pin_has_a_marker_for_this_python_is_required_and_found_
     shutil.rmtree(site / "thing-1.0.dist-info")
     assert eb.inspect(spec, ctx).stale == ("pip_lock",)
     assert list(eb.build(spec, ctx).did) == ["pip_lock"]
+
+
+def test_a_package_with_a_dot_in_its_name_is_found_missing_by_the_real_check(tmp_path):
+    spec, ctx, doors = make_real(tmp_path)
+    result = eb.build(spec, ctx)
+    site = doors._site_packages(eb.EnvPaths(result.env_dir).python)
+    assert "zope.interface-6.0.dist-info" in installed_names(site)
+    shutil.rmtree(site / "zope.interface-6.0.dist-info")
+    assert eb.inspect(spec, ctx).stale == ("pip_lock",)
+
+
+def test_the_trainers_own_package_missing_means_only_its_install_runs_again(tmp_path):
+    spec, ctx, doors = make_real(tmp_path)
+    result = eb.build(spec, ctx)
+    site = doors._site_packages(eb.EnvPaths(result.env_dir).python)
+    shutil.rmtree(site / "demo_dist-0.0.dist-info")
+    assert eb.inspect(spec, ctx).stale == ("pip_source",)
+    assert list(eb.build(spec, ctx).did) == ["pip_source"]
 
 
 def test_a_package_at_a_different_version_is_found_by_the_real_check(tmp_path):
