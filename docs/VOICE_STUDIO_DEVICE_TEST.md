@@ -142,10 +142,10 @@ may behave differently under WSL, so **do it on both**. The job here only prints
   cat /mnt/c/Users/<you>/.wslconfig
   ```
   Then in PowerShell: `wsl.exe --shutdown`. Open Ubuntu, start a check job, close **every** window, wait three minutes, open a new one and look. → `running` means this setting holds the
-  instance up (if WSL printed a complaint about the file when it started, send it to me). **To undo it:** put the copy back with `cp /mnt/c/Users/<you>/.wslconfig.bak /mnt/c/Users/<you>/.wslconfig`
+  instance up. **On the developer's machine (WSL 2.7.14.0) it did**: still `running` after more than five minutes with every window closed. (If WSL printed a complaint about the file when it started, send it to me.) **To undo it:** put the copy back with `cp /mnt/c/Users/<you>/.wslconfig.bak /mnt/c/Users/<you>/.wslconfig`
   and run `wsl.exe --shutdown` again.
-- [ ] **Can Ubuntu start Windows programs?** `cmd.exe /c ver` → a Windows version line. On the developer's machine it says `cannot execute binary file: Exec format error`, which also breaks
-  `explorer.exe`; `ls /proc/sys/fs/binfmt_misc/` then lacks `WSLInterop`. Write down what yours says.
+- [ ] **Can Ubuntu start Windows programs?** `cmd.exe /c ver` → a Windows version line. On the developer's machine it first said `cannot execute binary file: Exec format error` (which also breaks
+  `explorer.exe`, and `ls /proc/sys/fs/binfmt_misc/` lacked `WSLInterop`) and, after `wsl.exe --shutdown` and a restart, worked: **it is intermittent**. Write down what yours says, and try again after a restart.
 - [ ] **Does a session you leave open keep jobs alive?** (Only if it said `interrupted`.) Start a new check job. In PowerShell run `wsl.exe -l -v` and note the distribution's
   name, then `wsl.exe -d <name> --exec sleep infinity` and **leave that PowerShell window open**. Close every Ubuntu terminal window, wait a minute, open a new one and look
   again. → `running` means a session held open from Windows keeps jobs alive. Ask the job to stop (next step) **before** you close the PowerShell window.

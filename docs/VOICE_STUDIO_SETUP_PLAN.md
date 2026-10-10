@@ -64,13 +64,14 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   the Ubuntu instance. `systemd=true`, `Linger=no` and a systemd user service made no difference (the service died too). The shutdown takes about a second, so the runner never wrote a result and
   the supervisor read the job as `interrupted`, which was the truth. **D12's "training keeps running if the window closes" is false on WSL by default.** One job did run its full ten minutes while a
   `wsl.exe … sleep infinity` session was left open in another window (the developer's recollection, to be confirmed), so a session held open from Windows holds the instance up. `.wslconfig`
-  held only `networkingMode=mirrored`. Other users report that `[general] instanceIdleTimeout` (named in WSL 2.5.4's notes) and `[wsl2] vmIdleTimeout` can stop the idling, and that newer versions
-  still shut down regardless; this is to be tested on WSL 2.7.14. Until the options below are tested, VS-4.4 must not claim jobs survive on WSL.
-- **F4 (2026-10-10), Ubuntu cannot start Windows programs on this machine.** `powershell.exe` from Ubuntu gave `cannot execute binary file: Exec format error`: the interop handler is not registered in
-  `binfmt_misc`, a known fault when systemd is on (its `systemd-binfmt` service can clear the entry). Anything that starts a Windows program from Ubuntu (`explorer.exe`, a keeper session, opening the
-  Windows browser) fails here, so the tool must **check for it, say so in plain words, and never depend on it**: the `.wslconfig` edit (D17) is a file write through `/mnt/c` and does not need interop,
-  and the folder can be opened from Windows through `\\wsl.localhost\<distribution>\…`. The usual fix is a one-line `binfmt.d` file and a restart of `systemd-binfmt`, a change inside Ubuntu that
-  needs `sudo` and the person's yes.
+  held only `networkingMode=mirrored`. **Tested on WSL 2.7.14.0: adding `[general] instanceIdleTimeout=-1` to `.wslconfig` (then `wsl.exe --shutdown`) keeps jobs alive.** A check job was still running after every window had been closed for
+  more than five minutes, where the same job had been killed within about a minute every time before (the developer kept a backup and has not undone the setting yet). Other users report that this
+  setting did not always work on 2.5.x, so the tool must re-check it on the machine it runs on (below) rather than assume it.
+- **F4 (2026-10-10), Ubuntu starting Windows programs is intermittent.** After the instance had restarted on its own, `powershell.exe` from Ubuntu gave `cannot execute binary file: Exec format error`
+  (the interop handler was missing from `binfmt_misc`, a known fault when systemd is on, because its `systemd-binfmt` service can clear the entry). After a later `wsl.exe --shutdown` and restart,
+  `cmd.exe /c ver` worked and `WSLInterop` was listed. So the tool must **check at the moment it needs it** (a short, time-limited `cmd.exe /c ver`), say plainly when it does not work, and never depend
+  on it: the `.wslconfig` edit (D17) is a file write through `/mnt/c` and does not need interop, and the folder can be opened from Windows through `\\wsl.localhost\<distribution>\…`. The usual
+  repair when it is down is a restart of WSL, or a one-line `binfmt.d` file with a restart of `systemd-binfmt` (a change inside Ubuntu that needs `sudo` and the person's yes).
 
 ## 3. Rules that apply to every task below
 
@@ -348,10 +349,11 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-4.3 Automatic settings and guards (M, sandbox + dev).** Batch size from the VRAM table (VS-0.2), free the speech model before
   training (the 8 GB rule), the disk guard from P11 (check before a round, watch during it, stop gracefully before a write can fail), refuse a second GPU job.
 - **VS-4.4 Survive closing and rebooting (M, dev).** Reopen shows the true state; a silent desktop notification when a round ends
-  (no sound, no vibration, no auto-advance: it only tells). **On WSL this is not free (finding F3):** the instance powers down about a minute after the last window or terminal closes, taking every job with it. The options, to be tested
-  on the developer's machine in this order: `[general] instanceIdleTimeout=-1` (and `[wsl2] vmIdleTimeout=-1`) in `.wslconfig` (a Windows-side edit through `/mnt/c`, with a `.bak` and D17's explain-then-confirm rule;
-  it needs a WSL restart, so never while a job runs); a session held open from Windows (works, but starting one from Ubuntu needs interop, which F4 shows may be broken); and, if none holds, a plain warning
-  when the window closes while a job runs, with the job's last checkpoint named.
+  (no sound, no vibration, no auto-advance: it only tells). **On WSL this is not free (finding F3):** the instance powers down about a minute after the last window or terminal closes, taking every job with it. The fix that
+  worked on the developer's machine is `[general] instanceIdleTimeout=-1` in `.wslconfig` (a Windows-side edit through `/mnt/c`, offered with a `.bak` and D17's explain-then-confirm rule; it needs a WSL restart, so never
+  while a job runs; the tool says that Ubuntu then keeps running in the background until WSL is shut down). Before a long job starts on WSL the tool checks the setting is in place (and that WSL's version knows it)
+  and, if not, says so in plain words and offers the edit; if the person declines, a plain warning when the window closes while a job runs, naming the job's last checkpoint. A session held open from Windows also
+  works, but starting one from Ubuntu needs interop, which F4 shows is intermittent.
 - **VS-4.5 Listening UX (M, dev).** Compare rounds, a note per round, "use this round", "go back".
 - **VS-4.6 Plain failure messages (M, sandbox).** Map each failure in the guide's troubleshooting table to a plain message plus the safe next step.
 
