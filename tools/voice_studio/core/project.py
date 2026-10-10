@@ -27,6 +27,8 @@ SCRATCH_DEFAULT, SCRATCH_CUSTOM = "default", "custom"
 MAX_NAME = 80
 MAX_NOTE = 500
 MIN_HOURS, MAX_HOURS = 0.5, 100.0
+ERROR_CODES = ("damaged", "newer", "exists", "bad_name", "consent", "bad_value", "unreadable")        # each has words in the text catalog
+CONSENT_PROBLEM_CODES = ("given_by", "what_to", "when", "withdraw", "how_given", "how_given_other")
 
 
 class ProjectError(Exception):

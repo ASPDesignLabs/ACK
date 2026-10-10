@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.5, VS-1.6, VS-1.10, VS-1.11 |
+| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1, VS-1.2, VS-1.3, VS-1.5, VS-1.6, VS-1.7, VS-1.10, VS-1.11 |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -164,9 +164,16 @@ Gate: the findings are written into section 6, and any decision they contradict 
   sends **one** Ctrl+C-equivalent however often it is asked, and only an explicit force stop sends terminate and then, after a grace time, kill. A command that dies or fails has
   its leftover workers killed. One GPU job at a time, and a stopping job still holds the GPU. A job gets Hugging Face's libraries in offline mode and network programs are
   refused. `core/jobs.py` and `core/jobrunner.py` joined `system.py` and `fetch.py` as the only files that may start a program (held by the network-rules test).
-- **VS-1.7 Text catalog and wording lint (S, sandbox).** All visible text in one catalog (gettext) so translations can follow; a test fails
-  on jargon in default labels (checkpoint, epoch, venv, tensor, ONNX... except under Show details) and on a string with no Show-details
-  partner where a command runs.
+- **VS-1.7 Text catalog and wording lint (S, sandbox). Done 2026-10-10.** All visible text in one catalog so translations can follow; a test fails
+  on jargon in default labels (checkpoint, epoch, venv, tensor, ONNX... except under Show details). **As built, with one change from the plan:** the catalog is *keyed*,
+  like ACK's own string resources (`data/text/en.json`, names such as `fetch.error.checksum.what`), not gettext with English as the key. A stable name survives a copy edit,
+  a plural can carry a second argument, and the same discipline as the Android app applies (a key that is missing reads as itself so a gap shows; a language that lacks
+  a key falls back to English for it). A template holds `{name}` placeholders and nothing else, filled by pattern and never by `str.format`, so no text or value can run
+  anything. **D22 is held by tests:** every error code any module can raise has three keys, what happened, whether anything was changed and the next step, and the
+  middle one must say something about the files. Complete in both directions: every key the code names has words, and a string nothing uses fails. The plain-words
+  lint covers jargon (checkpoint, GPU, cache, dataset, sudo, apt...), sentences over 25 words, shouting, web addresses and stray template syntax; text under a `.detail`
+  key may be technical. 164 strings so far (preflight, the reasons for each program and download, every failure, every status, every refusal and warning). What is not
+  checked by a test: that a `Show details` partner exists wherever a command runs; that is a screen-level rule for Stage 2.
 - **VS-1.8 Problem report builder (M, sandbox).** Builds the text the helper sees *before* saving: versions, step names, error text.
   Redacts user name, home folder, project and person names. Tests plant canary strings and fail if one survives. Never includes
   recordings, transcripts or phrases.

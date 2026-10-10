@@ -33,6 +33,7 @@ from .system import is_network_command
 SCHEMA = 1
 KIND = re.compile(r"^[a-z0-9][a-z0-9-]{0,19}$")
 START_GRACE_S = 15.0
+ERROR_CODES = ("bad_spec", "network_program", "gpu_busy", "launch_failed", "no_start", "not_found")           # each has words in the text catalog
 OFFLINE_ENV = {"HF_HUB_OFFLINE": "1", "HF_HUB_DISABLE_TELEMETRY": "1", "DO_NOT_TRACK": "1", "TRANSFORMERS_OFFLINE": "1"}
 TOOLS_DIR = Path(__file__).resolve().parents[2]            # the folder that holds the voice_studio package
 

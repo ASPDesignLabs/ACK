@@ -38,6 +38,12 @@ NETWORK_FS = frozenset({"nfs", "nfs4", "cifs", "smb3", "smbfs", "sshfs", "fuse.s
 MEMORY_FS = frozenset({"tmpfs", "ramfs", "devtmpfs"})
 WSL_WINDOWS_FS = frozenset({"9p", "drvfs"})
 
+REFUSAL_CODES = ("not_absolute", "root_folder", "system_folder", "not_a_folder", "cannot_create", "not_writable", "read_only", "fs_fat", "fs_network", "fs_memory",
+                 "synced_folder", "not_mounted", "inside_project", "inside_other_project", "marker_other_project", "marker_damaged", "not_empty_unmarked",
+                 "bad_project_id")
+WARNING_CODES = ("fs_permissive", "perms_loose", "windows_drive", "fs_unknown", "removable", "same_device_as_project")
+SPEED_CODES = ("slow_write", "slow_read", "slow_small_files")           # each has words in the text catalog
+
 SLOW_WRITE_MBPS = 30.0              # PROVISIONAL (plan task VS-0.2 sets the real ones): about a USB 2.0 stick
 SLOW_READ_MBPS = 30.0
 SLOW_SMALL_FILES_PER_S = 200.0      # the training cache is many small files, which is what a Windows drive seen from WSL is slow at

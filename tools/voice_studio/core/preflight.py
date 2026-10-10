@@ -340,6 +340,6 @@ def run_preflight(system: System, measure: Sequence[str] = ()) -> PreflightRepor
         free = system.disk_free(path)
         if free is not None:
             disks[path] = free
-    add("disk", Status.INFO, "preflight.disk.facts", folders=len(disks))
+    add("disk", Status.INFO, "preflight.disk.facts", count=len(disks))
 
     return PreflightReport(tuple(checks), os_info, platform, gpu, ram, disks, missing)

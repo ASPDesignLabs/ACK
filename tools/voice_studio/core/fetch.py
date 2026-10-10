@@ -32,6 +32,7 @@ from .system import CommandResult
 CHUNK = 1 << 20
 ROOM_MARGIN_BYTES = 1 << 30            # PROVISIONAL (plan P11): spare room that must remain after the download
 USER_AGENT = "ACK-Voice-Studio"
+ERROR_CODES = ("consent", "not_pinned", "unsafe_name", "room", "disk", "http", "size", "checksum", "cancelled")     # each has words in the text catalog
 
 
 class FetchError(Exception):
