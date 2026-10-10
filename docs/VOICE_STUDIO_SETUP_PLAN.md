@@ -1,6 +1,6 @@
 # Guided voice setup (ACK Voice Studio): plan
 
-**Status: DRAFT for review.** The question-and-answer session is done (23 decisions, section 6); nothing is built yet. Branch:
+**Status: DRAFT for review.** The question-and-answer session is done (26 decisions, section 6); nothing is built yet. Branch:
 `claude/voice-studio-guided-setup` (started from `claude/nice-johnson-38v0sw`). Each decision in section 6 is the developer's; the
 "proposed defaults" in section 6 were **not** asked about and are there to be vetoed. Tasks are cut so that one session can finish one
 or two of them; the `Where tested` tag says what can be checked from the build sandbox and what only the developer's machines can.
@@ -103,10 +103,11 @@ Gate: the findings are written into section 6, and any decision they contradict 
   announced); what Narrator or NVDA can and cannot see in a WSLg window. Done when: a findings note says go, go-with-limits or no-go for
   WSLg, and what to tell Windows users who rely on a screen reader.
 - **VS-0.2 Pinned training environment on the GPU (L, dev).** Build a venv from a proposed lock (exact torch, setuptools, onnx and friends) and
-  a fixed `piper1-gpl` commit on both 22.04 and 24.04. Train a few minutes from a candidate base voice on a small dataset, export,
+  a fixed `piper1-gpl` commit on both 22.04 and 24.04. Train a few minutes from each starting voice (Mike first, then Amy; D25) on a small dataset, export,
   patch, synthesize with sherpa-onnx on the PC, import the zip into ACK on the phone. Record exact versions, wheel and disk sizes, the disk cost per hour of recording, per checkpoint and per round (for P11), GPU
-  memory used at each batch size, the minimum driver, build time, and which upstream problems needed a wrapper versus a source patch.
-  Done when: a lock file, a list of at least one base voice that works, a batch-size-by-memory table and the wrapper list exist.
+  memory used at each batch size, the minimum driver, build time, and which upstream problems needed a wrapper versus a source patch. Also time the training cache and a checkpoint write on the Linux disk, on a
+  Windows drive seen from WSL, and on a USB drive, to set D24's slow-drive warning.
+  Done when: a lock file, a verdict on each starting voice (does its checkpoint load and train with the pinned trainer; if Amy's does not, a replacement), a batch-size-by-memory table and the wrapper list exist.
 - **VS-0.3 Phone HTTPS (M, dev + phone, after nothing).** Generate a CA restricted by name constraints to one LAN address and a leaf for
   that address; install the CA on the developer's Android phone(s); confirm the browser can use the microphone at `https://<ip>:port`;
   change the computer's address and re-issue the leaf without touching the phone. Also try WSL mirrored mode and the firewall allowance.
@@ -120,7 +121,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   torch and the training stack) with how each license was read.
 - **VS-1.2 Preflight (M, sandbox).** Pure functions that read command output and say: Ubuntu release (22.04/24.04 or "unsupported, here is
   why"), WSL or native (and WSL version), a display is available, GPU and memory (`nvidia-smi`), free disk (on WSL, both inside Linux and on the Windows drive that holds its virtual disk), RAM, Python and `venv`, git,
-  ffmpeg, and which system packages are missing. Fixtures are real captured outputs. Returns a result the bootstrap prints and the window
+  ffmpeg, which system packages are missing, and the drives that could hold scratch (mount point, filesystem, free space, removable or not). Fixtures are real captured outputs. Returns a result the bootstrap prints and the window
   shows. No GPU is a *state*, not an error (D4).
 - **VS-1.3 Download registry and consent (M, sandbox).** One file lists every download (name, source, size, checksum, license, why).
   One module is the only code allowed to touch the network and it refuses without a consent record. Tests: no web address anywhere else,
@@ -149,24 +150,32 @@ Gate: the findings are written into section 6, and any decision they contradict 
 
 - **VS-1.10 Disk budget (M, sandbox).** Pure functions for P11: the three kinds of files (precious, rebuildable, disposable), an estimate from the
   planned recording time, the floors, a check before every step that writes a lot, a monitor decision while a job runs (fine, low, stop
-  gracefully), and a proposal of what could be freed, with sizes. The numbers come from one table filled in by VS-0.2; until then it carries the
+  gracefully), and a proposal of what could be freed, with sizes; all of it per drive, since scratch can be elsewhere (D24), and with the start number of D26
+  (both starting voices, two people). The numbers come from one table filled in by VS-0.2; until then it carries the
   guides' rough figures marked unmeasured. Boundary tests: exactly at a floor, one MB either side, a drive that fills during a round, a drive that
   reports nothing, and that training always stops before the recorder would refuse new audio.
+
+- **VS-1.11 Scratch location rules (M, sandbox).** Pure functions for D24: take a candidate place plus captured `/proc/mounts`, `df` and `lsblk`
+  output and say accept, accept-with-warning (and which warning) or refuse (and the plain reason), for the filesystem groups, synced folders,
+  read-only and unwritable places, the same-device check and the marker file. A quick speed test is a separate function around a stand-in
+  writer. Boundary tests: each filesystem name, a mount point that is not mounted, a marker holding another project's id, a path through a
+  symbolic link, and a candidate inside another project's folder.
 
 ### Stage 2: Thin slice (an ACK package in, one `.zip` out, plain screens)
 
 - **VS-2.1 Window shell (M, dev).** `Gtk.Application`, main window, navigation (Setup, Projects, one project), the accessibility baseline
   (P6), the `.desktop` entry and an icon with no binary-asset problem. The widget code uses GTK 4.6 API only (finding 7). After: VS-0.1.
-- **VS-2.2 Setup flow (L, sandbox for logic, dev for the screens).** Preflight results → the disk it will need against what is free (P11) → one consent list for every download (sizes, sources,
+- **VS-2.2 Setup flow (L, sandbox for logic, dev for the screens).** Preflight results → the disk it will need to start against what is free (P11, D26) → one consent list for every download (sizes, sources,
   licenses) → environment build with progress → self-test → done. Resumable after a closed window or a lost connection; a Show details
   expander with the real commands and log; a GPU-locked state that still lets everything else proceed. After: VS-1.2, 1.3, 1.9, 2.1.
 - **VS-2.3 Projects (M, sandbox + dev).** List and create: whose voice (mine, someone else's); for someone else's, the consent note
-  (who agreed, what to, when, how it can be withdrawn, how it was given) is required to continue (D21). It also asks roughly how long the recording will be, which sets the project's disk budget (P11). After: VS-1.5, 2.1.
+  (who agreed, what to, when, how it can be withdrawn, how it was given) is required to continue (D21). It also asks roughly how long the recording will be, which sets the project's disk budget (P11). The starting voice is chosen here too (D25; the thin slice has only Mike and VS-4.1 adds the
+  choice), and an Advanced section lets the person put scratch on another drive (D24, VS-1.11). After: VS-1.5, 2.1.
 - **VS-2.4 Import an ACK package (M, sandbox + dev).** File chooser → `freeform_studio.ack_import` → counts, minutes, any problems in plain
   words. The package is never deleted. After: VS-2.3.
 - **VS-2.5 Dataset (M, sandbox + dev).** A friendly wrapper over `build_dataset`: preview, build, show minutes and what was left out and
   why; refuses to overwrite; always a fresh cache folder (the guide's stale-cache rule).
-- **VS-2.6 One training round (M, dev).** Start, progress, stop cleanly at the end of the time. One base voice, hard-coded from VS-0.2.
+- **VS-2.6 One training round (M, dev).** Start, progress, stop cleanly at the end of the time. One starting voice, Mike (D25), hard-coded.
   After: VS-1.6, 2.5.
 - **VS-2.7 Listen (M, dev).** Export the latest checkpoint to a temporary `.onnx`, patch it (reusing `patch_voice_for_sherpa_onnx.py`),
   synthesize three test sentences with sherpa-onnx, play them. What you hear is what the phone will say. After: VS-2.6.
@@ -195,7 +204,9 @@ Gate: the findings are written into section 6, and any decision they contradict 
 
 ### Stage 4: Training rounds, in full
 
-- **VS-4.1 Base voice list (M, sandbox + dev).** The vetted entries from VS-0.2, license text shown before download, consent-gated fetch,
+- **VS-4.1 Base voice list (M, sandbox + dev).** Mike and Amy (D25), as judged in VS-0.2: each with its license text shown before download and a consent-gated fetch (both are on the setup
+  consent list, and either can be declined and fetched later), the plain male-voice or female-voice choice with one line saying the starting
+  voice only gives training a head start,
   checksum, and a compatibility check (the guide's old-checkpoint test) so an unusable file is explained, not crashed on. Never bundled.
 - **VS-4.2 Rounds engine (L, sandbox).** Many rounds; always resume from the person's latest checkpoint, never the base; go back to a
   previous round; rotate the cache folder whenever the audio changes; find `lightning_logs/version_N`. A state machine with boundary tests.
@@ -228,8 +239,12 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-6.2 Update (M, sandbox + dev).** A button that asks before contacting the internet, fetches a tagged release, shows what changes,
   builds the new environment beside the old one and switches only after the self-test passes. Never automatic (P4).
 - **VS-6.3 Uninstall and delete (M, sandbox).** Uninstall removes the tool and environments, never a project. Deleting a person's data asks
-  twice, names a backup first, and is driven by a storage catalogue with a test that fails if a new folder is in no area (the `StorageCatalogue` idea). Each area is also marked precious, rebuildable or disposable (P11).
+  twice, names a backup first, covers scratch wherever it lives (naming the drive, and saying what it could not reach if it is not plugged in),
+  and is driven by a storage catalogue with a test that fails if a new folder is in no area (the `StorageCatalogue` idea). Each area is also marked precious, rebuildable or disposable (P11).
 - **VS-6.4 Problem report everywhere (S, dev).** The button on every failure screen, content shown first, saved only where the helper chooses.
+
+- **VS-6.5 Move scratch (M, sandbox + dev).** Change the scratch location of an existing project (D24): check the new place with VS-1.11 and
+  its room, copy, verify, switch, and only then offer to remove the old copy. Refuses while a job is running.
 
 ### Stage 7: Windows helper
 
@@ -269,7 +284,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 | D12 | Training | **Rounds with listening**: about 25 minutes a round, stops itself cleanly, makes a short test clip from the latest checkpoint; the helper chooses *sounds good*, *another round* or *go back to the previous round*. Settings are chosen from the detected GPU memory and shown read-only. Training keeps running if the window closes. |
 | D13 | Existing installs | **Detect, then copy in**, after a checked backup; originals never moved or deleted. Reuse an old training environment only if it matches the lock, otherwise build a new one beside it. |
 | D14 | The command | **Both documented**: `git clone` of a tagged release `&& run setup` as the main route; a `curl ... \| bash` route for "no git yet". |
-| D15 | Base voice | A **short vetted list**, license text shown before download, fetched only with consent, never bundled. Vetting needs a run on the developer's GPU (VS-0.2). |
+| D15 | Base voice | A **short vetted list**, license text shown before download, fetched only with consent, never bundled. Vetting needs a run on the developer's GPU (VS-0.2). The list is fixed by D25. |
 | D16 | Phone certificate | A **wizard-made, name-restricted certificate authority**, re-issuing the certificate when the address changes; install one file on the phone once. mkcert is the fallback if VS-0.3 fails. |
 | D17 | Windows-side edits | **Explain, then edit after confirmation**: write `.wslconfig` keeping a `.bak`, show the firewall command to run as administrator. Never restart WSL, and warn that training must be paused first. |
 | D18 | Reading material | **Easy public-domain passages and a phonetically balanced sentence list**, plus pasting your own text and free speech. Each shipped text's license is read and logged first. |
@@ -278,6 +293,9 @@ Gate: the findings are written into section 6, and any decision they contradict 
 | D21 | Consent | **Prompt, and keep the note with the project.** New projects ask whose voice it is; for someone else's, a note is needed to continue (who agreed, what to, when, how to withdraw, how it was given: spoken, signed, through a guardian, using AAC). It verifies nothing; it starts the conversation. The note is kept in the project and in the voice's model card. |
 | D22 | Failures | **Plain cause, what is safe, a report file**: a message in everyday words saying what happened, whether anything was changed, and the next step. *Save problem report* writes a text file the helper can read first (versions, step names, error text; names and folders blanked; no recordings or text), never sent anywhere. |
 | D23 | Old recorder | **Retired from the guided path.** Each project gets its own output folder that Freeform Studio uses; the old guides stay as the manual route. |
+| D24 | Scratch location | **Scratch defaults to a folder inside the project, and an Advanced option lets the person choose another drive or folder**, on native Ubuntu and on WSL. A chosen place is checked before it is used, the tool never writes into the empty mount point of an unplugged drive, and the place is covered by backup, clean-up and delete ("Choosing another drive" under P11 in detail; VS-1.11, VS-6.5). |
+| D25 | Starting voices | **Mike and Amy** (`rhasspy/piper-checkpoints`, `en/en_US`) are the default install's two starting voices. Both are fetched during setup (each is its own line on the consent list, with its license shown, D15), and the helper chooses **male or female** for each person. The thin slice uses Mike, which the developer has found works best across the voices tried. **To confirm in VS-0.2:** the exact folder name for Mike (the build sandbox cannot reach Hugging Face), and that each checkpoint loads and trains with the pinned trainer; Amy's may be an older format, and the guide records that older ones fail. |
+| D26 | Disk needed to start | The number shown before setup, and the check that gates it, **counts both starting voices and a budget for at least two people** (a person's project is the "profile" here), not just the tool. |
 
 ### Proposed defaults (not asked: veto any of these)
 
@@ -293,13 +311,13 @@ Gate: the findings are written into section 6, and any decision they contradict 
 | P8 | Hardware floor | NVIDIA with at least 8 GB of GPU memory (the size the guide was verified on), plus RAM and disk numbers measured in VS-0.2. Less is "unverified", not "refused". |
 | P9 | Python | The window runs on the system Python with Ubuntu's PyGObject; training and Freeform Studio run in their own venvs. The lock must cover Python 3.10 (22.04) and 3.12 (24.04); if torch cannot, VS-0.2 reopens D8. |
 | P10 | Windows support | Windows 11 supported; Windows 10 (build 19044+, WSLg) best-effort, and past its standard support. |
-| P11 | Disk space | Observed, never discovered by a failed write. A **budget** (an estimate from how long the person plans to record, checked before each big step and watched while a job runs), with all the churn kept in a separate **scratch** folder inside the project rather than asking for a scratch drive. Details below the table. |
+| P11 | Disk space | Observed, never discovered by a failed write. A **budget** (an estimate from how long the person plans to record, checked before each big step and watched while a job runs), with all the churn kept in a **scratch** folder (inside the project by default, on another drive as an Advanced option: D24). Details below the table. |
 
 ### P11 in detail (disk space)
 
 You offered two ways: a scratch space, or a default minimum plus a recording budget. This proposes both in their simplest form, because
 they answer different questions: the **budget** decides *how much room is needed*, the **scratch folder** decides *where the churn goes*.
-Letting the person point scratch at another drive is not in the first version (see Still open).
+Letting the person point scratch at another drive is an Advanced option (D24), described under "Choosing another drive" below.
 
 | Kind | What it is | Rule |
 |---|---|---|
@@ -307,7 +325,8 @@ Letting the person point scratch at another drive is not in the first version (s
 | Rebuildable | The dataset (`wav/` and `metadata.csv`) and the training caches | Can be made again from the precious files. Removed only through *Free up space*. Not backed up. |
 | Disposable | Older rounds' checkpoints, temporary `.onnx` files and listening clips, logs | Removed only through *Free up space*, after one confirmation. Not backed up. |
 
-Rebuildable and disposable files live in `<project>/scratch/`, so the clean-up and budget rules apply to that folder and nothing else. A round's
+Rebuildable and disposable files live in the project's scratch folder (`<project>/scratch/` unless another place was chosen, D24), so the clean-up and
+budget rules apply to that folder and nothing else. A round's
 checkpoint is moved there (a rename on the same disk, not a copy) once it is no longer the chosen round or the one before it. The
 tool's own environments and download caches (pip, Hugging Face) are not per person; they are counted once, as "the tool", and the pip cache is
 offered for clean-up after a successful build, never removed on its own.
@@ -317,6 +336,12 @@ offered for clean-up after a successful build, never removed on its own.
   checkpoints the tool will keep, room for one backup copy of the precious kind, and a safety margin. Three answers: *enough*, *tight* (a
   warning that can be acknowledged and continued past), or *not enough* (that step does not start; nothing is changed; the message says how much
   is missing).
+- **The number needed to start (D26).** Shown before setup: the tool and its environments, the speech model, **both starting voices** (Mike and Amy,
+  whichever the person later chooses), and a budget for **at least two people**: two projects, each at a default plan of one hour of recording
+  (the guides say "an hour or more"; changeable), even if only one is made first. *Enough* covers all of it. *Tight* covers the tool, both
+  starting voices and one project, and can be continued past after a warning. *Not enough* is less than the tool, one starting voice and one
+  project's smallest plan, and setup stops there with nothing changed. Declining one starting voice on the consent list gives a smaller number.
+  The thresholds are proposals; the sizes come from VS-0.2.
 - **Before each big step** (import a package, build the dataset, start a round, make an export, make a backup) the same check runs against the
   room that step will need, including at a backup's destination.
 - **While a job runs** the free space is read on a timer. *Low* shows a quiet banner and a silent notification. *Stop* stops the job
@@ -332,13 +357,43 @@ offered for clean-up after a successful build, never removed on its own.
 - **The numbers** (margin, cost per hour, checkpoint size, the two floors) come from one table that VS-0.2 measures. Until then the guides'
   rough figures are used and are labelled unmeasured on screen.
 
+#### Choosing another drive for scratch (D24, Advanced)
+
+Hidden under *Advanced* when a project is made, and in the project's settings later. Scratch holds the dataset, the caches and the checkpoints,
+which are the voice in another form, so the same privacy rules apply as for the recordings. The option itself is decided; the checks below are
+my proposals (veto any). Each is a pure function in VS-1.11, tested in the sandbox against captured mount tables.
+
+- **What it offers.** The mounted drives from the preflight, each with its free space, filesystem and whether it is removable, or "choose a folder".
+- **A real, writable, private place.** The folder exists or can be made, the person can write to it, it is not read-only, and the tool makes
+  `scratch` there with owner-only permission. Filesystems are in three groups: *good* (ext4, xfs, btrfs, f2fs) are accepted; *permissive* (NTFS,
+  exFAT, and on WSL a Windows drive) are accepted only after a plain warning that they may be slow and that other accounts on the computer might
+  be able to read the files; *FAT* is refused (its file-size limit) and *network* filesystems (NFS, SMB, sshfs) are refused in the first version,
+  because a voice should not cross a network.
+- **Not a synced folder.** `freeform_studio/privacy.py`'s synced-folder detection is reused, but here it **refuses** rather than warns: scratch is
+  voice data that OneDrive, Dropbox or Google Drive would upload.
+- **Never into an empty mount point.** Every job start checks a marker file (`.ack-voice-scratch`, holding the project's id) in the chosen
+  folder and refuses to run if it is missing, so an unplugged USB drive cannot make the tool quietly fill the system disk through the empty folder
+  it was mounted on. If the person says it is another drive but it is the same device as the project's, the tool says so. Nothing falls back to
+  another place on its own.
+- **Speed.** A short write-and-read test on the chosen place; a slow one gets a warning with the measured speed (the cutoff is measured in
+  VS-0.2). On WSL a Windows drive (`/mnt/c` and similar) is allowed but marked slow. It stops the Linux virtual disk growing, at the cost of speed.
+- **Unplugging.** A removable drive is allowed with a warning that unplugging during a round stops training. The job supervisor stops gracefully
+  if the drive disappears, says what happened, and training resumes when the drive is back.
+- **A budget per drive.** The estimate and the floors are worked out for each drive: the precious kinds on the project's drive, scratch on its own.
+  The recorder's floor still protects the recordings drive; training stops on whichever drive runs low first.
+- **Changing it later.** *Move scratch* (VS-6.5): copy, verify, switch, and only then offer to remove the old copy. It refuses while a job runs and
+  checks room at the destination first.
+- **Covered everywhere else.** Backups leave scratch out wherever it lives. *Delete this person's data* names the drive, and says what it could
+  not reach if the drive is not plugged in. *Free up space* shows where scratch is.
+
 ### Still open
 
 - Anything in the proposed defaults you want changed.
-- Which candidate base voices to try in VS-0.2 (your choice, since the licenses differ).
+- Mike: the exact folder name under `en/en_US` (the nearest I know of is `hfc_male`, which the guide already records as working with the current
+  trainer, but the listing could not be read from here). If Amy's checkpoint is an older format, which female voice replaces it.
+- Whether Mike is preselected on the male/female choice screen, or neither is.
 - Whether the first release needs a translation of the window, or English only until the app's drafts are reviewed (D19 leaves the door open).
-- P11: the real numbers (cost per hour, checkpoint size, margin, the two floors) wait for VS-0.2; and whether scratch may later be pointed at
-  another drive (native Ubuntu only, not WSL, where a Windows drive is much slower).
+- P11 and D26: the real numbers (cost per hour, checkpoint size, both starting voices, margin, the floors, the slow-drive cutoff) wait for VS-0.2.
 
 ## 7. What I cannot do from here
 
