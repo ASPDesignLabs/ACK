@@ -85,7 +85,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
 | 1 | Foundations (sandbox-testable) | Done 2026-10-10 (VS-1.1 to VS-1.11). What still needs the developer's machine is listed under VS-0.2: the lock files, the pinned archive and the measured sizes. |
-| 2 | Thin slice: ACK package in, `.zip` out | In progress. Built and tested in the sandbox (plain Python, no window): the logic of VS-2.2 (setup plan, agreement, run) and VS-2.3 (new-project form), VS-2.4, VS-2.4b (new), the command builders and readers of VS-2.5, 2.6 and 2.7, VS-2.8, and VS-5.3. Every one was checked by breaking the code on purpose (about 300 deliberate breaks; each real survivor got a test). Found on the way: a file nested far too deep crashed six readers instead of reading as damaged; fixed, with a test each. **Not built:** VS-2.1 (the window; waits for VS-0.1), every screen, the runs on a real GPU (2.6, 2.7), and VS-2.9. |
+| 2 | Thin slice: ACK package in, `.zip` out | In progress. Built and tested in the sandbox (plain Python, no window): the logic of VS-2.2 (setup plan, agreement, run) and VS-2.3 (new-project form), VS-2.4, VS-2.4b (new), the command builders and readers of VS-2.5, 2.6 and 2.7, VS-2.8, and VS-5.3, with the terminal-only device-test checklist for VS-2.9. Every one was checked by breaking the code on purpose (about 300 deliberate breaks; each real survivor got a test). Found on the way: a file nested far too deep crashed six readers instead of reading as damaged; fixed, with a test each. **Not built:** VS-2.1 (the window; waits for VS-0.1), every screen, the runs on a real GPU (2.6, 2.7), and VS-2.9. |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
 | 5 | Send over Wi-Fi, export hardening | Not started |
@@ -281,6 +281,11 @@ Gate: the findings are written into section 6, and any decision they contradict 
   **As built (the zip; the screen waits for VS-2.1) with VS-5.3 done with it:** `core/voicezip.py`. `check_voice` applies ACK's import rules on the PC before anything is written: ACK's size limits, a config that looks like a Piper config, and the model metadata that sherpa-onnx requires and Piper's own export does not write (read from the top of the ONNX file without the onnx library, skipping the weights, and cross-checked against the real library and the real patcher in tests). `write_voice_zip` writes exactly `model.onnx` then `model.onnx.json`, no zip64 fields (the phone's zip reader is not asked to understand them), the same bytes for the same input, owner-only; reads the zip back and compares every byte; refuses to replace a file; removes any half-written one. `verify_voice_zip` applies the phone's rules to a finished zip. **VS-5.3:** `tests/test_vs_voicezip_contract.py` reads ACK's Kotlin source (entry names, the 400 MiB / 300 MiB / 1 MiB limits, the two required config keys, the symbols the phone leaves out) so a change on the phone side fails here.
 - **VS-2.9 Thin-slice device test (M, dev + phone).** The whole path on the developer's Ubuntu and WSL machines, then in ACK. Written up in
   `docs/VOICE_STUDIO_DEVICE_TEST.md`. Gate: findings reopen decisions before widening.
+  **As built so far (terminal only):** the checklist exists for the path that can be walked without a window: the machine's facts, the tests on Python 3.10, the first
+  step, a job that outlives its terminal (the open WSL question), the speech model, importing a phone package (including a damaged one), finishing the recordings, the
+  training set, one five-minute round on the graphics card (the numbers VS-0.2 needs), the voice file, and ACK on the phone. `tests/test_vs_device_test_doc.py` keeps it honest:
+  every program and option it names must exist, every path must be there, its training command must match the one the tool builds, and each snippet is run for real in a home
+  folder of its own. The window's part is added when VS-2.1 exists.
 
 ### Stage 3: Recording paths and helpers
 
