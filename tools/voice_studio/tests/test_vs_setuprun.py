@@ -110,9 +110,9 @@ def test_the_items_are_done_in_the_plans_order_and_each_gets_a_start_and_an_end(
 
 def test_the_model_goes_into_the_models_folder_and_the_voices_are_never_fetched_here(run):
     run.go()
-    assert (Path(run.ctx.home.downloads) / sr.MODELS_FOLDER / "small-en.bin").read_bytes() == b"MODEL" * 200
+    assert (Path(run.ctx.home.downloads) / "models" / "small-en.bin").read_bytes() == b"MODEL" * 200 and sr.MODELS_FOLDER == "models"
     assert "voice-mike" not in run.doors.fetches and "voice-amy" not in run.doors.fetches and run.doors.fetches.count("speech-model-small-en") == 1
-    assert not (Path(run.ctx.home.downloads) / sr.MODELS_FOLDER / "mike.ckpt").exists()
+    assert not (Path(run.ctx.home.downloads) / "models" / "mike.ckpt").exists() and not (Path(run.ctx.home.downloads) / "mike.ckpt").exists()
 
 
 def test_a_second_run_changes_nothing_and_asks_the_network_for_nothing(run):
