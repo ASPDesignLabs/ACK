@@ -132,6 +132,20 @@ may behave differently under WSL, so **do it on both**. The job here only prints
   ```
   → `runner.json` holds the `boot_id` the job started under. **If it differs from the current one, WSL stopped its whole virtual machine** (every process, without a
   warning); if it is the same, only the job was killed. `uptime -s` is when this WSL started; `ps -p 1` says `systemd` or `init`. Keep all of it with your notes.
+- [ ] **Known result on the developer's machine** (WSL 2.7.14.0): the journal says `System is powering down` about a minute after the last terminal closes, with the same `boot_id` (only
+  the Ubuntu instance stops). Look for the same on yours: `journalctl -b --no-pager | grep -iE "powering down|new session"` and compare the times with when you closed the windows.
+- [ ] **Does `instanceIdleTimeout` stop it?** This edits a Windows file and restarts WSL, so make sure **no job is running** and nothing in Ubuntu is unsaved. Keep a copy, add the setting,
+  restart WSL, and try again:
+  ```bash
+  cp -n /mnt/c/Users/<you>/.wslconfig /mnt/c/Users/<you>/.wslconfig.bak
+  printf '\n[general]\ninstanceIdleTimeout=-1\n' >> /mnt/c/Users/<you>/.wslconfig
+  cat /mnt/c/Users/<you>/.wslconfig
+  ```
+  Then in PowerShell: `wsl.exe --shutdown`. Open Ubuntu, start a check job, close **every** window, wait three minutes, open a new one and look. → `running` means this setting holds the
+  instance up (if WSL printed a complaint about the file when it started, send it to me). **To undo it:** put the copy back with `cp /mnt/c/Users/<you>/.wslconfig.bak /mnt/c/Users/<you>/.wslconfig`
+  and run `wsl.exe --shutdown` again.
+- [ ] **Can Ubuntu start Windows programs?** `cmd.exe /c ver` → a Windows version line. On the developer's machine it says `cannot execute binary file: Exec format error`, which also breaks
+  `explorer.exe`; `ls /proc/sys/fs/binfmt_misc/` then lacks `WSLInterop`. Write down what yours says.
 - [ ] **Does a session you leave open keep jobs alive?** (Only if it said `interrupted`.) Start a new check job. In PowerShell run `wsl.exe -l -v` and note the distribution's
   name, then `wsl.exe -d <name> --exec sleep infinity` and **leave that PowerShell window open**. Close every Ubuntu terminal window, wait a minute, open a new one and look
   again. → `running` means a session held open from Windows keeps jobs alive. Ask the job to stop (next step) **before** you close the PowerShell window.
@@ -341,7 +355,8 @@ round).
 
 ## K. On the phone
 
-- [ ] Copy `my_voice_backup.zip` to the phone (cable or USB drive; on WSL, `explorer.exe ~/ack-voice-check` opens the folder in Windows).
+- [ ] Copy `my_voice_backup.zip` to the phone (cable or USB drive). On WSL, open `\\wsl.localhost\<distribution>\home\<you>\ack-voice-check` in Windows File Explorer's address bar (this needs no set-up;
+  `explorer.exe ~/ack-voice-check` does the same when Ubuntu can start Windows programs, which the section D check tells you).
 - [ ] ACK → Audio Architect → Custom Voice → **IMPORT VOICE BACKUP** → pick the zip. → ACK accepts it and restarts by itself.
   If it refuses, note the message on screen and, if you can, the lines `adb logcat -s ACK_VOICE_BACKUP ACK_CUSTOM_VOICE` print.
 - [ ] A new chip **MY VOICE** appears in the voice profile row. Choose it and say a sentence. → It speaks in the trained voice, and does not

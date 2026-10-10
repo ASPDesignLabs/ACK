@@ -59,12 +59,18 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
 - **F1 (2026-10-10), the tests pass on the Python 3.10 floor under WSL2:** 1406 passed in 37 s, including the 10 that build real virtual environments.
 - **F2 (2026-10-10), the first terminal step behaves as designed on WSL2:** `--check` finds the desktop (WSLg) and the graphics card, lists only the one missing program, `--dry-run` shows
   exactly the two apt commands, a run under `sudo` is refused with the administrator-rights `[FIX]`, and after the developer said yes `--check` reports ready.
-- **F3 (2026-10-10), a job does not outlive the last WSL terminal.** A job started with `start_job` and left running was `interrupted` after every terminal window was closed for a minute
-  (its log still held the line it printed). The supervisor told the truth (not "running", not an error), but **D12's "training keeps running if the window closes" does not hold on WSL by
-  default**, and no gentle stop was given: the runner handles SIGTERM by stopping the command with one Ctrl+C-equivalent and writing a result, and there was no result, so the runner was
-  killed outright or the whole virtual machine stopped. Consequence: a closed window can end a training round at the last checkpoint with no warning. Open: whether the whole virtual
-  machine restarted (`boot_id`), what `/etc/wsl.conf` and `.wslconfig` say, and whether a session held open from Windows (`wsl.exe -d <name> --exec sleep infinity`) keeps jobs alive.
-  The device test now asks for exactly these. Until they are known, VS-4.4 (below) must not claim jobs survive on WSL.
+- **F3 (2026-10-10), a job does not outlive the last WSL terminal, and the cause is known.** The journal shows `systemd-logind: System is powering down` about a minute after the last terminal
+  closed, twice (12:35:10 and 13:06:24 local), and systemd starting again when a new terminal was opened. The virtual machine did not restart (`boot_id` and `uptime -s` unchanged): WSL stopped only
+  the Ubuntu instance. `systemd=true`, `Linger=no` and a systemd user service made no difference (the service died too). The shutdown takes about a second, so the runner never wrote a result and
+  the supervisor read the job as `interrupted`, which was the truth. **D12's "training keeps running if the window closes" is false on WSL by default.** One job did run its full ten minutes while a
+  `wsl.exe … sleep infinity` session was left open in another window (the developer's recollection, to be confirmed), so a session held open from Windows holds the instance up. `.wslconfig`
+  held only `networkingMode=mirrored`. Other users report that `[general] instanceIdleTimeout` (named in WSL 2.5.4's notes) and `[wsl2] vmIdleTimeout` can stop the idling, and that newer versions
+  still shut down regardless; this is to be tested on WSL 2.7.14. Until the options below are tested, VS-4.4 must not claim jobs survive on WSL.
+- **F4 (2026-10-10), Ubuntu cannot start Windows programs on this machine.** `powershell.exe` from Ubuntu gave `cannot execute binary file: Exec format error`: the interop handler is not registered in
+  `binfmt_misc`, a known fault when systemd is on (its `systemd-binfmt` service can clear the entry). Anything that starts a Windows program from Ubuntu (`explorer.exe`, a keeper session, opening the
+  Windows browser) fails here, so the tool must **check for it, say so in plain words, and never depend on it**: the `.wslconfig` edit (D17) is a file write through `/mnt/c` and does not need interop,
+  and the folder can be opened from Windows through `\\wsl.localhost\<distribution>\…`. The usual fix is a one-line `binfmt.d` file and a restart of `systemd-binfmt`, a change inside Ubuntu that
+  needs `sudo` and the person's yes.
 
 ## 3. Rules that apply to every task below
 
@@ -320,7 +326,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   when the address changes, show Android install steps for the CA file, and a QR code that opens the Record page. Chain verified with
   `openssl` in tests. After: VS-0.3.
 - **VS-3.6 WSL network guidance (M, dev).** Detect the networking mode and the firewall state; explain; on a yes write `.wslconfig` (keeping
-  `.bak`); show the firewall command to run as administrator; never restart WSL, and warn that training must be paused first (D17).
+  `.bak`); show the firewall command to run as administrator; never restart WSL, and warn that training must be paused first (D17). Also say, in plain words, whether Ubuntu can start Windows programs (finding F4) and what the person can do about it; nothing in the tool depends on it, and the explanation of the idle shutdown (finding F3) belongs here too.
 - **VS-3.7 Recording progress (S, sandbox).** "About X of 60 minutes", quality hints from the existing `ack_checks`, the disk left for the rest of the plan (P11), and what to do next.
   **As built (the decisions; the screen waits for VS-2.1):** `core/progress.py` turns the dataset builder's preview (already read by `core/joblines.py`), the project's planned hours and the free room into one picture:
   usable minutes against the target (the planned hours as minutes of usable speech, a guide and never a gate), the recordings still being listened to, failed or still being made, why pieces were left out,
@@ -342,9 +348,10 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-4.3 Automatic settings and guards (M, sandbox + dev).** Batch size from the VRAM table (VS-0.2), free the speech model before
   training (the 8 GB rule), the disk guard from P11 (check before a round, watch during it, stop gracefully before a write can fail), refuse a second GPU job.
 - **VS-4.4 Survive closing and rebooting (M, dev).** Reopen shows the true state; a silent desktop notification when a round ends
-  (no sound, no vibration, no auto-advance: it only tells). **On WSL this is not free (finding F3):** closing the last window or terminal can stop every job, so before this task is
-  built the options are tested on the developer's machine: a session held open from Windows, `systemd` in `wsl.conf`, `vmIdleTimeout` in `.wslconfig` (a Windows-side edit, so D17's
-  explain-then-confirm rule applies), or, if none holds, a plain warning when the window closes while a job runs.
+  (no sound, no vibration, no auto-advance: it only tells). **On WSL this is not free (finding F3):** the instance powers down about a minute after the last window or terminal closes, taking every job with it. The options, to be tested
+  on the developer's machine in this order: `[general] instanceIdleTimeout=-1` (and `[wsl2] vmIdleTimeout=-1`) in `.wslconfig` (a Windows-side edit through `/mnt/c`, with a `.bak` and D17's explain-then-confirm rule;
+  it needs a WSL restart, so never while a job runs); a session held open from Windows (works, but starting one from Ubuntu needs interop, which F4 shows may be broken); and, if none holds, a plain warning
+  when the window closes while a job runs, with the job's last checkpoint named.
 - **VS-4.5 Listening UX (M, dev).** Compare rounds, a note per round, "use this round", "go back".
 - **VS-4.6 Plain failure messages (M, sandbox).** Map each failure in the guide's troubleshooting table to a plain message plus the safe next step.
 
