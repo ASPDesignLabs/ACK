@@ -85,7 +85,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
 | 1 | Foundations (sandbox-testable) | Done 2026-10-10 (VS-1.1 to VS-1.11). What still needs the developer's machine is listed under VS-0.2: the lock files, the pinned archive and the measured sizes. |
-| 2 | Thin slice: ACK package in, `.zip` out | In progress. Built and tested in the sandbox (plain Python, no window): the logic of VS-2.2 (setup plan, agreement, run) and VS-2.3 (new-project form), VS-2.4, VS-2.4b (new), the command builders and readers of VS-2.5, 2.6 and 2.7, VS-2.8, and VS-5.3. **Not built:** VS-2.1 (the window; waits for VS-0.1), every screen, the runs on a real GPU (2.6, 2.7), and VS-2.9. |
+| 2 | Thin slice: ACK package in, `.zip` out | In progress. Built and tested in the sandbox (plain Python, no window): the logic of VS-2.2 (setup plan, agreement, run) and VS-2.3 (new-project form), VS-2.4, VS-2.4b (new), the command builders and readers of VS-2.5, 2.6 and 2.7, VS-2.8, and VS-5.3. Every one was checked by breaking the code on purpose (about 300 deliberate breaks; each real survivor got a test). Found on the way: a file nested far too deep crashed six readers instead of reading as damaged; fixed, with a test each. **Not built:** VS-2.1 (the window; waits for VS-0.1), every screen, the runs on a real GPU (2.6, 2.7), and VS-2.9. |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
 | 5 | Send over Wi-Fi, export hardening | Not started |
