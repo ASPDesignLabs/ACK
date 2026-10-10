@@ -86,6 +86,13 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   the speech model: roughly an eighth of real time. A missing model folder was refused with exit 3 and a plain sentence before anything started, and a second run found nothing waiting. Listening to
   an hour of recordings should take on the order of ten minutes on this machine, to be confirmed on a longer one.
 
+- **F8 (2026-10-10), a phone's recordings can be far quieter than the training set can fix by default.** Every piece of the developer's first package was flagged `quiet` (peak below -15 dBFS, the most the
+  dataset builder would turn up being 12 dB) and left out, although they sounded fine to play. A phone microphone with no automatic gain gives this. The remedy is in the training set, never the recording:
+  `build_dataset --max-gain-db N` (0 to 60, default 12) turns clips up further, a `quiet` flag stops blocking once N is above 12 (a `noisy` one still blocks, because turning up noise helps nobody), the report
+  and the summary say how far clips were turned up, a warning says when some are still softer than full level, and the limit is kept in `manifest.json`. Voice Studio's command builder takes the limit and
+  its reader reports the gain. Open: the right limit for the developer's phone (the measured peaks will say), and whether the window should offer it by itself when the only reason pieces were left out is
+  `quiet` (it should explain and ask, never change anything silently).
+
 ## 3. Rules that apply to every task below
 
 - Backups are encouraged and every edit to a person's files is confirmed first (the developer's standing preference). Nothing is moved or

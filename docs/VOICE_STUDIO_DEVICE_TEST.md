@@ -264,6 +264,20 @@ Uses the processor, with no browser and no server. On the computer's own process
   A report with what would go in, what would be left out and why. `ls ~/ack-voice-check` shows **no** `dataset-1`.
 - [ ] The same without `--dry-run`. → `~/ack-voice-check/dataset-1/` holds `wav/`, `metadata.csv`, `manifest.json`, `excluded.txt`. A few
   cards are enough to check the plumbing; they are far too little for a good voice, and the advice about length will say so.
+- [ ] **If every piece was left out as `quiet`** (a phone recording that sounds fine when you play it can still be far below full level): look at the levels first. This only reads:
+  ```bash
+  python3 - <<'EOF'
+  import glob, json, os
+  for path in sorted(glob.glob(os.path.expanduser("~/ack-voice-check/recordings/_freeform/en-US/takes/*/ack_checks.json"))):
+      r = json.load(open(path))
+      print(os.path.basename(os.path.dirname(path)), "room", r.get("noise_floor_dbfs"), "dBFS, speech threshold", r.get("threshold_dbfs"), "dBFS")
+      for sid, p in r.get("pieces", {}).items():
+          print("  ", sid, "peak", p.get("peak_dbfs"), "speech", p.get("speech_db"), "snr", p.get("snr_db"))
+  EOF
+  ```
+  → The peak of each piece (full level is 0; the training set aims for -3), how loud the speech is, and how far above the room it is (`snr`; below 20 flags `noisy`, which stays left out).
+  The gain needed is the distance from the peak to -3. Then preview with a limit that covers it, for example `… --dry-run --max-gain-db 36`. → A `LOUDNESS:` line says how far the clips were turned up, and a
+  warning says if some are still softer than full level. Your recordings are not changed; the gain is applied to the copies in the training set.
 - [ ] The same command again. → Refused, exit code 2, "never overwrites a dataset"; nothing in `dataset-1` changed.
 - [ ] `… --json | python3 -m json.tool` (with `--dry-run`). → Valid JSON with `result`, `included`, `left_out`.
 

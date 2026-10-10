@@ -150,6 +150,8 @@ class DatasetSummary:
     warnings: Tuple[str, ...]
     problems: Tuple[str, ...]
     advice: Optional[str]                      # one of ADVICE_CODES, or None
+    gain_median: Optional[float] = None        # how far the clips were turned up to reach full level, in dB (None: none were, or an older builder)
+    gain_max: Optional[float] = None
 
     @property
     def ok(self) -> bool:
@@ -187,7 +189,14 @@ def dataset_summary(lines: Iterable[str]) -> Optional[DatasetSummary]:
         _num(included.get("shortest")), _num(included.get("median")), _num(included.get("longest")),
         int(result.get("merged") or 0) if isinstance(result.get("merged"), int) else 0, int(left.get("pieces") or 0) if isinstance(left.get("pieces"), int) else 0,
         _ranked(kinds), _ranked(flags), tuple(str(w) for w in (result.get("warnings") or []))[:10] if isinstance(result.get("warnings"), list) else (),
-        tuple(str(p) for p in (result.get("problems") or []))[:20] if isinstance(result.get("problems"), list) else (), advice)
+        tuple(str(p) for p in (result.get("problems") or []))[:20] if isinstance(result.get("problems"), list) else (), advice,
+        *_gains(included.get("gain_db")))
+
+
+def _gains(raw: Any) -> Tuple[Optional[float], Optional[float]]:
+    if not isinstance(raw, dict):
+        return None, None
+    return _num(raw.get("median")), _num(raw.get("max"))
 
 
 def advice_for(minutes: float, pieces: int) -> Optional[str]:

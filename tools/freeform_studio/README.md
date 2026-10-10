@@ -304,6 +304,7 @@ JSON object, for a program to read.
 | `--exclude-tags laugh,cough` | leave out pieces carrying these tags (default `laugh,cough,noise,unclear`; `none` turns it off) |
 | `--min-seconds` / `--max-seconds` | length limits, default 1.0 and 11.5 |
 | `--no-normalize` | keep each clip's original loudness |
+| `--max-gain-db DB` | the most a quiet clip is turned up to reach full level (a peak of -3 dB); default 12, accepts 0 to 60. A phone microphone with no automatic gain often records softer than 12 dB can fix, and ACK's import flags those pieces `quiet`, so they are left out. **Give a higher limit (for example `--max-gain-db 36`) and they are used instead**, as long as nothing else is wrong with them (a `noisy` one is still left out). The report says how far clips were turned up and warns if some are still softer than full level; each clip's gain is in `manifest.json`. Your recordings are never changed. |
 | `--out DIR` | where to write it (default `~/piper/freeform-dataset-<date-time>`) |
 
 Pieces are also left out when they are too quiet, or clip repeatedly (a single stray full-scale sample is fine).

@@ -79,12 +79,20 @@ def repair_command(studio: EnvPaths, tools_dir: str, recordings: str) -> Command
     return Command("repair", argv, _absolute(tools_dir, "tools"))
 
 
-def dataset_command(studio: EnvPaths, tools_dir: str, recordings: str, out_dir: str, *, dry_run: bool = False) -> Command:
-    """Build a new dataset folder (or preview one). A folder that already holds anything is refused here, as Freeform Studio refuses it, so the person is told before a job starts."""
+MAX_GAIN_LIMIT_DB = 60.0        # freeform_studio/build_dataset.py: what --max-gain-db accepts
+
+
+def dataset_command(studio: EnvPaths, tools_dir: str, recordings: str, out_dir: str, *, dry_run: bool = False, max_gain_db: Optional[float] = None) -> Command:
+    """Build a new dataset folder (or preview one). A folder that already holds anything is refused here, as Freeform Studio refuses it, so the person is told before a job starts.
+    `max_gain_db` is the most a quiet clip may be turned up (Freeform Studio's own default is 12); it is only passed on when the person chose one."""
+    if max_gain_db is not None and (isinstance(max_gain_db, bool) or not isinstance(max_gain_db, (int, float)) or not 0 <= max_gain_db <= MAX_GAIN_LIMIT_DB):
+        raise CommandError("bad_value", "max_gain_db")
     out = _absolute(out_dir, "dataset")
     if not dry_run and os.path.lexists(out) and (not os.path.isdir(out) or os.listdir(out)):
         raise CommandError("exists", os.path.basename(out))
     argv = [studio.python, "-m", "freeform_studio.build_dataset", "--output", _absolute(recordings, "recordings"), "--code", CODE, "--out", out, "--json"]
+    if max_gain_db is not None:
+        argv += ["--max-gain-db", "%g" % max_gain_db]
     if dry_run:
         argv.append("--dry-run")
     return Command("dataset", tuple(argv), _absolute(tools_dir, "tools"))

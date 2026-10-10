@@ -346,6 +346,9 @@ first); `--include approved` uses only pieces you approved in the Review page (t
 reviewed enough); pieces you tagged `laugh`, `cough`, `noise` or `unclear` are always left out unless you pass
 `--exclude-tags none`; pieces whose cut point lands inside a word (flagged "cuts a word" in Review) are left out too, even if
 approved, because the text and audio disagree (`--allow cuts_word` overrides); `--no-normalize` keeps original loudness.
+Pieces recorded very softly (a phone microphone with no automatic gain often does) are flagged `quiet` when they are brought in, because the
+default turns a clip up by at most 12 dB; `--max-gain-db 36` raises that limit, and the quiet ones are then turned up and used. The report says how
+far clips were turned up. Your recordings are never changed.
 It never changes your takes and never overwrites an existing dataset folder.
 
 What it does to each piece: cuts it from the take, brings it to a consistent level (peak about -3 dB), adds a

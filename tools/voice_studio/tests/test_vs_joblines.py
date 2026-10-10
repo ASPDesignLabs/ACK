@@ -230,6 +230,15 @@ def test_flags_without_a_sentence_are_shown_as_words():
     assert len(set(jl.KNOWN_FLAGS)) == len(jl.KNOWN_FLAGS)
 
 
+def test_how_far_the_clips_were_turned_up_is_read_when_the_builder_says_it_and_absent_otherwise():
+    s = jl.dataset_summary([result(included={"pieces": 3, "minutes": 1.0, "gain_db": {"median": 31.0, "max": 33.5}})])
+    assert (s.gain_median, s.gain_max) == (31.0, 33.5)
+    for odd in (None, "x", [], {"median": "a", "max": True}, {}):
+        t = jl.dataset_summary([result(included={"pieces": 3, "minutes": 1.0, "gain_db": odd})])
+        assert (t.gain_median, t.gain_max) == (None, None), odd
+    assert jl.dataset_summary([result()]).gain_median is None, "an older builder says nothing about it"
+
+
 # ---------------------------------------------------------------- the real programs' output
 
 def test_the_real_dataset_builder_output_is_read_correctly(tmp_path):

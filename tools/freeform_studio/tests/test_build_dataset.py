@@ -379,7 +379,7 @@ def test_the_summary_works_out_its_numbers_from_the_pieces_that_were_written_not
     excluded = [{"reason": "no text"}] * 3
     stats = {"takes": 4, "segments": 9, "skipped_takes": [("t9", "queued")]}
     out = bd.summary_dict("built", bd.Policy(min_s=1.5, max_s=9.5), stats, rendered, merged, excluded, ["w%d" % i for i in range(15)], Path("/s/ds"))
-    assert out["included"] == {"pieces": 5, "minutes": 0.25, "shortest": 1.0, "median": 3.0, "longest": 5.0}
+    assert out["included"] == {"pieces": 5, "minutes": 0.25, "shortest": 1.0, "median": 3.0, "longest": 5.0, "gain_db": None}
     assert out["merged"] == 2 and out["takes"] == 4 and out["pieces_considered"] == 9 and out["skipped_takes"] == [["t9", "queued"]]
     assert out["left_out"] == {"pieces": 3, "by_reason": {"no text": 3}, "by_flag": {}}
     assert out["warnings"] == ["w%d" % i for i in range(10)] and out["problems"] == []
@@ -389,7 +389,7 @@ def test_the_summary_works_out_its_numbers_from_the_pieces_that_were_written_not
 
 def test_with_no_pieces_the_lengths_are_none_not_a_crash():
     out = bd.summary_dict("nothing_qualified", bd.Policy(), {"takes": 0, "segments": 0, "skipped_takes": []}, [], [], [], [], Path("/s/ds"))
-    assert out["included"] == {"pieces": 0, "minutes": 0.0, "shortest": None, "median": None, "longest": None}
+    assert out["included"] == {"pieces": 0, "minutes": 0.0, "shortest": None, "median": None, "longest": None, "gain_db": None}
 
 
 def test_json_when_the_finished_dataset_fails_its_own_checks_it_says_so_in_twenty_lines_and_exits_one(out_dir, tmp_path, capsys, monkeypatch):
@@ -419,3 +419,127 @@ def test_the_json_line_keeps_other_alphabets_as_they_are_and_is_flushed_at_once(
     monkeypatch.setattr(sys, "stdout", rec)
     assert bd._json_exit(3, text="Café 日本") == 3
     assert "".join(rec.parts) == '{"text": "Café 日本"}\n' and rec.flushes == 1
+
+
+# ---------------------------------------------------------------- quiet recordings: a limit the person chooses
+
+QUIET = 0.02            # a peak of about -34 dBFS: what a phone microphone with no automatic gain can give for ordinary speech
+
+
+def quiet_take(out_dir, flags=("quiet",), n=3, amp=QUIET):
+    segs = [seg(i + 1, i * 3.0, i * 3.0 + 3.0, flags=list(flags)) for i in range(n)]
+    write_take(out_dir, "t20260930-000001-aaaa", segs, seconds=n * 3.0 + 3.0, amp=amp)
+
+
+def peak_of(dest, name):
+    x, rate, channels, width = read_wav(dest / "wav" / name)
+    return float(np.abs(x).max())
+
+
+def test_quiet_phone_pieces_are_left_out_by_default_and_the_reason_says_how_to_bring_them_back(out_dir, tmp_path, capsys):
+    quiet_take(out_dir)
+    code, result = json_run(capsys, out_dir, tmp_path / "ds")
+    assert code == 1 and result["result"] == "nothing_qualified" and result["left_out"]["by_flag"] == {"quiet": 3}
+    assert result["policy"]["max_gain_db"] == 12.0
+
+
+def test_a_higher_limit_brings_them_up_to_full_level_and_uses_them(out_dir, tmp_path, capsys):
+    quiet_take(out_dir)
+    dest = tmp_path / "ds"
+    before = (out_dir / "_freeform" / "en-US" / "takes" / "t20260930-000001-aaaa" / "audio.wav").read_bytes()
+    code, result = json_run(capsys, out_dir, dest, "--max-gain-db", "36")
+    assert code == 0 and result["result"] == "built" and result["included"]["pieces"] == 3 and result["left_out"]["pieces"] == 0
+    gain = result["included"]["gain_db"]
+    assert 30.0 <= gain["median"] <= 32.0 and abs(gain["max"] - gain["median"]) < 1.0
+    assert result["warnings"] == [] and result["policy"]["max_gain_db"] == 36.0
+    manifest = json.loads((dest / "manifest.json").read_text())
+    assert manifest["policy"]["max_gain_db"] == 36.0 and all(30.0 <= c["gain_db"] <= 32.0 for c in manifest["clips"])
+    for c in manifest["clips"]:
+        assert 0.6 < peak_of(dest, c["file"]) < 0.75, "about -3 dBFS, as every clip is"
+    assert (out_dir / "_freeform" / "en-US" / "takes" / "t20260930-000001-aaaa" / "audio.wav").read_bytes() == before, "the recording itself is never changed"
+
+
+def test_the_text_report_says_how_much_each_clip_was_turned_up(out_dir, tmp_path, capsys):
+    quiet_take(out_dir)
+    assert run(out_dir, tmp_path / "ds", "--dry-run", "--max-gain-db", "36") == 0
+    text = capsys.readouterr().out
+    assert "LOUDNESS: turned up by a median of 31 dB, up to 31 dB (full level is a peak of -3 dB)" in text and "WARNING" not in text
+
+
+def test_a_limit_that_is_not_enough_still_uses_the_pieces_and_says_they_are_softer_than_full_level(out_dir, tmp_path, capsys):
+    quiet_take(out_dir)
+    dest = tmp_path / "ds"
+    code, result = json_run(capsys, out_dir, dest, "--max-gain-db", "24")
+    assert code == 0 and result["included"]["pieces"] == 3 and result["included"]["gain_db"]["max"] == 24.0
+    assert result["warnings"] == ["3 pieces still softer than full level after the most gain allowed (24 dB); a higher --max-gain-db turns them up further"]
+    manifest = json.loads((dest / "manifest.json").read_text())
+    assert all(0.28 < peak_of(dest, c["file"]) < 0.36 for c in manifest["clips"]), "-34 dB plus 24 dB is about -10 dBFS"
+
+
+def test_even_at_the_default_a_piece_that_cannot_reach_full_level_is_warned_about(out_dir, tmp_path, capsys):
+    quiet_take(out_dir, flags=(), n=1, amp=0.05)                    # about -26 dBFS, no flag (a recording made in the browser has none)
+    code, result = json_run(capsys, out_dir, tmp_path / "ds")
+    assert code == 0 and result["included"]["pieces"] == 1 and result["included"]["gain_db"]["max"] == 12.0
+    assert result["warnings"] == ["1 piece still softer than full level after the most gain allowed (12 dB); a higher --max-gain-db turns them up further"]
+
+
+def test_a_piece_that_reaches_full_level_with_room_to_spare_gives_no_warning(out_dir, tmp_path, capsys):
+    quiet_take(out_dir, flags=(), n=1, amp=0.2)                     # about -14 dBFS: needs 11 dB, the limit is 12
+    code, result = json_run(capsys, out_dir, tmp_path / "ds")
+    assert code == 0 and 10.0 <= result["included"]["gain_db"]["max"] <= 12.0 and result["warnings"] == []
+
+
+def test_a_noisy_quiet_piece_is_still_left_out_however_high_the_limit(out_dir, tmp_path, capsys):
+    quiet_take(out_dir, flags=("quiet", "noisy"), n=2)
+    code, result = json_run(capsys, out_dir, tmp_path / "ds", "--max-gain-db", "40")
+    assert code == 1 and result["left_out"]["by_flag"] == {"noisy": 2} and result["included"]["pieces"] == 0
+
+
+def test_a_clip_with_nothing_but_silence_is_still_refused_whatever_the_limit(out_dir, tmp_path, capsys):
+    quiet_take(out_dir, flags=("quiet",), n=1, amp=0.0001)          # about -70 dBFS: below the floor, not something gain can rescue
+    code, result = json_run(capsys, out_dir, tmp_path / "ds", "--max-gain-db", "60")
+    assert code == 1 and result["included"]["pieces"] == 0 and result["left_out"]["by_reason"] == {"too quiet to use": 1}
+
+
+def test_without_normalising_there_is_no_gain_so_a_quiet_flag_still_blocks(out_dir, tmp_path, capsys):
+    quiet_take(out_dir)
+    code, result = json_run(capsys, out_dir, tmp_path / "ds", "--max-gain-db", "36", "--no-normalize")
+    assert code == 1 and result["left_out"]["by_flag"] == {"quiet": 3}
+
+
+@pytest.mark.parametrize("limit, blocks", [("12", True), ("12.0", True), ("12.01", False), ("0", True), ("60", False)])
+def test_the_quiet_flag_stops_blocking_only_above_the_default_limit(out_dir, tmp_path, capsys, limit, blocks):
+    quiet_take(out_dir, n=1)
+    code, result = json_run(capsys, out_dir, tmp_path / "ds", "--dry-run", "--max-gain-db", limit)
+    assert (result["included"]["pieces"] == 0) is blocks
+
+
+@pytest.mark.parametrize("bad", ["-1", "-0.1", "60.5", "61", "nan", "inf", "-inf", "abc", ""])
+def test_a_gain_limit_that_is_not_a_sensible_number_of_decibels_is_a_usage_error(out_dir, tmp_path, bad):
+    quiet_take(out_dir)
+    with pytest.raises(SystemExit) as caught:
+        run(out_dir, tmp_path / "ds", "--max-gain-db", bad)
+    assert caught.value.code == 2 and not (tmp_path / "ds").exists()
+
+
+def test_the_edges_of_the_limit_are_accepted(out_dir, tmp_path, capsys):
+    quiet_take(out_dir, flags=(), n=1, amp=0.5)
+    for edge in ("0", "60"):
+        code, result = json_run(capsys, out_dir, tmp_path / ("ds" + edge), "--dry-run", "--max-gain-db", edge)
+        assert code == 0 and result["policy"]["max_gain_db"] == float(edge)
+
+
+def test_the_report_and_the_summary_give_the_median_and_the_largest_gain_not_the_smallest(out_dir, tmp_path, capsys):
+    for number, amp in ((1, 0.02), (2, 0.04), (3, 0.08)):                          # needs about 31, 25 and 19 dB
+        write_take(out_dir, "t20260930-00000%d-aaaa" % number, [seg(1, 0.0, 3.0, flags=["quiet"])], seconds=6.0, amp=amp)
+    assert run(out_dir, tmp_path / "ds1", "--dry-run", "--max-gain-db", "36") == 0
+    assert "LOUDNESS: turned up by a median of 25 dB, up to 31 dB" in capsys.readouterr().out
+    code, result = json_run(capsys, out_dir, tmp_path / "ds2", "--dry-run", "--max-gain-db", "36")
+    gain = result["included"]["gain_db"]
+    assert code == 0 and abs(gain["median"] - 25.0) < 0.2 and abs(gain["max"] - 31.0) < 0.2
+
+
+def test_with_no_normalising_there_is_no_gain_so_nothing_can_be_softer_than_the_limit_allows(out_dir, tmp_path, capsys):
+    quiet_take(out_dir, flags=(), n=1, amp=0.2)
+    code, result = json_run(capsys, out_dir, tmp_path / "ds", "--dry-run", "--no-normalize", "--max-gain-db", "0")
+    assert code == 0 and result["included"]["pieces"] == 1 and result["warnings"] == []

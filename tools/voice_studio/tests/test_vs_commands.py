@@ -89,6 +89,21 @@ def test_a_dataset_folder_that_already_holds_anything_is_refused_before_a_job_st
     assert code_of(cm.dataset_command, STUDIO, TOOLS, "/p/r", str(file_in_the_way)) == "exists"
 
 
+def test_a_gain_limit_the_person_chose_is_passed_on_and_none_means_freeform_studios_own(tmp_path):
+    base = cm.dataset_command(STUDIO, TOOLS, "/p/r", str(tmp_path / "d1"))
+    assert "--max-gain-db" not in base.argv, "nothing is added unless the person chose a limit"
+    for value, text in ((36, "36"), (36.0, "36"), (12.5, "12.5"), (0, "0"), (60, "60")):
+        c = cm.dataset_command(STUDIO, TOOLS, "/p/r", str(tmp_path / "d2"), max_gain_db=value)
+        assert c.argv[-2:] == ("--max-gain-db", text)
+    preview = cm.dataset_command(STUDIO, TOOLS, "/p/r", str(tmp_path / "d3"), dry_run=True, max_gain_db=24)
+    assert preview.argv[-3:] == ("--max-gain-db", "24", "--dry-run")
+
+
+@pytest.mark.parametrize("bad", [-1, -0.01, 60.01, 100, float("nan"), float("inf"), True, "36", [36]])
+def test_a_gain_limit_that_is_not_a_sensible_number_of_decibels_is_refused_before_a_job_starts(tmp_path, bad):
+    assert code_of(cm.dataset_command, STUDIO, TOOLS, "/p/r", str(tmp_path / "d"), max_gain_db=bad) == "bad_value"
+
+
 def test_each_dataset_gets_a_new_name_from_the_time():
     assert cm.dataset_folder_name("2026-10-10T12:00:00Z") == "dataset-20261010-120000"
     assert cm.dataset_folder_name("2026-10-10T12:00:01Z") != cm.dataset_folder_name("2026-10-10T12:00:00Z")
