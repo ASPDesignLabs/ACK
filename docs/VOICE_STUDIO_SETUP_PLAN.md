@@ -84,7 +84,7 @@ wraps a Linux command that should be stable first. Docs (Stage 8) are written pe
 | Stage | Name | Status |
 |---|---|---|
 | 0 | Spikes (developer's machines) | Not started |
-| 1 | Foundations (sandbox-testable) | Not started |
+| 1 | Foundations (sandbox-testable) | In progress. Done: VS-1.1 |
 | 2 | Thin slice: ACK package in, `.zip` out | Not started |
 | 3 | Recording paths and helpers | Not started |
 | 4 | Training rounds, in full | Not started |
@@ -122,7 +122,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 
 ### Stage 1: Foundations (all sandbox-testable)
 
-- **VS-1.1 Skeleton, licenses, test runner (S, sandbox).** `tools/voice_studio/` package (name subject to P1), SPDX test for it,
+- **VS-1.1 Skeleton, licenses, test runner (S, sandbox). Done 2026-10-10.** `tools/voice_studio/` package (name subject to P1), SPDX test for it,
   `run_tests.sh`, `THIRD_PARTY_NOTICES.md` rows for every planned dependency (PyGObject/GTK, a QR library, `cryptography`, sherpa-onnx,
   torch and the training stack) with how each license was read.
 - **VS-1.2 Preflight (M, sandbox).** Pure functions that read command output and say: Ubuntu release (22.04/24.04 or "unsupported, here is

@@ -92,10 +92,32 @@ The recordings you train on are your own voice: see `docs/DATA_SOVEREIGNTY.md` f
   with GPLv3, not with GPLv2-only; that is why the project is not "GPLv2".) LGPL libraries can be linked.
 * GPL components here (espeak-ng, piper1-gpl, FFmpeg's GPL build) are either the same family as ACK or separate programs.
 * Open items, each needing a decision rather than a quiet change: **the font** (section 1), **the two Play Services libraries**
-  (section 2), **the base checkpoint's license** (section 5), and the **provenance of the images** (section 1).
+  (section 2), **the base checkpoint's license** (section 5; the two starting voices ACK Voice Studio offers are in section 7), and the **provenance of the images** (section 1).
 * **Authorship note:** Freeform Studio and most recent changes were written with an AI coding assistant. No third-party code was
   copied in on purpose, and the only known derivation is the sherpa-onnx script credited in its own header, but similarity to
   existing code cannot be ruled out by anyone, and a maintainer should know that.
 * **Translations:** the Spanish, Portuguese, Hindi, Arabic and Afrikaans texts under `app/src/main/res/values-*` were written by an AI assistant
   with no native speaker involved and not copied from any other app, dictionary or translation memory on purpose. They are drafts, each file says
   so at the top, and they have not been reviewed by a native speaker or a speech-language pathologist (`docs/TRANSLATIONS.md`).
+
+## 7. ACK Voice Studio (`tools/voice_studio/`, being built: see `docs/VOICE_STUDIO_SETUP_PLAN.md`)
+
+Planned dependencies of the guided setup, listed before they are used so that nothing arrives unlisted. Checked 2026-10-10. None of this
+is shipped in the repository: the person's own computer installs or fetches it.
+
+| Item | License | Checked | Note |
+|---|---|---|---|
+| GTK 4 and PyGObject (Ubuntu packages `gir1.2-gtk-4.0` and `python3-gi`), for the window | PyGObject: LGPL-2.1-or-later (PyPI classifier "LGPLv2+", license text is LGPL 2.1). GTK 4: LGPL-2.1-or-later | PyGObject: PyPI metadata. GTK: not verified | Installed by the person's own `apt`, not distributed by this project. LGPL libraries can be linked from GPL-3.0-or-later code. |
+| segno (QR codes) | BSD (PyPI classifier "BSD License"; which BSD variant was not checked) | PyPI metadata | |
+| cryptography (the phone-recording certificate authority) | Apache-2.0 OR BSD-3-Clause | PyPI metadata (license expression) | |
+| sherpa-onnx (Python package, to check a finished voice on the PC with the engine the phone uses) | Apache-2.0 (PyPI: "Apache licensed, as found in the LICENSE file"; section 2 read its repository) | PyPI metadata | |
+| The training stack (piper1-gpl, torch and the rest) | see section 5 | | The guided setup pins exact versions; each pinned package is re-checked when the lock file is made. |
+
+**The two starting voices** (`rhasspy/piper-checkpoints`, `en/en_US`, medium quality, 22,050 Hz, 846 MB each). Fetched by the person after
+a screen that shows this chain and asks; the project hosts, mirrors and sublicenses none of it (plan decision D27). This is not legal advice.
+
+| Item | License | Checked | Note |
+|---|---|---|---|
+| `mike` | Its model card (read from the developer's screenshot, 2026-10-10): dataset OHF-Voice/voice-datasets, **CC0**. Fine-tuned from the lessac voice. | model card (screenshot) | The lessac chain below applies. |
+| `amy` | Its model card: dataset MycroftAI/mimic3-voices, license listed only as "See URL". Fine-tuned from the lessac voice. | model card (screenshot); the linked license **not read** | The lessac chain below applies. |
+| The lessac voice, and the Blizzard 2013 Lessac data behind it | **Not read here.** A separate review of the data's license, summarised by another session and **not verified**, reports: use limited to research and exploration, commercial use excluded, no redistribution, personal to the registered person and not sublicensable, revocable on written notice, Massachusetts law. Whether any of that reaches a model trained from the data is unsettled. | not verified | A voice trained from `mike` or `amy` carries this chain. A person using ACK to speak every day should decide for themselves whether their use is covered. |
