@@ -85,3 +85,32 @@ def test_unknown_fields_are_ignored_so_a_newer_record_still_reads(tmp_path):
     path = tmp_path / "consent.json"
     path.write_text(json.dumps({"schema": 1, "given_at": "t", "future": 1, "entries": [{"id": "apt:git", "extra": "x"}]}))
     assert cs.load_consent(path).covers_id("apt:git")
+
+
+# ---------------------------------------------------------------- adding a new yes to an old one
+
+def test_a_new_agreement_adds_to_the_saved_one_and_never_forgets_an_earlier_yes():
+    old = cs.ConsentRecord((cs.ConsentEntry("apt:git"), cs.ConsentEntry("voice-a", "https://huggingface.co/o/a", 5, "a" * 64)), "2026-01-01T00:00:00Z")
+    new = cs.ConsentRecord((cs.ConsentEntry("pip:training"),), "2026-02-02T00:00:00Z")
+    merged = cs.merge_consent(old, new)
+    assert [e.id for e in merged.entries] == ["apt:git", "voice-a", "pip:training"] and merged.given_at == "2026-02-02T00:00:00Z"
+
+
+def test_an_id_agreed_to_again_takes_the_entry_just_shown_not_the_old_one():
+    old = cs.ConsentRecord((cs.ConsentEntry("voice-a", "https://huggingface.co/o/a", 5, "a" * 64), cs.ConsentEntry("apt:git")), "2026-01-01T00:00:00Z")
+    new = cs.ConsentRecord((cs.ConsentEntry("voice-a", "https://huggingface.co/o/b", 6, "b" * 64),), "2026-02-02T00:00:00Z")
+    merged = cs.merge_consent(old, new)
+    assert merged.entries == (cs.ConsentEntry("apt:git"), cs.ConsentEntry("voice-a", "https://huggingface.co/o/b", 6, "b" * 64))
+    assert cs.ConsentEntry("voice-a", "https://huggingface.co/o/a", 5, "a" * 64) not in merged.entries
+
+
+def test_merging_with_nothing_saved_gives_the_new_agreement_as_it_is():
+    new = cs.ConsentRecord((cs.ConsentEntry("pip:x"),), "2026-02-02T00:00:00Z")
+    assert cs.merge_consent(None, new) is new
+
+
+def test_merging_does_not_change_the_records_it_was_given():
+    old = cs.ConsentRecord((cs.ConsentEntry("a"),), "t1")
+    new = cs.ConsentRecord((cs.ConsentEntry("b"),), "t2")
+    cs.merge_consent(old, new)
+    assert old.entries == (cs.ConsentEntry("a"),) and new.entries == (cs.ConsentEntry("b"),)

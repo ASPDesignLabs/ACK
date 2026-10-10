@@ -48,6 +48,15 @@ def make_consent(items: Iterable[Item], extra_ids: Iterable[str] = (), now: Opti
     return ConsentRecord(tuple(entries), stamp)
 
 
+def merge_consent(old: Optional[ConsentRecord], new: ConsentRecord) -> ConsentRecord:
+    """Add a new agreement to the saved one. An id in both takes the new entry (the registry may now point at a different file, and only what was
+    shown this time is agreed to); everything else already agreed to stays. Agreeing to a longer list never forgets an earlier yes."""
+    if old is None:
+        return new
+    newer = {e.id for e in new.entries}
+    return ConsentRecord(tuple(e for e in old.entries if e.id not in newer) + new.entries, new.given_at)
+
+
 def save_consent(path: Path, record: ConsentRecord) -> None:
     """Atomic: a crash leaves the old record or the new one. Created owner-only."""
     path = Path(path)

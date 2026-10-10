@@ -92,7 +92,7 @@ class BuildSystem(FakeSystem):
     def __init__(self, python=(3, 12, 3), free=500 * GIB, **kw):
         super().__init__(python=python, **kw)
         self.free = free
-        self.venv_dists = {}            # what is "installed" inside the simulated environment: normalised name -> version
+        self._dists = {}                # what is "installed" inside each simulated environment: venv folder -> {normalised name: version}
         self.commands: List[tuple] = []
         self.venv_minor = "%d.%d" % python[:2]
         self.fail_venv = None           # a CommandResult, or "none" for "could not run at all"
@@ -109,6 +109,19 @@ class BuildSystem(FakeSystem):
     def exists(self, path):
         return os.path.exists(path)
 
+    def dists(self, venv_dir):
+        return self._dists.setdefault(str(venv_dir), {})
+
+    @property
+    def venv_dists(self):
+        """For a test with one environment: what is installed in it."""
+        assert len(self._dists) == 1, "this test has more than one environment: use dists(venv folder)"
+        return next(iter(self._dists.values()))
+
+    @venv_dists.setter
+    def venv_dists(self, value):
+        self._dists = {key: dict(value) for key in self._dists}
+
     def disk_free(self, path):
         return (self.free * 2, self.free)
 
@@ -124,7 +137,7 @@ class BuildSystem(FakeSystem):
             (target / "bin").mkdir(parents=True, exist_ok=True)
             (target / "bin" / "python").write_text("#!/bin/sh\n")
             (target / "pyvenv.cfg").write_text("home = /usr/bin\n")
-            self.venv_dists.clear()
+            self._dists[str(target)] = {}
             return CommandResult(0, "created\n")
         if argv[0].endswith("/venv/bin/python"):
             if len(argv) >= 3 and argv[1] == "-c":
@@ -133,15 +146,16 @@ class BuildSystem(FakeSystem):
                     return CommandResult(0, "%s\n%s\n" % (self.venv_minor, self.venv_flag))
                 if code == eb._VERIFY_CODE:
                     want = json.loads(argv[3])
+                    have = self._dists.get(argv[0][: -len("/bin/python")], {})
                     bad = []
                     for name, version, marker in want["pins"]:
                         if marker:
                             continue
-                        if name not in self.venv_dists:
+                        if name not in have:
                             bad.append("missing " + name)
-                        elif self.venv_dists[name] != version:
-                            bad.append("version %s %s" % (name, self.venv_dists[name]))
-                    bad += ["missing " + d for d in want["dists"] if d not in self.venv_dists]
+                        elif have[name] != version:
+                            bad.append("version %s %s" % (name, have[name]))
+                    bad += ["missing " + d for d in want["dists"] if d not in have]
                     return CommandResult(0, json.dumps(bad) + "\n")
                 self.probe_runs.append((code, dict(env or {}), cwd))
                 if code in self.bad_probe_codes:
@@ -173,11 +187,12 @@ class Doors:
     def __init__(self, system: BuildSystem, archive: Path):
         self.system, self.archive = system, archive
         self.fetches, self.pip_runs = [], []
+        self.files = {}                 # item id -> the file served for it (the archive by default)
         self.fetch_error: Optional[str] = None
         self.pip_fail = {}              # "lock" / "source" -> exit status
         self.pip_lines = ["Collecting x", "Installing collected packages: x"]
 
-    def fetcher(self, item, dest_dir, consent):
+    def fetcher(self, item, dest_dir, consent, progress=None, cancelled=None, **kwargs):
         self.fetches.append(item.id)
         if self.fetch_error:
             raise fetch.FetchError(self.fetch_error)
@@ -186,7 +201,9 @@ class Doors:
         dest = Path(dest_dir)
         dest.mkdir(parents=True, exist_ok=True)
         target = dest / item.filename
-        shutil.copyfile(str(self.archive), str(target))
+        shutil.copyfile(str(self.files.get(item.id, self.archive)), str(target))
+        if progress:
+            progress(item.size_bytes, item.size_bytes)
         return target
 
     def networked(self, consent, argv, ids, cwd=None, on_line=None, runner=None, inherit_stdio=False):
@@ -201,12 +218,12 @@ class Doors:
             pins, problems = parse_lock(Path(argv[argv.index("-r") + 1]).read_text())
             assert problems == []
             for pin in pins:
-                self.system.venv_dists[pin.name] = pin.version
+                self.system.dists(argv[0][: -len("/bin/python")])[pin.name] = pin.version
             return CommandResult(0, "\n".join(self.pip_lines) + "\nSuccessfully installed\n")
         if "-e" in argv:
             if self.pip_fail.get("source"):
                 return CommandResult(self.pip_fail["source"], "ERROR: build failed\n")
-            self.system.venv_dists["demo-dist"] = "0.0"
+            self.system.dists(argv[0][: -len("/bin/python")])["demo-dist"] = "0.0"
             return CommandResult(0, "Successfully installed demo-dist\n")
         raise AssertionError("an unexpected network command: %r" % (argv,))
 

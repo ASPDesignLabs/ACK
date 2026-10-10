@@ -14,7 +14,7 @@ import pytest
 
 from vs_fakes import (DEBIAN_12, MEM_4G, PROC_WSL1, SMI_6G, SMI_DRIVER_DOWN, UBUNTU_2004, FakeSystem, wsl2)
 from voice_studio.core import describe as ds
-from voice_studio.core import diskbudget, envbuild, envspec, fetch, jobs, preflight, project, report, scratch, text
+from voice_studio.core import diskbudget, envbuild, envspec, fetch, jobs, preflight, project, report, scratch, setupplan, setuprun, text
 from voice_studio.core.registry import load_registry
 from voice_studio.core.system import CommandResult
 from voice_studio.core.text import Catalog, TextError
@@ -220,6 +220,8 @@ def derived_keys():
     keys |= {"budget.level." + l.value for l in diskbudget.Level} | {"budget.watch." + w.value for w in diskbudget.Watch}
     keys |= {"project.consent.missing." + c for c in project.CONSENT_PROBLEM_CODES} | {"project.how_given." + h for h in project.HOW_GIVEN}
     keys |= {"setup.tag." + s.value for s in preflight.Status}
+    keys |= {"setup.refuse." + c for c in setuprun.REFUSAL_CODES} | {"setup.status." + s for s in setuprun.STATUSES}
+    keys |= {"setup.problem." + p for p in ("not_ready", "broken")} | {"setup.kind." + k for k in setupplan.KINDS}
     keys |= {"env.step." + a for a in envbuild.ACTION_IDS} | {"env.state." + s for s in envbuild.INSPECTION_STATES}
     for spec in envspec.load_environments():
         keys |= {spec.why_key} | {"env.probe." + probe.id for probe in spec.probes}

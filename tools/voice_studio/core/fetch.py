@@ -100,6 +100,17 @@ def _content_range_start(headers) -> Optional[int]:
         return None
 
 
+def is_fetched(item: Item, dest_dir: Path) -> bool:
+    """True if the finished file for this pinned item is already in `dest_dir` and is byte for byte what was agreed. Reads the disk, never the network."""
+    if item.pin_problems() or not item.filename:
+        return False
+    try:
+        target = _target(Path(dest_dir), item.filename)
+        return target.is_file() and _matches(target, item)
+    except (FetchError, OSError):
+        return False
+
+
 # ---------------------------------------------------------------- door one: a registry file
 
 def fetch(item: Item, dest_dir: Path, consent: Optional[ConsentRecord], *, opener: Callable = default_opener,

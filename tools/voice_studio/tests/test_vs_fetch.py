@@ -339,3 +339,35 @@ def test_with_inherited_terminal_the_program_can_read_what_the_person_types(tmp_
 def test_with_inherited_terminal_a_program_that_is_not_there_is_a_plain_error():
     consent = cs.make_consent([], ["apt:git"])
     assert code_of(lambda: fx.run_networked(consent, ["/definitely/not/a/program"], ["apt:git"], inherit_stdio=True)) == "http"
+
+
+# ---------------------------------------------------------------- is it already here
+
+def test_a_finished_file_that_is_what_was_agreed_counts_as_fetched(tmp_path):
+    item = pinned_item()
+    (tmp_path / item.filename).write_bytes(PAYLOAD)
+    assert fx.is_fetched(item, tmp_path)
+
+
+def test_a_file_that_is_not_there_or_is_wrong_or_is_only_part_of_it_is_not_fetched(tmp_path):
+    item = pinned_item()
+    assert not fx.is_fetched(item, tmp_path)
+    (tmp_path / item.filename).write_bytes(PAYLOAD[:-1])
+    assert not fx.is_fetched(item, tmp_path)
+    (tmp_path / item.filename).write_bytes(PAYLOAD[:-1] + b"X")
+    assert not fx.is_fetched(item, tmp_path)
+    (tmp_path / item.filename).unlink()
+    (tmp_path / (item.filename + ".part")).write_bytes(PAYLOAD)
+    assert not fx.is_fetched(item, tmp_path)
+
+
+def test_an_unpinned_item_is_never_fetched_and_a_missing_folder_is_not_an_error(tmp_path):
+    unpinned = replace(pinned_item(), url=None, filename=None, revision=None, size_bytes=None, sha256=None)
+    assert not fx.is_fetched(unpinned, tmp_path)
+    assert not fx.is_fetched(pinned_item(), tmp_path / "nowhere")
+
+
+def test_a_folder_in_place_of_the_file_is_not_a_fetched_file(tmp_path):
+    item = pinned_item()
+    (tmp_path / item.filename).mkdir()
+    assert not fx.is_fetched(item, tmp_path)
