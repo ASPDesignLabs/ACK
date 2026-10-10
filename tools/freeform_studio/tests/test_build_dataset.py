@@ -543,3 +543,27 @@ def test_with_no_normalising_there_is_no_gain_so_nothing_can_be_softer_than_the_
     quiet_take(out_dir, flags=(), n=1, amp=0.2)
     code, result = json_run(capsys, out_dir, tmp_path / "ds", "--dry-run", "--no-normalize", "--max-gain-db", "0")
     assert code == 0 and result["included"]["pieces"] == 1 and result["warnings"] == []
+
+
+@pytest.mark.parametrize("limit, normalize, floor", [(12.0, True, -50.0), (6.0, True, -50.0), (0.0, True, -50.0), (12.5, True, -50.5), (30.0, True, -68.0), (36.0, True, -74.0),
+                                                      (35.0, True, -73.0), (60.0, True, -80.0), (48.0, True, -80.0), (41.9, True, -79.9), (42.0, True, -80.0), (42.1, True, -80.0), (36.0, False, -50.0)])
+def test_the_too_quiet_floor_moves_down_with_the_extra_gain_allowed_and_stops_at_silence(limit, normalize, floor):
+    assert bd.quiet_floor_db(bd.Policy(max_gain_db=limit, normalize=normalize)) == pytest.approx(floor)
+
+
+def test_a_piece_the_gain_can_bring_up_is_not_refused_as_too_quiet_first(out_dir, tmp_path, capsys):
+    quiet_take(out_dir, amp=0.002)                              # a peak near -54 dBFS and an average near -57: below the default floor of -50
+    code, result = json_run(capsys, out_dir, tmp_path / "ds1", "--dry-run", "--max-gain-db", "12")
+    assert result["included"]["pieces"] == 0 and result["left_out"]["by_flag"] == {"quiet": 3}
+    code, result = json_run(capsys, out_dir, tmp_path / "ds2", "--dry-run", "--max-gain-db", "36")
+    assert code == 0 and result["included"]["pieces"] == 3 and result["included"]["gain_db"]["max"] == 36.0
+    assert result["warnings"] and "still softer than full level" in result["warnings"][0], "36 dB is not enough for a -54 dB peak, and it says so"
+    code, result = json_run(capsys, out_dir, tmp_path / "ds3", "--dry-run", "--max-gain-db", "60")
+    assert result["included"]["pieces"] == 3 and 50.0 <= result["included"]["gain_db"]["max"] <= 52.0 and result["warnings"] == []
+
+
+def test_a_clip_below_any_microphones_noise_is_refused_at_every_limit(out_dir, tmp_path, capsys):
+    quiet_take(out_dir, n=1, amp=0.0001)                        # an average near -83 dBFS: nothing but the file's own rounding
+    for limit in ("36", "48", "60"):
+        code, result = json_run(capsys, out_dir, tmp_path / ("ds" + limit), "--dry-run", "--max-gain-db", limit)
+        assert result["included"]["pieces"] == 0 and result["left_out"]["by_reason"] == {"too quiet to use": 1}, limit

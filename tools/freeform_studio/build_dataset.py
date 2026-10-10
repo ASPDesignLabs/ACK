@@ -16,7 +16,8 @@ Which pieces go in (--include):
 Quiet recordings (--max-gain-db): every clip is turned up so its loudest point is at -3 dB, by at most 12 dB unless you say otherwise. A phone
 microphone with no automatic gain often records softer than that allows; the import flags those pieces "quiet" and they are left out. Give a higher limit
 (for example --max-gain-db 36) and they are brought up and used instead, as long as nothing else is wrong with them (a noisy one is still left out). Your
-recordings are never changed: the gain is applied to the copy that goes into the training set, and each clip's gain is written to manifest.json.
+recordings are never changed: the gain is applied to the copy that goes into the training set, and each clip's gain is written to manifest.json. The "too quiet to use"
+floor (an average level of -50 dB) moves down by the extra gain you allow, so a piece that the gain can bring up is not refused first; it never goes below -80 dB.
 """
 from __future__ import annotations
 
@@ -44,6 +45,7 @@ from .privacy import private_umask
 TARGET_SR = 22050
 CLIP_SAMPLES = 5
 DEFAULT_MAX_GAIN_DB = 12.0   # the most a quiet clip is turned up by default; ack_checks flags a piece "quiet" when it would need more
+SILENCE_DB = -80.0          # a clip averaging softer than this holds no speech in a 16-bit file whatever the gain; refused as too quiet at any limit
 MAX_GAIN_LIMIT_DB = 60.0     # what --max-gain-db accepts: far past anything a real recording needs, short of amplifying nothing but noise
 QUIET_FLAG = {"quiet"}  # set at import for a piece too soft to be brought up with the default limit; a higher --max-gain-db stops it blocking
 LENGTH_FLAGS = {"too_short", "too_long"}  # measured directly instead, against --min-seconds/--max-seconds
@@ -84,6 +86,13 @@ class Candidate:
 
 def clean_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").replace(" ", " ")).strip()
+
+
+def quiet_floor_db(p: Policy) -> float:
+    """The softest a clip's average level (dBFS) may be before it is refused as too quiet. `min_rms_db` was set for the default 12 dB of gain (a clip at the floor ends about
+    -38 dB, still usable), so when the person allows more gain the floor moves down by the extra, but never below SILENCE_DB: past that there is only noise to turn up."""
+    extra = max(0.0, p.max_gain_db - DEFAULT_MAX_GAIN_DB) if p.normalize else 0.0
+    return max(p.min_rms_db - extra, SILENCE_DB) if extra else p.min_rms_db
 
 
 def gain_limit(text: str) -> float:
@@ -190,7 +199,7 @@ def render_take(take_dir: Path, clips: List[Candidate], wav_dir: Path, p: Policy
         peak = float(np.abs(x).max())
         if int(np.count_nonzero(np.abs(x) >= 0.999)) >= CLIP_SAMPLES:  # one stray sample is normal; a run of them is distortion
             return bad("the recording clips (hits the maximum level repeatedly)")
-        if _db(float(np.sqrt(np.mean(x * x)))) < p.min_rms_db:
+        if _db(float(np.sqrt(np.mean(x * x)))) < quiet_floor_db(p):
             return bad("too quiet to use")
         gain_db = 0.0
         if p.normalize:
