@@ -260,6 +260,9 @@ Uses the processor, with no browser and no server. On the computer's own process
 
 ## H. The training set
 
+Each build needs a folder name that does not exist yet: the tool never overwrites one. If you build more than once (for example after changing `--max-gain-db`), use `dataset-2`, `dataset-3`
+and so on, and use the one you built last in section I (its commands say `dataset-1`).
+
 - [ ] `python -m freeform_studio.build_dataset --output ~/ack-voice-check/recordings --out ~/ack-voice-check/dataset-1 --dry-run`. →
   A report with what would go in, what would be left out and why. `ls ~/ack-voice-check` shows **no** `dataset-1`.
 - [ ] The same without `--dry-run`. → `~/ack-voice-check/dataset-1/` holds `wav/`, `metadata.csv`, `manifest.json`, `excluded.txt`. A few
