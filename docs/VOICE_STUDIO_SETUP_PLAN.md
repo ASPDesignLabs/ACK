@@ -38,8 +38,8 @@ is, can do: set it up, help a client or family member record a voice, run the tr
    24.04 has 4.14. The window code is written to the older API on purpose.
 8. **Not testable from the build sandbox:** a real GPU, Windows/WSL, WSLg, GTK on a real desktop, a real phone, a screen reader. Every
    stage ends with a device-test checklist (the other `*_DEVICE_TEST.md` files are the model) and results from those come only from the developer.
-9. **Training is the biggest disk user, and most of it is easy to miss.** The guides give rough figures, none measured yet: a checkpoint is about
-   1 GB, a run keeps up to about eleven, and `lightning_logs/version_N` folders pile up; Freeform Studio's decoded copies take about 350 MB per hour
+9. **Training is the biggest disk user, and most of it is easy to miss.** The figures are mostly rough. A starting voice's checkpoint is 846 MB (from the
+   Hugging Face listing); the guide says a run keeps up to about eleven of its own, which at that size would be about 9 GB if they match (unmeasured), and `lightning_logs/version_N` folders pile up; Freeform Studio's decoded copies take about 350 MB per hour
    of recording; every distinct audio state wants its own training cache; pip and Hugging Face keep their own download caches (the torch wheels alone
    are large). On WSL the Linux virtual disk grows with use and does not shrink by itself, so the Windows drive that holds it can fill first.
    Freeform Studio already refuses new audio below `--min-free-mb` (500 MB) and ACK's own capture screens stop before the last 100 MB; P11 extends
@@ -204,7 +204,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 
 ### Stage 4: Training rounds, in full
 
-- **VS-4.1 Base voice list (M, sandbox + dev).** Mike and Amy (D25), as judged in VS-0.2: each with its license text shown before download and a consent-gated fetch (both are on the setup
+- **VS-4.1 Base voice list (M, sandbox + dev).** Mike and Amy (D25), as judged in VS-0.2: each with its license text shown before download (its dataset and license, and that it was itself fine-tuned from lessac, as its model card says) and a consent-gated fetch (both are on the setup
   consent list, and either can be declined and fetched later), the plain male-voice or female-voice choice with one line saying the starting
   voice only gives training a head start,
   checksum, and a compatibility check (the guide's old-checkpoint test) so an unusable file is explained, not crashed on. Never bundled.
@@ -227,7 +227,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   The phone saves it to Downloads; the screen then shows the ACK import steps. Reuses the certificates from VS-3.5 (D10, D16).
 - **VS-5.2 Export hardening (M, sandbox + dev).** The `dynamo=False` problem handled by wrapper; config copy; patch with its backup; a
   sherpa-onnx round-trip on the PC that mirrors ACK's rules (single-codepoint tokens, metadata present, size ceilings) so a bad file is
-  caught before the phone sees it; a model card (base voice and its license, project, date, versions, a consent summary without personal detail).
+  caught before the phone sees it; a model card (base voice, its license and the chain behind it (for example mike, fine-tuned from lessac), project, date, versions, a consent summary without personal detail).
 - **VS-5.3 Zip contract check (S, sandbox).** A test pins the zip's entry names and limits to `CustomVoiceBackupManager` /
   `CustomVoiceRepository` so a change on the Android side fails here.
 
@@ -259,7 +259,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-8.1 Beginner guide and helper handout (M).** `docs/VOICE_STUDIO_GUIDE.md`; a one-page handout for a helper; plain words.
 - **VS-8.2 Existing guides (S).** `VOICE_TRAINING_GUIDE.md` and `VOICE_DATA_WSL_GUIDE.md` become "the manual route" with a pointer to the guide.
 - **VS-8.3 Data sovereignty (S).** New rows in `DATA_SOVEREIGNTY.md` section 2 (setup downloads), the new files in section 1, the test list in section 7.
-- **VS-8.4 Notices and changelog (S).** `THIRD_PARTY_NOTICES.md`, `CHANGELOG.md`, and a short section in `CLAUDE.md` once the design is real.
+- **VS-8.4 Notices and changelog (S).** `THIRD_PARTY_NOTICES.md` (the starting voices and the chain behind them are listed there too: fetched, not shipped), `CHANGELOG.md`, and a short section in `CLAUDE.md` once the design is real.
 - **VS-8.5 Device-test doc (M).** `docs/VOICE_STUDIO_DEVICE_TEST.md`, grown stage by stage, finished here.
 - **VS-8.6 Release and "bump the pin" runbook (S).** How a tag is cut, how the lock and the base-voice list are re-verified (VS-0.2 repeated), how the clone command's tag is updated.
 - **VS-8.7 Optional: an ACK HELP pointer (S).** A HELP walkthrough step that says where the desktop tool is. Only if wanted; HELP is translated into five languages, so it is not free.
@@ -294,7 +294,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 | D22 | Failures | **Plain cause, what is safe, a report file**: a message in everyday words saying what happened, whether anything was changed, and the next step. *Save problem report* writes a text file the helper can read first (versions, step names, error text; names and folders blanked; no recordings or text), never sent anywhere. |
 | D23 | Old recorder | **Retired from the guided path.** Each project gets its own output folder that Freeform Studio uses; the old guides stay as the manual route. |
 | D24 | Scratch location | **Scratch defaults to a folder inside the project, and an Advanced option lets the person choose another drive or folder**, on native Ubuntu and on WSL. A chosen place is checked before it is used, the tool never writes into the empty mount point of an unplugged drive, and the place is covered by backup, clean-up and delete ("Choosing another drive" under P11 in detail; VS-1.11, VS-6.5). |
-| D25 | Starting voices | **Mike and Amy** (`rhasspy/piper-checkpoints`, `en/en_US`) are the default install's two starting voices. Both are fetched during setup (each is its own line on the consent list, with its license shown, D15), and the helper chooses **male or female** for each person. The thin slice uses Mike, which the developer has found works best across the voices tried. **Confirmed from the developer's screenshot of `en/en_US` (2026-10-10):** the folders are `mike` ("Add mike (en_US)", about 3 months old) and `amy` (last changed by "Fix model cards", about 2 months old). The developer reports both were trained recently and will work. VS-0.2 still checks that each loads and trains with the pinned trainer, because the guide records that older-format checkpoints fail and the listing shows only each folder's last change, not when its checkpoint was trained. Each voice's own model card license is read before it ships: the dataset's page says MIT, which may not be the voice's own license. |
+| D25 | Starting voices | **Mike and Amy** (`rhasspy/piper-checkpoints`, `en/en_US`) are the default install's two starting voices. Both are fetched during setup (each is its own line on the consent list, with its license shown, D15), and the helper chooses **male or female** for each person. The thin slice uses Mike, which the developer has found works best across the voices tried. **Confirmed from the developer's screenshot of `en/en_US` (2026-10-10):** the folders are `mike` ("Add mike (en_US)", about 3 months old) and `amy` (last changed by "Fix model cards", about 2 months old). The developer reports both were trained recently and will work. VS-0.2 still checks that each loads and trains with the pinned trainer, because the guide records that older-format checkpoints fail and the listing shows only each folder's last change, not when its checkpoint was trained. Each voice's own model card license is read before it ships: the dataset's page says MIT, which may not be the voice's own license. **From the model cards (developer's screenshots, 2026-10-10):** each is one speaker, medium quality, 22,050 Hz, and **fine-tuned from the lessac voice**. `mike`'s dataset is OHF-Voice/voice-datasets under CC0; `amy`'s is MycroftAI/mimic3-voices with its license listed only as "See URL". **Each checkpoint is 846 MB**, so about 1.7 GB for both. |
 | D26 | Disk needed to start | The number shown before setup, and the check that gates it, **counts both starting voices and a budget for at least two people** (a person's project is the "profile" here), not just the tool. |
 
 ### Proposed defaults (not asked: veto any of these)
@@ -341,7 +341,8 @@ offered for clean-up after a successful build, never removed on its own.
   (the guides say "an hour or more"; changeable), even if only one is made first. *Enough* covers all of it. *Tight* covers the tool, both
   starting voices and one project, and can be continued past after a warning. *Not enough* is less than the tool, one starting voice and one
   project's smallest plan, and setup stops there with nothing changed. Declining one starting voice on the consent list gives a smaller number.
-  The thresholds are proposals; the sizes come from VS-0.2.
+  The thresholds are proposals. Sizes so far: both starting voices are 846 MB each, 1.69 GB together (from the Hugging Face
+  listing); the rest come from VS-0.2.
 - **Before each big step** (import a package, build the dataset, start a round, make an export, make a backup) the same check runs against the
   room that step will need, including at a backup's destination.
 - **While a job runs** the free space is read on a timer. *Low* shows a quiet banner and a silent notification. *Stop* stops the job
@@ -389,11 +390,12 @@ my proposals (veto any). Each is a pure function in VS-1.11, tested in the sandb
 ### Still open
 
 - Anything in the proposed defaults you want changed.
-- Mike and Amy: which quality folders each has (the guide's tier is `medium`, 22050 Hz) and the checkpoint sizes, for D26's numbers. The sandbox
-  cannot reach Hugging Face, so these come from a screenshot of each voice's folder, or from VS-0.2.
+- The licenses behind the starting voices. Mike's dataset is CC0; Amy's card says "See URL" (the MycroftAI/mimic3-voices repository); both were
+  fine-tuned from the lessac voice, whose terms are not read yet. A voice trained from either carries that chain. They are read before the default
+  install ships (VS-4.1, VS-8.4), and the developer decides what the wizard says about sharing a voice. The sandbox cannot reach those pages.
 - Whether Mike is preselected on the male/female choice screen, or neither is.
 - Whether the first release needs a translation of the window, or English only until the app's drafts are reviewed (D19 leaves the door open).
-- P11 and D26: the real numbers (cost per hour, checkpoint size, both starting voices, margin, the floors, the slow-drive cutoff) wait for VS-0.2.
+- P11 and D26: the real numbers (cost per hour, the size of a checkpoint a run saves, margin, the floors, the slow-drive cutoff) wait for VS-0.2.
 
 ## 7. What I cannot do from here
 
