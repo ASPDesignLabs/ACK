@@ -438,3 +438,28 @@ def test_a_yes_that_cannot_be_saved_downloads_nothing_and_says_why(rig):
     code, io = go(rig)
     assert code == bf.EXIT_PROBLEM and "Your yes could not be saved, so nothing was downloaded." in io.lines
     assert any(l.startswith("  Technical detail: ") for l in io.lines) and rig.doors.pip_runs == [] and not Path(rig.ctx.home.environments).exists()
+
+
+def test_a_sign_of_life_names_the_last_thing_in_words_never_the_installers_moving_bar():
+    p, io = progress([0.0, 5.0, 10.0, 25.0, 30.0, 50.0])
+    p(ev("start"))
+    p(ev("line", text="Downloading torch-2.14.1-cp310.whl (555 MB)"))
+    p(ev("line", text="     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 34.1/34.1 MB 10.4 MB/s eta 0:00:00"))
+    p(ev("line", text="     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 34.1/34.1 MB 10.4 MB/s eta 0:00:00"))
+    p(ev("line", text="Successfully installed Cython-3.3.0"))
+    assert [l for l in io.lines if "still working" in l] == ["    still working: Downloading torch-2.14.1-cp310.whl (555 MB)"]
+    p(ev("line", text="   eta 0:00:03"))
+    assert io.lines[-1] == "    still working: Successfully installed Cython-3.3.0"
+
+
+def test_when_only_a_moving_bar_has_been_seen_the_sign_just_says_it_is_still_working():
+    p, io = progress([0.0, 30.0])
+    p(ev("start")); p(ev("line", text="━━━━━━━━ 1.0/9.0 MB eta 0:01:00"))
+    assert io.lines[1:] == ["    still working"]
+
+
+@pytest.mark.parametrize("line, is_bar", [("━━━━ 3/9 MB", True), ("╸━━ 3/9 MB", True), ("downloading, eta 0:00:07", True), ("eta 1:02:03", True),
+                                           ("Downloading torch (555 MB)", False), ("Collecting numpy==2.2.6", False), ("Installing collected packages: eta", False),
+                                           ("meta 10:20 is a name", False)])
+def test_which_lines_are_the_installers_moving_bar(line, is_bar):
+    assert bool(bf.PROGRESS_BAR.search(line)) is is_bar

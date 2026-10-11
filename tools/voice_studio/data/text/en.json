@@ -72,6 +72,7 @@
     "buildenv.step_kept": "{step}: already done",
     "buildenv.step_start": "{step} ...",
     "buildenv.still_working": "still working: {last}",
+    "buildenv.still_working_plain": "still working",
     "buildenv.tail_header": "The last lines it printed:",
     "buildenv.technical": "Technical detail: {detail}",
     "buildenv.title": "ACK Voice Studio: setting up one set of programs",

@@ -9,6 +9,7 @@ same way, and every failure is the builder's three-part error. Every sentence co
 from __future__ import annotations
 
 import dataclasses
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
@@ -29,6 +30,7 @@ from .text import Catalog, size_text
 EXIT_OK, EXIT_PROBLEM, EXIT_NOTHING_DONE = 0, 1, 2
 DEFAULT_ENV = "training"
 HEARTBEAT_S = 20.0                       # how often a quiet step says it is still working
+PROGRESS_BAR = re.compile(r"[━╸╺]|\beta \d+:\d\d")              # the installer's moving bar: not worth showing as "what it is doing"
 BUILD_STATES = ("absent", "needs_work", "failed")        # the states a build can start from; "ready" needs nothing and the rest need a person
 USABLE_GPU = (GpuState.OK, GpuState.SMALL, GpuState.UNKNOWN)
 NEEDED_FROM_THE_SYSTEM = ("python3-venv", "python3-dev", "build-essential")      # what building programs needs; the window's own libraries are not needed to do it
@@ -71,6 +73,7 @@ class _Progress:
         self.cat, self.io, self.clock, self.verbose = cat, io, clock, verbose
         self.started: Dict[str, float] = {}
         self.last_sign = 0.0
+        self.last_said = ""                                           # the latest line that was words, not a progress bar
 
     def _step(self, step: str) -> str:
         key = "env.step." + step
@@ -89,11 +92,17 @@ class _Progress:
         elif event.kind == "skipped":
             pass                                                      # said once, at the end, with every other probe that was not tried
         elif event.kind == "line" and event.text.strip():
+            text = event.text.strip()
+            if not PROGRESS_BAR.search(text):
+                self.last_said = text
             if self.verbose:
                 self.io.say("    " + event.text.rstrip())
             elif now - self.last_sign >= HEARTBEAT_S:
                 self.last_sign = now
-                self.io.say("    " + self.cat.t("buildenv.still_working", last=event.text.strip()[:90]))
+                if self.last_said:
+                    self.io.say("    " + self.cat.t("buildenv.still_working", last=self.last_said[:90]))
+                else:
+                    self.io.say("    " + self.cat.t("buildenv.still_working_plain"))
 
 
 def _lock_names(spec: EnvSpec, ctx: envbuild.Context) -> List[str]:

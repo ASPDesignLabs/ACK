@@ -124,6 +124,13 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   `cmake`, `ninja`, `scikit-build` and its `distro` and `tomli` (only the from-source build needed them) and gained `piper-tts` and `setuptools`: 91 packages, and with exactly these versions pip's own
   resolver needs nothing more on 3.11 or 3.12. **Not yet run:** a training round with the wheel-based environment (that is the next device test), and anything on 24.04.
 
+- **F11 (2026-10-11), the tool's own builder built the training environment on the developer's computer, first try.** Ubuntu 22.04 on WSL2, Python 3.10, `python3 -m voice_studio.buildenv training`: space check
+  0 s, the separate space 2 s, **installing the 91 locked packages 1 min 17 s** (about 3.2 GB from the package site; it replaced the venv's own old setuptools with the pinned 81.0.0), **compiling the
+  alignment part 3 s**, the helper 0 s, the self-test 3 s (the imports, the alignment module and, because no "not tried" line appeared, the graphics-card check); **1 min 25 s in all**, against about
+  6 minutes for the hand-built one (it also built espeak-ng from source). The disk line read "about 11 GB free needed, 958 GB free". One thing found and fixed: a quiet step's sign of life showed the
+  installer's moving progress bar; it now shows the last line in words. **Still unmeasured:** the installed size (section I0 asks for `du`), a training round with this environment, Ubuntu 24.04, and the
+  workaround prelude (`add_safe_globals`, `dynamo=False`), which the export in section J will show to be needed or not.
+
 ## 3. Rules that apply to every task below
 
 - Backups are encouraged and every edit to a person's files is confirmed first (the developer's standing preference). Nothing is moved or
@@ -200,7 +207,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   **A terminal command now builds an environment** (`python3 -m voice_studio.buildenv training [--check] [--yes] [--verbose]`, logic in `core/buildenv_flow.py`): it looks first, says where, how much space and which
   sites, names the Nvidia libraries when the lock holds them, asks once, saves the same `pip:training` agreement the setup plan would, builds with the step lines timed, and shows a three-part error with the end of the
   output when it fails; Ctrl+C stops it cleanly and the same command carries on. Section I0 of the device checklist runs it, and section I now trains with the environment it builds.
-  **Still to do for the first half:** (a) that **first run of the tool's own builder** on the developer's machine (section I0), which is the real proof of the lock and of the native step and the prelude; (b) the
+  **Still to do for the first half:** (a) ~~the first run of the tool's own builder~~ (done, F11) and then the training round with it (section I); (b) the
   same on Ubuntu 24.04 (a second WSL distribution is enough); (c) `studio.lock.txt` from the Freeform Studio environment; (d) the decision on NVIDIA's licence (below). **Second half (not started):**
   training rounds with that environment, memory by batch size, `--trainer.max_time`, export, whether the workarounds are needed, the network-off run, the slow-drive timings.
   **What VS-1.9 now waits for from this task** (the builder and its rules exist; these are the facts to put into the data files): (1) `data/locks/training.lock.txt` and `studio.lock.txt`, made with a resolver that writes
