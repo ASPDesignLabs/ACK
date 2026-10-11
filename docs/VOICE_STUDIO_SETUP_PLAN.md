@@ -154,6 +154,13 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   from earlier hand training). Fix, in the launcher where nothing can override it: one more line replaces the scorer's loader with a no-op, so it is never fetched or run; `train_command` no longer passes the useless
   switch and a test now fails if any `--model.*` option other than the sample rate is added. **To confirm on the developer's computer:** the next round's log has no `SpeechMOS` or `MOS predictor` line.
 
+- **F14 (2026-10-11), a round's time limit is not per round unless the launcher makes it so.** The one-minute round that followed the fix (from the five-minute round's `last.ckpt`) exited 0 with **no scorer line in its
+  log** (so the loader fix works) but took **8 seconds** and printed `Time limit reached. Elapsed time is 0:04:57`: Lightning's time-limit callback saves its clock in every checkpoint and restores it on a resume
+  (`Timer.load_state_dict` sets an offset), so the new round started at 4:57 of a 1:00 limit. The tool starts every round with a length and resumes from the previous round's `last.ckpt`, so **every round after the
+  first would have stopped at once**; the first one only worked because the starting voice's checkpoint has no saved clock. Fix (D34): one more launcher line makes the restore do nothing, so `--trainer.max_time`
+  counts from the round's own start. The launcher now has seven one-line workarounds, each found by a real round: the `torch.load` rule, the exporter's `dynamo=False`, the scorer's checkpoint rule, the scorer's loader
+  and the saved clock (the first two come from the guide). **To confirm:** the same one-minute round says `Elapsed time is 0:01:00`.
+
 ## 3. Rules that apply to every task below
 
 - Backups are encouraged and every edit to a person's files is confirmed first (the developer's standing preference). Nothing is moved or
@@ -545,6 +552,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 | D31 | The package is copied in | The chosen ACK package is copied into the project's `incoming` folder, checked byte for byte, and everything after is read from the copy. The original is never touched, and a copy this step made is removed only if the package then fails a check. |
 | D32 | The trainer's install | **The published `piper-tts` wheel, hash-checked in the training lock, plus one small shipped source file built by the tool** (F10). Not a source archive: the trainer's own build downloads espeak-ng from GitHub (outside the one agreed place, unchecked, slow from the developer's computer). Decided on evidence (files compared, the compile and its answers checked); reopen if the wheel's training differs from the commit's in the first device run. |
 | D33 | The trainer's quality score | **Off.** The trainer's optional `val_mos` score fetches and runs code and weights from GitHub at the first check and needs a library the lock does not carry (F12). A command-line switch cannot turn it off on a resume (F13), so the launcher replaces the scorer's loader with a no-op and skips that one checkpoint rule when its score was never logged. Checkpoints are kept by `val_mel` and chosen by listening. Reopen if you want the score back: it would need a pinned registry entry for the scorer's repository and weights, one more line on the agreement, and `torchaudio` in the lock. |
+| D34 | A round's length | **A round's time limit counts from the round's own start.** The trainer's checkpoint carries the clock of the run that wrote it and restores it on a resume, which would shorten (or cancel) every later round; the launcher keeps that restore from doing anything (F14). A round's length is therefore exactly the minutes the tool asks for, and the total training time is the sum of rounds. |
 
 ### Proposed defaults (not asked: veto any of these)
 

@@ -437,3 +437,40 @@ def test_the_two_scorer_lines_do_different_jobs_and_neither_is_the_other(monkeyp
     lines = [l for l in TRAINING_LOCK.prelude if "MosPredictor" in l or "_save_topk_checkpoint" in l]
     assert len(lines) == 2 and "val_mos" not in [l for l in lines if "MosPredictor" in l][0] and "MosPredictor" not in [l for l in lines if "val_mos" in l][0]
     assert all(len(l) <= es.MAX_LINE for l in lines)
+
+
+def test_a_rounds_time_limit_counts_from_its_own_start_not_from_the_clock_saved_in_the_checkpoint(monkeypatch):
+    """Lightning's time-limit callback saves its clock in every checkpoint and restores it on resume (`Timer.load_state_dict`), so a round resumed from a round that
+    had run five minutes would start at 4:57 and stop at once with a one-minute limit. The launcher makes the restore do nothing."""
+    class Timer:
+        def __init__(self):
+            self._offset = 0
+
+        def load_state_dict(self, state_dict):
+            self._offset = state_dict.get("time_elapsed", {}).get("train", 0)
+
+    callbacks = types.ModuleType("lightning.pytorch.callbacks")
+    callbacks.Timer = Timer
+    pytorch = types.ModuleType("lightning.pytorch")
+    pytorch.callbacks = callbacks
+    lightning = types.ModuleType("lightning")
+    lightning.pytorch = pytorch
+    for name, module in (("lightning", lightning), ("lightning.pytorch", pytorch), ("lightning.pytorch.callbacks", callbacks)):
+        monkeypatch.setitem(sys.modules, name, module)
+    before = Timer()
+    before.load_state_dict({"time_elapsed": {"train": 297}})
+    assert before._offset == 297, "the stand-in does what the real callback does until the line is run"
+    line = next(l for l in TRAINING_LOCK.prelude if "Timer" in l)
+    exec(compile(line, "<prelude>", "exec"), {})
+    after = Timer()
+    after.load_state_dict({"time_elapsed": {"train": 297, "validate": 12}})
+    assert after._offset == 0
+    after.load_state_dict({})
+    assert after._offset == 0
+
+
+def test_the_launcher_has_exactly_the_workarounds_the_first_real_rounds_needed_and_no_more():
+    """One line each: the checkpoint-loading rule, the exporter, the scorer's checkpoint rule, the scorer's loader and the saved clock."""
+    assert len(TRAINING_LOCK.prelude) == 7
+    for needle in ("PosixPath", "dynamo=False", "_save_topk_checkpoint", "MosPredictor", "Timer.load_state_dict"):
+        assert sum(needle in line for line in TRAINING_LOCK.prelude) == 1, needle

@@ -394,6 +394,35 @@ round).
   `Detected KeyboardInterrupt, attempting graceful shutdown ...`, back at the prompt within a few seconds, a new `version_1/checkpoints/` folder with a `last.ckpt`, and `exit code: 1`. Write down how many seconds the stop took
   and whether the newest `last.ckpt` is older than the moment you pressed Ctrl+C (a stop by hand loses what was trained since the last check, at most ten epochs here).
 
+- [ ] **A short round after a long one still trains for its whole time.** Start a one-minute round from the checkpoint the five-minute round wrote (the clock saved inside a checkpoint is not restored; the launcher sees to that).
+  The output goes to a file, as above:
+  ```bash
+  V=~/piper/voice-check; cd $V/run
+  TRAIN=$(ls -d ~/ack-voice-studio/tool/environments/training-* | head -1)
+  date +%T
+  "$TRAIN/venv/bin/python" "$TRAIN/ack_run.py" piper.train fit \
+    --data.voice_name "my_voice" \
+    --data.csv_path ~/ack-voice-check/dataset-1/metadata.csv \
+    --data.audio_dir ~/ack-voice-check/dataset-1/wav \
+    --model.sample_rate 22050 \
+    --data.espeak_voice "en-us" \
+    --data.cache_dir $V/cache-3 \
+    --data.config_path $V/config.json \
+    --data.batch_size 12 \
+    --data.num_workers 4 \
+    --trainer.check_val_every_n_epoch 10 \
+    --trainer.log_every_n_steps 1 \
+    --trainer.max_time 00:00:01:00 \
+    --ckpt_path $V/run/lightning_logs/version_0/checkpoints/last.ckpt > $V/round3.log 2>&1
+  echo "exit code: $?"
+  date +%T
+  echo "scorer lines in the log (want 0): $(grep -c -E 'SpeechMOS|MOS predictor' $V/round3.log)"
+  tr '\r' '\n' < $V/round3.log | grep -i -E "time limit|traceback|error|exception" | tail -8
+  ls $V/run/lightning_logs/
+  ```
+  → About a minute and a half in all, `exit code: 0`, `scorer lines … 0`, and `Time limit reached. Elapsed time is 0:01:00` (**not** `0:04:57`, which is what it said before the launcher kept the clock from being restored: the round
+  then stopped after eight seconds).
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
