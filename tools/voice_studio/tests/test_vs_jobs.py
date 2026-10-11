@@ -422,3 +422,15 @@ def test_a_stop_a_person_asked_for_has_no_reason_and_an_unknown_reason_is_ignore
     assert finish(info).stop_reason == ""
     jb.write_json(info.dir + "/stop.json", {"forced": False, "reason": "because"})
     assert jb.job_info(info.dir).stop_reason == ""
+
+
+def test_a_job_started_from_a_process_that_ignores_ctrl_c_still_stops_gently(root):
+    """A script run in the background (`&`, a launcher) is told to ignore Ctrl+C, and a command started from it would have inherited that: the gentle stop, and the disk guard, never worked."""
+    import subprocess
+    starter = ("import signal, sys\nsignal.signal(signal.SIGINT, signal.SIG_IGN)\nfrom voice_studio.core import jobs\n"
+               "info = jobs.start_job(sys.argv[1], jobs.JobSpec('test', '', (sys.executable, '-c', 'import time; time.sleep(60)')))\nprint(info.dir)\n")
+    done = subprocess.run([sys.executable, "-c", starter, root], capture_output=True, text=True, timeout=60, env=dict(os.environ, PYTHONPATH=str(jb.TOOLS_DIR)))
+    assert done.returncode == 0, done.stderr
+    folder = done.stdout.strip()
+    assert jb.job_info(folder).status in jb.ACTIVE and jb.request_stop(folder) == "asked"
+    assert finish(jb.job_info(folder)).status is JobStatus.STOPPED

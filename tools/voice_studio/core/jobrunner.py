@@ -30,6 +30,12 @@ def _starttime(pid: int) -> Optional[int]:
     return jobs.parse_proc_starttime(jobs.read_text_file("/proc/%d/stat" % pid))
 
 
+def _restore_ctrl_c() -> None:
+    """Run in the command's process just before it starts. A program started from a background shell (a script, a launcher, `&`) is told to ignore Ctrl+C, and a command
+    that inherited that would ignore the gentle stop, and the disk guard's, for good. Python only installs its own KeyboardInterrupt handler if the signal is not ignored."""
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+
 def run(job_dir: str) -> int:
     raw = jobs.read_json(job_dir + "/job.json")
     if raw is None:
@@ -42,7 +48,8 @@ def run(job_dir: str) -> int:
     child: Optional[subprocess.Popen] = None
     try:
         try:
-            child = subprocess.Popen(list(spec.argv), cwd=spec.cwd, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+            child = subprocess.Popen(list(spec.argv), cwd=spec.cwd, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+                                     preexec_fn=_restore_ctrl_c)
         except FileNotFoundError:
             result["error"] = "program_not_found"
         except PermissionError:
