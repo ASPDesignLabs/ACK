@@ -1265,12 +1265,12 @@ def test_once_the_running_round_has_its_folder_a_newer_stray_one_is_not_also_its
 
 def test_the_files_of_the_running_round_and_files_nobody_claimed_are_not_in_the_list_for_freeing_up_space(world):
     world.run_round(version=0)
+    world.trainer_makes(9)                                             # there before the next round began
     plan = world.begin()
     rd.attach_job(world.paths, 2, world.job_for(plan, "running").id)
-    world.trainer_makes(1)
-    world.trainer_makes(9)
+    world.trainer_makes(10)
     kept = rd.retention(world.paths, rd.load(world.paths))
-    assert len(kept.busy) == 3 and len(kept.unclaimed) == 3
+    assert len(kept.busy) == 3 and len(kept.unclaimed) == 3 and {f.version for n, f in kept.busy} == {10} and {f.version for f in kept.unclaimed} == {9}
     items = rd.cleanup_items(kept)
     assert {i.key for i in items} == {"checkpoint.round1.%s" % f.name for n, f in kept.keep + kept.spare}
     assert not [i for i in diskbudget.reclaimable(items) if "round2" in i.key]
