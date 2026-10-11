@@ -18,8 +18,8 @@ The folders and names used below (change them if yours differ):
 |---|---|
 | This tool's files (a checkout of the branch `claude/voice-studio-guided-setup`: **section 0**) | `~/ack-tools` |
 | Freeform Studio's environment (from its own `install.sh`) | `~/freeform-studio-venv` |
-| The trainer and its environment (from the training guide) | `~/piper1-gpl` (with `.venv`) |
-| The base checkpoint (from the training guide) | `~/piper/checkpoints/base.ckpt` |
+| The training programs (built by the tool in section I0; the hand-built `~/piper1-gpl` is not used) | `~/ack-voice-studio/tool/environments/training-…` |
+| The starting voice's checkpoint (a download from the training guide) | `~/piper/checkpoints/mike.ckpt` (or the file you have there) |
 | Recordings folder used by this list | `~/ack-voice-check/recordings` |
 
 ## 0. Get this branch (a clone of the main branch does not have this tool)
@@ -284,6 +284,36 @@ and so on, and use the one you built last in section I (its commands say `datase
 - [ ] The same command again. → Refused, exit code 2, "never overwrites a dataset"; nothing in `dataset-1` changed.
 - [ ] `… --json | python3 -m json.tool` (with `--dry-run`). → Valid JSON with `result`, `included`, `left_out`.
 
+## I0. Set up the training programs with the tool (before the round)
+
+The training programs are no longer built by hand. The tool builds them itself from a list of exact versions with checksums, from the package site only (no GitHub). **This is the first time
+that has run on a real computer**, so write down everything that surprises you. It needs the packages from section C (`python3-venv`, `python3-dev`, `build-essential`) and about 10 GB free.
+Run it in a terminal you keep open, not through a window that closes.
+
+- [ ] Only look. This changes nothing and downloads nothing:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.buildenv training --check; echo "exit code: $?"
+  ```
+  → `Now: Not set up yet.`, then `This is not ready.`, `exit code: 1`. (If it says some programs are missing, run `setup.sh` from section C again.)
+- [ ] Set it up:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.buildenv training
+  ```
+  → It says where it will put things, how much space it needs and how much is free, where the programs come from, that it includes Nvidia's libraries, and asks `Download and set it up now?`.
+  Type `yes`. Then each step prints, with how long it took, and at the end `Ready, after …`. Write down: the total time, the time of **Installing the programs this part needs** and of
+  **Building the part made for this computer**, and the folder it printed. Press **Ctrl+C once** during the install step if you want to check the stop (it says how to carry on; run the same command again and
+  it should say the finished steps are `already done`). If it fails, copy the message, **Technical detail** and the last lines it printed, and the end of `build.log` in the folder it named.
+- [ ] Run the same command again. → `Nothing needs doing.`, no question, nothing downloaded.
+- [ ] Look inside (this only reads):
+  ```bash
+  TRAIN=$(ls -d ~/ack-voice-studio/tool/environments/training-* | head -1); echo "$TRAIN"
+  ls "$TRAIN"; du -sh "$TRAIN"
+  "$TRAIN/venv/bin/python" -c "import piper.train.vits.monotonic_align as m; print(m.__file__)"
+  ```
+  → The folder holds `venv`, `ack_run.py`, `ack-env.json`, `lock.txt` and `build.log` (no `native-work`, no `source`). Its size is what to write down (the tool assumed 6.1 GiB installed). The last line is a path
+  ending in `…/piper/train/vits/monotonic_align/__init__.py`, with no error.
+- [ ] Check the card is seen: `"$TRAIN/venv/bin/python" -c "import torch; print(torch.cuda.is_available(), torch.version.cuda)"`. → `True 13.0` (or the CUDA version the lock names).
+
 ## I. One short training round, on the graphics card
 
 **This is the part nobody has been able to check.** It uses the graphics card and can take several minutes to load. Close other programs
@@ -291,11 +321,11 @@ that use it. The numbers you write down here replace the guesses in the code (ba
 round).
 
 - [ ] In a **second terminal**, leave this running: `nvidia-smi --query-gpu=memory.used,memory.total --format=csv -l 5`.
-- [ ] Start a round that stops itself after five minutes. It runs from a **new, empty folder**, because the tool will start it that way:
+- [ ] Start a round that stops itself after five minutes, with the programs the tool built in I0 (`ack_run.py` applies the documented workarounds first). It starts from your Mike checkpoint (use the file you have in `~/piper/checkpoints`) and runs from a **new, empty folder**, because the tool will start it that way:
   ```bash
   mkdir -p ~/piper/voice-check/run && cd ~/piper/voice-check/run
-  source ~/piper1-gpl/.venv/bin/activate
-  python3 -m piper.train fit \
+  TRAIN=$(ls -d ~/ack-voice-studio/tool/environments/training-* | head -1)
+  "$TRAIN/venv/bin/python" "$TRAIN/ack_run.py" piper.train fit \
     --data.voice_name "my_voice" \
     --data.csv_path ~/ack-voice-check/dataset-1/metadata.csv \
     --data.audio_dir ~/ack-voice-check/dataset-1/wav \
@@ -308,7 +338,7 @@ round).
     --trainer.check_val_every_n_epoch 10 \
     --trainer.log_every_n_steps 1 \
     --trainer.max_time 00:00:05:00 \
-    --ckpt_path ~/piper/checkpoints/base.ckpt
+    --ckpt_path ~/piper/checkpoints/mike.ckpt
   echo "exit code: $?"
   ```
   → It starts, prints progress, and **stops by itself** about five minutes after it started (not counting loading). Then `exit code: 0`.
@@ -319,7 +349,7 @@ round).
   - Was the exit code 0?
   - The highest `memory.used` the second terminal showed, the card's name and total memory, and the seconds per epoch the trainer printed.
   - If it ran out of memory, try `--data.batch_size 8` and write that down. If steps took tens of seconds, the batch is too big for the card.
-  - If it says `No module named piper`, it was not installed so that other folders can find it; write that down.
+  - If it says `No module named piper`, the wheel did not install properly; write that down with the last lines of `build.log`.
 - [ ] Start the same round again without `--trainer.max_time` and press **Ctrl+C once** after about a minute, then wait. → It shuts down on its
   own and leaves a `last.ckpt` in `lightning_logs/version_1/checkpoints/`. Write down how long the wait was and whether it did.
 - [ ] Resume from the newest checkpoint, as the tool will (the highest `version_N`): the same command with

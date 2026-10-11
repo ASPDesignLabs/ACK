@@ -197,7 +197,10 @@ Gate: the findings are written into section 6, and any decision they contradict 
   shipped in `data/native/`, pinned by checksum, compiled with the environment's Cython after the packages are installed and copied to the one place the installed package looks; it is the same
   `native_build` step as before, refused with `native_changed` if the shipped file is not the pinned one, and run again when the Python, the lock or the file changes. The training entry no longer
   names a source archive, so `piper1-gpl-source` is gone from `data/sources.json`, and the setup agreement for the training environment is now a real, offerable line (`pip:training`).
-  **Still to do for the first half:** (a) a **rebuild with the tool's own builder** on the developer's machine, which is the real proof of the lock and of the native step and the prelude; (b) the
+  **A terminal command now builds an environment** (`python3 -m voice_studio.buildenv training [--check] [--yes] [--verbose]`, logic in `core/buildenv_flow.py`): it looks first, says where, how much space and which
+  sites, names the Nvidia libraries when the lock holds them, asks once, saves the same `pip:training` agreement the setup plan would, builds with the step lines timed, and shows a three-part error with the end of the
+  output when it fails; Ctrl+C stops it cleanly and the same command carries on. Section I0 of the device checklist runs it, and section I now trains with the environment it builds.
+  **Still to do for the first half:** (a) that **first run of the tool's own builder** on the developer's machine (section I0), which is the real proof of the lock and of the native step and the prelude; (b) the
   same on Ubuntu 24.04 (a second WSL distribution is enough); (c) `studio.lock.txt` from the Freeform Studio environment; (d) the decision on NVIDIA's licence (below). **Second half (not started):**
   training rounds with that environment, memory by batch size, `--trainer.max_time`, export, whether the workarounds are needed, the network-off run, the slow-drive timings.
   **What VS-1.9 now waits for from this task** (the builder and its rules exist; these are the facts to put into the data files): (1) `data/locks/training.lock.txt` and `studio.lock.txt`, made with a resolver that writes

@@ -23,6 +23,13 @@ starts the step above. It needs `ACK_VOICE_TAG` set to a release name; there are
 It never touches a folder that is already there and never edits your shell settings. The only password prompt is Ubuntu's own `sudo`, in your terminal;
 this program never sees it.
 
+Until the window exists, the training programs are set up from a terminal (it asks once before it downloads anything, from the package site only):
+
+```bash
+PYTHONPATH=tools python3 -m voice_studio.buildenv training --check    # only look; exit 0 when ready, 1 when not
+PYTHONPATH=tools python3 -m voice_studio.buildenv training            # show what it will do, ask once, build it (about 10 GB free is needed)
+```
+
 ## Rules the code keeps
 
 - `core/` is plain Python: no GUI toolkit, no network. The window will be a thin layer over it.

@@ -147,7 +147,7 @@ def test_the_files_and_documents_it_points_to_exist():
 
 def test_the_training_command_in_the_checklist_is_the_one_the_tool_builds(tmp_path):
     block = " ".join(l.rstrip("\\").strip() for l in next(b for b in _fences() if "piper.train fit" in b).splitlines())
-    words = shlex.split(block[block.index("python3 -m piper.train fit"):])
+    words = shlex.split(block[block.index('"$TRAIN/venv/bin/python" "$TRAIN/ack_run.py" piper.train fit'):])
     shown = {words[i][2:]: words[i + 1] for i in range(4, len(words) - 1, 2) if words[i].startswith("--")}
     dataset = tmp_path / "dataset-1"
     (dataset / "wav").mkdir(parents=True)
@@ -160,6 +160,27 @@ def test_the_training_command_in_the_checklist_is_the_one_the_tool_builds(tmp_pa
     paths = {"data.csv_path", "data.audio_dir", "data.cache_dir", "data.config_path", "ckpt_path"}
     assert set(shown) == set(made), "the checklist and the tool must give the trainer the same options"
     assert {k: v for k, v in shown.items() if k not in paths} == {k: v for k, v in made.items() if k not in paths}
+
+
+def test_the_build_command_the_checklist_gives_takes_the_options_it_gives_and_changes_nothing_when_only_looking(home):
+    from voice_studio.core.buildenv_flow import parse_build_options
+    commands_given = re.findall(r"PYTHONPATH=~/ack-tools/tools python3 -m voice_studio\.buildenv ([^;\n`]*)", doc_text())
+    assert len(commands_given) >= 2
+    for given in commands_given:
+        parsed, unknown = parse_build_options(shlex.split(given))
+        assert parsed is not None, given
+        assert parsed.env_id == "training"
+    assert any("--check" in c for c in commands_given) and any("--check" not in c for c in commands_given)
+    env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(TOOLS))
+    done = subprocess.run([sys.executable, "-m", "voice_studio.buildenv", "training", "--check"], cwd=str(home), env=env, text=True, capture_output=True, timeout=120)
+    assert done.returncode == 1 and done.stdout.startswith("ACK Voice Studio: setting up one set of programs"), done.stdout + done.stderr
+    assert not (Path(home) / "ack-voice-studio").exists() and sorted(p.name for p in Path(home).iterdir()) == []
+
+
+def test_the_folders_the_checklist_names_for_the_tool_built_programs_are_where_the_tool_puts_them():
+    from voice_studio.core.paths import DATA_HOME_NAME, DataHome
+    assert "~/%s/tool/environments/training-" % DATA_HOME_NAME in doc_text()
+    assert DataHome("/h").environments == "/h/%s/tool/environments" % DATA_HOME_NAME
 
 
 def _fences():
