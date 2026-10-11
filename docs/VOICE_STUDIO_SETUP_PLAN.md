@@ -158,8 +158,8 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   log** (so the loader fix works) but took **8 seconds** and printed `Time limit reached. Elapsed time is 0:04:57`: Lightning's time-limit callback saves its clock in every checkpoint and restores it on a resume
   (`Timer.load_state_dict` sets an offset), so the new round started at 4:57 of a 1:00 limit. The tool starts every round with a length and resumes from the previous round's `last.ckpt`, so **every round after the
   first would have stopped at once**; the first one only worked because the starting voice's checkpoint has no saved clock. Fix (D34): one more launcher line makes the restore do nothing, so `--trainer.max_time`
-  counts from the round's own start. The launcher now has seven one-line workarounds, each found by a real round: the `torch.load` rule, the exporter's `dynamo=False`, the scorer's checkpoint rule, the scorer's loader
-  and the saved clock (the first two come from the guide). **To confirm:** the same one-minute round says `Elapsed time is 0:01:00`.
+  counts from the round's own start. The launcher now has seven lines, five of them workarounds: the `torch.load` rule, the exporter's `dynamo=False`, the scorer's checkpoint rule, the scorer's loader
+  and the saved clock (the first two come from the guide; the last three were found by real rounds). **To confirm:** the same one-minute round says `Elapsed time is 0:01:00`.
 
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
   `Time limit reached. Elapsed time is 0:01:04`, and `version_0` to `version_3` exist. The export under the launcher exited 0 with **no extra package** (`onnxscript` is not needed): `my_voice.onnx` 63,516,211 bytes after the
@@ -168,6 +168,13 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   refused by IMPORT CUSTOM VOICE**: the zip's contents are what ACK's restore expects, but that picker wanted exactly two files, and the restore button (IMPORT VOICE BACKUP) is only shown once a voice is installed, so a
   phone with no voice had no way to take the zip. Fixed in the app (see VS-5.3's as-built note): IMPORT CUSTOM VOICE takes one `.zip` as well, routed by name to the same restore path. **Still unproven:** whether the
   guide's `torch.load` rule and the exporter's `dynamo=False` line are needed at all (each probe is a minute; the launcher keeps both until they are shown unnecessary).
+
+- **F16 (2026-10-11), which launcher lines matter, tried by leaving each out.** Run without the launcher, on the developer's computer: **the exporter fails** (`ModuleNotFoundError: No module named 'onnxscript'`: PyTorch's newer
+  exporter needs it, and `dynamo=False` makes it use the old one), so that line is **needed** (the other cure, adding `onnxscript` and what it brings to the lock, is bigger). **A resume loads fine** from the tool's own
+  checkpoint (exit 0, `Restored all states`) **and from the downloaded Mike checkpoint**, so the `torch.load` safe-globals rule was **not needed for either**; it stays because Amy's checkpoint, the other default starting voice, has
+  not been tried and a base voice could carry a path object (the guide's report); it is to be dropped if Amy loads without it. The Mike run then died at its first check with the `val_mos` error, a second independent proof
+  that the checkpoint-rule line is needed. So the launcher's seven lines are five workarounds and two lines that only import what they use: **four workarounds are shown to matter** (the exporter's `dynamo=False`, the scorer's loader, the scorer's checkpoint rule and the
+  saved clock) and **one is unproven for Amy** (`torch.load`); none is shown pointless.
 
 ## 3. Rules that apply to every task below
 

@@ -495,9 +495,10 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
-## M. Clean up (only the two folders this list made)
+## M. Clean up (only the folders this list made)
 
-- [ ] When you are finished and have saved what you want (the zip, your notes): `rm -r ~/ack-voice-check ~/piper/voice-check`. These
-  hold only what this list made. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
+- [ ] Look first at how much room they take: `du -sh ~/ack-voice-check ~/piper/voice-check ~/piper/voice-check-2 2>/dev/null` (each training round keeps six checkpoints of 846 MB, so a few rounds are several GB).
+- [ ] When you are finished and have saved what you want (the zip, your notes): `rm -r ~/ack-voice-check ~/piper/voice-check ~/piper/voice-check-2` (leave out a folder that does not exist on your computer; `voice-check-2` is
+  where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
