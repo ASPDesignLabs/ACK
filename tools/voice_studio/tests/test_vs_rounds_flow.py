@@ -637,3 +637,12 @@ def test_while_the_first_round_runs_the_answer_is_that_a_round_is_running_not_th
     rd.attach_job(rig.paths, 1, rig.world.job_for(plan, "running").id)
     code, io = rig.run(*start_args("--yes"))
     assert code == 1 and "already running" in io.text and "no starting voice" not in io.text and rig.started == []
+
+
+def test_the_training_set_named_is_the_one_the_round_trains_on_not_the_first_in_the_list(rig):
+    rig.world.dataset("dataset-a")
+    rig.world.dataset("dataset-b")
+    code, io = rig.run(*start_args("--yes", dataset="dataset-b"))
+    spec = rig.started[0]
+    assert code == 0 and spec.argv[spec.argv.index("--data.csv_path") + 1] == rig.world.scratch.datasets + "/dataset-b/metadata.csv"
+    assert rd.load(rig.paths).rounds[0].dataset == "dataset-b" and "dataset-b, which has 1 clips" in io.text
