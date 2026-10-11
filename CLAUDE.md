@@ -725,6 +725,12 @@ deck import, since a newly-imported voice is exactly the kind of state
 `OutputService`'s `PiperVoiceEngine` singleton needs a clean process
 restart to pick up.
 
+**Import takes the two trainer files or the one Voice Studio zip.** `CustomVoiceRepository.importPicked` is the single entry for the IMPORT / RE-IMPORT button: `core/CustomVoiceImport.kindOf(names)` (plain Kotlin,
+`CustomVoiceImportTest`) says ONE_ZIP for exactly one picked file whose name ends in `.zip` (any case) and everything else is the original two-file path, which refuses what is not a `.onnx` and a `.onnx.json`. A zip
+goes to `CustomVoiceBackupManager.importBackup`, the very restore path (entries `model.onnx` and `model.onnx.json`, the 400 MB zip ceiling, then `installFromValidatedFiles`'s own re-check), so nothing is validated
+less than before. This routing only exists because the restore button (IMPORT VOICE BACKUP, next to EXPORT) is shown only once a voice is installed: a phone with no voice could not take the zip ACK Voice Studio writes
+(found on the first real phone test). `CustomVoiceImportWiringTest` reads the three Android-only files. The failure toast names both forms in all six languages (drafts for the translations).
+
 **Two ways to actually put the voice on output, not one:**
 1. **A fourth fixed preset, `"MY VOICE"`** — a real entry in
    `OutputService`'s `FACTORY_PRESETS` map (id `"MY_VOICE"`,

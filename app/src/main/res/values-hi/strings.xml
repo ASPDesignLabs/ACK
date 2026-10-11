@@ -632,7 +632,7 @@ DRAFT TRANSLATION (Hindi, Devanagari). Written by an AI assistant for the ACK pr
     <string name="audio_delete_profile_title">प्रोफ़ाइल हटाएँ?</string>
     <string name="audio_delete_profile_body">\"%1$s\" को हमेशा के लिए हटाएँ? इसे वापस नहीं किया जा सकता।</string>
     <string name="audio_toast_imported">आवाज़ आयात हुई -- फिर से शुरू हो रहा है</string>
-    <string name="audio_toast_import_failed">आयात नहीं हुआ -- .ONNX और .ONNX.JSON दोनों चुनें</string>
+    <string name="audio_toast_import_failed">आयात नहीं हुआ -- .ONNX और .ONNX.JSON दोनों चुनें, या आवाज़ की एक .ZIP फ़ाइल</string>
     <string name="audio_toast_restored">आवाज़ का बैकअप वापस लाया गया -- फिर से शुरू हो रहा है</string>
     <string name="audio_toast_restore_failed">वापस लाना नहीं हुआ -- अखंडता जाँच</string>
     <string name="speech_language_device">बोलने की भाषा: इस फ़ोन की भाषा</string>

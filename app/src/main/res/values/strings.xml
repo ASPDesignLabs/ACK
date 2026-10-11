@@ -653,7 +653,7 @@
     <string name="audio_delete_profile_title">DELETE PROFILE?</string>
     <string name="audio_delete_profile_body">Delete \"%1$s\" permanently? This cannot be undone.</string>
     <string name="audio_toast_imported">VOICE IMPORTED -- RESTARTING</string>
-    <string name="audio_toast_import_failed">IMPORT FAILED -- SELECT BOTH .ONNX AND .ONNX.JSON</string>
+    <string name="audio_toast_import_failed">IMPORT FAILED -- PICK BOTH .ONNX AND .ONNX.JSON, OR ONE VOICE .ZIP</string>
     <string name="audio_toast_restored">VOICE BACKUP RESTORED -- RESTARTING</string>
     <string name="audio_toast_restore_failed">RESTORE FAILED -- INTEGRITY CHECK</string>
     <string name="speech_language_device">SPEECH LANGUAGE: THIS PHONE\'S LANGUAGE</string>

@@ -644,7 +644,7 @@ DRAFT TRANSLATION (Arabic, Modern Standard Arabic, right to left). Written by an
     <string name="audio_delete_profile_title">حذف الملف؟</string>
     <string name="audio_delete_profile_body">هل تريد حذف \"%1$s\" نهائيًا؟ لا يمكن التراجع عن ذلك.</string>
     <string name="audio_toast_imported">تم استيراد الصوت -- جار إعادة التشغيل</string>
-    <string name="audio_toast_import_failed">فشل الاستيراد -- اختر الملفين .ONNX و .ONNX.JSON</string>
+    <string name="audio_toast_import_failed">فشل الاستيراد -- اختر الملفين .ONNX و .ONNX.JSON، أو ملف .ZIP واحدًا للصوت</string>
     <string name="audio_toast_restored">تمت استعادة النسخة الاحتياطية للصوت -- جار إعادة التشغيل</string>
     <string name="audio_toast_restore_failed">فشلت الاستعادة -- فحص السلامة</string>
     <string name="speech_language_device">لغة النطق: لغة هذا الهاتف</string>

@@ -476,8 +476,10 @@ round).
 
 - [ ] Copy `my_voice_backup.zip` to the phone (cable or USB drive). On WSL, open `\\wsl.localhost\<distribution>\home\<you>\ack-voice-check` in Windows File Explorer's address bar (this needs no set-up;
   `explorer.exe ~/ack-voice-check` does the same when Ubuntu can start Windows programs, which the section D check tells you).
-- [ ] ACK → Audio Architect → Custom Voice → **IMPORT VOICE BACKUP** → pick the zip. → ACK accepts it and restarts by itself.
-  If it refuses, note the message on screen and, if you can, the lines `adb logcat -s ACK_VOICE_BACKUP ACK_CUSTOM_VOICE` print.
+- [ ] ACK → Audio Architect → Custom Voice → **IMPORT CUSTOM VOICE** (or RE-IMPORT) → pick **the zip, alone**. → ACK accepts it and restarts by itself. This needs a build of ACK that has the zip import (the branch this
+  checklist is on): before that change the picker wanted the two trainer files, and **IMPORT VOICE BACKUP** (the restore button next to EXPORT) appears only once a voice is already installed. On a phone that has a voice,
+  either button takes the zip; the picker still takes the two files (`my_voice.onnx` and `my_voice.onnx.json`, together) as before.
+  If it refuses, note the message on screen (it now names both ways) and, if you can, the lines `adb logcat -s ACK_VOICE_BACKUP ACK_CUSTOM_VOICE` print.
 - [ ] A new chip **MY VOICE** appears in the voice profile row. Choose it and say a sentence. → It speaks in the trained voice, and does not
   crash on the first word (the crash the patch step prevents). Short training means it will sound rough; what matters here is that it speaks.
 - [ ] Run the listening test on the PC too, if you have `sherpa-onnx` there (the training guide, section 6). → It sounds like what the phone says.

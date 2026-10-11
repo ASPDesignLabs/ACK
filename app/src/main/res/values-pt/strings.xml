@@ -635,7 +635,7 @@ DRAFT TRANSLATION (Portuguese, Brazilian wording; European Portuguese needs its 
     <string name="audio_delete_profile_title">EXCLUIR PERFIL?</string>
     <string name="audio_delete_profile_body">EXCLUIR \"%1$s\" PARA SEMPRE? ISSO NÃO PODE SER DESFEITO.</string>
     <string name="audio_toast_imported">VOZ IMPORTADA -- REINICIANDO</string>
-    <string name="audio_toast_import_failed">FALHA NA IMPORTAÇÃO -- ESCOLHA OS DOIS ARQUIVOS .ONNX E .ONNX.JSON</string>
+    <string name="audio_toast_import_failed">FALHA NA IMPORTAÇÃO -- ESCOLHA OS DOIS ARQUIVOS .ONNX E .ONNX.JSON, OU UM ÚNICO .ZIP DA VOZ</string>
     <string name="audio_toast_restored">CÓPIA DA VOZ RESTAURADA -- REINICIANDO</string>
     <string name="audio_toast_restore_failed">FALHA NA RESTAURAÇÃO -- VERIFICAÇÃO DE INTEGRIDADE</string>
     <string name="speech_language_device">IDIOMA DA VOZ: O DESTE CELULAR</string>
