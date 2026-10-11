@@ -1217,3 +1217,22 @@ def test_the_batch_size_the_workers_and_the_check_interval_asked_for_reach_the_t
     rd.start_round(world.paths, world.scratch, PROJECT, world.training, world.jobs_root, dataset=DATASET, base=world.base, now=NOW, start=start, batch_size=8, workers=2, check_every=5)
     spec = calls[0]
     assert [option(spec, o) for o in ("--data.batch_size", "--data.num_workers", "--trainer.check_val_every_n_epoch")] == ["8", "2", "5"]
+
+
+def test_the_saved_files_are_listed_in_the_same_order_whatever_order_the_disk_gives_them(world, monkeypatch):
+    for version in (2, 0, 1):
+        world.trainer_makes(version, extras=3)
+    real = os.scandir
+
+    class Backwards:
+        def __init__(self, path):
+            self.inner = real(path)
+
+        def __enter__(self):
+            return iter(list(self.inner.__enter__())[::-1])
+
+        def __exit__(self, *exc):
+            return self.inner.__exit__(*exc)
+    monkeypatch.setattr(os, "scandir", Backwards)
+    listed = [(f.version, f.name) for f in rd.scan_checkpoint_files(world.paths)]
+    assert listed == sorted(listed) and len(listed) == 12 and rd.version_dirs(world.paths) == (0, 1, 2)
