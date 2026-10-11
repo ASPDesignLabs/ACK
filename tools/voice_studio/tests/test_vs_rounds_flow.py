@@ -278,8 +278,8 @@ def test_with_no_round_to_continue_from_a_starting_voice_is_needed_and_is_asked_
     project = with_starting_voice(load_project(rig.paths), "voice-mike")
     save_project(rig.paths, project)
     code, io = rig.run(*start_args("--yes"))
-    assert code == 2 and "voice-mike is not ready yet (next:" in io.text and "voices get voice-mike --project anna" in io.text and rig.started == []
-    assert "(next: %s)" % CAT.t("startvoice.step.acknowledge") in io.text
+    assert code == 2 and "voice-mike is not ready yet. What is left:" in io.text and "voices get voice-mike --project anna" in io.text and rig.started == []
+    assert "What is left: %s" % CAT.t("startvoice.step.acknowledge") in io.text
 
 
 def test_once_a_round_has_a_saved_point_the_starting_voice_is_no_longer_needed(tmp_path):

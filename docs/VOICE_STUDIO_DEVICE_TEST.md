@@ -513,6 +513,11 @@ round keeps about 4.8 GB of saved files, so have about 25 GB free for the whole 
   ls ~/ack-voice-studio/projects/voice-check/rounds
   ```
   → `There are no rounds yet. The first round starts from the starting voice.` and `No round is chosen yet, so the next round starts from the starting voice.` The `ls` shows no `rounds.json`: looking wrote nothing.
+- [ ] The first round starts from the project's starting voice, which must be Mike here (section I1 ends by choosing him back). If `start` says another voice is not ready, put Mike back and ask again; this edits the project file, so it asks,
+  and keeps the earlier one as `project.json.previous`:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voices choose mike --project voice-check
+  ```
 - [ ] Ask for the first round, and say no:
   ```bash
   PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds start --set dataset-1 --minutes 3 --project voice-check

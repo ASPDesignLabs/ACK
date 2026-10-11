@@ -582,7 +582,7 @@
     "rounds.start.scratch_not_ready": "The place chosen for this project's working files is not ready, and nothing was started. If it is a drive, check that it is plugged in.",
     "rounds.start.set_unknown": "There is no training set called {name} in this project. The ones there are: {names}.",
     "rounds.start.started": "Round {number} started (job {job}).",
-    "rounds.start.voice_not_ready": "The starting voice {voice} is not ready yet (next: {step}). Nothing was started. Get it with: {command}",
+    "rounds.start.voice_not_ready": "The starting voice {voice} is not ready yet. What is left: {step} Nothing was started. Get it with: {command}",
     "rounds.start.watch": "To see how it is going: {list}. To stop it: {stop}",
     "rounds.start.which_set": "Which training set? Say it with --set. The ones in this project are: {names}.",
     "rounds.state.failed": "Ended with an error",
