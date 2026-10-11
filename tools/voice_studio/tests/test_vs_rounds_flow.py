@@ -232,7 +232,7 @@ def test_the_length_of_the_round_is_the_length_asked_for(rig):
     assert rd.load(rig.paths).rounds[0].minutes == 30
 
 
-@pytest.mark.parametrize("minutes", ["abc", "0", "25.5", "-5", "", "1441", "２５", "1_0"])
+@pytest.mark.parametrize("minutes", ["abc", "0", "25.5", "-5", "", "1441", "２５", "1_0", "9" * 5000])             # the last is longer than Python will turn into a number
 def test_a_length_that_is_not_a_whole_number_of_minutes_from_one_to_a_day_starts_nothing(rig, minutes):
     rig.world.dataset()
     code, io = rig.run(*start_args("--minutes", minutes, "--yes"))
