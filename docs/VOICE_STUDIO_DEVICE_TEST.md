@@ -758,8 +758,12 @@ round that is chosen (`rounds list` says which), and it does not run while a rou
 
 ## K. On the phone
 
-- [ ] Copy `my_voice_backup.zip` to the phone (cable or USB drive). On WSL, open `\\wsl.localhost\<distribution>\home\<you>\ack-voice-check` in Windows File Explorer's address bar (this needs no set-up;
-  `explorer.exe ~/ack-voice-check` does the same when Ubuntu can start Windows programs, which the section D check tells you).
+- [ ] Copy the zip file to the phone (cable or USB drive). It is the `.zip` in the folder section I4 made, under the project's `exports` folder (or, if you made it by hand in section J, `my_voice_backup.zip`). On WSL, this opens that folder in Windows File Explorer
+  (it needs Ubuntu to be able to start Windows programs, which the section D check tells you; Explorer may report an error code even when the window opens, which is normal):
+  ```bash
+  explorer.exe "$(wslpath -w ~/ack-voice-studio/projects/voice-check/exports)"
+  ```
+  Without that, type `\\wsl.localhost\<distribution>\home\<you>\ack-voice-studio\projects\voice-check\exports` into File Explorer's address bar (this needs no set-up).
 - [ ] ACK → Audio Architect → Custom Voice → **IMPORT CUSTOM VOICE** (or RE-IMPORT) → pick **the zip, alone**. → ACK accepts it and restarts by itself. This needs a build of ACK that has the zip import (the branch this
   checklist is on): before that change the picker wanted the two trainer files, and **IMPORT VOICE BACKUP** (the restore button next to EXPORT) appears only once a voice is already installed. On a phone that has a voice,
   either button takes the zip; the picker still takes the two files (`my_voice.onnx` and `my_voice.onnx.json`, together) as before.
