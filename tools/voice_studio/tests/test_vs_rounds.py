@@ -1251,3 +1251,13 @@ def test_a_folder_that_was_already_there_when_the_running_round_began_is_not_tha
     world.trainer_makes(8)
     kept = rd.retention(world.paths, rd.load(world.paths))
     assert {f.version for n, f in kept.busy} == {8} and {f.version for f in kept.unclaimed} == {7}
+
+
+def test_once_the_running_round_has_its_folder_a_newer_stray_one_is_not_also_its_own(world):
+    plan = world.begin()
+    rd.attach_job(world.paths, 1, world.job_for(plan, "running").id)
+    world.trainer_makes(8)
+    world.reconcile(now=NOW + timedelta(seconds=1))                    # the round is seen to own version 8
+    world.trainer_makes(9)
+    kept = rd.retention(world.paths, rd.load(world.paths))
+    assert {f.version for n, f in kept.busy} == {8} and {f.version for f in kept.unclaimed} == {9}
