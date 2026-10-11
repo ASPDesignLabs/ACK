@@ -625,3 +625,33 @@ def test_a_whole_pin_through_the_real_hub_code_against_the_stand_in(host):
 def test_a_dataset_is_asked_for_under_datasets_and_the_listing_comes_from_there(host):
     assert mp.Hub().commit("datasets/Org/data", "main") == COMMIT
     assert ("GET", "/api/datasets/Org/data/revision/main") in host.requests
+
+
+# ---------------------------------------------------------------- pages to read before a voice is downloaded
+
+PAGES = {"lessac": "https://example.org/licence.html", "mike": "https://github.com/example/recordings"}
+
+
+def test_a_spec_with_pages_puts_them_on_the_entry_it_builds_and_the_app_loads_them():
+    spec = {**VOICE_SPEC, "pages": PAGES}
+    item = mp.build_item(spec, mp.Entry("en/en_US/mike/medium/epoch=5460-val_mos=4.2686.ckpt", 845_891_981, None), COMMIT, BIG2, 845_891_981)
+    assert item["pages"] == PAGES and item["pages"] is not spec["pages"]
+    loaded = reg.parse_registry(json.dumps({"schema": 1, "items": [item]})).items[0]
+    assert loaded.pinned and dict(loaded.pages) == PAGES
+
+
+def test_a_spec_without_pages_builds_an_entry_without_the_field():
+    item = mp.build_item(VOICE_SPEC, mp.Entry("en/en_US/mike/medium/epoch=5460-val_mos=4.2686.ckpt", 845_891_981, None), COMMIT, BIG2, 845_891_981)
+    assert "pages" not in item
+
+
+def test_pinning_again_does_not_drop_the_pages_of_a_voice_because_merge_replaces_a_whole_entry():
+    """merge_registry puts the new entry where the old one stood, so anything the maker does not write is lost: the shipped wanted list must carry the pages."""
+    shipped = json.loads((PKG / "data" / "sources.json").read_text(encoding="utf-8"))
+    wanted = {s["id"]: s for s in mp.load_wanted(mp.WANTED.read_text(encoding="utf-8"))}
+    for entry in shipped["items"]:
+        if entry["kind"] == "voice":
+            assert wanted[entry["id"]].get("pages") == entry["pages"], entry["id"]
+            rebuilt = mp.build_item(wanted[entry["id"]], mp.Entry("en/en_US/x/medium/" + entry["filename"], entry["size_bytes"], None), entry["revision"], entry["sha256"], entry["size_bytes"])
+            assert rebuilt == {**entry, "url": rebuilt["url"]}, entry["id"]
+            assert rebuilt["pages"] == entry["pages"]

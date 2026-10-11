@@ -162,6 +162,8 @@ def build_item(spec: dict, entry: Entry, commit: str, sha256: str, size: int) ->
     item = {"id": item_id(spec, entry), "kind": spec["kind"], "why_key": spec["why_key"], "license_id": spec["license_id"], "approx_size_bytes": approx}
     if spec.get("folder"):
         item["folder"] = spec["folder"]
+    if spec.get("pages"):
+        item["pages"] = dict(spec["pages"])          # pages to read before the download: a re-pin must not drop them, because merge_registry replaces a whole entry
     item.update({"filename": entry.name, "url": address(spec["repo"], commit, entry.path), "revision": commit, "size_bytes": size, "sha256": sha256})
     return item
 

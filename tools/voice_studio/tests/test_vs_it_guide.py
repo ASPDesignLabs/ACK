@@ -165,6 +165,15 @@ def test_the_page_says_it_is_not_legal_advice_and_that_the_project_hosts_none_of
     assert "hosts, mirrors and sublicenses none of it" in text and "not established" in text and "Nothing in this project says or implies that use is permitted" in text
 
 
+def test_the_licence_pages_the_tool_will_show_are_listed_exactly_and_the_page_says_they_are_shown_and_never_opened():
+    pages = {address for item in reg.load_registry().items for _, address in item.pages}
+    assert len(pages) == 3
+    listed = set(re.findall(r"`(https://[^`]+)`", section(10)))
+    assert pages <= listed, sorted(pages - listed)
+    assert "never opens" in section(5) and "never opens" in section(10)
+    assert not any(address in section(5) for address in pages), "the network table must not suggest these hosts are contacted"
+
+
 def test_the_page_does_not_claim_the_licence_screen_exists_before_it_does():
     text = section(10)
     assert "designed to show" in text and "not built yet" in text and "the tool says so" not in text

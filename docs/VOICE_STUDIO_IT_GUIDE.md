@@ -79,6 +79,9 @@ address, size and checksum, and asks **before** it starts; the person's yes is s
 what was observed from one place on 2026-10-11. If a large download is blocked, the tool's error names what failed; you can see where an address
 leads with `curl -sI "<address>"` and reading the `location:` line. Allowing `huggingface.co` and `*.hf.co` is the simple rule.
 
+**Addresses that are shown but never contacted.** Before a starting voice is fetched, the tool will show the web addresses of the pages that state its licence (section 10), so the person can read them. It **never opens
+those pages**; nothing in the tool can: its only network code downloads the pinned files in section 8. They need no firewall rule for the tool to work.
+
 **What it does not contact.** No telemetry, no analytics, no update check, no cloud service, no account. Programs the tool starts for training and for
 listening to recordings are started with `HF_HUB_OFFLINE=1`, `HF_HUB_DISABLE_TELEMETRY=1`, `DO_NOT_TRACK=1` and `TRANSFORMERS_OFFLINE=1`, and the one thing in the trainer
 that would have fetched code from the internet at run time (an optional quality scorer) is switched off. *Tested:* a run with the scorer off logged **zero** lines about it.
@@ -146,7 +149,11 @@ they do for any other Python program. A TLS-inspecting proxy needs its certifica
 * **The starting voices** (Mike and Amy) are checkpoints that were themselves fine-tuned from a third voice (lessac), trained on the **Blizzard 2013** data. Mike's dataset is
   stated to be CC0. **Amy's dataset licence is not established** by what was read. The Blizzard 2013 data is distributed under a *research-only* agreement that excludes commercial use,
   does not allow sub-licensing and names the person or organisation it is granted to. **Whether any of that reaches a voice trained from it is not settled here.** The tool is designed to show the person this chain and ask for
-  their acknowledgment before each voice is fetched (that screen is not built yet). The project hosts, mirrors and sublicenses none of it. **Nothing in this project says or implies that use is permitted.**
+  their acknowledgment before each voice is fetched (that screen is not built yet).
+  The rules behind that screen are built and tested: a voice is not downloaded until the person's project has recorded the acknowledgment (with its date and the exact file's revision) **and** this
+  computer has a saved yes to that one download; a changed file asks again. The pages the screen will point to are `https://github.com/OHF-Voice/voice-datasets` (Mike's recordings),
+  `https://github.com/MycroftAI/mimic3-voices` (Amy's) and `https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html` (lessac and the Blizzard 2013 data). They were read on 2026-10-11;
+  the tool only shows these addresses and never opens them. The project hosts, mirrors and sublicenses none of it. **Nothing in this project says or implies that use is permitted.**
 * The training programs include NVIDIA's CUDA libraries (15 packages) under NVIDIA's licences.
 
 ## 11. What was tested and what was not

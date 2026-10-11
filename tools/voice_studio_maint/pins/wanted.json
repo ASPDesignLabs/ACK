@@ -25,7 +25,8 @@
       "repo": "datasets/rhasspy/piper-checkpoints",
       "revision": "main",
       "directory": "en/en_US/mike/medium",
-      "files": ["*.ckpt"]
+      "files": ["*.ckpt"],
+      "pages": {"lessac": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html", "mike": "https://github.com/OHF-Voice/voice-datasets"}
     },
     {
       "id": "voice-amy",
@@ -36,7 +37,8 @@
       "repo": "datasets/rhasspy/piper-checkpoints",
       "revision": "main",
       "directory": "en/en_US/amy/medium",
-      "files": ["*.ckpt"]
+      "files": ["*.ckpt"],
+      "pages": {"amy": "https://github.com/MycroftAI/mimic3-voices", "lessac": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html"}
     }
   ]
 }

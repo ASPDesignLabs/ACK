@@ -174,3 +174,53 @@ def test_the_folder_is_not_part_of_what_makes_an_item_pinned():
 def test_the_old_single_placeholder_for_the_speech_model_is_gone():
     with pytest.raises(KeyError):
         reg.load_registry().get("speech-model-small-en")
+
+
+# ---------------------------------------------------------------- pages to read before a download (shown, never opened)
+
+PAGE = "https://example.org/licence.html"
+
+
+def one(**over):
+    return parse_registry(doc({**GOOD, **over})).items[0]
+
+
+def test_an_entry_may_carry_pages_to_read_and_they_are_kept_in_name_order_and_found_by_name():
+    item = one(pages={"zeta": "https://example.org/z", "alpha": PAGE})
+    assert item.pages == (("alpha", PAGE), ("zeta", "https://example.org/z")) and item.page("alpha") == PAGE and item.page("nope") is None
+    assert one().pages == () and one(pages={}).pages == ()
+
+
+def test_pages_are_no_part_of_a_pin_so_they_neither_make_an_entry_fetchable_nor_stop_it_being_so():
+    unpinned = {"id": "voice-y", "kind": "voice", "why_key": "fetch.why.x", "license_id": "voice-y-card", "approx_size_bytes": 5, "pages": {"a": PAGE}}
+    item = parse_registry(doc(unpinned)).items[0]
+    assert item.pin_problems() == ["unpinned"] and not item.any_pin_field and not item.pinned
+    assert one(pages={"a": PAGE}).pinned and one(pages={"a": "https://not-an-allowed-host.example/p"}).pinned, "a page is shown, so its host is not limited to the download hosts"
+
+
+@pytest.mark.parametrize("pages", ["https://example.org/p", ["https://example.org/p"], 5, {"A": PAGE}, {"": PAGE}, {"a b": PAGE}, {"a": 5}, {"a": None}, {"a": ""},
+                                   {"a": "http://example.org/p"}, {"a": "ftp://example.org/p"}, {"a": "example.org/p"}, {"a": "https://"},
+                                   {"a": "https://user:secret@example.org/p"}, {"a": "https://user@example.org/p"}, {"a": "https://example.org/a b"},
+                                   {"a": "https://example.org/a\nb"}, {"a": "https://example.org/\u00e9"}, {"a": "https://example.org/" + "x" * 300}])
+def test_a_page_that_is_not_a_plain_https_address_without_credentials_is_refused(pages):
+    with pytest.raises(RegistryError):
+        parse_registry(doc({**GOOD, "pages": pages}))
+
+
+def test_a_page_at_the_longest_length_is_accepted_and_one_more_is_not():
+    longest = "https://example.org/" + "x" * (reg.MAX_PAGE_LENGTH - len("https://example.org/"))
+    assert len(longest) == reg.MAX_PAGE_LENGTH and one(pages={"a": longest}).page("a") == longest
+    assert reg.page_problem(longest + "x") == "not_an_address"
+
+
+def test_the_reasons_a_page_is_refused_are_told_apart():
+    assert reg.page_problem(PAGE) is None and reg.page_problem(5) == "not_text" and reg.page_problem("") == "not_an_address"
+    assert reg.page_problem("http://example.org/p") == "not_https" and reg.page_problem("https://u:p@example.org/p") == "has_credentials"
+    assert reg.page_problem("https:///p") == "not_https"
+
+
+def test_the_shipped_pages_are_https_addresses_on_the_hosts_the_notices_name_and_only_the_voices_have_them():
+    registry = reg.load_registry()
+    hosts = {urlparse(a).hostname for i in registry.items for _, a in i.pages}
+    assert hosts == {"github.com", "www.cstr.ed.ac.uk"}
+    assert [i.id for i in registry.items if i.pages] == ["voice-mike", "voice-amy"]

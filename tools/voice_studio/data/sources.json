@@ -12,7 +12,11 @@
       "url": "https://huggingface.co/datasets/rhasspy/piper-checkpoints/resolve/37d1bea250e21ca0d617818d2bef1db724edb80c/en/en_US/mike/medium/epoch=5460-val_mos=4.2686.ckpt",
       "revision": "37d1bea250e21ca0d617818d2bef1db724edb80c",
       "size_bytes": 845891981,
-      "sha256": "9a8389c2d733f94e2acc3b4e8264b4ba3c063612217780e4be21c0ccaff18b9b"
+      "sha256": "9a8389c2d733f94e2acc3b4e8264b4ba3c063612217780e4be21c0ccaff18b9b",
+      "pages": {
+        "lessac": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html",
+        "mike": "https://github.com/OHF-Voice/voice-datasets"
+      }
     },
     {
       "id": "voice-amy",
@@ -24,7 +28,11 @@
       "url": "https://huggingface.co/datasets/rhasspy/piper-checkpoints/resolve/37d1bea250e21ca0d617818d2bef1db724edb80c/en/en_US/amy/medium/epoch=6679-step=1554200.ckpt",
       "revision": "37d1bea250e21ca0d617818d2bef1db724edb80c",
       "size_bytes": 845898392,
-      "sha256": "6573ebd94b0610555ef34a1684cb89cae86ab9a7372d16f74bab35932879ef5a"
+      "sha256": "6573ebd94b0610555ef34a1684cb89cae86ab9a7372d16f74bab35932879ef5a",
+      "pages": {
+        "amy": "https://github.com/MycroftAI/mimic3-voices",
+        "lessac": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html"
+      }
     },
     {
       "id": "speech-model-small-en-config-json",

@@ -24,10 +24,27 @@ MAX_FILE_BYTES = 8 * 2**30                              # a hostile or mistaken 
 DEFAULT_PATH = Path(__file__).resolve().parent.parent / "data" / "sources.json"
 
 PIN_FIELDS = ("url", "filename", "revision", "size_bytes", "sha256")
+MAX_PAGE_LENGTH = 300
+PAGE_ADDRESS = re.compile(r"^[\x21-\x7e]+$")             # printable ASCII with no white space: an address that can be read aloud and copied
 
 
 class RegistryError(Exception):
     pass
+
+
+def page_problem(address: object) -> Optional[str]:
+    """Why an address cannot be shown as a page to read, or None. A page is shown to the person, never opened or fetched by this tool, so its host
+    is not limited to ALLOWED_HOSTS; it still has to be an https address with no credentials in it."""
+    if not isinstance(address, str):
+        return "not_text"
+    if not address or len(address) > MAX_PAGE_LENGTH or not PAGE_ADDRESS.match(address):
+        return "not_an_address"
+    parsed = urlparse(address)
+    if parsed.scheme != "https" or not parsed.hostname:
+        return "not_https"
+    if parsed.username or parsed.password:
+        return "has_credentials"
+    return None
 
 
 @dataclass(frozen=True)
@@ -43,6 +60,7 @@ class Item:
     size_bytes: Optional[int] = None
     sha256: Optional[str] = None
     folder: Optional[str] = None                  # items that share a folder are one thing in the download area (a model made of several files)
+    pages: Tuple[Tuple[str, str], ...] = ()       # (name, address) of pages to read before the download, in name order; shown, never opened, never part of a pin
 
     @property
     def any_pin_field(self) -> bool:
@@ -80,6 +98,9 @@ class Item:
         """The size the disk estimate uses: the exact one once pinned, otherwise what the host shows."""
         return self.size_bytes if self.size_bytes is not None else self.approx_size_bytes
 
+    def page(self, name: str) -> Optional[str]:
+        return next((address for key, address in self.pages if key == name), None)
+
 
 @dataclass(frozen=True)
 class Registry:
@@ -99,6 +120,21 @@ def _optional(raw: dict, key: str, kind: type) -> Optional[object]:
     if not isinstance(value, kind) or isinstance(value, bool):
         raise RegistryError("%s: %r is not a %s" % (raw.get("id", "?"), key, kind.__name__))
     return value
+
+
+def _pages(raw: dict) -> Tuple[Tuple[str, str], ...]:
+    value = raw.get("pages")
+    if value is None:
+        return ()
+    if not isinstance(value, dict):
+        raise RegistryError("%s: pages is not an object" % raw.get("id", "?"))
+    for name, address in value.items():
+        if not isinstance(name, str) or not SLUG.match(name):
+            raise RegistryError("%s: bad page name %r" % (raw.get("id", "?"), name))
+        problem = page_problem(address)
+        if problem:
+            raise RegistryError("%s: page %s is not shown: %s" % (raw.get("id", "?"), name, problem))
+    return tuple(sorted(value.items()))
 
 
 def parse_registry(text: str) -> Registry:
@@ -128,7 +164,7 @@ def parse_registry(text: str) -> Registry:
             raise RegistryError("%s: bad license_id" % item_id)
         item = Item(item_id, kind, raw["why_key"], raw["license_id"], _optional(raw, "approx_size_bytes", int),
                     _optional(raw, "url", str), _optional(raw, "filename", str), _optional(raw, "revision", str),
-                    _optional(raw, "size_bytes", int), _optional(raw, "sha256", str), _optional(raw, "folder", str))
+                    _optional(raw, "size_bytes", int), _optional(raw, "sha256", str), _optional(raw, "folder", str), _pages(raw))
         if item.folder is not None and not SLUG.match(item.folder):
             raise RegistryError("%s: bad folder" % item_id)
         if item.any_pin_field and item.pin_problems():

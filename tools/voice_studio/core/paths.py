@@ -38,6 +38,11 @@ class DataHome:
         return self.tool + "/downloads"
 
     @property
+    def voices(self) -> str:
+        """Starting voices the person chose, one folder each. A kept copy: it cannot be downloaded again if the host removes it (plan D27)."""
+        return self.downloads + "/voices"
+
+    @property
     def environments(self) -> str:
         return self.tool + "/environments"
 
