@@ -146,8 +146,10 @@ def test_the_files_and_documents_it_points_to_exist():
 
 
 def test_the_training_command_in_the_checklist_is_the_one_the_tool_builds(tmp_path):
-    block = " ".join(l.rstrip("\\").strip() for l in next(b for b in _fences() if "piper.train fit" in b).splitlines())
-    words = shlex.split(block[block.index('"$TRAIN/venv/bin/python" "$TRAIN/ack_run.py" piper.train fit'):])
+    lines = next(b for b in _fences() if "piper.train fit" in b).splitlines()
+    first = next(i for i, l in enumerate(lines) if '"$TRAIN/venv/bin/python" "$TRAIN/ack_run.py" piper.train fit' in l)
+    last = next(i for i in range(first, len(lines)) if not lines[i].rstrip().endswith("\\"))          # the command ends at the first line with no continuation
+    words = shlex.split(" ".join(l.rstrip("\\").strip() for l in lines[first:last + 1]).split(" 2>&1")[0])
     shown = {words[i][2:]: words[i + 1] for i in range(4, len(words) - 1, 2) if words[i].startswith("--")}
     dataset = tmp_path / "dataset-1"
     (dataset / "wav").mkdir(parents=True)

@@ -16,7 +16,8 @@
         "import pathlib, torch",
         "torch.serialization.add_safe_globals([pathlib.PosixPath]) if hasattr(torch.serialization, 'add_safe_globals') else None",
         "import functools, torch.onnx",
-        "torch.onnx.export = functools.partial(torch.onnx.export, dynamo=False)"
+        "torch.onnx.export = functools.partial(torch.onnx.export, dynamo=False)",
+        "import lightning.pytorch.callbacks as lc; keep = lc.ModelCheckpoint._save_topk_checkpoint; lc.ModelCheckpoint._save_topk_checkpoint = lambda self, trainer, found: None if (self.monitor == 'val_mos' and 'val_mos' not in found) else keep(self, trainer, found)"
       ],
       "patches": [],
       "probes": [

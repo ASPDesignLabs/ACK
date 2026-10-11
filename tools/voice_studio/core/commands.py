@@ -24,6 +24,10 @@ from .jobs import JobSpec
 ERROR_CODES = ("bad_path", "exists", "dataset_incomplete", "cache_exists", "bad_checkpoint", "bad_value")        # each has words in the text catalog
 CODE = "en-US"
 VOICE_NAME = "my_voice"
+# The trainer's optional quality score ("val_mos") loads a scorer's code and weights from GitHub at the first validation and needs torchaudio, which the locked
+# programs do not carry. A voice trained here must not fetch and run anything from the internet, so the score is turned off; the best checkpoints are chosen by
+# listening, and by the mel loss the trainer also keeps. (Plan finding F12.)
+MOS_METRIC = "none"
 ESPEAK_VOICE = "en-us"
 SAMPLE_RATE = 22050
 BATCH_SIZE = 12                 # PROVISIONAL: the guide's, for an 8 GB card (VS-0.2 gives a table by memory)
@@ -144,7 +148,7 @@ def train_command(training: EnvPaths, dataset: str, run_dir: str, cache_dir: str
     hours, rest = divmod(minutes, 60)
     argv = (training.python, training.launcher, "piper.train", "fit",
             "--data.voice_name", VOICE_NAME, "--data.csv_path", dataset + "/metadata.csv", "--data.audio_dir", dataset + "/wav",
-            "--model.sample_rate", str(SAMPLE_RATE), "--data.espeak_voice", ESPEAK_VOICE, "--data.cache_dir", cache_dir, "--data.config_path", config_path,
+            "--model.sample_rate", str(SAMPLE_RATE), "--model.mos_metric", MOS_METRIC, "--data.espeak_voice", ESPEAK_VOICE, "--data.cache_dir", cache_dir, "--data.config_path", config_path,
             "--data.batch_size", str(batch_size), "--data.num_workers", str(workers), "--trainer.check_val_every_n_epoch", str(check_every),
             "--trainer.log_every_n_steps", "1", "--trainer.max_time", "00:%02d:%02d:00" % (hours, rest), "--ckpt_path", checkpoint)
     return Command("train", argv, run_dir, gpu=True)

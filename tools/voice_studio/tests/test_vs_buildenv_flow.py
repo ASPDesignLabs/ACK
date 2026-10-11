@@ -6,6 +6,7 @@ The computer and the network are the builder tests' stand-ins (tests/vs_env_help
 import dataclasses
 import itertools
 import re
+import shutil
 from pathlib import Path
 
 import pytest
@@ -463,3 +464,81 @@ def test_when_only_a_moving_bar_has_been_seen_the_sign_just_says_it_is_still_wor
                                            ("meta 10:20 is a name", False)])
 def test_which_lines_are_the_installers_moving_bar(line, is_bar):
     assert bool(bf.PROGRESS_BAR.search(line)) is is_bar
+
+
+# ---------------------------------------------------------------- finishing only the small local steps
+
+def test_when_only_a_small_step_is_left_it_says_so_asks_a_different_question_and_downloads_nothing(rig):
+    go(rig)
+    pip_before, consent_before = len(rig.doors.pip_runs), Path(rig.ctx.home.consent_file).read_bytes()
+    Path(rig.paths.launcher).write_text("# an older helper\n")                  # the helper's workarounds changed since it was written
+    code, io = go(rig)
+    assert code == bf.EXIT_OK and io.prompts == ["Finish it now? Type yes to go on. "]
+    assert "Now: Needs to be finished or repaired." in io.lines
+    assert "Only small steps on this computer are left: Writing the helper that starts it. Nothing will be downloaded." in io.lines
+    assert not any("package site" in l or "free space" in l or "Nvidia" in l for l in io.lines)
+    assert len(rig.doors.pip_runs) == pip_before and Path(rig.ctx.home.consent_file).read_bytes() == consent_before, "no network command, no new agreement"
+    assert Path(rig.paths.launcher).read_text() == eb.launcher_text(rig.spec)
+    assert go(rig)[1].lines.count("Nothing needs doing. It is in %s." % rig.env_dir) == 1
+
+
+def test_several_small_steps_are_listed_in_the_order_they_will_run(rig):
+    go(rig)
+    Path(rig.paths.launcher).write_text("# older\n")
+    next(Path(rig.paths.venv).glob("lib/python3.12/site-packages/demo/pkg/inner/core*.so")).unlink()
+    code, io = go(rig)
+    assert code == bf.EXIT_OK
+    assert "Only small steps on this computer are left: Building the part made for this computer, Writing the helper that starts it. Nothing will be downloaded." in io.lines
+
+
+def test_a_build_that_is_waiting_only_for_its_last_check_says_that(rig):
+    go(rig)
+    record = rig.record()
+    record["state"] = "failed"
+    Path(rig.paths.record).write_text(__import__("json").dumps(record))
+    code, io = go(rig)
+    assert code == bf.EXIT_OK and "Only small steps on this computer are left: Checking it works. Nothing will be downloaded." in io.lines
+
+
+def test_a_missing_download_step_still_asks_the_download_question_with_everything_that_goes_with_it(rig):
+    rig.doors.pip_fail["lock"] = 1
+    go(rig)
+    rig.doors.pip_fail.clear()
+    code, io = go(rig)
+    assert code == bf.EXIT_OK and io.prompts == ["Download and set it up now? Type yes to go on. "]
+    assert any("package site" in l for l in io.lines) and not any("Only small steps" in l for l in io.lines)
+
+
+def test_the_small_steps_question_can_be_declined_and_then_nothing_changes(rig):
+    go(rig)
+    Path(rig.paths.launcher).write_text("# older\n")
+    code, io = go(rig, io=FakeIO(answers=["no"]))
+    assert code == bf.EXIT_NOTHING_DONE and Path(rig.paths.launcher).read_text() == "# older\n" and "Nothing was done." in io.lines
+
+
+def test_the_small_steps_need_no_agreement_so_none_is_made(rig):
+    go(rig)
+    Path(rig.ctx.home.consent_file).unlink()
+    Path(rig.paths.launcher).write_text("# older\n")
+    assert go(rig)[0] == bf.EXIT_OK and consent_of(rig) is None
+
+
+def test_the_steps_are_listed_in_the_order_the_builder_reports_them_not_alphabetically(rig, monkeypatch):
+    go(rig)
+    real = eb.inspect
+    monkeypatch.setattr(bf.envbuild, "inspect", lambda spec, ctx: dataclasses.replace(real(spec, ctx), state="needs_work", stale=("wrapper", "native_build")))
+    code, io = go(rig, io=FakeIO(answers=["no"]))
+    assert "Only small steps on this computer are left: Writing the helper that starts it, Building the part made for this computer. Nothing will be downloaded." in io.lines
+
+
+@pytest.mark.parametrize("what", ["pip_source", "source_unpack"])
+def test_a_missing_installed_source_or_unpacked_source_is_a_download_step_too(tmp_path, what):
+    rig = make_rig(tmp_path)                                                  # the stand-in environment that has a source archive
+    assert go(rig)[0] == bf.EXIT_OK
+    if what == "pip_source":
+        rig.system.dists(rig.paths.venv).pop("demo-dist")
+    else:
+        shutil.rmtree(rig.paths.source)
+    code, io = go(rig)
+    assert code == bf.EXIT_OK and io.prompts == ["Download and set it up now? Type yes to go on. "], what
+    assert not any("Only small steps" in l for l in io.lines)

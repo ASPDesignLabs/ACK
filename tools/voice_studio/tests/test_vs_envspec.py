@@ -318,6 +318,61 @@ def test_every_file_in_the_native_folder_is_listed_by_an_environment_and_nothing
 def test_the_shipped_trainer_workarounds_are_the_guides_and_are_one_line_each():
     training = next(s for s in SHIPPED if s.id == "training")
     joined = "\n".join(training.prelude)
-    assert "PosixPath" in joined and "dynamo=False" in joined
+    assert "PosixPath" in joined and "dynamo=False" in joined and "val_mos" in joined
     assert training.source is None and training.native is not None, "no source archive: the trainer is the published wheel"
     assert training.python_min == (3, 10)
+
+
+# ---------------------------------------------------------------- the launcher's workaround for the trainer's quality-score checkpoint
+
+import sys
+import types
+
+
+def run_val_mos_workaround(monkeypatch):
+    """Run the shipped launcher line against a stand-in for the checkpoint class, and hand back that class and the calls its real method got."""
+    calls = []
+
+    class ModelCheckpoint:
+        def __init__(self, monitor):
+            self.monitor = monitor
+
+        def _save_topk_checkpoint(self, trainer, found):
+            calls.append((self.monitor, trainer, sorted(found)))
+            if self.monitor not in found:
+                raise RuntimeError("could not find the monitored key")
+            return "saved"
+
+    callbacks = types.ModuleType("lightning.pytorch.callbacks")
+    callbacks.ModelCheckpoint = ModelCheckpoint
+    pytorch = types.ModuleType("lightning.pytorch")
+    pytorch.callbacks = callbacks
+    lightning = types.ModuleType("lightning")
+    lightning.pytorch = pytorch
+    for name, module in (("lightning", lightning), ("lightning.pytorch", pytorch), ("lightning.pytorch.callbacks", callbacks)):
+        monkeypatch.setitem(sys.modules, name, module)
+    line = next(l for l in TRAINING_LOCK.prelude if "val_mos" in l)
+    exec(compile(line, "<prelude>", "exec"), {})
+    return ModelCheckpoint, calls
+
+
+def test_a_quality_score_that_was_never_logged_is_skipped_quietly_instead_of_stopping_the_round(monkeypatch):
+    checkpoint, calls = run_val_mos_workaround(monkeypatch)
+    assert checkpoint("val_mos")._save_topk_checkpoint("T", {"val_mel": 0.6, "epoch": 1}) is None and calls == []
+
+
+def test_a_quality_score_that_was_logged_is_saved_as_before(monkeypatch):
+    checkpoint, calls = run_val_mos_workaround(monkeypatch)
+    assert checkpoint("val_mos")._save_topk_checkpoint("T", {"val_mos": 3.9, "val_mel": 0.6}) == "saved" and calls == [("val_mos", "T", ["val_mel", "val_mos"])]
+
+
+def test_any_other_missing_key_still_stops_the_round_because_that_is_a_real_mistake(monkeypatch):
+    checkpoint, calls = run_val_mos_workaround(monkeypatch)
+    with pytest.raises(RuntimeError, match="monitored key"):
+        checkpoint("val_mel")._save_topk_checkpoint("T", {"val_mos": 3.9})
+    assert checkpoint("val_mel")._save_topk_checkpoint("T", {"val_mel": 0.6}) == "saved" and len(calls) == 2
+
+
+def test_the_workaround_names_exactly_the_one_key_and_leaves_the_rest_of_the_launcher_line_alone(monkeypatch):
+    line = next(l for l in TRAINING_LOCK.prelude if "val_mos" in l)
+    assert line.count("val_mos") == 2 and "ModelCheckpoint._save_topk_checkpoint" in line and len(line) <= es.MAX_LINE

@@ -131,6 +131,17 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   installer's moving progress bar; it now shows the last line in words. **Still unmeasured:** the installed size (section I0 asks for `du`), a training round with this environment, Ubuntu 24.04, and the
   workaround prelude (`add_safe_globals`, `dynamo=False`), which the export in section J will show to be needed or not.
 
+- **F12 (2026-10-11), the first training round with the tool-built environment: it trained, then stopped at its first check, because of the quality score.** From Mike's checkpoint (epoch 5465, 23 utterances,
+  70.4 M parameters) it restored all states (the launcher's `torch.load` line was in place; whether it is *needed* is still unproven), trained epochs 5465 to 5469 at about 1.3 to 1.9 steps a second (one batch an
+  epoch with this little data) and, at the first validation (31 seconds after starting), stopped with `MisconfigurationException: ModelCheckpoint(monitor='val_mos') could not find the monitored key`. The trainer
+  tried to load its optional quality scorer (code and weights fetched from GitHub through `torch.hub`, which then needs `torchaudio`; the locked programs have neither the library nor, on a fresh computer, the download)
+  and logged `val_mos logging disabled`, but both the published 1.8.0 and the developer's commit still register a second `ModelCheckpoint` on `val_mos` that raises when it was never logged: the guide's "older
+  checkouts" problem, and the reason the guide told people to delete that callback. What the failed round did leave proves the folder layout the tool assumes: `run/lightning_logs/version_0/checkpoints/` holds
+  `last.ckpt` (807 MB) and `epoch=5469-val_mel=0.6043.ckpt` (807 MB), both written before the error. **Peak graphics memory at batch 12 was 7762 MiB of 8188** (about 2.1 GB of that was other programs: that is
+  what was in use afterwards), so batch 12 is within about 5 percent of the RTX 4060's limit even with short clips; batch 8 is the next thing to try. The **fix** (D33): the train command always passes
+  `--model.mos_metric none`, and the launcher gets one more line that makes `ModelCheckpoint` skip a `val_mos` that was never logged, so nothing is fetched or run from the internet at training time. That also
+  answers VS-0.2's "run the trainer with the network off" for the scorer.
+
 ## 3. Rules that apply to every task below
 
 - Backups are encouraged and every edit to a person's files is confirmed first (the developer's standing preference). Nothing is moved or
@@ -191,7 +202,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 - **VS-0.2 Pinned training environment on the GPU (L, dev).** Build a venv from a proposed lock (exact torch, setuptools, onnx and friends, and the published
   `piper-tts` wheel; F10) on both 22.04 and 24.04. Train a few minutes from each starting voice (Mike first, then Amy; D25) on a small dataset, export,
   patch, synthesize with sherpa-onnx on the PC, import the zip into ACK on the phone. Record exact versions, wheel and disk sizes, the disk cost per hour of recording, per checkpoint and per round (for P11), GPU
-  memory used at each batch size, the minimum driver, build time, and which upstream problems needed a wrapper versus a source patch. **Run the trainer with the network off** (for example in a loopback-only namespace) after setup: the trainer fetches its `val_mos` quality scorer from GitHub on the
+  memory used at each batch size, the minimum driver, build time, and which upstream problems needed a wrapper versus a source patch. **Run the trainer with the network off** (for example in a loopback-only namespace) after setup (the scorer part is settled by D33; the rest of a round is still to be checked): the trainer fetches its `val_mos` quality scorer from GitHub on the
   first run (`DATA_SOVEREIGNTY.md` section 2), which would break "the server never goes online". If it needs that fetch, the scorer goes into the registry and onto the
   setup consent list, fetched at setup and not at the first training. Also time the training cache and a checkpoint write on the Linux disk, on a
   Windows drive seen from WSL, and on a USB drive, to set D24's slow-drive warning.
@@ -521,6 +532,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 | D30 | Starting voices in the setup run | The setup run **lists** both voices (so the disk estimate and the agreement list are complete) but **fetches none**. Each is fetched when it is chosen, after the person's own acknowledgment (D27, VS-4.1). |
 | D31 | The package is copied in | The chosen ACK package is copied into the project's `incoming` folder, checked byte for byte, and everything after is read from the copy. The original is never touched, and a copy this step made is removed only if the package then fails a check. |
 | D32 | The trainer's install | **The published `piper-tts` wheel, hash-checked in the training lock, plus one small shipped source file built by the tool** (F10). Not a source archive: the trainer's own build downloads espeak-ng from GitHub (outside the one agreed place, unchecked, slow from the developer's computer). Decided on evidence (files compared, the compile and its answers checked); reopen if the wheel's training differs from the commit's in the first device run. |
+| D33 | The trainer's quality score | **Off.** The trainer's optional `val_mos` score fetches and runs code and weights from GitHub at the first check and needs a library the lock does not carry (F12). Every round the tool starts passes `--model.mos_metric none`, and the launcher skips that one checkpoint rule when its score was never logged. Checkpoints are kept by `val_mel` and chosen by listening. Reopen if you want the score back: it would need a pinned registry entry for the scorer's repository and weights, one more line on the agreement, and `torchaudio` in the lock. |
 
 ### Proposed defaults (not asked: veto any of these)
 

@@ -320,16 +320,21 @@ Run it in a terminal you keep open, not through a window that closes.
 that use it. The numbers you write down here replace the guesses in the code (batch size 12, 4 workers, check every 10 epochs, a 25-minute
 round).
 
-- [ ] In a **second terminal**, leave this running: `nvidia-smi --query-gpu=memory.used,memory.total --format=csv -l 5`.
-- [ ] Start a round that stops itself after five minutes, with the programs the tool built in I0 (`ack_run.py` applies the documented workarounds first). It starts from your Mike checkpoint (use the file you have in `~/piper/checkpoints`) and runs from a **new, empty folder**, because the tool will start it that way:
+- [ ] Start a round that stops itself after five minutes, with the programs the tool built in I0 (`ack_run.py` applies the documented workarounds first). It starts from your Mike
+  checkpoint (use the file you have in `~/piper/checkpoints`) and runs from a **new, empty folder**, because the tool will start it that way. A background logger writes the card's memory
+  to a file every five seconds, so no second terminal is needed, and the whole output is also saved in `round1.log`. Use the training set you built last (`dataset-2` if you built twice):
   ```bash
   mkdir -p ~/piper/voice-check/run && cd ~/piper/voice-check/run
   TRAIN=$(ls -d ~/ack-voice-studio/tool/environments/training-* | head -1)
+  nvidia-smi --query-gpu=timestamp,memory.used,memory.total,utilization.gpu --format=csv,noheader -l 5 > ~/piper/voice-check/gpu.csv &
+  GPU_LOG=$!
+  date +%T
   "$TRAIN/venv/bin/python" "$TRAIN/ack_run.py" piper.train fit \
     --data.voice_name "my_voice" \
     --data.csv_path ~/ack-voice-check/dataset-1/metadata.csv \
     --data.audio_dir ~/ack-voice-check/dataset-1/wav \
     --model.sample_rate 22050 \
+    --model.mos_metric none \
     --data.espeak_voice "en-us" \
     --data.cache_dir ~/piper/voice-check/cache \
     --data.config_path ~/piper/voice-check/config.json \
@@ -338,18 +343,28 @@ round).
     --trainer.check_val_every_n_epoch 10 \
     --trainer.log_every_n_steps 1 \
     --trainer.max_time 00:00:05:00 \
-    --ckpt_path ~/piper/checkpoints/mike.ckpt
-  echo "exit code: $?"
+    --ckpt_path ~/piper/checkpoints/mike.ckpt 2>&1 | tee ~/piper/voice-check/round1.log
+  echo "exit code: ${PIPESTATUS[0]}"
+  date +%T
+  kill $GPU_LOG
+  echo "---- summary"
+  ls -l --block-size=M ~/piper/voice-check/run/lightning_logs/*/checkpoints/
+  awk -F, '{gsub(/ MiB/,"",$2); if ($2+0>m) m=$2+0} END{print "peak graphics memory used (MiB):", m}' ~/piper/voice-check/gpu.csv
+  tail -1 ~/piper/voice-check/gpu.csv
+  tr '\r' '\n' < ~/piper/voice-check/round1.log | grep -i -E "error|traceback|warning|restor|max_time|time limit|Epoch [0-9]+:.*it/s" | tail -25
   ```
-  → It starts, prints progress, and **stops by itself** about five minutes after it started (not counting loading). Then `exit code: 0`.
+  → It starts, prints progress, and **stops by itself** about five minutes after it started (not counting loading). Then `exit code: 0`. **There is no `val_mos` score, on purpose** (see below).
   The findings, each of which decides something:
   - Did `--trainer.max_time` stop it by itself? How long after five minutes?
   - Is there a file `~/piper/voice-check/run/lightning_logs/version_0/checkpoints/last.ckpt`? (`ls -l` it.) It should be **there, in the
-    folder you started from**, and about a gigabyte.
+    folder you started from**, and about 800 MB.
   - Was the exit code 0?
-  - The highest `memory.used` the second terminal showed, the card's name and total memory, and the seconds per epoch the trainer printed.
+  - The peak memory in the summary (it includes whatever else the card was doing; the last line shows what was left over afterwards), the card's total memory, and the epochs per second the trainer printed.
   - If it ran out of memory, try `--data.batch_size 8` and write that down. If steps took tens of seconds, the batch is too big for the card.
   - If it says `No module named piper`, the wheel did not install properly; write that down with the last lines of `build.log`.
+  - **Why the quality score is off.** The trainer's optional `val_mos` score downloads a scorer's code and weights from GitHub and *runs* them, and needs `torchaudio`, which the locked programs do not carry. Without the
+    `--model.mos_metric none` line the first check ended with `MisconfigurationException: ModelCheckpoint(monitor='val_mos')` (the first real run did). The launcher also makes the trainer skip that one score quietly when it is
+    missing. The best checkpoints are still kept by `val_mel`; you choose by listening.
 - [ ] Start the same round again without `--trainer.max_time` and press **Ctrl+C once** after about a minute, then wait. → It shuts down on its
   own and leaves a `last.ckpt` in `lightning_logs/version_1/checkpoints/`. Write down how long the wait was and whether it did.
 - [ ] Resume from the newest checkpoint, as the tool will (the highest `version_N`): the same command with
@@ -360,16 +375,16 @@ round).
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
   ```bash
-  python3 -m piper.train.export_onnx \
+  TRAIN=$(ls -d ~/ack-voice-studio/tool/environments/training-* | head -1)
+  "$TRAIN/venv/bin/python" "$TRAIN/ack_run.py" piper.train.export_onnx \
     --checkpoint ~/piper/voice-check/run/lightning_logs/version_0/checkpoints/last.ckpt \
     --output-file ~/piper/voice-check/my_voice.onnx
   cp ~/piper/voice-check/config.json ~/piper/voice-check/my_voice.onnx.json
-  pip install onnx
-  python3 ~/ack-tools/tools/patch_voice_for_sherpa_onnx.py ~/piper/voice-check/my_voice.onnx ~/piper/voice-check/my_voice.onnx.json
+  "$TRAIN/venv/bin/python" ~/ack-tools/tools/patch_voice_for_sherpa_onnx.py ~/piper/voice-check/my_voice.onnx ~/piper/voice-check/my_voice.onnx.json
   ls -l ~/piper/voice-check/my_voice.onnx*
   ```
-  → `my_voice.onnx`, `my_voice.onnx.json` and `my_voice.onnx.before-patch`. If the export stops with a `GuardOnDataDependentSymNode` error,
-  the training guide says what to add (`dynamo=False`); write down that it happened, since the tool's launcher will carry that fix.
+  → `my_voice.onnx`, `my_voice.onnx.json` and `my_voice.onnx.before-patch`. The launcher (`ack_run.py`) applies the guide's `dynamo=False` fix first; if the export still stops with a
+  `GuardOnDataDependentSymNode` error or asks for `onnxscript`, copy the error: it decides whether the lock needs another package.
 - [ ] Run the patch command again. → "… already has this metadata, so nothing was changed." and `ls -l` shows the same sizes and dates.
 - [ ] Make the file for the phone. It checks what ACK would refuse **before** writing, asks nothing, and never replaces a file:
   <!-- snippet: voice-zip -->

@@ -33,6 +33,7 @@ HEARTBEAT_S = 20.0                       # how often a quiet step says it is sti
 PROGRESS_BAR = re.compile(r"[━╸╺]|\beta \d+:\d\d")              # the installer's moving bar: not worth showing as "what it is doing"
 BUILD_STATES = ("absent", "needs_work", "failed")        # the states a build can start from; "ready" needs nothing and the rest need a person
 USABLE_GPU = (GpuState.OK, GpuState.SMALL, GpuState.UNKNOWN)
+NETWORK_STEPS = ("source_unpack", "pip_lock", "pip_source")                  # the steps that reach out to the network; every other step happens on this computer alone
 NEEDED_FROM_THE_SYSTEM = ("python3-venv", "python3-dev", "build-essential")      # what building programs needs; the window's own libraries are not needed to do it
 
 
@@ -168,31 +169,39 @@ def _run(opts: BuildOptions, system: System, home: DataHome, specs: Sequence[Env
         return EXIT_PROBLEM
 
     folder = envbuild.environment_dir(spec, ctx)
+    downloads = inspection.state == "absent" or any(step in NETWORK_STEPS for step in inspection.stale)
     disk = system.disk_free(home.home)
     mine = Registry(tuple(i for i in registry.items if spec.source is not None and i.id == spec.source.item_id))      # the agreement covers this one set of programs only
     plan = plan_setup(mine, [spec], free={"home": disk[1] if disk else None})
     io.say(cat.t("buildenv.folder", folder=folder))
-    if disk:
-        io.say(cat.t("buildenv.space", size=size_text(spec.approx_size_bytes), free=size_text(disk[1])))
+    if downloads:
+        if disk:
+            io.say(cat.t("buildenv.space", size=size_text(spec.approx_size_bytes), free=size_text(disk[1])))
+        else:
+            io.say(cat.t("buildenv.space_unknown", size=size_text(spec.approx_size_bytes)))
+        io.say(cat.t("buildenv.sites", sites=", ".join(PACKAGE_HOSTS)))
+        if any(normalise_name(n).startswith("nvidia-") for n in _lock_names(spec, ctx)):
+            io.say(cat.t("buildenv.nvidia"))
     else:
-        io.say(cat.t("buildenv.space_unknown", size=size_text(spec.approx_size_bytes)))
-    io.say(cat.t("buildenv.sites", sites=", ".join(PACKAGE_HOSTS)))
-    if any(normalise_name(n).startswith("nvidia-") for n in _lock_names(spec, ctx)):
-        io.say(cat.t("buildenv.nvidia"))
+        left = ", ".join(cat.t("env.step." + step) for step in inspection.stale) or cat.t("env.step.self_test")
+        io.say(cat.t("buildenv.local_only", steps=left))
     if not opts.yes:
-        answer = io.ask(cat.t("buildenv.question") + " ") if io.interactive else None
+        asked = cat.t("buildenv.question" if downloads else "buildenv.question_local")
+        answer = io.ask(asked + " ") if io.interactive else None
         if answer is None:
             io.say(cat.t("buildenv.cannot_ask"))
             return EXIT_NOTHING_DONE
         if not _said_yes(answer):
             io.say(cat.t("buildenv.declined"))
             return EXIT_NOTHING_DONE
-    try:
-        saved = agree(plan, mine, home)
-    except OSError as exc:                                       # nothing is downloaded on a yes that could not be kept
-        io.say(cat.t("buildenv.not_agreed"))
-        io.say("  " + cat.t("buildenv.technical", detail=exc.strerror or type(exc).__name__))
-        return EXIT_PROBLEM
+    saved = ctx.consent
+    if downloads:
+        try:
+            saved = agree(plan, mine, home)
+        except OSError as exc:                                   # nothing is downloaded on a yes that could not be kept
+            io.say(cat.t("buildenv.not_agreed"))
+            io.say("  " + cat.t("buildenv.technical", detail=exc.strerror or type(exc).__name__))
+            return EXIT_PROBLEM
     ctx = dataclasses.replace(ctx, consent=saved, on_event=_Progress(cat, io, clock, opts.verbose))
 
     io.say(cat.t("buildenv.working"))
