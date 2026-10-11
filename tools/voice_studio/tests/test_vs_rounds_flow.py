@@ -518,3 +518,26 @@ def test_the_trainings_programs_are_looked_for_without_building_anything(tmp_pat
     registry = make_registry()
     found, state = front.training_environment(DataHome(str(tmp_path / "home")), registry)()
     assert found is None and state in ("absent", "not_buildable") and not os.path.exists(tmp_path / "home")
+
+
+def test_a_chosen_place_counts_as_ready_only_with_a_marker_that_names_this_very_project(tmp_path):
+    from dataclasses import replace
+    from vs_startvoice_helpers import make_project
+    from voice_studio.core.project import SCRATCH_CUSTOM, Scratch
+    place = tmp_path / "usb"
+    place.mkdir()
+    project = replace(make_project(id="ben", name="Ben"), scratch=Scratch(SCRATCH_CUSTOM, str(place)))
+    paths = ProjectPaths(str(tmp_path / "projects" / "ben"))
+    folder = place / "ack-voice-scratch" / "ben"
+    assert rf.scratch_ready(project, paths) is False                                         # nothing there: an unplugged drive
+    folder.mkdir(parents=True)
+    assert rf.scratch_ready(project, paths) is False                                         # a folder with no marker
+    (folder / MARKER_NAME).write_text(marker_text("anna"))
+    assert rf.scratch_ready(project, paths) is False                                         # the marker names someone else
+    (folder / MARKER_NAME).write_text("not json")
+    assert rf.scratch_ready(project, paths) is False
+    (folder / MARKER_NAME).write_text(marker_text("ben"))
+    assert rf.scratch_ready(project, paths) is True and rf.scratch_root(project, paths).root == str(folder)
+    assert rf.scratch_ready(replace(project, scratch=Scratch(SCRATCH_CUSTOM, None)), paths) is False        # custom, but no place named
+    assert rf.scratch_ready(replace(project, scratch=Scratch("default", None)), paths) is True
+    assert rf.scratch_root(replace(project, scratch=Scratch(SCRATCH_CUSTOM, None)), paths).root == paths.default_scratch
