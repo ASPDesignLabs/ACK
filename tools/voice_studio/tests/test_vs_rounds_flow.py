@@ -267,6 +267,7 @@ def test_programs_that_are_not_ready_are_said_with_the_command_that_sets_them_up
     rig.world.dataset()
     code, io = rig.run(*start_args("--yes"))
     assert code == 2 and "voice_studio.buildenv training" in io.text and "not ready on this computer" in io.text and rig.started == [] and rig.record_bytes() is None
+    assert CAT.t("env.state.needs_work") in io.text and "needs_work" not in io.text           # the state in words, not as the program names it
 
 
 def test_with_no_round_to_continue_from_a_starting_voice_is_needed_and_is_asked_for_in_words(tmp_path):
