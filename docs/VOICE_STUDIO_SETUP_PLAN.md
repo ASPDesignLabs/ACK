@@ -165,7 +165,7 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   that `install.sh --gpu` adds (about 1.6 GB, proprietary). The guided setup recognises speech on the processor (F5), so the lock leaves them out: **44 packages, 58 checksums, 130 MB of wheels to download**, Python 3.10 to 3.12.
   pip's metadata for exactly these versions needs every one on 3.10 (`exceptiongroup` and `tomli` only there), and with these pins the resolver needs nothing more on 3.11 or 3.12; a hash-mode dry run passes on both.
   `setuptools` is not needed (the current `ctranslate2` no longer asks for it). All licences are permissive (MIT, BSD, Apache-2.0, MPL-2.0, PSF-2.0), none proprietary. The entry carries `python_max` 3.12. A consequence: **both
-  environments now have a pinned lock, so the setup plan lists two offerable agreements (`pip:studio`, `pip:training`)**; the whole plan still cannot run because the speech model and the two voices are not pinned yet. **GPU
+  environments now have a pinned lock, so the setup plan lists two offerable agreements (`pip:studio`, `pip:training`)**; the whole plan could not yet run because the speech model and the two voices were not pinned (pinned since, see F22). **GPU
   speech recognition** (the CUDA 12 libraries) is not part of the default; if it is wanted it is a separate, optional environment with its own lock and its own licence line. **Run since: see F18.**
 
 - **F18 (2026-10-11), the studio environment built by the tool's own builder, on the developer's computer.** `buildenv studio` said Ready after 15 s (the install itself 12 s, the self-test under 1 s), the folder is 489M, and
@@ -211,6 +211,16 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   `last.ckpt` was written at the epoch-5779 check, 01:31:01; the run had reached epoch 5785, so **about 6 epochs (a few seconds of training) were not saved**, inside the "at most ten" the check interval allows. 0 scorer lines.
   **Known noise after a Ctrl+C:** `Exception in thread Thread-2 (_pin_memory_loop) ... EOFError`, the data loader's helper thread cut off mid-read while the main program shuts down; it comes after the checkpoint was written, and the exit code is the
   expected 1. **The voice on a phone: the zip imports as expected** (the developer, rebuilt ACK, 2026-10-11).
+
+- **F22 (2026-10-11), the speech model and the two starting voices are pinned, and the whole setup plan can start.** Hugging Face became reachable from the build sandbox, so `tools/voice_studio_maint/make_pins.py` was run against the real host
+  (plan decisions D11, D27, D29). **What the host showed that the plan had wrong:** `rhasspy/piper-checkpoints` is a **dataset** repository, not a model one (`datasets/rhasspy/piper-checkpoints`: the maker now knows both kinds); the folders
+  `en/en_US/mike/medium` and `.../amy/medium` each hold one checkpoint. **Pinned, each to commit, size and SHA-256:** the listening model `Systran/faster-whisper-small.en` as four entries in one folder (`config.json` 2,657 bytes,
+  `model.bin` 483,545,366, `tokenizer.json` 2,128,466, `vocabulary.txt` 422,309; no `preprocessor_config.json` exists) at commit `d1d751a5f827`; Mike `epoch=5460-val_mos=4.2686.ckpt` (845,891,981 bytes) and Amy `epoch=6679-step=1554200.ckpt`
+  (845,898,392) at commit `37d1bea250e2`. **Checked three ways:** the listing's SHA-256 and the download address's own headers agree for each large file; the app's own downloader (`core/fetch.py`, first time on a real connection) fetched
+  `model.bin` (5.7 s), Amy (10.5 s) and the three small files, and its size and checksum checks passed; and **Mike's pin is byte for byte the `mike.ckpt` the developer trained from** (identical SHA-256). The shipped plan now lists eight items,
+  none blocked, with one yes covering each environment by name and each file by address, size and checksum; it needs about 63 GiB free for two people and both voices. The model cards and licence pages were read and recorded in
+  `THIRD_PARTY_NOTICES.md` (Amy's dataset licence is **not established** by what was read; the lessac agreement is a research-only licence, read in full). **Still to do for VS-4.1:** the licence screens and the one-click acknowledgment per voice
+  (D27), which wait for the window; the starting voices are listed but not fetched by the setup run (D30).
 
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
   `Time limit reached. Elapsed time is 0:01:04`, and `version_0` to `version_3` exist. The export under the launcher exited 0 with **no extra package** (`onnxscript` is not needed): `my_voice.onnx` 63,516,211 bytes after the

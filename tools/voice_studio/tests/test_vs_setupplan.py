@@ -251,15 +251,15 @@ def test_an_environment_whose_lock_is_not_pinned_gets_no_package_agreement():
 
 # ---------------------------------------------------------------- the shipped data
 
-def test_the_shipped_plan_today_lists_everything_and_says_what_can_and_cannot_be_fetched_yet():
+def test_the_shipped_plan_lists_everything_and_all_of_it_can_be_fetched():
     plan = sp.plan_setup(load_registry(), load_environments(), free=free(500 * GIB))
-    assert [i.id for i in plan.items] == ["env-training", "env-studio", "speech-model-small-en", "voice-amy", "voice-mike"]
-    by_id = {i.id: i for i in plan.items}
-    assert by_id["env-training"].problems == () and by_id["env-training"].available, "the training environment is pinned: lock, native part and no source archive"
-    assert by_id["env-studio"].problems == () and by_id["env-studio"].available, "and so is the studio environment"
-    assert all(i.not_ready_only for i in plan.items if i.kind != "packages"), "the model and the voices still wait for their exact files"
-    assert sorted(e.id for e in plan.agreement(load_registry(), NOW).entries) == ["pip:studio", "pip:training"], "the only things that could be agreed to today"
-    assert plan.blockers == ("not_available",), "so the whole plan still cannot run"
+    assert [i.id for i in plan.items] == ["env-training", "env-studio", "speech-model-small-en-config-json", "speech-model-small-en-model-bin",
+                                          "speech-model-small-en-tokenizer-json", "speech-model-small-en-vocabulary-txt", "voice-amy", "voice-mike"]
+    assert all(i.problems == () and i.available for i in plan.items), "every environment and every file is pinned, so nothing is waiting for anything"
+    agreed_to = sorted(e.id for e in plan.agreement(load_registry(), NOW).entries)
+    assert agreed_to == ["pip:studio", "pip:training", "speech-model-small-en-config-json", "speech-model-small-en-model-bin", "speech-model-small-en-tokenizer-json",
+                         "speech-model-small-en-vocabulary-txt", "voice-amy", "voice-mike"], "one yes covers each environment by name and each file by address, size and checksum"
+    assert plan.blockers == () and plan.can_start, "so the whole plan can run"
     assert plan.verdict.need["home"] > 20 * GIB, "both voices, the environments and two people"
 
 

@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The registry of downloads (plan task VS-1.3): what an entry must be to be fetchable, and that nothing is half pinned."""
 import json
+import re
 from dataclasses import replace
+from urllib.parse import quote, urlparse
 
 import pytest
 
@@ -26,9 +28,34 @@ def test_the_shipped_registry_loads_and_lists_the_starting_voices():
     assert registry.get("voice-mike").approx_size_bytes == 846_000_000 == registry.get("voice-amy").approx_size_bytes
 
 
-def test_nothing_in_the_shipped_registry_is_fetchable_until_it_has_been_checked_on_a_real_machine():
+def test_everything_in_the_shipped_registry_is_fully_pinned_to_one_commit_one_size_and_one_checksum():
     for item in reg.load_registry().items:
-        assert item.pin_problems() == ["unpinned"] and not item.pinned and item.url is None, item.id
+        assert item.pin_problems() == [] and item.pinned, item.id
+        assert re.fullmatch(r"[0-9a-f]{40}", item.revision) and item.revision in item.url, item.id          # a commit, never a branch name that can move
+        assert re.fullmatch(r"[0-9a-f]{64}", item.sha256) and 0 < item.size_bytes <= reg.MAX_FILE_BYTES, item.id
+        assert urlparse(item.url).hostname == "huggingface.co" and item.url.endswith("/" + quote(item.filename, safe="=+-._")), item.id
+
+
+def test_the_starting_voices_are_the_medium_checkpoints_of_mike_and_amy_in_the_original_hosts_dataset():
+    registry = reg.load_registry()
+    base = "https://huggingface.co/datasets/rhasspy/piper-checkpoints/resolve/"
+    for voice in ("mike", "amy"):
+        item = registry.get("voice-" + voice)
+        assert item.kind == "voice" and item.url.startswith(base) and ("/en/en_US/%s/medium/" % voice) in item.url and item.filename.endswith(".ckpt"), voice
+        assert item.approx_size_bytes == 846_000_000 and abs(item.size_bytes - item.approx_size_bytes) < 1_000_000, "the round number the host shows is close to the exact one"
+
+
+def test_mikes_pin_is_the_file_the_developer_trained_from():
+    """The developer's own mike.ckpt (copied between two computers and compared by fingerprint) is byte for byte the file the pin names."""
+    assert reg.load_registry().get("voice-mike").sha256 == "9a8389c2d733f94e2acc3b4e8264b4ba3c063612217780e4be21c0ccaff18b9b"
+
+
+def test_the_speech_model_is_four_files_pinned_one_by_one_in_one_folder():
+    files = [i for i in reg.load_registry().items if i.kind == "model"]
+    assert sorted(i.filename for i in files) == ["config.json", "model.bin", "tokenizer.json", "vocabulary.txt"]
+    assert {i.folder for i in files} == {"speech-small-en"} and len({i.revision for i in files}) == 1
+    assert all(i.url.startswith("https://huggingface.co/Systran/faster-whisper-small.en/resolve/") for i in files)
+    assert 480_000_000 < sum(i.size_bytes for i in files) < 490_000_000, "about the 480 MB the plan has always said"
 
 
 def test_every_shipped_entry_has_a_reason_a_license_id_and_a_size_for_the_disk_estimate():
@@ -144,5 +171,6 @@ def test_the_folder_is_not_part_of_what_makes_an_item_pinned():
     assert reg.Item("a", "model", "k", "l", approx_size_bytes=5, folder="f").pin_problems() == ["unpinned"]
 
 
-def test_the_shipped_speech_model_has_a_folder_of_its_own():
-    assert reg.load_registry().get("speech-model-small-en").folder == "speech-small-en"
+def test_the_old_single_placeholder_for_the_speech_model_is_gone():
+    with pytest.raises(KeyError):
+        reg.load_registry().get("speech-model-small-en")

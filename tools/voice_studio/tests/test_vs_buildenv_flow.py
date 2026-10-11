@@ -324,7 +324,7 @@ def test_the_command_passes_the_real_pieces_to_the_flow(monkeypatch):
     from voice_studio.core import fetch
     import time
     assert seen["opts"] == bf.BuildOptions(check=True) and seen["ids"] == ["training", "studio"] and seen["networked"] is fetch.run_networked and seen["clock"] is time.monotonic
-    assert "speech-model-small-en" in seen["registry_ids"] and seen["home"] == str(Path("~").expanduser())
+    assert "speech-model-small-en-model-bin" in seen["registry_ids"] and "voice-mike" in seen["registry_ids"] and seen["home"] == str(Path("~").expanduser())
 
 
 # ---------------------------------------------------------------- the progress lines, one at a time
