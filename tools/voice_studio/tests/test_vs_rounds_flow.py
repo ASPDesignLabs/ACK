@@ -660,3 +660,11 @@ def test_a_note_goes_on_the_round_it_was_written_for(rig):
     assert [r.note for r in rd.load(rig.paths).rounds] == ["", "this one"]
     assert rig.run("note", "1", "--text", "that one", "--project", "anna", "--yes")[0] == 0
     assert [r.note for r in rd.load(rig.paths).rounds] == ["that one", "this one"]
+
+
+def test_a_starting_voice_the_tool_does_not_know_is_refused_in_words_and_nothing_starts(tmp_path):
+    rig = Rig(tmp_path, voice=False)
+    rig.world.dataset()
+    save_project(rig.paths, with_starting_voice(load_project(rig.paths), "voice-zzz"))
+    code, io = rig.run(*start_args("--yes"))
+    assert code == 1 and rig.started == [] and rig.record_bytes() is None and "Traceback" not in io.text and "Nothing was" in io.text
