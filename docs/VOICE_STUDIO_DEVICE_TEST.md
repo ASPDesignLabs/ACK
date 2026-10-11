@@ -334,7 +334,6 @@ round).
     --data.csv_path ~/ack-voice-check/dataset-1/metadata.csv \
     --data.audio_dir ~/ack-voice-check/dataset-1/wav \
     --model.sample_rate 22050 \
-    --model.mos_metric none \
     --data.espeak_voice "en-us" \
     --data.cache_dir ~/piper/voice-check/cache \
     --data.config_path ~/piper/voice-check/config.json \
@@ -353,7 +352,7 @@ round).
   tail -1 ~/piper/voice-check/gpu.csv
   tr '\r' '\n' < ~/piper/voice-check/round1.log | grep -i -E "error|traceback|warning|restor|max_time|time limit|Epoch [0-9]+:.*it/s" | tail -25
   ```
-  → It starts, prints progress, and **stops by itself** about five minutes after it started (not counting loading). Then `exit code: 0`. **There is no `val_mos` score, on purpose** (see below).
+  → It starts, prints progress, and **stops by itself** about five minutes after it started (not counting loading): the log says `Time limit reached. Elapsed time is 0:05:00.` Then `exit code: 0`. **There is no `val_mos` score, on purpose** (see below).
   The findings, each of which decides something:
   - Did `--trainer.max_time` stop it by itself? How long after five minutes?
   - Is there a file `~/piper/voice-check/run/lightning_logs/version_0/checkpoints/last.ckpt`? (`ls -l` it.) It should be **there, in the
@@ -362,14 +361,38 @@ round).
   - The peak memory in the summary (it includes whatever else the card was doing; the last line shows what was left over afterwards), the card's total memory, and the epochs per second the trainer printed.
   - If it ran out of memory, try `--data.batch_size 8` and write that down. If steps took tens of seconds, the batch is too big for the card.
   - If it says `No module named piper`, the wheel did not install properly; write that down with the last lines of `build.log`.
-  - **Why the quality score is off.** The trainer's optional `val_mos` score downloads a scorer's code and weights from GitHub and *runs* them, and needs `torchaudio`, which the locked programs do not carry. Without the
-    `--model.mos_metric none` line the first check ended with `MisconfigurationException: ModelCheckpoint(monitor='val_mos')` (the first real run did). The launcher also makes the trainer skip that one score quietly when it is
-    missing. The best checkpoints are still kept by `val_mel`; you choose by listening.
-- [ ] Start the same round again without `--trainer.max_time` and press **Ctrl+C once** after about a minute, then wait. → It shuts down on its
-  own and leaves a `last.ckpt` in `lightning_logs/version_1/checkpoints/`. Write down how long the wait was and whether it did.
-- [ ] Resume from the newest checkpoint, as the tool will (the highest `version_N`): the same command with
-  `--ckpt_path ~/piper/voice-check/run/lightning_logs/version_1/checkpoints/last.ckpt` and a **new** `--data.cache_dir
-  ~/piper/voice-check/cache-2`. → It starts from that file (the log says so), not from the base voice.
+  - **The log must not mention `SpeechMOS` or `MOS predictor`**: `grep -c -E "SpeechMOS|MOS predictor" ~/piper/voice-check/round1.log` → `0`. If it prints more, the quality score was loaded, which on a computer that has never run it means a download from GitHub.
+  - **Why the quality score is off.** The trainer's optional `val_mos` score downloads a scorer's code and weights from GitHub (through `torch.hub`) and *runs* them, and needs `torchaudio`, which the locked programs do not carry. The
+    first real round ended with `MisconfigurationException: ModelCheckpoint(monitor='val_mos')`. Passing `--model.mos_metric none` does **not** switch it off when resuming: Lightning's command line tool lays the settings saved inside the
+    checkpoint over the command line (`hparams.yaml` and `config.yaml` in `lightning_logs/version_0/` still said `mos_metric: utmos`). So the launcher (`ack_run.py`) stops the scorer from loading and makes the trainer skip that one
+    checkpoint rule when its score was never logged. The best checkpoints are still kept by `val_mel`; you choose by listening.
+- [ ] Resume from the checkpoint the round just wrote, with **no time limit**, and stop it yourself with **Ctrl+C once**. The output goes to a file, so nothing is shown while it runs (if it went through `tee`, Ctrl+C
+  would end `tee` too and could break the shutdown). The tool will always resume the highest `version_N`, with a **new** cache folder:
+  ```bash
+  V=~/piper/voice-check; cd $V/run
+  TRAIN=$(ls -d ~/ack-voice-studio/tool/environments/training-* | head -1)
+  date +%T
+  "$TRAIN/venv/bin/python" "$TRAIN/ack_run.py" piper.train fit \
+    --data.voice_name "my_voice" \
+    --data.csv_path ~/ack-voice-check/dataset-1/metadata.csv \
+    --data.audio_dir ~/ack-voice-check/dataset-1/wav \
+    --model.sample_rate 22050 \
+    --data.espeak_voice "en-us" \
+    --data.cache_dir $V/cache-2 \
+    --data.config_path $V/config.json \
+    --data.batch_size 12 \
+    --data.num_workers 4 \
+    --trainer.check_val_every_n_epoch 10 \
+    --trainer.log_every_n_steps 1 \
+    --ckpt_path $V/run/lightning_logs/version_0/checkpoints/last.ckpt > $V/round2.log 2>&1
+  echo "exit code: $?"
+  date +%T
+  ls -l --block-size=M $V/run/lightning_logs/*/checkpoints/ | tail -12
+  tr '\r' '\n' < $V/round2.log | grep -i -E "restor|resum|interrupt|graceful|exception|traceback|error" | tail -15
+  ```
+  Press Enter, wait about 90 seconds (it loads for about 20 seconds, then trains), press **Ctrl+C once**, and wait. → `Restoring states from the checkpoint path … version_0/checkpoints/last.ckpt`, `Restored all states`, then
+  `Detected KeyboardInterrupt, attempting graceful shutdown ...`, back at the prompt within a few seconds, a new `version_1/checkpoints/` folder with a `last.ckpt`, and `exit code: 1`. Write down how many seconds the stop took
+  and whether the newest `last.ckpt` is older than the moment you pressed Ctrl+C (a stop by hand loses what was trained since the last check, at most ten epochs here).
 
 ## J. Making the voice file
 

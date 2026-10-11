@@ -77,10 +77,10 @@ DEFAULT_TABLE = SizeTable(
     recording_per_hour=400 * MIB,                       # freeform_studio/health.py HOUR_MB: an hour of recording once decoded for review
     dataset_per_hour=22050 * 2 * 3600,                  # 22,050 Hz, mono, 16-bit, one hour: 158,760,000 bytes
     training_cache_per_hour=1 * GIB,
-    checkpoint=846_000_000,                             # the size Hugging Face shows for the two starting voices' checkpoints
-    checkpoints_per_round=3, rounds=4, margin=5 * GIB,
+    checkpoint=846_000_000,                             # the size Hugging Face shows for the two starting voices' checkpoints; a trainer checkpoint on disk is the same 807 MiB (measured 2026-10-11)
+    checkpoints_per_round=6, rounds=4, margin=5 * GIB,  # measured: a round's folder keeps the five best by mel loss and last.ckpt, 4.84 GB, however short the round
     bases={"tool_environments": "guess", "tool_download_cache": "guess", "recording_per_hour": "freeform", "dataset_per_hour": "computed",
-           "training_cache_per_hour": "guess", "checkpoint": "listing", "checkpoints_per_round": "guess", "rounds": "guess", "margin": "guess"})
+           "training_cache_per_hour": "guess", "checkpoint": "measured", "checkpoints_per_round": "measured", "rounds": "guess", "margin": "guess"})
 
 
 @dataclass(frozen=True)

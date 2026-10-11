@@ -180,16 +180,18 @@ def test_a_round_is_the_guides_command_with_the_environments_launcher_and_a_time
     assert c.argv[:4] == (TRAINING.python, TRAINING.launcher, "piper.train", "fit")
     pairs = dict(zip(c.argv[4::2], c.argv[5::2]))
     assert pairs == {
-        "--data.voice_name": "my_voice", "--data.csv_path": str(dataset) + "/metadata.csv", "--data.audio_dir": str(dataset) + "/wav", "--model.sample_rate": "22050", "--model.mos_metric": "none",
+        "--data.voice_name": "my_voice", "--data.csv_path": str(dataset) + "/metadata.csv", "--data.audio_dir": str(dataset) + "/wav", "--model.sample_rate": "22050",
         "--data.espeak_voice": "en-us", "--data.cache_dir": str(tmp_path / "cache-dataset-20261010-120000"), "--data.config_path": str(tmp_path / "config.json"),
         "--data.batch_size": "12", "--data.num_workers": "4", "--trainer.check_val_every_n_epoch": "10", "--trainer.log_every_n_steps": "1",
         "--trainer.max_time": "00:00:25:00", "--ckpt_path": str(tmp_path / "base.ckpt")}
     assert c.kind == "train" and c.gpu is True and c.cwd == str(tmp_path / "run")
 
 
-def test_the_quality_score_that_fetches_code_from_the_internet_is_always_turned_off(tmp_path):
+def test_only_the_sample_rate_is_passed_as_a_model_setting_because_a_checkpoint_overrides_the_rest(tmp_path):
+    """Resuming makes Lightning's command line tool overlay the checkpoint's saved model settings on the command line, so any other --model.* option would be
+    ignored without a word (the quality-score switch was, in the first real rounds). Such a difference is made in the launcher instead."""
     c, _ = train(tmp_path)
-    assert c.argv[c.argv.index("--model.mos_metric") + 1] == "none" and c.argv.count("--model.mos_metric") == 1
+    assert [a for a in c.argv if a.startswith("--model.")] == ["--model.sample_rate"]
 
 
 def test_the_audio_folder_is_exactly_the_datasets_wav_folder(tmp_path):

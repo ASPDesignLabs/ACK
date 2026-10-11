@@ -318,7 +318,7 @@ def test_every_file_in_the_native_folder_is_listed_by_an_environment_and_nothing
 def test_the_shipped_trainer_workarounds_are_the_guides_and_are_one_line_each():
     training = next(s for s in SHIPPED if s.id == "training")
     joined = "\n".join(training.prelude)
-    assert "PosixPath" in joined and "dynamo=False" in joined and "val_mos" in joined
+    assert "PosixPath" in joined and "dynamo=False" in joined and "val_mos" in joined and "MosPredictor" in joined
     assert training.source is None and training.native is not None, "no source archive: the trainer is the published wheel"
     assert training.python_min == (3, 10)
 
@@ -376,3 +376,64 @@ def test_any_other_missing_key_still_stops_the_round_because_that_is_a_real_mist
 def test_the_workaround_names_exactly_the_one_key_and_leaves_the_rest_of_the_launcher_line_alone(monkeypatch):
     line = next(l for l in TRAINING_LOCK.prelude if "val_mos" in l)
     assert line.count("val_mos") == 2 and "ModelCheckpoint._save_topk_checkpoint" in line and len(line) <= es.MAX_LINE
+
+
+def run_scorer_workaround(monkeypatch):
+    """Run the shipped launcher line against a stand-in that loads its scorer from the internet the way the trainer's does, lazily, on first use."""
+    loads = []
+
+    class MosPredictor:
+        def __init__(self):
+            self._model, self._disabled = None, False
+
+        def _ensure_model(self):
+            if self._model is None and not self._disabled:
+                loads.append("downloaded code and weights")           # torch.hub.load(...) in the trainer
+                self._model = object()
+
+        def score(self, audio, sample_rate):
+            self._ensure_model()
+            return None if self._model is None else 3.9
+
+    mos = types.ModuleType("piper.train.vits.mos")
+    mos.MosPredictor = MosPredictor
+    for name in ("piper", "piper.train", "piper.train.vits"):
+        monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
+    sys.modules["piper.train.vits"].mos = mos
+    monkeypatch.setitem(sys.modules, "piper.train.vits.mos", mos)
+    line = next(l for l in TRAINING_LOCK.prelude if "MosPredictor" in l)
+    exec(compile(line, "<prelude>", "exec"), {})
+    return MosPredictor, loads
+
+
+def test_the_quality_scorer_is_never_loaded_so_nothing_is_fetched_or_run_from_the_internet(monkeypatch):
+    predictor, loads = run_scorer_workaround(monkeypatch)
+    one = predictor()
+    one._ensure_model()
+    assert loads == [] and one._model is None and one._disabled is True
+    assert one.score(object(), 22050) is None and loads == [], "scoring a clip finds no scorer, asks for none and gives nothing"
+
+
+def test_the_scorer_stays_off_for_every_predictor_made_after_the_workaround(monkeypatch):
+    predictor, loads = run_scorer_workaround(monkeypatch)
+    assert [predictor().score(None, 22050) for _ in range(3)] == [None, None, None] and loads == []
+
+
+def test_without_the_workaround_the_stand_in_does_fetch(monkeypatch):
+    """The test above would pass for a stand-in that never fetched; this shows the stand-in is the kind of thing the line prevents."""
+    class Plain:
+        def __init__(self):
+            self.loads = 0
+
+        def _ensure_model(self):
+            self.loads += 1
+
+    plain = Plain()
+    plain._ensure_model()
+    assert plain.loads == 1
+
+
+def test_the_two_scorer_lines_do_different_jobs_and_neither_is_the_other(monkeypatch):
+    lines = [l for l in TRAINING_LOCK.prelude if "MosPredictor" in l or "_save_topk_checkpoint" in l]
+    assert len(lines) == 2 and "val_mos" not in [l for l in lines if "MosPredictor" in l][0] and "MosPredictor" not in [l for l in lines if "val_mos" in l][0]
+    assert all(len(l) <= es.MAX_LINE for l in lines)
