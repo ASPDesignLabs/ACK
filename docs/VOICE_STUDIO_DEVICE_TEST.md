@@ -659,6 +659,54 @@ and what was removed cannot be brought back, so **if you want every round kept a
   If `list` says `The saved point is missing` for the **chosen** round, stop and send it back: that is the one thing this command must never do.
 - [ ] Write down: how long it took, whether any wording confused you (the lines for a round's files, the question, the `Done.` line), whether you wanted a way to see the files before choosing, and whether the numbers in `--saved` were easy to read off the list.
 
+## I4. Making the voice file with one command
+
+**New, and not yet run on a real computer.** This does what section J does by hand, from the round you chose, in one command: it makes the voice from that round's saved file, gives it that round's own settings file, prepares it for the phone, makes the zip
+file ACK takes, and reads the zip back as the phone would. It writes only into **one new folder** under the project's `exports` and never changes, replaces or removes anything that was there. It needs the project from section I2 with at least one finished
+round that is chosen (`rounds list` says which), and it does not run while a round is training. About 1 GB of free space is needed at most (the tool says how much it checked). Run one command at a time.
+
+- [ ] Look. This changes nothing:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile list --project voice-check
+  ```
+  → `No voice file has been made for this project yet.` and how to make one.
+- [ ] Ask for the voice file, and say no. The command shows what it will do and checks the room before it asks:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile make --project voice-check
+  ls ~/ack-voice-studio/projects/voice-check/exports
+  ```
+  → `The voice file would be made like this:` and under it that it would take the saved point of the chosen round (with its size and how many minutes of training are in it), take that round's own settings file, make the voice, make the zip file and read it back, and write
+  everything into a new folder. Then `Checked before starting:` and a line about the free space. Then `Make the voice file from round` and the chosen round's number. Type **`no`**: `Nothing was done.` and the `ls` shows nothing new. **Write down the saved point's size and the minutes.**
+- [ ] The same command, and type **`yes`**. Write down how many seconds each step takes (the export is the slow one, a minute or two):
+  ```bash
+  time PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile make --project voice-check
+  ```
+  → `Step 1 of 5: making the voice from the saved point.`, then steps 2 to 5, then `Done. The file to give to ACK is: …` with the path of the zip file, and the folder it is all in. If a step stops, it says which, what was left (`What was made so far is in …`) and that nothing was deleted;
+  **copy the whole output**, and the `ls -l` of that folder. If the export stops with `GuardOnDataDependentSymNode` or asks for `onnxscript`, that decides whether the lock needs another package, as in section J.
+- [ ] Look at what it made, and compare the settings file with the round's own:
+  ```bash
+  ls -l ~/ack-voice-studio/projects/voice-check/exports/*/
+  unzip -l ~/ack-voice-studio/projects/voice-check/exports/*/*.zip
+  ls ~/ack-voice-studio/projects/voice-check/rounds/config
+  ```
+  → The folder holds `my_voice.onnx`, `my_voice.onnx.json`, `my_voice.onnx.before-patch` and the zip file. `unzip -l` lists exactly `model.onnx` and `model.onnx.json`. The settings file is a copy of the chosen round's file in `rounds/config`: `cmp` that file with `my_voice.onnx.json`
+  (give `cmp` both paths); it prints nothing when they are the same.
+- [ ] Look again, and make a second one a minute later. The first must not change:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile list --project voice-check
+  ```
+  → `Voice files made for Voice check:` and a line for the file with its size and where it is. Run `make` and `yes` again after a minute: the list now shows two, with different time stamps in their names, and the first one's files have the same dates as before.
+- [ ] **Only if you want to see a refusal.** This moves one of your files aside for a minute and puts it back. With the chosen round's settings file out of the way, `make` must refuse before it writes anything. The commands below use round 3: change `003` in all three to the chosen round's number, with leading zeros to make three digits:
+  ```bash
+  mv ~/ack-voice-studio/projects/voice-check/rounds/config/round-003.json ~/ack-voice-studio/projects/voice-check/rounds/config/round-003.json.aside
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile make --project voice-check --yes
+  mv ~/ack-voice-studio/projects/voice-check/rounds/config/round-003.json.aside ~/ack-voice-studio/projects/voice-check/rounds/config/round-003.json
+  ls ~/ack-voice-studio/projects/voice-check/exports
+  ```
+  → `The chosen round has no settings file.` and under it `Nothing was made.` and what to do next. The `ls` shows only the folders from before. **Put the file back (the third command) even if something looks wrong.**
+- [ ] Take the zip file to the phone and import it, as in section K. Write down whether ACK took it the first time, and whether it speaks in the voice.
+- [ ] Write down: how long it took, whether any wording confused you (the plan, the five steps, the `Done.` lines), whether you wanted the file somewhere else than the project's `exports` folder, and whether you wanted a name of your own for it.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:

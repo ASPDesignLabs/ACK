@@ -577,3 +577,52 @@ def test_free_on_a_project_with_nothing_to_free_says_so_and_writes_nothing(tmp_p
     for argv, said in ((("--saved", "99"), "There is nothing to free up."), (("--saved", "one"), "I did not understand one."), (("--all", "--saved", "1"), "Give either --all or a list of rounds, not both.")):
         done = run("voice_studio.rounds", "free", *argv, "--project", "voice-check")
         assert done.returncode == 2 and said in done.stdout, (argv, done.stdout)
+
+
+# ---------------------------------------------------------------- section I4: the voice file with one command
+
+def test_the_voicefile_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import voicefile_flow as vff
+    found = re.findall(r"python3 -m voice_studio\.voicefile ([a-z]+)([^\n`;<]*)", section("I4."))
+    assert {c for c, _ in found} == {"list", "make"} and len(found) >= 4
+    seen = set()
+    for command, rest in found:
+        assert command in vff.OPTIONS, command
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            assert words[i].startswith("-") and words[i] in vff.OPTIONS[command], (command, words[i])
+            seen.add(words[i])
+            i += 2 if words[i] == "--project" else 1
+        assert words[words.index("--project") + 1] == "voice-check"
+    assert seen >= {"--project", "--yes"}
+
+
+def test_every_sentence_the_voice_file_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I4."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans if " " in s and s.rstrip()[-1] in ".?…" and not s.startswith(("PYTHONPATH", "ls ", "unzip ", "mv ", "time ", "~/"))]
+    assert len(quoted) >= 7 and any(cut for _, cut in quoted), quoted
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_places_the_voice_file_section_names_are_where_the_tool_puts_things():
+    from voice_studio.core import voicefile
+    from voice_studio.core.paths import DataHome, ProjectPaths
+    body = section("I4.")
+    paths = ProjectPaths(DataHome("~").projects + "/voice-check")
+    assert paths.exports in body and voicefile.settings_file(paths, 3) in body and voicefile.settings_file(paths, 3) + ".aside" in body
+    assert paths.round_configs in body and "my_voice.onnx.before-patch" in body and voicefile.VOICE_NAME + ".onnx.json" in body
+
+
+def test_the_voice_file_section_says_it_writes_only_a_new_folder_and_puts_the_moved_file_back():
+    body = " ".join(section("I4.").split())
+    assert "writes only into **one new folder**" in body and "never changes, replaces or removes anything that was there" in body
+    assert "Only if you want to see a refusal" in body and "Put the file back (the third command) even if something looks wrong" in body
+    assert "it does not run while a round is training" in body and "Write down how many seconds each step takes" in body
+    moves = re.findall(r"^\s*mv (\S+) (\S+)$", section("I4."), flags=re.M)
+    assert len(moves) == 2 and moves[0] == (moves[1][1], moves[1][0]), "the second move undoes the first"
+
+
+def test_the_voice_file_section_follows_the_free_up_section_and_comes_before_the_manual_one():
+    names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I3") < names.index("I4") < names.index("J")
