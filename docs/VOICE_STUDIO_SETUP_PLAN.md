@@ -161,6 +161,14 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   counts from the round's own start. The launcher now has seven lines, five of them workarounds: the `torch.load` rule, the exporter's `dynamo=False`, the scorer's checkpoint rule, the scorer's loader
   and the saved clock (the first two come from the guide; the last three were found by real rounds). **To confirm:** the same one-minute round says `Elapsed time is 0:01:00`.
 
+- **F17 (2026-10-11), the studio environment's lock, from Freeform Studio's own installer.** The developer's `~/freeform-studio-venv` (Python 3.10.12, 2.7 GB) holds 47 packages, three of them the optional `nvidia-*` CUDA 12 libraries
+  that `install.sh --gpu` adds (about 1.6 GB, proprietary). The guided setup recognises speech on the processor (F5), so the lock leaves them out: **44 packages, 58 checksums, 130 MB of wheels to download**, Python 3.10 to 3.12.
+  pip's metadata for exactly these versions needs every one on 3.10 (`exceptiongroup` and `tomli` only there), and with these pins the resolver needs nothing more on 3.11 or 3.12; a hash-mode dry run passes on both.
+  `setuptools` is not needed (the current `ctranslate2` no longer asks for it). All licences are permissive (MIT, BSD, Apache-2.0, MPL-2.0, PSF-2.0), none proprietary. The entry carries `python_max` 3.12. A consequence: **both
+  environments now have a pinned lock, so the setup plan lists two offerable agreements (`pip:studio`, `pip:training`)**; the whole plan still cannot run because the speech model and the two voices are not pinned yet. **GPU
+  speech recognition** (the CUDA 12 libraries) is not part of the default; if it is wanted it is a separate, optional environment with its own lock and its own licence line. **Not yet run:** the tool's own builder on this
+  lock (the installed size and the time are still guesses: 1 GiB).
+
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
   `Time limit reached. Elapsed time is 0:01:04`, and `version_0` to `version_3` exist. The export under the launcher exited 0 with **no extra package** (`onnxscript` is not needed): `my_voice.onnx` 63,516,211 bytes after the
   patch (the original, kept as `.before-patch`, is 63,516,051), the settings file 5,036 bytes; the patcher's second run changed nothing; the zip is 63,517,438 bytes holding exactly `model.onnx` and `model.onnx.json`, and
@@ -253,7 +261,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   sites, names the Nvidia libraries when the lock holds them, asks once, saves the same `pip:training` agreement the setup plan would, builds with the step lines timed, and shows a three-part error with the end of the
   output when it fails; Ctrl+C stops it cleanly and the same command carries on. Section I0 of the device checklist runs it, and section I now trains with the environment it builds.
   **Still to do for the first half:** (a) ~~the first run of the tool's own builder~~ (done, F11) and then the training round with it (section I); (b) the
-  same on Ubuntu 24.04 (a second WSL distribution is enough); (c) `studio.lock.txt` from the Freeform Studio environment; (d) the decision on NVIDIA's licence (below). **Second half (not started):**
+  same on Ubuntu 24.04 (a second WSL distribution is enough); (c) ~~`studio.lock.txt`~~ (made, F17; the build of it is to be run); (d) the decision on NVIDIA's licence (below). **Second half (not started):**
   training rounds with that environment, memory by batch size, `--trainer.max_time`, export, whether the workarounds are needed, the network-off run, the slow-drive timings.
   **What VS-1.9 now waits for from this task** (the builder and its rules exist; these are the facts to put into the data files): (1) `data/locks/training.lock.txt` and `studio.lock.txt`, made with a resolver that writes
   hashes for every package including the build tools the trainer's `setup.py` needs (`setuptools<82`, `wheel`, `scikit-build`, `cmake`, `ninja`, `Cython`), and proved to install with `--require-hashes --only-binary=:all: --no-deps`

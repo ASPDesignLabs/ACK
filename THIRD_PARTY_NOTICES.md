@@ -111,7 +111,7 @@ is shipped in the repository: the person's own computer installs or fetches it.
 | segno (QR codes) | BSD (PyPI classifier "BSD License"; which BSD variant was not checked) | PyPI metadata | |
 | cryptography (the phone-recording certificate authority) | Apache-2.0 OR BSD-3-Clause | PyPI metadata (license expression) | |
 | sherpa-onnx (Python package, to check a finished voice on the PC with the engine the phone uses) | Apache-2.0 (PyPI: "Apache licensed, as found in the LICENSE file"; section 2 read its repository) | PyPI metadata | |
-| The training stack (piper1-gpl, torch and the rest) | see section 5 and the lock's table below | PyPI metadata (training lock, 2026-10-10) | The guided setup pins exact versions; each pinned package is re-checked when the lock file is made. `studio.lock.txt` is not made yet. |
+| The training stack (piper1-gpl, torch and the rest) | see section 5 and the lock's table below | PyPI metadata (training lock, 2026-10-10) | The guided setup pins exact versions; each pinned package is re-checked when the lock file is made. The studio lock is below. |
 
 **The training environment's lock** (`tools/voice_studio/data/locks/training.lock.txt`, 91 packages, made 2026-10-11). Each package's licence was read from the package
 site's own metadata for the exact pinned version (setuptools and wheel included); the licence *texts* were not read. Nothing is GPL-only or AGPL. The packages are installed by the person's own
@@ -134,6 +134,21 @@ computer from the package site; none is part of this repository.
 | **GPL-3.0-or-later** | piper-tts 1.8.0, the trainer's published wheel (PyPI metadata and its `setup.py`; the wheel carries the compiled espeak-ng, also GPL-3.0-or-later, and g2pW-derived code under Apache-2.0, as section 5 says of its source) |
 | **LGPL-2.1-or-later** | soxr (a dependency of librosa; the wheel carries the libsoxr library). Fine to link from GPL-3.0-or-later code; the person's computer installs it. |
 | **NVIDIA proprietary, or no licence stated** | The 15 `nvidia-*` CUDA libraries (cuBLAS, cuDNN, NCCL, cuFFT, cuRAND, cuSOLVER, cuSPARSE, cuSPARSELt, NVSHMEM, NVTX, nvJitLink, cuFile, CUDA runtime, NVRTC, CUPTI) that `torch` needs, and the `cuda-toolkit` meta-package. Ten say proprietary (`LicenseRef-NVIDIA-Proprietary` or "NVIDIA Proprietary Software"); `nvidia-nvtx` says "Apache 2.0" but carries the proprietary classifier; `nvidia-cuda-runtime`, `nvidia-cudnn-cu13`, `nvidia-nccl-cu13`, `nvidia-nvshmem-cu13` and `cuda-toolkit` state nothing. **NVIDIA's licence text was not read** (not reachable from where this was checked). |
+
+**The studio environment's lock** (`tools/voice_studio/data/locks/studio.lock.txt`, 44 packages, made 2026-10-11): the packages Freeform Studio runs on, as section 3 lists them for its own installer, at the exact versions the
+developer's computer runs, **without** the three `nvidia-*` CUDA 12 libraries that `install.sh --gpu` adds (the guided setup recognises speech on the processor). Each licence was read from the package site's metadata for
+that version; the licence texts were not read. Nothing is GPL-only, AGPL or proprietary.
+
+| License (as the package states it) | Packages |
+|---|---|
+| MIT | anyio, blinker, coloredlogs, ctranslate2, exceptiongroup, faster-whisper, filelock, h11, h2, hpack, humanfriendly, hypercorn, hyperframe, onnxruntime, priority, PyYAML, Quart, toml, tomli, wsproto |
+| BSD-3-Clause / "BSD" | av (PyAV), click, Flask, fsspec, httpcore, httpx, idna, itsdangerous, Jinja2, MarkupSafe, mpmath, numpy (also bundles other permissive parts), protobuf, sympy, Werkzeug |
+| Apache-2.0 | aiofiles, flatbuffers, hf-xet, huggingface_hub, tokenizers |
+| Apache-2.0 OR BSD-2-Clause | packaging |
+| MPL-2.0 | certifi; tqdm (MPL-2.0 AND MIT) |
+| PSF-2.0 | typing_extensions |
+
+PyAV's wheel bundles FFmpeg libraries, as section 3 says; that has not changed.
 
 **One file of someone else's code is in this repository** (`tools/voice_studio/data/native/monotonic_align_core.pyx`, 1148 bytes, SHA-256 `8640b303683823a4a1259179547ef476999b1cbb2e46ff656b970763cfbc1157`). It is the
 alignment code the trainer imports as `monotonic_align.core`, which the published wheel neither compiles nor ships. It is byte for byte `src/piper/train/vits/monotonic_align/core.pyx` of piper1-gpl at commit

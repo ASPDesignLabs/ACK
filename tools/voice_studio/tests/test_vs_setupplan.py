@@ -256,9 +256,10 @@ def test_the_shipped_plan_today_lists_everything_and_says_what_can_and_cannot_be
     assert [i.id for i in plan.items] == ["env-training", "env-studio", "speech-model-small-en", "voice-amy", "voice-mike"]
     by_id = {i.id: i for i in plan.items}
     assert by_id["env-training"].problems == () and by_id["env-training"].available, "the training environment is pinned: lock, native part and no source archive"
-    assert by_id["env-studio"].problems == ("lock_unpinned",)
-    assert all(i.not_ready_only for i in plan.items if i.id != "env-training")
-    assert [e.id for e in plan.agreement(load_registry(), NOW).entries] == ["pip:training"], "the only thing that could be agreed to today"
+    assert by_id["env-studio"].problems == () and by_id["env-studio"].available, "and so is the studio environment"
+    assert all(i.not_ready_only for i in plan.items if i.kind != "packages"), "the model and the voices still wait for their exact files"
+    assert sorted(e.id for e in plan.agreement(load_registry(), NOW).entries) == ["pip:studio", "pip:training"], "the only things that could be agreed to today"
+    assert plan.blockers == ("not_available",), "so the whole plan still cannot run"
     assert plan.verdict.need["home"] > 20 * GIB, "both voices, the environments and two people"
 
 

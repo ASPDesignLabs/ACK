@@ -474,3 +474,34 @@ def test_the_launcher_has_exactly_the_workarounds_the_first_real_rounds_needed_a
     assert len(TRAINING_LOCK.prelude) == 7
     for needle in ("PosixPath", "dynamo=False", "_save_topk_checkpoint", "MosPredictor", "Timer.load_state_dict"):
         assert sum(needle in line for line in TRAINING_LOCK.prelude) == 1, needle
+
+
+# ---------------------------------------------------------------- the studio environment's lock
+
+STUDIO = next(s for s in SHIPPED if s.id == "studio")
+
+
+def test_the_shipped_studio_lock_is_pinned_covers_the_programs_and_holds_nothing_proprietary():
+    assert STUDIO.lock_sha256 is not None and STUDIO.source is None and STUDIO.native is None
+    pins, problems = es.parse_lock(STUDIO.lock_path.read_text(encoding="utf-8"))
+    assert problems == []
+    by_name = {p.name: p for p in pins}
+    needed = ("quart", "hypercorn", "werkzeug", "numpy", "huggingface-hub", "faster-whisper", "ctranslate2", "onnxruntime", "av", "tokenizers", "flask", "h2", "wsproto",
+              "tomli", "exceptiongroup")
+    assert [n for n in needed if n not in by_name] == []
+    assert by_name["quart"].version == "0.20.0" and by_name["hypercorn"].version == "0.14.3", "the versions Freeform Studio's requirements.txt asks for"
+    assert [n for n in by_name if n.startswith("nvidia") or n.startswith("cuda") or n in ("torch", "triton")] == [], "speech recognition runs on the processor here: no graphics card libraries"
+    assert all(p.marker == "" and p.hashes for p in pins)
+
+
+def test_the_studio_lock_and_entry_agree_about_which_pythons_they_serve():
+    header = [l for l in STUDIO.lock_path.read_text(encoding="utf-8").splitlines() if l.startswith("# Python versions covered")]
+    assert header == ["# Python versions covered: 3.10, 3.11, 3.12. Linux x86_64 wheels only; Python 3.13 and newer are not covered."]
+    assert STUDIO.python_min == (3, 10) and STUDIO.python_max == (3, 12)
+
+
+def test_every_package_the_studio_probe_imports_is_in_its_lock():
+    pins = {p.name for p in es.parse_lock(STUDIO.lock_path.read_text(encoding="utf-8"))[0]}
+    probe = next(p for p in STUDIO.probes if p.id == "studio-imports").code
+    wanted = [m.strip().replace("_", "-") for m in probe.replace("import", "").split(",")]
+    assert [m for m in wanted if m not in pins] == []
