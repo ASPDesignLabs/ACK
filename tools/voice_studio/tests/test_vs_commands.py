@@ -391,3 +391,8 @@ def test_the_job_kinds_are_the_ones_the_supervisor_allows_and_none_starts_a_netw
     from voice_studio.core.system import is_network_command
     for c in (cm.process_command(STUDIO, TOOLS, "/p/r", "m"), cm.dataset_command(STUDIO, TOOLS, "/p/r", "/d/new", dry_run=True)):
         assert not is_network_command(c.argv)
+
+
+def test_a_command_hands_its_disk_watch_to_the_job():
+    c = cm.Command("train", ("python", "x"), "/p", gpu=True, watch=(("/p/run", 100),))
+    assert c.job("anna").watch == (("/p/run", 100),) and cm.Command("train", ("python", "x"), "/p").job("anna").watch == ()

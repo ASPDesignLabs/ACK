@@ -63,7 +63,11 @@ def run(job_dir: str) -> int:
                     _signal_group(child.pid, signal.SIGINT)
             signal.signal(signal.SIGTERM, on_shutdown)
             signal.signal(signal.SIGHUP, on_shutdown)
+            next_look = 0.0
             while child.poll() is None:
+                if spec.watch and time.time() >= next_look:
+                    next_look = time.time() + jobs.WATCH_EVERY_S
+                    jobs.ask_stop_for_disk(job_dir, spec.watch)            # the disk guard: a stop request of its own, written here so it works with the window closed
                 stop = jobs.read_json(job_dir + "/stop.json")
                 if stop is not None:
                     result["stop_requested"] = True

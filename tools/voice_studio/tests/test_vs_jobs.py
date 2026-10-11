@@ -3,6 +3,7 @@
 
 Most of these start real (short) processes through the real detached runner. A fixture force-stops anything still running at the end of each test.
 """
+import json
 import os
 import sys
 import time
@@ -344,3 +345,80 @@ def test_listing_orders_by_start_and_names_folders_it_cannot_read(root):
     listing = jb.list_jobs(root)
     assert [j.id for j in listing.jobs] == [b.id, a.id] and listing.problems == ("broken",)
     assert jb.list_jobs("/no/such/folder") == jb.JobList((), ())
+
+
+# ---------------------------------------------------------------- the disk guard: the runner watches the free space and asks for a stop
+
+def test_a_watched_folder_breaches_only_when_less_than_its_floor_is_free():
+    free = {"/a": 1000, "/b": 5000, "/c": None}.get
+    assert jb.watch_breach((), free) is None
+    assert jb.watch_breach((("/a", 1000),), free) is None                              # exactly the floor is fine
+    assert jb.watch_breach((("/a", 1001),), free) == ("/a", 1000, 1001)
+    assert jb.watch_breach((("/a", 0),), free) is None and jb.watch_breach((("/c", 10 ** 15),), free) is None        # a drive that cannot be read is not judged
+    assert jb.watch_breach((("/b", 100), ("/a", 2000), ("/b", 9000)), free) == ("/a", 1000, 2000)               # the first one, in the order given
+
+
+def test_the_guard_asks_for_a_stop_once_gently_and_says_why(tmp_path):
+    folder = tmp_path / "job"
+    folder.mkdir()
+    free = {"/data": 400}.get
+    assert jb.ask_stop_for_disk(str(folder), (("/data", 500),), free) is True
+    note = json.loads((folder / "stop.json").read_text())
+    assert note["forced"] is False and note["reason"] == "disk" and (note["path"], note["free"], note["floor"]) == ("/data", 400, 500) and note["at"]
+    (folder / "stop.json").write_text('{"forced": false, "reason": "kept"}')
+    assert jb.ask_stop_for_disk(str(folder), (("/data", 500),), free) is False and json.loads((folder / "stop.json").read_text())["reason"] == "kept"      # a request is never overwritten
+
+
+def test_the_guard_asks_for_nothing_when_nothing_is_wrong(tmp_path):
+    folder = tmp_path / "job"
+    folder.mkdir()
+    assert jb.ask_stop_for_disk(str(folder), (), {}.get) is False and jb.ask_stop_for_disk(str(folder), (("/data", 500),), {"/data": 500}.get) is False
+    assert not (folder / "stop.json").exists()
+
+
+@pytest.mark.parametrize("watch, bad", [
+    ((("/data", 10),), False), ((("/data", 0),), False), ((("/data", 1 << 50),), False), ((("/data", (1 << 50) + 1),), True), ((("/data", -1),), True),
+    ((("data", 10),), True), ((("", 10),), True), (((None, 10),), True), ((("/da\x00ta", 10),), True), ((("/data", True),), True), ((("/data", 1.5),), True),
+    ((("/a", 1), ("/b", 1), ("/c", 1), ("/d", 1)), False), ((("/a", 1), ("/b", 1), ("/c", 1), ("/d", 1), ("/e", 1)), True), (("/data",), True),
+])
+def test_a_job_may_watch_a_few_absolute_folders_for_a_whole_number_of_bytes(watch, bad):
+    spec = JobSpec("train", "anna", ("true",), watch=watch)
+    if bad:
+        with pytest.raises(JobError) as caught:
+            jb._check_spec(spec)
+        assert caught.value.code == "bad_spec"
+    else:
+        jb._check_spec(spec)
+
+
+def test_the_watch_is_written_into_the_jobs_file_and_read_back_and_an_older_file_has_none(root, tmp_path):
+    info = jb.start_job(root, JobSpec("test", "", py("pass"), watch=(("/", 0), (str(tmp_path), 123))))
+    finish(info)
+    assert jb.job_info(info.dir).spec.watch == (("/", 0), (str(tmp_path), 123))
+    raw = jb.read_json(info.dir + "/job.json")
+    raw.pop("watch")
+    jb.write_json(info.dir + "/job.json", raw)
+    assert jb.job_info(info.dir).spec.watch == ()
+
+
+def test_a_runner_with_a_floor_above_the_free_space_stops_its_command_gently_and_says_it_was_the_disk(root, tmp_path):
+    above = jb.free_bytes(str(tmp_path)) + 10 ** 9
+    info = jb.start_job(root, JobSpec("test", "", py(SLEEPER), watch=((str(tmp_path), above),)))
+    done = finish(info)
+    assert done.status is JobStatus.STOPPED and done.stop_reason == "disk"
+    note = jb.read_json(info.dir + "/stop.json")
+    assert note["forced"] is False and note["path"] == str(tmp_path) and note["floor"] == above and 0 < note["free"] < above
+
+
+def test_a_runner_with_room_lets_its_command_finish_and_a_missing_folder_is_not_a_reason_to_stop(root, tmp_path):
+    ample = jb.start_job(root, JobSpec("test", "", py("import time; time.sleep(1.5)"), watch=((str(tmp_path), 0), (str(tmp_path / "gone"), 10 ** 15))))
+    done = finish(ample)
+    assert done.status is JobStatus.FINISHED and done.stop_reason == "" and not os.path.exists(ample.dir + "/stop.json")
+
+
+def test_a_stop_a_person_asked_for_has_no_reason_and_an_unknown_reason_is_ignored(root):
+    info = jb.start_job(root, JobSpec("test", "", py(SLEEPER)))
+    assert jb.request_stop(info.dir) == "asked"
+    assert finish(info).stop_reason == ""
+    jb.write_json(info.dir + "/stop.json", {"forced": False, "reason": "because"})
+    assert jb.job_info(info.dir).stop_reason == ""

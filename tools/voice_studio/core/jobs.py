@@ -18,6 +18,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -34,6 +35,9 @@ SCHEMA = 1
 KIND = re.compile(r"^[a-z0-9][a-z0-9-]{0,19}$")
 START_GRACE_S = 15.0
 ERROR_CODES = ("bad_spec", "network_program", "gpu_busy", "launch_failed", "no_start", "not_found")           # each has words in the text catalog
+STOP_REASONS = ("disk",)                       # why a stop was asked for by the runner itself rather than by a person; each has words in the text catalog
+WATCH_EVERY_S = 5.0                            # how often the runner looks at the free space of the folders it was told to watch
+MAX_WATCHES = 4
 OFFLINE_ENV = {"HF_HUB_OFFLINE": "1", "HF_HUB_DISABLE_TELEMETRY": "1", "DO_NOT_TRACK": "1", "TRANSFORMERS_OFFLINE": "1"}
 TOOLS_DIR = Path(__file__).resolve().parents[2]            # the folder that holds the voice_studio package
 
@@ -70,6 +74,7 @@ class JobSpec:
     env: Mapping[str, str] = field(default_factory=dict)
     gpu: bool = False
     force_grace_s: float = 10.0                  # how long a forced stop waits between "terminate" and "kill"
+    watch: Tuple[Tuple[str, int], ...] = ()      # (a folder, the free space in bytes below which the runner asks the command to stop, once, gently): the disk guard
 
 
 @dataclass(frozen=True)
@@ -83,6 +88,7 @@ class JobInfo:
     signal: Optional[int] = None
     error: str = ""
     runner_pid: Optional[int] = None
+    stop_reason: str = ""                        # one of STOP_REASONS when the runner asked for the stop itself; empty for a stop a person asked for, or none
 
 
 # ---------------------------------------------------------------- files
@@ -176,7 +182,7 @@ def compute_status(runner: Optional[dict], result: Optional[dict], stop_asked: b
 def _spec_from(raw: dict) -> JobSpec:
     return JobSpec(kind=str(raw["kind"]), project=str(raw.get("project", "")), argv=tuple(str(a) for a in raw["argv"]), cwd=raw.get("cwd"),
                    env={str(k): str(v) for k, v in (raw.get("env") or {}).items()}, gpu=bool(raw.get("gpu", False)),
-                   force_grace_s=float(raw.get("force_grace_s", 10.0)))
+                   force_grace_s=float(raw.get("force_grace_s", 10.0)), watch=tuple((str(p), int(f)) for p, f in (raw.get("watch") or [])))
 
 
 def job_info(job_dir: str, read: Callable[[str], Optional[str]] = read_text_file, now: Optional[float] = None) -> JobInfo:
@@ -193,9 +199,10 @@ def job_info(job_dir: str, read: Callable[[str], Optional[str]] = read_text_file
     age = max(0.0, (now if now is not None else time.time()) - float(raw.get("created_epoch", 0)))
     status = compute_status(runner, result, stop_asked, alive, age)
     exit_code = result.get("exit_code") if result else None
+    stop = read_json(job_dir + "/stop.json") or {}
     return JobInfo(os.path.basename(job_dir), job_dir, spec, str(raw.get("started_at", "")), status,
                    exit_code if isinstance(exit_code, int) else None, (result or {}).get("signal"), str((result or {}).get("error", "")),
-                   runner.get("pid") if runner else None)
+                   runner.get("pid") if runner else None, stop.get("reason") if stop.get("reason") in STOP_REASONS else "")
 
 
 @dataclass(frozen=True)
@@ -239,6 +246,9 @@ def _check_spec(spec: JobSpec) -> None:
         raise JobError("network_program", os.path.basename(spec.argv[0]))
     if not (0 <= spec.force_grace_s <= 600):
         raise JobError("bad_spec", "force_grace_s")
+    if len(spec.watch) > MAX_WATCHES or any(not (isinstance(w, tuple) and len(w) == 2 and isinstance(w[0], str) and w[0].startswith("/") and "\x00" not in w[0]
+                                                 and isinstance(w[1], int) and not isinstance(w[1], bool) and 0 <= w[1] <= 1 << 50) for w in spec.watch):
+        raise JobError("bad_spec", "watch")
 
 
 def start_job(jobs_root: str, spec: JobSpec, now: Optional[datetime] = None, wait_s: float = 15.0, python: Optional[str] = None) -> JobInfo:
@@ -255,7 +265,8 @@ def start_job(jobs_root: str, spec: JobSpec, now: Optional[datetime] = None, wai
     env = dict(OFFLINE_ENV)
     env.update(spec.env)
     write_json(job_dir + "/job.json", {"schema": SCHEMA, "kind": spec.kind, "project": spec.project, "argv": list(spec.argv), "cwd": spec.cwd, "env": env,
-                                       "gpu": spec.gpu, "force_grace_s": spec.force_grace_s, "started_at": utc_stamp(stamp), "created_epoch": time.time()})
+                                       "gpu": spec.gpu, "force_grace_s": spec.force_grace_s, "watch": [list(w) for w in spec.watch], "started_at": utc_stamp(stamp),
+                                       "created_epoch": time.time()})
     launcher_env = dict(os.environ, PYTHONPATH=os.pathsep.join([str(TOOLS_DIR)] + ([os.environ["PYTHONPATH"]] if os.environ.get("PYTHONPATH") else [])))
     try:
         with subprocess.Popen([python or sys.executable, "-m", "voice_studio.core.jobrunner", job_dir], cwd=str(TOOLS_DIR), env=launcher_env,
@@ -294,6 +305,36 @@ def force_stop(job_dir: str) -> str:
         return "already"
     write_json(job_dir + "/stop.json", {"forced": True, "at": utc_stamp()})
     return "asked"
+
+
+def free_bytes(path: str) -> Optional[int]:
+    """Free space on the drive holding `path`, or None if it cannot be read (a folder that is gone, a drive that is unplugged)."""
+    try:
+        return shutil.disk_usage(path).free
+    except OSError:
+        return None
+
+
+def watch_breach(watch: Tuple[Tuple[str, int], ...], free_of: Callable[[str], Optional[int]] = free_bytes) -> Optional[Tuple[str, int, int]]:
+    """(folder, free, floor) of the first watched folder whose drive has *less* than its floor free; exactly the floor is fine. A drive that cannot be read is not judged:
+    a command is never stopped on a guess."""
+    for path, floor in watch:
+        free = free_of(path)
+        if free is not None and free < floor:
+            return path, free, floor
+    return None
+
+
+def ask_stop_for_disk(job_dir: str, watch: Tuple[Tuple[str, int], ...], free_of: Callable[[str], Optional[int]] = free_bytes) -> bool:
+    """If a watched drive is below its floor and nobody has asked for a stop yet, ask for one the gentle way (like one Ctrl+C) and say why. True if it asked now."""
+    if not watch or os.path.exists(job_dir + "/stop.json"):
+        return False
+    breach = watch_breach(watch, free_of)
+    if breach is None:
+        return False
+    path, free, floor = breach
+    write_json(job_dir + "/stop.json", {"forced": False, "at": utc_stamp(), "reason": "disk", "path": path, "free": free, "floor": floor})
+    return True
 
 
 def tail_log(job_dir: str, max_lines: int = 40, max_bytes: int = 65536) -> List[str]:

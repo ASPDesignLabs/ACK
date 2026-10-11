@@ -50,9 +50,10 @@ class Command:
     cwd: str
     gpu: bool = False                   # holds the graphics card while it runs (only one such job at a time)
     env: Tuple[Tuple[str, str], ...] = ()
+    watch: Tuple[Tuple[str, int], ...] = ()      # (folder, free bytes below which the runner asks it to stop): the disk guard, core/trainguard.py
 
     def job(self, project_id: str, force_grace_s: float = 10.0) -> JobSpec:
-        return JobSpec(self.kind, project_id, self.argv, self.cwd, dict(self.env), self.gpu, force_grace_s)
+        return JobSpec(self.kind, project_id, self.argv, self.cwd, dict(self.env), self.gpu, force_grace_s, self.watch)
 
 
 def _absolute(path: object, what: str) -> str:

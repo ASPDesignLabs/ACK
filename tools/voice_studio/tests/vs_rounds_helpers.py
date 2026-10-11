@@ -96,7 +96,7 @@ class World:
     def reconcile(self, now=None):
         return rd.reconcile(self.paths, self.scratch, self.jobs_root, PROJECT, now=now or NOW + timedelta(minutes=30))
 
-    def run_round(self, *, version, ends="finished", files="whole", later=26, **kw):
+    def run_round(self, *, version, ends="finished", files="whole", later=26, reason="", **kw):
         """A whole round, written the way the pieces would write it: begin, a job, the trainer's files, an ended job, then reconcile.
         `ends` is how the job ended (finished, stopped, failed); `files` is what the trainer left (whole, cut, no_last, none)."""
         plan = self.begin(**kw)
@@ -104,7 +104,7 @@ class World:
         rd.attach_job(self.paths, plan.number, info.id)
         if files != "none":
             self.trainer_makes(version, whole=(files != "cut"), with_last=(files != "no_last"))
-        end_job(info.dir, ends, ended_at=stamp(later))
+        end_job(info.dir, ends, ended_at=stamp(later), reason=reason)
         self.reconcile()
         return plan
 
@@ -148,11 +148,11 @@ def fake_job(jobs_root, argv, status, *, run_dir=None, name=None, project=PROJEC
     return jobs.job_info(folder)
 
 
-def end_job(folder, how, *, exit_code=None, signal=None, error="", ended_at=None):
+def end_job(folder, how, *, exit_code=None, signal=None, error="", ended_at=None, reason=""):
     """Write the runner's last word. `how` is finished (exit 0), stopped (a stop was asked for), failed (exit 1 unless told otherwise) or never_started (a launch error)."""
     code = {"finished": 0, "stopped": 130, "failed": 1, "never_started": None}[how] if exit_code is None and signal is None else exit_code
     if how == "stopped":
-        jobs.write_json(folder + "/stop.json", {"forced": False, "at": jobs.utc_stamp()})
+        jobs.write_json(folder + "/stop.json", dict({"forced": False, "at": jobs.utc_stamp()}, **({"reason": reason} if reason else {})))
     if how == "never_started":
         error = error or "program_not_found"
     jobs.write_json(folder + "/result.json", {"exit_code": code, "signal": signal, "ended_at": ended_at or jobs.utc_stamp(), "stop_requested": how == "stopped",

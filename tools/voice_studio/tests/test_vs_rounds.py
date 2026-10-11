@@ -1274,3 +1274,52 @@ def test_the_files_of_the_running_round_and_files_nobody_claimed_are_not_in_the_
     items = rd.cleanup_items(kept)
     assert {i.key for i in items} == {"checkpoint.round1.%s" % f.name for n, f in kept.keep + kept.spare}
     assert not [i for i in diskbudget.reclaimable(items) if "round2" in i.key]
+
+
+# ---------------------------------------------------------------- stopped by the disk guard
+
+def test_a_round_the_runner_stopped_because_the_disk_was_nearly_full_remembers_why_and_can_still_be_continued_from(world):
+    world.run_round(version=0, ends="stopped", reason="disk")
+    r = rd.load(world.paths).rounds[0]
+    assert (r.state, r.stopped_for, r.has_checkpoint) == ("stopped", "disk", True) and rd.load(world.paths).current == 1
+    world.run_round(version=1, ends="stopped")                          # a stop a person asked for has no reason
+    assert rd.load(world.paths).rounds[1].stopped_for == ""
+
+
+def test_a_stop_reason_is_only_read_from_a_stop_and_a_later_stopped_round_keeps_its_own(world):
+    world.run_round(version=0, ends="failed", reason="disk")
+    assert rd.load(world.paths).rounds[0].stopped_for == ""            # reason is only written for a stop; a plain failure writes none
+    world.run_round(version=1)
+    plan = world.begin()
+    info = world.job_for(plan, "running")
+    rd.attach_job(world.paths, 3, info.id)
+    end_job(info.dir, "stopped", reason="disk")
+    assert world.reconcile().rounds[2].stopped_for == "disk"
+
+
+@pytest.mark.parametrize("change, good", [
+    (lambda d: d["rounds"][0].update(stopped_for="disk"), True), (lambda d: d["rounds"][0].update(stopped_for=""), True), (lambda d: d["rounds"][0].update(stopped_for=None), True),
+    (lambda d: d["rounds"][0].update(stopped_for="because"), False), (lambda d: d["rounds"][0].update(stopped_for=5), False),
+    (lambda d: d["rounds"][0].update(state="running", ended="", has_checkpoint=False, version=None, stopped_for="disk") or d.update(current=0), False),
+])
+def test_the_reason_a_round_was_stopped_is_one_of_the_known_ones_and_only_for_a_round_that_ended(change, good):
+    data = one_round_dict()
+    change(data)
+    if good:
+        rd.record_from_text(json.dumps(data))
+    else:
+        assert code_of(rd.record_from_text, json.dumps(data)) == "damaged"
+
+
+def test_the_reason_survives_saving_and_reading(world):
+    record = rd.Record((R(1, state="stopped", stopped_for="disk"),), 1)
+    rd.modify(world.paths, lambda old: record)
+    assert rd.load(world.paths) == record and json.loads(slurp(world.paths.rounds_file))["rounds"][0]["stopped_for"] == "disk"
+
+
+def test_the_free_space_floors_asked_for_reach_the_job_the_runner_will_watch(world):
+    world.dataset()
+    start, calls = starter()
+    watch = ((world.paths.run, 1_640_000_000), (world.scratch.caches, 1_114_000_000))
+    rd.start_round(world.paths, world.scratch, PROJECT, world.training, world.jobs_root, dataset=DATASET, base=world.base, now=NOW, start=start, watch=watch)
+    assert calls[0].watch == watch

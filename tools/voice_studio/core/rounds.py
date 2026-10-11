@@ -93,6 +93,7 @@ class Round:
     versions_before: Tuple[int, ...] = ()    # the version folders that existed when the round began
     has_checkpoint: bool = False             # it ended with a whole saved point (finished or stopped); that is what makes it choosable
     failure: str = ""                        # one of FAILURE_CODES, or empty
+    stopped_for: str = ""                    # one of jobs.STOP_REASONS when the runner stopped it by itself (the disk was nearly full), empty otherwise
     exit_code: Optional[int] = None
     note: str = ""                           # the helper's own words about the round (VS-4.5)
     extra: Dict[str, Any] = field(default_factory=dict)       # fields a newer version added, kept so saving never loses them
@@ -106,7 +107,7 @@ class Record:
 
 
 ROUND_FIELDS = {"number", "parent", "voice", "dataset", "minutes", "state", "started", "ended", "job", "version", "versions_before", "has_checkpoint", "failure",
-                "exit_code", "note"}
+                "stopped_for", "exit_code", "note"}
 RECORD_FIELDS = {"schema", "rounds", "current"}
 
 
@@ -216,7 +217,9 @@ def _round_from(raw: Any) -> Round:
     flag = raw.get("has_checkpoint", False)
     if not isinstance(flag, bool):
         raise RoundsError("damaged", "has_checkpoint")
-    state, failure = _str(raw, "state", 20, required=True), _str(raw, "failure", 20)
+    state, failure, stopped_for = _str(raw, "state", 20, required=True), _str(raw, "failure", 20), _str(raw, "stopped_for", 20)
+    if stopped_for and stopped_for not in jobs.STOP_REASONS:
+        raise RoundsError("damaged", "stopped_for")
     if state not in STATES:
         raise RoundsError("damaged", "state")
     if failure and failure not in FAILURE_CODES:
@@ -229,7 +232,7 @@ def _round_from(raw: Any) -> Round:
     return Round(
         number=_int(raw, "number", 1, MAX_ROUNDS), parent=parent, voice=_name(raw, "voice", required=(parent == 0)), dataset=_name(raw, "dataset", required=True),
         minutes=_int(raw, "minutes", 1, MAX_MINUTES), state=state, started=_stamp(raw, "started", required=True), ended=_stamp(raw, "ended", required=False), job=_name(raw, "job", required=False),
-        version=_opt_int(raw, "version", 0, MAX_VERSION), versions_before=tuple(before), has_checkpoint=flag, failure=failure, exit_code=_opt_int(raw, "exit_code", -1_000_000, 1_000_000),
+        version=_opt_int(raw, "version", 0, MAX_VERSION), versions_before=tuple(before), has_checkpoint=flag, failure=failure, stopped_for=stopped_for, exit_code=_opt_int(raw, "exit_code", -1_000_000, 1_000_000),
         note=clean_text(note, MAX_NOTE), extra={k: v for k, v in raw.items() if k not in ROUND_FIELDS})
 
 
@@ -249,7 +252,7 @@ def validate(record: Record) -> None:
             raise RoundsError("damaged", "voice")
         if r.state not in ACTIVE_STATES and not r.ended:
             raise RoundsError("damaged", "ended")
-        if r.state in ACTIVE_STATES and (r.ended or r.has_checkpoint or r.failure):
+        if r.state in ACTIVE_STATES and (r.ended or r.has_checkpoint or r.failure or r.stopped_for):
             raise RoundsError("damaged", "state")
         if r.has_checkpoint and (r.state not in RESUMABLE_STATES or r.version is None):
             raise RoundsError("damaged", "has_checkpoint")
@@ -303,7 +306,7 @@ def round_to_dict(r: Round) -> Dict[str, Any]:
     data: Dict[str, Any] = dict(r.extra)
     data.update({"number": r.number, "parent": r.parent, "voice": r.voice, "dataset": r.dataset, "minutes": r.minutes, "state": r.state, "started": r.started,
                  "ended": r.ended, "job": r.job, "version": r.version, "versions_before": list(r.versions_before), "has_checkpoint": r.has_checkpoint,
-                 "failure": r.failure, "exit_code": r.exit_code, "note": r.note})
+                 "failure": r.failure, "stopped_for": r.stopped_for, "exit_code": r.exit_code, "note": r.note})
     return data
 
 
@@ -620,7 +623,7 @@ def _job_for(r: Round, scratch: ScratchPaths, jobs_root: str, project_id: str, l
     return None
 
 
-def _ended(r: Round, record: Record, paths: ProjectPaths, state: str, failure: str, exit_code: Optional[int], ended: str) -> Tuple[Round, bool]:
+def _ended(r: Round, record: Record, paths: ProjectPaths, state: str, failure: str, exit_code: Optional[int], ended: str, stopped_for: str = "") -> Tuple[Round, bool]:
     """The round as it ended: its folder found, its saved point checked. A round that finished without writing one did not finish. Returns (round, chosen-by-itself)."""
     version = r.version if r.version is not None else _new_version(paths, record, r)
     probe = replace(r, version=version)
@@ -629,7 +632,7 @@ def _ended(r: Round, record: Record, paths: ProjectPaths, state: str, failure: s
     if state == "finished" and not whole:
         state, failure = "failed", "no_checkpoint"
     keeps = whole and state in RESUMABLE_STATES
-    return replace(r, state=state, failure=failure, exit_code=exit_code, ended=ended, version=version, has_checkpoint=keeps), keeps
+    return replace(r, state=state, failure=failure, stopped_for=stopped_for, exit_code=exit_code, ended=ended, version=version, has_checkpoint=keeps), keeps
 
 
 def reconcile(paths: ProjectPaths, scratch: ScratchPaths, jobs_root: str, project_id: str, *, now: Optional[datetime] = None, write: bool = True) -> Record:
@@ -665,7 +668,7 @@ def reconcile(paths: ProjectPaths, scratch: ScratchPaths, jobs_root: str, projec
                     failure = "signal" if info.signal else "exit"
                 elif info.status is jobs.JobStatus.NEVER_STARTED and info.error:
                     failure = "program"                                          # the program could not be run at all (not found, not allowed)
-                new, keeps = _ended(replace(r, job=info.id), record, paths, state, failure, info.exit_code, ended)
+                new, keeps = _ended(replace(r, job=info.id), record, paths, state, failure, info.exit_code, ended, info.stop_reason)
             record = _replace_round(record, new)
             if keeps:
                 record = replace(record, current=new.number)
@@ -691,12 +694,13 @@ class Started:
 
 def start_round(paths: ProjectPaths, scratch: ScratchPaths, project_id: str, training: EnvPaths, jobs_root: str, *, dataset: str, minutes: int = ROUND_MINUTES,
                 base: Optional[Base] = None, now: Optional[datetime] = None, start: Callable[[str, jobs.JobSpec], jobs.JobInfo] = jobs.start_job,
-                batch_size: int = BATCH_SIZE, workers: int = NUM_WORKERS, check_every: int = CHECK_VAL_EVERY_N_EPOCH) -> Started:
+                batch_size: int = BATCH_SIZE, workers: int = NUM_WORKERS, check_every: int = CHECK_VAL_EVERY_N_EPOCH,
+                watch: Tuple[Tuple[str, int], ...] = ()) -> Started:
     """Bring the record up to date, plan the next round, check the command, write the round down, start the job, and write the job's name. Every step that can refuse
     does so before anything is written; if the job does not start, the line written for it is taken out again and the reason is raised."""
     record = reconcile(paths, scratch, jobs_root, project_id, now=now)
     plan = plan_round(paths, scratch, record, dataset=dataset, minutes=minutes, base=base)
-    command = command_for(training, plan, batch_size=batch_size, workers=workers, check_every=check_every)
+    command = replace(command_for(training, plan, batch_size=batch_size, workers=workers, check_every=check_every), watch=watch)
     prepare_folders(paths, plan)
     begin(paths, plan, now)
     try:
