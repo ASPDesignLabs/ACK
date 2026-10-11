@@ -198,6 +198,12 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   **Seen for real:** the first wait, the return, and the plain sentences. **Only simulated (tests and a local server), not yet seen on a real connection:** the longer pauses (10, 20, 30, 60 s), giving up after 30 minutes, and the
   next run carrying on without a second yes.
 
+- **F21 (2026-10-11), the first training round on Ubuntu 24.04 (Python 3.12.3, the same RTX 4060 through WSL, programs built by the tool from the lock).** The starting voice and the 23-clip training set were copied from the 22.04
+  distribution through a pipe and checked by fingerprint (identical). Loading took about 36 seconds; the round stopped itself with `Time limit reached. Elapsed time is 0:05:04.` (D34 holds: the clock starts with the round) and exit code 0;
+  six checkpoints (the five best by `val_mel` and `last.ckpt`, 807 MB each, 4841 MB, as on 22.04); **peak graphics memory 7,750 MiB (22.04: 7,793)**; 0 lines about the quality scorer; about 1.5 to 2.2 steps a second. The only warnings were
+  deprecation notes from the newer libraries (`torch.jit.script`, `weight_norm`, a Lightning `isinstance` note) and Lightning's "dirpath has changed" note, which quotes the folder the *starting voice's* author trained in. So the
+  launcher's workarounds, the lock and the time rule behave the same on 3.12 as on 3.10; **not yet done on 24.04: the resume and the export, patch and zip (device test J).**
+
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
   `Time limit reached. Elapsed time is 0:01:04`, and `version_0` to `version_3` exist. The export under the launcher exited 0 with **no extra package** (`onnxscript` is not needed): `my_voice.onnx` 63,516,211 bytes after the
   patch (the original, kept as `.before-patch`, is 63,516,051), the settings file 5,036 bytes; the patcher's second run changed nothing; the zip is 63,517,438 bytes holding exactly `model.onnx` and `model.onnx.json`, and
