@@ -602,3 +602,11 @@ def test_a_round_with_no_saved_point_says_why_it_ended_and_does_not_also_say_it_
     rig.world.run_round(version=0, ends="failed")
     code, io = rig.run("list", "--project", "anna")
     assert "  The training program ended with an error." in io.lines and not any("saved point" in l and l.startswith("  ") for l in io.lines)
+
+
+def test_the_training_time_shown_is_that_of_the_chosen_round_not_of_the_last_one(rig):
+    rig.finish_rounds(2)
+    assert rig.run("back", "--project", "anna", "--yes")[0] == 0
+    code, io = rig.run("list", "--project", "anna")
+    assert any(l.startswith("Chosen: round 1.") and "About 25 minutes of training" in l for l in io.lines), io.lines
+    assert "Round 1 (chosen): Finished." in io.lines and "Round 2: Finished." in io.lines
