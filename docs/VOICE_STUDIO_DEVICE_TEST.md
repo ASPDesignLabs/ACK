@@ -705,6 +705,7 @@ round that is chosen (`rounds list` says which), and it does not run while a rou
   ```
   → `The chosen round has no settings file.` and under it `Nothing was made.` and what to do next. The `ls` shows only the folders from before. **Put the file back (the third command) even if something looks wrong.**
 - [ ] Take the zip file to the phone and import it, as in section K. Write down whether ACK took it the first time, and whether it speaks in the voice.
+  *Confirmed on the developer's computer and phone (2026-10-11): `make` ran the real export, patcher and zip in 10.7 seconds and produced a 64 MB zip that read back clean; the folder held exactly the four files, the zip held exactly `model.onnx` and `model.onnx.json`, the settings file was identical to round 3's own; the phone took the zip the first time and MY VOICE spoke, better than the earlier runs. The refusal step (moving the settings file aside) was not run.*
 - [ ] Write down: how long it took, whether any wording confused you (the plan, the five steps, the `Done.` lines), whether you wanted the file somewhere else than the project's `exports` folder, and whether you wanted a name of your own for it.
 
 ## J. Making the voice file
