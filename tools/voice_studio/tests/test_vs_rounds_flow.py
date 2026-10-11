@@ -596,3 +596,9 @@ def test_keep_and_list_leave_a_record_that_is_behind_exactly_as_it_is(rig):
     for argv in (("keep",), ("list",)):
         assert rig.run(*argv, "--project", "anna")[0] == 0 and rig.record_bytes() == before, argv
     assert rd.load(rig.paths).rounds[0].state == "running"
+
+
+def test_a_round_with_no_saved_point_says_why_it_ended_and_does_not_also_say_it_has_no_saved_point(rig):
+    rig.world.run_round(version=0, ends="failed")
+    code, io = rig.run("list", "--project", "anna")
+    assert "  The training program ended with an error." in io.lines and not any("saved point" in l and l.startswith("  ") for l in io.lines)
