@@ -557,3 +557,34 @@ def test_a_marker_that_cannot_be_read_does_not_make_a_place_ready(tmp_path):
     (folder / MARKER_NAME).rmdir()
     (folder / MARKER_NAME).write_bytes(b"\xff\xfe\x00")
     assert rf.scratch_ready(project, paths) is False
+
+
+def ended_since(rig):
+    plan = rig.world.begin()
+    info = rig.world.job_for(plan, "running")
+    rd.attach_job(rig.paths, 1, info.id)
+    rig.world.trainer_makes(0)
+    end_job(info.dir, "finished", ended_at=stamp(20))
+    assert rd.load(rig.paths).rounds[0].state == "running"
+
+
+@pytest.mark.parametrize("argv", [("note", "1", "--text", "x", "--yes"), ("stop", "--yes"), ("choose", "1", "--yes"), ("back", "--yes")])
+def test_every_command_that_changes_something_first_writes_down_what_has_ended_since_and_says_so(rig, argv):
+    ended_since(rig)
+    code, io = rig.run(*argv, "--project", "anna")
+    assert "Noticed: round 1 is now: Finished." in io.lines, (argv, io.lines)
+    assert rd.load(rig.paths).rounds[0].state == "finished" and rd.load(rig.paths).current == 1
+
+
+def test_looking_says_nothing_about_what_it_would_have_written(rig):
+    ended_since(rig)
+    for argv in (("list",), ("keep",)):
+        code, io = rig.run(*argv, "--project", "anna")
+        assert code == 0 and "Noticed" not in io.text, argv
+
+
+def test_a_round_that_has_only_started_running_is_not_announced(rig):
+    plan = rig.world.begin()
+    rig.world.job_for(plan, "running")                                                         # its job exists; the record does not know the name yet
+    code, io = rig.run("stop", "--project", "anna", "--yes")
+    assert code == 0 and "Noticed" not in io.text and "Asked round 1 to stop" in io.text
