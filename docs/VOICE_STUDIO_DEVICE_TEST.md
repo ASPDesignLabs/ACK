@@ -628,7 +628,7 @@ and what was removed cannot be brought back, so **if you want every round kept a
   ```
   → `What could be freed up for Voice check:`, then a line for each round whose saved files could go, with their size, and for each ended round whose working files are still there, with theirs. The chosen round's line says `Its own saved point is kept.`
   A round that is neither the chosen one nor the one it continued from says, if its saved point is on the list, that the round could not be chosen again. Then the total, `Kept for sure, never on this list: …`, and
-  `Recordings, notes, the project file, backups, exports and the starting voices are never on this list.` and how to name rounds. Write down the sizes and the output of `df`. If it says `There is nothing to free up. Every saved file that is left is kept for sure, in use, or not made by a round.`, there is nothing to try yet: run more rounds, or stop here.
+  `Recordings, notes, the project file, backups, exports and the starting voices are never on this list.` and how to name rounds. Write down the sizes and the output of `df`. (`df -h` counts in 1,024s and this tool counts in 1,000s, the way drives are sold, so the tool's numbers read about 7% bigger: `872G` in `df` is about 936 GB in the tool. Same space, different unit.) If it says `There is nothing to free up. Every saved file that is left is kept for sure, in use, or not made by a round.`, there is nothing to try yet: run more rounds, or stop here.
 - [ ] Ask to remove one round's spare saved files, and say no. Pick a round whose line does **not** say it could not be chosen again:
   ```bash
   PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --saved 1 --project voice-check
