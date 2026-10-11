@@ -652,3 +652,11 @@ def test_back_with_nowhere_to_go_does_not_ask_a_question_first(rig):
     rig.finish_rounds(1)
     code, io = rig.run("back", "--project", "anna", answers=["yes"])
     assert code == 1 and io.prompts == [] and "no earlier round to go back to" in io.text
+
+
+def test_a_note_goes_on_the_round_it_was_written_for(rig):
+    rig.finish_rounds(2)
+    assert rig.run("note", "2", "--text", "this one", "--project", "anna", "--yes")[0] == 0
+    assert [r.note for r in rd.load(rig.paths).rounds] == ["", "this one"]
+    assert rig.run("note", "1", "--text", "that one", "--project", "anna", "--yes")[0] == 0
+    assert [r.note for r in rd.load(rig.paths).rounds] == ["that one", "this one"]
