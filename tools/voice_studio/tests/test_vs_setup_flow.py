@@ -138,7 +138,7 @@ def test_what_was_agreed_to_is_each_program_by_name_and_the_update_and_nothing_e
     assert ids_a == ["apt:update"] and ids_b == ["apt:git", "apt:ffmpeg"]
     assert consent_a is consent_b
     assert sorted(e.id for e in consent_a.entries) == ["apt:ffmpeg", "apt:git", "apt:update"]
-    assert consent_a.covers_id("apt:git") and not consent_a.covers_id("apt:cmake") and not consent_a.covers_id("pip:lock")
+    assert consent_a.covers_id("apt:git") and not consent_a.covers_id("apt:python3-gi") and not consent_a.covers_id("pip:lock")
 
 
 # ---------------------------------------------------------------- not interactive

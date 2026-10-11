@@ -184,8 +184,6 @@ REQUIREMENTS: Tuple[Requirement, ...] = (
     Requirement("python3-venv", "apt.why.python3_venv", _python_runs("import venv, ensurepip")),
     Requirement("python3-dev", "apt.why.python3_dev"),
     Requirement("build-essential", "apt.why.build_essential", _tool("gcc", "g++", "make")),
-    Requirement("cmake", "apt.why.cmake", _tool("cmake")),
-    Requirement("ninja-build", "apt.why.ninja_build", _tool("ninja")),
     Requirement("git", "apt.why.git", _tool("git")),
     Requirement("ffmpeg", "apt.why.ffmpeg", _tool("ffmpeg", "ffprobe")),
     Requirement("python3-gi", "apt.why.python3_gi", _python_runs("import gi")),

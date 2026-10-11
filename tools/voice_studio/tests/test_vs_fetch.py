@@ -281,7 +281,7 @@ def test_a_networked_command_is_refused_without_agreement_by_name(tmp_path):
     assert code_of(lambda: fx.run_networked(None, ["pip", "install", "x"], ["pip:lock"], runner=runner)) == "consent"
     assert code_of(lambda: fx.run_networked(cs.make_consent([], ["apt:git"]), ["pip", "install", "x"], ["pip:lock"], runner=runner)) == "consent"
     assert code_of(lambda: fx.run_networked(cs.make_consent([], ["pip:lock"]), ["pip", "install", "x"], [], runner=runner)) == "consent"
-    assert code_of(lambda: fx.run_networked(cs.make_consent([], ["apt:git"]), ["apt-get", "install"], ["apt:git", "apt:cmake"], runner=runner)) == "consent"
+    assert code_of(lambda: fx.run_networked(cs.make_consent([], ["apt:git"]), ["apt-get", "install"], ["apt:git", "apt:ffmpeg"], runner=runner)) == "consent"
     assert calls == []
 
 
@@ -305,7 +305,7 @@ def test_a_command_run_in_the_persons_own_terminal_is_still_refused_without_agre
     consent = cs.make_consent([], ["apt:git"])
     code = code_of(lambda: fx.run_networked(None, [sys.executable, "-c", "print('ran')"], ["apt:git"], inherit_stdio=True))
     assert code == "consent"
-    assert code_of(lambda: fx.run_networked(consent, [sys.executable, "-c", "print('ran')"], ["apt:cmake"], inherit_stdio=True)) == "consent"
+    assert code_of(lambda: fx.run_networked(consent, [sys.executable, "-c", "print('ran')"], ["apt:ffmpeg"], inherit_stdio=True)) == "consent"
     assert code_of(lambda: fx.run_networked(consent, [sys.executable, "-c", "print('ran')"], [], inherit_stdio=True)) == "consent"
     assert "ran" not in capfd.readouterr().out
 

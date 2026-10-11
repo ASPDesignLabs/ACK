@@ -175,6 +175,12 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   bigger than a person's real project would be: `~/piper/voice-check-2` is 17 GB (every round keeps 6 checkpoints, 4.84 GB, F13), so P11's "older rounds' checkpoints" clean-up (VS-4.7) matters early. Nothing was
   deleted; clean-up is only done when the developer asks.
 
+- **F19 (2026-10-11), the first run on a fresh Ubuntu 24.04 (a second WSL distribution, Python 3.12.3, git 2.43.0, the same RTX 4060 seen through the Windows driver).** `setup.sh --check` listed seven
+  programs to install, two of them wrong: `cmake` and `ninja-build` "to build the training programs". They were left over from the build-from-source design; since D32 the training programs come from the
+  published wheel and only the shipped alignment source is built, with Cython and `gcc`. Both are removed from the list (and their two sentences from the text catalogue), so the tool no longer asks a person to
+  install what it never uses. The list is now `python3-venv`, `python3-dev`, `build-essential`, `git`, `ffmpeg`, `python3-gi`, `gir1.2-gtk-4.0`. `test_the_package_list_is_what_the_plan_says_and_each_has_a_reason`
+  pins it. Lesson: a fresh machine finds the requirement a design change forgot; the sandbox had everything installed.
+
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
   `Time limit reached. Elapsed time is 0:01:04`, and `version_0` to `version_3` exist. The export under the launcher exited 0 with **no extra package** (`onnxscript` is not needed): `my_voice.onnx` 63,516,211 bytes after the
   patch (the original, kept as `.before-patch`, is 63,516,051), the settings file 5,036 bytes; the patcher's second run changed nothing; the zip is 63,517,438 bytes holding exactly `model.onnx` and `model.onnx.json`, and

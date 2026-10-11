@@ -30,8 +30,8 @@ SMI_6G = "NVIDIA GeForce GTX 1660, 6144, 535.183.01\n"
 SMI_TWO = "NVIDIA GeForce GT 1030, 2048, 535.183.01\nNVIDIA GeForce RTX 4060, 8188, 535.183.01\n"
 SMI_DRIVER_DOWN = "NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running.\n"
 
-ALL_PACKAGES = ["python3-venv", "python3-dev", "build-essential", "cmake", "ninja-build", "git", "ffmpeg", "python3-gi", "gir1.2-gtk-4.0"]
-ALL_TOOLS = {n: "/usr/bin/" + n for n in ["gcc", "g++", "make", "cmake", "ninja", "git", "ffmpeg", "ffprobe", "apt-get", "sudo", "nvidia-smi"]}
+ALL_PACKAGES = ["python3-venv", "python3-dev", "build-essential", "git", "ffmpeg", "python3-gi", "gir1.2-gtk-4.0"]
+ALL_TOOLS = {n: "/usr/bin/" + n for n in ["gcc", "g++", "make", "git", "ffmpeg", "ffprobe", "apt-get", "sudo", "nvidia-smi"]}
 
 
 class FakeSystem:

@@ -34,7 +34,7 @@ def test_if_the_registry_later_points_at_a_different_file_the_old_consent_does_n
 
 def test_names_with_no_file_behind_them_are_consented_to_by_name():
     record = cs.make_consent([], extra_ids=["apt:git", "pip:lock"])
-    assert record.covers_id("apt:git") and record.covers_id("pip:lock") and not record.covers_id("apt:cmake")
+    assert record.covers_id("apt:git") and record.covers_id("pip:lock") and not record.covers_id("apt:ffmpeg")
 
 
 def test_the_time_is_recorded_in_utc():
@@ -60,7 +60,7 @@ def test_a_failed_save_keeps_the_old_record_and_leaves_nothing_behind(tmp_path, 
         raise OSError("disk full")
     monkeypatch.setattr(cs.os, "replace", boom)
     with pytest.raises(OSError):
-        cs.save_consent(path, cs.make_consent([], extra_ids=["apt:cmake"]))
+        cs.save_consent(path, cs.make_consent([], extra_ids=["apt:ffmpeg"]))
     monkeypatch.undo()
     assert cs.load_consent(path) == old and [p.name for p in tmp_path.iterdir()] == ["consent.json"]
 

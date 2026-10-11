@@ -133,7 +133,7 @@ def test_missing_requirements_survives_dpkg_not_running_at_all():
     class NoDpkg(FakeSystem):
         def run(self, argv, timeout=15.0):
             return None if argv[0] == "dpkg-query" else super().run(argv, timeout)
-    assert {r.package for r in pf.missing_requirements(NoDpkg(tools={}))} >= {"git", "cmake"}
+    assert {r.package for r in pf.missing_requirements(NoDpkg(tools={}))} >= {"git", "ffmpeg"}
 
 
 # ---------------------------------------------------------------- the whole report
