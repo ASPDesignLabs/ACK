@@ -1171,3 +1171,14 @@ def test_going_back_after_a_branch_goes_to_the_round_the_chosen_one_continued_fr
     assert rd.go_back_target(world.paths, record) == 1
     assert rd.go_back(world.paths).current == 1
     assert rd.kept_rounds(rd.load(world.paths)) == (1,)
+
+
+def test_a_job_for_another_working_folder_is_never_taken_for_this_round(world):
+    plan = world.begin()
+    other = ("py", "ack_run.py", "--data.cache_dir", "%s/%s-r002" % (world.scratch.caches, DATASET))
+    fake_job(world.jobs_root, other, "running")
+    fake_job(world.jobs_root, ("py", "ack_run.py", "--data.cache_dir"), "running")                    # an option with no value after it
+    r = world.reconcile(now=NOW + timedelta(seconds=30)).rounds[0]
+    assert (r.state, r.job) == ("starting", "")
+    mine = fake_job(world.jobs_root, world.command_of(plan).argv, "running")
+    assert world.reconcile(now=NOW + timedelta(seconds=30)).rounds[0].job == mine.id
