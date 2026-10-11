@@ -646,3 +646,9 @@ def test_the_training_set_named_is_the_one_the_round_trains_on_not_the_first_in_
     spec = rig.started[0]
     assert code == 0 and spec.argv[spec.argv.index("--data.csv_path") + 1] == rig.world.scratch.datasets + "/dataset-b/metadata.csv"
     assert rd.load(rig.paths).rounds[0].dataset == "dataset-b" and "dataset-b, which has 1 clips" in io.text
+
+
+def test_back_with_nowhere_to_go_does_not_ask_a_question_first(rig):
+    rig.finish_rounds(1)
+    code, io = rig.run("back", "--project", "anna", answers=["yes"])
+    assert code == 1 and io.prompts == [] and "no earlier round to go back to" in io.text
