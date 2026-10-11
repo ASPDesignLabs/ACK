@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""python3 -m voice_studio.rounds [list | start | stop | choose | back | note | keep | help]: training rounds from a terminal, until the window exists.
+"""python3 -m voice_studio.rounds [list | start | stop | choose | back | note | keep | free | help]: training rounds from a terminal, until the window exists.
 
-The terminal front of core/rounds.py (plan task VS-4.2). `list` and `keep` only look. `start`, `stop`, `choose`, `back` and `note` show what they will do and ask first.
+The terminal front of core/rounds.py (plan task VS-4.2). `list` and `keep` only look, and `free` only looks until it is told which rounds to free (then it shows what it will remove and asks first). `start`, `stop`, `choose`, `back`
+and `note` show what they will do and ask first.
 A round runs as a job of its own: closing the terminal does not stop it.
 """
 from __future__ import annotations

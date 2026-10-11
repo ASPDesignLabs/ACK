@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The terminal front for training rounds (until the window exists): see the rounds, start one, stop it, choose a round, go back, write a note, see what is kept.
+"""The terminal front for training rounds (until the window exists): see the rounds, start one, stop it, choose a round, go back, write a note, see what is kept, free up space.
 
-It is the front of core/rounds.py and decides nothing that module does not. Commands that only look (`list`, `keep`) change nothing, not even the record: they work out
+It is the front of core/rounds.py and decides nothing that module does not. Commands that only look (`list`, `keep`, and `free` with no rounds named) change nothing, not even the record: they work out
 what a write would find and show it. Every command that changes something shows what it will do and asks first (a typed yes, or `--yes`); a terminal with nobody at it is
 never asked, whatever else is queued. A command that changes the record first brings it up to date (a round that ended since is written down as ended) and says so, because
 that is a fact about what already happened, not an edit the person asked for.
@@ -14,9 +14,9 @@ import os
 from datetime import datetime
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import commands, jobs, rounds as rd, startvoice as sv, trainguard as tg
+from . import commands, freeup, jobs, rounds as rd, startvoice as sv, trainguard as tg
 from .buildenv_flow import duration_text
-from .diskbudget import DEFAULT_TABLE, MIB, DriveMap, Level, Watch, floors_for, watch as disk_watch
+from .diskbudget import DEFAULT_TABLE, MIB, DriveMap, Level, Role, Watch, floors_for, watch as disk_watch
 from .cliargs import ArgError, Parsed, parse_args
 from .describe import error_text
 from .envbuild import EnvPaths
@@ -35,9 +35,13 @@ YES = {"--yes": "yes", "-y": "yes"}
 PROJECT = {"--project": "project"}
 START_VALUES = {**PROJECT, "--set": "dataset", "--minutes": "minutes"}
 NOTE_VALUES = {**PROJECT, "--text": "text"}
+FREE_FLAGS = {**YES, "--all": "all"}
+FREE_VALUES = {**PROJECT, "--saved": "saved", "--working": "working"}
+MAX_FAILURES_SHOWN = 10
+FILES_ROW = {"chosen": "rounds.free.files_chosen", "before": "rounds.free.files_before", "other": "rounds.free.files_other", "point": "rounds.free.files_other_point"}
 OPTIONS = {"list": frozenset(PROJECT), "start": frozenset(YES) | frozenset(START_VALUES), "stop": frozenset(YES) | frozenset(PROJECT),
            "choose": frozenset(YES) | frozenset(PROJECT), "back": frozenset(YES) | frozenset(PROJECT), "note": frozenset(YES) | frozenset(NOTE_VALUES),
-           "keep": frozenset(PROJECT)}                       # the checklist is held to these
+           "keep": frozenset(PROJECT), "free": frozenset(FREE_FLAGS) | frozenset(FREE_VALUES)}                       # the checklist is held to these
 TrainingEnv = Callable[[], Tuple[Optional[EnvPaths], str]]
 
 
@@ -237,6 +241,114 @@ def _keep(args: Sequence[str], home: DataHome, now: Optional[datetime], cat: Cat
     if kept.unclaimed:
         io.say(cat.t("rounds.keep.unclaimed", count=len(kept.unclaimed), size=size_text(sum(f.size for f in kept.unclaimed))))
     io.say(cat.t("rounds.keep.nothing_removed"))
+    return EXIT_OK
+
+
+# ---------------------------------------------------------------- free up space
+
+def _round_numbers(word: str) -> Optional[List[int]]:
+    """'1,3' -> [1, 3]; anything that is not whole round numbers separated by commas -> None."""
+    found = [_number(part) for part in word.split(",")]
+    if any(n is None or n < 1 for n in found):
+        return None
+    return [n for n in found if n is not None]
+
+
+def _free_row(offer: freeup.Offer, cat: Catalog, io: IO) -> None:
+    if offer.kind == "folder":
+        io.say("  " + cat.t("rounds.free.working", round=offer.round, size=size_text(offer.bytes)))
+        return
+    key = FILES_ROW["point" if offer.includes_saved_point else offer.relation]
+    io.say("  " + cat.count(key, len(offer.paths), round=offer.round, size=size_text(offer.bytes)))
+
+
+def _free_list(shown: freeup.Plan, ctx: Open, cat: Catalog, io: IO) -> None:
+    """Everything that could be freed, then what never can be."""
+    io.say(cat.t("rounds.free.heading", name=ctx.project.name))
+    if not shown.offers:
+        io.say(cat.t("rounds.free.nothing"))
+    for offer in shown.offers:
+        _free_row(offer, cat, io)
+    if shown.offers:
+        io.say(cat.t("rounds.free.total", size=size_text(sum(o.bytes for o in shown.offers))))
+    if shown.kept:
+        io.say(cat.count("rounds.free.kept", len(shown.kept), size=size_text(sum(f.size for _n, f in shown.kept))))
+    if shown.busy:
+        io.say(cat.count("rounds.free.busy", shown.busy))
+    if shown.unclaimed:
+        io.say(cat.count("rounds.free.unclaimed", shown.unclaimed))
+    io.say(cat.t("rounds.free.never"))
+    if shown.offers:
+        io.say(cat.t("rounds.free.how", command="%s free --saved 1 --project %s" % (ROUNDS_COMMAND, ctx.project.id)))
+        io.say(cat.t("rounds.free.how_all"))
+
+
+def _free_up(args: Sequence[str], home: DataHome, now: Optional[datetime], system: System, cat: Catalog, io: IO) -> int:
+    try:
+        parsed = parse_args(args, flags=FREE_FLAGS, values=FREE_VALUES, max_words=0)
+    except ArgError as error:
+        return say_bad_arg(error, cat, io)
+    io.say(cat.t("rounds.title"))
+    named = {kind: parsed.values[kind] for kind in ("saved", "working") if kind in parsed.values}
+    if "all" in parsed.flags and named:
+        io.say(cat.t("rounds.free.both"))
+        return EXIT_NOTHING_DONE
+    numbers: Dict[str, List[int]] = {}
+    for kind, word in named.items():
+        found = _round_numbers(word)
+        if found is None:
+            io.say(cat.t("rounds.free.bad_numbers", text=word[:40]))
+            return EXIT_NOTHING_DONE
+        numbers[kind] = found
+    selecting = "all" in parsed.flags or bool(named)
+    ctx, code = _open(parsed, home, cat, io)
+    if ctx is None:
+        return code
+    record = _look(ctx, now, cat, io, write=selecting)
+    shown = freeup.plan(ctx.paths, ctx.scratch, record)
+    if not selecting:
+        _free_list(shown, ctx, cat, io)
+        return EXIT_OK
+    if not shown.offers:
+        io.say(cat.t("rounds.free.nothing"))
+        return EXIT_NOTHING_DONE
+    if "all" in parsed.flags:
+        picked = list(shown.offers)
+    else:
+        picked = []
+        for kind, wanted in numbers.items():
+            offer_kind = "files" if kind == "saved" else "folder"
+            by_round = {o.round: o for o in shown.offers if o.kind == offer_kind}
+            missing = [n for n in wanted if n not in by_round]
+            if missing:
+                io.say(cat.t("rounds.free.unknown", option="--" + kind, numbers=",".join(str(n) for n in missing), command="%s free --project %s" % (ROUNDS_COMMAND, ctx.project.id)))
+                return EXIT_NOTHING_DONE
+            picked += [by_round[n] for n in sorted(set(wanted))]
+    io.say(cat.t("rounds.free.will_remove"))
+    for offer in picked:
+        _free_row(offer, cat, io)
+    declined = _confirmed(parsed, cat.t("rounds.free.question", size=size_text(sum(o.bytes for o in picked))), cat, io)
+    if declined is not None:
+        return declined
+    try:
+        result = freeup.remove(ctx.paths, ctx.scratch, shown, [o.number for o in picked])
+    except freeup.FreeError as error:
+        _say_parts(cat, io, "freeup", error.code, error.detail)
+        return EXIT_PROBLEM
+    io.say(cat.t("rounds.free.done", files=result.removed_files, folders=result.removed_folders, size=size_text(result.removed_bytes)))
+    free = _free(system, ctx)
+    if free["project"] is not None:
+        io.say(cat.t("rounds.free.free_now", free=size_text(free["project"])))
+    drives = _drives(ctx)
+    if drives.of(Role.SCRATCH) != drives.of(Role.PROJECT) and free["scratch"] is not None:
+        io.say(cat.t("rounds.free.free_now_scratch", free=size_text(free["scratch"])))
+    if result.failed:
+        io.say(cat.t("rounds.free.failed_head"))
+        for path, reason in result.failed[:MAX_FAILURES_SHOWN]:
+            io.say("  " + cat.t("rounds.free.failed_row", path=path, reason=reason))
+        if len(result.failed) > MAX_FAILURES_SHOWN:
+            io.say("  " + cat.t("rounds.free.failed_more", count=len(result.failed) - MAX_FAILURES_SHOWN))
+        return EXIT_PROBLEM
     return EXIT_OK
 
 
@@ -475,7 +587,7 @@ def _help(cat: Catalog, io: IO) -> int:
     io.say(cat.t("rounds.title"))
     io.say(cat.t("rounds.usage.head"))
     for key in ("rounds.usage.list", "rounds.usage.start", "rounds.usage.stop", "rounds.usage.choose", "rounds.usage.back", "rounds.usage.note", "rounds.usage.keep",
-                "rounds.usage.options"):
+                "rounds.usage.free", "rounds.usage.options"):
         io.say("  " + cat.t(key))
     return EXIT_OK
 
@@ -493,6 +605,8 @@ def run_rounds(argv: Sequence[str], home: DataHome, registry: Registry, cat: Cat
             return _list(rest, home, now, system, cat, io)
         if command == "keep":
             return _keep(rest, home, now, cat, io)
+        if command == "free":
+            return _free_up(rest, home, now, system, cat, io)
         if command == "start":
             return _start(rest, home, registry, training, now, start, system, cat, io)
         if command == "stop":
@@ -519,4 +633,7 @@ def run_rounds(argv: Sequence[str], home: DataHome, registry: Registry, cat: Cat
         return EXIT_PROBLEM
     except sv.StartVoiceError as error:
         _say_parts(cat, io, "startvoice", error.code, error.detail)
+        return EXIT_PROBLEM
+    except freeup.FreeError as error:
+        _say_parts(cat, io, "freeup", error.code, error.detail)
         return EXIT_PROBLEM

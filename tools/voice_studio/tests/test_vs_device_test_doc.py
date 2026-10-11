@@ -355,8 +355,10 @@ def says(sentence, truncated=False):
 
 
 def text_catalog_strings():
+    """Every sentence the tool says: the plain ones and every form of a plural one."""
     from voice_studio.core import text as vtext
-    return list(json.loads((vtext.DATA_DIR / "en.json").read_text(encoding="utf-8"))["strings"].values())
+    data = json.loads((vtext.DATA_DIR / "en.json").read_text(encoding="utf-8"))
+    return list(data["strings"].values()) + [form for forms in data["plurals"].values() for form in forms.values()]
 
 
 def test_the_check_that_a_quoted_sentence_is_one_the_tool_says_can_actually_fail():
@@ -520,3 +522,58 @@ def test_the_disk_guard_snippet_makes_the_real_runner_stop_a_waiting_job_and_say
 def test_the_section_tells_what_the_new_checks_say_and_that_the_numbers_are_to_be_written_down():
     body = " ".join(section("I2.").split())
     assert "Checked before starting:" in body and "Write down the two checks' numbers" in body and "disk guard" in body
+
+
+# ---------------------------------------------------------------- section I3: freeing up space
+
+def test_the_free_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import rounds_flow as rf
+    found = re.findall(r"python3 -m voice_studio\.rounds (free)([^\n`;<]*)", section("I3."))
+    assert len(found) >= 6
+    takes_a_value = {"--project", "--saved", "--working"}
+    seen = set()
+    for command, rest in found:
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            assert words[i].startswith("-") and words[i] in rf.OPTIONS[command], (command, words[i])
+            seen.add(words[i])
+            i += 2 if words[i] in takes_a_value else 1
+        assert words[words.index("--project") + 1] == "voice-check"
+    assert seen >= {"--saved", "--working", "--all", "--project"}
+
+
+def test_every_sentence_the_free_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I3."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans if " " in s and s.rstrip()[-1] in ".?…" and not s.startswith(("PYTHONPATH", "ls ", "df ", "~/"))]
+    assert len(quoted) >= 8 and any(cut for _, cut in quoted), quoted
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_free_section_says_it_removes_files_asks_first_and_that_the_first_steps_remove_nothing():
+    body = " ".join(section("I3.").split())
+    assert "the one section that removes files you made" in body and "asks first" in body and "cannot be brought back" in body
+    assert "stop after the first two steps" in body and "It never offers recordings" in body and "Only if you are willing to lose it" in body
+    assert "Look. This changes nothing" in body and "The saved point is missing" in body and "must never do" in body
+
+
+def test_the_free_section_follows_the_order_the_sections_run_in():
+    names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I2") < names.index("I3") < names.index("J")
+
+
+def test_free_on_a_project_with_nothing_to_free_says_so_and_writes_nothing(tmp_path):
+    env = dict(os.environ, HOME=str(tmp_path), PYTHONDONTWRITEBYTECODE="1")
+
+    def run(*argv):
+        return subprocess.run([sys.executable, "-m"] + list(argv), cwd=str(TOOLS), env=env, text=True, capture_output=True, timeout=60, stdin=subprocess.DEVNULL)
+    assert run("voice_studio.projects", "new", "--own", "--name", "Voice check", "--voice", "mike", "--yes").returncode == 0
+    folder = tmp_path / "ack-voice-studio" / "projects" / "voice-check" / "rounds"
+    looked = run("voice_studio.rounds", "free", "--project", "voice-check")
+    assert looked.returncode == 0 and "There is nothing to free up." in looked.stdout and "What could be freed up for Voice check:" in looked.stdout
+    assert "Traceback" not in looked.stderr and sorted(p.name for p in folder.iterdir()) == []
+    asked = run("voice_studio.rounds", "free", "--all", "--project", "voice-check", "--yes")
+    assert asked.returncode == 2 and "There is nothing to free up." in asked.stdout and sorted(p.name for p in folder.iterdir()) in ([], [".rounds.lock"])
+    for argv, said in ((("--saved", "99"), "There is nothing to free up."), (("--saved", "one"), "I did not understand one."), (("--all", "--saved", "1"), "Give either --all or a list of rounds, not both.")):
+        done = run("voice_studio.rounds", "free", *argv, "--project", "voice-check")
+        assert done.returncode == 2 and said in done.stdout, (argv, done.stdout)

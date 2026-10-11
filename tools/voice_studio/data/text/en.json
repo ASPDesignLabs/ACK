@@ -294,6 +294,15 @@
     "fetch.why.speech_model": "A listening model that turns recordings into text, so each piece can be checked.",
     "fetch.why.voice_amy": "Amy, a starting voice. Training begins from a voice that already sounds natural.",
     "fetch.why.voice_mike": "Mike, a starting voice. Training begins from a voice that already sounds natural.",
+    "freeup.error.changed.changed": "Nothing was removed.",
+    "freeup.error.changed.next": "Look at the list again, then choose again.",
+    "freeup.error.changed.what": "The list changed after it was shown: a round started or ended, or files were removed.",
+    "freeup.error.nothing_to_remove.changed": "Nothing was removed.",
+    "freeup.error.nothing_to_remove.next": "Say which items with --only, or use --all.",
+    "freeup.error.nothing_to_remove.what": "Nothing was chosen to remove.",
+    "freeup.error.unknown_choice.changed": "Nothing was removed.",
+    "freeup.error.unknown_choice.next": "Look at the list and use its numbers.",
+    "freeup.error.unknown_choice.what": "One of the numbers is not on the list.",
     "job.error.bad_spec.changed": "Nothing was started or changed.",
     "job.error.bad_spec.next": "Save a problem report. This is a mistake in the tool.",
     "job.error.bad_spec.what": "The job could not be started because it was set up wrongly.",
@@ -542,6 +551,24 @@
     "rounds.failure.no_checkpoint": "It ended, but it did not save a whole point to carry on from.",
     "rounds.failure.program": "The training program could not be started.",
     "rounds.failure.signal": "The training program was ended from outside.",
+    "rounds.free.bad_numbers": "I did not understand {text}. Give round numbers separated by commas, for example 1,3. Nothing was removed.",
+    "rounds.free.both": "Give either --all or a list of rounds, not both. Nothing was removed.",
+    "rounds.free.done": "Done. Saved files removed: {files}. Rounds whose working files were removed: {folders}. About {size} freed.",
+    "rounds.free.failed_head": "These could not be removed and were left as they are:",
+    "rounds.free.failed_more": "And {count} more.",
+    "rounds.free.failed_row": "{path}: {reason}",
+    "rounds.free.free_now": "About {free} is free on the drive of this project now.",
+    "rounds.free.free_now_scratch": "About {free} is free on the drive of the working files now.",
+    "rounds.free.heading": "What could be freed up for {name}:",
+    "rounds.free.how": "To remove some of these, name their rounds. For example: {command}",
+    "rounds.free.how_all": "To remove everything listed, use --all. Either way it shows what it will remove, and asks first.",
+    "rounds.free.never": "Recordings, notes, the project file, backups, exports and the starting voices are never on this list.",
+    "rounds.free.nothing": "There is nothing to free up. Every saved file that is left is kept for sure, in use, or not made by a round.",
+    "rounds.free.question": "Remove all of that, about {size}? This cannot be undone. Type yes to remove it.",
+    "rounds.free.total": "In all, about {size} could be freed.",
+    "rounds.free.unknown": "The list has nothing for {option} {numbers}. Nothing was removed. See the list with: {command}",
+    "rounds.free.will_remove": "This removes:",
+    "rounds.free.working": "Working files of round {round}: {size}. They are never used again.",
     "rounds.interrupted": "Stopped. If a round had already started, it keeps running by itself. See with: {command}",
     "rounds.keep.busy": "In use by the running round ({count} files): never touched.",
     "rounds.keep.heading": "Saved files of the rounds, by what happens to them:",
@@ -621,6 +648,7 @@
     "rounds.title": "ACK Voice Studio: training rounds",
     "rounds.usage.back": "back [--project name]: choose the round that the chosen one continued from. Asks first. Removes nothing.",
     "rounds.usage.choose": "choose number [--project name]: make that round the one the next round continues from. Asks first. Removes nothing.",
+    "rounds.usage.free": "free [--saved rounds] [--working rounds] [--all] [--project name]: show what could be freed up, with sizes. Say which with --saved, --working or --all and it shows exactly what it will remove, and asks first. Only spare saved files and old working files.",
     "rounds.usage.head": "Commands:",
     "rounds.usage.keep": "keep [--project name]: show which saved files are kept for sure and which are spare. Changes nothing.",
     "rounds.usage.list": "list [--project name]: show every round, which one is chosen, and what the next one will continue from. Changes nothing.",
@@ -832,6 +860,34 @@
     "progress.takes.waiting": {
       "one": "{count} recording is still being listened to.",
       "other": "{count} recordings are still being listened to."
+    },
+    "rounds.free.busy": {
+      "one": "Not touched: {count} file of the round that is running.",
+      "other": "Not touched: {count} files of the round that is running."
+    },
+    "rounds.free.files_before": {
+      "one": "Saved files of round {round}, the round the chosen one continued from: {count} file, {size}. Its own saved point is kept.",
+      "other": "Saved files of round {round}, the round the chosen one continued from: {count} files, {size}. Its own saved point is kept."
+    },
+    "rounds.free.files_chosen": {
+      "one": "Saved files of round {round}, the chosen round: {count} file, {size}. Its own saved point is kept.",
+      "other": "Saved files of round {round}, the chosen round: {count} files, {size}. Its own saved point is kept."
+    },
+    "rounds.free.files_other": {
+      "one": "Saved files of round {round}: {count} file, {size}.",
+      "other": "Saved files of round {round}: {count} files, {size}."
+    },
+    "rounds.free.files_other_point": {
+      "one": "Saved files of round {round}: {count} file, {size}. This includes its saved point, so the round could not be chosen again.",
+      "other": "Saved files of round {round}: {count} files, {size}. This includes its saved point, so the round could not be chosen again."
+    },
+    "rounds.free.kept": {
+      "one": "Kept for sure, never on this list: {count} file, {size} (the chosen round's saved point and the one before it).",
+      "other": "Kept for sure, never on this list: {count} files, {size} (the chosen round's saved point and the one before it)."
+    },
+    "rounds.free.unclaimed": {
+      "one": "Not touched: {count} file in a folder that no round of this tool made.",
+      "other": "Not touched: {count} files in a folder that no round of this tool made."
     },
     "setup.still_missing": {
       "one": "{count} extra program is still missing after installing. Look at the messages above, then try again.",

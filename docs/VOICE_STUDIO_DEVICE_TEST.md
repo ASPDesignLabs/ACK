@@ -614,6 +614,51 @@ round keeps about 4.8 GB of saved files, so have about 25 GB free for the whole 
   ```
   → For a round that ended at its time limit: is the epoch in the file the same as the last epoch in the log, or older (by up to 10)? Write both down for every round.
 
+## I3. Freeing up space
+
+**New, and not yet run on a real computer. This is the one section that removes files you made**, so it is written to be done slowly, and the first steps remove nothing. `free` only ever offers two things, and only from rounds
+that have ended: a round's spare saved files (every saved file of it except the chosen round's saved point and the one before it), and a round's working files (the training program's scratch folder, which is never read again).
+It never offers recordings, notes, the project file, backups, finished voice files, the starting voices, the files of a round that is running, or anything the tool did not make. It always shows exactly what it will remove and asks first,
+and what was removed cannot be brought back, so **if you want every round kept as it is, stop after the first two steps.** It uses the project from section I2 and needs at least two rounds there.
+
+- [ ] Look. This changes nothing:
+  ```bash
+  df -h ~
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --project voice-check
+  ```
+  → `What could be freed up for Voice check:`, then a line for each round whose saved files could go, with their size, and for each ended round whose working files are still there, with theirs. The chosen round's line says `Its own saved point is kept.`
+  A round that is neither the chosen one nor the one it continued from says, if its saved point is on the list, that the round could not be chosen again. Then the total, `Kept for sure, never on this list: …`, and
+  `Recordings, notes, the project file, backups, exports and the starting voices are never on this list.` and how to name rounds. Write down the sizes and the output of `df`. If it says `There is nothing to free up. Every saved file that is left is kept for sure, in use, or not made by a round.`, there is nothing to try yet: run more rounds, or stop here.
+- [ ] Ask to remove one round's spare saved files, and say no. Pick a round whose line does **not** say it could not be chosen again:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --saved 1 --project voice-check
+  ls -l ~/ack-voice-studio/projects/voice-check/rounds/run/lightning_logs/version_0/checkpoints/
+  ```
+  → `This removes:` and that round's line, then `Remove all of that, about …` and, in the same question, that it cannot be undone. Type **`no`**: `Nothing was done.` and the `ls` still lists every file. (Round 1 is normally `version_0`, round 2 `version_1`, and so on in the order the rounds ran. If you picked another round, `ls` the `version_` folders and use the one that has the files the list described.)
+- [ ] Ask for something that is not on the list. Nothing may be removed, and nothing is asked:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --saved 99 --project voice-check
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --all --saved 1 --project voice-check
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --saved one --project voice-check
+  ```
+  → `The list has nothing for --saved 99. Nothing was removed. See the list with: …`, then `Give either --all or a list of rounds, not both. Nothing was removed.`, then `I did not understand one. Give round numbers separated by commas, for example 1,3. Nothing was removed.`
+- [ ] **Only if you are willing to lose it:** remove the working files of one ended round. They are rebuilt by the next round that needs them, so this is the least precious thing on the list (if the list has no working files, skip this step). Type **`yes`**:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --working 1 --project voice-check
+  df -h ~
+  ```
+  → `Done. Saved files removed: …`, which says 0 saved files and 1 round whose working files were removed, and how much was freed; the free space on the drive of this project. The `df` shows about that much more room (on WSL the room is free inside Ubuntu at once, but Windows only gets it back when the virtual disk is shrunk, which the tool does not do).
+  Look again with `free --project voice-check`: that line is gone and nothing else changed.
+- [ ] **Only if you are willing to lose it:** remove one older round's spare saved files (a round that is not the chosen one and not the one it continued from, and whose line does not say it could not be chosen again). Type **`yes`**, then check that the voice you are building on is still whole:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --saved 1 --project voice-check
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds list --project voice-check
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds keep --project voice-check
+  ```
+  → `Done. Saved files removed: …`; then `list` still says `The saved point is there` under the chosen round, and `keep` still lists the chosen round's `last.ckpt` and the one before it. The `ls -l` of the `version_` folder you picked shows only `last.ckpt` is left if that round's saved point was not on the list.
+  If `list` says `The saved point is missing` for the **chosen** round, stop and send it back: that is the one thing this command must never do.
+- [ ] Write down: how long it took, whether any wording confused you (the lines for a round's files, the question, the `Done.` line), whether you wanted a way to see the files before choosing, and whether the numbers in `--saved` were easy to read off the list.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:

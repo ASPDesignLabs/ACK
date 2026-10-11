@@ -378,6 +378,11 @@ def _locked(paths: ProjectPaths) -> Iterator[None]:
         os.close(fd)
 
 
+def exclusive(paths: ProjectPaths) -> "contextmanager":
+    """Hold the record's lock: no round can begin and no record change can happen while the caller works (Free up space removes files under it)."""
+    return _locked(paths)
+
+
 def modify(paths: ProjectPaths, change: Callable[[Record], Record]) -> Record:
     """Read, change and write back under the lock. `change` may raise RoundsError (nothing is written); a change that changes nothing writes nothing."""
     with _locked(paths):
@@ -468,6 +473,11 @@ def _check_name(value: object, what: str) -> None:
         raise RoundsError("bad_value", what)
 
 
+def cache_dir_for(scratch: ScratchPaths, dataset: str, number: int) -> str:
+    """A round's own working folder, named from the training set and the round so that no two rounds ever share one."""
+    return "%s/%s-r%03d" % (scratch.caches, dataset, number)
+
+
 def resume_source(paths: ProjectPaths, record: Record, base: Optional[Base]) -> Tuple[str, int, str]:
     """(file, parent, starting voice). The chosen round's saved point if there is a chosen round; otherwise, and only then, the starting voice.
     A chosen round whose file is gone or is not whole stops the round with a reason: it never quietly falls back to another file."""
@@ -493,7 +503,7 @@ def plan_round(paths: ProjectPaths, scratch: ScratchPaths, record: Record, *, da
     source, parent, voice = resume_source(paths, record, base)
     number = next_number(record)
     return RoundPlan(number=number, parent=parent, voice=voice, dataset=dataset, minutes=minutes, resume_from=source, run_dir=paths.run,
-                     cache_dir="%s/%s-r%03d" % (scratch.caches, dataset, number), config_path="%s/round-%03d.json" % (paths.round_configs, number),
+                     cache_dir=cache_dir_for(scratch, dataset, number), config_path="%s/round-%03d.json" % (paths.round_configs, number),
                      dataset_dir="%s/%s" % (scratch.datasets, dataset), versions_before=version_dirs(paths))
 
 
@@ -613,7 +623,7 @@ def _job_for(r: Round, scratch: ScratchPaths, jobs_root: str, project_id: str, l
             return jobs.job_info(jobs_root.rstrip("/") + "/" + r.job)
         except jobs.JobError:
             pass
-    cache = "%s/%s-r%03d" % (scratch.caches, r.dataset, r.number)
+    cache = cache_dir_for(scratch, r.dataset, r.number)
     for info in listed():
         argv = info.spec.argv
         if info.spec.kind == "train" and info.spec.project == project_id and "--data.cache_dir" in argv:

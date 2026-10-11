@@ -96,7 +96,7 @@ def start_args(*extra, dataset=DATASET):
 @pytest.mark.parametrize("argv", [(), ("help",), ("-h",), ("--help",)])
 def test_help_lists_every_command(rig, argv):
     code, io = rig.run(*argv)
-    assert code == 0 and all(word in io.text for word in ("list", "start", "stop", "choose", "back", "note", "keep", "--yes")) and rig.record_bytes() is None
+    assert code == 0 and all(word in io.text for word in ("list", "start", "stop", "choose", "back", "note", "keep", "free", "--yes")) and rig.record_bytes() is None
 
 
 def test_an_unknown_command_or_option_does_nothing_and_says_so(rig):
@@ -108,13 +108,14 @@ def test_an_unknown_command_or_option_does_nothing_and_says_so(rig):
 
 def test_the_options_each_command_publishes_are_the_options_it_accepts():
     for command, options in rf.OPTIONS.items():
-        flags = {o: o.lstrip("-") for o in options if o in rf.YES}
-        values = {o: o.lstrip("-") for o in options if o not in rf.YES}
-        sample = [x for o in sorted(options) for x in ((o,) if o in rf.YES else (o, "v"))]
+        flags = {o: o.lstrip("-") for o in options if o in rf.FREE_FLAGS}
+        values = {o: o.lstrip("-") for o in options if o not in rf.FREE_FLAGS}
+        sample = [x for o in sorted(options) for x in ((o,) if o in rf.FREE_FLAGS else (o, "v"))]
         parse_args(sample + ["word"] if command in ("choose", "note") else sample, flags=flags, values=values, max_words=1)
-    assert set(rf.OPTIONS) == {"list", "start", "stop", "choose", "back", "note", "keep"}
+    assert set(rf.OPTIONS) == {"list", "start", "stop", "choose", "back", "note", "keep", "free"}
     long = {c: {o for o in options if o.startswith("--")} for c, options in rf.OPTIONS.items()}
     assert long["list"] == {"--project"} and long["keep"] == {"--project"} and {"--set", "--minutes", "--yes", "--project"} == long["start"]
+    assert {"--all", "--saved", "--working", "--yes", "--project"} == long["free"]
     assert {"--text", "--yes", "--project"} == long["note"] and {"--yes", "--project"} == long["stop"] == long["choose"] == long["back"]
 
 
@@ -841,3 +842,232 @@ def test_two_places_are_one_drive_only_if_they_are_on_the_same_device_and_a_plac
 
     monkeypatch.setattr(os, "stat", lambda path, *a, **k: OtherDevice(real(path), 7 if str(path).endswith("/b") else 3))
     assert rf._same_drive(str(here), str(there)) is False
+
+
+# ---------------------------------------------------------------- free up space
+
+def tree_of(root):
+    return sorted(str(p) for p in Path(root).rglob("*") if p.is_file())
+
+
+def make_working_files(rig, number, size=1000):
+    folder = rd.cache_dir_for(rig.world.scratch, DATASET, number)
+    os.makedirs(folder + "/train")
+    Path(folder + "/train/a.pt").write_bytes(b"c" * size)
+    return folder
+
+
+def spare_of(rig, number):
+    return [f.path for n, f in rd.retention(rig.paths, rd.load(rig.paths)).spare if n == number]
+
+
+def test_free_with_nothing_to_free_says_so_and_changes_nothing(rig):
+    code, io = rig.run("free", "--project", "anna")
+    assert code == 0 and "There is nothing to free up." in io.text and "never on this list" in io.text and rig.record_bytes() is None
+    assert "To remove some of these" not in io.text
+
+
+def test_free_lists_every_offer_with_its_size_what_is_kept_and_what_never_is_and_removes_nothing(rig):
+    rig.finish_rounds(3)
+    make_working_files(rig, 1)
+    rig.world.trainer_makes(7)
+    before, run_before, scratch_before = rig.record_bytes(), tree_of(rig.paths.run), tree_of(rig.world.scratch.root)
+    code, io = rig.run("free", "--project", "anna")
+    assert code == 0 and rig.record_bytes() == before and tree_of(rig.paths.run) == run_before and tree_of(rig.world.scratch.root) == scratch_before
+    assert "What could be freed up for Anna:" in io.lines
+    rows = [l for l in io.lines if l.startswith("  ")]
+    assert any(l.startswith("  Saved files of round 1: 3 files,") and l.endswith("could not be chosen again.") for l in rows)
+    assert any(l.startswith("  Saved files of round 2, the round the chosen one continued from: 2 files,") and l.endswith("Its own saved point is kept.") for l in rows)
+    assert any(l.startswith("  Saved files of round 3, the chosen round: 2 files,") for l in rows)
+    assert any(l.startswith("  Working files of round 1: ") and l.endswith("They are never used again.") for l in rows)
+    from voice_studio.core import freeup
+    from voice_studio.core.text import size_text
+    shown = freeup.plan(rig.paths, rig.world.scratch, rd.load(rig.paths))
+    assert "In all, about %s could be freed." % size_text(sum(o.bytes for o in shown.offers)) in io.lines
+    assert "Kept for sure, never on this list: 2 files, %s (the chosen round's saved point and the one before it)." % size_text(sum(f.size for _n, f in shown.kept)) in io.lines
+    assert any(l.startswith("Kept for sure, never on this list: 2 files,") for l in io.lines) and "Not touched: 3 files in a folder that no round of this tool made." in io.lines
+    assert "Recordings, notes, the project file, backups, exports and the starting voices are never on this list." in io.lines
+    assert any(l.startswith("To remove some of these, name their rounds. For example: python3 -m voice_studio.rounds free --saved 1") for l in io.lines)
+
+
+def test_free_names_the_rounds_it_is_given_and_a_round_means_the_same_whatever_else_is_on_the_list(rig):
+    rig.finish_rounds(3)
+    first, second = spare_of(rig, 1), spare_of(rig, 2)
+    code, io = rig.run("free", "--saved", "1", "--project", "anna", "--yes")
+    assert code == 0 and not any(os.path.exists(p) for p in first) and all(os.path.exists(p) for p in second)
+    code, io = rig.run("free", "--saved", "2", "--project", "anna", "--yes")                       # round 2 was the second offer; now it is the first
+    assert code == 0 and not any(os.path.exists(p) for p in second) and "  Saved files of round 2, the round the chosen one continued from: 2 files," in " ".join(io.lines)
+
+
+def test_free_shows_what_it_will_remove_before_it_asks_and_asks_with_the_size(rig):
+    from voice_studio.core import freeup
+    from voice_studio.core.text import size_text
+    rig.finish_rounds(2)
+    sized = next(o.bytes for o in freeup.plan(rig.paths, rig.world.scratch, rd.load(rig.paths)).offers if o.round == 1)
+    code, io = rig.run("free", "--saved", "1", "--project", "anna", answers=["yes"])
+    shown, asked = io.events.index(("say", "This removes:")), next(i for i, e in enumerate(io.events) if e[0] == "ask")
+    assert code == 0 and shown < asked
+    between = [e[1] for e in io.events[shown + 1:asked] if e[0] == "say"]
+    assert len(between) == 1 and between[0].startswith("  Saved files of round 1, the round the chosen one continued from: 2 files,")
+    assert io.prompts == ["Remove all of that, about %s? This cannot be undone. Type yes to remove it. " % size_text(sized)]
+    assert any(l.startswith("Done. Saved files removed: 2. Rounds whose working files were removed: 0. About ") and l.endswith(" freed.") for l in io.lines)
+    assert "About %s is free on the drive of this project now." % size_text(rig.system.disks[rig.paths.rounds][1]) in io.lines
+
+
+@pytest.mark.parametrize("answers, interactive, said", [(["no"], True, "Nothing was done."), ([""], True, "Nothing was done."), ([], True, "There was nobody to ask."),
+                                                        ([], False, "There was nobody to ask.")])
+def test_free_removes_nothing_unless_the_answer_is_a_yes(rig, answers, interactive, said):
+    rig.finish_rounds(2)
+    run_before, record = tree_of(rig.paths.run), rig.record_bytes()
+    code, io = rig.run("free", "--all", "--project", "anna", answers=answers, interactive=interactive)
+    assert code == 2 and said in io.text and tree_of(rig.paths.run) == run_before and rig.record_bytes() == record
+
+
+def test_free_all_removes_every_offer_and_keeps_the_chosen_rounds_saved_point_and_the_one_before(rig):
+    rig.finish_rounds(3)
+    folder = make_working_files(rig, 1)
+    code, io = rig.run("free", "--all", "--project", "anna", "--yes")
+    record = rd.load(rig.paths)
+    assert code == 0 and not os.path.exists(folder) and rd.checkpoint_status(rig.paths, rd.chosen(record)) == "ok" and rd.checkpoint_status(rig.paths, rd.find(record, 2)) == "ok"
+    assert rd.retention(rig.paths, record).spare == () and rd.version_dirs(rig.paths) == (0, 1, 2)
+    assert "Saved files removed: 7. Rounds whose working files were removed: 1." in " ".join(io.lines)
+    code, io = rig.run("free", "--project", "anna")
+    assert "There is nothing to free up." in io.text
+
+
+def test_free_working_removes_only_the_working_files_of_the_rounds_named(rig):
+    rig.finish_rounds(2)
+    one, two = make_working_files(rig, 1), make_working_files(rig, 2)
+    code, io = rig.run("free", "--working", "1", "--project", "anna", "--yes")
+    assert code == 0 and not os.path.exists(one) and os.path.exists(two) and all(os.path.exists(p) for p in spare_of(rig, 1))
+    assert "Rounds whose working files were removed: 1." in " ".join(io.lines) and "Saved files removed: 0." in " ".join(io.lines)
+
+
+def test_free_with_both_kinds_named_removes_both(rig):
+    rig.finish_rounds(2)
+    folder = make_working_files(rig, 1)
+    files = spare_of(rig, 1)
+    code, io = rig.run("free", "--saved", "1", "--working", "1", "--project", "anna", "--yes")
+    assert code == 0 and not os.path.exists(folder) and not any(os.path.exists(p) for p in files)
+
+
+@pytest.mark.parametrize("word", ["", "x", "1,x", "0", "1,,2", "-1", "1.5", "١", "9999999", " 1", "1 "])
+def test_free_refuses_numbers_it_cannot_read_and_removes_nothing(rig, word):
+    rig.finish_rounds(2)
+    run_before = tree_of(rig.paths.run)
+    for option in ("--saved", "--working"):
+        code, io = rig.run("free", option, word, "--project", "anna", "--yes")
+        assert code == 2 and "I did not understand" in io.text and "Nothing was removed." in io.text and tree_of(rig.paths.run) == run_before
+
+
+def test_free_refuses_a_round_that_has_nothing_to_free_and_removes_nothing_even_of_the_others(rig):
+    rig.finish_rounds(2)
+    run_before = tree_of(rig.paths.run)
+    code, io = rig.run("free", "--saved", "1,9", "--project", "anna", "--yes")
+    assert code == 2 and "The list has nothing for --saved 9. Nothing was removed." in io.text and tree_of(rig.paths.run) == run_before
+    code, io = rig.run("free", "--working", "1", "--project", "anna", "--yes")                       # there is no working folder to free
+    assert code == 2 and "The list has nothing for --working 1." in io.text and tree_of(rig.paths.run) == run_before
+
+
+def test_free_refuses_all_together_with_named_rounds(rig):
+    rig.finish_rounds(2)
+    run_before = tree_of(rig.paths.run)
+    for extra in (("--saved", "1"), ("--working", "1")):
+        code, io = rig.run("free", "--all", *extra, "--project", "anna", "--yes")
+        assert code == 2 and "Give either --all or a list of rounds, not both." in io.text and tree_of(rig.paths.run) == run_before
+
+
+def test_free_with_nothing_to_remove_and_a_choice_made_says_so_and_does_nothing(rig):
+    code, io = rig.run("free", "--all", "--project", "anna", "--yes")
+    assert code == 2 and "There is nothing to free up." in io.text and rig.record_bytes() is None
+
+
+def test_free_never_touches_the_files_of_the_running_round_or_an_unknown_folder(rig):
+    rig.finish_rounds(1)
+    rig.world.trainer_makes(7)
+    plan = rig.world.begin()
+    rd.attach_job(rig.paths, plan.number, rig.world.job_for(plan, "running").id)
+    rig.world.trainer_makes(1)
+    busy_folder = make_working_files(rig, 2)
+    code, io = rig.run("free", "--project", "anna")
+    assert "Not touched: 3 files of the round that is running." in io.lines and "Not touched: 3 files in a folder that no round of this tool made." in io.lines
+    assert not any("round 2" in l for l in io.lines if l.startswith("  "))
+    code, io = rig.run("free", "--all", "--project", "anna", "--yes")
+    assert code == 0 and len(tree_of(rig.paths.run + "/lightning_logs/version_1")) == 4 and len(tree_of(rig.paths.run + "/lightning_logs/version_7")) == 4 and os.path.exists(busy_folder)
+
+
+def test_free_that_removes_brings_the_record_up_to_date_and_says_so_but_the_list_alone_does_not(rig):
+    ended_since(rig)
+    before = rig.record_bytes()
+    code, io = rig.run("free", "--project", "anna")
+    assert code == 0 and rig.record_bytes() == before and "Noticed" not in io.text
+    code, io = rig.run("free", "--saved", "1", "--project", "anna", "--yes")
+    assert "Noticed: round 1 is now: Finished." in io.lines and rd.load(rig.paths).rounds[0].state == "finished"
+
+
+def test_free_reports_a_file_it_could_not_remove_and_exits_with_a_problem(rig, monkeypatch):
+    rig.finish_rounds(2)
+    files = spare_of(rig, 1)
+    stuck = files[1]
+    real = os.unlink
+
+    def unlink(path, *a, **kw):
+        if str(path) == stuck:
+            raise PermissionError(13, "Permission denied", path)
+        return real(path, *a, **kw)
+
+    monkeypatch.setattr(os, "unlink", unlink)
+    code, io = rig.run("free", "--saved", "1", "--project", "anna", "--yes")
+    assert code == 1 and "These could not be removed and were left as they are:" in io.lines and "  %s: Permission denied" % stuck in io.lines
+    assert "Saved files removed: 1." in " ".join(io.lines) and os.path.exists(stuck)
+
+
+def test_free_that_finds_the_list_changed_while_it_asked_removes_nothing_and_says_so(rig, monkeypatch):
+    rig.finish_rounds(2)
+    real = rf._confirmed
+
+    def confirmed(parsed, question, cat, io):
+        rig.world.trainer_makes(0, extras=3)                                                       # a file appears while the question is on the screen
+        return real(parsed, question, cat, io)
+
+    monkeypatch.setattr(rf, "_confirmed", confirmed)
+    run_before = tree_of(rig.paths.run)
+    code, io = rig.run("free", "--saved", "1", "--project", "anna", answers=["yes"])
+    assert code == 1 and "The list changed after it was shown" in io.text and "Nothing was removed." in io.text
+    assert set(run_before) <= set(tree_of(rig.paths.run))
+
+
+def test_free_prints_the_stuck_files_only_up_to_a_limit_and_counts_the_rest(rig, monkeypatch):
+    rig.finish_rounds(1)
+    for n in range(12):
+        write_extra = "%s/lightning_logs/version_0/checkpoints/epoch=%d-val_mel=0.9.ckpt" % (rig.paths.run, 500 + n)
+        from vs_rounds_helpers import write_checkpoint
+        write_checkpoint(write_extra)
+    real = os.unlink
+    monkeypatch.setattr(os, "unlink", lambda path, *a, **kw: (_ for _ in ()).throw(PermissionError(13, "Permission denied", path)) if str(path).endswith(".ckpt") else real(path, *a, **kw))
+    code, io = rig.run("free", "--all", "--project", "anna", "--yes")
+    stuck_rows = [l for l in io.lines if l.endswith(": Permission denied")]
+    assert code == 1 and len(stuck_rows) == rf.MAX_FAILURES_SHOWN and "  And %d more." % (len(spare_of(rig, 1)) - rf.MAX_FAILURES_SHOWN) in io.lines
+
+
+def test_free_says_how_much_room_the_other_drive_has_when_working_files_are_somewhere_else(rig, monkeypatch):
+    rig.finish_rounds(2)
+    make_working_files(rig, 1)
+    monkeypatch.setattr(rf, "_same_drive", lambda a, b: False)
+    code, io = rig.run("free", "--all", "--project", "anna", "--yes")
+    assert code == 0 and any(l.endswith("is free on the drive of the working files now.") for l in io.lines)
+
+
+def test_free_does_not_say_a_second_drive_when_there_is_one(rig):
+    rig.finish_rounds(2)
+    code, io = rig.run("free", "--saved", "1", "--project", "anna", "--yes")
+    assert "the drive of the working files" not in io.text
+
+
+def test_free_in_a_damaged_record_changes_nothing(rig):
+    os.makedirs(rig.paths.rounds, exist_ok=True)
+    Path(rig.paths.rounds_file).write_text("{broken")
+    for argv in (("free",), ("free", "--all", "--yes")):
+        code, io = rig.run(*argv, "--project", "anna")
+        assert code == 1 and "damaged" in io.text
+    assert Path(rig.paths.rounds_file).read_text() == "{broken"
