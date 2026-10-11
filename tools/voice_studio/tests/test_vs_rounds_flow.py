@@ -825,3 +825,19 @@ def test_list_says_nothing_of_room_when_no_round_runs_and_a_round_the_guard_stop
     code, io = rig.run("list", "--project", "anna")
     assert "Free space where the round writes" not in io.text and "  It stopped by itself because the disk was nearly full." in io.lines
     assert "Round 1 (chosen): Stopped by you." in io.lines                                      # the state word is the job's: the reason line says whose stop it was
+
+
+def test_two_places_are_one_drive_only_if_they_are_on_the_same_device_and_a_place_that_cannot_be_looked_at_is_another(tmp_path, monkeypatch):
+    here, there = tmp_path / "a", tmp_path / "b"
+    here.mkdir()
+    there.mkdir()
+    assert rf._same_drive(str(here), str(there)) is True                                # one real disk
+    assert rf._same_drive(str(here), str(tmp_path / "missing")) is False and rf._same_drive(str(tmp_path / "missing"), str(here)) is False
+    real = os.stat
+
+    class OtherDevice:
+        def __init__(self, st, device):
+            self.st_dev = device
+
+    monkeypatch.setattr(os, "stat", lambda path, *a, **k: OtherDevice(real(path), 7 if str(path).endswith("/b") else 3))
+    assert rf._same_drive(str(here), str(there)) is False
