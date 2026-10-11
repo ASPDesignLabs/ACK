@@ -588,3 +588,11 @@ def test_a_round_that_has_only_started_running_is_not_announced(rig):
     rig.world.job_for(plan, "running")                                                         # its job exists; the record does not know the name yet
     code, io = rig.run("stop", "--project", "anna", "--yes")
     assert code == 0 and "Noticed" not in io.text and "Asked round 1 to stop" in io.text
+
+
+def test_keep_and_list_leave_a_record_that_is_behind_exactly_as_it_is(rig):
+    ended_since(rig)
+    before = rig.record_bytes()
+    for argv in (("keep",), ("list",)):
+        assert rig.run(*argv, "--project", "anna")[0] == 0 and rig.record_bytes() == before, argv
+    assert rd.load(rig.paths).rounds[0].state == "running"
