@@ -109,6 +109,7 @@ they do for any other Python program. A TLS-inspecting proxy needs its certifica
 * **pip also keeps its normal download cache** in `~/.cache/pip` (roughly the size of the downloads). It can be deleted at any time.
 * **Long-running programs.** Training and listening to recordings run as the user's own ordinary Python processes, for minutes to hours, using the graphics
   card. They keep running if the terminal is closed, by design, and the tool can stop them on request. **There are no services, daemons, cron jobs or start-up items.**
+* **Training rounds write a lot, in one place.** Each round keeps about 4.8 GB of saved files (six of about 807 MiB) under the project's `rounds/run/` folder, and a small working folder under the project's scratch folder (`scratch/caches/`, which the tool never reuses between rounds). The tool never deletes, moves or renames any of it by itself (a clean-up screen that does so only after a confirmation is not built yet), so a person who runs many rounds will see the disk fill: `python3 -m voice_studio.rounds keep` lists what is kept for sure and what is spare, with sizes, and removes nothing. A small record of the rounds, `rounds/rounds.json`, is the only file the tool itself keeps about them.
 * **Ports.** By design the programs the tool starts open no listening port (single-card training uses local pipes only). *Not measured with a port scanner.*
 * **The one exception, optional and separate:** *Freeform Studio*, the web tool for recording and reviewing in a browser, listens on `127.0.0.1` port 8001 by default (this
   computer only). Its helper script `start.sh` starts it on **`0.0.0.0` (the local network)**, over HTTPS when a certificate is provided and with a private token, so that a phone's browser can record. Voice Studio
@@ -164,7 +165,8 @@ they do for any other Python program. A TLS-inspecting proxy needs its certifica
 | A dropped connection during the download (Wi-Fi switched off) | A proxy, TLS inspection, or an internal package mirror |
 | The downloader and the pins, against the real hosts | A training round with the network cut off completely |
 | That the voice zip imports into the phone app | Port-scanning the running programs |
-| The `projects` and `voices` terminal commands, in the sandbox with a stand-in network | Those two commands on a real computer and the real download of a starting voice through them |
+| The `projects` and `voices` terminal commands: in the sandbox with a stand-in network, and on a real Ubuntu 22.04 computer including the real download of a starting voice (the developer's report; its logs were not sent) | The same commands on Ubuntu 24.04 and on a computer that is not the developer's |
+| Training rounds (`python3 -m voice_studio.rounds`): the record, the chosen round, going back, what is kept, starting and ending a round through real detached jobs with a stand-in trainer | The same commands with the real trainer and the graphics card (checklist section I2), and whether the tool's check that a saved file is whole is right about real files |
 
 ## 12. Removing it
 

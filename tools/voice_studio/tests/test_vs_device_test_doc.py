@@ -23,7 +23,7 @@ import vs_voice_helpers as vh
 REPO = Path(__file__).resolve().parents[3]
 TOOLS = REPO / "tools"
 DOC = REPO / "docs" / "VOICE_STUDIO_DEVICE_TEST.md"
-SNIPPETS = ("jobs-start", "jobs-list", "jobs-stop", "package-summary", "flip-a-byte", "voice-zip")
+SNIPPETS = ("jobs-start", "jobs-list", "jobs-stop", "package-summary", "flip-a-byte", "checkpoint-check", "voice-zip")
 
 
 def doc_text():
@@ -93,7 +93,7 @@ def run_snippet(marker, home, *args, stdin="", use_doc_args=True, preamble=""):
 # ---------------------------------------------------------------- the checklist's promises that need no input
 
 def test_every_snippet_the_checklist_relies_on_is_there_and_nothing_else_is_marked():
-    assert tuple(re.findall(r"<!-- snippet: ([a-z-]+) -->", doc_text())) == tuple(s for s in ("jobs-start", "jobs-list", "jobs-stop", "package-summary", "flip-a-byte", "voice-zip"))
+    assert tuple(re.findall(r"<!-- snippet: ([a-z-]+) -->", doc_text())) == SNIPPETS
     for name in SNIPPETS:
         assert fenced_after(name), name
 
@@ -414,3 +414,97 @@ def test_the_cleanup_line_names_the_folder_the_section_made_and_keeps_the_voices
     body = section("M.")
     assert "`rm -r ~/ack-voice-studio/projects/voice-check`" in body and DataHome("~").projects + "/voice-check" in doc_text()
     assert "Keep the voices in" in body and DataHome("~").voices in body
+
+
+# ---------------------------------------------------------------- section I2: training rounds with the tool
+
+def test_the_rounds_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import rounds_flow as rf
+    found = re.findall(r"python3 -m voice_studio\.rounds ([a-z]+)([^\n`;<]*)", section("I2."))
+    assert {c for c, _ in found} >= {"list", "start", "stop", "back", "keep", "note"}
+    takes_a_value = {"--project", "--set", "--minutes", "--text"}
+    for command, rest in found:
+        assert command in rf.OPTIONS, command
+        words, i, positional = shlex.split(rest), 0, []
+        while i < len(words):
+            option = words[i].split("=")[0]
+            if words[i].startswith("-"):
+                assert option in rf.OPTIONS[command], (command, words[i])
+                i += 2 if option in takes_a_value and "=" not in words[i] else 1
+            else:
+                positional.append(words[i])
+                i += 1
+        assert len(positional) == (1 if command == "note" else 0), (command, positional)
+        if "--project" in words:
+            assert words[words.index("--project") + 1] == "voice-check"
+        if command == "start":
+            assert words[words.index("--set") + 1] == "dataset-1" and words[words.index("--minutes") + 1].isdigit()
+
+
+def test_every_sentence_the_rounds_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I2."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans if " " in s and s.rstrip()[-1] in ".?…" and not s.startswith(("PYTHONPATH", "ls ", "tail ", "grep ", "~/", "rm ", "cp ", "mkdir "))]
+    assert len(quoted) >= 12 and any(cut for _, cut in quoted), quoted
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_places_the_rounds_section_names_are_where_the_tool_puts_things():
+    from voice_studio.core.paths import DataHome, ProjectPaths, ScratchPaths
+    from voice_studio.core.registry import load_registry
+    body = section("I2.")
+    home = DataHome("~")
+    paths = ProjectPaths(home.projects + "/voice-check")
+    assert ScratchPaths(paths.default_scratch).datasets in body and paths.rounds in body and paths.run.replace(paths.rounds, "rounds") in body
+    assert paths.run + "/lightning_logs" in body and home.jobs in body
+    mike = load_registry().get("voice-mike")
+    assert mike.filename in body and "/tool/downloads/voices/voice-mike/" in body and home.voices.endswith("/tool/downloads/voices")
+
+
+def test_the_section_says_what_the_first_two_rounds_start_from_and_that_the_second_must_not_be_the_voice_file():
+    from voice_studio.core.registry import load_registry
+    body = " ".join(section("I2.").split())
+    assert "Round 1's ends in Mike's own file name, `%s`" % load_registry().get("voice-mike").filename in body
+    assert "Round 2's must never be the voice file" in body and "close the terminal while it runs" in body
+    assert "Nothing here deletes or moves a file" in body and "never from the starting voice again by accident" in body
+
+
+def test_the_grep_the_section_gives_finds_what_each_round_was_started_from(tmp_path):
+    from voice_studio.core import jobs
+    for n, ckpt in enumerate(("/home/u/ack-voice-studio/tool/downloads/voices/voice-mike/epoch=5460-val_mos=4.2686.ckpt", "/home/u/ack-voice-studio/projects/voice-check/rounds/run/lightning_logs/version_0/checkpoints/last.ckpt")):
+        folder = tmp_path / "ack-voice-studio" / "state" / "jobs" / ("2026101%d-000000-train-abcd" % n)
+        folder.mkdir(parents=True)
+        jobs.write_json(str(folder / "job.json"), {"schema": 1, "kind": "train", "project": "voice-check", "argv": ["py", "run", "--data.cache_dir", "/c", "--ckpt_path", ckpt], "env": {}})
+    line = next(l for l in section("I2.").splitlines() if l.strip().startswith("grep -h -o"))
+    done = subprocess.run(["bash", "-c", line.strip()], env=dict(os.environ, HOME=str(tmp_path)), text=True, capture_output=True, timeout=30)
+    assert done.returncode == 0 and done.stdout.splitlines() == ['"--ckpt_path", "/home/u/ack-voice-studio/tool/downloads/voices/voice-mike/epoch=5460-val_mos=4.2686.ckpt"',
+                                                                  '"--ckpt_path", "/home/u/ack-voice-studio/projects/voice-check/rounds/run/lightning_logs/version_0/checkpoints/last.ckpt"']
+
+
+def test_the_saved_file_check_the_section_gives_says_true_for_a_whole_file_and_false_for_a_cut_one(home):
+    from vs_rounds_helpers import write_checkpoint
+    root = home / "ack-voice-studio"
+    mike = write_checkpoint(str(root / "tool" / "downloads" / "voices" / "voice-mike" / "epoch=5460-val_mos=4.2686.ckpt"))
+    good = write_checkpoint(str(root / "projects" / "voice-check" / "rounds" / "run" / "lightning_logs" / "version_0" / "checkpoints" / "last.ckpt"))
+    cut = write_checkpoint(str(root / "projects" / "voice-check" / "rounds" / "run" / "lightning_logs" / "version_1" / "checkpoints" / "last.ckpt"), whole=False)
+    done = run_snippet("checkpoint-check", home)
+    assert done.returncode == 0 and done.stderr == "" and done.stdout.splitlines() == ["True " + mike, "True " + good, "False " + cut]
+
+
+def test_the_read_only_rounds_commands_run_as_the_section_shows_them_and_write_nothing(tmp_path):
+    env = dict(os.environ, HOME=str(tmp_path), PYTHONDONTWRITEBYTECODE="1")
+
+    def run(*argv):
+        return subprocess.run([sys.executable, "-m"] + list(argv), cwd=str(TOOLS), env=env, text=True, capture_output=True, timeout=60, stdin=subprocess.DEVNULL)
+    made = run("voice_studio.projects", "new", "--own", "--name", "Voice check", "--voice", "mike", "--yes")
+    assert made.returncode == 0
+    listed = run("voice_studio.rounds", "list", "--project", "voice-check")
+    assert listed.returncode == 0 and "There are no rounds yet. The first round starts from the starting voice." in listed.stdout
+    assert "No round is chosen yet, so the next round starts from the starting voice." in listed.stdout and "Traceback" not in listed.stderr
+    kept = run("voice_studio.rounds", "keep", "--project", "voice-check")
+    assert kept.returncode == 0 and "This command removes nothing." in kept.stdout
+    folder = tmp_path / "ack-voice-studio" / "projects" / "voice-check" / "rounds"
+    assert sorted(p.name for p in folder.iterdir()) == [], "looking wrote nothing"
+    asked = run("voice_studio.rounds", "start", "--set", "dataset-1", "--minutes", "3", "--project", "voice-check")
+    assert asked.returncode == 2 and "no training set yet" in asked.stdout and "Traceback" not in asked.stderr
+    assert sorted(p.name for p in folder.iterdir()) in ([], [".rounds.lock"]), "asking for a round that cannot start made no round (the lock file is only the place changes are taken turns)"

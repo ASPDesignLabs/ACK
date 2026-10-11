@@ -34,17 +34,19 @@ If the internet connection drops while it downloads, it says so, waits, and carr
 If it still has to stop, or you stop it, run the same command again: it carries on from where it stopped and does not ask the same question twice
 (`core/connection.py` has the rules; it was measured against real pip, not guessed).
 
-Projects and starting voices, also from a terminal until the window exists. Anything you leave out is asked one question at a time, and nothing is made or changed without a yes:
+Projects, starting voices and training rounds, also from a terminal until the window exists. Anything you leave out is asked one question at a time, and nothing is made or changed without a yes:
 
 ```bash
 PYTHONPATH=tools python3 -m voice_studio.projects list                       # the projects there are
 PYTHONPATH=tools python3 -m voice_studio.projects new --own --name "Anna"    # make one (shows it first, then asks)
 PYTHONPATH=tools python3 -m voice_studio.voices show mike                    # where a starting voice comes from; changes nothing
 PYTHONPATH=tools python3 -m voice_studio.voices get mike --project anna      # confirm you read that, agree to the download, then download
+PYTHONPATH=tools python3 -m voice_studio.rounds list --project anna          # the training rounds, which one is chosen; changes nothing
+PYTHONPATH=tools python3 -m voice_studio.rounds start --set dataset-1 --project anna    # one more round, from the chosen round (shows the plan, then asks)
 ```
 
 `get` keeps two things apart on purpose: **`--acknowledge`** (or answering `yes` to its first question) says you read where the voice comes from, and **`--yes`** (or its second `yes`) agrees to the download. Neither can stand in for the other.
-Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` section I1 walks through it.
+Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices) and I2 (training rounds) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
 
 **For an IT department:** `docs/VOICE_STUDIO_IT_GUIDE.md` says what to allow (hosts, ports, packages, disk), what runs and what listens, how to install offline, and what has and has not been tested.
 

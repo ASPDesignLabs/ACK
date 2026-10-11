@@ -84,6 +84,29 @@ class ProjectPaths:
         return self.root + "/rounds"
 
     @property
+    def rounds_file(self) -> str:
+        """The record of every training round (core/rounds.py)."""
+        return self.rounds + "/rounds.json"
+
+    @property
+    def rounds_previous(self) -> str:
+        return self.rounds + "/rounds.json.previous"
+
+    @property
+    def rounds_lock(self) -> str:
+        return self.rounds + "/.rounds.lock"
+
+    @property
+    def run(self) -> str:
+        """The one folder every round trains in: the trainer adds a `lightning_logs/version_N` to it for each round and the checkpoints are inside."""
+        return self.rounds + "/run"
+
+    @property
+    def round_configs(self) -> str:
+        """The settings file each round's trainer writes, one per round, so a later round never overwrites an earlier one's."""
+        return self.rounds + "/config"
+
+    @property
     def exports(self) -> str:
         return self.root + "/exports"
 
@@ -94,3 +117,18 @@ class ProjectPaths:
     @property
     def folders(self) -> tuple:
         return (self.recordings, self.rounds, self.exports, self.default_scratch)
+
+
+@dataclass(frozen=True)
+class ScratchPaths:
+    """Inside a project's scratch folder (the default one, or the folder core/scratch.py made on the place the person chose): the training sets and the
+    working files of each round. Both can be made again from the recordings, so both are for *Free up space* (plan P11)."""
+    root: str
+
+    @property
+    def datasets(self) -> str:
+        return self.root + "/datasets"
+
+    @property
+    def caches(self) -> str:
+        return self.root + "/caches"

@@ -380,7 +380,7 @@ typing `yes` to the second) agrees to the download. Neither can stand in for the
   `ls ~/ack-voice-studio/projects/voice-check` shows `project.json.previous`. Choosing it only names it: nothing is downloaded and nothing is acknowledged. Do the same with `mike` to put it back.
 - [ ] **Amy, and the check nobody has been able to make.** Get her the same way (`… voices get amy --project voice-check`, **read her notes first**: her licence is not established by what was read). Then see whether her checkpoint trains:
   the tool does not check this yet, and it has never been loaded with this trainer. Do section I's round with `--ckpt_path` pointing at her file in `~/ack-voice-studio/tool/downloads/voices/voice-amy/`, with `max_time` of about three minutes.
-  → It either starts training or fails at once. Write down which, and the last five lines.
+  → It either starts training or fails at once. Write down which, and the last five lines. (Done once, 2026-10-11, on 22.04: the developer reported that Amy's checkpoint trained; no lines were sent back, so do send them if you run it again.)
 
 ## I. One short training round, on the graphics card
 
@@ -491,6 +491,91 @@ round).
   → About a minute and a half in all, `exit code: 0`, `scorer lines … 0`, and `Time limit reached. Elapsed time is 0:01:00` (**not** `0:04:57`, which is what it said before the launcher kept the clock from being restored: the round
   then stopped after eight seconds).
 
+## I2. Training rounds with the tool
+
+**New, and not yet run on a real computer.** This is how the window will run a person's training: one round after another, each continuing from the round the person chose, and never from the starting voice
+again by accident. It uses the project from section I1 (`voice-check`, with Mike chosen, acknowledged and on this computer), the training programs from I0 and the training set from H. Every step that changes
+something shows what it will do and asks first. Nothing here deletes or moves a file. Run one command at a time. Keep the rounds short, two or three minutes each: they only have to prove the plumbing, and each
+round keeps about 4.8 GB of saved files, so have about 25 GB free for the whole section.
+
+- [ ] Put a copy of the training set where the project keeps its own (the original stays where it is), and look. Looking changes nothing:
+  ```bash
+  mkdir -p ~/ack-voice-studio/projects/voice-check/scratch/datasets
+  cp -r ~/ack-voice-check/dataset-1 ~/ack-voice-studio/projects/voice-check/scratch/datasets/
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds list --project voice-check
+  ls ~/ack-voice-studio/projects/voice-check/rounds
+  ```
+  → `There are no rounds yet. The first round starts from the starting voice.` and `No round is chosen yet, so the next round starts from the starting voice.` The `ls` shows no `rounds.json`: looking wrote nothing.
+- [ ] Ask for the first round, and say no:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds start --set dataset-1 --minutes 3 --project voice-check
+  ```
+  → `Round 1 would:` and, under it, that it would continue from the starting voice `voice-mike`, train on the training set with its number of clips, run for about 3 minutes, use the graphics card, and keep its files under the
+  project's `rounds` folder. Then `Start round 1 now? Type yes to start.` Type **`no`**: `Nothing was done.` and the `ls` above still shows no `rounds.json`.
+- [ ] The same command, and type **`yes`**: `Round 1 started (job …).` Write down how long it took to start training (`tail -3 ~/ack-voice-studio/state/jobs/*/log.txt`). From another terminal, look:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds list --project voice-check
+  ```
+  → `Round 1: Training now.` while it runs, and how to stop it.
+- [ ] When it has ended (about four minutes in all), look again. → `Round 1 (chosen): Finished.`, a line saying the saved point is there, and `Chosen: round 1. The next round continues from it. About 3 minutes of training went into this voice.`
+  If it says `Ended with an error`, or `It ended, but it did not save a whole point to carry on from.`, **send back the last 20 lines of the job's log** and `ls -l ~/ack-voice-studio/projects/voice-check/rounds/run/lightning_logs/version_0/checkpoints`:
+  the second sentence can also mean that the tool's check of a saved file is wrong about real files (see the check below).
+- [ ] Round 2 continues from round 1. Start it the same way, say `yes`, and **close the terminal while it runs**: it must go on by itself. Open a new terminal when it should be over and run `list`. → `Round 2 would:` said
+  that it would continue from round 1, the chosen round; now `Round 2 (chosen): Finished.` Then look at what each round was started from:
+  ```bash
+  grep -h -o -- '"--ckpt_path", "[^"]*"' ~/ack-voice-studio/state/jobs/*/job.json
+  ```
+  → One line for each round. Round 1's ends in Mike's own file name, `epoch=5460-val_mos=4.2686.ckpt`. Round 2's ends in `rounds/run/lightning_logs/version_0/checkpoints/last.ckpt`. **Round 2's must never be the voice file.**
+- [ ] Stop a round by hand. Start round 3 with `--minutes 10`, wait a minute, then:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds stop --project voice-check
+  ```
+  → `Ask round 3 to stop? It saves what it can first, but a stop by hand can lose the last few minutes of training. Type yes to stop it.` Type **`yes`**: `Asked round 3 to stop. It may take a little while to finish saving. Look again with: …`
+  Write down the seconds until `list` shows `Round 3: Stopped by you.` and whether it says the saved point is there. A round stopped before its first check has none; it is then not chosen, and the next round
+  still continues from round 2.
+- [ ] Go back, and branch. `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds back --project voice-check` → `Go back to round …` with both numbers in it. Type **`no`**: `Nothing was done.` Run it again and type **`yes`**:
+  `Done. Round 2 is chosen now. Round 3 is still in the list, and its files are untouched.` (If round 3 had no saved point, round 2 was already chosen and `back` goes to round 1: the numbers in the sentence follow what the list says.)
+  Then start another round. → It says it would continue from the round you went back to, and `list` shows the new round as `continuing from round 2` (or 1). `ls ~/ack-voice-studio/projects/voice-check/rounds/run/lightning_logs` still shows every `version_` folder.
+- [ ] See what is kept. This changes nothing:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds keep --project voice-check
+  ```
+  → `Kept for sure (2 files …` (the chosen round's saved point and the one before it), a line for the spare files and their size, and `This command removes nothing.` Compare the sizes with
+  `ls -l ~/ack-voice-studio/projects/voice-check/rounds/run/lightning_logs/*/checkpoints/` (every round has the `last.ckpt` and five more, about 807 MiB each).
+- [ ] Write a note, and take it away:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds note 1 --text "first try" --project voice-check
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds note 1 --text= --project voice-check
+  ```
+  → `Set the note on round 1 to this? first try Type yes to save it.` Type **`yes`**; `list` shows `Note: first try`. Then `Remove the note on round 1? Type yes to remove it.`
+- [ ] **Is the tool's check of a saved file right about real files?** The tool calls a saved point whole when it opens as a zip and holds the state, which is how PyTorch writes one; nobody has run that on a real file.
+  This only reads:
+  <!-- snippet: checkpoint-check -->
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 - <<'EOF'
+  import glob, os
+  from voice_studio.core.rounds import checkpoint_complete
+  home = os.path.expanduser("~/ack-voice-studio")
+  files = sorted(glob.glob(home + "/tool/downloads/voices/voice-mike/*.ckpt"))
+  files += sorted(glob.glob(home + "/projects/voice-check/rounds/run/lightning_logs/version_*/checkpoints/last.ckpt"))
+  for path in files:
+      print(checkpoint_complete(path), path)
+  EOF
+  ```
+  → `True` on every line. A `False` for a file that trained fine means the check is wrong about real files and every round would be called failed: send that back first.
+- [ ] **Does a round that ends at its time limit save its last moment?** Each round's log says which epoch it reached; the saved file says which epoch it holds. This only reads:
+  ```bash
+  TRAIN=$(ls -d ~/ack-voice-studio/tool/environments/training-* | head -1)
+  "$TRAIN/venv/bin/python" - <<'EOF'
+  import glob, os, torch
+  for path in sorted(glob.glob(os.path.expanduser("~/ack-voice-studio/projects/voice-check/rounds/run/lightning_logs/version_*/checkpoints/last.ckpt"))):
+      saved = torch.load(path, map_location="cpu", weights_only=False)
+      print(os.path.basename(os.path.dirname(os.path.dirname(path))), "holds epoch", saved.get("epoch"), "step", saved.get("global_step"))
+  EOF
+  for log in ~/ack-voice-studio/state/jobs/*/log.txt; do echo "$log"; tr '\r' '\n' < "$log" | grep -o "Epoch [0-9]*" | tail -1; done
+  ```
+  → For a round that ended at its time limit: is the epoch in the file the same as the last epoch in the log, or older (by up to 10)? Write both down for every round.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -561,6 +646,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section B: the last line of the test run, and any failure's first red line.
 - Section D, **both** computers: what the job said after a minute with every terminal closed, and after a restart.
 - Section I1: every sentence of the notes that was hard to follow or sounded like permission, how long the voice took to download, whether the refusals refused, and whether Amy's checkpoint trained.
+- Section I2: whether round 2 started from round 1's file (the `--ckpt_path` lines), how long a stop by hand took, every `False` from the saved-file check, the two epochs for each round, and any sentence that was hard to follow.
 - Section I: the card, the memory used, the batch size that worked, the seconds per epoch, how long `max_time` took, whether `last.ckpt` was in the folder you started from, the exit code, and how long Ctrl+C took.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
@@ -572,4 +658,4 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
-- [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.
+- [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.

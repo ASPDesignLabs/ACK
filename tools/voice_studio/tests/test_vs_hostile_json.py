@@ -47,3 +47,11 @@ def test_a_jobs_notes_nested_too_deep_read_as_missing(tmp_path):
     path = tmp_path / "state.json"
     path.write_text(DEEP_OBJECT)
     assert jobs.read_json(str(path)) is None
+
+
+def test_a_rounds_record_nested_too_deep_is_damaged_not_a_crash():
+    from voice_studio.core import rounds
+    for text in (DEEP, DEEP_OBJECT, '{"schema": 1, "rounds": [' + "[" * 200_000):
+        with pytest.raises(rounds.RoundsError) as caught:
+            rounds.record_from_text(text)
+        assert caught.value.code == "damaged"
