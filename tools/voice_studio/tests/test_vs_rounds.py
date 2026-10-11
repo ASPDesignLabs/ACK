@@ -1159,3 +1159,15 @@ def test_a_folder_that_was_there_before_the_round_is_never_taken_for_the_rounds_
 def test_a_round_written_as_starting_that_already_has_a_job_is_never_taken_back(world):
     put(world, rd.Record((R(1, state="starting", ended="", has_checkpoint=False, version=None, job="job-1"),), 0))
     assert [r.number for r in rd.rollback_start(world.paths, 1).rounds] == [1]
+
+
+def test_going_back_after_a_branch_goes_to_the_round_the_chosen_one_continued_from_not_to_the_number_before_it(world):
+    world.run_round(version=0)
+    world.run_round(version=1)
+    rd.go_back(world.paths)                                            # back to round 1
+    world.run_round(version=2)                                         # round 3 continues from round 1; round 2 is the number before it, but not what it came from
+    record = rd.load(world.paths)
+    assert (record.current, rd.chosen(record).parent) == (3, 1)
+    assert rd.go_back_target(world.paths, record) == 1
+    assert rd.go_back(world.paths).current == 1
+    assert rd.kept_rounds(rd.load(world.paths)) == (1,)
