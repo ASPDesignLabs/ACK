@@ -484,6 +484,7 @@ round).
 - [ ] ACK → Audio Architect → Custom Voice → **IMPORT CUSTOM VOICE** (or RE-IMPORT) → pick **the zip, alone**. → ACK accepts it and restarts by itself. This needs a build of ACK that has the zip import (the branch this
   checklist is on): before that change the picker wanted the two trainer files, and **IMPORT VOICE BACKUP** (the restore button next to EXPORT) appears only once a voice is already installed. On a phone that has a voice,
   either button takes the zip; the picker still takes the two files (`my_voice.onnx` and `my_voice.onnx.json`, together) as before.
+  *Confirmed on the developer's phone (2026-10-11): the zip alone imports as expected.*
   If it refuses, note the message on screen (it now names both ways) and, if you can, the lines `adb logcat -s ACK_VOICE_BACKUP ACK_CUSTOM_VOICE` print.
 - [ ] A new chip **MY VOICE** appears in the voice profile row. Choose it and say a sentence. → It speaks in the trained voice, and does not
   crash on the first word (the crash the patch step prevents). Short training means it will sound rough; what matters here is that it speaks.

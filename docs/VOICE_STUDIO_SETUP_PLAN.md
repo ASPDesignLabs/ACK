@@ -206,7 +206,11 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   **The export, patch and zip also work on 24.04** (device test J): `export_onnx` through the launcher wrote a 62,028 KB model, the patch added the metadata and kept the original as `.before-patch`, a second patch changed nothing, and
   the zip (63,517,438 bytes) re-checked "as the phone would: no problems" and holds exactly `model.onnx` and `model.onnx.json`. **A risk to carry:** the exporter now prints that the legacy TorchScript-based ONNX export is deprecated
   (PyTorch 2.9 made the new `torch.export` one the default); the launcher forces the legacy path (`dynamo=False`, needed because the new one wants `onnxscript` and the export failed without it in F16). So **every change of the locked `torch` version
-  must repeat the export step** before the lock is accepted. Not done on 24.04: the resume and the Ctrl+C stop (device test I, second item), and the voice on a phone.
+  must repeat the export step** before the lock is accepted. **The resume and the Ctrl+C stop also work on 24.04** (device test I, second item): the second run restored all states from `version_0/last.ckpt`, trained on from epoch 5710, and after one Ctrl+C
+  printed `Detected KeyboardInterrupt, attempting graceful shutdown` and was back at the prompt within about 6 seconds with exit code 1, leaving a new `version_1` with five best-by-`val_mel` checkpoints and a `last.ckpt` (4841 MB). The newest
+  `last.ckpt` was written at the epoch-5779 check, 01:31:01; the run had reached epoch 5785, so **about 6 epochs (a few seconds of training) were not saved**, inside the "at most ten" the check interval allows. 0 scorer lines.
+  **Known noise after a Ctrl+C:** `Exception in thread Thread-2 (_pin_memory_loop) ... EOFError`, the data loader's helper thread cut off mid-read while the main program shuts down; it comes after the checkpoint was written, and the exit code is the
+  expected 1. **The voice on a phone: the zip imports as expected** (the developer, rebuilt ACK, 2026-10-11).
 
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
   `Time limit reached. Elapsed time is 0:01:04`, and `version_0` to `version_3` exist. The export under the launcher exited 0 with **no extra package** (`onnxscript` is not needed): `my_voice.onnx` 63,516,211 bytes after the
