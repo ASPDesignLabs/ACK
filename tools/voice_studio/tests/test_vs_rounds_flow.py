@@ -610,3 +610,20 @@ def test_the_training_time_shown_is_that_of_the_chosen_round_not_of_the_last_one
     code, io = rig.run("list", "--project", "anna")
     assert any(l.startswith("Chosen: round 1.") and "About 25 minutes of training" in l for l in io.lines), io.lines
     assert "Round 1 (chosen): Finished." in io.lines and "Round 2: Finished." in io.lines
+
+
+def test_a_running_round_is_not_told_to_start_another_and_keep_gives_the_real_sizes(rig):
+    rig.finish_rounds(3)
+    rig.world.trainer_makes(9)                                                                 # there before the next round began
+    plan = rig.world.begin()
+    rd.attach_job(rig.paths, 4, rig.world.job_for(plan, "running").id)
+    rig.world.trainer_makes(10)
+    code, io = rig.run("list", "--project", "anna")
+    assert "To train another round" not in io.text and any("Round 4 is running now" in l for l in io.lines)
+    from voice_studio.core.text import size_text
+    kept = rd.retention(rig.paths, rd.load(rig.paths))
+    code, io = rig.run("keep", "--project", "anna")
+    assert "Kept for sure (2 files, %s)" % size_text(sum(f.size for n, f in kept.keep)) in io.text and size_text(0) not in io.text
+    assert "Spare (%d files, %s)" % (len(kept.spare), size_text(sum(f.size for n, f in kept.spare))) in io.text
+    assert "In use by the running round (3 files): never touched." in io.lines
+    assert "Not made by a round of this tool (3 files, %s): left alone and never offered." % size_text(sum(f.size for f in kept.unclaimed)) in io.lines
