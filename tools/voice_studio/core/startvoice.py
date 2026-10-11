@@ -133,6 +133,15 @@ def voices(registry: Registry) -> Tuple[VoiceCard, ...]:
     return tuple(card(registry, facts.voice_id) for facts in FACTS if facts.voice_id in present)
 
 
+def find_voice(registry: Registry, typed: str) -> Optional[str]:
+    """The voice a person means by "mike", "Mike" or "voice-mike": its id, or None if it is none of the voices this registry has."""
+    word = " ".join(str(typed).split()).lower()
+    for entry in voices(registry):
+        if word in (entry.voice_id, entry.voice_id[len("voice-"):]):
+            return entry.voice_id
+    return None
+
+
 # ---------------------------------------------------------------- choosing, and the two yeses
 
 def choose(project: Project, registry: Registry, voice_id: str) -> Project:

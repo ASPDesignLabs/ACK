@@ -319,6 +319,67 @@ Run it in a terminal you keep open, not through a window that closes.
   ending in `…/piper/train/vits/monotonic_align/__init__.py`, with no error.
 - [ ] Check the card is seen: `"$TRAIN/venv/bin/python" -c "import torch; print(torch.cuda.is_available(), torch.version.cuda)"`. → `True 13.0` (or the CUDA version the lock names).
 
+## I1. Make a project and get a starting voice with the tool
+
+**New, and not yet run on a real computer.** This is how the window will make a person's project and fetch a starting voice, done from the terminal: read where the voice comes from, confirm that
+you read it, agree to the download, and only then download. Two things are kept apart on purpose: **`--acknowledge`** (or typing `yes` to the first question) says you read the notes, and **`--yes`** (or
+typing `yes` to the second) agrees to the download. Neither can stand in for the other. Nothing here deletes anything, and every step that changes a file asks first and keeps the earlier project file as
+`project.json.previous`. You need about 1 GB free beyond the 846 MB. Run one command at a time, and wait for it to finish before you type the next.
+
+- [ ] Look at what exists. This changes nothing:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects list
+  ```
+  → `There are no projects yet.` and the command to make one (or a line for each project you already have).
+- [ ] Make a project for this check. It asks one question for what you did not give:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects new --own --name "Voice check" --voice mike
+  ```
+  → `About how many hours of recording do you expect? Press Enter for 1.` (press **Enter**). Then the whole project it would make (its name, its folder, the hours, the starting voice), how much room the whole plan needs against what is free,
+  and `Make this project? Type yes to make it.` Type **`no`**: `Nothing was made.`, and `ls ~/ack-voice-studio/projects` shows no new folder. Run the same command again and type **`yes`**: `Made the project voice-check.`
+  (If you would rather paste one line and have nobody asked, add `--yes` to the end.)
+- [ ] Look at the project: `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects show`. → `Using the only project: voice-check.`, its folder, `Starting voice: voice-mike`, and `No starting voice has been acknowledged yet.`
+- [ ] **Read the notes. This changes nothing and downloads nothing:**
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voices show mike
+  ```
+  → The voice, then where it comes from (Mike, then the lessac voice behind it), the address of the page to read for each, the date the pages were read, `This project gives no legal advice. Whether your use is allowed is for you to decide.`
+  and that this project does not host the voice. **Read it as the person it is for would, and write down:** any sentence that is hard to follow, any that sounds as if it says you may use the voice, and any statement you think is wrong
+  (these are summaries of pages read on 2026-10-11; the pages themselves are the thing to trust).
+- [ ] See where each voice stands for this project: `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voices list --project voice-check`. → Both voices, `On this computer: no.`, and for each the next step
+  (`Read where this voice comes from, then confirm that you have read it.`). Mike also says `This is the starting voice of project voice-check.`
+- [ ] **The refusals.** In the terminal, give only the download's yes and see that it is not enough:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voices get mike --project voice-check --yes
+  ```
+  → The notes again, and it **still asks** `Have you read where this voice comes from? Type yes to confirm that you have.` Type **`no`**: `Nothing was done.` Check that nothing changed: `projects show` still says no starting voice has been
+  acknowledged, and `ls ~/ack-voice-studio/tool/downloads` has no `voices` folder. Then the same with nobody to ask:
+  `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voices get mike --project voice-check --yes < /dev/null`. → `There was nobody to ask, and --acknowledge was not given. Nothing was done.`
+- [ ] **The real thing.** About 846 MB over the internet, kept for good:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voices get mike --project voice-check
+  ```
+  → The notes, then `Have you read where this voice comes from? Type yes to confirm that you have.` (type **`yes`**), `Saved: project voice-check has acknowledged this voice …`, then `Download this voice now? It is 846 MB from huggingface.co and will be kept in …`
+  (type **`yes`**), `Saved your agreement to download this one file.`, and a line at about every 10% (no moving bar). It ends `Done. The voice is on this computer, and the file was checked against the one that was agreed to.`
+  Write down: how long it took, and anything odd. **Optional:** press Ctrl+C part-way, then run the same command: it does not show the notes again, says `You already agreed to download this file, so it carries on.` and finishes. Or turn the Wi-Fi off for a minute while
+  it downloads, and see `The internet connection stopped.` and then `The connection is back. Carrying on.`
+- [ ] Look inside (this only reads):
+  ```bash
+  ls -l ~/ack-voice-studio/tool/downloads/voices/voice-mike/; sha256sum ~/ack-voice-studio/tool/downloads/voices/voice-mike/*.ckpt
+  ```
+  → One file, `epoch=5460-val_mos=4.2686.ckpt`, 845891981 bytes, with the fingerprint `9a8389c2d733f94e2acc3b4e8264b4ba3c063612217780e4be21c0ccaff18b9b`: the same as your own `mike.ckpt`
+  (`sha256sum ~/piper/checkpoints/mike.ckpt`, if you still have it).
+- [ ] Run the get command again. → `This voice is already on this computer, and project voice-check has acknowledged it. Nothing to download.` and no question.
+- [ ] **Change the starting voice, and back** (this edits the project file, so it asks, and keeps the earlier one):
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voices choose amy --project voice-check
+  ```
+  → `Set the starting voice of project voice-check to voice-amy? Only that line of its file changes, and the earlier file is kept as project.json.previous. Type yes to do it.` Type **`yes`**: `Done. Project voice-check now starts from voice-amy.`
+  `ls ~/ack-voice-studio/projects/voice-check` shows `project.json.previous`. Choosing it only names it: nothing is downloaded and nothing is acknowledged. Do the same with `mike` to put it back.
+- [ ] **Amy, and the check nobody has been able to make.** Get her the same way (`… voices get amy --project voice-check`, **read her notes first**: her licence is not established by what was read). Then see whether her checkpoint trains:
+  the tool does not check this yet, and it has never been loaded with this trainer. Do section I's round with `--ckpt_path` pointing at her file in `~/ack-voice-studio/tool/downloads/voices/voice-amy/`, with `max_time` of about three minutes.
+  → It either starts training or fails at once. Write down which, and the last five lines.
+
 ## I. One short training round, on the graphics card
 
 **This is the part nobody has been able to check.** It uses the graphics card and can take several minutes to load. Close other programs
@@ -497,6 +558,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - The notes from section A, for each computer you used (Ubuntu, WSL).
 - Section B: the last line of the test run, and any failure's first red line.
 - Section D, **both** computers: what the job said after a minute with every terminal closed, and after a restart.
+- Section I1: every sentence of the notes that was hard to follow or sounded like permission, how long the voice took to download, whether the refusals refused, and whether Amy's checkpoint trained.
 - Section I: the card, the memory used, the batch size that worked, the seconds per epoch, how long `max_time` took, whether `last.ckpt` was in the folder you started from, the exit code, and how long Ctrl+C took.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
@@ -508,3 +570,4 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
+- [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.

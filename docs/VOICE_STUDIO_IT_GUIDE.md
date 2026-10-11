@@ -96,7 +96,7 @@ they do for any other Python program. A TLS-inspecting proxy needs its certifica
 
 1. **Hand over the listening-model files.** Download the four files in section 8 on an approved machine, check their SHA-256, and put them in
    `~/ack-voice-studio/tool/downloads/models/speech-small-en/` with exactly those names. The tool checks size and SHA-256 of a file that is already there
-   and **skips the download** when it is right. (The starting voices have no such folder yet: they are fetched from the voice screen, which is not built.)
+   and **skips the download** when it is right. A starting voice is fetched by the person with `python3 -m voice_studio.voices get <voice>` into `~/ack-voice-studio/tool/downloads/voices/<voice>/`, and the same rule applies: a file placed there with the exact pinned name, size and checksum is used with no download. The person still has to read and acknowledge where the voice comes from (section 10).
 2. **An internal Python mirror.** The tool installs with `pip install --require-hashes --only-binary=:all: --no-deps`, so every wheel is pinned by SHA-256 in
    `tools/voice_studio/data/locks/training.lock.txt` and `studio.lock.txt`. A mirror must carry those exact files. Point pip at it with its usual
    settings (`PIP_INDEX_URL` or `pip.conf`). *Not tested here.*
@@ -149,7 +149,7 @@ they do for any other Python program. A TLS-inspecting proxy needs its certifica
 * **The starting voices** (Mike and Amy) are checkpoints that were themselves fine-tuned from a third voice (lessac), trained on the **Blizzard 2013** data. Mike's dataset is
   stated to be CC0. **Amy's dataset licence is not established** by what was read. The Blizzard 2013 data is distributed under a *research-only* agreement that excludes commercial use,
   does not allow sub-licensing and names the person or organisation it is granted to. **Whether any of that reaches a voice trained from it is not settled here.** The tool is designed to show the person this chain and ask for
-  their acknowledgment before each voice is fetched (that screen is not built yet).
+  their acknowledgment before each voice is fetched. Today that is the terminal command `python3 -m voice_studio.voices get`; the window's screen for it is not built yet.
   The rules behind that screen are built and tested: a voice is not downloaded until the person's project has recorded the acknowledgment (with its date and the exact file's revision) **and** this
   computer has a saved yes to that one download; a changed file asks again. The pages the screen will point to are `https://github.com/OHF-Voice/voice-datasets` (Mike's recordings),
   `https://github.com/MycroftAI/mimic3-voices` (Amy's) and `https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html` (lessac and the Blizzard 2013 data). They were read on 2026-10-11;
@@ -164,6 +164,7 @@ they do for any other Python program. A TLS-inspecting proxy needs its certifica
 | A dropped connection during the download (Wi-Fi switched off) | A proxy, TLS inspection, or an internal package mirror |
 | The downloader and the pins, against the real hosts | A training round with the network cut off completely |
 | That the voice zip imports into the phone app | Port-scanning the running programs |
+| The `projects` and `voices` terminal commands, in the sandbox with a stand-in network | Those two commands on a real computer and the real download of a starting voice through them |
 
 ## 12. Removing it
 

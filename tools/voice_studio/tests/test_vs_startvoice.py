@@ -16,7 +16,8 @@ from pathlib import Path
 import pytest
 
 from vs_env_helpers import FakeTime
-from vs_fetch_helpers import FakeOpener, pinned_item
+from vs_fetch_helpers import FakeOpener
+from vs_startvoice_helpers import LESSAC_PAGE, NOW, STAMP, VOICE_A, VOICE_B, implies_permission, make_project, make_registry, make_voice
 from voice_studio.core import connection as cn
 from voice_studio.core import fetch, startvoice as sv, text
 from voice_studio.core.consent import ConsentRecord, load_consent, make_consent, save_consent
@@ -27,33 +28,6 @@ from voice_studio.core.registry import Item, Registry, load_registry
 REPO = Path(__file__).resolve().parents[3]
 NOTICES = (REPO / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
 CAT = text.load_catalog("en")
-NOW = datetime(2026, 10, 11, 12, 30, tzinfo=timezone.utc)
-STAMP = "2026-10-11T12:30:00Z"
-LESSAC_PAGE = "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html"
-VOICE_A = b"the first voice, as bytes " * 80
-VOICE_B = b"the second voice, as bytes " * 80
-
-
-def make_voice(voice_id, payload, revision="0123abcd", **over):
-    base = pinned_item(payload)
-    pages = (("lessac", LESSAC_PAGE), ("mike" if voice_id == "voice-mike" else "amy", "https://github.com/example/recordings"))
-    return replace(base, id=voice_id, url="https://huggingface.co/datasets/example/store/resolve/%s/%s.ckpt" % (revision, voice_id), filename=voice_id + ".ckpt",
-                   revision=revision, pages=tuple(sorted(pages)), **over)
-
-
-def make_registry(*, mike=VOICE_A, amy=VOICE_B, revision="0123abcd"):
-    items = []
-    if mike is not None:
-        items.append(make_voice("voice-mike", mike, revision))
-    if amy is not None:
-        items.append(make_voice("voice-amy", amy, revision))
-    return Registry(tuple(items))
-
-
-def make_project(**over):
-    base = dict(id="anna", name="Anna", whose_voice="own", created="2026-10-11T09:00:00Z")
-    base.update(over)
-    return Project(**base)
 
 
 class Rig:
@@ -146,18 +120,9 @@ def test_the_chain_for_each_voice_is_the_voice_then_lessac_and_the_text_catalog_
 
 # ---------------------------------------------------------------- what is said never says or implies that use is permitted
 
-IMPLIES_PERMISSION = re.compile(r"\b(permit(?:ted|s)?|allowed|free (?:to|for)|legal(?:ly)? to|licensed for|may use|can use|fine to use|safe to use|ok(?:ay)? to use|entitled)\b", re.I)
-
-
 def shown_texts():
     data = json.loads((text.DATA_DIR / "en.json").read_text(encoding="utf-8"))["strings"]
     return {k: v for k, v in data.items() if k.startswith("startvoice.")}
-
-
-def implies_permission(value):
-    """The one sentence D27 asks for, "Whether ... is allowed is for you to decide", is not a grant; every other sentence is checked."""
-    sentences = re.split(r"(?<=[.!?])\s+", value)
-    return [s for s in sentences if IMPLIES_PERMISSION.search(s) and not re.match(r"Whether\b", s)]
 
 
 def test_no_starting_voice_text_says_or_implies_that_use_is_permitted():
@@ -211,6 +176,28 @@ def test_voices_lists_the_ones_the_registry_has_in_the_plans_order_and_skips_one
     assert [c.voice_id for c in sv.voices(make_registry())] == ["voice-mike", "voice-amy"]
     assert [c.voice_id for c in sv.voices(make_registry(mike=None))] == ["voice-amy"]
     assert sv.voices(Registry(())) == ()
+
+
+# ---------------------------------------------------------------- naming a voice
+
+@pytest.mark.parametrize("typed", ["mike", "Mike", "MIKE", "voice-mike", "Voice-Mike", "  mike  ", "mike\n"])
+def test_a_voice_can_be_named_loosely(typed):
+    assert sv.find_voice(make_registry(), typed) == "voice-mike"
+
+
+@pytest.mark.parametrize("typed", ["amy", "AMY", "voice-amy", " voice-amy"])
+def test_the_other_voice_is_found_too(typed):
+    assert sv.find_voice(make_registry(), typed) == "voice-amy"
+
+
+@pytest.mark.parametrize("typed", ["", " ", "bob", "voice-", "voice", "mik", "mikey", "voice-mike2", "amy mike", "voice mike", None])
+def test_a_name_that_is_not_a_voice_finds_nothing(typed):
+    assert sv.find_voice(make_registry(), typed) is None
+
+
+def test_a_voice_the_registry_lacks_is_not_found_by_its_name():
+    assert sv.find_voice(make_registry(amy=None), "amy") is None and sv.find_voice(make_registry(amy=None), "mike") == "voice-mike"
+    assert sv.find_voice(Registry(()), "mike") is None
 
 
 # ---------------------------------------------------------------- choosing

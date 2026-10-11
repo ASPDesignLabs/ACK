@@ -51,6 +51,14 @@ def test_the_folder_to_hand_files_to_is_the_one_the_setup_run_looks_in_and_the_n
     assert all(i.filename in GUIDE for i in model)
 
 
+def test_the_folder_a_starting_voice_is_placed_in_by_hand_is_the_one_the_voices_command_looks_in_and_it_names_the_command_and_the_acknowledgment():
+    from voice_studio.core import voices_flow
+    expected = DataHome("~").voices + "/<voice>/"
+    offline = section(6).replace("`", "")
+    assert expected == "~/ack-voice-studio/tool/downloads/voices/<voice>/" and expected in offline
+    assert "python3 -m voice_studio.voices get <voice>" in offline and "acknowledge" in offline and "get" in voices_flow.OPTIONS and (PKG / "voices.py").is_file()
+
+
 def test_a_file_already_in_place_is_checked_by_size_and_checksum_and_skipped_which_is_what_the_offline_route_relies_on(tmp_path):
     item = next(i for i in reg.load_registry().items if i.filename == "config.json")
     folder = tmp_path / "models" / item.folder

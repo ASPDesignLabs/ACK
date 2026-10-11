@@ -298,3 +298,119 @@ def test_a_voice_is_checked_zipped_checked_again_and_never_written_over(home):
     assert raw.returncode == 1 and "has not been prepared for the phone yet" in raw.stdout and "This voice is not ready to send to the phone." in raw.stdout
     assert sorted(p.name for p in dest.parent.iterdir()) == ["my_voice_backup.zip"], "no zip and no half-written file is left"
     assert "Traceback" not in made.stderr + second.stderr + raw.stderr
+
+
+# ---------------------------------------------------------------- section I1: projects and starting voices
+
+def section(prefix):
+    match = re.search(r"^## %s.*?(?=^## |\Z)" % re.escape(prefix), doc_text(), flags=re.S | re.M)
+    assert match, prefix
+    return match.group(0)
+
+
+def test_the_project_and_voice_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import projects_flow as pf, voices_flow as vf
+    from voice_studio.core.project import slugify
+    from voice_studio.core.registry import load_registry
+    from voice_studio.core.startvoice import find_voice
+    registry = load_registry()
+    found = re.findall(r"python3 -m voice_studio\.(projects|voices) ([a-z]+)([^\n`;<]*)", doc_text())
+    assert {(m, c) for m, c, _ in found} >= {("projects", "list"), ("projects", "new"), ("projects", "show"), ("voices", "show"), ("voices", "list"), ("voices", "get"), ("voices", "choose")}
+    takes_a_value = {"projects": set(pf.NEW_VALUES), "voices": set(vf.PROJECT)}
+    for module, command, rest in found:
+        table = (pf if module == "projects" else vf).OPTIONS
+        assert command in table, (module, command)
+        words, i = shlex.split(rest), 0
+        positional = []
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert words[i] in table[command], (module, command, words[i])
+                i += 2 if words[i] in takes_a_value[module] else 1
+            else:
+                positional.append(words[i])
+                i += 1
+        if module == "voices" and command in ("show", "choose", "get"):
+            assert len(positional) == 1 and find_voice(registry, positional[0]), (command, positional)
+        if "--project" in words:
+            assert words[words.index("--project") + 1] == slugify("Voice check") == "voice-check"
+    assert "--name \"Voice check\"" in doc_text()
+
+
+def says(sentence, truncated=False):
+    """Is `sentence` something the tool says? Whole sentences must match a catalog sentence with its placeholders filled by anything. A quote that the checklist
+    ends with an ellipsis may be only the start of one. A template that begins with a placeholder ("{question} {answer}") would match almost any text, so it cannot
+    vouch for anything and is left out."""
+    for template in text_catalog_strings():
+        if template.startswith("{") or (truncated and template[:6] != sentence[:6]):
+            continue
+        if sentence in template:
+            return True
+        units = [u for part in re.split(r"(\{[a-z_0-9]+\})", template) for u in ([part] if part.startswith("{") else list(part))]
+        for k in (range(len(units), 0, -1) if truncated else (len(units),)):
+            if truncated and units[k - 1].startswith("{"):
+                continue                                  # a cut-off quote ends on real wording: ending in a placeholder would let it swallow any text
+            if re.fullmatch("".join(".+?" if u.startswith("{") else re.escape(u) for u in units[:k]), sentence, re.S):
+                return True
+    return False
+
+
+def text_catalog_strings():
+    from voice_studio.core import text as vtext
+    return list(json.loads((vtext.DATA_DIR / "en.json").read_text(encoding="utf-8"))["strings"].values())
+
+
+def test_the_check_that_a_quoted_sentence_is_one_the_tool_says_can_actually_fail():
+    assert says("Nothing was made.") and says("Made the project voice-check.")
+    assert says("Download this voice now? It is 846 MB from huggingface.co and will be kept in", truncated=True)
+    assert says("Saved: project voice-check has acknowledged this voice", truncated=True)
+    assert not says("Download this voice now? It is 846 MB from huggingface.co and will be kept in"), "a cut-off quote is only allowed when the checklist marks it with an ellipsis"
+    assert not says("Make this project? Type y to make it.") and not says("A sentence nobody wrote.") and not says("Made the projects voice-check.")
+    assert not says("Saved: project voice-check has acknowledged that voice", truncated=True) and not says("Anything goes here at all", truncated=True)
+
+
+def test_every_sentence_the_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I1."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans if " " in s and s.rstrip()[-1] in ".?…" and not s.startswith(("PYTHONPATH", "ls ", "sha256sum", "~/", "rm "))]
+    assert len(quoted) >= 18 and any(cut for _, cut in quoted), quoted
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_section_states_the_facts_about_mike_that_the_registry_pins():
+    from voice_studio.core.registry import load_registry
+    from voice_studio.core.text import size_text
+    mike = load_registry().get("voice-mike")
+    body = section("I1.")
+    for fact in (mike.filename, str(mike.size_bytes), mike.sha256, size_text(mike.size_bytes) + " from huggingface.co", "2026-10-11"):
+        assert fact in body, fact
+
+
+def test_the_section_says_what_the_two_flags_are_and_that_neither_stands_for_the_other():
+    body = section("I1.")
+    assert "**`--acknowledge`**" in body and "**`--yes`**" in body and "Neither can stand in for the other" in body
+
+
+def test_the_read_only_commands_and_the_refusal_run_as_the_section_shows_them(tmp_path):
+    env = dict(os.environ, HOME=str(tmp_path), PYTHONDONTWRITEBYTECODE="1")
+
+    def run(*argv):
+        return subprocess.run([sys.executable, "-m"] + list(argv), cwd=str(TOOLS), env=env, text=True, capture_output=True, timeout=60, stdin=subprocess.DEVNULL)
+    listed = run("voice_studio.projects", "list")
+    assert listed.returncode == 0 and "There are no projects yet." in listed.stdout and "Traceback" not in listed.stderr
+    shown = run("voice_studio.voices", "show", "mike")
+    assert shown.returncode == 0 and "This project gives no legal advice. Whether your use is allowed is for you to decide." in shown.stdout
+    assert "Mike" in shown.stdout and "Lessac" in shown.stdout and "Traceback" not in shown.stderr
+    made = run("voice_studio.projects", "new", "--own", "--name", "Voice check", "--voice", "mike", "--yes")
+    assert made.returncode == 0 and "Made the project voice-check." in made.stdout
+    refused = run("voice_studio.voices", "get", "mike", "--project", "voice-check", "--yes")
+    assert refused.returncode == 2 and "There was nobody to ask, and --acknowledge was not given. Nothing was done." in refused.stdout
+    assert not (tmp_path / "ack-voice-studio" / "tool").exists(), "the refusal fetched nothing and made no folder for it"
+    project = json.loads((tmp_path / "ack-voice-studio" / "projects" / "voice-check" / "project.json").read_text())
+    assert project["acknowledgments"] == [] and project["starting_voice"] == "voice-mike"
+
+
+def test_the_cleanup_line_names_the_folder_the_section_made_and_keeps_the_voices():
+    from voice_studio.core.paths import DataHome
+    body = section("M.")
+    assert "`rm -r ~/ack-voice-studio/projects/voice-check`" in body and DataHome("~").projects + "/voice-check" in doc_text()
+    assert "Keep the voices in" in body and DataHome("~").voices in body
