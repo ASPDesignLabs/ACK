@@ -193,6 +193,10 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   **First real test (the developer, 24.04, studio programs, Wi-Fi off for about 30 seconds): the build carried on, but it was pip's own five retries that absorbed the gap, so the tool's own waiting did not run and is still unproven on a real
   connection** (it needs an outage longer than pip's patience, a minute or two). The screen showed pip's raw warning as "still working: WARNING: Retrying (Retry(total=4, connect=None, ...", cut off mid-word: jargon and alarming. Fixed: pip's
   own retry warnings are replaced by one sentence ("The connection hiccupped. It is trying again by itself.") once per burst (60 s), and never quoted as "still working"; the raw lines still show with --verbose.
+  **Second real test (the developer, 24.04, studio programs rebuilt with pip's download cache off, Wi-Fi off from before the yes until about two minutes in): confirmed on a real connection.** pip's own retries ran first (the
+  hiccup sentence), the tool then said the internet connection stopped, waited its first 5 seconds, tried again, and the connection was back: "The connection is back. Carrying on.", Ready after 2 min 16 s, nothing typed.
+  **Seen for real:** the first wait, the return, and the plain sentences. **Only simulated (tests and a local server), not yet seen on a real connection:** the longer pauses (10, 20, 30, 60 s), giving up after 30 minutes, and the
+  next run carrying on without a second yes.
 
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
   `Time limit reached. Elapsed time is 0:01:04`, and `version_0` to `version_3` exist. The export under the launcher exited 0 with **no extra package** (`onnxscript` is not needed): `my_voice.onnx` 63,516,211 bytes after the
