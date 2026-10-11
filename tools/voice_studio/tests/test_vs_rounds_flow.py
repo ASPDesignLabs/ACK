@@ -541,3 +541,19 @@ def test_a_chosen_place_counts_as_ready_only_with_a_marker_that_names_this_very_
     assert rf.scratch_ready(replace(project, scratch=Scratch(SCRATCH_CUSTOM, None)), paths) is False        # custom, but no place named
     assert rf.scratch_ready(replace(project, scratch=Scratch("default", None)), paths) is True
     assert rf.scratch_root(replace(project, scratch=Scratch(SCRATCH_CUSTOM, None)), paths).root == paths.default_scratch
+
+
+def test_a_marker_that_cannot_be_read_does_not_make_a_place_ready(tmp_path):
+    from dataclasses import replace
+    from vs_startvoice_helpers import make_project
+    from voice_studio.core.project import SCRATCH_CUSTOM, Scratch
+    place = tmp_path / "usb"
+    folder = place / "ack-voice-scratch" / "ben"
+    folder.mkdir(parents=True)
+    project = replace(make_project(id="ben", name="Ben"), scratch=Scratch(SCRATCH_CUSTOM, str(place)))
+    paths = ProjectPaths(str(tmp_path / "projects" / "ben"))
+    (folder / MARKER_NAME).mkdir()                                                           # a folder where the file should be
+    assert rf.scratch_ready(project, paths) is False
+    (folder / MARKER_NAME).rmdir()
+    (folder / MARKER_NAME).write_bytes(b"\xff\xfe\x00")
+    assert rf.scratch_ready(project, paths) is False
