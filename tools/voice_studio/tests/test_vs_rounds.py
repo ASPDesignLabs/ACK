@@ -1190,3 +1190,15 @@ def test_a_round_whose_named_job_folder_is_gone_is_still_found_by_its_working_fo
     mine = fake_job(world.jobs_root, world.command_of(plan).argv, "running")
     r = world.reconcile().rounds[0]
     assert (r.state, r.job) == ("running", mine.id)
+
+
+def test_the_folder_a_running_round_was_seen_to_make_stays_its_own_when_another_appears_before_it_ends(world):
+    plan = world.begin()
+    info = world.job_for(plan, "running")
+    rd.attach_job(world.paths, 1, info.id)
+    world.trainer_makes(0)
+    assert world.reconcile().rounds[0].version == 0                    # seen while it ran
+    world.trainer_makes(5)                                             # something else appears in the run folder afterwards
+    end_job(info.dir, "finished", ended_at=stamp(20))
+    r = world.reconcile().rounds[0]
+    assert (r.state, r.version) == ("finished", 0)
