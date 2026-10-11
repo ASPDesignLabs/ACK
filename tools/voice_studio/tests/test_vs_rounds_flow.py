@@ -218,7 +218,8 @@ def test_yes_on_the_command_line_answers_the_question_and_nothing_else_is_asked(
 
 def test_a_no_or_nobody_to_ask_starts_nothing_and_writes_nothing(rig):
     rig.world.dataset()
-    for answers, interactive, said in ((["no"], True, "Nothing was done"), ([""], True, "Nothing was done"), ([], False, "nobody to ask"), ([], True, "nobody to ask")):
+    for answers, interactive, said in ((["no"], True, "Nothing was done"), ([""], True, "Nothing was done"), ([], False, "nobody to ask"), ([], True, "nobody to ask"),
+                                       (["yes"], False, "nobody to ask")):                       # nobody at the terminal: a queued yes is not read
         code, io = rig.run(*start_args(), answers=answers, interactive=interactive)
         assert code == 2 and said in io.text and rig.started == [] and rig.record_bytes() is None, (answers, interactive)
 
