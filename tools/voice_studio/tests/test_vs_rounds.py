@@ -1209,3 +1209,11 @@ def test_a_running_round_whose_job_is_gone_does_not_wait_out_the_start_up_time(w
     rd.attach_job(world.paths, 1, "job-gone")                          # a job's folder exists before its name is written down, so a missing one has vanished
     r = world.reconcile(now=NOW + timedelta(seconds=10)).rounds[0]
     assert (r.state, r.failure) == ("interrupted", "job_missing")
+
+
+def test_the_batch_size_the_workers_and_the_check_interval_asked_for_reach_the_trainers_command(world):
+    world.dataset()
+    start, calls = starter()
+    rd.start_round(world.paths, world.scratch, PROJECT, world.training, world.jobs_root, dataset=DATASET, base=world.base, now=NOW, start=start, batch_size=8, workers=2, check_every=5)
+    spec = calls[0]
+    assert [option(spec, o) for o in ("--data.batch_size", "--data.num_workers", "--trainer.check_val_every_n_epoch")] == ["8", "2", "5"]
