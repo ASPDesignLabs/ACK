@@ -74,3 +74,35 @@ def finished_rounds(world, count=2, settings=True):
 
 def tree_of(root):
     return sorted(str(p) for p in Path(root).rglob("*") if p.is_file() or p.is_symlink())
+
+
+class ProjectRig:
+    """A project called Voice check with a made-up training environment, a place for rounds, and a stand-in for the programs that make the voice."""
+
+    def __init__(self, tmp_path, environment="ready", **system_kw):
+        from vs_rounds_helpers import World, write_checkpoint
+        from voice_studio.core.envbuild import EnvPaths
+        from voice_studio.core.paths import DataHome, ProjectPaths, ScratchPaths
+        from voice_studio.core.project import create_project
+        self.home = DataHome(str(tmp_path / "home"))
+        create_project(self.home.projects, "Voice check", "own")
+        self.paths = ProjectPaths(self.home.projects + "/voice-check")
+        os.makedirs(self.home.jobs, exist_ok=True)
+        self.training = EnvPaths(str(tmp_path / "environments" / "training-abc"))
+        self.environment = environment
+        base = tmp_path / "voices" / "mike.ckpt"
+        base.parent.mkdir(parents=True)
+        write_checkpoint(str(base))
+        self.world = World(self.paths, ScratchPaths(self.paths.default_scratch), self.home.jobs, self.training, str(base))
+        self.system = MakerSystem(disks={self.paths.rounds: (500 * 2**30, 300 * 2**30)}, **system_kw)
+
+    def training_env(self):
+        return (self.training, "ready") if self.environment == "ready" else (None, self.environment)
+
+    def finish(self, count=2, **kw):
+        for version in range(count):
+            self.world.run_round(version=version, **kw)
+            write_settings(self.paths, version + 1)
+
+    def exports(self):
+        return sorted(os.listdir(self.paths.exports)) if os.path.isdir(self.paths.exports) else []

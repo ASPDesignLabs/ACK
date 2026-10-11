@@ -13,7 +13,7 @@ import pytest
 from vs_fakes import FakeSystem
 from vs_rounds_helpers import NOW, World, end_job, make_world, slurp, stamp
 from vs_startvoice_helpers import Terminal, implies_permission, leaked_keys
-from vs_voicefile_helpers import MakerSystem, TOOLS, finished_rounds, tree_of, write_settings
+from vs_voicefile_helpers import MakerSystem, ProjectRig, TOOLS, finished_rounds, tree_of, write_settings
 from voice_studio.core import jobs, rounds as rd, text, voicefile as vf, voicefile_flow as vff
 from voice_studio.core.diskbudget import DEFAULT_TABLE, floors_for
 from voice_studio.core.envbuild import EnvPaths
@@ -25,25 +25,8 @@ CAT = text.load_catalog("en")
 FOLDER = "voice-check-round-%03d-20261011-120000"        # NOW is 2026-10-11 12:00 UTC
 
 
-class Rig:
-    """A project with a training environment (a made-up one) and a stand-in for the programs that make the voice."""
-
-    def __init__(self, tmp_path, environment="ready", **system_kw):
-        self.home = DataHome(str(tmp_path / "home"))
-        create_project(self.home.projects, "Voice check", "own")
-        self.paths = ProjectPaths(self.home.projects + "/voice-check")
-        os.makedirs(self.home.jobs, exist_ok=True)
-        self.training = EnvPaths(str(tmp_path / "environments" / "training-abc"))
-        self.environment = environment
-        base = tmp_path / "voices" / "mike.ckpt"
-        base.parent.mkdir(parents=True)
-        from vs_rounds_helpers import write_checkpoint
-        write_checkpoint(str(base))
-        self.world = World(self.paths, ScratchPaths(self.paths.default_scratch), self.home.jobs, self.training, str(base))
-        self.system = MakerSystem(disks={self.paths.rounds: (500 * 2**30, 300 * 2**30)}, **system_kw)
-
-    def training_env(self):
-        return (self.training, "ready") if self.environment == "ready" else (None, self.environment)
+class Rig(ProjectRig):
+    """The shared project with a way to run the voice file command on a made-up terminal."""
 
     def run(self, *argv, answers=(), interactive=True):
         io = Terminal(answers, interactive)
@@ -51,14 +34,6 @@ class Rig:
         assert leaked_keys(io.text + "\n".join(io.prompts)) == [], "a catalog key was printed instead of words"
         assert implies_permission(io.text) == [], "something printed says or implies that use is permitted"
         return code, io
-
-    def finish(self, count=2, **kw):
-        for version in range(count):
-            self.world.run_round(version=version, **kw)
-            write_settings(self.paths, version + 1)
-
-    def exports(self):
-        return sorted(os.listdir(self.paths.exports)) if os.path.isdir(self.paths.exports) else []
 
 
 @pytest.fixture

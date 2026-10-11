@@ -55,9 +55,12 @@ def _say_parts(cat: Catalog, io: IO, namespace: str, code: str, detail: str = ""
 
 
 def _ask_yes(io: IO, prompt: str) -> Optional[bool]:
-    """True for a yes, False for any other answer, None when nobody is there to ask."""
+    """True for a yes, False for any other answer, None when nobody is there to ask. A window asks with a Yes and a No button instead of a typed word: an IO that has `confirm` is given the question."""
     if not io.interactive:
         return None
+    confirm = getattr(io, "confirm", None)
+    if confirm is not None:
+        return confirm(prompt)
     answer = io.ask(prompt + " ")                              # a catalog sentence never ends in a space, so the prompt gets its own
     if answer is None:
         return None
@@ -161,22 +164,29 @@ def _when(stamp: str) -> str:
 
 # ---------------------------------------------------------------- list and keep (they change nothing)
 
-def _row(r: rd.Round, chosen: bool, ctx: Open, cat: Catalog, io: IO) -> None:
+def round_lines(r: rd.Round, chosen: bool, paths: ProjectPaths, cat: Catalog) -> List[str]:
+    """What is said about one round: its head, then indented lines. The terminal prints them and the window draws them, so the two never word a round differently."""
     label = "%d %s" % (r.number, cat.t("rounds.row.mark")) if chosen else str(r.number)
-    io.say(cat.t("rounds.row.head", label=label, state=cat.t("rounds.state." + r.state)))
+    lines = [cat.t("rounds.row.head", label=label, state=cat.t("rounds.state." + r.state))]
     if r.parent:
-        io.say("  " + cat.t("rounds.row.from_round", minutes=r.minutes, parent=r.parent, set=r.dataset))
+        lines.append("  " + cat.t("rounds.row.from_round", minutes=r.minutes, parent=r.parent, set=r.dataset))
     else:
-        io.say("  " + cat.t("rounds.row.from_voice", minutes=r.minutes, voice=r.voice, set=r.dataset))
-    io.say("  " + cat.t("rounds.row.started", when=_when(r.started)))
+        lines.append("  " + cat.t("rounds.row.from_voice", minutes=r.minutes, voice=r.voice, set=r.dataset))
+    lines.append("  " + cat.t("rounds.row.started", when=_when(r.started)))
     if r.failure:
-        io.say("  " + cat.t("rounds.failure." + r.failure))
+        lines.append("  " + cat.t("rounds.failure." + r.failure))
     if r.stopped_for:
-        io.say("  " + cat.t("rounds.stopped_for." + r.stopped_for))
+        lines.append("  " + cat.t("rounds.stopped_for." + r.stopped_for))
     if r.has_checkpoint:
-        io.say("  " + cat.t("rounds.checkpoint." + rd.checkpoint_status(ctx.paths, r)))
+        lines.append("  " + cat.t("rounds.checkpoint." + rd.checkpoint_status(paths, r)))
     if r.note:
-        io.say("  " + cat.t("rounds.row.note", note=r.note))
+        lines.append("  " + cat.t("rounds.row.note", note=r.note))
+    return lines
+
+
+def _row(r: rd.Round, chosen: bool, ctx: Open, cat: Catalog, io: IO) -> None:
+    for line in round_lines(r, chosen, ctx.paths, cat):
+        io.say(line)
 
 
 def _list(args: Sequence[str], home: DataHome, now: Optional[datetime], system: System, cat: Catalog, io: IO) -> int:
@@ -254,12 +264,16 @@ def _round_numbers(word: str) -> Optional[List[int]]:
     return [n for n in found if n is not None]
 
 
-def _free_row(offer: freeup.Offer, cat: Catalog, io: IO) -> None:
+def free_row_text(offer: freeup.Offer, cat: Catalog) -> str:
+    """What is said about one thing that could be freed. The terminal prints it and the window draws it."""
     if offer.kind == "folder":
-        io.say("  " + cat.t("rounds.free.working", round=offer.round, size=size_text(offer.bytes)))
-        return
+        return cat.t("rounds.free.working", round=offer.round, size=size_text(offer.bytes))
     key = FILES_ROW["point" if offer.includes_saved_point else offer.relation]
-    io.say("  " + cat.count(key, len(offer.paths), round=offer.round, size=size_text(offer.bytes)))
+    return cat.count(key, len(offer.paths), round=offer.round, size=size_text(offer.bytes))
+
+
+def _free_row(offer: freeup.Offer, cat: Catalog, io: IO) -> None:
+    io.say("  " + free_row_text(offer, cat))
 
 
 def _free_list(shown: freeup.Plan, ctx: Open, cat: Catalog, io: IO) -> None:
