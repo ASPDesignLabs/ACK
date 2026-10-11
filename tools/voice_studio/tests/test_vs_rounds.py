@@ -1202,3 +1202,10 @@ def test_the_folder_a_running_round_was_seen_to_make_stays_its_own_when_another_
     end_job(info.dir, "finished", ended_at=stamp(20))
     r = world.reconcile().rounds[0]
     assert (r.state, r.version) == ("finished", 0)
+
+
+def test_a_running_round_whose_job_is_gone_does_not_wait_out_the_start_up_time(world):
+    world.begin()
+    rd.attach_job(world.paths, 1, "job-gone")                          # a job's folder exists before its name is written down, so a missing one has vanished
+    r = world.reconcile(now=NOW + timedelta(seconds=10)).rounds[0]
+    assert (r.state, r.failure) == ("interrupted", "job_missing")
