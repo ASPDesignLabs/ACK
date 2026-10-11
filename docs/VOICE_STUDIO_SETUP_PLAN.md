@@ -166,8 +166,14 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   pip's metadata for exactly these versions needs every one on 3.10 (`exceptiongroup` and `tomli` only there), and with these pins the resolver needs nothing more on 3.11 or 3.12; a hash-mode dry run passes on both.
   `setuptools` is not needed (the current `ctranslate2` no longer asks for it). All licences are permissive (MIT, BSD, Apache-2.0, MPL-2.0, PSF-2.0), none proprietary. The entry carries `python_max` 3.12. A consequence: **both
   environments now have a pinned lock, so the setup plan lists two offerable agreements (`pip:studio`, `pip:training`)**; the whole plan still cannot run because the speech model and the two voices are not pinned yet. **GPU
-  speech recognition** (the CUDA 12 libraries) is not part of the default; if it is wanted it is a separate, optional environment with its own lock and its own licence line. **Not yet run:** the tool's own builder on this
-  lock (the installed size and the time are still guesses: 1 GiB).
+  speech recognition** (the CUDA 12 libraries) is not part of the default; if it is wanted it is a separate, optional environment with its own lock and its own licence line. **Run since: see F18.**
+
+- **F18 (2026-10-11), the studio environment built by the tool's own builder, on the developer's computer.** `buildenv studio` said Ready after 15 s (the install itself 12 s, the self-test under 1 s), the folder is 489M, and
+  `imports ok 1.2.1` (the speech library's version). No Nvidia sentence appeared in its list (the 44-package lock has none). The 1 GiB in `environments.json` was a guess; the entry now says 768 MiB (the 489M it
+  takes once built, plus the 130 MB of wheels it downloads, with room), and the disk budget's `tool_environments` is 7 GiB (training 6.0 GiB + studio 0.46 GiB, measured) instead of the 8 GiB guess. The download cache
+  (4 GiB) is now marked computed rather than guessed: the package site lists about 3.2 GB of wheels for the training lock and 0.13 GB for the studio one. **Also noticed:** the developer's own test folders are far
+  bigger than a person's real project would be: `~/piper/voice-check-2` is 17 GB (every round keeps 6 checkpoints, 4.84 GB, F13), so P11's "older rounds' checkpoints" clean-up (VS-4.7) matters early. Nothing was
+  deleted; clean-up is only done when the developer asks.
 
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
   `Time limit reached. Elapsed time is 0:01:04`, and `version_0` to `version_3` exist. The export under the launcher exited 0 with **no extra package** (`onnxscript` is not needed): `my_voice.onnx` 63,516,211 bytes after the
