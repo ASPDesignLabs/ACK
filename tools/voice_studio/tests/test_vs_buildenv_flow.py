@@ -669,3 +669,41 @@ def test_a_build_with_only_small_steps_left_still_asks_even_if_it_never_finished
     Path(rig.paths.launcher).write_text("# older\n")
     code, io = go(rig)
     assert code == bf.EXIT_OK and io.prompts == ["Finish it now? Type yes to go on. "] and CAT.t("buildenv.resuming") not in io.lines
+
+
+# ---------------------------------------------------------------- pip trying again by itself is said in plain words, once per burst
+
+RETRY = "WARNING: Retrying (Retry(total=%d, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError'"
+
+
+def test_pips_own_retry_warnings_are_not_shown_raw_but_as_one_plain_sentence(rig):
+    rig.doors.pip_lines = ["Collecting x"] + [RETRY % n for n in (4, 3, 2)] + ["Installing collected packages: x"]
+    code, io = go(rig)
+    assert code == bf.EXIT_OK
+    assert not any("Retrying" in l or "Retry(" in l for l in io.lines)
+    assert [l.strip() for l in io.lines].count(CAT.t("connection.hiccup")) == 1
+
+
+def test_a_second_burst_a_minute_later_is_told_again(rig):
+    rig.doors.pip_lines = [RETRY % 4] + ["Collecting x"] * 70 + [RETRY % 4]
+    code, io = go(rig, clock=ticking(1.0))
+    assert [l.strip() for l in io.lines].count(CAT.t("connection.hiccup")) == 2
+
+
+def test_a_second_burst_inside_a_minute_is_not_told_again(rig):
+    rig.doors.pip_lines = [RETRY % 4] + ["Collecting x"] * 5 + [RETRY % 4]
+    code, io = go(rig, clock=ticking(1.0))
+    assert [l.strip() for l in io.lines].count(CAT.t("connection.hiccup")) == 1
+
+
+def test_the_sign_of_life_never_quotes_a_retry_warning(rig):
+    rig.doors.pip_lines = ["Collecting x", RETRY % 4, RETRY % 3, "Installing collected packages: x"]
+    code, io = go(rig, clock=ticking(30.0))
+    assert not any(l.strip().startswith("still working: WARNING") for l in io.lines)
+    assert any(l.strip() == CAT.t("buildenv.still_working", last="Installing collected packages: x") for l in io.lines)
+
+
+def test_with_verbose_the_raw_warnings_are_shown_as_well(rig):
+    rig.doors.pip_lines = ["Collecting x", RETRY % 4]
+    code, io = go(rig, opts=bf.BuildOptions(env_id="demo", verbose=True))
+    assert any("Retrying (Retry(total=4" in l for l in io.lines) and [l.strip() for l in io.lines].count(CAT.t("connection.hiccup")) == 1

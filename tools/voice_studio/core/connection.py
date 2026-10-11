@@ -95,6 +95,15 @@ def classify_pip(output: str) -> PipOutcome:
     return PipOutcome("other")
 
 
+RETRY_NOTICES = ("retrying (retry(", "connection interrupted while downloading")      # what pip prints while it is trying again by itself
+
+
+def is_retry_notice(line: str) -> bool:
+    """Whether a line is pip saying it is trying again after a hiccup. It is pip's own words, not ours, so the screen says it plainly instead."""
+    lower = line.lower()
+    return any(notice in lower for notice in RETRY_NOTICES)
+
+
 def raise_if_connection(returncode: int, output: str) -> None:
     """After a failed `pip install`: raise ConnectionLost if the output says the connection (or a file cut off on the way) was the reason. Otherwise
     return, and the caller reports an ordinary failure."""

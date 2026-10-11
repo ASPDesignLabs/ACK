@@ -190,6 +190,9 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   Built: `core/connection.py` (what a failed pip was about, from the end of its output; the waits; `keep_trying`), used by the builder for the pip steps and by `fetch.fetch_patiently` for registry downloads (resume from the kept `.part`).
   Tests include a real pip against a local server on three Pythons. **Not covered: apt** (`setup.sh`): it asks for the administrator password in the terminal and its output is not captured, so a retry could neither tell a drop from
   another failure nor avoid asking for the password again; apt does resume what it fetched, and the question is only the program list. Open if it proves a real pain.
+  **First real test (the developer, 24.04, studio programs, Wi-Fi off for about 30 seconds): the build carried on, but it was pip's own five retries that absorbed the gap, so the tool's own waiting did not run and is still unproven on a real
+  connection** (it needs an outage longer than pip's patience, a minute or two). The screen showed pip's raw warning as "still working: WARNING: Retrying (Retry(total=4, connect=None, ...", cut off mid-word: jargon and alarming. Fixed: pip's
+  own retry warnings are replaced by one sentence ("The connection hiccupped. It is trying again by itself.") once per burst (60 s), and never quoted as "still working"; the raw lines still show with --verbose.
 
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
   `Time limit reached. Elapsed time is 0:01:04`, and `version_0` to `version_3` exist. The export under the launcher exited 0 with **no extra package** (`onnxscript` is not needed): `my_voice.onnx` 63,516,211 bytes after the

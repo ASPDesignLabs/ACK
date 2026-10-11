@@ -317,3 +317,17 @@ def test_a_fresh_spell_forgets_the_last_wrong_file():
 def test_a_drop_without_a_signature_never_counts_as_the_same_file():
     value, _, _, clock, _ = run([0, 0, 0, "ok"])
     assert value == "done" and clock.slept == [5, 10, 20]
+
+
+# ---------------------------------------------------------------- pip trying again by itself
+
+@pytest.mark.parametrize("line", ["WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'X'",
+                                  "  WARNING: Connection interrupted while downloading.", "warning: RETRYING (RETRY(total=0))"])
+def test_pips_own_retry_warnings_are_recognised_whatever_the_capitals_or_indent(line):
+    assert cn.is_retry_notice(line)
+
+
+@pytest.mark.parametrize("line", ["Collecting x==1.0", "Downloading https://x/y.whl (4.0 MB)", "ERROR: No matching distribution found for x", "",
+                                  "Successfully installed x-1.0", "a hash like cb1a5e0fd5fc8a1b96b1048cc9673c19f7df68dae0667470d581c14f7d226c9b"])
+def test_ordinary_pip_lines_are_not_retry_warnings(line):
+    assert not cn.is_retry_notice(line)

@@ -98,6 +98,7 @@
     "commands.error.exists.changed": "It was left as it is, and nothing new was written.",
     "commands.error.exists.next": "Use a new name, or move the old one yourself first.",
     "commands.error.exists.what": "Something with that name is already there.",
+    "connection.hiccup": "The connection hiccupped. It is trying again by itself.",
     "connection.offline_again": "Still no connection. Trying again in {seconds} seconds. It has been away for {waited}.",
     "connection.offline_first": "The internet connection stopped. Nothing is lost and you do not need to do anything. It will try again in {seconds} seconds, and keep trying for up to {minutes} minutes. To stop, press Ctrl+C.",
     "connection.online": "The connection is back. Carrying on.",

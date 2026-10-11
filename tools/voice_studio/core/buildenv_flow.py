@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import envbuild
+from . import connection, envbuild
 from .consent import load_consent
 from .describe import error_text
 from .envspec import EnvSpec, normalise_name, parse_lock
@@ -30,6 +30,7 @@ from .text import Catalog, size_text
 EXIT_OK, EXIT_PROBLEM, EXIT_NOTHING_DONE = 0, 1, 2
 DEFAULT_ENV = "training"
 HEARTBEAT_S = 20.0                       # how often a quiet step says it is still working
+HICCUP_QUIET_S = 60.0                    # pip's own retries come in bursts; the person is told once per burst
 PROGRESS_BAR = re.compile(r"[━╸╺]|\beta \d+:\d\d")              # the installer's moving bar: not worth showing as "what it is doing"
 BUILD_STATES = ("absent", "needs_work", "failed")        # the states a build can start from; "ready" needs nothing and the rest need a person
 USABLE_GPU = (GpuState.OK, GpuState.SMALL, GpuState.UNKNOWN)
@@ -75,6 +76,7 @@ class _Progress:
         self.started: Dict[str, float] = {}
         self.last_sign = 0.0
         self.last_said = ""                                           # the latest line that was words, not a progress bar
+        self.last_hiccup: Optional[float] = None                      # when the person was last told that pip was trying again by itself
 
     def _step(self, step: str) -> str:
         key = "env.step." + step
@@ -104,6 +106,14 @@ class _Progress:
             self.io.say("  " + self.cat.t("connection.online"))
         elif event.kind == "line" and event.text.strip():
             text = event.text.strip()
+            if connection.is_retry_notice(text):
+                self.last_sign = now
+                if self.last_hiccup is None or now - self.last_hiccup >= HICCUP_QUIET_S:
+                    self.last_hiccup = now
+                    self.io.say("    " + self.cat.t("connection.hiccup"))
+                if self.verbose:
+                    self.io.say("    " + event.text.rstrip())
+                return
             if not PROGRESS_BAR.search(text):
                 self.last_said = text
             if self.verbose:
