@@ -5,6 +5,7 @@ No real connection is made anywhere in this file: the opener is a stand-in.
 """
 import errno
 import hashlib
+import http.client
 import os
 import stat
 import sys
@@ -371,3 +372,50 @@ def test_a_folder_in_place_of_the_file_is_not_a_fetched_file(tmp_path):
     item = pinned_item()
     (tmp_path / item.filename).mkdir()
     assert not fx.is_fetched(item, tmp_path)
+
+
+# ---------------------------------------------------------------- a reply that ends early is "the connection", not a crash
+
+class BrokenAfter(FakeOpener):
+    """A server that sends `keep` bytes and then the connection fails in the way `error` says, once; after that it behaves."""
+
+    def __init__(self, keep, error):
+        super().__init__()
+        self.keep, self.error, self.failed = keep, error, False
+
+    def __call__(self, url, headers):
+        response = super().__call__(url, headers)
+        if self.failed:
+            return response
+        self.failed = True
+        real = response.read
+        state = {"sent": 0}
+
+        def read(amount=-1):
+            if state["sent"] >= self.keep:
+                raise self.error
+            block = real(min(amount, self.keep - state["sent"]) if amount and amount > 0 else self.keep - state["sent"])
+            state["sent"] += len(block)
+            return block
+        response.read = read
+        return response
+
+
+@pytest.mark.parametrize("error, detail", [(http.client.IncompleteRead(b"x", 5), "IncompleteRead"), (http.client.BadStatusLine("x"), "BadStatusLine"),
+                                           (http.client.RemoteDisconnected("gone"), "RemoteDisconnected")])
+def test_a_reply_that_ends_early_keeps_the_part_and_names_the_fault(tmp_path, monkeypatch, error, detail):
+    monkeypatch.setattr(fx, "CHUNK", 100)
+    opener = BrokenAfter(300, error)
+    with pytest.raises(FetchError) as caught:
+        run_fetch(tmp_path, opener=opener)
+    assert caught.value.code == "http" and caught.value.detail == detail
+    assert (tmp_path / "dl" / "model.ckpt.part").read_bytes() == PAYLOAD[:300]
+    path, _ = run_fetch(tmp_path, opener=opener)                                       # the next try asks only for the rest
+    assert path.read_bytes() == PAYLOAD and opener.calls[-1][1]["Range"] == "bytes=300-"
+
+
+def test_a_malformed_reply_when_asking_is_also_the_connection(tmp_path):
+    class Bad(FakeOpener):
+        def __call__(self, url, headers):
+            raise http.client.BadStatusLine("x")
+    assert code_of(lambda: run_fetch(tmp_path, opener=Bad())) == "http"

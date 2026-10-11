@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import envbuild, fetch
+from . import connection, envbuild, fetch
 from .consent import ConsentRecord, load_consent, merge_consent, save_consent
 from .envspec import EnvSpec
 from .paths import DataHome
@@ -37,6 +37,7 @@ class SetupEvent:
     done: int = 0            # for a download: bytes so far
     total: int = 0
     text: str = ""           # for a line a command printed
+    wait: Optional[connection.Wait] = None        # for "offline": the pause before the next try ("online" says the connection came back)
 
 
 @dataclass(frozen=True)
@@ -114,7 +115,7 @@ def _do(item: SetupItem, plan: SetupPlan, ctx: envbuild.Context, specs: Dict[str
 
 def _build(item: SetupItem, ctx: envbuild.Context, spec: EnvSpec, built: Dict[str, envbuild.BuildResult], say: Callable[[SetupEvent], None]) -> ItemResult:
     def bridge(event: envbuild.Event) -> None:
-        say(SetupEvent("line" if event.kind == "line" else event.kind, item.id, step=event.step, text=event.text))
+        say(SetupEvent("line" if event.kind == "line" else event.kind, item.id, step=event.step, text=event.text, wait=event.wait))
         ctx.on_event(event)
 
     result = envbuild.build(spec, dataclasses.replace(ctx, on_event=bridge))
@@ -138,9 +139,11 @@ def _download(item: SetupItem, ctx: envbuild.Context, say: Callable[[SetupEvent]
     folder = Path(ctx.home.downloads) / MODELS_FOLDER / (pinned.folder or "")          # a model of several files keeps them together in its own folder
     if fetch.is_fetched(pinned, folder):
         return ItemResult(item.id, "kept")
+
     try:
-        ctx.fetcher(pinned, folder, ctx.consent, progress=lambda done, total: say(SetupEvent("progress", item.id, done=done, total=total)),
-                    cancelled=cancelled)
+        fetch.fetch_patiently(pinned, folder, ctx.consent, on_wait=lambda wait: say(SetupEvent("offline", item.id, wait=wait)),
+                              on_back=lambda: say(SetupEvent("online", item.id)), sleep=ctx.sleep, clock=ctx.monotonic, patience=ctx.patience,
+                              cancelled=cancelled, fetcher=ctx.fetcher, progress=lambda done, total: say(SetupEvent("progress", item.id, done=done, total=total)))
     except fetch.FetchError as error:
         if error.code == "cancelled":
             return ItemResult(item.id, "cancelled", "fetch", error.code, error.detail)

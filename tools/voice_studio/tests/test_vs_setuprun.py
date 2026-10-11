@@ -9,7 +9,8 @@ from typing import List
 
 import pytest
 
-from vs_env_helpers import GIB, LOCK, BuildSystem, Doors, make_archive, make_spec, pinned_item, sha_of
+from vs_env_helpers import GIB, LOCK, BuildSystem, Doors, FakeTime, make_archive, make_spec, pip_text, pinned_item, sha_of
+from voice_studio.core import connection as cn
 from voice_studio.core import envbuild as eb
 from voice_studio.core import fetch
 from voice_studio.core import setupplan as sp
@@ -66,8 +67,9 @@ def make_run(tmp_path, *, free=500 * GIB, declined=(), agree=True, unpinned_voic
     doors.files = {"speech-model-small-en": model_file}
     events: List[sr.SetupEvent] = []
     low: List[eb.Event] = []
+    time = FakeTime()
     ctx = eb.Context(system=system, home=DataHome(str(root / "home")), registry=registry, consent=None, on_event=low.append, fetcher=doors.fetcher,
-                     networked=doors.networked, read_lock=lambda s: LOCK)
+                     networked=doors.networked, read_lock=lambda s: LOCK, sleep=time.sleep, monotonic=time.monotonic)
     plan = sp.plan_setup(registry, envs, free={"home": free}, declined=declined)
     run = Run(root, system, doors, registry, envs, ctx, plan, events, low)
     if agree:
@@ -354,3 +356,101 @@ def test_a_model_of_several_files_keeps_them_together_in_a_folder_of_its_own(tmp
     folder = Path(run.ctx.home.downloads) / "models" / "speech-small-en"
     assert sorted(os.listdir(folder)) == ["small-en.bin", "tokenizer.json"]
     assert not (Path(run.ctx.home.downloads) / "models" / "small-en.bin").exists()
+
+
+# ---------------------------------------------------------------- the connection drops during a download or a build
+
+def flaky_model(run, failures):
+    """The model's download fails with each of `failures` (a FetchError) in turn, then works."""
+    original = run.doors.fetcher
+    calls = []
+    pending = list(failures)
+
+    def fetcher(item, dest, consent, **kwargs):
+        if item.id == "speech-model-small-en":
+            calls.append(item.id)
+            if pending:
+                raise pending.pop(0)
+        return original(item, dest, consent, **kwargs)
+
+    run.ctx.fetcher = fetcher
+    return calls
+
+
+def model_events(run, kind):
+    return [e for e in run.events if e.kind == kind and e.item == "speech-model-small-en"]
+
+
+def test_a_download_that_loses_the_connection_waits_and_goes_on_by_itself(run):
+    calls = flaky_model(run, [fetch.FetchError("http", "URLError"), fetch.FetchError("http", "TimeoutError")])
+    outcome = run.go()
+    assert outcome.ok and len(calls) == 3
+    assert [e.wait for e in model_events(run, "offline")] == [cn.Wait(5, 0, 1800, True), cn.Wait(10, 5, 1800, False)]
+    assert len(model_events(run, "online")) == 1
+    assert [r.status for r in outcome.results if r.id == "speech-model-small-en"] == ["done"]
+
+
+def test_the_waiting_is_in_one_second_steps_so_stop_is_never_ignored_for_long(run):
+    flaky_model(run, [fetch.FetchError("http", "URLError")])
+    slept = []
+    original = run.ctx.sleep
+    run.ctx.sleep = lambda s: (slept.append(s), original(s))[1]
+    assert run.go().ok
+    assert slept == [1, 1, 1, 1, 1]
+
+
+@pytest.mark.parametrize("failure", [fetch.FetchError("size", "got 5 of 9 bytes"), fetch.FetchError("http", "503"), fetch.FetchError("http", "429"),
+                                     fetch.FetchError("http", "IncompleteRead"), fetch.FetchError("http", "Connection reset by peer")])
+def test_each_kind_of_dropped_download_is_waited_for(run, failure):
+    calls = flaky_model(run, [failure])
+    assert run.go().ok and len(calls) == 2
+
+
+@pytest.mark.parametrize("failure", [fetch.FetchError("http", "404"), fetch.FetchError("http", "403"), fetch.FetchError("checksum", "x"),
+                                     fetch.FetchError("disk", "full"), fetch.FetchError("room", "9 bytes needed"), fetch.FetchError("consent", "x")])
+def test_a_download_that_failed_for_another_reason_is_not_waited_for(run, failure):
+    calls = flaky_model(run, [failure])
+    outcome = run.go()
+    assert not outcome.ok and len(calls) == 1 and not model_events(run, "offline")
+    assert (outcome.failure.namespace, outcome.failure.code, outcome.failure.detail) == ("fetch", failure.code, failure.detail)
+
+
+def test_a_download_gives_up_when_the_connection_stays_away(run):
+    run.ctx.patience = cn.Patience(total_s=20, pauses_s=(10,), progress_s=60)
+    calls = flaky_model(run, [fetch.FetchError("http", "URLError")] * 10)
+    outcome = run.go()
+    failure = outcome.failure
+    assert not outcome.ok and len(calls) == 3
+    assert (failure.id, failure.status, failure.namespace, failure.code) == ("speech-model-small-en", "failed", "fetch", "connection_lost")
+    assert failure.detail == "away for 0 minutes (http: URLError)"
+
+
+def test_stop_during_a_wait_ends_it_at_once(run):
+    flaky_model(run, [fetch.FetchError("http", "URLError")] * 3)
+    seen = {"model": False}
+    original = run.ctx.sleep
+
+    def sleep(seconds):
+        original(seconds)
+        seen["slept"] = seen.get("slept", 0) + 1
+
+    run.ctx.sleep = sleep
+    outcome = run.go(cancelled=lambda: seen.get("slept", 0) >= 2)
+    assert not outcome.ok and outcome.results[-1].status == "cancelled" and outcome.results[-1].id == "speech-model-small-en"
+    assert seen["slept"] == 2
+
+
+def test_a_second_run_after_giving_up_finishes_the_download(run):
+    run.ctx.patience = cn.Patience(total_s=20, pauses_s=(10,), progress_s=60)
+    flaky_model(run, [fetch.FetchError("http", "URLError")] * 3)
+    assert not run.go().ok
+    run.ctx.fetcher = run.doors.fetcher
+    assert run.go().ok
+
+
+def test_a_build_that_loses_the_connection_reports_it_through_the_setup_events(run):
+    run.doors.pip_script = [(1, pip_text("connection_refused"))]
+    assert run.go().ok
+    offline = [e for e in run.events if e.kind == "offline" and e.item == "env-training"]
+    assert [(e.step, e.wait) for e in offline] == [("pip_lock", cn.Wait(5, 0, 1800, True))]
+    assert [e.step for e in run.events if e.kind == "online" and e.item == "env-training"] == ["pip_lock"]

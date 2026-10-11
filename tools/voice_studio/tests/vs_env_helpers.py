@@ -222,6 +222,7 @@ class Doors:
         self.files = {}                 # item id -> the file served for it (the archive by default)
         self.fetch_error: Optional[str] = None
         self.pip_fail = {}              # "lock" / "source" -> exit status
+        self.pip_script = []            # (exit status, what pip printed) for the next lock installs, in order; once it is empty the usual outcome applies
         self.pip_lines = ["Collecting x", "Installing collected packages: x"]
 
     def fetcher(self, item, dest_dir, consent, progress=None, cancelled=None, **kwargs):
@@ -245,6 +246,10 @@ class Doors:
         argv = list(argv)
         self.pip_runs.append(tuple(argv))
         if "--require-hashes" in argv:
+            if self.pip_script:
+                status, output = self.pip_script.pop(0)
+                if status != 0:
+                    return CommandResult(status, output)
             if self.pip_fail.get("lock"):
                 return CommandResult(self.pip_fail["lock"], "\n".join(self.pip_lines) + "\nERROR: No matching distribution\n")
             pins, problems = parse_lock(Path(argv[argv.index("-r") + 1]).read_text())
@@ -308,7 +313,31 @@ def make_rig(tmp_path: Path, *, spec_over=None, archive_files=None, archive_extr
     consent = make_consent([item], extra_ids=(["pip:demo"] if consent_pip else []))
     events: List[eb.Event] = []
     home = DataHome(str(root / "home"))
+    time = FakeTime()
     ctx = eb.Context(system=system, home=home, registry=registry, consent=consent, gpu_ok=gpu_ok, confirm_patch=confirm or (lambda p: False),
                      on_event=events.append, fetcher=doors.fetcher, networked=doors.networked, read_lock=lambda s: lock,
-                     read_native=lambda n: native_source)
+                     read_native=lambda n: native_source, sleep=time.sleep, monotonic=time.monotonic)
     return Rig(root, system, doors, spec, item, registry, consent, ctx, events, lock)
+
+
+PIP_TRANSCRIPTS = Path(__file__).parent / "data" / "pip_transcripts"
+
+
+def pip_text(name: str) -> str:
+    """What a real pip printed when something went wrong (tests/data/pip_transcripts)."""
+    return (PIP_TRANSCRIPTS / (name + ".txt")).read_text(encoding="utf-8")
+
+
+class FakeTime:
+    """The builder's clock and its way of waiting, so a half hour of waiting takes no time: sleeping moves the clock."""
+
+    def __init__(self):
+        self.now = 0.0
+        self.slept = []
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.slept.append(seconds)
+        self.now += seconds

@@ -1,0 +1,14 @@
+Looking in indexes: http://127.0.0.1:8765/simple/
+DEPRECATION: The HTML index page being used (http://127.0.0.1:8765/simple/pkga/) is not a proper HTML 5 document. This is in violation of PEP 503 which requires these pages to be well-formed HTML 5 documents. Please reach out to the owners of this index page, and ask them to update this index page to a valid HTML 5 document. pip 22.2 will enforce this behaviour change. Discussion can be found at https://github.com/pypa/pip/issues/10825
+Collecting pkga==1.0
+  Downloading http://127.0.0.1:8765/files/pkga-1.0-py3-none-any.whl (4.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.0/4.0 MB 423.0 MB/s eta 0:00:00
+DEPRECATION: The HTML index page being used (http://127.0.0.1:8765/simple/pkgb/) is not a proper HTML 5 document. This is in violation of PEP 503 which requires these pages to be well-formed HTML 5 documents. Please reach out to the owners of this index page, and ask them to update this index page to a valid HTML 5 document. pip 22.2 will enforce this behaviour change. Discussion can be found at https://github.com/pypa/pip/issues/10825
+Collecting pkgb==1.0
+  Downloading http://127.0.0.1:8765/files/pkgb-1.0-py3-none-any.whl (4.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━                     2.0/4.0 MB 387.2 MB/s eta 0:00:01
+ERROR: THESE PACKAGES DO NOT MATCH THE HASHES FROM THE REQUIREMENTS FILE. If you have updated the package versions, please update the hashes. Otherwise, examine the package contents carefully; someone may have tampered with them.
+    pkgb==1.0 from http://127.0.0.1:8765/files/pkgb-1.0-py3-none-any.whl#sha256=ad3538e0d135775c48425a7da370651e3cbdfb52cffc9982504e251474a15ff3 (from -r lock.txt (line 3)):
+        Expected sha256 ad3538e0d135775c48425a7da370651e3cbdfb52cffc9982504e251474a15ff3
+             Got        1d62f08f0e846718c190ca0d89834db74887cef0b7400c5e8b5d239c5e5eb69e
+

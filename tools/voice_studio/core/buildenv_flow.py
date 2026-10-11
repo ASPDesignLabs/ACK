@@ -22,7 +22,7 @@ from .paths import DataHome
 from .preflight import GpuState, run_preflight
 from .registry import Registry
 from .setup_flow import IO, _said_yes
-from .setupplan import PACKAGE_HOSTS, plan_setup
+from .setupplan import PACKAGE_HOSTS, agreed, plan_setup
 from .setuprun import agree
 from .system import System
 from .text import Catalog, size_text
@@ -92,6 +92,16 @@ class _Progress:
             self.io.say("  " + self.cat.t("buildenv.step_kept", step=self._step(event.step)))
         elif event.kind == "skipped":
             pass                                                      # said once, at the end, with every other probe that was not tried
+        elif event.kind == "offline" and event.wait is not None:
+            self.last_sign = now
+            wait = event.wait
+            if wait.first:
+                self.io.say("  " + self.cat.t("connection.offline_first", seconds=wait.pause_s, minutes=wait.budget_s // 60))
+            else:
+                self.io.say("  " + self.cat.t("connection.offline_again", seconds=wait.pause_s, waited=duration_text(self.cat, wait.waited_s)))
+        elif event.kind == "online":
+            self.last_sign = now
+            self.io.say("  " + self.cat.t("connection.online"))
         elif event.kind == "line" and event.text.strip():
             text = event.text.strip()
             if not PROGRESS_BAR.search(text):
@@ -185,7 +195,15 @@ def _run(opts: BuildOptions, system: System, home: DataHome, specs: Sequence[Env
     else:
         left = ", ".join(cat.t("env.step." + step) for step in inspection.stale) or cat.t("env.step.self_test")
         io.say(cat.t("buildenv.local_only", steps=left))
-    if not opts.yes:
+    # A build that never finished (the connection gave out, or Ctrl+C) is in a folder named for exactly what it builds, and the folder only exists because the
+    # person said yes to that. Asking the same question again for the same files would be a second yes for nothing, so it carries on and says so.
+    # An environment that had finished and then lost a piece is a new decision (rebuild what was deleted?), so that still asks.
+    record, _ = envbuild.read_record(inspection.env_dir)
+    unfinished = record is not None and record.get("state") in ("building", "failed")
+    resuming = downloads and unfinished and inspection.state in ("failed", "needs_work") and agreed(plan, mine, ctx.consent)
+    if resuming and not opts.yes:
+        io.say(cat.t("buildenv.resuming"))
+    elif not opts.yes:
         asked = cat.t("buildenv.question" if downloads else "buildenv.question_local")
         answer = io.ask(asked + " ") if io.interactive else None
         if answer is None:

@@ -30,6 +30,10 @@ PYTHONPATH=tools python3 -m voice_studio.buildenv training --check    # only loo
 PYTHONPATH=tools python3 -m voice_studio.buildenv training            # show what it will do, ask once, build it (about 10 GB free is needed)
 ```
 
+If the internet connection drops while it downloads, it says so, waits, and carries on by itself when the connection is back (it keeps trying for 30 minutes; Ctrl+C stops it).
+If it still has to stop, or you stop it, run the same command again: it carries on from where it stopped and does not ask the same question twice
+(`core/connection.py` has the rules; it was measured against real pip, not guessed).
+
 ## Rules the code keeps
 
 - `core/` is plain Python: no GUI toolkit, no network. The window will be a thin layer over it.

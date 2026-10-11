@@ -24,12 +24,13 @@ import json
 import os
 import shutil
 import tarfile
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import fetch
+from . import connection, fetch
 from .consent import ConsentRecord
 from .envspec import EnvSpec, NativePart, Pin, SourcePatch, lock_digest, normalise_name, parse_lock
 from .jobs import OFFLINE_ENV, boot_id, parse_proc_starttime, process_alive, read_json, read_text_file, utc_stamp, write_json
@@ -57,7 +58,7 @@ STEP_TIMEOUT_S = {"venv": 600.0, "native_build": 3600.0, "probe": 600.0, "verify
 # Each has words in the text catalog (env.error.<code>.what / .changed / .next).
 ERROR_CODES = ("not_pinned", "lock_missing", "lock_changed", "lock_invalid", "python_old", "python_new", "not_ours", "newer_record", "damaged_record", "busy",
                "no_room", "consent", "source_fetch", "unpack_unsafe", "unpack_failed", "venv_failed", "pip_failed", "native_failed",
-               "patch_declined", "patch_changed", "native_changed", "launcher_failed", "self_test_failed", "write_failed")
+               "patch_declined", "patch_changed", "native_changed", "launcher_failed", "self_test_failed", "write_failed", "connection_lost", "download_mismatch")
 STEP_IDS = ("source_unpack", "patches", "venv", "pip_lock", "pip_source", "native_build", "wrapper")      # the recorded steps, in order
 ACTION_IDS = ("room", "source_fetch") + STEP_IDS + ("self_test",)                                         # everything the screens can name
 INSPECTION_STATES = ("absent", "ready", "needs_work", "failed", "not_ours", "damaged", "newer", "not_buildable")
@@ -75,9 +76,10 @@ class EnvError(Exception):
 
 @dataclass(frozen=True)
 class Event:
-    kind: str                       # "start", "done", "kept", "skipped", "line"
+    kind: str                       # "start", "done", "kept", "skipped", "line", and "offline" / "online" (the connection dropped / came back)
     step: str                       # one of ACTION_IDS, or a probe id for "skipped"
     text: str = ""
+    wait: Optional[connection.Wait] = None          # for "offline": the pause the tool is about to make
 
 
 @dataclass(frozen=True)
@@ -120,6 +122,9 @@ class Context:
     read_lock: Callable[[EnvSpec], bytes] = _read_lock_file
     read_native: Callable[[NativePart], bytes] = _read_native_file
     now: Callable[[], datetime] = lambda: datetime.now(timezone.utc)
+    sleep: Callable[[float], None] = time.sleep                       # waiting for the connection to come back; tests hand in one that does not wait
+    monotonic: Callable[[], float] = time.monotonic
+    patience: connection.Patience = connection.DEFAULT_PATIENCE
 
 
 @dataclass(frozen=True)
@@ -301,6 +306,15 @@ class _Log:
         except OSError:
             pass
         self.on_event(Event("line", self.step, text))
+
+    def note(self, text: str) -> None:
+        """A line for the saved log only: the tool's own remark, not something a command printed (it is not shown as progress)."""
+        try:
+            fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            with os.fdopen(fd, "a", encoding="utf-8", errors="replace") as handle:
+                handle.write("[ack-voice-studio] " + text + "\n")
+        except OSError:
+            pass
 
     def result(self, result: Optional[CommandResult]) -> None:
         if result is None:
@@ -796,13 +810,35 @@ def _verify_lock_installed(plan: _Plan) -> bool:
 
 
 def _networked(plan: _Plan, step: str, argv: Sequence[str]) -> None:
-    log = _Log(plan.paths.log, step, plan.ctx.on_event)
-    try:
-        result = plan.ctx.networked(plan.ctx.consent, list(argv), ["pip:" + plan.spec.id], cwd=Path(plan.paths.env_dir), on_line=log.line)
-    except fetch.FetchError as error:
-        raise EnvError("consent" if error.code == "consent" else "pip_failed", "pip:" + plan.spec.id if error.code == "consent" else error.code, log.tail)
-    if result.returncode != 0:
+    """Run a command that reaches the network. If it fails because the connection dropped, wait and run the same command again by itself (core/connection.py):
+    the person is not asked anything, because nothing has changed since their yes. What had finished downloading is reused, so a try costs one file."""
+    ctx = plan.ctx
+    log = _Log(plan.paths.log, step, ctx.on_event)
+
+    def attempt() -> None:
+        try:
+            result = ctx.networked(ctx.consent, list(argv), ["pip:" + plan.spec.id], cwd=Path(plan.paths.env_dir), on_line=log.line)
+        except fetch.FetchError as error:
+            raise EnvError("consent" if error.code == "consent" else "pip_failed", "pip:" + plan.spec.id if error.code == "consent" else error.code, log.tail)
+        if result.returncode == 0:
+            return
+        connection.raise_if_connection(result.returncode, result.stdout + result.stderr)
         raise EnvError("pip_failed", "exit %d" % result.returncode, log.tail)
+
+    def waiting(wait: connection.Wait) -> None:
+        log.note("the connection stopped; trying again in %d s (away for %d s so far)" % (wait.pause_s, wait.waited_s))
+        ctx.on_event(Event("offline", step, wait=wait))
+
+    def back() -> None:
+        log.note("the connection is back")
+        ctx.on_event(Event("online", step))
+
+    try:
+        connection.keep_trying(attempt, on_wait=waiting, on_back=back, sleep=ctx.sleep, clock=ctx.monotonic, patience=ctx.patience)
+    except connection.ConnectionGaveUp as gave_up:
+        raise EnvError("connection_lost", "away for %d minutes (%s)" % (gave_up.waited_s // 60, gave_up.detail), log.tail)
+    except connection.NotTheConnection as same:
+        raise EnvError("download_mismatch", same.detail, log.tail)
 
 
 def _run_pip_lock(plan: _Plan) -> None:

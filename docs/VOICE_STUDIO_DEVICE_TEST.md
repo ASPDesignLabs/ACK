@@ -302,8 +302,13 @@ Run it in a terminal you keep open, not through a window that closes.
   → It says where it will put things, how much space it needs and how much is free, where the programs come from, that it includes Nvidia's libraries, and asks `Download and set it up now?`.
   Type `yes`. Then each step prints, with how long it took, and at the end `Ready, after …`. Write down: the total time, the time of **Installing the programs this part needs** and of
   **Building the part made for this computer**, and the folder it printed. Press **Ctrl+C once** during the install step if you want to check the stop (it says how to carry on; run the same command again and
-  it should say the finished steps are `already done`). If it fails, copy the message, **Technical detail** and the last lines it printed, and the end of `build.log` in the folder it named.
+  it should say `You already said yes to this, so it carries on from where it stopped and does not ask again.`, then that the finished steps are `already done`). If it fails, copy the message, **Technical detail** and the last lines it printed, and the end of `build.log` in the folder it named.
 - [ ] Run the same command again. → `Nothing needs doing.`, no question, nothing downloaded.
+- [ ] **A dropped connection (optional, but it is how real life goes).** Run the set-up again from scratch if you can (a new folder, or after the step above is ready, pick the studio programs instead: `buildenv studio`), and while it is
+  downloading turn the Wi-Fi off, or pull the cable, for about a minute, then turn it back on. Type nothing. → `The internet connection stopped. Nothing is lost and you do not need to do anything. It will try again in 5 seconds, and keep trying
+  for up to 30 minutes. To stop, press Ctrl+C.`, then every so often `Still no connection. Trying again in … seconds. It has been away for ….`, and once it is back `The connection is back. Carrying on.` and the build goes on to
+  `Ready` with nothing typed. Write down: how long the connection was away, and whether it carried on by itself. If you keep it off for more than 30 minutes: `The internet connection did not come back in time, so this stopped.`; turn it
+  back on and run the same command again → `You already said yes to this, so it carries on …` and it finishes, with no question.
 - [ ] Look inside (this only reads):
   ```bash
   TRAIN=$(ls -d ~/ack-voice-studio/tool/environments/training-* | head -1); echo "$TRAIN"

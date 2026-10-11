@@ -11,10 +11,11 @@ from pathlib import Path
 
 import pytest
 
-from vs_env_helpers import LOCK, NATIVE_OVER, make_rig
+from vs_env_helpers import LOCK, NATIVE_OVER, FakeTime, make_rig, pip_text
 from vs_fakes import ALL_PACKAGES, ALL_TOOLS, SMI_6G
 from voice_studio import buildenv
 from voice_studio.core import buildenv_flow as bf
+from voice_studio.core import connection as cn
 from voice_studio.core import envbuild as eb
 from voice_studio.core.consent import load_consent
 from voice_studio.core.system import CommandResult
@@ -44,9 +45,10 @@ def ticking(step=1.0):
     return lambda: next(counter) * step
 
 
-def go(rig, opts=bf.BuildOptions(env_id="demo"), io=None, clock=None):
+def go(rig, opts=bf.BuildOptions(env_id="demo"), io=None, clock=None, seams_extra=None):
     io = io or FakeIO()
     seams = {"read_lock": rig.ctx.read_lock, "read_native": rig.ctx.read_native, "fetcher": rig.ctx.fetcher}
+    seams.update(seams_extra or {})
     code = bf.run_build_env(opts, rig.system, rig.ctx.home, [rig.spec], CAT, io, rig.doors.networked, clock or ticking(), rig.registry, seams)
     return code, io
 
@@ -500,13 +502,128 @@ def test_a_build_that_is_waiting_only_for_its_last_check_says_that(rig):
     assert code == bf.EXIT_OK and "Only small steps on this computer are left: Checking it works. Nothing will be downloaded." in io.lines
 
 
-def test_a_missing_download_step_still_asks_the_download_question_with_everything_that_goes_with_it(rig):
+def test_a_build_that_stopped_part_way_carries_on_without_asking_the_same_question_again(rig):
     rig.doors.pip_fail["lock"] = 1
     go(rig)
     rig.doors.pip_fail.clear()
     code, io = go(rig)
+    assert code == bf.EXIT_OK and io.prompts == []
+    assert CAT.t("buildenv.resuming") in io.lines
+    assert any("package site" in l for l in io.lines) and not any("Only small steps" in l for l in io.lines)      # it still says where things come from
+
+
+def test_a_first_build_asks_the_download_question_with_everything_that_goes_with_it(rig):
+    code, io = go(rig)
     assert code == bf.EXIT_OK and io.prompts == ["Download and set it up now? Type yes to go on. "]
-    assert any("package site" in l for l in io.lines) and not any("Only small steps" in l for l in io.lines)
+    assert CAT.t("buildenv.resuming") not in io.lines
+
+
+def test_a_stopped_build_whose_yes_is_gone_asks_again(rig):
+    rig.doors.pip_fail["lock"] = 1
+    go(rig)
+    rig.doors.pip_fail.clear()
+    Path(rig.ctx.home.consent_file).unlink()
+    code, io = go(rig)
+    assert code == bf.EXIT_OK and io.prompts == ["Download and set it up now? Type yes to go on. "] and CAT.t("buildenv.resuming") not in io.lines
+
+
+def test_a_stopped_build_that_is_declined_when_asked_again_changes_nothing_more(rig):
+    rig.doors.pip_fail["lock"] = 1
+    go(rig)
+    rig.doors.pip_fail.clear()
+    Path(rig.ctx.home.consent_file).unlink()
+    runs = len(rig.doors.pip_runs)
+    code, io = go(rig, io=FakeIO(answers=["no"]))
+    assert code == bf.EXIT_NOTHING_DONE and len(rig.doors.pip_runs) == runs
+
+
+def test_saying_yes_on_the_command_line_does_not_also_say_it_is_resuming(rig):
+    rig.doors.pip_fail["lock"] = 1
+    go(rig)
+    rig.doors.pip_fail.clear()
+    code, io = go(rig, opts=bf.BuildOptions(env_id="demo", yes=True))
+    assert code == bf.EXIT_OK and io.prompts == [] and CAT.t("buildenv.resuming") not in io.lines
+
+
+def test_a_build_stopped_with_ctrl_c_carries_on_without_asking_again(rig):
+    def interrupted(seconds):
+        raise KeyboardInterrupt
+
+    rig.doors.pip_script = [(1, pip_text("connection_refused"))]
+    code, io = go(rig, seams_extra={"sleep": interrupted})
+    assert code == bf.EXIT_PROBLEM and CAT.t("buildenv.interrupted") in io.lines
+    code, io = go(rig, seams_extra={"sleep": FakeTime().sleep})
+    assert code == bf.EXIT_OK and io.prompts == [] and CAT.t("buildenv.resuming") in io.lines
+
+
+def test_the_resume_rule_does_not_apply_when_only_small_steps_are_left(rig):
+    go(rig)
+    Path(rig.paths.launcher).write_text("# older\n")
+    code, io = go(rig)
+    assert code == bf.EXIT_OK and io.prompts == ["Finish it now? Type yes to go on. "] and CAT.t("buildenv.resuming") not in io.lines
+
+
+# ---------------------------------------------------------------- the connection drops while it works
+
+def drop_then_return(rig, drops, patience=None):
+    t = FakeTime()
+    extra = {"sleep": t.sleep, "monotonic": t.monotonic}
+    if patience:
+        extra["patience"] = patience
+    rig.doors.pip_script = [(1, pip_text("connection_refused"))] * drops
+    return t, extra
+
+
+def test_a_drop_that_comes_back_is_explained_once_and_then_only_updated(rig):
+    t, extra = drop_then_return(rig, 3)
+    code, io = go(rig, seams_extra=extra)
+    assert code == bf.EXIT_OK and t.slept == [5, 10, 20]
+    first = CAT.t("connection.offline_first", seconds=5, minutes=30)
+    again = [CAT.t("connection.offline_again", seconds=10, waited="5 s"), CAT.t("connection.offline_again", seconds=20, waited="15 s")]
+    lines = [l.strip() for l in io.lines]
+    assert lines.count(first) == 1 and all(lines.count(a) == 1 for a in again)
+    assert lines.index(first) < lines.index(again[0]) < lines.index(again[1]) < lines.index(CAT.t("connection.online"))
+    assert lines.count(CAT.t("connection.online")) == 1
+
+
+def test_the_first_explanation_says_nothing_is_lost_how_long_it_will_try_and_how_to_stop(rig):
+    first = CAT.t("connection.offline_first", seconds=5, minutes=30)
+    assert "Nothing is lost" in first and "30 minutes" in first and "5 seconds" in first and "Ctrl+C" in first and "do not need to do anything" in first
+
+
+def test_a_long_wait_is_shown_in_minutes_and_seconds(rig):
+    t, extra = drop_then_return(rig, 6)
+    code, io = go(rig, seams_extra=extra)
+    assert t.slept == [5, 10, 20, 30, 60, 60]
+    assert CAT.t("connection.offline_again", seconds=60, waited="2 min 5 s") in [l.strip() for l in io.lines]
+
+
+def test_when_it_gives_up_it_says_what_happened_what_was_kept_and_what_to_do_in_three_parts(rig):
+    t, extra = drop_then_return(rig, 20, cn.Patience(total_s=30, pauses_s=(10,), progress_s=60))
+    code, io = go(rig, seams_extra=extra)
+    assert code == bf.EXIT_PROBLEM
+    parts = [CAT.t("env.error.connection_lost." + p) for p in ("what", "changed", "next")]
+    at = [io.lines.index("  " + part) for part in parts]
+    assert at == sorted(at) and at[0] < at[1] < at[2]
+    assert "  " + CAT.t("buildenv.technical", detail="away for 0 minutes (exit 1)") in io.lines
+    assert CAT.t("buildenv.log", path=rig.env_dir + "/build.log") in ["  " + l.strip() if False else l.strip() for l in io.lines] or any("build.log" in l for l in io.lines)
+
+
+def test_after_it_gives_up_the_next_run_carries_on_by_itself_and_needs_no_yes(rig):
+    t, extra = drop_then_return(rig, 20, cn.Patience(total_s=30, pauses_s=(10,), progress_s=60))
+    assert go(rig, seams_extra=extra)[0] == bf.EXIT_PROBLEM
+    rig.doors.pip_script = []
+    code, io = go(rig)
+    assert code == bf.EXIT_OK and io.prompts == [] and CAT.t("buildenv.resuming") in io.lines
+
+
+def test_a_file_that_keeps_coming_out_wrong_is_said_to_be_something_else_than_the_connection(rig):
+    t = FakeTime()
+    rig.doors.pip_script = [(1, pip_text("cut_download_pip22"))] * 3
+    code, io = go(rig, seams_extra={"sleep": t.sleep, "monotonic": t.monotonic})
+    assert code == bf.EXIT_PROBLEM and t.slept == [5]
+    assert "  " + CAT.t("env.error.download_mismatch.what") in io.lines
+    assert "not a dropped connection" in CAT.t("env.error.download_mismatch.next")
 
 
 def test_the_small_steps_question_can_be_declined_and_then_nothing_changes(rig):
@@ -542,3 +659,13 @@ def test_a_missing_installed_source_or_unpacked_source_is_a_download_step_too(tm
     code, io = go(rig)
     assert code == bf.EXIT_OK and io.prompts == ["Download and set it up now? Type yes to go on. "], what
     assert not any("Only small steps" in l for l in io.lines)
+
+
+def test_a_build_with_only_small_steps_left_still_asks_even_if_it_never_finished(rig):
+    go(rig)
+    record = rig.record()
+    record["state"] = "failed"
+    Path(rig.paths.record).write_text(__import__("json").dumps(record))
+    Path(rig.paths.launcher).write_text("# older\n")
+    code, io = go(rig)
+    assert code == bf.EXIT_OK and io.prompts == ["Finish it now? Type yes to go on. "] and CAT.t("buildenv.resuming") not in io.lines

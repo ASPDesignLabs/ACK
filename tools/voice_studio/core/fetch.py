@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import errno
 import hashlib
+import http.client
 import os
 import shutil
 import subprocess
@@ -25,6 +26,7 @@ from pathlib import Path
 from typing import Callable, Dict, Iterable, Optional, Sequence, Tuple
 from urllib.parse import urlparse
 
+from . import connection
 from .consent import ConsentRecord
 from .registry import SAFE_FILENAME, Item
 from .system import CommandResult
@@ -32,7 +34,7 @@ from .system import CommandResult
 CHUNK = 1 << 20
 ROOM_MARGIN_BYTES = 1 << 30            # PROVISIONAL (plan P11): spare room that must remain after the download
 USER_AGENT = "ACK-Voice-Studio"
-ERROR_CODES = ("consent", "not_pinned", "unsafe_name", "room", "disk", "http", "size", "checksum", "cancelled")     # each has words in the text catalog
+ERROR_CODES = ("consent", "not_pinned", "unsafe_name", "room", "disk", "http", "size", "checksum", "cancelled", "connection_lost")     # each has words in the text catalog
 
 
 class FetchError(Exception):
@@ -158,7 +160,7 @@ def fetch(item: Item, dest_dir: Path, consent: Optional[ConsentRecord], *, opene
                 have = 0
                 continue
             raise FetchError("http", str(exc.code))
-        except (urllib.error.URLError, OSError) as exc:
+        except (urllib.error.URLError, OSError, http.client.HTTPException) as exc:
             raise FetchError("http", type(exc).__name__)
         with closing(response):
             status = getattr(response, "status", 200)
@@ -194,6 +196,8 @@ def fetch(item: Item, dest_dir: Path, consent: Optional[ConsentRecord], *, opene
                     os.fsync(out.fileno())
             except OSError as exc:
                 raise FetchError("disk" if exc.errno in (errno.ENOSPC, errno.EDQUOT) else "http", exc.strerror or type(exc).__name__)
+            except http.client.HTTPException as exc:                 # a reply that ended early in the chunked form: the same as the connection going away
+                raise FetchError("http", type(exc).__name__)
         break
 
     if done != item.size_bytes:
@@ -204,6 +208,34 @@ def fetch(item: Item, dest_dir: Path, consent: Optional[ConsentRecord], *, opene
     os.chmod(part, 0o600)
     os.replace(part, target)
     return target
+
+
+def fetch_patiently(item: Item, dest_dir: Path, consent: Optional[ConsentRecord], *, on_wait: Callable[[connection.Wait], None], on_back: Callable[[], None],
+                    sleep: Callable[[float], None], clock: Callable[[], float], patience: connection.Patience = connection.DEFAULT_PATIENCE,
+                    cancelled: Optional[Callable[[], bool]] = None, fetcher: Optional[Callable] = None, **kwargs) -> Path:
+    """`fetch`, but when the connection drops it waits and asks for the rest by itself (core/connection.py), for as long as the patience lasts. Whatever
+    arrived is kept in the `.part` file, so each try only asks for what is missing. Anything that is not the connection (a wrong file, a full drive, a
+    refusal) is raised at once. The wait is taken one second at a time so that `cancelled` is looked at throughout and Stop is never ignored for long."""
+    do = fetcher or fetch
+
+    def attempt() -> Path:
+        try:
+            return do(item, dest_dir, consent, cancelled=cancelled, **kwargs)
+        except FetchError as error:
+            if connection.fetch_lost(error.code, error.detail):
+                raise connection.ConnectionLost(error.code + ": " + error.detail)
+            raise
+
+    def pause(seconds: float) -> None:
+        for _ in range(int(seconds)):
+            if cancelled and cancelled():
+                raise FetchError("cancelled")
+            sleep(1)
+
+    try:
+        return connection.keep_trying(attempt, on_wait=on_wait, on_back=on_back, sleep=pause, clock=clock, patience=patience)
+    except connection.ConnectionGaveUp as gave_up:
+        raise FetchError("connection_lost", "away for %d minutes (%s)" % (gave_up.waited_s // 60, gave_up.detail))
 
 
 # ---------------------------------------------------------------- door two: a command that reaches the network

@@ -1,0 +1,15 @@
+Looking in indexes: http://127.0.0.1:8765/simple/
+Collecting connpkga==1.0 (from -r /work/lock.txt (line 1))
+  Downloading connpkga-1.0-py3-none-any.whl (600 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 600.8/600.8 kB 890.9 MB/s  0:00:00
+Collecting connpkgb==1.0 (from -r /work/lock.txt (line 3))
+  Downloading connpkgb-1.0-py3-none-any.whl (600 kB)
+     ━━━━━━━━━━━━━━━━━                        262.1/600.8 kB ? eta -:--:--
+  WARNING: Connection interrupted while downloading.
+error: incomplete-download
+
+× Download failed because not enough bytes were received (262 kB/600 kB)
+╰─> URL: http://127.0.0.1:8765/files/connpkgb-1.0-py3-none-any.whl#sha256=2882721444921c02714a7e5c976d7113aea4b77bc784093af159307c9bba495b
+
+note: This is an issue with network connectivity, not pip.
+hint: Consider using --resume-retries to enable download resumption.
