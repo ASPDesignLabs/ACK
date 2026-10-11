@@ -34,6 +34,8 @@ If the internet connection drops while it downloads, it says so, waits, and carr
 If it still has to stop, or you stop it, run the same command again: it carries on from where it stopped and does not ask the same question twice
 (`core/connection.py` has the rules; it was measured against real pip, not guessed).
 
+**For an IT department:** `docs/VOICE_STUDIO_IT_GUIDE.md` says what to allow (hosts, ports, packages, disk), what runs and what listens, how to install offline, and what has and has not been tested.
+
 ## Rules the code keeps
 
 - `core/` is plain Python: no GUI toolkit, no network. The window will be a thin layer over it.
