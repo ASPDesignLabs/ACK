@@ -628,3 +628,11 @@ def test_a_running_round_is_not_told_to_start_another_and_keep_gives_the_real_si
     assert "Spare (%d files, %s)" % (len(kept.spare), size_text(sum(f.size for n, f in kept.spare))) in io.text
     assert "In use by the running round (3 files): never touched." in io.lines
     assert "Not made by a round of this tool (3 files, %s): left alone and never offered." % size_text(sum(f.size for f in kept.unclaimed)) in io.lines
+
+
+def test_while_the_first_round_runs_the_answer_is_that_a_round_is_running_not_that_a_voice_is_missing(tmp_path):
+    rig = Rig(tmp_path, voice=False)
+    plan = rig.world.begin()
+    rd.attach_job(rig.paths, 1, rig.world.job_for(plan, "running").id)
+    code, io = rig.run(*start_args("--yes"))
+    assert code == 1 and "already running" in io.text and "no starting voice" not in io.text and rig.started == []
