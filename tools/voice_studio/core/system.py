@@ -12,7 +12,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Optional, Protocol, Sequence, Tuple
+from typing import Callable, Mapping, Optional, Protocol, Sequence, Tuple
 
 
 # Programs that can reach the network. `System.run` refuses them: the only code allowed to start one is core/fetch.py, and only after
@@ -24,6 +24,26 @@ WRAPPER_PROGRAMS = frozenset({"sudo", "env", "nice", "nohup", "time", "timeout",
 
 class NetworkBlocked(RuntimeError):
     """A command that can reach the network was asked for outside the download module."""
+
+
+def real_interpreter(executable: str, minor: Tuple[int, int], prefix: str, base_prefix: str, base_exec_prefix: str, *,
+                     is_usable: Callable[[str], bool] = lambda p: os.path.isfile(p) and os.access(p, os.X_OK), resolve: Callable[[str], str] = os.path.realpath) -> str:
+    """The interpreter a Python environment should be built from: the real one, never the Python of a virtual environment.
+
+    On Python 3.10 (Ubuntu 22.04's) an environment made while another is active is linked to the *other* environment's Python, not to the system's, and it
+    stops working the day the other one is removed or rebuilt (found on a real computer: a training environment linked into a folder that was later deleted).
+    So when this program is itself running inside a virtual environment, the real interpreter is named from where it lives: `<base prefix>/bin/python3.X`.
+    Outside a virtual environment the running interpreter already is the real one."""
+    executable = executable or "python3"
+    if prefix == base_prefix:
+        return executable
+    named = os.path.join(base_exec_prefix, "bin", "python%d.%d" % minor)
+    if is_usable(named):
+        return named
+    resolved = resolve(executable)
+    if is_usable(resolved) and not os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(resolved)), "pyvenv.cfg")):
+        return resolved
+    return executable
 
 
 def is_network_command(argv: Sequence[str]) -> bool:
@@ -110,7 +130,7 @@ class RealSystem:
         return tuple(sys.version_info[:3])  # type: ignore[return-value]
 
     def python_executable(self) -> str:
-        return sys.executable or "python3"
+        return real_interpreter(sys.executable, tuple(sys.version_info[:2]), sys.prefix, sys.base_prefix, sys.base_exec_prefix)    # type: ignore[arg-type]
 
     def geteuid(self) -> int:
         return os.geteuid() if hasattr(os, "geteuid") else 1000

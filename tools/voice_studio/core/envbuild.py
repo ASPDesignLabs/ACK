@@ -590,7 +590,9 @@ def build(spec: EnvSpec, ctx: Context) -> BuildResult:
         if pending:
             _check_room(plan, [s.id for s in pending])
         for step in steps:
-            if step not in pending:
+            # A step that was out of date when we began may be fine once an earlier one has been put right: a repaired Python link makes the installed packages
+            # usable again, so they are looked at again rather than downloaded again. Nothing is skipped on a guess: the same check that found it out of date decides.
+            if step not in pending or (did and _is_done(plan, step)):
                 kept.append(step.id)
                 ctx.on_event(Event("kept", step.id))
                 continue
@@ -768,8 +770,40 @@ def _backup_name(path: str) -> str:
 
 # -- the Python environment
 
+def _links_out_of(link: str, own_bin: str) -> Optional[str]:
+    """Where a link in the environment's own `bin` first leaves that folder (following links that stay in it), or None if it does not leave."""
+    path = link
+    for _ in range(16):
+        if not os.path.islink(path):
+            return None
+        path = os.path.normpath(os.path.join(os.path.dirname(path), os.readlink(path)))
+        if os.path.dirname(path) != own_bin:
+            return path
+    return None
+
+
+def broken_interpreter_links(venv: str, minor: Tuple[int, int]) -> List[str]:
+    """Names, in the environment's `bin`, of interpreter links that point at nothing or at *another* virtual environment.
+
+    Python 3.10 links an environment made while another is active to that other one, so deleting or rebuilding the other breaks this one, and Python's own
+    `venv` will not repair a link that is already there. A link to the system's Python, a file that is a copy, and a name that is not there are all left alone."""
+    own_bin = os.path.normpath(venv + "/bin")
+    broken = []
+    for name in ("python", "python3", "python%d.%d" % minor):
+        link = own_bin + "/" + name
+        if not os.path.islink(link):
+            continue
+        if not os.path.exists(link):
+            broken.append(name)
+            continue
+        outside = _links_out_of(link, own_bin)
+        if outside is not None and os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(outside)), "pyvenv.cfg")):
+            broken.append(name)
+    return broken
+
+
 def _verify_venv(plan: _Plan) -> bool:
-    if not os.path.exists(plan.paths.python):
+    if not os.path.exists(plan.paths.python) or broken_interpreter_links(plan.paths.venv, plan.minor):
         return False
     result = _python(plan, _MINOR_CODE)
     if result is None or result.returncode != 0:
@@ -781,6 +815,14 @@ def _verify_venv(plan: _Plan) -> bool:
 def _run_venv(plan: _Plan) -> None:
     exe = plan.ctx.system.python_executable()
     log = _Log(plan.paths.log, "venv", plan.ctx.on_event)
+    broken = broken_interpreter_links(plan.paths.venv, plan.minor)
+    for name in broken:                                     # only these links, only inside this folder: the installed packages are not touched
+        try:
+            os.unlink(plan.paths.venv + "/bin/" + name)
+        except OSError as exc:
+            raise EnvError("write_failed", exc.strerror or type(exc).__name__)
+    if broken:
+        log.note("replaced the links %s, which pointed at a Python that is gone or at another virtual environment; the installed packages were not touched" % ", ".join(broken))
     result = plan.ctx.system.run([exe, "-m", "venv", plan.paths.venv], timeout=STEP_TIMEOUT_S["venv"], cwd=plan.paths.env_dir)
     log.result(result)
     if result is None or result.returncode != 0:

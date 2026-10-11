@@ -185,3 +185,148 @@ def test_a_real_probe_that_fails_stops_the_build_with_its_name(tmp_path):
     ctx.gpu_ok = True
     result = eb.build(spec, ctx)
     assert not result.ok and result.error.code == "self_test_failed" and result.error.detail == "card"
+
+
+# ---------------------------------------------------------------- the environment's own Python (found on a real Ubuntu 22.04)
+
+import subprocess
+
+MINOR = tuple(sys.version_info[:2])
+
+
+def chain_to_another_environment(paths, outer: Path):
+    """Make `paths`' interpreter links the way Python 3.10 makes them when another environment is active: pointing at that environment's Python.
+    On 3.10 Python itself does this (so the test uses it, as it happened on the developer's computer: the links and `home` in pyvenv.cfg together); 3.11 and
+    later no longer chain, so there the same layout is written by hand."""
+    subprocess.run([RealSystem().python_executable(), "-m", "venv", "--without-pip", str(outer)], check=True, capture_output=True, timeout=120)      # from the real Python: made from a venv's, it would be chained itself on 3.10
+    for name in ("python", "python3", "python%d.%d" % MINOR):
+        os.unlink(paths.venv + "/bin/" + name)
+    if sys.version_info < (3, 11):
+        subprocess.run([str(outer / "bin" / "python"), "-m", "venv", "--without-pip", paths.venv], check=True, capture_output=True, timeout=120)
+        assert eb.broken_interpreter_links(paths.venv, MINOR) == ["python", "python3", "python%d.%d" % MINOR], "this Python chained it by itself"
+        return
+    os.symlink(str(outer / "bin" / "python3"), paths.venv + "/bin/python3")
+    os.symlink("python3", paths.venv + "/bin/python")
+    os.symlink("python3", paths.venv + "/bin/python%d.%d" % MINOR)
+    cfg = Path(paths.venv + "/pyvenv.cfg")
+    cfg.write_text(cfg.read_text().replace("home = ", "home = %s\n#was " % (outer / "bin"), 1))
+
+
+def test_an_environment_built_here_is_not_linked_to_any_other_virtual_environment_even_when_built_from_inside_one(tmp_path):
+    spec, ctx, doors = make_real(tmp_path)
+    result = eb.build(spec, ctx)
+    paths = eb.EnvPaths(result.env_dir)
+    assert result.ok and eb.broken_interpreter_links(paths.venv, MINOR) == []
+    ends = [os.path.realpath(paths.venv + "/bin/" + n) for n in ("python", "python3")]
+    assert all(not os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(e)), "pyvenv.cfg")) for e in ends), ends
+
+
+def test_a_healthy_environments_links_are_never_rewritten(tmp_path):
+    spec, ctx, doors = make_real(tmp_path)
+    paths = eb.EnvPaths(eb.build(spec, ctx).env_dir)
+    names = ("python", "python3", "python%d.%d" % MINOR)
+    before = {n: (os.readlink(paths.venv + "/bin/" + n), os.lstat(paths.venv + "/bin/" + n).st_ino) for n in names}
+    cfg = os.stat(paths.venv + "/pyvenv.cfg").st_mtime_ns
+    again = eb.build(spec, ctx)
+    assert again.ok and again.did == ()
+    assert before == {n: (os.readlink(paths.venv + "/bin/" + n), os.lstat(paths.venv + "/bin/" + n).st_ino) for n in names} and os.stat(paths.venv + "/pyvenv.cfg").st_mtime_ns == cfg
+
+
+def test_an_environment_chained_to_another_one_is_found_not_done_and_repaired_in_place_and_survives_that_one_being_deleted(tmp_path):
+    spec, ctx, doors = make_real(tmp_path)
+    paths = eb.EnvPaths(eb.build(spec, ctx).env_dir)
+    site = doors._site_packages(paths.python)
+    before = installed_names(site)
+    outer = tmp_path / "outer"
+    chain_to_another_environment(paths, outer)
+    assert eb.broken_interpreter_links(paths.venv, MINOR) == ["python", "python3", "python%d.%d" % MINOR]
+    looked = eb.inspect(spec, ctx)
+    assert looked.state == "needs_work" and looked.stale == ("venv",), "it still runs, so only the link step is out of date"
+
+    doors.pip_runs.clear()
+    fixed = eb.build(spec, ctx)
+    assert fixed.ok and list(fixed.did) == ["venv"] and doors.pip_runs == [], "nothing is downloaded or installed again"
+    assert eb.broken_interpreter_links(paths.venv, MINOR) == [] and installed_names(site) == before
+    assert "replaced the links python, python3, python%d.%d" % MINOR in Path(paths.log).read_text()
+    shutil.rmtree(outer)                                                  # the day the other environment goes away
+    ran = RealSystem().run([paths.python, "-c", "import fakedemo; print(fakedemo.VALUE)"], timeout=60)
+    assert ran is not None and ran.stdout.split() == ["41"] and eb.inspect(spec, ctx).state == "ready"
+
+
+def test_an_environment_whose_links_point_at_nothing_is_repaired_in_place_with_its_packages_kept(tmp_path):
+    """The real failure: the environment it was linked to was deleted, so the environment's own python was gone, with every package still beside it."""
+    spec, ctx, doors = make_real(tmp_path)
+    paths = eb.EnvPaths(eb.build(spec, ctx).env_dir)
+    site = doors._site_packages(paths.python)
+    before = installed_names(site)
+    outer = tmp_path / "outer"
+    chain_to_another_environment(paths, outer)
+    shutil.rmtree(outer)
+    assert not os.path.exists(paths.python) and RealSystem().run([paths.python, "-c", "print(1)"], timeout=60) is None
+    looked = eb.inspect(spec, ctx)
+    assert looked.state == "needs_work" and "venv" in looked.stale
+
+    doors.pip_runs.clear()
+    fixed = eb.build(spec, ctx)
+    assert fixed.ok, (fixed.error, fixed.error and fixed.error.tail)
+    assert list(fixed.did) == ["venv"] and doors.pip_runs == [] and installed_names(site) == before
+    ran = RealSystem().run([paths.python, "-c", "import fakedemo; print(fakedemo.VALUE)"], timeout=60)
+    assert ran is not None and ran.stdout.split() == ["41"] and eb.inspect(spec, ctx).state == "ready"
+
+
+def test_an_environment_whose_earlier_repair_failed_is_repaired_by_the_next_try(tmp_path):
+    """The state the developer's computer was in: links gone bad, and a recorded failed attempt."""
+    spec, ctx, doors = make_real(tmp_path)
+    paths = eb.EnvPaths(eb.build(spec, ctx).env_dir)
+    outer = tmp_path / "outer"
+    chain_to_another_environment(paths, outer)
+    shutil.rmtree(outer)
+    record, _ = eb.read_record(paths.env_dir)
+    record["state"] = "failed"
+    record["failed"] = {"code": "venv_failed", "detail": "exit 1"}
+    eb._save_record(paths.env_dir, record, "2026-10-11T17:19:00Z")
+    assert eb.inspect(spec, ctx).state == "failed"
+    assert eb.build(spec, ctx).ok and eb.inspect(spec, ctx).state == "ready"
+    assert "failed" not in eb.read_record(paths.env_dir)[0]
+
+
+def test_only_the_broken_links_are_removed_and_a_real_file_in_their_place_is_never_touched(tmp_path):
+    spec, ctx, doors = make_real(tmp_path)
+    paths = eb.EnvPaths(eb.build(spec, ctx).env_dir)
+    outer = tmp_path / "outer"
+    chain_to_another_environment(paths, outer)
+    versioned = paths.venv + "/bin/python%d.%d" % MINOR
+    os.unlink(versioned)
+    Path(versioned).write_text("#!/bin/sh\nexec true\n")                                # a file, not a link: the tool never deletes one
+    assert eb.broken_interpreter_links(paths.venv, MINOR) == ["python", "python3"]
+    removed = []
+    real_unlink = os.unlink
+    os.unlink = lambda p, *a, **k: (removed.append(os.path.basename(str(p))), real_unlink(p, *a, **k))[1]
+    try:
+        assert eb.build(spec, ctx).ok
+    finally:
+        os.unlink = real_unlink
+    assert [n for n in removed if n.startswith("python")] == ["python", "python3"], "the tool removed the two broken links and nothing else"
+    assert os.access(versioned, os.X_OK) and eb.broken_interpreter_links(paths.venv, MINOR) == []
+
+
+def test_a_link_that_cannot_be_removed_stops_the_repair_in_words_and_changes_nothing_else(tmp_path, monkeypatch):
+    spec, ctx, doors = make_real(tmp_path)
+    paths = eb.EnvPaths(eb.build(spec, ctx).env_dir)
+    outer = tmp_path / "outer"
+    chain_to_another_environment(paths, outer)
+    site = doors._site_packages(paths.python)
+    before = installed_names(site)
+
+    real_unlink = os.unlink
+
+    def refuse(path, *args, **kwargs):
+        if "/venv/bin/python" in str(path):
+            raise PermissionError(13, "Permission denied")
+        return real_unlink(path, *args, **kwargs)                          # the build's own lock file is released as usual
+    monkeypatch.setattr(eb.os, "unlink", refuse)
+    result = eb.build(spec, ctx)
+    assert not result.ok and result.error.code == "write_failed" and "Permission denied" in result.error.detail
+    monkeypatch.undo()
+    assert installed_names(site) == before and eb.broken_interpreter_links(paths.venv, MINOR) != []
+    assert eb.build(spec, ctx).ok, "and the next try, with the fault gone, repairs it"

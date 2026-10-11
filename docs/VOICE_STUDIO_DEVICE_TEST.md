@@ -315,6 +315,8 @@ Run it in a terminal you keep open, not through a window that closes.
   ls "$TRAIN"; du -sh "$TRAIN"
   "$TRAIN/venv/bin/python" -c "import piper.train.vits.monotonic_align as m; print(m.__file__)"
   ```
+  If the third command says `venv/bin/python: No such file or directory`, the environment's own Python link points at something that was deleted (on Python 3.10 an environment built while another
+  one is active is linked to *that* one; found on a real 22.04). Update the tool (`git pull`) and run `buildenv training` again with no options: it finds the broken links, replaces only those, keeps the installed packages and finishes without downloading them again.
   → The folder holds `venv`, `ack_run.py`, `ack-env.json`, `lock.txt` and `build.log` (no `native-work`, no `source`). Its size is what to write down (the tool assumed 6.1 GiB installed). The last line is a path
   ending in `…/piper/train/vits/monotonic_align/__init__.py`, with no error.
 - [ ] Check the card is seen: `"$TRAIN/venv/bin/python" -c "import torch; print(torch.cuda.is_available(), torch.version.cuda)"`. → `True 13.0` (or the CUDA version the lock names).
