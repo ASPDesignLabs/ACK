@@ -1182,3 +1182,11 @@ def test_a_job_for_another_working_folder_is_never_taken_for_this_round(world):
     assert (r.state, r.job) == ("starting", "")
     mine = fake_job(world.jobs_root, world.command_of(plan).argv, "running")
     assert world.reconcile(now=NOW + timedelta(seconds=30)).rounds[0].job == mine.id
+
+
+def test_a_round_whose_named_job_folder_is_gone_is_still_found_by_its_working_folder(world):
+    plan = world.begin()
+    rd.attach_job(world.paths, 1, "job-gone")                                                   # the name the record has no folder for
+    mine = fake_job(world.jobs_root, world.command_of(plan).argv, "running")
+    r = world.reconcile().rounds[0]
+    assert (r.state, r.job) == ("running", mine.id)
