@@ -11,11 +11,12 @@ from pathlib import Path
 
 import pytest
 
-from vs_env_helpers import GIB, GOOD_FILES, LOCK, PATCH, TOP, link, make_archive, make_rig, make_spec, special
+from vs_env_helpers import GIB, GOOD_FILES, LOCK, NATIVE, NATIVE_OVER, NATIVE_SOURCE, PATCH, TOP, link, make_archive, make_rig, make_spec, special
 from voice_studio.core import envbuild as eb
 from voice_studio.core import fetch
 from voice_studio.core.consent import make_consent
 from voice_studio.core.envspec import lock_digest
+from voice_studio.core.system import CommandResult
 from voice_studio.core.jobs import OFFLINE_ENV, boot_id, parse_proc_starttime, read_text_file
 
 ALL_STEPS = ["source_unpack", "venv", "pip_lock", "pip_source", "native_build", "wrapper"]
@@ -1199,3 +1200,204 @@ def test_this_module_starts_no_program_of_its_own():
     source = Path(eb.__file__).read_text()
     for forbidden in ("subprocess", "os.system", "os.popen", "os.exec", "os.spawn", "urllib", "socket", "shell=True"):
         assert forbidden not in source, forbidden
+
+
+# ---------------------------------------------------------------- a native part built from a file shipped with the tool
+
+NATIVE_STEPS = ["venv", "pip_lock", "native_build", "wrapper"]
+
+
+@pytest.fixture
+def nrig(tmp_path):
+    return make_rig(tmp_path, spec_over=NATIVE_OVER)
+
+
+def packages_folder(rig):
+    return Path(rig.paths.venv, "lib/python3.12/site-packages")
+
+
+def installed_native(rig):
+    return sorted(p.name for p in (packages_folder(rig) / NATIVE["into"]).glob("*")) if (packages_folder(rig) / NATIVE["into"]).is_dir() else []
+
+
+def test_a_native_part_is_built_after_the_packages_and_put_where_the_installed_package_looks(nrig):
+    result = nrig.build()
+    assert result.ok and list(result.did) == NATIVE_STEPS and nrig.record()["state"] == "ready"
+    assert nrig.step_ids("start") == ["room", "venv", "pip_lock", "native_build", "wrapper", "self_test"]
+    assert installed_native(nrig) == ["core.cpython-312-x86_64-linux-gnu.so"]
+    assert (packages_folder(nrig) / NATIVE["into"] / installed_native(nrig)[0]).read_bytes() == b"\x7fELF" + NATIVE_SOURCE
+    assert not Path(nrig.paths.env_dir, eb.NATIVE_WORK).exists(), "the work folder is removed"
+    assert nrig.doors.fetches == [] and len(nrig.doors.pip_runs) == 1, "no source archive, no second pip command"
+
+
+def test_the_native_part_is_built_by_the_environments_own_python_in_a_folder_of_its_own_with_its_tools_first(nrig):
+    nrig.build()
+    run, = nrig.system.cython_runs
+    assert run.argv == (nrig.paths.python, "-m", "Cython.Build.Cythonize", "-i", "core.pyx")
+    assert run.cwd == nrig.paths.env_dir + "/" + eb.NATIVE_WORK and run.source == NATIVE_SOURCE
+    assert run.env["PATH"].startswith(nrig.paths.venv + "/bin:") and run.env["VIRTUAL_ENV"] == nrig.paths.venv and run.env["PYTHONDONTWRITEBYTECODE"] == "1"
+    assert run.timeout == eb.STEP_TIMEOUT_S["native_build"], "a slow compile gets the long allowance, not the short one"
+    assert run.work_mode == 0o700, "the work folder is the owner's alone"
+
+
+def test_a_native_part_already_built_is_kept_and_not_built_again(nrig):
+    nrig.build()
+    again = nrig.build()
+    assert again.ok and again.did == () and list(again.kept) == NATIVE_STEPS and len(nrig.system.cython_runs) == 1
+
+
+def test_a_native_part_that_went_missing_is_built_again_and_only_that(nrig):
+    nrig.build()
+    (packages_folder(nrig) / NATIVE["into"] / installed_native(nrig)[0]).unlink()
+    again = nrig.build()
+    assert again.ok and list(again.did) == ["native_build"] and list(again.kept) == ["venv", "pip_lock", "wrapper"] and len(nrig.system.cython_runs) == 2
+    assert installed_native(nrig) == ["core.cpython-312-x86_64-linux-gnu.so"]
+
+
+def test_an_environment_that_cannot_say_where_its_packages_are_has_nothing_to_keep(nrig):
+    nrig.build()
+    nrig.system.packages_answer = "/somewhere/else"
+    again = nrig.build()
+    assert code_of(again) == "native_failed" and list(again.did) == [] and installed_native(nrig) == ["core.cpython-312-x86_64-linux-gnu.so"]
+
+
+def test_a_packages_question_that_fails_is_not_trusted_even_if_it_printed_a_path(tmp_path):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER)
+    rig.system.packages_exit = 1
+    result = rig.build()
+    assert code_of(result) == "native_failed" and "packages" in result.error.detail and installed_native(rig) == []
+
+
+def test_the_packages_folder_is_the_last_line_the_environment_prints_so_a_warning_before_it_does_no_harm(tmp_path):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER)
+    rig.system.packages_answer = "DeprecationWarning: something\n" + rig.paths.venv + "/lib/python3.12/site-packages"
+    assert rig.build().ok and installed_native(rig) == ["core.cpython-312-x86_64-linux-gnu.so"]
+
+
+def test_a_target_that_cannot_be_made_is_a_write_failure_not_a_build_failure(tmp_path):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER)
+    rig.system.fail_cython = CommandResult(1, "", "stopped\n")
+    rig.build()                                                           # makes the environment folder ours
+    blocker = packages_folder(rig) / "demo"
+    blocker.parent.mkdir(parents=True)
+    blocker.write_text("a file where a folder is needed")
+    rig.system.fail_cython = None
+    result = rig.build()
+    assert code_of(result) == "write_failed" and not Path(rig.paths.env_dir, eb.NATIVE_WORK).exists()
+
+
+@pytest.mark.parametrize("answer", ["/etc", "relative/path", "", "{venv}/../../elsewhere", "{venv}x/lib"])
+def test_a_packages_folder_outside_the_environment_is_never_written_into(tmp_path, answer):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER)
+    rig.system.packages_answer = answer.replace("{venv}", rig.paths.venv)
+    result = rig.build()
+    assert code_of(result) == "native_failed" and "packages" in result.error.detail
+    assert not Path(rig.paths.env_dir, eb.NATIVE_WORK).exists()
+    assert rig.system.cython_runs and not Path("/etc/demo").exists()
+
+
+def test_a_shipped_source_that_is_not_the_pinned_one_is_refused_before_anything_is_built(tmp_path):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER, native_source=NATIVE_SOURCE + b"# changed\n")
+    result = rig.build()
+    assert code_of(result) == "native_changed" and result.error.detail == NATIVE["file"]
+    assert rig.system.cython_runs == [] and not Path(rig.paths.env_dir, eb.NATIVE_WORK).exists()
+    assert rig.record()["state"] == "failed" and rig.record()["failed"]["code"] == "native_changed"
+    assert "native_build" not in rig.record()["steps"] and installed_native(rig) == []
+
+
+def test_a_shipped_source_that_cannot_be_read_is_refused_in_plain_terms(tmp_path):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER)
+
+    def gone(native):
+        raise FileNotFoundError(2, "No such file or directory")
+
+    rig.ctx.read_native = gone
+    result = rig.build()
+    assert code_of(result) == "native_changed" and "No such file" in result.error.detail and rig.system.cython_runs == []
+
+
+@pytest.mark.parametrize("failure, detail", [(CommandResult(1, "", "error: command 'gcc' failed\n"), "exit 1"), ("none", "could not run")])
+def test_a_build_that_fails_says_so_keeps_the_tail_and_leaves_no_work_folder(tmp_path, failure, detail):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER)
+    rig.system.fail_cython = failure
+    result = rig.build()
+    assert code_of(result) == "native_failed" and result.error.detail == detail
+    assert not Path(rig.paths.env_dir, eb.NATIVE_WORK).exists() and installed_native(rig) == []
+    assert rig.record()["state"] == "failed" and list(result.did) == ["venv", "pip_lock"]
+    rig.system.fail_cython = None
+    assert rig.build().ok and "native_build" in rig.record()["steps"] and installed_native(rig) == ["core.cpython-312-x86_64-linux-gnu.so"]
+
+
+def test_a_failed_compile_carries_the_end_of_the_compilers_output(tmp_path):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER)
+    rig.system.fail_cython = CommandResult(1, "", "line one\nPython.h: No such file or directory\n")
+    result = rig.build()
+    assert any("Python.h" in line for line in result.error.tail)
+
+
+def test_a_build_that_makes_nothing_is_a_failure_even_when_the_command_said_ok(tmp_path):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER)
+    rig.system.cython_makes = False
+    result = rig.build()
+    assert code_of(result) == "native_failed" and result.error.detail == "nothing was built" and installed_native(rig) == []
+
+
+def test_a_leftover_work_folder_from_an_earlier_try_is_never_installed(tmp_path):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER)
+    rig.system.fail_cython = CommandResult(1, "", "stopped\n")
+    assert code_of(rig.build()) == "native_failed"                          # the environment folder now exists and is ours
+    stale = Path(rig.paths.env_dir, eb.NATIVE_WORK)
+    stale.mkdir()
+    (stale / "core.cpython-312-x86_64-linux-gnu.so").write_bytes(b"stale")
+    rig.system.fail_cython, rig.system.cython_makes = None, False
+    assert code_of(rig.build()) == "native_failed" and installed_native(rig) == [] and not stale.exists()
+
+
+def test_a_native_part_changes_the_environments_name_in_each_of_its_fields(tmp_path):
+    def name(**over):
+        spec = make_spec(**{**NATIVE_OVER, "native": {**NATIVE, **over}})
+        return eb.env_dir_name(spec, eb.fingerprint(spec, "l" * 64, None, (3, 12)))
+
+    base = name()
+    assert name() == base
+    assert len({base, name(sha256="a" * 64), name(module="other"), name(into="demo/other")}) == 4
+    plain = make_spec(**{"source": None, "patches": []})
+    assert eb.env_dir_name(plain, eb.fingerprint(plain, "l" * 64, None, (3, 12))) != base
+
+
+def test_an_environment_without_a_native_part_keeps_its_fingerprint_inputs_unchanged():
+    """Adding native parts to the list must not rename the environments that have none: their folders would be rebuilt for nothing."""
+    plain = make_spec(**{"source": None, "patches": []})
+    calls = []
+    original = eb.sha256_bytes
+    try:
+        eb.sha256_bytes = lambda data: (calls.append(data), original(data))[1]
+        eb.fingerprint(plain, "l" * 64, None, (3, 12))
+    finally:
+        eb.sha256_bytes = original
+    assert b"native_part" not in calls[-1]
+
+
+def test_the_native_step_runs_again_when_anything_it_depends_on_changes(nrig):
+    """Its file name and format depend on the Python, the compiled result on the source and the installed Cython (the lock), and where it goes on `into`."""
+    def step_input(spec=nrig.spec, minor=(3, 12), lock_sha="L" * 64):
+        return eb._native_part_input(eb._Plan(spec, nrig.ctx, nrig.paths, LOCK, lock_sha, [], None, minor, {}))
+
+    def with_native(**over):
+        return make_spec(**{**NATIVE_OVER, "native": {**NATIVE, **over}})
+
+    inputs = [step_input(), step_input(minor=(3, 10)), step_input(lock_sha="M" * 64), step_input(with_native(sha256="a" * 64)),
+              step_input(with_native(module="other")), step_input(with_native(into="demo/other"))]
+    assert len(set(inputs)) == 6 and step_input() == step_input()
+
+
+def test_a_native_part_needs_the_same_room_as_any_heavy_step(tmp_path):
+    rig = make_rig(tmp_path, spec_over=NATIVE_OVER, system_kw={"free": 1000})
+    assert code_of(rig.build()) == "no_room" and rig.system.cython_runs == []
+
+
+def test_the_new_error_has_words_in_the_text_catalog():
+    from voice_studio.core.text import load_catalog
+    catalog = load_catalog()
+    assert all(catalog.has("env.error.native_changed." + part) for part in ("what", "changed", "next"))
+    assert "native_changed" in eb.ERROR_CODES

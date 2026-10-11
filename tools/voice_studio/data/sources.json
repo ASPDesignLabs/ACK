@@ -19,14 +19,6 @@
       "filename": null, "url": null, "revision": null, "size_bytes": null, "sha256": null
     },
     {
-      "id": "piper1-gpl-source",
-      "kind": "source",
-      "why_key": "fetch.why.source_piper",
-      "license_id": "piper1-gpl",
-      "approx_size_bytes": 20000000,
-      "filename": null, "url": null, "revision": null, "size_bytes": null, "sha256": null
-    },
-    {
       "id": "speech-model-small-en",
       "kind": "model",
       "why_key": "fetch.why.speech_model",

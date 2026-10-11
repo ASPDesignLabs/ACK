@@ -251,10 +251,14 @@ def test_an_environment_whose_lock_is_not_pinned_gets_no_package_agreement():
 
 # ---------------------------------------------------------------- the shipped data
 
-def test_the_shipped_plan_today_lists_everything_and_says_nothing_can_be_fetched_yet():
+def test_the_shipped_plan_today_lists_everything_and_says_what_can_and_cannot_be_fetched_yet():
     plan = sp.plan_setup(load_registry(), load_environments(), free=free(500 * GIB))
-    assert [i.id for i in plan.items] == ["env-training", "env-studio", "speech-model-small-en", "piper1-gpl-source", "voice-amy", "voice-mike"]
-    assert plan.blockers == ("not_available",) and all(i.not_ready_only for i in plan.items) and plan.agreement(load_registry(), NOW).entries == ()
+    assert [i.id for i in plan.items] == ["env-training", "env-studio", "speech-model-small-en", "voice-amy", "voice-mike"]
+    by_id = {i.id: i for i in plan.items}
+    assert by_id["env-training"].problems == () and by_id["env-training"].available, "the training environment is pinned: lock, native part and no source archive"
+    assert by_id["env-studio"].problems == ("lock_unpinned",)
+    assert all(i.not_ready_only for i in plan.items if i.id != "env-training")
+    assert [e.id for e in plan.agreement(load_registry(), NOW).entries] == ["pip:training"], "the only thing that could be agreed to today"
     assert plan.verdict.need["home"] > 20 * GIB, "both voices, the environments and two people"
 
 

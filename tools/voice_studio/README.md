@@ -48,5 +48,6 @@ They need no network, GPU or display. Two optional libraries add checks, and wit
 |---|---|
 | `numpy` | importing an ACK package and reading the real output of Freeform Studio's processor and dataset builder (Freeform Studio itself needs numpy to run) |
 | `onnx` | the voice zip's metadata reader against the real library and the real patcher (the reader is still tested on files built by hand) |
+| `Cython` (with `numpy`, a C compiler and the Python headers) | the shipped alignment source compiles the way the environment builder compiles it, and gives the right answers |
 
-To run everything: `pip install pytest numpy onnx` in the throwaway environment above. These are for testing only. Freeform Studio's own tests (`tools/freeform_studio/tests`) need what `tools/freeform_studio/requirements.txt` lists (its server tests fail, rather than skip, when `quart` is missing).
+To run everything: `pip install pytest numpy onnx Cython setuptools` in the throwaway environment above (and `sudo apt-get install build-essential python3-dev` if the compile test says it skipped). These are for testing only. Freeform Studio's own tests (`tools/freeform_studio/tests`) need what `tools/freeform_studio/requirements.txt` lists (its server tests fail, rather than skip, when `quart` is missing).

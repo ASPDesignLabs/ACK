@@ -31,7 +31,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from . import fetch
 from .consent import ConsentRecord
-from .envspec import EnvSpec, Pin, SourcePatch, lock_digest, normalise_name, parse_lock
+from .envspec import EnvSpec, NativePart, Pin, SourcePatch, lock_digest, normalise_name, parse_lock
 from .jobs import OFFLINE_ENV, boot_id, parse_proc_starttime, process_alive, read_json, read_text_file, utc_stamp, write_json
 from .paths import DataHome
 from .registry import Item, Registry
@@ -45,6 +45,7 @@ LOG_NAME = "build.log"
 LOCK_COPY_NAME = "lock.txt"
 LAUNCHER_NAME = "ack_run.py"
 UNPACK_MARKER = ".ack-unpacked"
+NATIVE_WORK = "native-work"            # where a native part is built; made fresh for each build and removed afterwards
 BACKUP_SUFFIX = ".before-ack-patch"
 ROOM_MARGIN_BYTES = 1 << 30            # PROVISIONAL (plan P11): spare room that must remain after the environment is built
 RESUME_NEED_BYTES = 256 << 20          # what a resumed build that only has small steps left needs
@@ -56,7 +57,7 @@ STEP_TIMEOUT_S = {"venv": 600.0, "native_build": 3600.0, "probe": 600.0, "verify
 # Each has words in the text catalog (env.error.<code>.what / .changed / .next).
 ERROR_CODES = ("not_pinned", "lock_missing", "lock_changed", "lock_invalid", "python_old", "python_new", "not_ours", "newer_record", "damaged_record", "busy",
                "no_room", "consent", "source_fetch", "unpack_unsafe", "unpack_failed", "venv_failed", "pip_failed", "native_failed",
-               "patch_declined", "patch_changed", "launcher_failed", "self_test_failed", "write_failed")
+               "patch_declined", "patch_changed", "native_changed", "launcher_failed", "self_test_failed", "write_failed")
 STEP_IDS = ("source_unpack", "patches", "venv", "pip_lock", "pip_source", "native_build", "wrapper")      # the recorded steps, in order
 ACTION_IDS = ("room", "source_fetch") + STEP_IDS + ("self_test",)                                         # everything the screens can name
 INSPECTION_STATES = ("absent", "ready", "needs_work", "failed", "not_ours", "damaged", "newer", "not_buildable")
@@ -101,6 +102,10 @@ def _read_lock_file(spec: EnvSpec) -> bytes:
     return spec.lock_path.read_bytes()
 
 
+def _read_native_file(native: NativePart) -> bytes:
+    return native.path.read_bytes()
+
+
 @dataclass
 class Context:
     system: System
@@ -113,6 +118,7 @@ class Context:
     fetcher: Callable = fetch.fetch
     networked: Callable = fetch.run_networked
     read_lock: Callable[[EnvSpec], bytes] = _read_lock_file
+    read_native: Callable[[NativePart], bytes] = _read_native_file
     now: Callable[[], datetime] = lambda: datetime.now(timezone.utc)
 
 
@@ -180,6 +186,8 @@ def fingerprint(spec: EnvSpec, lock_sha: str, source: Optional[Item], python_min
             "install": bool(spec.source and spec.source.install), "dist": spec.source.dist if spec.source else None,
             "native": spec.source.native_build if spec.source else None,
             "patches": [[p.id, p.file, sha256_bytes(p.old.encode()), sha256_bytes(p.new.encode())] for p in spec.patches]}
+    if spec.native is not None:
+        data["native_part"] = [spec.native.sha256, spec.native.module, spec.native.into]
     return sha256_bytes(json.dumps(data, sort_keys=True).encode())
 
 
@@ -633,6 +641,8 @@ def _steps(plan: _Plan) -> List[_Step]:
         steps.append(_Step("pip_source", lambda p: p.item.sha256 + p.lock_sha, _verify_source_installed, _run_pip_source))
     if plan.spec.source is not None and plan.spec.source.native_build:
         steps.append(_Step("native_build", lambda p: p.item.sha256 + "%d.%d" % p.minor, _verify_native, _run_native))
+    elif plan.spec.native is not None:
+        steps.append(_Step("native_build", _native_part_input, _verify_native_part, _run_native_part))
     steps.append(_Step("wrapper", lambda p: sha256_bytes(launcher_text(p.spec).encode()), _verify_wrapper, _run_wrapper))
     return steps
 
@@ -838,6 +848,79 @@ def _run_native(plan: _Plan) -> None:
         raise EnvError("native_failed", "could not run" if result is None else "exit %d" % result.returncode, log.tail)
     if not _artifact_matches(plan):
         raise EnvError("native_failed", "nothing was built", log.tail)
+
+
+# -- a native part built from a file shipped with the tool
+
+_PACKAGES_CODE = "import sysconfig; print(sysconfig.get_paths()['platlib'])"
+
+
+def _packages_dir(plan: _Plan) -> Optional[str]:
+    """Where the environment keeps its installed packages, asked of the environment itself; None when it cannot say or it says somewhere outside."""
+    result = _python(plan, _PACKAGES_CODE)
+    if result is None or result.returncode != 0 or not result.stdout.strip():
+        return None
+    folder = result.stdout.strip().splitlines()[-1]
+    inside = plan.paths.venv + "/"
+    if ".." in folder.split("/") or not (folder + "/").startswith(inside):          # inside is absolute, so a relative answer fails this too
+        return None
+    return folder
+
+
+def _native_part_input(plan: _Plan) -> str:
+    native = plan.spec.native
+    return "%s|%s|%s|%d.%d|%s" % (native.sha256, native.module, native.into, plan.minor[0], plan.minor[1], plan.lock_sha)
+
+
+def _native_matches(folder: str, native: NativePart) -> List[str]:
+    try:
+        return sorted(n for n in os.listdir(folder) if fnmatch.fnmatchcase(n, native.artifact))
+    except OSError:
+        return []
+
+
+def _verify_native_part(plan: _Plan) -> bool:
+    packages = _packages_dir(plan)
+    return packages is not None and bool(_native_matches(packages + "/" + plan.spec.native.into, plan.spec.native))
+
+
+def _run_native_part(plan: _Plan) -> None:
+    """Build the shipped source with Cython and the computer's C compiler, then put the one compiled file where the installed package looks for
+    it. The source is checked against its pinned checksum first; the work happens in a folder of its own inside the environment, removed after."""
+    native, system, ctx = plan.spec.native, plan.ctx.system, plan.ctx
+    try:
+        source = ctx.read_native(native)
+    except OSError as exc:
+        raise EnvError("native_changed", "%s: %s" % (native.file, exc.strerror or "cannot be read"))
+    if sha256_bytes(source) != native.sha256:
+        raise EnvError("native_changed", native.file)
+    log = _Log(plan.paths.log, "native_build", ctx.on_event)
+    work = plan.paths.env_dir + "/" + NATIVE_WORK
+    shutil.rmtree(work, ignore_errors=True)
+    try:
+        os.makedirs(work, mode=0o700)
+        _atomic_write("%s/%s.pyx" % (work, native.module), source)
+        path = plan.paths.venv + "/bin" + os.pathsep + system.environ().get("PATH", "")      # the environment's own tools first, the computer's compiler after
+        result = system.run([plan.paths.python, "-m", "Cython.Build.Cythonize", "-i", native.module + ".pyx"], timeout=STEP_TIMEOUT_S["native_build"],
+                            cwd=work, env={"PATH": path, "VIRTUAL_ENV": plan.paths.venv, "PYTHONDONTWRITEBYTECODE": "1"})
+        log.result(result)
+        if result is None or result.returncode != 0:
+            raise EnvError("native_failed", "could not run" if result is None else "exit %d" % result.returncode, log.tail)
+        built = _native_matches(work, native)
+        if not built:
+            raise EnvError("native_failed", "nothing was built", log.tail)
+        packages = _packages_dir(plan)
+        if packages is None:
+            raise EnvError("native_failed", "the environment did not say where its packages are", log.tail)
+        target_dir = packages + "/" + native.into
+        try:
+            os.makedirs(target_dir, exist_ok=True)
+            with open("%s/%s" % (work, built[0]), "rb") as handle:
+                _atomic_write("%s/%s" % (target_dir, built[0]), handle.read())
+        except OSError as exc:
+            raise EnvError("write_failed", exc.strerror or type(exc).__name__)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 
 # -- the launcher

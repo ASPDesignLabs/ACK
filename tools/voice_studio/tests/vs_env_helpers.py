@@ -10,7 +10,7 @@ import shutil
 import tarfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import List, NamedTuple, Optional
 
 from vs_fakes import FakeSystem
 from voice_studio.core import envbuild as eb
@@ -77,6 +77,9 @@ BASE_SPEC = {
     "probes": [{"id": "imports", "code": "import os", "needs_gpu": False}, {"id": "card", "code": "import sys", "needs_gpu": True}],
 }
 PATCH = {"id": "fix-it", "file": "src/demo/train.py", "old": "return 'old'", "new": "return 'new'"}
+NATIVE_SOURCE = b"cpdef int answer(): return 42\n"
+NATIVE = {"file": "demo_core.pyx", "sha256": hashlib.sha256(NATIVE_SOURCE).hexdigest(), "module": "core", "into": "demo/pkg/inner"}
+NATIVE_OVER = {"source": None, "patches": [], "native": NATIVE}          # an environment with no source archive, only a native part built from a shipped file
 
 
 def make_spec(lock: bytes = LOCK, **over):
@@ -84,6 +87,15 @@ def make_spec(lock: bytes = LOCK, **over):
     raw["lock"]["sha256"] = lock_digest(lock)
     raw.update(over)
     return parse_environments(json.dumps({"schema": 1, "environments": [raw]}))[0]
+
+
+class CythonRun(NamedTuple):
+    argv: tuple
+    cwd: str
+    env: dict
+    source: Optional[bytes]         # what the source file held when the compiler was run
+    timeout: float
+    work_mode: int                  # the permission bits of the work folder at that moment
 
 
 class BuildSystem(FakeSystem):
@@ -98,6 +110,11 @@ class BuildSystem(FakeSystem):
         self.fail_venv = None           # a CommandResult, or "none" for "could not run at all"
         self.fail_native = None
         self.native_makes = True
+        self.cython_runs: List[CythonRun] = []
+        self.fail_cython = None                              # a CommandResult, or "none" for "could not run at all"
+        self.cython_makes = True
+        self.packages_answer = None                          # what the environment says its packages folder is (None: its own, inside it)
+        self.packages_exit = 0                               # the exit status of that question
         self.native_makes_then_fails = False
         self.venv_flag = "1"                # what the check inside the environment reports for "this is a virtual environment"
         self.bad_probe_codes = set()
@@ -144,6 +161,10 @@ class BuildSystem(FakeSystem):
                 code = argv[2]
                 if code == eb._MINOR_CODE:
                     return CommandResult(0, "%s\n%s\n" % (self.venv_minor, self.venv_flag))
+                if code == eb._PACKAGES_CODE:
+                    if self.packages_answer is not None:
+                        return CommandResult(self.packages_exit, self.packages_answer + "\n")
+                    return CommandResult(self.packages_exit, "%s/lib/python3.12/site-packages\n" % argv[0][: -len("/bin/python")])
                 if code == eb._VERIFY_CODE:
                     want = json.loads(argv[3])
                     have = self._dists.get(argv[0][: -len("/bin/python")], {})
@@ -161,6 +182,17 @@ class BuildSystem(FakeSystem):
                 if code in self.bad_probe_codes:
                     return CommandResult(1, "", "Traceback\nImportError: nothing called that\n")
                 return CommandResult(0, "ok\n")
+            if argv[1:3] == ["-m", "Cython.Build.Cythonize"]:
+                module_file = Path(cwd) / argv[4]
+                source = module_file.read_bytes() if module_file.exists() else None
+                self.cython_runs.append(CythonRun(tuple(argv), cwd, dict(env or {}), source, timeout, os.stat(cwd).st_mode & 0o777))
+                if self.fail_cython == "none":
+                    return None
+                if self.fail_cython is not None:
+                    return self.fail_cython
+                if self.cython_makes:
+                    (Path(cwd) / (Path(argv[4]).stem + ".cpython-312-x86_64-linux-gnu.so")).write_bytes(b"\x7fELF" + (source or b""))
+                return CommandResult(0, "compiled\n")
             if len(argv) >= 2 and argv[1].endswith("ack_run.py"):
                 self.launcher_runs.append((argv, dict(env or {})))
                 return CommandResult(1, "", "boom\n") if self.fail_launcher else CommandResult(0, "Linux\n")
@@ -264,7 +296,7 @@ class Rig:
 
 
 def make_rig(tmp_path: Path, *, spec_over=None, archive_files=None, archive_extra=(), lock: bytes = LOCK, system_kw=None, consent_pip=True, confirm=None,
-             gpu_ok=False) -> Rig:
+             gpu_ok=False, native_source: bytes = NATIVE_SOURCE) -> Rig:
     root = Path(tmp_path)
     root.mkdir(parents=True, exist_ok=True)
     archive = make_archive(root / "demo.tar.gz", files=archive_files, extra=archive_extra)
@@ -277,5 +309,6 @@ def make_rig(tmp_path: Path, *, spec_over=None, archive_files=None, archive_extr
     events: List[eb.Event] = []
     home = DataHome(str(root / "home"))
     ctx = eb.Context(system=system, home=home, registry=registry, consent=consent, gpu_ok=gpu_ok, confirm_patch=confirm or (lambda p: False),
-                     on_event=events.append, fetcher=doors.fetcher, networked=doors.networked, read_lock=lambda s: lock)
+                     on_event=events.append, fetcher=doors.fetcher, networked=doors.networked, read_lock=lambda s: lock,
+                     read_native=lambda n: native_source)
     return Rig(root, system, doors, spec, item, registry, consent, ctx, events, lock)

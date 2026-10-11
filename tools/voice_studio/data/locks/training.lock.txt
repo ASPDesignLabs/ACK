@@ -1,8 +1,8 @@
-# ACK Voice Studio, the training environment. Made by tools/voice_studio_maint/make_lock.py; do not edit by hand.
-# Every package is at the exact version the developer's own computer installed and trained with (Ubuntu 22.04 on WSL2, Python 3.10, piper1-gpl 5b355b1, 2026-10-10).
-# setuptools is held below 82 as docs/VOICE_TRAINING_GUIDE.md says; wheel is the newest at the time and is not yet confirmed against that computer. Installed with --require-hashes --only-binary=:all: --no-deps, so every package the trainer needs is listed.
+# ACK Voice Studio, the training environment. Made by tools/voice_studio_maint/make_lock.py from tools/voice_studio_maint/locks/training.versions.txt; do not edit by hand.
+# Every package is at the exact version the developer's own computer trained with (Ubuntu 22.04 on WSL2, Python 3.10, 2026-10-10), except piper-tts, which is the published 1.8.0 wheel (it carries the trainer and its espeak-ng part).
+# Installed with --require-hashes --only-binary=:all: --no-deps, so every package the trainer needs is listed. The alignment module is built afterwards from data/native/ (see environments.json).
 # Python versions covered: 3.10, 3.11, 3.12. Linux x86_64 wheels only; Python 3.13 and newer are not covered.
-# Input list sha256: f93c5daf400206b2b8a1aa61d45c8a7a6f35f20cb12ef5b1481798d35fd4e17d
+# Input list sha256: 9fce794f21c94595a0568db897b777d108cd16c1f2e0f844e7b91b64c2fb299d
 
 absl-py==2.5.1 \
     --hash=sha256:721200f2f0e9960f2ca9dc3a2a706b201f5f75d812c158f059cbbe29eeafbdb8
@@ -35,8 +35,6 @@ charset-normalizer==3.5.2 \
     --hash=sha256:b6b751274acb69d77b3323d6b7dbaa3c7fdfc1eb829b7eb61d262f32e1af9685
 cloudpickle==3.1.2 \
     --hash=sha256:9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a
-cmake==4.4.4 \
-    --hash=sha256:f773a0544c66370408f451acd487c2c643b0dfebb48c5d64f3638bc1bb820238
 coloredlogs==15.0.1 \
     --hash=sha256:612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934
 cuda-bindings==13.4.3 \
@@ -54,8 +52,6 @@ Cython==3.3.0 \
     --hash=sha256:eda47eb7731c3b41180b58bb83de423f43aa58a677677e3390e8d332b003859e
 decorator==5.3.1 \
     --hash=sha256:f47fe6fdbd2edd623ecfe36875d37aba411624e2670dd395dddae1358689bb3c
-distro==1.9.0 \
-    --hash=sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2
 docstring_parser==0.18.0 \
     --hash=sha256:b3fcbed555c47d8479be0796ef7e19c2670d428d72e96da63f3a40122860374b
 filelock==4.1.0 \
@@ -118,8 +114,6 @@ multidict==6.9.1 \
     --hash=sha256:e8f1e362c9352b50ed120f001046fdbb80810c9d56580f4c3fc13bbe30823387
 networkx==3.4.2 \
     --hash=sha256:df5d4365b724cf81b8c6a7312509d0c22386097011ad1abe274afd5e9d3bbc5f
-ninja==1.13.2 \
-    --hash=sha256:65a24341b5ac09fcadcc37082660be40a94174e51a937fabf6e2cae26225fa2c
 numba==0.68.0 \
     --hash=sha256:3a5ca82e12b665ef30a19c124f0bd766471cf924c71f70638cb9ade72cc3896f \
     --hash=sha256:51fe913a70fe9a7a0b193757ff977a9e96c82ae936ae388aec8990814fffdf9d \
@@ -174,6 +168,8 @@ pillow==12.3.0 \
     --hash=sha256:23d27a3e0307ec2244cc51e7287b919aa68d097504ebe19df4e76a98a3eea5bd \
     --hash=sha256:78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91 \
     --hash=sha256:f0606c8bf2cdefea14a43530f7657cbbb7ecf1c4222512492ef4a4434a9501ec
+piper-tts==1.8.0 \
+    --hash=sha256:25b4d3f31ff70c8fa7151908e00aaa5650cbdf16bca8fcf21299f3941b89a7d3
 platformdirs==4.12.4 \
     --hash=sha256:78bfb9db2a8471ed7eebe3c3c932da413911042994e699b384fbb4493fa872d7
 pooch==1.9.0 \
@@ -198,8 +194,6 @@ PyYAML==6.0.3 \
     --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc
 requests==2.34.2 \
     --hash=sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0
-scikit-build==0.19.1 \
-    --hash=sha256:a4fa78a7222ca40d5e8bae6700514bbf7efea4346efd9fc1f8cfca837cd1de71
 scikit-learn==1.7.2 \
     --hash=sha256:7a58814265dfc52b3295b1900cfb5701589d30a8bb026c7540f1e9d3499d5ec8 \
     --hash=sha256:89877e19a80c7b11a2891a27c21c4894fb18e2c2e077815bcade10d34287b20d \
@@ -228,10 +222,6 @@ tensorboardX==2.6.5 \
     --hash=sha256:c10b891d00af306537cb8b58a039b2ba41571f0da06f433a41c4ca8d6abe1373
 threadpoolctl==3.7.0 \
     --hash=sha256:cd8b60b5641b45c67bbf73c64c843235fc2d8a480c87389f52f5dbee893b86be
-tomli==2.5.0 \
-    --hash=sha256:32a7b79ac57a2e83670ce329ccf675798bc5a2094783a63676866b70503f2e2b \
-    --hash=sha256:6cf74416bdc94ae458b14e37286c1073081850ac8459a00d0c5efef5d44294c6 \
-    --hash=sha256:d7e369fd63331746182360977b1892bfc215476a30d61612d732425311639f56
 torch==2.14.1 \
     --hash=sha256:1fee6b20869a90ccec05e35559a706338ac8aab40a9c4fb58f16667e93af36ae \
     --hash=sha256:23011fe29a99b591eabb3a31a25080c62e2c2f0690a3c798744e5489dae50451 \
@@ -252,8 +242,6 @@ urllib3==2.8.0 \
     --hash=sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3
 Werkzeug==3.1.9 \
     --hash=sha256:6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab
-wheel==0.48.0 \
-    --hash=sha256:3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab
 yarl==1.25.1 \
     --hash=sha256:681c758b0490f9e96b78e5fa8e8dc6e648e9185bb6eaebe73183c33ea0c445f3 \
     --hash=sha256:c6f117789d22dce188e5754e8bc65b7e6ebf8cb73963b9fa761f672a5883769d \

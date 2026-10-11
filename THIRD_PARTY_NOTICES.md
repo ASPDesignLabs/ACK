@@ -113,16 +113,16 @@ is shipped in the repository: the person's own computer installs or fetches it.
 | sherpa-onnx (Python package, to check a finished voice on the PC with the engine the phone uses) | Apache-2.0 (PyPI: "Apache licensed, as found in the LICENSE file"; section 2 read its repository) | PyPI metadata | |
 | The training stack (piper1-gpl, torch and the rest) | see section 5 and the lock's table below | PyPI metadata (training lock, 2026-10-10) | The guided setup pins exact versions; each pinned package is re-checked when the lock file is made. `studio.lock.txt` is not made yet. |
 
-**The training environment's lock** (`tools/voice_studio/data/locks/training.lock.txt`, 96 packages, made 2026-10-10). Each package's licence was read from the package
+**The training environment's lock** (`tools/voice_studio/data/locks/training.lock.txt`, 91 packages, made 2026-10-11). Each package's licence was read from the package
 site's own metadata for the exact pinned version (setuptools and wheel included); the licence *texts* were not read. Nothing is GPL-only or AGPL. The packages are installed by the person's own
 computer from the package site; none is part of this repository.
 
 | License (as the package states it) | Packages |
 |---|---|
-| MIT | attrs, audioread, charset-normalizer, coloredlogs, docstring_parser, filelock, humanfriendly, jsonargparse, onnxruntime, pathvalidate, platformdirs, pysilero_vad, PyYAML, scikit-build, setuptools, tensorboardX, tomli, triton, typeshed_client, urllib3, wheel |
+| MIT | attrs, audioread, charset-normalizer, coloredlogs, docstring_parser, filelock, humanfriendly, jsonargparse, onnxruntime, pathvalidate, platformdirs, pysilero_vad, PyYAML, setuptools, tensorboardX, triton, typeshed_client, urllib3 |
 | MIT-0 | cffi |
 | BSD-2-Clause / BSD-3-Clause / "BSD" | cloudpickle, decorator, fsspec, idna, Jinja2, joblib, Lazy-loader, Markdown, MarkupSafe, mpmath, networkx, numba, numpy, pooch, protobuf, pycparser, scikit-learn, scipy, soundfile, sympy, threadpoolctl, Werkzeug (numpy and scipy also bundle other permissive parts) |
-| Apache-2.0 | absl-py, aiosignal, async-timeout, cmake (also BSD), cuda-bindings, cuda-pathfinder, Cython, distro, flatbuffers, frozenlist, grpcio, lightning, Lightning-utilities, ml_dtypes, msgpack, multidict, ninja, onnx, propcache, pytorch-lightning, requests, tensorboard, tensorboard-data-server, torchmetrics, yarl |
+| Apache-2.0 | absl-py, aiosignal, async-timeout, cuda-bindings, cuda-pathfinder, Cython, flatbuffers, frozenlist, grpcio, lightning, Lightning-utilities, ml_dtypes, msgpack, multidict, onnx, propcache, pytorch-lightning, requests, tensorboard, tensorboard-data-server, torchmetrics, yarl |
 | Apache-2.0 AND MIT | aiohttp |
 | Apache-2.0 OR BSD-2-Clause | packaging |
 | BSD-2-Clause AND Apache-2.0 WITH LLVM-exception | llvmlite |
@@ -131,8 +131,14 @@ computer from the package site; none is part of this repository.
 | PSF-2.0 | aiohappyeyeballs, typing_extensions |
 | MPL-2.0 | certifi; tqdm (MPL-2.0 AND MIT) |
 | MIT-CMU | pillow |
+| **GPL-3.0-or-later** | piper-tts 1.8.0, the trainer's published wheel (PyPI metadata and its `setup.py`; the wheel carries the compiled espeak-ng, also GPL-3.0-or-later, and g2pW-derived code under Apache-2.0, as section 5 says of its source) |
 | **LGPL-2.1-or-later** | soxr (a dependency of librosa; the wheel carries the libsoxr library). Fine to link from GPL-3.0-or-later code; the person's computer installs it. |
 | **NVIDIA proprietary, or no licence stated** | The 15 `nvidia-*` CUDA libraries (cuBLAS, cuDNN, NCCL, cuFFT, cuRAND, cuSOLVER, cuSPARSE, cuSPARSELt, NVSHMEM, NVTX, nvJitLink, cuFile, CUDA runtime, NVRTC, CUPTI) that `torch` needs, and the `cuda-toolkit` meta-package. Ten say proprietary (`LicenseRef-NVIDIA-Proprietary` or "NVIDIA Proprietary Software"); `nvidia-nvtx` says "Apache 2.0" but carries the proprietary classifier; `nvidia-cuda-runtime`, `nvidia-cudnn-cu13`, `nvidia-nccl-cu13`, `nvidia-nvshmem-cu13` and `cuda-toolkit` state nothing. **NVIDIA's licence text was not read** (not reachable from where this was checked). |
+
+**One file of someone else's code is in this repository** (`tools/voice_studio/data/native/monotonic_align_core.pyx`, 1148 bytes, SHA-256 `8640b303683823a4a1259179547ef476999b1cbb2e46ff656b970763cfbc1157`). It is the
+alignment code the trainer imports as `monotonic_align.core`, which the published wheel neither compiles nor ships. It is byte for byte `src/piper/train/vits/monotonic_align/core.pyx` of piper1-gpl at commit
+`5b355b1` (checked by size and checksum on the developer's computer), so it is under that project's licence, GPL-3.0-or-later. The file carries no notice of its own; the algorithm comes from the VITS
+project, which I believe is MIT-licensed (**not checked**: no way to reach it from where this was written). The tool compiles it on the person's computer (Cython and the computer's C compiler) and never changes it.
 
 **Open item (a decision, not a quiet change):** the setup screen's agreement for the training environment does not yet say that it includes NVIDIA's CUDA libraries under NVIDIA's own licence
 (plan: "NVIDIA's licence on the training environment"). The trainer's own source, `piper1-gpl`, is GPL-3.0-or-later (section 5) and is installed from its pinned archive, not from this lock.

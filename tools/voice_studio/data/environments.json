@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "note": "The Python environments the guided setup builds, and nothing it does not list. Each one is built from a lock file (every package pinned with its checksums) and, for the trainer, from one pinned archive of its source in data/sources.json. An environment with no lock checksum is listed and sized for the disk estimate but cannot be built yet: the lock files are made, and the fixes below confirmed, on a real machine (plan task VS-0.2). Sizes are guesses until then. The 'prelude' lines are the documented workarounds from docs/VOICE_TRAINING_GUIDE.md, applied by a launcher so no source file is edited.",
+  "note": "The Python environments the guided setup builds, and nothing it does not list. Each one is built from a lock file (every package pinned with its checksums). The trainer is the published piper-tts wheel inside the training lock; the one small piece of it that no published package carries (the alignment code) is built from a file shipped in data/native/ and pinned here by its checksum. An environment with no lock checksum is listed and sized for the disk estimate but cannot be built yet. Sizes are measured where the plan says so (plan task VS-0.2). The 'prelude' lines are the documented workarounds from docs/VOICE_TRAINING_GUIDE.md, applied by a launcher so no source file is edited.",
   "environments": [
     {
       "id": "training",
@@ -8,10 +8,10 @@
       "python_min": [3, 10],
       "python_max": [3, 12],
       "approx_size_bytes": 10737418240,
-      "lock": {"filename": "training.lock.txt", "sha256": "7343b1c91a70867d50202ef918201267165fa8b174c81dc7a5b6e0a8a3bc8d92"},
-      "source": {"item_id": "piper1-gpl-source", "install": true, "dist": "piper-tts",
-                 "native_build": "build_monotonic_align.sh",
-                 "native_artifact": "src/piper/train/vits/monotonic_align/monotonic_align/core*.so"},
+      "lock": {"filename": "training.lock.txt", "sha256": "1fd6110cceab7ab3e9d0ccd4ff8c2457c5c0f2453db19dd5ad5185bf0168ae38"},
+      "source": null,
+      "native": {"file": "monotonic_align_core.pyx", "sha256": "8640b303683823a4a1259179547ef476999b1cbb2e46ff656b970763cfbc1157",
+                 "module": "core", "into": "piper/train/vits/monotonic_align/monotonic_align"},
       "prelude": [
         "import pathlib, torch",
         "torch.serialization.add_safe_globals([pathlib.PosixPath]) if hasattr(torch.serialization, 'add_safe_globals') else None",
@@ -21,6 +21,7 @@
       "patches": [],
       "probes": [
         {"id": "trainer-imports", "code": "import piper.train", "needs_gpu": false},
+        {"id": "trainer-alignment", "code": "from piper.train.vits.monotonic_align import maximum_path", "needs_gpu": false},
         {"id": "trainer-graphics-card", "code": "import torch; assert torch.cuda.is_available()", "needs_gpu": true}
       ]
     },

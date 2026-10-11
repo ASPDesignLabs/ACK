@@ -110,6 +110,20 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   onnxruntime 1.23.2: it needs its own lock, made and tried on a machine that has that Python. The entry therefore carries `python_max` (3.12), so a newer Python is refused in plain words instead of
   failing inside pip with a hash message. **Not yet run on 24.04**: the cp312 wheels exist and resolve, but nothing was trained there.
 
+- **F10 (2026-10-11), the source build reaches out to GitHub, so the trainer is installed from its published wheel instead.** The trainer's CMake files (`CMakeLists.txt`, `libpiper/CMakeLists.txt`)
+  clone espeak-ng from GitHub with `git` while building (`ExternalProject_Add … GIT_REPOSITORY`). That is a download outside the one agreed place, with no checksum of ours, and it cannot work with the
+  builder's no-internet source install. GitHub was also slow from the developer's computer: the 25.4 MB archive of the pinned commit took 5 minutes 14 seconds (about 70 KB/s), where the package site
+  delivered 3.2 GB in about six minutes. The package site publishes **`piper-tts 1.8.0` as a ready-made Linux wheel** (`cp39-abi3`, `manylinux_2_28`, 34 MB, so one file serves every Python the lock
+  covers): it contains the compiled espeak-ng part and its data and the whole `piper.train` trainer, and it takes a normal hash-checked line in the lock. **Is it the code that was tried?** The
+  developer's commit (`5b355b1`, 17 September) is 13 days after the release tag `v1.8.0` (4 September). Compared file by file (33 of 40 Python files byte-identical), the differences are Lithuanian
+  voice support (a new phonemizer and its word list, a branch in `dataset.py`, `phonemize_espeak.py`, `infer_torch.py`, `voice.py`) and an alias so a renamed voice downloads under its current name
+  (`download_voices.py`, `config.py`); nothing that English training touches. What the wheel lacks is the compiled alignment code and its source (the trainer imports `.monotonic_align.core` and the
+  wheel ships neither). That is one 1148-byte Cython file, so **it is shipped with the tool** (`data/native/monotonic_align_core.pyx`, byte for byte the developer's file at the pinned commit, pinned by
+  checksum) and **built by the tool** after the install, with the environment's own Cython and the computer's C compiler (both already required by the setup check), into the folder the wheel looks in.
+  Checked here: it compiles on Python 3.12 with the pinned Cython and gives the same answers as a plain-Python version on random cases, in a batch, and on a hand-worked one. The lock lost
+  `cmake`, `ninja`, `scikit-build` and its `distro` and `tomli` (only the from-source build needed them) and gained `piper-tts` and `setuptools`: 91 packages, and with exactly these versions pip's own
+  resolver needs nothing more on 3.11 or 3.12. **Not yet run:** a training round with the wheel-based environment (that is the next device test), and anything on 24.04.
+
 ## 3. Rules that apply to every task below
 
 - Backups are encouraged and every edit to a person's files is confirmed first (the developer's standing preference). Nothing is moved or
@@ -167,29 +181,34 @@ Gate: the findings are written into section 6, and any decision they contradict 
   opening the Windows browser from inside WSL; playing a `.wav`. **Screen readers:** Orca on native Ubuntu (every control reachable and
   announced); what Narrator or NVDA can and cannot see in a WSLg window. Done when: a findings note says go, go-with-limits or no-go for
   WSLg, and what to tell Windows users who rely on a screen reader.
-- **VS-0.2 Pinned training environment on the GPU (L, dev).** Build a venv from a proposed lock (exact torch, setuptools, onnx and friends) and
-  a fixed `piper1-gpl` commit on both 22.04 and 24.04. Train a few minutes from each starting voice (Mike first, then Amy; D25) on a small dataset, export,
+- **VS-0.2 Pinned training environment on the GPU (L, dev).** Build a venv from a proposed lock (exact torch, setuptools, onnx and friends, and the published
+  `piper-tts` wheel; F10) on both 22.04 and 24.04. Train a few minutes from each starting voice (Mike first, then Amy; D25) on a small dataset, export,
   patch, synthesize with sherpa-onnx on the PC, import the zip into ACK on the phone. Record exact versions, wheel and disk sizes, the disk cost per hour of recording, per checkpoint and per round (for P11), GPU
   memory used at each batch size, the minimum driver, build time, and which upstream problems needed a wrapper versus a source patch. **Run the trainer with the network off** (for example in a loopback-only namespace) after setup: the trainer fetches its `val_mos` quality scorer from GitHub on the
   first run (`DATA_SOVEREIGNTY.md` section 2), which would break "the server never goes online". If it needs that fetch, the scorer goes into the registry and onto the
   setup consent list, fetched at setup and not at the first training. Also time the training cache and a checkpoint write on the Linux disk, on a
   Windows drive seen from WSL, and on a USB drive, to set D24's slow-drive warning.
   Done when: a lock file, a verdict on each starting voice (does its checkpoint load and train with the pinned trainer; both are expected to, and a replacement is named for any that does not), a batch-size-by-memory table and the wrapper list exist.
-  **Progress (2026-10-10), first half: the lock.** `data/locks/training.lock.txt` (96 packages, 159 checksums, Python 3.10 to 3.12, Linux x86_64) is written by `tools/voice_studio_maint/
-  make_lock.py` from the developer's `pip freeze` plus setuptools and wheel, and its checksum is in `data/environments.json`; the same file is installed with `--require-hashes --only-binary=:all:
-  --no-deps` in a dry run on 3.11 and 3.12 here (a 3.13 run is refused, as it should be). The generator is a maintainers' tool outside the app (it reads the package site's public listing, so it needs a
-  network; the app never runs it), writes nothing until every package has a wheel for every Python asked for, keeps an old lock beside the new one, and is tested (71 tests, with mutation checks).
-  **Still to do for the first half:** (a) the developer confirms the installed `wheel` version (the lock names the newest, 0.48.0, and its header says so; the file is made again if it differs); (b)
-  the pinned archive of the trainer's source (address, file name, size, SHA-256) for `data/sources.json`, which must be measured on the developer's machine because the sandbox cannot reach GitHub, and
-  whether CMake fetches anything at build time (the builder installs the source with `--no-index`); (c) a **rebuild with the tool's own builder** on that machine, which is the real proof of the lock,
-  of `native_build`/`native_artifact` and of the prelude; (d) the same on Ubuntu 24.04 (a second WSL distribution is enough); (e) `studio.lock.txt` from the Freeform Studio environment; (f) the
-  decision on NVIDIA's licence (below). **Second half (not started):** training rounds, memory by batch size, `--trainer.max_time`, export, the workarounds' necessity, the network-off run, the
-  slow-drive timings.
+  **Progress (2026-10-11), first half: the lock and the way the trainer is installed (see F9 and F10).** `data/locks/training.lock.txt` (91 packages, 152 checksums, Python 3.10 to 3.12, Linux x86_64)
+  is written by `tools/voice_studio_maint/make_lock.py` from `tools/voice_studio_maint/locks/training.versions.txt` (the developer's `pip freeze`, minus the from-source build tools, plus the
+  published `piper-tts` and `setuptools`); its checksum is in `data/environments.json`; a dry run in pip's hash-checking mode passes on 3.11 and 3.12 here (3.13 is refused, as it should be). The
+  generator is a maintainers' tool outside the app (it reads the package site's public listing, so it needs a network; the app never runs it), writes nothing until every package has a wheel for every
+  Python asked for, keeps an old lock beside the new one, and is tested (71 tests, with mutation checks). **The builder grew a `native` part** (`core/envspec.py`, `core/envbuild.py`): a small file
+  shipped in `data/native/`, pinned by checksum, compiled with the environment's Cython after the packages are installed and copied to the one place the installed package looks; it is the same
+  `native_build` step as before, refused with `native_changed` if the shipped file is not the pinned one, and run again when the Python, the lock or the file changes. The training entry no longer
+  names a source archive, so `piper1-gpl-source` is gone from `data/sources.json`, and the setup agreement for the training environment is now a real, offerable line (`pip:training`).
+  **Still to do for the first half:** (a) a **rebuild with the tool's own builder** on the developer's machine, which is the real proof of the lock and of the native step and the prelude; (b) the
+  same on Ubuntu 24.04 (a second WSL distribution is enough); (c) `studio.lock.txt` from the Freeform Studio environment; (d) the decision on NVIDIA's licence (below). **Second half (not started):**
+  training rounds with that environment, memory by batch size, `--trainer.max_time`, export, whether the workarounds are needed, the network-off run, the slow-drive timings.
   **What VS-1.9 now waits for from this task** (the builder and its rules exist; these are the facts to put into the data files): (1) `data/locks/training.lock.txt` and `studio.lock.txt`, made with a resolver that writes
   hashes for every package including the build tools the trainer's `setup.py` needs (`setuptools<82`, `wheel`, `scikit-build`, `cmake`, `ninja`, `Cython`), and proved to install with `--require-hashes --only-binary=:all: --no-deps`
   from the ordinary package index on both Ubuntu releases (if a dependency has no wheel, say so; the answer is a decision, not a quiet change to the install flags); (2) the checksum of each lock written into `data/environments.json`;
   (3) the chosen `piper1-gpl` commit's archive address, file name, size and SHA-256 written into `data/sources.json` (`piper1-gpl-source`); (4) whether `build_monotonic_align.sh` builds from inside the environment as `native_build` expects and what file proves it
   (`native_artifact` is a guess from the guide); (5) which of the guide's workarounds in the launcher's `prelude` are really needed, and whether any needs a source `patches` entry instead; (6) the real installed sizes, to replace the 8 GiB and 1 GiB guesses.
+  **Update 2026-10-11:** (1) is done for the training environment (the lock has `piper-tts` itself and no compile tools besides Cython and setuptools); (3) no longer applies, there is no source
+  archive (F10); (4) became the shipped native file (`native_artifact` is now derived: `core.*so` in the package's `monotonic_align/monotonic_align` folder); (2), (5) and (6) wait for the rebuild with
+  the tool's own builder.
+
 - **VS-0.3 Phone HTTPS (M, dev + phone, after nothing).** Generate a CA restricted by name constraints to one LAN address and a leaf for
   that address; install the CA on the developer's Android phone(s); confirm the browser can use the microphone at `https://<ip>:port`;
   change the computer's address and re-issue the leaf without touching the phone. Also try WSL mirrored mode and the firewall allowance.
@@ -280,7 +299,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
   Studio's recorder and review tools); anything not listed is not built. **A lock is a file of `name==version` lines, each with at least one `--hash=sha256:`**, and nothing else (no range,
   address, option, editable install or repeat; a test per case), and its own SHA-256 is written in the list, so a changed lock is refused even by one byte. An environment whose lock has no checksum
   yet, or whose source archive is unpinned in the registry, is listed and sized for the disk estimate but **cannot be built** (`not_pinned`): both shipped environments are in that state until VS-0.2
-  makes the locks (**update:** the training lock exists now, see VS-0.2; its source archive is still unpinned). An entry may carry `python_max`: a Python newer than the lock's checksums cover is refused first as `python_new` ("newer than this part has been tried with"), never left to fail inside pip. The trainer's source is the pinned archive from `data/sources.json` (new kind `source`, entry `piper1-gpl-source`, unpinned), downloaded through the one agreement-checked
+  makes the locks (**update:** the training lock exists now, see VS-0.2; it has no source archive any more, see F10). An entry may carry `python_max`: a Python newer than the lock's checksums cover is refused first as `python_new` ("newer than this part has been tried with"), never left to fail inside pip. The trainer's source is the pinned archive from `data/sources.json` (new kind `source`, entry `piper1-gpl-source`, unpinned), downloaded through the one agreement-checked
   door, unpacked safely (no `..`, absolute, backslash, device, hard link or outward link; a link is judged by where it really lands; size and count caps; one top folder dropped; built as `.part` and renamed), then
   installed editable with `--no-deps --no-build-isolation --no-index`. **Each build lives in its own folder, `environments/<id>-<10 hex of a fingerprint>/`**, where the fingerprint covers the Python
   minor version, the lock, the source archive, the install and native-build settings and the source patches; a new lock or Python makes a new folder beside the old (nothing deleted). A folder with no
@@ -491,6 +510,7 @@ Gate: the findings are written into section 6, and any decision they contradict 
 | D29 | A model made of several files | **Each file is its own registry entry**, pinned by address, size and checksum like any other, and the files of one model share a `folder`; they are fetched through the same agreement-checked door into `downloads/models/<folder>/`, and Freeform Studio is given that folder. So the speech model is not fetched by a library's own download, and its files are checked the way every other download is. The real file list comes from VS-0.2. |
 | D30 | Starting voices in the setup run | The setup run **lists** both voices (so the disk estimate and the agreement list are complete) but **fetches none**. Each is fetched when it is chosen, after the person's own acknowledgment (D27, VS-4.1). |
 | D31 | The package is copied in | The chosen ACK package is copied into the project's `incoming` folder, checked byte for byte, and everything after is read from the copy. The original is never touched, and a copy this step made is removed only if the package then fails a check. |
+| D32 | The trainer's install | **The published `piper-tts` wheel, hash-checked in the training lock, plus one small shipped source file built by the tool** (F10). Not a source archive: the trainer's own build downloads espeak-ng from GitHub (outside the one agreed place, unchecked, slow from the developer's computer). Decided on evidence (files compared, the compile and its answers checked); reopen if the wheel's training differs from the commit's in the first device run. |
 
 ### Proposed defaults (not asked: veto any of these)
 
@@ -599,9 +619,10 @@ my proposals (veto any). Each is a pure function in VS-1.11, tested in the sandb
   text** (not reachable from here). Proposal: the agreement line for the training environment says in one sentence that it includes NVIDIA's CUDA libraries under NVIDIA's own licence, and
   `THIRD_PARTY_NOTICES.md` section 7 records it (done). Nothing on the screen has changed yet.
 - **A lock for Python 3.13 and 3.14** (Ubuntu 26.04): wanted for "a wider variety of Ubuntu configurations", needs a machine that has that Python (see F9). Until then those Pythons are refused with `python_new`.
-- **GitHub's archive bytes are not promised to stay the same.** The source pin will hold a SHA-256 of a GitHub-generated `.tar.gz`; GitHub has said such archives can change if its compression changes, which
-  would make the checksum fail (safely: the builder refuses) until the pin is remade. A mirror on the project's own release page would avoid it but would host the trainer's source (D27 says host no data;
-  source code is not data, but it is your call).
+- **One small file of someone else's code now ships in this repository** (new, 2026-10-11; veto it if you disagree): `tools/voice_studio/data/native/monotonic_align_core.pyx`, 1148 bytes, the alignment
+  code the trainer needs and the published wheel lacks. It is piper1-gpl's file (GPL-3.0-or-later, the same licence as this project), which in turn comes from the VITS project (believed MIT: **not
+  checked**, no way to reach it from here); `THIRD_PARTY_NOTICES.md` records it. The alternative is to fetch it at setup from the trainer's repository with an address, size and checksum in
+  `data/sources.json` (one more line on the agreement, and the developer's GitHub connection is slow). I chose shipping it because the setup then needs the package site and nothing else.
 
 ## 7. What I cannot do from here
 

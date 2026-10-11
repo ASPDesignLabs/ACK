@@ -20,10 +20,13 @@ from .registry import SLUG, Registry
 SCHEMA = 1
 DEFAULT_PATH = Path(__file__).resolve().parent.parent / "data" / "environments.json"
 LOCKS_DIR = Path(__file__).resolve().parent.parent / "data" / "locks"
+NATIVE_DIR = Path(__file__).resolve().parent.parent / "data" / "native"
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 SAFE_LOCK_NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{0,79}\.txt$")
 SAFE_RELATIVE = re.compile(r"^[A-Za-z0-9._*/+-]{1,200}$")
 DIST_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
+NATIVE_FILE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,79}\.pyx$")
+NATIVE_MODULE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,39}$")
 MAX_PRELUDE_LINES = 20
 MAX_LINE = 300
 
@@ -58,6 +61,25 @@ class SourceUse:
 
 
 @dataclass(frozen=True)
+class NativePart:
+    """One small piece of compiled code that no published package carries, built from a source file shipped in data/native/ (and pinned here by
+    its checksum) and put into an installed package. The trainer's alignment code is the case: the published wheel has no compiled copy of it and
+    no source for it. The person's computer needs a C compiler and the Python headers, which the setup check already asks for."""
+    file: str                       # the source file's name in data/native/ (a .pyx)
+    sha256: str                     # of exactly that file; a changed file is refused, never built
+    module: str                     # the compiled module's name (the .pyx is built as <module>.pyx, giving <module>.*.so)
+    into: str                       # the folder, relative to the environment's packages, that the compiled file is put into
+
+    @property
+    def path(self) -> Path:
+        return NATIVE_DIR / self.file
+
+    @property
+    def artifact(self) -> str:
+        return self.module + ".*so"
+
+
+@dataclass(frozen=True)
 class EnvSpec:
     id: str
     why_key: str
@@ -70,6 +92,7 @@ class EnvSpec:
     patches: Tuple[SourcePatch, ...]
     probes: Tuple[Probe, ...]
     python_max: Optional[Tuple[int, int]] = None    # the newest Python the lock has checksums for (and has been tried on); newer is refused plainly, not left to pip
+    native: Optional[NativePart] = None             # a small compiled piece built after the packages are installed (see NativePart)
 
     @property
     def lock_path(self) -> Path:
@@ -201,6 +224,25 @@ def _parse_source(raw: object, where: str) -> Optional[SourceUse]:
                      _relative(native, where) if native is not None else None, _relative(artifact, where) if artifact is not None else None)
 
 
+def _parse_native(raw: object, where: str) -> Optional[NativePart]:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise EnvSpecError("%s: native is not an object" % where)
+    name, digest = raw.get("file"), raw.get("sha256")
+    if not isinstance(name, str) or not NATIVE_FILE.match(name):
+        raise EnvSpecError("%s: native file must be a plain .pyx file name" % where)
+    if not isinstance(digest, str) or not SHA256.match(digest):
+        raise EnvSpecError("%s: native sha256 is missing or not a checksum" % where)
+    module = raw.get("module")
+    if not isinstance(module, str) or not NATIVE_MODULE.match(module):
+        raise EnvSpecError("%s: native module must be a plain module name" % where)
+    into = _relative(raw.get("into"), where)
+    if "*" in into or into.startswith(".") or into.endswith("/"):
+        raise EnvSpecError("%s: native 'into' must be a plain folder inside the packages" % where)
+    return NativePart(name, digest, module, into)
+
+
 def parse_environments(text: str) -> Tuple[EnvSpec, ...]:
     try:
         data = json.loads(text)
@@ -273,8 +315,11 @@ def parse_environments(text: str) -> Tuple[EnvSpec, ...]:
         source = _parse_source(raw.get("source"), where)
         if patches and source is None:
             raise EnvSpecError("%s: patches need a source" % where)
+        native = _parse_native(raw.get("native"), where)
+        if native is not None and source is not None and source.native_build:
+            raise EnvSpecError("%s: a native part and a source's native build are two ways of the same step; list one" % where)
         specs.append(EnvSpec(env_id, why, (python_min[0], python_min[1]), size, filename, digest, source, tuple(prelude), tuple(patches), tuple(probes),
-                         (python_max[0], python_max[1]) if python_max is not None else None))
+                         (python_max[0], python_max[1]) if python_max is not None else None, native))
     return tuple(specs)
 
 

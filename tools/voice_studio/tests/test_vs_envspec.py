@@ -106,6 +106,44 @@ def test_a_good_entry_is_read_completely():
     assert spec.probes == (es.Probe("imports", "import os", False),)
 
 
+GOOD_NATIVE = {"file": "core_part.pyx", "sha256": H1, "module": "core", "into": "pkg/sub"}
+
+
+def test_a_native_part_is_read_completely_and_is_optional():
+    assert parse_one().native is None
+    native = parse_one(native=GOOD_NATIVE, source=None, patches=[]).native
+    assert native == es.NativePart("core_part.pyx", H1, "core", "pkg/sub")
+    assert native.artifact == "core.*so" and native.path == es.NATIVE_DIR / "core_part.pyx"
+    assert parse_one(native={**GOOD_NATIVE, "file": "x" * 80 + ".pyx"}, source=None, patches=[]).native.file == "x" * 80 + ".pyx", "the longest name allowed"
+    assert parse_one(native={**GOOD_NATIVE, "module": "m" * 40}, source=None, patches=[]).native.module == "m" * 40
+
+
+def test_a_native_part_may_sit_beside_a_source_but_not_beside_the_sources_own_native_build():
+    assert parse_one(native=GOOD_NATIVE, source={"item_id": "demo-source", "install": True, "dist": "demo-dist"}).native is not None
+    with pytest.raises(es.EnvSpecError, match="two ways of the same step"):
+        parse_one(native=GOOD_NATIVE)                                  # GOOD's source has a native build of its own
+
+
+@pytest.mark.parametrize("change, fragment", [
+    ({"file": "../x.pyx"}, "plain .pyx file name"), ({"file": "x.py"}, "plain .pyx file name"), ({"file": "a/b.pyx"}, "plain .pyx file name"),
+    ({"file": ".pyx"}, "plain .pyx file name"), ({"file": "x.pyx.sh"}, "plain .pyx file name"), ({"file": "x.pyxz"}, "plain .pyx file name"), ({"file": 5}, "plain .pyx file name"), ({"file": ""}, "plain .pyx file name"), ({"file": "x" * 81 + ".pyx"}, "plain .pyx file name"),
+    ({"sha256": None}, "not a checksum"), ({"sha256": "abc"}, "not a checksum"), ({"sha256": "A" * 64}, "not a checksum"), ({"sha256": 7}, "not a checksum"),
+    ({"module": "a-b"}, "plain module name"), ({"module": "1x"}, "plain module name"), ({"module": ""}, "plain module name"), ({"module": "a.b"}, "plain module name"),
+    ({"module": "m" * 41}, "plain module name"), ({"module": None}, "plain module name"),
+    ({"into": "../x"}, "safe relative path"), ({"into": "/abs"}, "safe relative path"), ({"into": "a/../b"}, "safe relative path"), ({"into": None}, "safe relative path"),
+    ({"into": "a/*"}, "plain folder"), ({"into": ".hidden/x"}, "plain folder"), ({"into": "a/b/"}, "plain folder"),
+])
+def test_a_native_part_with_anything_unsafe_is_refused(change, fragment):
+    with pytest.raises(es.EnvSpecError, match=fragment):
+        parse_one(native={**GOOD_NATIVE, **change}, source=None, patches=[])
+
+
+@pytest.mark.parametrize("value", ["x", 5, ["a"], True])
+def test_a_native_part_that_is_not_an_object_is_refused(value):
+    with pytest.raises(es.EnvSpecError, match="native is not an object"):
+        parse_one(native=value, source=None, patches=[])
+
+
 def test_the_newest_python_is_optional_and_may_equal_the_oldest():
     assert parse_one().python_max is None
     assert parse_one(python_max=[3, 12]).python_max == (3, 12)
@@ -234,19 +272,21 @@ def test_every_shipped_lock_file_is_listed_and_the_names_are_unique():
 TRAINING_LOCK = next(s for s in SHIPPED if s.id == "training")
 
 
-def test_the_shipped_training_lock_is_pinned_and_covers_the_build_tools_and_the_trainer_stack():
-    """Plan VS-0.2: the builder installs with --no-deps, so a package missing here is missing in the environment. The build tools the
-    trainer's setup.py needs (and the setuptools ceiling the guide gives) must be in it."""
+def test_the_shipped_training_lock_is_pinned_and_covers_the_trainer_stack_as_a_published_wheel():
+    """Plan VS-0.2: the builder installs with --no-deps, so a package missing here is missing in the environment. The trainer is the published
+    piper-tts wheel (it carries the compiled espeak-ng part, so nothing is built from source and nothing is cloned); the compile tools that
+    only the from-source route needed are gone, and Cython and setuptools (held below 82, as the guide says) are there for the one compile step."""
     assert TRAINING_LOCK.lock_sha256 is not None
     pins, problems = es.parse_lock(TRAINING_LOCK.lock_path.read_text(encoding="utf-8"))
     assert problems == []
     by_name = {p.name: p for p in pins}
-    needed = ("setuptools", "wheel", "scikit-build", "cmake", "ninja", "cython", "torch", "lightning", "pytorch-lightning", "tensorboard", "tensorboardx",
+    needed = ("piper-tts", "setuptools", "cython", "torch", "lightning", "pytorch-lightning", "tensorboard", "tensorboardx",
               "jsonargparse", "docstring-parser", "typeshed-client", "onnx", "onnxruntime", "pysilero-vad", "librosa", "numpy", "pathvalidate", "numba", "soxr",
               "nvidia-cudnn-cu13", "triton")
     assert [n for n in needed if n not in by_name] == []
+    assert by_name["piper-tts"].version == "1.8.0" and len(by_name["piper-tts"].hashes) == 1, "one wheel: the cp39-abi3 build serves every Python the lock covers"
     assert int(by_name["setuptools"].version.split(".")[0]) < 82
-    assert "piper-tts" not in by_name, "the trainer itself is installed from the pinned source, not from the package site"
+    assert [n for n in ("cmake", "ninja", "scikit-build", "wheel", "distro") if n in by_name] == [], "build tools only the from-source route needed"
     assert all(p.marker == "" and p.hashes for p in pins)
 
 
@@ -258,9 +298,26 @@ def test_the_shipped_training_lock_holds_wheels_for_every_python_the_entry_allow
     assert TRAINING_LOCK.python_min == (3, 10) and TRAINING_LOCK.python_max == (3, 12)
 
 
+def test_the_shipped_native_part_is_the_alignment_source_the_published_trainer_expects():
+    """The published wheel imports `.monotonic_align.core` and ships neither a compiled copy nor the source. The shipped file must be byte for byte
+    the one that was checked (the developer's clone of the pinned commit: 1148 bytes), and it must land where that import looks."""
+    native = TRAINING_LOCK.native
+    data = native.path.read_bytes()
+    assert es.lock_digest(data) == native.sha256 == "8640b303683823a4a1259179547ef476999b1cbb2e46ff656b970763cfbc1157" and len(data) == 1148
+    assert b"cpdef void maximum_path_c(" in data and b"def " not in data.replace(b"cpdef", b"").replace(b"cdef", b""), "the one function the trainer imports"
+    assert native.module == "core" and native.artifact == "core.*so"
+    assert native.into == "piper/train/vits/monotonic_align/monotonic_align", "the folder the wheel's alignment package imports its compiled core from"
+
+
+def test_every_file_in_the_native_folder_is_listed_by_an_environment_and_nothing_else_is_there():
+    listed = {s.native.file for s in SHIPPED if s.native is not None}
+    on_disk = {p.name for p in es.NATIVE_DIR.iterdir()}
+    assert on_disk == listed, "a file nothing builds, or a listed file that is missing: %s" % (on_disk ^ listed)
+
+
 def test_the_shipped_trainer_workarounds_are_the_guides_and_are_one_line_each():
     training = next(s for s in SHIPPED if s.id == "training")
     joined = "\n".join(training.prelude)
     assert "PosixPath" in joined and "dynamo=False" in joined
-    assert training.source.native_build == "build_monotonic_align.sh" and training.source.install
+    assert training.source is None and training.native is not None, "no source archive: the trainer is the published wheel"
     assert training.python_min == (3, 10)
