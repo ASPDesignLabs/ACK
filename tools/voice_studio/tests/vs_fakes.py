@@ -25,6 +25,7 @@ MEM_8G = "MemTotal:        8040000 kB\n"
 MEM_4G = "MemTotal:        4021000 kB\n"
 
 SMI_4060 = "NVIDIA GeForce RTX 4060, 8188, 560.35.03\n"
+SMI_4060_MEMORY = "NVIDIA GeForce RTX 4060, 1203, 8188\n"             # the query for memory.used, memory.total (name first)
 SMI_3090 = "NVIDIA GeForce RTX 3090, 24576, 535.183.01\n"
 SMI_6G = "NVIDIA GeForce GTX 1660, 6144, 535.183.01\n"
 SMI_TWO = "NVIDIA GeForce GT 1030, 2048, 535.183.01\nNVIDIA GeForce RTX 4060, 8188, 535.183.01\n"
@@ -39,7 +40,7 @@ class FakeSystem:
                  environ: Optional[Dict[str, str]] = None, tools: Optional[Dict[str, str]] = None, present: Iterable[str] = (),
                  disks: Optional[Dict[str, Tuple[int, int]]] = None, python: Tuple[int, int, int] = (3, 12, 3), euid: int = 1000,
                  home: str = "/home/user", python_exe: str = "/usr/bin/python3", installed: Optional[Iterable[str]] = None,
-                 failing_probes: Sequence[str] = (), smi: Optional[CommandResult] = CommandResult(0, SMI_4060),
+                 failing_probes: Sequence[str] = (), smi: Optional[CommandResult] = CommandResult(0, SMI_4060), smi_memory: Optional[CommandResult] = CommandResult(0, SMI_4060_MEMORY),
                  dirs: Iterable[str] = (), unwritable: Iterable[str] = (), devices: Optional[Dict[str, int]] = None,
                  symlinks: Optional[Dict[str, str]] = None, lsblk: Optional[CommandResult] = None, listings: Optional[Dict[str, list]] = None,
                  hostname: str = "testhost"):
@@ -53,6 +54,7 @@ class FakeSystem:
         self.installed = set(ALL_PACKAGES if installed is None else installed)
         self.failing_probes = tuple(failing_probes)
         self.smi = smi
+        self.smi_memory = smi_memory
         self.dirs, self.unwritable = set(dirs), set(unwritable)
         self.devices, self.symlinks, self.lsblk, self.listings = dict(devices or {}), dict(symlinks or {}), lsblk, dict(listings or {})
         self.ran = []
@@ -68,7 +70,7 @@ class FakeSystem:
             lines = ["%s %s" % (p, "installed" if p in self.installed else "not-installed") for p in asked]
             return CommandResult(0, "\n".join(lines) + "\n")
         if exe == "nvidia-smi":
-            return self.smi
+            return self.smi_memory if any("memory.used" in a for a in argv) else self.smi
         if exe == "lsblk":
             return self.lsblk
         if argv[0] == self._python_exe and len(argv) >= 3 and argv[1] == "-c":

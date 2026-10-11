@@ -119,6 +119,11 @@ def detect_platform(proc_version: Optional[str], environ: Mapping[str, str]) -> 
     return Platform.NATIVE
 
 
+def find_smi(system: System) -> Optional[str]:
+    """Where nvidia-smi is, on this computer or (on WSL) in the folder the Windows driver puts it; None if it is nowhere."""
+    return system.which("nvidia-smi") or (WSL_NVIDIA_SMI if system.exists(WSL_NVIDIA_SMI) else None)
+
+
 def parse_nvidia_smi(returncode: int, stdout: str, stderr: str = "") -> GpuReport:
     """Output of: nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader,nounits"""
     if returncode != 0:
@@ -298,7 +303,7 @@ def run_preflight(system: System, measure: Sequence[str] = ()) -> PreflightRepor
             add("sudo", Status.BLOCK, "preflight.sudo.missing")
 
     # the GPU (a state, not an error: D4)
-    smi = system.which("nvidia-smi") or (WSL_NVIDIA_SMI if system.exists(WSL_NVIDIA_SMI) else None)
+    smi = find_smi(system)
     if smi is None:
         gpu = GpuReport(GpuState.NONE)
     else:
