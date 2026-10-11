@@ -1236,3 +1236,9 @@ def test_the_saved_files_are_listed_in_the_same_order_whatever_order_the_disk_gi
     monkeypatch.setattr(os, "scandir", Backwards)
     listed = [(f.version, f.name) for f in rd.scan_checkpoint_files(world.paths)]
     assert listed == sorted(listed) and len(listed) == 12 and rd.version_dirs(world.paths) == (0, 1, 2)
+
+
+def test_a_trainer_folder_with_no_saved_files_does_not_hide_the_ones_after_it(world):
+    os.makedirs(world.paths.run + "/lightning_logs/version_0")                                    # a round that failed before it saved anything
+    world.trainer_makes(1)
+    assert {f.version for f in rd.scan_checkpoint_files(world.paths)} == {1}
