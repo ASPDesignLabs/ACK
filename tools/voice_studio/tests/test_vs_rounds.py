@@ -1242,3 +1242,12 @@ def test_a_trainer_folder_with_no_saved_files_does_not_hide_the_ones_after_it(wo
     os.makedirs(world.paths.run + "/lightning_logs/version_0")                                    # a round that failed before it saved anything
     world.trainer_makes(1)
     assert {f.version for f in rd.scan_checkpoint_files(world.paths)} == {1}
+
+
+def test_a_folder_that_was_already_there_when_the_running_round_began_is_not_that_rounds_busy_file(world):
+    world.trainer_makes(7)
+    plan = world.begin()
+    rd.attach_job(world.paths, 1, world.job_for(plan, "running").id)
+    world.trainer_makes(8)
+    kept = rd.retention(world.paths, rd.load(world.paths))
+    assert {f.version for n, f in kept.busy} == {8} and {f.version for f in kept.unclaimed} == {7}
