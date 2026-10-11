@@ -498,6 +498,13 @@ again by accident. It uses the project from section I1 (`voice-check`, with Mike
 something shows what it will do and asks first. Nothing here deletes or moves a file. Run one command at a time. Keep the rounds short, two or three minutes each: they only have to prove the plumbing, and each
 round keeps about 4.8 GB of saved files, so have about 25 GB free for the whole section.
 
+- [ ] **First bring your copy of the tool up to date.** Section I2 was added after the earlier sections, and a copy made before that has no `rounds` command: Python then says there is no module named `voice_studio.rounds`.
+  This only moves your copy forward, and it refuses (changing nothing) if you have edited files in it:
+  ```bash
+  git -C ~/ack-tools pull --ff-only
+  ls ~/ack-tools/tools/voice_studio/rounds.py
+  ```
+  → Git lists the files it brought, or says it is already up to date; the `ls` prints the file's name. If `pull` refuses, copy what it says and stop there.
 - [ ] Put a copy of the training set where the project keeps its own (the original stays where it is), and look. Looking changes nothing:
   ```bash
   mkdir -p ~/ack-voice-studio/projects/voice-check/scratch/datasets
