@@ -205,7 +205,7 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   launcher's workarounds, the lock and the time rule behave the same on 3.12 as on 3.10.
   **The export, patch and zip also work on 24.04** (device test J): `export_onnx` through the launcher wrote a 62,028 KB model, the patch added the metadata and kept the original as `.before-patch`, a second patch changed nothing, and
   the zip (63,517,438 bytes) re-checked "as the phone would: no problems" and holds exactly `model.onnx` and `model.onnx.json`. **A risk to carry:** the exporter now prints that the legacy TorchScript-based ONNX export is deprecated
-  (PyTorch 2.9 made the new `torch.export` one the default); the launcher forces the legacy path (`dynamo=False`, needed because the new one wants `onnxscript` and failed on this model in F11). So **every change of the locked `torch` version
+  (PyTorch 2.9 made the new `torch.export` one the default); the launcher forces the legacy path (`dynamo=False`, needed because the new one wants `onnxscript` and the export failed without it in F16). So **every change of the locked `torch` version
   must repeat the export step** before the lock is accepted. Not done on 24.04: the resume and the Ctrl+C stop (device test I, second item), and the voice on a phone.
 
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
