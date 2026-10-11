@@ -202,7 +202,11 @@ Ubuntu 22.04.5, Python 3.10.12, GTK 4.6.9 (from `gir1.2-gtk-4.0`), RTX 4060 with
   distribution through a pipe and checked by fingerprint (identical). Loading took about 36 seconds; the round stopped itself with `Time limit reached. Elapsed time is 0:05:04.` (D34 holds: the clock starts with the round) and exit code 0;
   six checkpoints (the five best by `val_mel` and `last.ckpt`, 807 MB each, 4841 MB, as on 22.04); **peak graphics memory 7,750 MiB (22.04: 7,793)**; 0 lines about the quality scorer; about 1.5 to 2.2 steps a second. The only warnings were
   deprecation notes from the newer libraries (`torch.jit.script`, `weight_norm`, a Lightning `isinstance` note) and Lightning's "dirpath has changed" note, which quotes the folder the *starting voice's* author trained in. So the
-  launcher's workarounds, the lock and the time rule behave the same on 3.12 as on 3.10; **not yet done on 24.04: the resume and the export, patch and zip (device test J).**
+  launcher's workarounds, the lock and the time rule behave the same on 3.12 as on 3.10.
+  **The export, patch and zip also work on 24.04** (device test J): `export_onnx` through the launcher wrote a 62,028 KB model, the patch added the metadata and kept the original as `.before-patch`, a second patch changed nothing, and
+  the zip (63,517,438 bytes) re-checked "as the phone would: no problems" and holds exactly `model.onnx` and `model.onnx.json`. **A risk to carry:** the exporter now prints that the legacy TorchScript-based ONNX export is deprecated
+  (PyTorch 2.9 made the new `torch.export` one the default); the launcher forces the legacy path (`dynamo=False`, needed because the new one wants `onnxscript` and failed on this model in F11). So **every change of the locked `torch` version
+  must repeat the export step** before the lock is accepted. Not done on 24.04: the resume and the Ctrl+C stop (device test I, second item), and the voice on a phone.
 
 - **F15 (2026-10-11), the first voice file this tool made: exported, patched, zipped, and it spoke on the phone.** Confirmed on the developer's computer after F14's fix: the one-minute round took 1 min 33 s, exit 0, no scorer line,
   `Time limit reached. Elapsed time is 0:01:04`, and `version_0` to `version_3` exist. The export under the launcher exited 0 with **no extra package** (`onnxscript` is not needed): `my_voice.onnx` 63,516,211 bytes after the
