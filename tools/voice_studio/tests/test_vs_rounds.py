@@ -1154,3 +1154,8 @@ def test_a_folder_that_was_there_before_the_round_is_never_taken_for_the_rounds_
     world.run_round(version=0, files="none")                          # the trainer made nothing
     r = rd.load(world.paths).rounds[0]
     assert (r.version, r.state, r.failure, r.versions_before) == (None, "failed", "no_checkpoint", (7,))
+
+
+def test_a_round_written_as_starting_that_already_has_a_job_is_never_taken_back(world):
+    put(world, rd.Record((R(1, state="starting", ended="", has_checkpoint=False, version=None, job="job-1"),), 0))
+    assert [r.number for r in rd.rollback_start(world.paths, 1).rounds] == [1]
