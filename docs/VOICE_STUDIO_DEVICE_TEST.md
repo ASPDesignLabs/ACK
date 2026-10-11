@@ -522,8 +522,11 @@ round keeps about 4.8 GB of saved files, so have about 25 GB free for the whole 
   ```bash
   PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds start --set dataset-1 --minutes 3 --project voice-check
   ```
-  → `Round 1 would:` and, under it, that it would continue from the starting voice `voice-mike`, train on the training set with its number of clips, run for about 3 minutes, use the graphics card, and keep its files under the
-  project's `rounds` folder. Then `Start round 1 now? Type yes to start.` Type **`no`**: `Nothing was done.` and the `ls` above still shows no `rounds.json`.
+  → `Round 1 would:` and, under it, that it would continue from the starting voice `voice-mike`, train on the training set with its number of clips, run for about 3 minutes, train 12 clips at a time (and that this number was
+  measured on a card with 8 GB), save its progress about every so many seconds (and that a round that ends loses that much at most), use the graphics card, stop by itself if the free space falls below a size it names, and keep its files
+  under the project's `rounds` folder. Then `Checked before starting:` and two lines: how much of the graphics card is free against what this needs, and how much the round writes against the free space on the disk. Then
+  `Start round 1 now? Type yes to start.` Type **`no`**: `Nothing was done.` and the `ls` above still shows no `rounds.json`. **Write down the two checks' numbers**: the card's free memory is the first real reading of what
+  else is holding it (the Windows desktop, a browser, a speech model left loaded), and with less than about 5.4 GB free (5,184 MiB) the round is refused, with 5.4 to 6.0 GB (5,760 MiB) it is warned. These two numbers are guesses worked out from the one measured run.
 - [ ] The same command, and type **`yes`**: `Round 1 started (job …).` Write down how long it took to start training (`tail -3 ~/ack-voice-studio/state/jobs/*/log.txt`). From another terminal, look:
   ```bash
   PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds list --project voice-check
@@ -554,6 +557,29 @@ round keeps about 4.8 GB of saved files, so have about 25 GB free for the whole 
   ```
   → `Kept for sure (2 files …` (the chosen round's saved point and the one before it), a line for the spare files and their size, and `This command removes nothing.` Compare the sizes with
   `ls -l ~/ack-voice-studio/projects/voice-check/rounds/run/lightning_logs/*/checkpoints/` (every round has the `last.ckpt` and five more, about 807 MiB each).
+- [ ] **Try the disk guard without filling a disk.** This starts a harmless job that only waits, with a free-space floor set *above* what your disk has, so the job's own runner sees the disk as too full. It uses no graphics card
+  and no round:
+  <!-- snippet: disk-guard -->
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 - <<'EOF'
+  import os, shutil, sys, time
+  from voice_studio.core import jobs
+
+  home = os.path.expanduser("~")
+  folder = os.path.join(home, "ack-voice-check", "jobs")
+  os.makedirs(folder, exist_ok=True)
+  free = shutil.disk_usage(home).free
+  code = "import time\nprint('waiting', flush=True)\ntime.sleep(60)\n"
+  info = jobs.start_job(folder, jobs.JobSpec("guard", "", (sys.executable, "-c", code), watch=((home, free + 10 ** 9),)))
+  for _ in range(60):
+      time.sleep(1)
+      now = jobs.job_info(info.dir)
+      if now.status not in jobs.ACTIVE:
+          break
+  print(now.status.value, "stop reason:", now.stop_reason or "none")
+  EOF
+  ```
+  → `stopped stop reason: disk`, within a few seconds (the runner looks every five). That is the real runner, on your computer, stopping a command the gentle way because a drive was below its floor.
 - [ ] Write a note, and take it away:
   ```bash
   PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds note 1 --text "first try" --project voice-check

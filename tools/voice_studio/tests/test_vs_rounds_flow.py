@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from vs_fakes import FakeSystem
 from vs_rounds_helpers import DATASET, NOW, PROJECT, VOICE, World, end_job, fake_job, make_world, slurp, stamp
 from vs_startvoice_helpers import VOICE_A, Terminal, implies_permission, leaked_keys, make_registry
 from voice_studio import rounds as front
@@ -48,6 +49,14 @@ class Rig:
             project = sv.acknowledge(sv.choose(load_project(self.paths), self.registry, "voice-mike"), self.registry, "voice-mike")
             save_project(self.paths, project)
         self.world = World(self.paths, ScratchPaths(self.paths.default_scratch), self.home.jobs, self.training, str(folder / "voice-mike.ckpt"))
+        self.system = FakeSystem(disks={self.paths.rounds: (500 * 2**30, 300 * 2**30), self.world.scratch.root: (500 * 2**30, 300 * 2**30)})      # a roomy disk, the 8 GiB card, 1.2 GiB in use
+
+    def set_card(self, used, total):
+        from voice_studio.core.system import CommandResult
+        self.system.smi_memory = CommandResult(0, "NVIDIA GeForce RTX 4060, %d, %d\n" % (used, total))
+
+    def set_free(self, free):
+        self.system.disks[self.paths.rounds] = self.system.disks[self.world.scratch.root] = (500 * 2**30, free)
 
     def training_env(self):
         return (self.training, "ready") if self.environment == "ready" else (None, self.environment)
@@ -60,7 +69,7 @@ class Rig:
 
     def run(self, *argv, answers=(), interactive=True):
         io = Terminal(answers, interactive)
-        code = rf.run_rounds(list(argv), self.home, self.registry, CAT, io, training=self.training_env, now=NOW, start=self.start)
+        code = rf.run_rounds(list(argv), self.home, self.registry, CAT, io, training=self.training_env, now=NOW, start=self.start, system=self.system)
         assert leaked_keys(io.text + "\n".join(io.prompts)) == [], "a catalog key was printed instead of words"
         assert implies_permission(io.text) == [], "something printed says or implies that use is permitted"
         return code, io
@@ -668,3 +677,151 @@ def test_a_starting_voice_the_tool_does_not_know_is_refused_in_words_and_nothing
     save_project(rig.paths, with_starting_voice(load_project(rig.paths), "voice-zzz"))
     code, io = rig.run(*start_args("--yes"))
     assert code == 1 and rig.started == [] and rig.record_bytes() is None and "Traceback" not in io.text and "Nothing was" in io.text
+
+
+# ---------------------------------------------------------------- the automatic settings and the guards
+
+from voice_studio.core import trainguard as tg
+from voice_studio.core.buildenv_flow import duration_text
+from voice_studio.core.diskbudget import DEFAULT_TABLE, MIB, floors_for
+from voice_studio.core.text import size_text
+
+FLOORS = floors_for(DEFAULT_TABLE, holds_recordings=True)
+NEED = 6 * 846_000_000 + DEFAULT_TABLE.training_cache_per_hour // 2          # a tiny set is counted as half an hour for its working folder
+
+
+def opt(spec, name):
+    return spec.argv[spec.argv.index(name) + 1]
+
+
+def test_the_plan_shows_the_settings_then_the_checks_and_only_then_asks(rig):
+    rig.world.dataset()
+    code, io = rig.run(*start_args(), answers=["yes"])
+    lines = io.lines
+    assert code == 0 and len(rig.started) == 1
+    assert "  train 12 clips at a time: " + CAT.t("rounds.basis.measured") in lines
+    assert "  save its progress about every %s, so a round that ends loses %s of training at most" % ((duration_text(CAT, tg.lost_seconds(1, 12, 10)),) * 2) in lines
+    assert "  stop by itself, saving what it can, if the free space falls below " + size_text(FLOORS.stop) in lines
+    assert "Checked before starting:" in lines
+    assert "  the graphics card has about %s free, and this needs about %s" % (size_text((8188 - 1203) * MIB), size_text(5760 * MIB)) in lines
+    assert any(l.startswith("  write about %s of saved files" % size_text(NEED)) for l in lines)
+    asked = next(i for i, e in enumerate(io.events) if e[0] == "ask")
+    assert io.events.index(("say", "Checked before starting:")) < asked and io.events.index(("say", "Round 1 would:")) < asked
+
+
+def test_the_batch_the_check_interval_and_the_floors_reach_the_job(rig):
+    rig.world.dataset()
+    assert rig.run(*start_args("--yes"))[0] == 0
+    spec = rig.started[0]
+    assert (opt(spec, "--data.batch_size"), opt(spec, "--trainer.check_val_every_n_epoch")) == ("12", "10") and spec.watch == ((rig.paths.run, FLOORS.stop),)
+
+
+def test_a_set_of_a_real_size_is_checked_much_more_often_than_every_ten_epochs(rig):
+    folder = rig.world.dataset()
+    with open(folder + "/metadata.csv", "w") as handle:
+        for n in range(800):
+            handle.write("c%d.wav|text\n" % n)
+            Path(folder, "wav", "c%d.wav" % n).write_bytes(b"x" * 400_000)
+    code, io = rig.run(*start_args("--yes"))
+    spec = rig.started[0]
+    assert code == 0 and opt(spec, "--trainer.check_val_every_n_epoch") == "3" and "which has 800 clips" in io.text
+    hours = 800 * 400_000 / 158_760_000                                              # about two hours of speech: the working folder is counted for that, not for half an hour
+    assert any(l.startswith("  write about %s of saved files" % size_text(6 * 846_000_000 + int(hours * DEFAULT_TABLE.training_cache_per_hour))) for l in io.lines)
+
+
+def test_a_smaller_card_gets_a_smaller_batch_and_is_told_it_is_a_guess(rig):
+    rig.world.dataset()
+    rig.set_card(500, 6144)
+    code, io = rig.run(*start_args("--yes"))
+    assert code == 0 and "  train 8 clips at a time: " + CAT.t("rounds.basis.guess") in io.lines and opt(rig.started[0], "--data.batch_size") == "8"
+
+
+def test_a_card_too_small_for_the_smallest_setting_is_refused_even_with_yes(rig):
+    rig.world.dataset()
+    rig.set_card(100, 3999)
+    code, io = rig.run(*start_args("--yes"))
+    assert code == 2 and "less than the %s" % size_text(4000 * MIB) in io.text and "Nothing was started" in io.text and rig.started == [] and rig.record_bytes() is None
+
+
+def test_a_card_that_cannot_be_asked_keeps_the_measured_batch_and_says_it_could_not_check(tmp_path):
+    rig = Rig(tmp_path)
+    rig.system = FakeSystem(tools={}, disks=rig.system.disks)
+    rig.world.dataset()
+    code, io = rig.run(*start_args("--yes"))
+    assert code == 0 and "  train 12 clips at a time: " + CAT.t("rounds.basis.unknown") in io.lines and "  " + CAT.t("rounds.start.gpu_unknown") in io.lines
+    assert opt(rig.started[0], "--data.batch_size") == "12"
+
+
+@pytest.mark.parametrize("used, outcome", [(2428, "ok"), (2429, "tight"), (3004, "tight"), (3005, "refused"), (8188, "refused")])
+def test_another_program_holding_the_card_is_a_warning_and_then_a_refusal(rig, used, outcome):
+    rig.world.dataset()
+    rig.set_card(used, 8188)
+    code, io = rig.run(*start_args("--yes"))
+    free = 8188 - used
+    if outcome == "refused":
+        assert code == 2 and rig.started == [] and rig.record_bytes() is None and "Close programs that use the graphics card" in io.text and "Nothing was started" in io.text
+    else:
+        assert code == 0 and len(rig.started) == 1 and (("It may run out of memory" in io.text) == (outcome == "tight"))
+    assert size_text(free * MIB) in io.text
+
+
+@pytest.mark.parametrize("extra, outcome", [(FLOORS.low, "ok"), (FLOORS.low - 1, "tight"), (FLOORS.stop, "tight"), (FLOORS.stop - 1, "refused"), (0, "refused")])
+def test_a_disk_that_would_be_left_too_full_is_a_warning_and_then_a_refusal(rig, extra, outcome):
+    rig.world.dataset()
+    rig.set_free(NEED + extra)
+    code, io = rig.run(*start_args("--yes"))
+    if outcome == "refused":
+        assert code == 2 and rig.started == [] and rig.record_bytes() is None and "There is not enough free space for this round" in io.text and rig.system and io.prompts == []
+        assert size_text(FLOORS.low + NEED - (NEED + extra)) in io.text                          # how much more is needed
+    else:
+        assert code == 0 and len(rig.started) == 1 and (("Free space is getting tight" in io.text) == (outcome == "tight"))
+
+
+def test_a_disk_that_cannot_be_read_is_not_judged_and_is_said(rig):
+    rig.world.dataset()
+    rig.system.disks.clear()
+    code, io = rig.run(*start_args("--yes"))
+    assert code == 0 and "  " + CAT.t("rounds.start.disk_unknown") in io.lines and len(rig.started) == 1
+
+
+def test_a_refusal_for_room_asks_no_question_and_writes_nothing_whatever_else_was_given(rig):
+    rig.world.dataset()
+    rig.set_free(0)
+    for argv in (start_args(), start_args("--yes")):
+        code, io = rig.run(*argv, answers=["yes"])
+        assert code == 2 and io.prompts == [] and rig.started == [] and rig.record_bytes() is None
+
+
+def test_scratch_on_another_drive_is_checked_and_watched_on_its_own(rig, monkeypatch):
+    rig.world.dataset()
+    monkeypatch.setattr(rf, "_same_drive", lambda a, b: False)
+    cache = DEFAULT_TABLE.training_cache_per_hour // 2
+    scratch_floors = floors_for(DEFAULT_TABLE, holds_recordings=False)
+    rig.system.disks[rig.paths.rounds] = (500 * 2**30, 6 * 846_000_000 + FLOORS.low)
+    rig.system.disks[rig.world.scratch.root] = (500 * 2**30, cache + scratch_floors.stop - 1)
+    code, io = rig.run(*start_args("--yes"))
+    assert code == 2 and rig.started == [] and rig.record_bytes() is None                       # the other drive's shortage refuses the round
+    rig.system.disks[rig.world.scratch.root] = (500 * 2**30, cache + scratch_floors.low)
+    code, io = rig.run(*start_args("--yes"))
+    spec = rig.started[0]
+    assert code == 0 and spec.watch == ((rig.paths.run, FLOORS.stop), (rig.world.scratch.caches, scratch_floors.stop))
+    assert sum(1 for l in io.lines if l.startswith("  write about")) == 2
+
+
+@pytest.mark.parametrize("free, said", [(10 ** 12, None), (FLOORS.low, None), (FLOORS.low - 1, "getting low"), (FLOORS.stop, "getting low"), (FLOORS.stop - 1, "nearly full")])
+def test_while_a_round_runs_list_says_how_much_room_is_left_and_when_it_is_low(rig, free, said):
+    plan = rig.world.begin()
+    rd.attach_job(rig.paths, 1, rig.world.job_for(plan, "running").id)
+    rig.set_free(free)
+    code, io = rig.run("list", "--project", "anna")
+    assert "Free space where the round writes: %s." % size_text(free) in io.lines
+    assert (("The disk is getting low. The round stops by itself below %s free." % size_text(FLOORS.stop)) in io.lines) == (said == "getting low")
+    assert ("The disk is nearly full: the round is being asked to stop." in io.lines) == (said == "nearly full")
+
+
+def test_list_says_nothing_of_room_when_no_round_runs_and_a_round_the_guard_stopped_says_so(rig):
+    rig.world.run_round(version=0, ends="stopped", reason="disk")
+    rig.set_free(0)
+    code, io = rig.run("list", "--project", "anna")
+    assert "Free space where the round writes" not in io.text and "  It stopped by itself because the disk was nearly full." in io.lines
+    assert "Round 1 (chosen): Stopped by you." in io.lines                                      # the state word is the job's: the reason line says whose stop it was

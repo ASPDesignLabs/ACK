@@ -12,9 +12,11 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Callable, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import commands, jobs, rounds as rd, startvoice as sv
+from . import commands, jobs, rounds as rd, startvoice as sv, trainguard as tg
+from .buildenv_flow import duration_text
+from .diskbudget import DEFAULT_TABLE, MIB, DriveMap, Level, Watch, floors_for, watch as disk_watch
 from .cliargs import ArgError, Parsed, parse_args
 from .describe import error_text
 from .envbuild import EnvPaths
@@ -24,6 +26,7 @@ from .projects_flow import EXIT_NOTHING_DONE, EXIT_OK, EXIT_PROBLEM, VOICES_COMM
 from .registry import Registry
 from .scratch import MARKER_NAME, check_marker, may_start_job, scratch_dir_for
 from .setup_flow import IO, _said_yes
+from .system import RealSystem, System
 from .text import Catalog, size_text
 
 ROUNDS_COMMAND = "python3 -m voice_studio.rounds"
@@ -124,6 +127,26 @@ def _look(ctx: Open, now: Optional[datetime], cat: Catalog, io: IO, *, write: bo
     return after
 
 
+def _same_drive(a: str, b: str) -> bool:
+    try:
+        return os.stat(a).st_dev == os.stat(b).st_dev
+    except OSError:
+        return False                                                     # a place that cannot be looked at is counted as another drive, which asks for more room
+
+
+def _drives(ctx: Open) -> DriveMap:
+    """The project's drive, and scratch's when it is another one (a place the person chose on a different disk)."""
+    return DriveMap(tool="project", project="project", scratch="project" if _same_drive(ctx.paths.rounds, ctx.scratch.root) else "scratch", backup="project")
+
+
+def _free(system: System, ctx: Open) -> Dict[str, Optional[int]]:
+    found: Dict[str, Optional[int]] = {}
+    for drive, path in (("project", ctx.paths.rounds), ("scratch", ctx.scratch.root)):
+        usage = system.disk_free(path)
+        found[drive] = usage[1] if usage else None
+    return found
+
+
 def _number(word: str) -> Optional[int]:
     return int(word) if word.isascii() and word.isdigit() and len(word) <= 6 else None
 
@@ -144,13 +167,15 @@ def _row(r: rd.Round, chosen: bool, ctx: Open, cat: Catalog, io: IO) -> None:
     io.say("  " + cat.t("rounds.row.started", when=_when(r.started)))
     if r.failure:
         io.say("  " + cat.t("rounds.failure." + r.failure))
+    if r.stopped_for:
+        io.say("  " + cat.t("rounds.stopped_for." + r.stopped_for))
     if r.has_checkpoint:
         io.say("  " + cat.t("rounds.checkpoint." + rd.checkpoint_status(ctx.paths, r)))
     if r.note:
         io.say("  " + cat.t("rounds.row.note", note=r.note))
 
 
-def _list(args: Sequence[str], home: DataHome, now: Optional[datetime], cat: Catalog, io: IO) -> int:
+def _list(args: Sequence[str], home: DataHome, now: Optional[datetime], system: System, cat: Catalog, io: IO) -> int:
     try:
         parsed = parse_args(args, flags={}, values=PROJECT, max_words=0)
     except ArgError as error:
@@ -173,6 +198,15 @@ def _list(args: Sequence[str], home: DataHome, now: Optional[datetime], cat: Cat
     running = rd.active(record)
     if running is not None:
         io.say(cat.t("rounds.list.running", number=running.number, command="%s stop --project %s" % (ROUNDS_COMMAND, ctx.project.id)))
+        free = _free(system, ctx)["project"]
+        if free is not None:
+            floors = floors_for(DEFAULT_TABLE, holds_recordings=True)
+            io.say(cat.t("rounds.list.disk", free=size_text(free)))
+            state = disk_watch(free, floors)
+            if state is Watch.LOW:
+                io.say(cat.t("rounds.list.disk_low", floor=size_text(floors.stop)))
+            elif state is Watch.STOP:
+                io.say(cat.t("rounds.list.disk_stop"))
     else:
         io.say(cat.t("rounds.list.next", command="%s start --set <name> --project %s" % (ROUNDS_COMMAND, ctx.project.id)))
     return EXIT_OK
@@ -233,7 +267,7 @@ def _starting_point(ctx: Open, record: rd.Record, home: DataHome, registry: Regi
     return rd.Base(voice, str(path)), EXIT_OK
 
 
-def _start(args: Sequence[str], home: DataHome, registry: Registry, training: TrainingEnv, now: Optional[datetime], start: Callable, cat: Catalog, io: IO) -> int:
+def _start(args: Sequence[str], home: DataHome, registry: Registry, training: TrainingEnv, now: Optional[datetime], start: Callable, system: System, cat: Catalog, io: IO) -> int:
     try:
         parsed = parse_args(args, flags=YES, values=START_VALUES, max_words=0)
     except ArgError as error:
@@ -267,17 +301,48 @@ def _start(args: Sequence[str], home: DataHome, registry: Registry, training: Tr
     minutes_text = parsed.values.get("minutes")
     minutes: object = commands.ROUND_MINUTES if minutes_text is None else (int(minutes_text) if minutes_text.isascii() and minutes_text.isdigit() and len(minutes_text) <= 6 else minutes_text)
     plan = rd.plan_round(ctx.paths, ctx.scratch, record, dataset=wanted, minutes=minutes, base=base)       # type: ignore[arg-type]
-    clips = commands.check_dataset(plan.dataset_dir)
+    clips, wav_bytes = commands.dataset_size(plan.dataset_dir)
+    card = tg.read_gpu_memory(system)
+    choice = tg.batch_for(card.total_mib if card else None)
+    if choice.batch is None:
+        io.say(cat.t("rounds.start.gpu_small", memory=size_text((card.total_mib if card else 0) * MIB), least=size_text(tg.MIN_GPU_MIB * MIB)))
+        return EXIT_NOTHING_DONE
+    every = tg.check_every(clips, choice.batch)
+    room = tg.judge_gpu_room(card.total_mib if card else None, card.used_mib if card else None, choice.batch)
+    drives = _drives(ctx)
+    disk = tg.judge_round_disk(DEFAULT_TABLE, tg.hours_of_speech(wav_bytes), drives, _free(system, ctx))
+    stop_floor = floors_for(DEFAULT_TABLE, holds_recordings=True).stop
     io.say(cat.t("rounds.start.plan_head", number=plan.number))
     io.say("  " + (cat.t("rounds.start.plan_round", parent=plan.parent) if plan.parent else cat.t("rounds.start.plan_voice", voice=plan.voice)))
     io.say("  " + cat.t("rounds.start.plan_set", set=plan.dataset, clips=clips))
     io.say("  " + cat.t("rounds.start.plan_length", minutes=plan.minutes))
+    io.say("  " + cat.t("rounds.start.plan_batch", batch=choice.batch, basis=cat.t("rounds.basis." + choice.basis)))
+    io.say("  " + cat.t("rounds.start.plan_check", time=duration_text(cat, tg.lost_seconds(clips, choice.batch, every))))
     io.say("  " + cat.t("rounds.start.plan_card"))
+    io.say("  " + cat.t("rounds.start.guard", floor=size_text(stop_floor)))
     io.say("  " + cat.t("rounds.start.plan_files", folder=ctx.paths.run))
+    io.say(cat.t("rounds.start.checks_head"))
+    if room.free_mib is None:
+        io.say("  " + cat.t("rounds.start.gpu_unknown"))
+    else:
+        words = dict(free=size_text(room.free_mib * MIB), need=size_text(room.need_mib * MIB))
+        io.say("  " + cat.t({Level.ENOUGH: "rounds.start.gpu_ok", Level.TIGHT: "rounds.start.gpu_tight", Level.NOT_ENOUGH: "rounds.start.gpu_short"}[room.level], **words))
+    for drive in disk.drives:
+        if drive.free is None:
+            io.say("  " + cat.t("rounds.start.disk_unknown"))
+        elif drive.level is Level.NOT_ENOUGH:
+            io.say("  " + cat.t("rounds.start.disk_short", free=size_text(drive.free), need=size_text(drive.need), short=size_text(drive.short_by)))
+        elif drive.level is Level.TIGHT:
+            io.say("  " + cat.t("rounds.start.disk_tight", free=size_text(drive.free), need=size_text(drive.need)))
+        else:
+            io.say("  " + cat.t("rounds.start.disk_ok", free=size_text(drive.free), need=size_text(drive.need)))
+    if Level.NOT_ENOUGH in (room.level, disk.level):
+        return EXIT_NOTHING_DONE                                          # said above, in words, with nothing started; --yes does not get past this
     declined = _confirmed(parsed, cat.t("rounds.start.question", number=plan.number), cat, io)
     if declined is not None:
         return declined
-    started = rd.start_round(ctx.paths, ctx.scratch, ctx.project.id, env, ctx.jobs_root, dataset=wanted, minutes=plan.minutes, base=base, now=now, start=start)
+    started = rd.start_round(ctx.paths, ctx.scratch, ctx.project.id, env, ctx.jobs_root, dataset=wanted, minutes=plan.minutes, base=base, now=now, start=start,
+                             batch_size=choice.batch, check_every=every, watch=tg.watches(DEFAULT_TABLE, ctx.paths.run, ctx.scratch.caches, drives))
     io.say(cat.t("rounds.start.started", number=started.number, job=started.job))
     io.say(cat.t("rounds.start.watch", list="%s list --project %s" % (ROUNDS_COMMAND, ctx.project.id), stop="%s stop --project %s" % (ROUNDS_COMMAND, ctx.project.id)))
     return EXIT_OK
@@ -416,19 +481,20 @@ def _help(cat: Catalog, io: IO) -> int:
 
 
 def run_rounds(argv: Sequence[str], home: DataHome, registry: Registry, cat: Catalog, io: IO, *, training: TrainingEnv, now: Optional[datetime] = None,
-               start: Callable = jobs.start_job) -> int:
+               start: Callable = jobs.start_job, system: Optional[System] = None) -> int:
     """`python3 -m voice_studio.rounds COMMAND ...`. Ctrl+C at any point stops cleanly; a round that had already started keeps running by itself."""
     command = argv[0] if argv else "help"
     rest = list(argv[1:])
+    system = system or RealSystem()
     try:
         if command in ("help", "--help", "-h"):
             return _help(cat, io)
         if command == "list":
-            return _list(rest, home, now, cat, io)
+            return _list(rest, home, now, system, cat, io)
         if command == "keep":
             return _keep(rest, home, now, cat, io)
         if command == "start":
-            return _start(rest, home, registry, training, now, start, cat, io)
+            return _start(rest, home, registry, training, now, start, system, cat, io)
         if command == "stop":
             return _stop(rest, home, now, cat, io)
         if command == "choose":

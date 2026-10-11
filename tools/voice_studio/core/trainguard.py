@@ -23,7 +23,7 @@ from .system import System
 
 BATCH_TABLE = ((8000, 12, "measured"), (6000, 8, "guess"), (4000, 4, "guess"))       # (the card's memory in MiB or more, the batch, on what basis)
 MIN_GPU_MIB = BATCH_TABLE[-1][0]
-BASES = ("measured", "guess", "unknown", "too_small")                                # each has words in the text catalog
+BASES = ("measured", "guess", "unknown")                                             # the ways a batch can be known; each has words in the text catalog. A card below the table has none: "too_small"
 
 
 @dataclass(frozen=True)

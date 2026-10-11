@@ -23,7 +23,7 @@ import vs_voice_helpers as vh
 REPO = Path(__file__).resolve().parents[3]
 TOOLS = REPO / "tools"
 DOC = REPO / "docs" / "VOICE_STUDIO_DEVICE_TEST.md"
-SNIPPETS = ("jobs-start", "jobs-list", "jobs-stop", "package-summary", "flip-a-byte", "checkpoint-check", "voice-zip")
+SNIPPETS = ("jobs-start", "jobs-list", "jobs-stop", "package-summary", "flip-a-byte", "disk-guard", "checkpoint-check", "voice-zip")
 
 
 def doc_text():
@@ -508,3 +508,15 @@ def test_the_read_only_rounds_commands_run_as_the_section_shows_them_and_write_n
     asked = run("voice_studio.rounds", "start", "--set", "dataset-1", "--minutes", "3", "--project", "voice-check")
     assert asked.returncode == 2 and "no training set yet" in asked.stdout and "Traceback" not in asked.stderr
     assert sorted(p.name for p in folder.iterdir()) in ([], [".rounds.lock"]), "asking for a round that cannot start made no round (the lock file is only the place changes are taken turns)"
+
+
+def test_the_disk_guard_snippet_makes_the_real_runner_stop_a_waiting_job_and_say_it_was_the_disk(home):
+    done = run_snippet("disk-guard", home)
+    assert done.returncode == 0 and done.stderr == "" and done.stdout.strip() == "stopped stop reason: disk", (done.stdout, done.stderr)
+    note = json.loads(next((home / "ack-voice-check" / "jobs").glob("*-guard-*/stop.json")).read_text())
+    assert note["reason"] == "disk" and note["forced"] is False and note["floor"] > note["free"]
+
+
+def test_the_section_tells_what_the_new_checks_say_and_that_the_numbers_are_to_be_written_down():
+    body = " ".join(section("I2.").split())
+    assert "Checked before starting:" in body and "Write down the two checks' numbers" in body and "disk guard" in body

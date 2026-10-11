@@ -38,7 +38,7 @@ def training_environment(home: DataHome, registry: Registry) -> Callable[[], Tup
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     home, registry = DataHome(os.path.expanduser("~")), load_registry()
-    return run_rounds(args, home, registry, load_catalog("en"), TerminalIO(), training=training_environment(home, registry))
+    return run_rounds(args, home, registry, load_catalog("en"), TerminalIO(), training=training_environment(home, registry), system=RealSystem())
 
 
 if __name__ == "__main__":

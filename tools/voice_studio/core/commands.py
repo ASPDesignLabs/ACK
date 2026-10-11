@@ -107,12 +107,12 @@ def dataset_folder_name(stamp: str) -> str:
     return "dataset-%s-%s" % (digits[:8], digits[8:14])
 
 
-def check_dataset(folder: str) -> int:
-    """The number of rows in a finished dataset, or CommandError("dataset_incomplete"): `metadata.csv` and a `wav/` folder holding every file it names."""
+def dataset_size(folder: str) -> Tuple[int, int]:
+    """(the number of rows, the bytes of the audio they name) of a finished dataset, or CommandError("dataset_incomplete"): `metadata.csv` and a `wav/` folder holding every file it names."""
     meta, wav = os.path.join(folder, "metadata.csv"), os.path.join(folder, "wav")
     if not os.path.isfile(meta) or not os.path.isdir(wav):
         raise CommandError("dataset_incomplete", os.path.basename(folder))
-    rows = 0
+    rows, size = 0, 0
     with open(meta, encoding="utf-8") as handle:
         for line in handle:
             if not line.strip():
@@ -121,9 +121,15 @@ def check_dataset(folder: str) -> int:
             if not name or "/" in name or not os.path.isfile(os.path.join(wav, name)):
                 raise CommandError("dataset_incomplete", name or "empty name")
             rows += 1
+            size += os.path.getsize(os.path.join(wav, name))
     if rows == 0:
         raise CommandError("dataset_incomplete", "no rows")
-    return rows
+    return rows, size
+
+
+def check_dataset(folder: str) -> int:
+    """The number of rows in a finished dataset, or CommandError("dataset_incomplete")."""
+    return dataset_size(folder)[0]
 
 
 # ---------------------------------------------------------------- one training round

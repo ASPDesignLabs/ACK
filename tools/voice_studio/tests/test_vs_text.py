@@ -14,7 +14,7 @@ import pytest
 
 from vs_fakes import (DEBIAN_12, MEM_4G, PROC_WSL1, SMI_6G, SMI_DRIVER_DOWN, UBUNTU_2004, FakeSystem, wsl2)
 from voice_studio.core import describe as ds
-from voice_studio.core import ackimport, commands, copyin, diskbudget, envbuild, envspec, fetch, joblines, jobs, newproject, preflight, progress, project, report, rounds, scratch, setupplan, setuprun, startvoice, text, voicezip
+from voice_studio.core import ackimport, commands, copyin, diskbudget, envbuild, envspec, fetch, joblines, jobs, newproject, preflight, progress, project, report, rounds, scratch, setupplan, setuprun, startvoice, text, trainguard, voicezip
 from voice_studio.core.registry import load_registry
 from voice_studio.core.system import CommandResult
 from voice_studio.core.text import Catalog, TextError
@@ -227,6 +227,7 @@ def derived_keys():
     keys |= {"progress.next." + n for n in progress.NEXT_STEPS}
     keys |= {"startvoice.choice." + c for c in startvoice.CHOICES} | {"startvoice.step." + s for s in startvoice.STEPS}
     keys |= {"startvoice.link.%s.name" % l for l in startvoice.LINK_IDS} | {"startvoice.says." + s for s in startvoice.STATEMENTS}
+    keys |= {"rounds.stopped_for." + s for s in jobs.STOP_REASONS} | {"rounds.basis." + b for b in trainguard.BASES}
     keys |= {"rounds.state." + s for s in rounds.STATES} | {"rounds.failure." + f for f in rounds.FAILURE_CODES} | {"rounds.checkpoint." + c for c in rounds.CHECKPOINT_STATUSES}
     keys |= {"ackimport.state." + s for s in ("new", "already", "aborted")} | {"ackimport.mode." + m for m in ("script", "free")}
     keys |= {"setup.refuse." + c for c in setuprun.REFUSAL_CODES} | {"setup.status." + s for s in setuprun.STATUSES}
