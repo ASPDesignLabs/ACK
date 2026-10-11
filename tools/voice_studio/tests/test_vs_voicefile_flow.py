@@ -178,7 +178,7 @@ def test_make_with_yes_does_everything_in_order_and_says_where_the_file_is(rig):
     zip_path = "%s/%s/%s.zip" % (rig.paths.exports, FOLDER % 2, FOLDER % 2)
     assert code == 0 and io.prompts == [] and rig.system.kinds() == ["export", "patch"] and os.path.isfile(zip_path)
     steps = [l for l in io.lines if l.startswith("Step ")]
-    assert steps == ["Step 1 of 5: making the voice from the saved point. This is the slow step, a minute or two.", "Step 2 of 5: giving it its settings file.",
+    assert steps == ["Step 1 of 5: making the voice from the saved point. This is the slow step.", "Step 2 of 5: giving it its settings file.",
                      "Step 3 of 5: preparing it for the phone.", "Step 4 of 5: making the zip file.", "Step 5 of 5: reading the zip file back as the phone would."]
     assert io.lines.index(steps[0]) < io.lines.index(steps[4]) < io.lines.index("Done. The file to give to ACK is: " + zip_path)
     assert "It is %s, and read back as the phone would, it has no problems." % size_text(os.stat(zip_path).st_size) in io.lines
@@ -191,7 +191,7 @@ def test_make_with_a_typed_yes_asks_once_and_then_makes_it(rig):
     rig.finish(1)
     code, io = rig.run("make", "--project", "voice-check", answers=["yes"])
     assert code == 0 and len(io.prompts) == 1 and rig.exports() == [FOLDER % 1]
-    assert io.events.index(("ask", io.prompts[0])) < io.events.index(("say", "Step 1 of 5: making the voice from the saved point. This is the slow step, a minute or two."))
+    assert io.events.index(("ask", io.prompts[0])) < io.events.index(("say", "Step 1 of 5: making the voice from the saved point. This is the slow step."))
 
 
 def test_make_names_the_only_project_without_being_told_and_a_second_run_in_the_same_second_is_refused_not_overwritten(rig):

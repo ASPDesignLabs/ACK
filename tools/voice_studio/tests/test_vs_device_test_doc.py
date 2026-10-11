@@ -618,7 +618,7 @@ def test_the_voice_file_section_says_it_writes_only_a_new_folder_and_puts_the_mo
     body = " ".join(section("I4.").split())
     assert "writes only into **one new folder**" in body and "never changes, replaces or removes anything that was there" in body
     assert "Only if you want to see a refusal" in body and "Put the file back (the third command) even if something looks wrong" in body
-    assert "it does not run while a round is training" in body and "Write down how many seconds each step takes" in body
+    assert "it does not run while a round is training" in body and "Write down how long it takes" in body
     moves = re.findall(r"^\s*mv (\S+) (\S+)$", section("I4."), flags=re.M)
     assert len(moves) == 2 and moves[0] == (moves[1][1], moves[1][0]), "the second move undoes the first"
 

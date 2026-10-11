@@ -677,7 +677,7 @@ round that is chosen (`rounds list` says which), and it does not run while a rou
   ```
   → `The voice file would be made like this:` and under it that it would take the saved point of the chosen round (with its size and how many minutes of training are in it), take that round's own settings file, make the voice, make the zip file and read it back, and write
   everything into a new folder. Then `Checked before starting:` and a line about the free space. Then `Make the voice file from round` and the chosen round's number. Type **`no`**: `Nothing was done.` and the `ls` shows nothing new. **Write down the saved point's size and the minutes.**
-- [ ] The same command, and type **`yes`**. Write down how many seconds each step takes (the export is the slow one, a minute or two):
+- [ ] The same command, and type **`yes`**. Write down how long it takes (the export is the slow step; on the developer's computer the whole thing took 11 seconds, which is not a promise for yours):
   ```bash
   time PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile make --project voice-check
   ```
@@ -686,10 +686,10 @@ round that is chosen (`rounds list` says which), and it does not run while a rou
 - [ ] Look at what it made, and compare the settings file with the round's own:
   ```bash
   ls -l ~/ack-voice-studio/projects/voice-check/exports/*/
-  unzip -l ~/ack-voice-studio/projects/voice-check/exports/*/*.zip
+  python3 -m zipfile -l ~/ack-voice-studio/projects/voice-check/exports/*/*.zip
   ls ~/ack-voice-studio/projects/voice-check/rounds/config
   ```
-  → The folder holds `my_voice.onnx`, `my_voice.onnx.json`, `my_voice.onnx.before-patch` and the zip file. `unzip -l` lists exactly `model.onnx` and `model.onnx.json`. The settings file is a copy of the chosen round's file in `rounds/config`: `cmp` that file with `my_voice.onnx.json`
+  → The folder holds `my_voice.onnx`, `my_voice.onnx.json`, `my_voice.onnx.before-patch` and the zip file. `python3 -m zipfile -l` lists exactly `model.onnx` and `model.onnx.json`. The settings file is a copy of the chosen round's file in `rounds/config`: `cmp` that file with `my_voice.onnx.json`
   (give `cmp` both paths); it prints nothing when they are the same.
 - [ ] Look again, and make a second one a minute later. The first must not change:
   ```bash
