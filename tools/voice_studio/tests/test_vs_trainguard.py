@@ -171,3 +171,19 @@ def test_one_drive_is_watched_at_the_higher_floor_and_two_drives_each_at_their_o
     two = tg.watches(DEFAULT_TABLE, "/p/rounds/run", "/usb/scratch", SPLIT)
     assert two == (("/p/rounds/run", FLOORS.stop), ("/usb/scratch", floors_for(DEFAULT_TABLE, holds_recordings=False).stop))
     assert two[1][1] < two[0][1] and two[0][1] > 500 * MIB
+
+
+def test_what_a_failed_driver_printed_is_not_trusted_even_if_it_looks_like_numbers():
+    assert tg.read_gpu_memory(FakeSystem(smi_memory=CommandResult(1, "NVIDIA GeForce RTX 4060, 100, 8188\n"))) is None
+
+
+def test_a_drive_with_room_to_spare_is_short_by_nothing_not_by_a_negative_amount():
+    check = tg.judge_round_disk(DEFAULT_TABLE, 1.0, HOME, {"project": 10 ** 13})
+    assert check.drives[0].short_by == 0 and check.level is Level.ENOUGH
+
+
+def test_a_round_that_writes_nothing_needs_no_room():
+    from dataclasses import replace
+    empty = replace(DEFAULT_TABLE, checkpoints_per_round=0, training_cache_per_hour=0)
+    check = tg.judge_round_disk(empty, 1.0, HOME, {"project": 0})
+    assert check.level is Level.ENOUGH and check.drives == ()
