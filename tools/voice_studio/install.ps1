@@ -281,11 +281,19 @@ function Invoke-AckVsWslCapture {
 }
 
 function Invoke-AckVsWslLive {
-    <# Runs wsl.exe with the person's own window: they see everything it says and can type to it (the Ubuntu first run, the password prompt). #>
+    <# Runs wsl.exe on the person's own console: they see everything it says and can type to it (the Ubuntu first run, the password prompt, the answers). It is started with Start-Process
+       and -NoNewWindow so that it shares this console. A native program called inside a function has its output captured into the function's result (and gets a pipe, not a console),
+       which swallowed everything Ubuntu said and left it no terminal to ask on; that was found on the first run on a real Windows. The command line is built here, quoting only what has a space. #>
     param([string[]]$WslArguments)
     try {
-        & wsl.exe @WslArguments
-        return @{ Ran = $true; Code = $LASTEXITCODE }
+        $program = Get-Command -Name 'wsl.exe' -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($null -eq $program) { return @{ Ran = $false; Code = 1 } }
+        $line = Format-AckVsCommandLine -CommandArguments $WslArguments
+        $process = Start-Process -FilePath $program.Source -ArgumentList $line -NoNewWindow -Wait -PassThru -ErrorAction Stop
+        $process.WaitForExit()
+        $code = 1
+        if ($null -ne $process.ExitCode) { $code = [int]$process.ExitCode }
+        return @{ Ran = $true; Code = $code }
     } catch {
         return @{ Ran = $false; Code = 1 }
     }
