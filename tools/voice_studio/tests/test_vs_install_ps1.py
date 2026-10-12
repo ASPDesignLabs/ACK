@@ -652,7 +652,7 @@ def test_the_window_is_opened_after_the_ubuntu_part_ended_well_and_the_person_is
     got = run_install(tmp_path)
     said = got["said"]
     assert "The Ubuntu part has ended." in said
-    opening = "Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it can stop Ubuntu, and the window with it. When you close the Voice Studio window, this PowerShell window is free again."
+    opening = "Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it closes the Voice Studio window. When you close the Voice Studio window, this PowerShell window is free again."
     assert opening in said and "The Voice Studio window was closed." in said
     assert said.index("The Ubuntu part has ended.") < said.index(opening) < said.index("The Voice Studio window was closed.")
     assert got["calls"].index(lives(got)[0]) < got["calls"].index(lives(got)[1]) and got["code"] == 0

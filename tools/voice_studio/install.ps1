@@ -70,7 +70,7 @@ function Get-AckVsText {
         first_run      = 'Ubuntu is installed but has no user yet. Open Ubuntu 24.04 from the Start menu once. Choose a user name and a password, which are for Ubuntu only. Close it, then run the same command again.'
         handing_over   = 'Starting the Ubuntu part. Ubuntu will ask for the password you chose, in this window, to install a few Ubuntu programs.'
         handed_back    = 'The Ubuntu part has ended.'
-        window_opening = 'Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it can stop Ubuntu, and the window with it. When you close the Voice Studio window, this PowerShell window is free again.'
+        window_opening = 'Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it closes the Voice Studio window. When you close the Voice Studio window, this PowerShell window is free again.'
         window_closed  = 'The Voice Studio window was closed.'
         window_failed  = 'The window stopped with code {code}. What it said is above. To try again, run the same command.'
         handover_failed = 'The Ubuntu part stopped with code {code}. What it said is above. Run the same command again to carry on from where it stopped.'
