@@ -88,6 +88,23 @@ class Box:
         body = ('for last; do :; done\nDEST_OF_CLONE="$last"\n' + make) + ("exit 128\n" if fail else "")
         return self.stand_in("git", body)
 
+    def git_for_a_copy(self, *, inside=True, here="aaaa111", there="bbbb222", ahead=False, dirty=False, pull_fails=False, listing=True, annotated=False):
+        """A git that answers the questions get.sh asks of a copy that is already there, and records the rest."""
+        body = ('case "$*" in\n'
+                '  *"rev-parse --is-inside-work-tree"*) %s ;;\n'
+                '  *"rev-parse HEAD"*) echo %s ;;\n'
+                '  *"ls-remote"*) %s ;;\n'
+                '  *"merge-base"*) exit %d ;;\n'
+                '  *"status --porcelain"*) %s ;;\n'
+                '  *" pull "*) echo "argc $#" >> "$CALLS"; exit %d ;;\n'
+                'esac\n') % ("echo true" if inside else "exit 128", here,
+                              (("printf 'tagobject9\\trefs/tags/main\\n%s\\trefs/tags/main^{}\\n'" if annotated else "printf '%s\\trefs/heads/main\\n'") % there) if listing else "exit 128",
+                              0 if ahead else 1, 'echo " M changed.txt"' if dirty else "true", 1 if pull_fails else 0)
+        return self.stand_in("git", body)
+
+    def a_copy_is_there(self):
+        write_exe(self.dest / "tools/voice_studio/setup.sh", 'echo "setup.sh $*" >> "$CALLS"\n')
+
     def sudo_that_installs_git(self, fail_on=None):
         body = ""
         if fail_on:
@@ -265,6 +282,135 @@ def test_get_check_is_a_dry_run_too(box):
     code, _ = box.bash(GET, "--check", env=box.env(ACK_VOICE_TAG="v1", ACK_VOICE_DIR=str(box.dest)))
     assert code == 0 and box.calls() == [] and not box.dest.exists()
 
+
+
+# ---- a copy that is already there: used as it is, but an out-of-date one is said so and only updated after a yes (found on a real Windows: a copy from before
+#      --no-window made setup stop with "Unknown option: --no-window")
+
+def pull_calls(box):
+    return [c for c in box.calls() if " pull " in c]
+
+
+def existing(box, **kinds):
+    box.git_for_a_copy(**kinds)
+    box.a_copy_is_there()
+    return box.env(ACK_VOICE_TAG="main", ACK_VOICE_DIR=str(box.dest))
+
+
+def test_a_copy_that_is_the_release_asked_for_is_used_without_a_question(box):
+    env = existing(box, here="same1", there="same1")
+    code, out = box.bash(GET, "--no-window", env=env)
+    assert code == 0 and pull_calls(box) == [] and "not the same" not in out and "Update the copy" not in out and box.calls()[-1] == "setup.sh --no-window"
+
+
+def test_a_copy_that_already_holds_the_release_is_used_without_a_question(box):
+    env = existing(box, ahead=True)
+    code, out = box.bash(GET, env=env)
+    assert code == 0 and pull_calls(box) == [] and "not the same" not in out
+
+
+def test_the_check_only_looks_and_changes_nothing_before_a_yes(box):
+    env = existing(box)
+    code, out = box.bash(GET, env=env)
+    assert code == 0 and pull_calls(box) == []
+    assert any("ls-remote" in c and URL in c and "refs/heads/main" in c for c in box.calls())
+    assert "is not the same as ACK main" in out and "may be older" in out and "not touched" in out and "ack-voice-studio" in out
+
+
+@needs_pty
+def test_a_yes_updates_the_copy_with_a_fast_forward_only_and_then_carries_on_with_every_argument(box):
+    env = existing(box)
+    code, out = box.bash(GET, "--no-window", env=env, answers=["y"])
+    assert code == 0 and pull_calls(box) == ["git -C %s pull --ff-only origin main" % box.dest] and "Update the copy now?" in out and "The copy was updated." in out
+    assert box.calls()[-1] == "setup.sh --no-window"
+
+
+@needs_pty
+@pytest.mark.parametrize("answer", ["", "n", "no", "yes please", "yy"])
+def test_anything_but_a_plain_yes_leaves_the_copy_alone_and_carries_on_with_it(box, answer):
+    env = existing(box)
+    code, out = box.bash(GET, env=env, answers=[answer])
+    assert code == 0 and pull_calls(box) == [] and "left as it is" in out and "Unknown option" in out and box.calls()[-1].rstrip() == "setup.sh"
+
+
+def test_with_nobody_to_ask_the_copy_is_left_alone_and_the_way_to_update_it_is_said(box):
+    env = existing(box)
+    code, out = box.bash(GET, env=env)
+    assert code == 0 and pull_calls(box) == [] and "cannot ask you a question" in out and "git pull" in out and box.calls()[-1].rstrip() == "setup.sh"
+
+
+def test_yes_on_the_command_line_does_not_answer_the_update_question(box):
+    env = existing(box)
+    code, out = box.bash(GET, "--yes", env=env)
+    assert code == 0 and pull_calls(box) == [] and box.calls()[-1] == "setup.sh --yes"
+
+
+@needs_pty
+def test_yes_on_the_command_line_does_not_stop_the_update_question_being_asked(box):
+    env = existing(box)
+    code, out = box.bash(GET, "--yes", env=env, answers=["n"])
+    assert code == 0 and pull_calls(box) == [] and out.count("Update the copy now?") == 1
+
+
+def test_a_copy_with_changes_of_the_persons_own_is_never_updated_or_asked_about(box):
+    env = existing(box, dirty=True)
+    code, out = box.bash(GET, env=env)
+    assert code == 0 and pull_calls(box) == [] and "changes of your own" in out and "Update the copy now?" not in out and box.calls()[-1].rstrip() == "setup.sh"
+
+
+@needs_pty
+def test_a_failed_update_says_nothing_was_changed_and_does_not_start_setup(box):
+    env = existing(box, pull_fails=True)
+    code, out = box.bash(GET, env=env, answers=["y"])
+    assert code == 1 and "could not be updated" in out and "nothing was changed" in out and "git pull" in out
+    assert not any(c.startswith("setup.sh") for c in box.calls())
+
+
+def test_a_copy_is_used_quietly_when_the_release_cannot_be_looked_up(box):
+    env = existing(box, listing=False)
+    code, out = box.bash(GET, env=env)
+    assert code == 0 and pull_calls(box) == [] and "not the same" not in out and box.calls()[-1].rstrip() == "setup.sh"
+
+
+def test_a_folder_that_is_not_a_git_copy_is_used_without_a_question(box):
+    env = existing(box, inside=False)
+    code, out = box.bash(GET, env=env)
+    assert code == 0 and pull_calls(box) == [] and not any("ls-remote" in c for c in box.calls()) and box.calls()[-1].rstrip() == "setup.sh"
+
+
+def test_a_copy_is_used_when_git_is_not_there_at_all(box):
+    box.a_copy_is_there()
+    code, out = box.bash(GET, env=box.env(ACK_VOICE_TAG="main", ACK_VOICE_DIR=str(box.dest)))
+    assert code == 0 and [c.rstrip() for c in box.calls()] == ["setup.sh"] and "not the same" not in out
+
+
+def test_a_dry_run_does_not_look_at_the_copy_at_all(box):
+    env = existing(box)
+    code, _ = box.bash(GET, "--dry-run", env=env)
+    assert code == 0 and box.calls() == ["setup.sh --dry-run"]
+
+
+@needs_pty
+def test_an_odd_folder_name_stays_one_piece_through_the_check_and_the_update(box):
+    box.dest = box.home / "my folder; $(touch gotcha)"
+    env = existing(box)
+    code, _ = box.bash(GET, env=env, answers=["y"])
+    assert code == 0 and not (box.home / "gotcha").exists() and list(box.cwd.iterdir()) == []
+    assert pull_calls(box) == ["git -C %s pull --ff-only origin main" % box.dest] and "argc 6" in box.calls(), "-C, the folder, pull, --ff-only, origin, main: the folder is one argument"
+
+
+def test_a_copy_at_the_commit_an_annotated_release_points_to_is_the_same_copy(box):
+    env = existing(box, annotated=True, here="commit77", there="commit77")
+    code, out = box.bash(GET, env=env)
+    assert code == 0 and pull_calls(box) == [] and "not the same" not in out, "the line for the tag itself is not the one to compare; the commit it points at is the last line"
+
+
+def test_the_only_change_get_makes_to_a_copy_is_one_fast_forward_pull_asked_for_first():
+    code = GET.read_text()
+    assert len(re.findall(r"\bpull\b", commands_only(GET))) == 1 and 'pull --ff-only origin "$TAG"' in code
+    check = code.split("check_copy() {", 1)[1].split("\n}\n", 1)[0]
+    assert check.index("ask_person \"") < check.index('pull --ff-only origin "$TAG"') and "$YES" not in check and "--yes" not in check
+    assert 'ls-remote "$REPO_URL"' in check and check.count("</dev/null") == 2
 
 # ---- when git is missing
 

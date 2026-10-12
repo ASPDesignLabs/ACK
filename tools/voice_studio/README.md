@@ -19,8 +19,8 @@ On Windows, `install.ps1` does the Windows part and then runs the Ubuntu command
 curl -fsSL https://raw.githubusercontent.com/ASPDesignLabs/ACK/main/tools/voice_studio/get.sh | bash
 ```
 
-`get.sh` installs git (after asking), fetches ACK into `~/ack-tools` (or `ACK_VOICE_DIR`) at the release in `ACK_VOICE_TAG` (default `main`), and runs `setup.sh`. It never touches a folder that is
-already there and never edits your shell settings. The only password prompt is Ubuntu's own `sudo`, in your terminal; this program never sees it. If you already have ACK's files:
+`get.sh` installs git (after asking), fetches ACK into `~/ack-tools` (or `ACK_VOICE_DIR`) at the release in `ACK_VOICE_TAG` (default `main`), and runs `setup.sh`. It never changes a folder that is
+already there except to bring an out-of-date copy of ACK up to date (`git pull --ff-only`, only after you say yes), and never edits your shell settings. The only password prompt is Ubuntu's own `sudo`, in your terminal; this program never sees it. If you already have ACK's files:
 
 ```bash
 ./tools/voice_studio/setup.sh              # packages, then the two sets of programs, then the window; each step asks first

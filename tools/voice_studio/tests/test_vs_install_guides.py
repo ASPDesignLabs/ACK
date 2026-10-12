@@ -59,7 +59,7 @@ def helper_texts():
 
 
 def script_texts(name):
-    return [m.replace("\\\"", "\"") for m in re.findall(r'(?:say|ask) "([^"]*)"', (PKG / name).read_text())]
+    return [m.replace("\\\"", "\"") for m in re.findall(r'(?:say|ask|ask_person) "([^"]*)"', (PKG / name).read_text())]
 
 
 _real_catalog = device_doc.text_catalog_strings
