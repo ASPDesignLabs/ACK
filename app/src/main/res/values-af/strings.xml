@@ -632,7 +632,7 @@ DRAFT TRANSLATION (Afrikaans). Written by an AI assistant for the ACK project. N
     <string name="audio_delete_profile_title">SKRAP PROFIEL?</string>
     <string name="audio_delete_profile_body">SKRAP \"%1$s\" VIR ALTYD? DIT KAN NIE ONGEDAAN GEMAAK WORD NIE.</string>
     <string name="audio_toast_imported">STEM INGEVOER -- HERBEGIN</string>
-    <string name="audio_toast_import_failed">INVOER MISLUK -- KIES BEIDE .ONNX EN .ONNX.JSON</string>
+    <string name="audio_toast_import_failed">INVOER MISLUK -- KIES BEIDE .ONNX EN .ONNX.JSON, OF ÉÉN .ZIP-LÊER VAN DIE STEM</string>
     <string name="audio_toast_restored">STEMRUGSTEUNKOPIE HERSTEL -- HERBEGIN</string>
     <string name="audio_toast_restore_failed">HERSTEL MISLUK -- INTEGRITEITSTOETS</string>
     <string name="speech_language_device">SPRAAKTAAL: DIE FOON SE TAAL</string>

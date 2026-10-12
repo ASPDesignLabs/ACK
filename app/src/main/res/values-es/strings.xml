@@ -635,7 +635,7 @@ DRAFT TRANSLATION (Spanish, neutral for Spain and Latin America). Written by an 
     <string name="audio_delete_profile_title">¿ELIMINAR PERFIL?</string>
     <string name="audio_delete_profile_body">¿ELIMINAR \"%1$s\" PARA SIEMPRE? ESTO NO SE PUEDE DESHACER.</string>
     <string name="audio_toast_imported">VOZ IMPORTADA -- REINICIANDO</string>
-    <string name="audio_toast_import_failed">FALLÓ LA IMPORTACIÓN -- ELIGE LOS DOS ARCHIVOS .ONNX Y .ONNX.JSON</string>
+    <string name="audio_toast_import_failed">FALLÓ LA IMPORTACIÓN -- ELIGE LOS DOS ARCHIVOS .ONNX Y .ONNX.JSON, O UN SOLO .ZIP DE LA VOZ</string>
     <string name="audio_toast_restored">COPIA DE LA VOZ RESTAURADA -- REINICIANDO</string>
     <string name="audio_toast_restore_failed">FALLÓ LA RESTAURACIÓN -- COMPROBACIÓN DE INTEGRIDAD</string>
     <string name="speech_language_device">IDIOMA DE VOZ: EL DE ESTE TELÉFONO</string>

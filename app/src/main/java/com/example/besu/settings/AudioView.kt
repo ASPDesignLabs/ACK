@@ -254,7 +254,7 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris: List<Uri> ->
         if (uris.isNotEmpty()) {
-            if (CustomVoiceRepository.importVoice(context, uris)) {
+            if (CustomVoiceRepository.importPicked(context, uris)) {
                 hasCustomVoice = true
                 Toast.makeText(context, context.getString(R.string.audio_toast_imported), Toast.LENGTH_LONG).show()
                 pendingCustomVoiceRestart = true
@@ -494,6 +494,8 @@ fun AudioArchitectView(context: Context, primaryColor: Color, systemVoices: List
             // No reliable MIME type for .onnx/.onnx.json -- CustomVoiceRepository
             // identifies which is which by filename suffix, same tolerance
             // GifRepository.importGif already applies to a null/unknown MIME.
+            // The same picker also takes the one .zip Voice Studio makes
+            // (CustomVoiceRepository.importPicked routes by the file's name).
             importVoiceLauncher.launch(arrayOf("*/*"))
         }
         Spacer(modifier = Modifier.height(6.dp))

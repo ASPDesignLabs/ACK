@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "note": "Every download the guided setup can make is listed here, and only here: this file is the one place (with get.sh) allowed to hold a web address. An entry with no address is not fetchable yet: it is filled in, pinned to a revision, a size and a checksum, once it has been checked on a real machine (plan tasks VS-0.2 and VS-4.1). Sizes marked approx are the sizes the hosts show, used only for the disk estimate.",
+  "items": [
+    {
+      "id": "voice-mike",
+      "kind": "voice",
+      "why_key": "fetch.why.voice_mike",
+      "license_id": "voice-mike-card",
+      "approx_size_bytes": 846000000,
+      "filename": "epoch=5460-val_mos=4.2686.ckpt",
+      "url": "https://huggingface.co/datasets/rhasspy/piper-checkpoints/resolve/37d1bea250e21ca0d617818d2bef1db724edb80c/en/en_US/mike/medium/epoch=5460-val_mos=4.2686.ckpt",
+      "revision": "37d1bea250e21ca0d617818d2bef1db724edb80c",
+      "size_bytes": 845891981,
+      "sha256": "9a8389c2d733f94e2acc3b4e8264b4ba3c063612217780e4be21c0ccaff18b9b",
+      "pages": {
+        "lessac": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html",
+        "mike": "https://github.com/OHF-Voice/voice-datasets"
+      }
+    },
+    {
+      "id": "voice-amy",
+      "kind": "voice",
+      "why_key": "fetch.why.voice_amy",
+      "license_id": "voice-amy-card",
+      "approx_size_bytes": 846000000,
+      "filename": "epoch=6679-step=1554200.ckpt",
+      "url": "https://huggingface.co/datasets/rhasspy/piper-checkpoints/resolve/37d1bea250e21ca0d617818d2bef1db724edb80c/en/en_US/amy/medium/epoch=6679-step=1554200.ckpt",
+      "revision": "37d1bea250e21ca0d617818d2bef1db724edb80c",
+      "size_bytes": 845898392,
+      "sha256": "6573ebd94b0610555ef34a1684cb89cae86ab9a7372d16f74bab35932879ef5a",
+      "pages": {
+        "amy": "https://github.com/MycroftAI/mimic3-voices",
+        "lessac": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html"
+      }
+    },
+    {
+      "id": "speech-model-small-en-config-json",
+      "kind": "model",
+      "why_key": "fetch.why.speech_model",
+      "license_id": "whisper-mit",
+      "approx_size_bytes": 2657,
+      "folder": "speech-small-en",
+      "filename": "config.json",
+      "url": "https://huggingface.co/Systran/faster-whisper-small.en/resolve/d1d751a5f8271d482d14ca55d9e2deeebbae577f/config.json",
+      "revision": "d1d751a5f8271d482d14ca55d9e2deeebbae577f",
+      "size_bytes": 2657,
+      "sha256": "666a9605530ac1f61fa8177f3702b4dacec9966749e42610839fcc32661d5fae"
+    },
+    {
+      "id": "speech-model-small-en-model-bin",
+      "kind": "model",
+      "why_key": "fetch.why.speech_model",
+      "license_id": "whisper-mit",
+      "approx_size_bytes": 483545366,
+      "folder": "speech-small-en",
+      "filename": "model.bin",
+      "url": "https://huggingface.co/Systran/faster-whisper-small.en/resolve/d1d751a5f8271d482d14ca55d9e2deeebbae577f/model.bin",
+      "revision": "d1d751a5f8271d482d14ca55d9e2deeebbae577f",
+      "size_bytes": 483545366,
+      "sha256": "62b2a45b05ee59acb4a5341b33ee35e041395d378d418a18acfe4c9e768ee37a"
+    },
+    {
+      "id": "speech-model-small-en-tokenizer-json",
+      "kind": "model",
+      "why_key": "fetch.why.speech_model",
+      "license_id": "whisper-mit",
+      "approx_size_bytes": 2128466,
+      "folder": "speech-small-en",
+      "filename": "tokenizer.json",
+      "url": "https://huggingface.co/Systran/faster-whisper-small.en/resolve/d1d751a5f8271d482d14ca55d9e2deeebbae577f/tokenizer.json",
+      "revision": "d1d751a5f8271d482d14ca55d9e2deeebbae577f",
+      "size_bytes": 2128466,
+      "sha256": "929c5252409436dce1b38a75d1abbcb5e132d170d8e324e4e04ed915fa2d22df"
+    },
+    {
+      "id": "speech-model-small-en-vocabulary-txt",
+      "kind": "model",
+      "why_key": "fetch.why.speech_model",
+      "license_id": "whisper-mit",
+      "approx_size_bytes": 422309,
+      "folder": "speech-small-en",
+      "filename": "vocabulary.txt",
+      "url": "https://huggingface.co/Systran/faster-whisper-small.en/resolve/d1d751a5f8271d482d14ca55d9e2deeebbae577f/vocabulary.txt",
+      "revision": "d1d751a5f8271d482d14ca55d9e2deeebbae577f",
+      "size_bytes": 422309,
+      "sha256": "ff77588746d3a2595d32ab5b69ffd7b95ce2441ac57533cb66fc3eb575a115cf"
+    }
+  ]
+}

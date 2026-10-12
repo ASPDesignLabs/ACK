@@ -16,7 +16,7 @@ pytestmark = pytest.mark.skipif(not (ROOT / "LICENSE").exists() or not (ROOT / "
 
 GPL3_SHA256 = "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"       # the FSF's text, as shipped in Debian and Ubuntu
 APACHE2_SHA256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
-CODE = {".kt", ".kts", ".py", ".js", ".mjs", ".html", ".css", ".sh", ".pro"}
+CODE = {".kt", ".kts", ".py", ".js", ".mjs", ".html", ".css", ".sh", ".pro", ".ps1"}
 SKIP_PARTS = {".idea", "__pycache__", "node_modules", ".gradle", "build"}
 BINARY_ASSETS = {".so", ".otf", ".ttf", ".jar", ".aar", ".woff", ".woff2"}
 NOTICES = ROOT / "THIRD_PARTY_NOTICES.md"

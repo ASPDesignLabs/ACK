@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "note": "What ACK Voice Studio may download, as the host lists it. `make_pins.py pin` turns each entry into registry entries pinned to one commit, size and SHA-256. files: shell patterns for names directly inside `directory`; the speech model takes the same file patterns as faster-whisper's own downloader (config.json, preprocessor_config.json, model.bin, tokenizer.json, vocabulary.*), each file its own entry (plan decision D29); a starting voice is one checkpoint.",
+  "specs": [
+    {
+      "id": "speech-model-small-en",
+      "kind": "model",
+      "why_key": "fetch.why.speech_model",
+      "license_id": "whisper-mit",
+      "repo": "Systran/faster-whisper-small.en",
+      "revision": "main",
+      "directory": "",
+      "folder": "speech-small-en",
+      "id_per_file": true,
+      "files": ["config.json", "preprocessor_config.json", "model.bin", "tokenizer.json", "vocabulary.*"],
+      "optional": ["preprocessor_config.json"],
+      "replaces": ["speech-model-small-en"]
+    },
+    {
+      "id": "voice-mike",
+      "kind": "voice",
+      "why_key": "fetch.why.voice_mike",
+      "license_id": "voice-mike-card",
+      "approx_size_bytes": 846000000,
+      "repo": "datasets/rhasspy/piper-checkpoints",
+      "revision": "main",
+      "directory": "en/en_US/mike/medium",
+      "files": ["*.ckpt"],
+      "pages": {"lessac": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html", "mike": "https://github.com/OHF-Voice/voice-datasets"}
+    },
+    {
+      "id": "voice-amy",
+      "kind": "voice",
+      "why_key": "fetch.why.voice_amy",
+      "license_id": "voice-amy-card",
+      "approx_size_bytes": 846000000,
+      "repo": "datasets/rhasspy/piper-checkpoints",
+      "revision": "main",
+      "directory": "en/en_US/amy/medium",
+      "files": ["*.ckpt"],
+      "pages": {"amy": "https://github.com/MycroftAI/mimic3-voices", "lessac": "https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html"}
+    }
+  ]
+}

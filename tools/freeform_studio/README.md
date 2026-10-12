@@ -228,8 +228,23 @@ What happens:
   unclear, laugh or cough become tags, which keep a piece out of training until you clear them. Nothing is dropped or edited
   for you: a flagged piece waits for you.
 
+**Finishing recordings without the server.** The server decodes, listens to and cuts a recording as soon as it arrives. If you would rather not start it
+(a program such as ACK Voice Studio does this), `python -m freeform_studio.process --output <recordings folder>` does the same work for every recording
+that is waiting, then stops. It needs the speech model to be on this computer already (it never downloads one), it can be stopped and run again, and it
+changes nothing but the recordings that were waiting. `--json` prints one JSON object per line instead of sentences.
+
 The package format is written down in `docs/ACK_TRAINING_CAPTURE_FORMAT.md`, and both programs are tested against the same
 shared test cases, so a rule can not quietly differ between the phone and this computer.
+
+**Recordings that ACK did not make.** If you already have voice recordings (a folder of audio files), `python -m freeform_studio.files_import FOLDER --kind K --output <recordings folder>`
+brings them in the same careful way. **You say what kind they are; it never guesses:** `pairs` (a `.txt` with the same name beside each audio file),
+`table` (one `metadata.csv`-style table: file name and sentence on each line, separated by `|`, a tab or a comma) or `audio` (nothing else; the computer listens and
+writes the sentences). `FOLDER` may also be a `.zip` of such a folder. `--dry-run` looks and writes nothing; without it, it shows the plan and asks.
+The folder is only read. Each file is recognised by its content, so running it twice, or with a renamed copy, adds nothing; a file that cannot be read is named and left out
+without stopping the rest. Files that come with a sentence are joined into recordings of up to 20 minutes (like a script session), a file with no sentence is a recording of its own, and
+all of them are then listened to and cut like any other. The sentence you give is kept as a **reference**: if what the computer hears differs, the piece is marked and waits for you.
+Unlike a recording from the phone there are no *cut off* or phone-only marks, since a file trimmed close to the speech is normal for voice data. (ACK Voice Studio's Recordings page and
+`python3 -m voice_studio.recordings import` use this same code.)
 
 ## Training clips: export approved pieces into your recorder's folders
 
@@ -286,7 +301,8 @@ python -m freeform_studio.build_dataset               # builds a NEW folder, nev
 It reads the takes (and never changes them), keeps the pieces that are safe to train on, and writes `wav/` plus
 `metadata.csv`, exactly what `piper.train fit` reads, along with `manifest.json` (where every clip came from) and
 `excluded.txt` (everything left out, with the reason and the text, so you can judge the choices yourself). It then
-prints the training command to run, including a fresh cache folder.
+prints the training command to run, including a fresh cache folder. `--json` prints the same facts (counts, minutes, what was left out and why) as one
+JSON object, for a program to read.
 
 | Option | What it does |
 |---|---|
@@ -298,6 +314,7 @@ prints the training command to run, including a fresh cache folder.
 | `--exclude-tags laugh,cough` | leave out pieces carrying these tags (default `laugh,cough,noise,unclear`; `none` turns it off) |
 | `--min-seconds` / `--max-seconds` | length limits, default 1.0 and 11.5 |
 | `--no-normalize` | keep each clip's original loudness |
+| `--max-gain-db DB` | the most a quiet clip is turned up to reach full level (a peak of -3 dB); default 12, accepts 0 to 60. A phone microphone with no automatic gain often records softer than 12 dB can fix, and ACK's import flags those pieces `quiet`, so they are left out. **Give a higher limit (for example `--max-gain-db 36`) and they are used instead**, as long as nothing else is wrong with them (a `noisy` one is still left out). The report says how far clips were turned up and warns if some are still softer than full level; each clip's gain is in `manifest.json`. The "too quiet to use" floor (an average level of -50 dB) moves down by the extra gain you allow, so a piece the gain can bring up is not refused first; it never goes below -80 dB, where there is only noise. Your recordings are never changed. |
 | `--out DIR` | where to write it (default `~/piper/freeform-dataset-<date-time>`) |
 
 Pieces are also left out when they are too quiet, or clip repeatedly (a single stray full-scale sample is fine).

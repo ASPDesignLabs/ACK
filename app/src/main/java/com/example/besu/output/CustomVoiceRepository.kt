@@ -5,6 +5,8 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import com.example.besu.core.CustomVoiceImport
+import com.example.besu.core.CustomVoiceImportKind
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import java.io.File
@@ -41,6 +43,13 @@ object CustomVoiceRepository {
             if (idx >= 0 && cursor.moveToFirst()) return cursor.getString(idx) ?: ""
         }
         return ""
+    }
+
+    // IMPORT CUSTOM VOICE's one entry point: what was picked is either the voice's two trainer files or the one .zip Voice Studio (and EXPORT VOICE BACKUP) makes.
+    // core/CustomVoiceImport only routes by name; both landing paths validate again on their own, so a wrong guess cannot install anything unchecked.
+    fun importPicked(context: Context, uris: List<Uri>): Boolean {
+        val kind = CustomVoiceImport.kindOf(uris.map { displayName(context, it) })
+        return if (kind == CustomVoiceImportKind.ONE_ZIP) CustomVoiceBackupManager.importBackup(context, uris[0]) else importVoice(context, uris)
     }
 
     // Copies from arbitrary content Uris (in whatever order the picker

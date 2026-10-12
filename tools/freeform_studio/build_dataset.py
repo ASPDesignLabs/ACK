@@ -12,6 +12,12 @@ Which pieces go in (--include):
             [tags], symbols, possible mis-hearing) stays out unless you allow that flag.
   approved  only pieces you approved in review.
   all       everything you didn't drop, flags ignored. Use with care.
+
+Quiet recordings (--max-gain-db): every clip is turned up so its loudest point is at -3 dB, by at most 12 dB unless you say otherwise. A phone
+microphone with no automatic gain often records softer than that allows; the import flags those pieces "quiet" and they are left out. Give a higher limit
+(for example --max-gain-db 36) and they are brought up and used instead, as long as nothing else is wrong with them (a noisy one is still left out). Your
+recordings are never changed: the gain is applied to the copy that goes into the training set, and each clip's gain is written to manifest.json. The "too quiet to use"
+floor (an average level of -50 dB) moves down by the extra gain you allow, so a piece that the gain can bring up is not refused first; it never goes below -80 dB.
 """
 from __future__ import annotations
 
@@ -38,6 +44,10 @@ from .privacy import private_umask
 
 TARGET_SR = 22050
 CLIP_SAMPLES = 5
+DEFAULT_MAX_GAIN_DB = 12.0   # the most a quiet clip is turned up by default; ack_checks flags a piece "quiet" when it would need more
+SILENCE_DB = -80.0          # a clip averaging softer than this holds no speech in a 16-bit file whatever the gain; refused as too quiet at any limit
+MAX_GAIN_LIMIT_DB = 60.0     # what --max-gain-db accepts: far past anything a real recording needs, short of amplifying nothing but noise
+QUIET_FLAG = {"quiet"}  # set at import for a piece too soft to be brought up with the default limit; a higher --max-gain-db stops it blocking
 LENGTH_FLAGS = {"too_short", "too_long"}  # measured directly instead, against --min-seconds/--max-seconds
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 # split_long_takes.py names a clip from the export folder "freeform_<recording>_<piece>.wav" (group name + file name)
@@ -53,7 +63,7 @@ class Policy:
     max_s: float = 11.5
     normalize: bool = True
     peak_db: float = -3.0
-    max_gain_db: float = 12.0
+    max_gain_db: float = DEFAULT_MAX_GAIN_DB
     min_rms_db: float = -50.0
     fade_s: float = 0.008
 
@@ -76,6 +86,24 @@ class Candidate:
 
 def clean_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").replace(" ", " ")).strip()
+
+
+def quiet_floor_db(p: Policy) -> float:
+    """The softest a clip's average level (dBFS) may be before it is refused as too quiet. `min_rms_db` was set for the default 12 dB of gain (a clip at the floor ends about
+    -38 dB, still usable), so when the person allows more gain the floor moves down by the extra, but never below SILENCE_DB: past that there is only noise to turn up."""
+    extra = max(0.0, p.max_gain_db - DEFAULT_MAX_GAIN_DB) if p.normalize else 0.0
+    return max(p.min_rms_db - extra, SILENCE_DB) if extra else p.min_rms_db
+
+
+def gain_limit(text: str) -> float:
+    """`--max-gain-db`: a finite number of decibels from 0 to MAX_GAIN_LIMIT_DB."""
+    try:
+        value = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a number of decibels")
+    if not 0.0 <= value <= MAX_GAIN_LIMIT_DB:                    # NaN and infinity fail this too
+        raise argparse.ArgumentTypeError(f"must be from 0 to {MAX_GAIN_LIMIT_DB:g}")
+    return value
 
 
 def parse_allow(text: Optional[str]) -> Set[str]:
@@ -112,7 +140,7 @@ def why_excluded(seg: Dict[str, Any], p: Policy) -> Optional[str]:
     if p.include == "approved":
         return "not approved yet"
     if p.include == "clean":
-        blocking = set(seg.get("flags", [])) - p.allow - LENGTH_FLAGS
+        blocking = set(seg.get("flags", [])) - p.allow - LENGTH_FLAGS - (QUIET_FLAG if p.normalize and p.max_gain_db > DEFAULT_MAX_GAIN_DB else set())
         if blocking:
             return "flagged: " + ", ".join(sorted(blocking))
     return None
@@ -171,7 +199,7 @@ def render_take(take_dir: Path, clips: List[Candidate], wav_dir: Path, p: Policy
         peak = float(np.abs(x).max())
         if int(np.count_nonzero(np.abs(x) >= 0.999)) >= CLIP_SAMPLES:  # one stray sample is normal; a run of them is distortion
             return bad("the recording clips (hits the maximum level repeatedly)")
-        if _db(float(np.sqrt(np.mean(x * x)))) < p.min_rms_db:
+        if _db(float(np.sqrt(np.mean(x * x)))) < quiet_floor_db(p):
             return bad("too quiet to use")
         gain_db = 0.0
         if p.normalize:
@@ -236,16 +264,22 @@ def read_dataset(folder: Path) -> Tuple[List[Tuple[Path, str]], List[str]]:
 def build(args: argparse.Namespace) -> int:
     policy = Policy(include=args.include, allow=parse_allow(args.allow),
                     exclude_tags=set() if args.exclude_tags == "none" else {t for t in args.exclude_tags.split(",") if t},
-                    min_s=args.min_seconds, max_s=args.max_seconds, normalize=not args.no_normalize)
+                    min_s=args.min_seconds, max_s=args.max_seconds, normalize=not args.no_normalize,
+                    max_gain_db=getattr(args, "max_gain_db", DEFAULT_MAX_GAIN_DB))
+    as_json = bool(getattr(args, "json", False))
     takes_dir = Path(args.output).expanduser() / "_freeform" / args.code / "takes"
     out = Path(args.out).expanduser() if args.out else Path("~/piper").expanduser() / f"freeform-dataset-{datetime.now():%Y%m%d-%H%M%S}"
     if out.exists() and any(out.iterdir()) and not args.dry_run:
+        if as_json:
+            return _json_exit(2, result="refused_existing", out=str(out))
         print(f"\nCan't continue: {out} already exists and isn't empty. This tool never overwrites a dataset; "
               f"choose a new name with --out.\n", file=sys.stderr)
         return 2
 
     chosen, excluded, stats = scan(takes_dir, policy)
     if not takes_dir.is_dir():
+        if as_json:
+            return _json_exit(2, result="no_takes_folder", out=str(takes_dir))
         print(f"\nCan't continue: no takes folder at {takes_dir}. Check --output and --code.\n", file=sys.stderr)
         return 2
 
@@ -286,6 +320,11 @@ def build(args: argparse.Namespace) -> int:
             rendered.extend(r)
             excluded.extend(bad)
     rendered.sort(key=lambda r: (r["take"], r["index"]))
+    if policy.normalize:
+        capped = sum(1 for r in rendered if r.get("gain_db") is not None and r["gain_db"] >= round(policy.max_gain_db, 1))
+        if capped:
+            warnings.append(f"{_pieces(capped)} still softer than full level after the most gain allowed ({policy.max_gain_db:g} dB); "
+                            f"a higher --max-gain-db turns them up further")
 
     # merged-in rows keep their own audio; give each a name that cannot collide
     merged: List[Dict[str, Any]] = []
@@ -298,9 +337,10 @@ def build(args: argparse.Namespace) -> int:
             shutil.copy2(path, out / "wav" / name)
         merged.append({"file": name, "text": text, "seconds": None})
 
-    report(args, policy, stats, rendered, merged, excluded, warnings, out)
+    if not as_json:
+        report(args, policy, stats, rendered, merged, excluded, warnings, out)
     if args.dry_run:
-        return 0
+        return _json_exit(0, **summary_dict("dry_run", policy, stats, rendered, merged, excluded, warnings, out)) if as_json else 0
     if not rendered and not merged:
         if made_dirs:  # only ever remove folders this run created, and only if empty
             for d in (out / "wav", out):
@@ -308,6 +348,8 @@ def build(args: argparse.Namespace) -> int:
                     d.rmdir()
                 except OSError:
                     pass
+        if as_json:
+            return _json_exit(1, **summary_dict("nothing_qualified", policy, stats, rendered, merged, excluded, warnings, out))
         print("Nothing qualified, so no dataset was written. See the list above for why.\n")
         return 1
 
@@ -317,16 +359,20 @@ def build(args: argparse.Namespace) -> int:
             w.writerow([r["file"], r["text"]])
     (out / "manifest.json").write_text(json.dumps({"built": datetime.now().isoformat(timespec="seconds"), "policy": {
         "include": policy.include, "allow": sorted(policy.allow), "min_seconds": policy.min_s, "max_seconds": policy.max_s,
-        "normalize": policy.normalize, "peak_db": policy.peak_db}, "clips": rendered, "merged": merged}, indent=1, ensure_ascii=False))
+        "normalize": policy.normalize, "peak_db": policy.peak_db, "max_gain_db": policy.max_gain_db}, "clips": rendered, "merged": merged}, indent=1, ensure_ascii=False))
     with open(out / "excluded.txt", "w", encoding="utf-8") as f:
         for e in excluded:
             f.write(f"{e['reason']}\t{e['take']}/{e['seg']}\t{e['seconds']}s\t{e['text']}\n")
     problems = validate(out)
+    if problems and as_json:
+        return _json_exit(1, **summary_dict("problems", policy, stats, rendered, merged, excluded, warnings, out, problems[:20]))
     if problems:
         print("Checks on the finished dataset found problems:")
         for line in problems[:20]:
             print("  PROBLEM", line)
         return 1
+    if as_json:
+        return _json_exit(0, **summary_dict("built", policy, stats, rendered, merged, excluded, warnings, out))
     print(f"Checked like the trainer reads it: {len(rendered) + len(merged)} rows, every wav present and 22050 Hz mono.\n")
     print_training_command(out)
     return 0
@@ -356,6 +402,41 @@ def validate(folder: Path) -> List[str]:
     return problems
 
 
+def _reasons(excluded: List[Dict[str, Any]]) -> Tuple[Dict[str, int], Dict[str, int]]:
+    """(left-out pieces counted by reason, and the flagged ones counted by flag)."""
+    by_reason: Dict[str, int] = {}
+    flagged: Dict[str, int] = {}
+    for e in excluded:
+        key = "flagged" if e["reason"].startswith("flagged:") else e["reason"].split(" (")[0]
+        by_reason[key] = by_reason.get(key, 0) + 1
+        if e["reason"].startswith("flagged:"):
+            for fl in e["reason"][len("flagged: "):].split(", "):
+                flagged[fl] = flagged.get(fl, 0) + 1
+    return by_reason, flagged
+
+
+def summary_dict(result: str, p: Policy, stats: Dict[str, Any], rendered: List[Dict[str, Any]], merged: List[Dict[str, Any]],
+                 excluded: List[Dict[str, Any]], warnings: List[str], out: Path, problems: Optional[List[str]] = None) -> Dict[str, Any]:
+    """The same facts the report prints, as plain data for a program (--json)."""
+    secs = sorted(r["seconds"] for r in rendered if r.get("seconds"))
+    gains = sorted(r["gain_db"] for r in rendered if r.get("gain_db") is not None)
+    by_reason, flagged = _reasons(excluded)
+    return {"result": result, "out": str(out), "takes": stats["takes"], "pieces_considered": stats["segments"],
+            "skipped_takes": [[name, status] for name, status in stats["skipped_takes"]],
+            "included": {"pieces": len(rendered), "minutes": round(sum(secs) / 60.0, 2), "shortest": secs[0] if secs else None,
+                         "median": secs[len(secs) // 2] if secs else None, "longest": secs[-1] if secs else None,
+                         "gain_db": ({"median": gains[len(gains) // 2], "max": gains[-1]} if gains else None)},
+            "merged": len(merged), "left_out": {"pieces": len(excluded), "by_reason": by_reason, "by_flag": flagged},
+            "warnings": warnings[:10], "problems": problems or [],
+            "policy": {"include": p.include, "allow": sorted(p.allow), "min_seconds": p.min_s, "max_seconds": p.max_s, "normalize": p.normalize,
+                       "max_gain_db": p.max_gain_db}}
+
+
+def _json_exit(code: int, **fields: Any) -> int:
+    print(json.dumps(fields, ensure_ascii=False), flush=True)
+    return code
+
+
 def report(args: argparse.Namespace, p: Policy, stats: Dict[str, Any], rendered: List[Dict[str, Any]],
            merged: List[Dict[str, Any]], excluded: List[Dict[str, Any]], warnings: List[str], out: Path) -> None:
     secs = sorted(r["seconds"] for r in rendered if r.get("seconds"))
@@ -368,21 +449,16 @@ def report(args: argparse.Namespace, p: Policy, stats: Dict[str, Any], rendered:
         print(f"  skipped take {name} ({status}): only finished takes are used")
     print(f"  INCLUDED: {_pieces(len(rendered))}, {total_min:.1f} minutes of speech" +
           (f", {secs[0]:.1f}s to {secs[-1]:.1f}s, median {secs[len(secs) // 2]:.1f}s" if secs else ""))
+    gains = sorted(r["gain_db"] for r in rendered if r.get("gain_db") is not None)
+    if gains and gains[-1] >= 0.5:
+        print(f"  LOUDNESS: turned up by a median of {gains[len(gains) // 2]:.0f} dB, up to {gains[-1]:.0f} dB (full level is a peak of {p.peak_db:g} dB)")
     if merged:
         print(f"  MERGED IN from other datasets: {len(merged)} rows")
-    by_reason: Dict[str, int] = {}
-    for e in excluded:
-        key = "flagged" if e["reason"].startswith("flagged:") else e["reason"].split(" (")[0]
-        by_reason[key] = by_reason.get(key, 0) + 1
+    by_reason, flagged = _reasons(excluded)
     if excluded:
         print(f"  LEFT OUT: {_pieces(len(excluded))}")
         for key, count in sorted(by_reason.items(), key=lambda kv: -kv[1]):
             print(f"      {count:4d}  {key}")
-        flagged = {}
-        for e in excluded:
-            if e["reason"].startswith("flagged:"):
-                for fl in e["reason"][len("flagged: "):].split(", "):
-                    flagged[fl] = flagged.get(fl, 0) + 1
         if flagged:
             print("      of the flagged ones, by flag: " + ", ".join(f"{k} {v}" for k, v in sorted(flagged.items(), key=lambda kv: -kv[1])))
             print("      Read them in excluded.txt. If the text is right, bring a kind back with e.g. --allow low_confidence")
@@ -448,8 +524,11 @@ def _main(argv: Optional[list] = None) -> int:
     ap.add_argument("--also", action="append", metavar="DATASET", help="also include an existing dataset folder "
                     "(wav/ + metadata.csv), e.g. ~/piper/my-dataset-split; can be repeated")
     ap.add_argument("--no-normalize", action="store_true", help="keep each clip's original loudness")
+    ap.add_argument("--max-gain-db", type=gain_limit, default=DEFAULT_MAX_GAIN_DB, metavar="DB",
+                    help=f"the most a quiet clip is turned up to reach full level (default {DEFAULT_MAX_GAIN_DB:g}); above that, pieces flagged \"quiet\" at import are used instead of left out")
     ap.add_argument("--show-excluded", type=int, default=10, help="how many left-out examples to print (0 = none)")
     ap.add_argument("--dry-run", action="store_true", help="show the plan and write nothing")
+    ap.add_argument("--json", action="store_true", help="print the result as one JSON object instead of the report (for a program to read)")
     return build(ap.parse_args(argv))
 
 
