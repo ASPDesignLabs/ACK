@@ -3,8 +3,8 @@
 <!-- ack-voice-studio-icon: plain shapes, no outside artwork, no text -->
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <title>ACK Voice Studio</title>
-  <rect x="8" y="8" width="112" height="112" rx="22" ry="22" fill="#1f2a44"/>
-  <g fill="#f2f5fb">
+  <polygon points="36,8 120,8 120,92 92,120 8,120 8,36" fill="#050505" stroke="#00f3ff" stroke-width="4" stroke-linejoin="miter"/>
+  <g fill="#00f3ff">
     <rect x="22" y="52" width="10" height="24" rx="5"/>
     <rect x="40" y="38" width="10" height="52" rx="5"/>
     <rect x="58" y="24" width="10" height="80" rx="5"/>

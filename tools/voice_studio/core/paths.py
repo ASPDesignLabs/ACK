@@ -55,6 +55,11 @@ class DataHome:
         return self.root + "/backups"
 
     @property
+    def window_file(self) -> str:
+        """The window's display choices (theme, accent, text size, scale): written only after the person says yes (core/windowprefs.py)."""
+        return self.state + "/window.json"
+
+    @property
     def consent_file(self) -> str:
         return self.state + "/consent.json"
 

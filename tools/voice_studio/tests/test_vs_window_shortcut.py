@@ -151,37 +151,48 @@ def test_the_icon_is_the_same_bytes_every_time_and_needs_no_image_library():
 def test_the_icon_is_drawn_from_the_same_shapes_and_colours_as_the_svg():
     root = ET.parse(PKG / "data" / "icons" / "org.aspdesignlabs.AckVoiceStudio.svg").getroot()
     ns = "{http://www.w3.org/2000/svg}"
-    square = root.find(ns + "rect")
+    shape = root.find(ns + "polygon")
     bars = root.find(ns + "g").findall(ns + "rect")
-    assert tuple(float(square.get(k)) for k in ("x", "y", "width", "height", "rx")) == iconmake.SQUARE
+    assert tuple(tuple(float(v) for v in pair.split(",")) for pair in shape.get("points").split()) == iconmake.POLYGON
+    assert float(shape.get("stroke-width")) == iconmake.STROKE
+    assert shape.get("fill") == "#%02x%02x%02x" % iconmake.BACKGROUND and shape.get("stroke") == "#%02x%02x%02x" % iconmake.ACCENT
     assert tuple(tuple(float(b.get(k)) for k in ("x", "y", "width", "height")) for b in bars) == iconmake.BARS
     assert all(float(b.get("rx")) == float(b.get("width")) / 2 for b in bars)
-    assert "#%02x%02x%02x" % iconmake.BACKGROUND == square.get("fill") and "#%02x%02x%02x" % iconmake.BARS_COLOUR == root.find(ns + "g").get("fill")
+    assert root.find(ns + "g").get("fill") == "#%02x%02x%02x" % iconmake.ACCENT
     assert root.get("viewBox") == "0 0 128 128" and iconmake.VIEW == 128.0
 
 
-def test_the_big_image_has_a_clear_corner_a_dark_square_and_light_bars_where_the_svg_has_them():
+def test_the_icon_is_ACKs_own_colours_and_cut_corners():
+    from voice_studio.core import windowtheme as wt
+    assert "#%02x%02x%02x" % iconmake.BACKGROUND == wt.VOID and "#%02x%02x%02x" % iconmake.ACCENT == wt.ACCENTS[0][1]
+    top_left, _top_right, _right, bottom_right, _bottom_left, _left = iconmake.POLYGON[0], iconmake.POLYGON[1], iconmake.POLYGON[2], iconmake.POLYGON[3], iconmake.POLYGON[4], iconmake.POLYGON[5]
+    assert len(iconmake.POLYGON) == 6 and top_left[0] > iconmake.POLYGON[5][0] and bottom_right[0] < iconmake.POLYGON[2][0], "the top left and the bottom right are the cut ones, as ACK's panels are"
+
+
+def test_the_big_image_has_clear_cut_corners_a_cyan_line_a_void_black_inside_and_cyan_bars_where_the_svg_has_them():
     data = real_icon()
     w, h, _p, _b, size, offset = read_ico(data)[-1]
     _w, _h, pixels = read_png(data[offset:offset + size])
     scale = 256 / 128.0
     at = lambda x, y: pixels[int(y * scale)][int(x * scale)]
-    assert at(1, 1)[3] == 0                                                      # outside the rounded square
-    assert at(12, 64) == iconmake.BACKGROUND + (255,)                            # in the square, between nothing and the first bar
-    assert at(27, 64) == iconmake.BARS_COLOUR + (255,)                           # the middle of the first bar
-    assert at(63, 64) == iconmake.BARS_COLOUR + (255,)                           # the middle of the tall bar
-    assert at(63, 14)[:3] == iconmake.BACKGROUND and at(63, 14)[3] == 255        # above the tall bar, still in the square
-    assert at(99, 64) == iconmake.BARS_COLOUR + (255,) and at(99, 40) == iconmake.BACKGROUND + (255,)      # the shortest bar is short
-    assert at(22.6, 52.6) == iconmake.BACKGROUND + (255,) and at(31.4, 75.4) == iconmake.BACKGROUND + (255,)      # the ends of a bar are round: its corners are not light
+    cyan, void = iconmake.ACCENT + (255,), iconmake.BACKGROUND + (255,)
+    assert at(1, 1)[3] == 0 and at(126, 126)[3] == 0 and at(14, 14)[3] == 0 and at(114, 114)[3] == 0           # outside the two cut corners
+    assert at(64, 8) == cyan and at(8, 64) == cyan and at(120, 64) == cyan and at(64, 120) == cyan             # the line, on each side
+    assert at(22, 22) == cyan and at(106, 106) == cyan                                                          # and along each cut
+    assert at(30, 30) == void and at(48, 16) == void and at(100, 100) == void                                  # inside the line
+    assert at(27, 64) == cyan and at(63, 64) == cyan and at(99, 64) == cyan and at(36, 64) == void             # the bars, and the space between them
+    assert at(22.6, 52.6) == void and at(31.4, 75.4) == void                                                    # the ends of a bar are round: its corners are not cyan
+    assert at(99, 40) == void and at(63, 14)[:3] == iconmake.BACKGROUND                                         # the shortest bar is short; above the tall bar is still inside
 
 
-def test_the_edge_of_a_bar_is_smoothed_a_pixel_half_covered_is_half_way_between_the_two_colours():
+def test_the_edges_are_smoothed_so_a_sloping_edge_has_pixels_between_the_two_colours():
     data = real_icon()
     entry = [e for e in read_ico(data) if e[0] == 48][0]
     _w, _h, pixels = read_png(data[entry[5]:entry[5] + entry[4]])
-    edge = pixels[24][8][:3]                                                             # the first bar's left edge falls inside this pixel
-    low, high = iconmake.BACKGROUND, iconmake.BARS_COLOUR
-    assert edge != low and edge != high and all(min(a, b) < c < max(a, b) for a, b, c in zip(low, high, edge)), edge
+    low, high = iconmake.BACKGROUND, iconmake.ACCENT
+    between = [p for row in pixels for p in row if p[3] == 255 and p[:3] != low and p[:3] != high and all(min(a, b) < c < max(a, b) for a, b, c in zip(low, high, p[:3]))]
+    assert len(between) >= 20, len(between)
+    assert any(0 < p[3] < 255 for row in pixels for p in row), "the outside edge is soft too"
 
 
 # ---------------------------------------------------------------- the words in a name
