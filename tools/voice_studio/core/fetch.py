@@ -102,6 +102,16 @@ def _content_range_start(headers) -> Optional[int]:
         return None
 
 
+def file_is_agreed(path: Path, item: Item) -> bool:
+    """True if this one file (a link to a regular file is followed) is byte for byte what the pinned item agreed to. Reads the disk only; the size is checked first so a wrong file is not read through."""
+    if item.pin_problems():
+        return False
+    try:
+        return Path(path).is_file() and Path(path).stat().st_size == item.size_bytes and _matches(Path(path), item)
+    except OSError:
+        return False
+
+
 def is_fetched(item: Item, dest_dir: Path) -> bool:
     """True if the finished file for this pinned item is already in `dest_dir` and is byte for byte what was agreed. Reads the disk, never the network."""
     if item.pin_problems() or not item.filename:
@@ -109,7 +119,7 @@ def is_fetched(item: Item, dest_dir: Path) -> bool:
     try:
         target = _target(Path(dest_dir), item.filename)
         return target.is_file() and _matches(target, item)
-    except (FetchError, OSError):
+    except (FetchError, OSError, RuntimeError):       # RuntimeError: a loop of links, on Python before 3.13
         return False
 
 

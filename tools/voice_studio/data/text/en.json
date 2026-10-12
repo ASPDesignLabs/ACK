@@ -544,6 +544,8 @@
     "recordings.error.unreadable.what": "This tool is not allowed to read that place.",
     "recordings.finish.already": "The computer is already listening to this project's recordings. To see how it is going, run: {command}",
     "recordings.finish.follow": "To see how it is going, run: {command}",
+    "recordings.finish.model_incomplete": "The listening model in {folder} is not complete, or a file in it is not what the guided setup agreed to. Nothing was changed or deleted. The guided setup fetches it again after asking you. Run: {command}",
+    "recordings.finish.model_looked": "It was looked for in {own} and in {hub}.",
     "recordings.finish.no_environment": "The studio programs are not ready ({state}). Set them up with: {command}",
     "recordings.finish.no_model": "The listening model is not on this computer yet. The guided setup downloads it after asking you. Run: {command}",
     "recordings.finish.nothing_waiting": "No recording is waiting to be listened to.",

@@ -337,9 +337,14 @@ def _finish(args: Sequence[str], home: DataHome, registry: Registry, studio: Stu
     if env is None:
         io.say(cat.t("recordings.finish.no_environment", state=cat.t("env.state." + state), command=BUILDENV_STUDIO_COMMAND))
         return EXIT_NOTHING_DONE
-    model, _state = speech()
+    model, why = speech()
     if model is None:
-        io.say(cat.t("recordings.finish.no_model", command=SETUP_COMMAND))
+        own, hub = envfind.speech_places(home)
+        if why == "incomplete":
+            io.say(cat.t("recordings.finish.model_incomplete", folder=own, command=SETUP_COMMAND))
+        else:
+            io.say(cat.t("recordings.finish.no_model", command=SETUP_COMMAND))
+            io.say(cat.t("recordings.finish.model_looked", own=own, hub=hub))
         return EXIT_NOTHING_DONE
     io.say(cat.count("recordings.finish.plan_count", view.waiting))
     io.say("  " + cat.t("recordings.finish.plan_how"))

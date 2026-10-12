@@ -15,6 +15,7 @@ import pytest
 from freeform_studio import files_import
 from vs_recordings_helpers import (Runner, Starter, TEXTS, audio_folder, builder_lines, make_package, needs_ffmpeg, pairs_folder, studio_env, table_folder, tone_wav,
                                    write_dataset, write_take)
+from vs_envfind_hub import A, B, put_hub, registry_for
 from vs_rounds_helpers import PROJECT, fake_job
 from vs_startvoice_helpers import NOW, Terminal, leaked_keys
 from voice_studio.core import commands, jobs, recordings as rec, recordings_flow as rf, text
@@ -572,13 +573,59 @@ def test_finish_without_the_studio_programs_says_what_to_run_and_starts_nothing(
     assert start.calls == []
 
 
-def test_finish_without_the_listening_model_says_what_to_run_and_starts_nothing(home, anna, tmp_path):
+@pytest.fixture
+def plain_places(monkeypatch):
+    """Where the listening model is looked for does not depend on the machine the tests run on."""
+    for name in ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "HF_HOME", "XDG_CACHE_HOME"):
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_finish_without_the_listening_model_says_what_to_run_where_it_looked_and_starts_nothing(home, anna, tmp_path, plain_places):
     write_take(anna.recordings, OLD, status="finishing", duration=None)
     studio, _speech = ready_world(tmp_path)
     start = Starter()
     code, io = go(home, "finish", "--yes", start=start, studio=studio, speech=lambda: (None, "missing"))
+    own = home.downloads + "/models/speech-small-en"
+    hub = home.home + "/.cache/huggingface/hub/models--Systran--faster-whisper-small.en"
     assert code == 2 and "The listening model is not on this computer yet. The guided setup downloads it after asking you. Run: python3 -m voice_studio" in io.lines
+    assert "It was looked for in %s and in %s." % (own, hub) in io.lines
     assert start.calls == []
+
+
+def test_finish_with_a_listening_model_that_is_not_complete_names_its_folder_and_says_nothing_was_changed(home, anna, tmp_path, plain_places):
+    write_take(anna.recordings, OLD, status="finishing", duration=None)
+    studio, _speech = ready_world(tmp_path)
+    start = Starter()
+    code, io = go(home, "finish", "--yes", start=start, studio=studio, speech=lambda: (None, "incomplete"))
+    own = home.downloads + "/models/speech-small-en"
+    assert code == 2
+    assert ("The listening model in %s is not complete, or a file in it is not what the guided setup agreed to. Nothing was changed or deleted. "
+            "The guided setup fetches it again after asking you. Run: python3 -m voice_studio") % own in io.lines
+    assert "not on this computer yet" not in io.text and "looked for in" not in io.text
+    assert start.calls == []
+
+
+def test_finish_uses_the_model_the_lookup_finds_when_no_answer_is_given_for_it(home, anna, tmp_path, monkeypatch):
+    """The default wiring: a complete copy in the Hugging Face folder is what the job is started with; a copy one byte short is not."""
+    write_take(anna.recordings, OLD, status="finishing", duration=None)
+    studio, _speech = ready_world(tmp_path)
+    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path / "hub"))
+    monkeypatch.delenv("HUGGINGFACE_HUB_CACHE", raising=False)
+
+    def run(hub_files, name):
+        start = Starter()
+        snapshot = put_hub(tmp_path / name, hub_files)
+        monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path / name))
+        io = Terminal([])
+        code = rf.run_recordings(["finish", "--yes"], home, registry_for(), CAT, io, studio=studio, tools_dir="/tools", now=NOW, start=start, system=Runner(),
+                                 plan_files=files_import.make_plan)
+        return code, io, start, snapshot
+
+    code, io, start, snapshot = run({"a.bin": A, "b.bin": B}, "good")
+    argv = list(start.calls[0][1].argv)
+    assert code == 0 and argv[argv.index("--asr-model") + 1] == snapshot
+    code, io, start, _snapshot = run({"a.bin": A, "b.bin": B[:-1]}, "short")
+    assert code == 2 and start.calls == [] and "The listening model is not on this computer yet" in io.text
 
 
 def test_finish_shows_what_it_will_do_then_asks_and_a_no_starts_nothing(home, anna, tmp_path):
