@@ -374,7 +374,7 @@ class RecordingsPage(Refreshing, Page):
     def refresh(self) -> None:
         cat, shell = self.cat, self.shell
         clear(self.content)
-        self.bring_in = self.listen = self.preview = self.make = None
+        self.bring_in = self.get_model = self.listen = self.preview = self.make = None
         if not self.need_project():
             return
         view = wm.recordings_view(shell.services.home, shell.project_id, cat)
@@ -389,10 +389,11 @@ class RecordingsPage(Refreshing, Page):
             self.content.append(text(cat.t("window.recordings.listening"), ("dim-text",)))
         self.content.append(text(view.next_line, ("section-heading",)))
         self.bring_in = button(cat.t("window.recordings.bring_in"), self._bring_in)
+        self.get_model = button(cat.t("window.recordings.get_model"), lambda: shell.run(wm.get_model_args()))
         self.listen = button(cat.t("window.recordings.listen"), lambda: shell.run(wm.finish_args(pid)), sensitive=view.can_listen)
         self.preview = button(cat.t("window.recordings.preview"), lambda: shell.run(wm.preview_set_args(pid)), sensitive=view.can_make)
         self.make = button(cat.t("window.recordings.make_set"), lambda: shell.run(wm.make_set_args(pid)), sensitive=view.can_make)
-        self.content.append(action_bar([self.bring_in, self.listen, self.preview, self.make, button(cat.t("window.recordings.refresh"), self.refresh),
+        self.content.append(action_bar([self.bring_in, self.get_model, self.listen, self.preview, self.make, button(cat.t("window.recordings.refresh"), self.refresh),
                                         button(cat.t("window.recordings.show_folder"), lambda: self._show_folder(view.folder, view.project_name))]))
         self._arm_refresh(view.listening)
 

@@ -51,6 +51,11 @@ def speech_places(home: DataHome, environ: Optional[Mapping[str, str]] = None) -
     return str(Path(home.downloads) / MODELS_FOLDER / SPEECH_FOLDER), str(hf_hub_folder(home, environ) / HF_REPO_FOLDER)
 
 
+def speech_files(registry: Registry) -> List[Item]:
+    """The files the listening model is made of, as the registry pins them."""
+    return [item for item in registry.items if item.kind == "model" and item.folder == SPEECH_FOLDER]
+
+
 def _own_folder_state(folder: Path, files: List[Item]) -> str:
     if all(fetch.is_fetched(item, folder) for item in files):
         return "ready"
@@ -87,7 +92,7 @@ def speech_model(home: DataHome, registry: Registry, environ: Optional[Mapping[s
     (or a file that is not what was agreed) and "missing" when nothing is there. Looks only: nothing is fetched, moved, repaired or deleted.
     """
     own, hub = speech_places(home, environ)
-    files = [item for item in registry.items if item.kind == "model" and item.folder == SPEECH_FOLDER]
+    files = speech_files(registry)
     if not files:
         return None, "missing"
     state = _own_folder_state(Path(own), files)

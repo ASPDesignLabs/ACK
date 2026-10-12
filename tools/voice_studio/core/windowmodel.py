@@ -390,6 +390,11 @@ def import_args(project_id: str, kind: str, source: str, table: str = "") -> Tup
     return "recordings", argv + _project(project_id) + ["--", source]
 
 
+def get_model_args() -> Tuple[str, List[str]]:
+    """`recordings model`: look for the listening model and, if it is not here, say where it comes from and ask before downloading it. It belongs to no project."""
+    return "recordings", ["model"]
+
+
 def finish_args(project_id: str) -> Tuple[str, List[str]]:
     return "recordings", ["finish"] + _project(project_id)
 

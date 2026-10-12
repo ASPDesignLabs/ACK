@@ -18,10 +18,11 @@ from vs_recordings_helpers import (Runner, Starter, TEXTS, audio_folder, builder
 from vs_envfind_hub import A, B, put_hub, registry_for
 from vs_rounds_helpers import PROJECT, fake_job
 from vs_startvoice_helpers import NOW, Terminal, leaked_keys
-from voice_studio.core import commands, jobs, recordings as rec, recordings_flow as rf, text
+from voice_studio.core import commands, envfind, jobs, recordings as rec, recordings_flow as rf, text
+from voice_studio.core.consent import load_consent, make_consent, save_consent
 from voice_studio.core.paths import DataHome, ProjectPaths
 from voice_studio.core.project import SCRATCH_CUSTOM, Scratch, create_project, load_project, save_project, with_archived
-from voice_studio.core.registry import load_registry
+from voice_studio.core.registry import Registry, load_registry
 from voice_studio.core.system import CommandResult
 
 CAT = text.load_catalog("en")
@@ -65,10 +66,11 @@ def tree(root):
     return found
 
 
-def go(home, *argv, answers=(), interactive=True, io=None, studio=None, speech=None, start=None, system=None, plan_files=None, now=NOW):
+def go(home, *argv, answers=(), interactive=True, io=None, studio=None, speech=None, start=None, system=None, plan_files=None, now=NOW, registry=None, fetcher=None):
     io = io or Terminal(answers, interactive)
-    code = rf.run_recordings(list(argv), home, load_registry(), CAT, io, studio=studio or (lambda: (None, "absent")), speech=speech or (lambda: (None, "missing")),
-                             tools_dir="/tools", now=now, start=start or Starter(), system=system or Runner(), plan_files=plan_files or files_import.make_plan)
+    code = rf.run_recordings(list(argv), home, registry or load_registry(), CAT, io, studio=studio or (lambda: (None, "absent")), speech=speech or (lambda: (None, "missing")),
+                             tools_dir="/tools", now=now, start=start or Starter(), system=system or Runner(), plan_files=plan_files or files_import.make_plan,
+                             sleep=lambda seconds: None, clock=lambda: 0.0, fetcher=fetcher)
     assert leaked_keys(io.text + "\n".join(io.prompts) + "\n".join(getattr(io, "asked", []))) == [], "a catalog key was printed instead of words"
     return code, io
 
@@ -99,7 +101,7 @@ def test_help_names_the_four_commands_and_the_four_kinds(home):
 def test_every_option_each_command_takes_is_named_in_its_help_line(home):
     _code, io = go(home, "help")
     help_of = {line.split()[0]: line for line in io.lines if line.startswith("  ") and line.split()[0] in rf.OPTIONS}
-    assert set(help_of) == set(rf.OPTIONS) == {"show", "import", "finish", "set"}
+    assert set(help_of) == set(rf.OPTIONS) == {"show", "import", "finish", "model", "set"}
     for command, options in rf.OPTIONS.items():
         for option in options - {"--yes", "-y"}:
             assert option in help_of[command], (command, option)
@@ -587,7 +589,7 @@ def test_finish_without_the_listening_model_says_what_to_run_where_it_looked_and
     code, io = go(home, "finish", "--yes", start=start, studio=studio, speech=lambda: (None, "missing"))
     own = home.downloads + "/models/speech-small-en"
     hub = home.home + "/.cache/huggingface/hub/models--Systran--faster-whisper-small.en"
-    assert code == 2 and "The listening model is not on this computer yet. The guided setup downloads it after asking you. Run: python3 -m voice_studio" in io.lines
+    assert code == 2 and "The listening model is not on this computer yet. To get it, run: python3 -m voice_studio.recordings model" in io.lines
     assert "It was looked for in %s and in %s." % (own, hub) in io.lines
     assert start.calls == []
 
@@ -599,8 +601,8 @@ def test_finish_with_a_listening_model_that_is_not_complete_names_its_folder_and
     code, io = go(home, "finish", "--yes", start=start, studio=studio, speech=lambda: (None, "incomplete"))
     own = home.downloads + "/models/speech-small-en"
     assert code == 2
-    assert ("The listening model in %s is not complete, or a file in it is not what the guided setup agreed to. Nothing was changed or deleted. "
-            "The guided setup fetches it again after asking you. Run: python3 -m voice_studio") % own in io.lines
+    assert ("The listening model in %s is not complete, or a file in it is not what was agreed to. Nothing was changed or deleted. "
+            "To fetch what is missing, run: python3 -m voice_studio.recordings model") % own in io.lines
     assert "not on this computer yet" not in io.text and "looked for in" not in io.text
     assert start.calls == []
 
@@ -626,6 +628,182 @@ def test_finish_uses_the_model_the_lookup_finds_when_no_answer_is_given_for_it(h
     assert code == 0 and argv[argv.index("--asr-model") + 1] == snapshot
     code, io, start, _snapshot = run({"a.bin": A, "b.bin": B[:-1]}, "short")
     assert code == 2 and start.calls == [] and "The listening model is not on this computer yet" in io.text
+
+
+# ---------------------------------------------------------------- model: get the listening model
+
+class Fetcher:
+    """A stand-in for fetch.fetch: it puts the agreed bytes (or others) in place, tells how far it is, and remembers what it was asked for."""
+
+    def __init__(self, payloads, wrong=(), error=None):
+        self.payloads, self.wrong, self.error, self.calls = payloads, set(wrong), error, []
+
+    def __call__(self, item, dest_dir, consent, cancelled=None, progress=None, **kwargs):
+        self.calls.append((item.filename, str(dest_dir), consent.covers(item)))
+        if self.error:
+            raise self.error
+        data = self.payloads[item.filename]
+        if item.filename in self.wrong:
+            data = data[:-1] + bytes([data[-1] ^ 1])
+        os.makedirs(str(dest_dir), exist_ok=True)
+        with open(os.path.join(str(dest_dir), item.filename), "wb") as handle:
+            for start in range(0, len(data), 500):
+                handle.write(data[start:start + 500])
+                if progress:
+                    progress(min(len(data), start + 500), len(data))
+        return Path(str(dest_dir)) / item.filename
+
+
+def model_world(home, monkeypatch):
+    """A registry of two small model files and the lookup that reads the disk, with the machine's own Hugging Face settings out of the way."""
+    for name in ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "HF_HOME", "XDG_CACHE_HOME"):
+        monkeypatch.delenv(name, raising=False)
+    registry = registry_for()
+    return registry, (lambda: envfind.speech_model(home, registry)), Fetcher({"a.bin": A, "b.bin": B}), home.downloads + "/models/speech-small-en"
+
+
+def test_model_shows_where_it_comes_from_and_how_big_and_a_no_downloads_and_saves_nothing(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    code, io = go(home, "model", answers=["no"], registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 2 and fetcher.calls == [] and not os.path.exists(home.consent_file) and not os.path.exists(folder)
+    assert ("The listening model lets the computer write down what it hears in your recordings. It is %s in all, from huggingface.co, and will be kept in %s. "
+            "Your recordings are not sent anywhere.") % (text.size_text(len(A) + len(B)), folder) in io.lines
+    assert io.prompts == ["Download the listening model now? Type yes to go on. "] and "Nothing was done." in io.text
+
+
+def test_model_with_nobody_to_ask_downloads_nothing_and_says_how_to_say_yes(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    code, io = go(home, "model", interactive=False, registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 2 and fetcher.calls == [] and not os.path.exists(home.consent_file) and "--yes" in io.text
+
+
+def test_model_after_a_yes_saves_the_agreement_then_fetches_each_file_into_the_tools_folder_and_says_it_is_there(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    code, io = go(home, "model", answers=["yes"], registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 0
+    assert fetcher.calls == [("a.bin", folder, True), ("b.bin", folder, True)], "each file is fetched, only after the agreement that names it was saved"
+    assert open(os.path.join(folder, "a.bin"), "rb").read() == A and open(os.path.join(folder, "b.bin"), "rb").read() == B
+    assert "Saved your agreement to download these files." in io.lines
+    assert "Done. The listening model is on this computer, in %s. Every file was checked against the one that was agreed to." % folder in io.lines
+    assert io.lines[-1] == "To let the computer listen to a project's recordings, run: python3 -m voice_studio.recordings finish --project PROJECT"
+    assert envfind.speech_model(home, registry, {}) == (folder, "ready")
+    consent = load_consent(Path(home.consent_file))
+    assert all(consent.covers(item) for item in registry.items)
+
+
+def test_model_says_how_far_it_is_over_both_files_in_plain_lines_that_end_at_a_hundred_percent(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    _code, io = go(home, "model", "--yes", registry=registry, speech=speech, fetcher=fetcher)
+    steps = [line for line in io.lines if line.startswith("  ") and "%:" in line]
+    percents = [int(line.split("%")[0]) for line in steps]
+    assert percents == sorted(percents) and percents[-1] == 100 and len(set(percents)) == len(percents) and len(percents) >= 5
+    total = text.size_text(len(A) + len(B))
+    assert all(line.endswith("of " + total) for line in steps), "the figure is over both files together, not each file alone"
+
+
+def test_model_with_yes_on_the_line_does_not_ask(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    code, io = go(home, "model", "--yes", registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 0 and io.prompts == [] and len(fetcher.calls) == 2
+
+
+def test_model_when_it_is_already_there_downloads_nothing_and_asks_nothing(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    put_hub(os.path.join(home.home, ".cache", "huggingface", "hub"), {"a.bin": A, "b.bin": B})
+    code, io = go(home, "model", registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 0 and fetcher.calls == [] and io.prompts == [] and not os.path.exists(home.consent_file)
+    assert "The listening model is already on this computer, in " in io.text and "Nothing was downloaded." in io.text
+
+
+def test_model_fetches_only_the_files_that_are_not_already_right(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    os.makedirs(folder)
+    open(os.path.join(folder, "a.bin"), "wb").write(A)
+    open(os.path.join(folder, "b.bin"), "wb").write(B[:-3])                    # cut short
+    code, io = go(home, "model", answers=["yes"], registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 0 and [call[0] for call in fetcher.calls] == ["b.bin"]
+    assert ("It is %s in all," % text.size_text(len(B))) in io.text
+    assert envfind.speech_model(home, registry, {})[1] == "ready"
+
+
+def test_model_keeps_an_earlier_agreement_when_it_saves_this_one(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    other = replace(registry.items[0], id="voice-other", kind="voice", folder=None, filename="v.ckpt")
+    os.makedirs(os.path.dirname(home.consent_file), exist_ok=True)
+    save_consent(Path(home.consent_file), make_consent([other]))
+    go(home, "model", "--yes", registry=Registry(registry.items + (other,)), speech=speech, fetcher=fetcher)
+    consent = load_consent(Path(home.consent_file))
+    assert consent.covers(other) and all(consent.covers(item) for item in registry.items)
+
+
+def test_model_that_cannot_save_the_agreement_downloads_nothing(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    os.makedirs(home.root, exist_ok=True)
+    open(home.state, "w").close()                                               # the place for the agreement is a file, so it cannot be written
+    code, io = go(home, "model", "--yes", registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 1 and fetcher.calls == [] and "Your agreement could not be saved, so nothing was downloaded." in io.lines
+
+
+def test_model_when_a_download_fails_says_why_in_three_parts_and_says_nothing_is_there(home, monkeypatch):
+    from voice_studio.core.fetch import FetchError
+    registry, speech, _fetcher, folder = model_world(home, monkeypatch)
+    code, io = go(home, "model", "--yes", registry=registry, speech=speech, fetcher=Fetcher({}, error=FetchError("checksum", "a.bin")))
+    assert code == 1 and "The file that arrived did not match what was agreed, so it cannot be trusted." in io.text
+    assert "Done." not in io.text and envfind.speech_model(home, registry, {}) == (None, "missing")
+
+
+def test_model_that_cannot_confirm_what_it_fetched_does_not_claim_success(home, monkeypatch):
+    registry, speech, _fetcher, folder = model_world(home, monkeypatch)
+    code, io = go(home, "model", "--yes", registry=registry, speech=speech, fetcher=Fetcher({"a.bin": A, "b.bin": B}, wrong={"b.bin"}))
+    assert code == 1 and "still does not check out in %s. Nothing was deleted." % folder in io.text and "Done." not in io.text
+
+
+def test_model_stopped_with_ctrl_c_keeps_what_arrived_and_says_to_run_it_again(home, monkeypatch):
+    registry, speech, _fetcher, folder = model_world(home, monkeypatch)
+    code, io = go(home, "model", "--yes", registry=registry, speech=speech, fetcher=Fetcher({}, error=KeyboardInterrupt()))
+    assert code == 1 and "Run the same command again to carry on." in io.text and "listening that had started" not in io.text
+
+
+def test_model_with_files_that_are_not_fixed_yet_does_nothing_and_says_so(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    unpinned = Registry(tuple(replace(item, sha256=None) for item in registry.items))
+    code, io = go(home, "model", "--yes", registry=unpinned, speech=lambda: (None, "missing"), fetcher=fetcher)
+    assert code == 2 and fetcher.calls == [] and "its files are not fixed in this version of the tool. Nothing was done." in io.text
+
+
+def test_the_windows_buttons_answer_the_model_question(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    code, io = go(home, "model", io=Buttons([False]), registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 2 and io.asked == ["Download the listening model now? Type yes to go on."] and io.prompts == [] and fetcher.calls == []
+    code, io = go(home, "model", io=Buttons([True]), registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 0 and len(fetcher.calls) == 2
+
+
+def test_model_with_a_stray_word_or_option_does_nothing(home, monkeypatch):
+    registry, speech, fetcher, folder = model_world(home, monkeypatch)
+    code, _io = go(home, "model", "extra", registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 2 and fetcher.calls == []
+    code, _io = go(home, "model", "--project", "anna", registry=registry, speech=speech, fetcher=fetcher)
+    assert code == 2 and fetcher.calls == []
+
+
+def test_every_command_the_messages_name_is_one_a_front_really_runs(tmp_path, monkeypatch):
+    """The setup command once stood in a message as the way to get the model and could not do it. Each command a message names is checked here by running its front."""
+    import subprocess
+    import sys as _sys
+    for name in ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "HF_HOME", "XDG_CACHE_HOME"):
+        monkeypatch.delenv(name, raising=False)
+    tools = str(Path(rf.__file__).resolve().parents[2])
+    env = dict(os.environ, PYTHONPATH=tools, HOME=str(tmp_path), PYTHONDONTWRITEBYTECODE="1")
+    for command in (rf.RECORDINGS_COMMAND, rf.MODEL_COMMAND, rf.ROUNDS_COMMAND, rf.BUILDENV_STUDIO_COMMAND):
+        assert command.startswith("python3 -m voice_studio."), command
+    verb = rf.MODEL_COMMAND.split()[-1]
+    assert verb in rf.COMMANDS and verb in rf.OPTIONS
+    helped = subprocess.run([_sys.executable, "-m", rf.RECORDINGS_COMMAND.split()[2], "help"], capture_output=True, text=True, env=env, cwd=str(tmp_path), timeout=120)
+    assert helped.returncode == 0 and "model [--yes]: get the listening model" in helped.stdout
+    asked = subprocess.run([_sys.executable, "-m", rf.RECORDINGS_COMMAND.split()[2], verb], capture_output=True, text=True, env=env, cwd=str(tmp_path), stdin=subprocess.DEVNULL, timeout=120)
+    assert asked.returncode == 2 and "--yes" in asked.stdout and "The listening model lets the computer write down what it hears" in asked.stdout
+    assert not (tmp_path / "ack-voice-studio" / "tool" / "downloads").exists() and not (tmp_path / "ack-voice-studio" / "state").exists(), "nobody to ask: nothing downloaded, nothing saved"
 
 
 def test_finish_shows_what_it_will_do_then_asks_and_a_no_starts_nothing(home, anna, tmp_path):

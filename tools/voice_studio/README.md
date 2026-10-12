@@ -43,6 +43,7 @@ PYTHONPATH=tools python3 -m voice_studio.projects edit anna --hours 2        # c
 PYTHONPATH=tools python3 -m voice_studio.projects delete anna                # delete one for good: lists what goes, then asks TWICE (--yes never answers the second question)
 PYTHONPATH=tools python3 -m voice_studio.recordings show --project anna      # what is in the project, what the computer is doing, what to do next; changes nothing
 PYTHONPATH=tools python3 -m voice_studio.recordings import ~/voice-files --kind pairs --project anna   # bring in audio files, each with a text file (shows what it found, then asks); kinds: package, pairs, table, audio
+PYTHONPATH=tools python3 -m voice_studio.recordings model                      # get the listening model (about 485 MB; shows where it comes from and asks first; nothing else downloads it)
 PYTHONPATH=tools python3 -m voice_studio.recordings finish --project anna    # let the computer listen to what was brought in (a job of its own; asks first)
 PYTHONPATH=tools python3 -m voice_studio.recordings set --project anna       # make a training set from what was heard (--preview only shows what it would hold; asks first)
 PYTHONPATH=tools python3 -m voice_studio.voices show mike                    # where a starting voice comes from; changes nothing

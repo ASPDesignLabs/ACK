@@ -165,7 +165,7 @@ def test_bringing_recordings_in_goes_only_through_the_terminals_command_after_a_
     close = forms.split("class ImportForm")[1].split("def _close(")[1].split("\n    def ")[0]
     assert "self.chooser.destroy()" in close
     # each button of the page is one command, run as the one task, and the form is opened from one place
-    for call in ("wm.finish_args(pid)", "wm.preview_set_args(pid)", "wm.make_set_args(pid)"):
+    for call in ("wm.get_model_args()", "wm.finish_args(pid)", "wm.preview_set_args(pid)", "wm.make_set_args(pid)"):
         assert pages.count("shell.run(" + call + ")") == 1, call
     assert pages.count("forms.open_import(") == 1 and "wm.import_args(" not in pages and "wm.import_args(" not in shell
     assert "self.stack.set_visible_child_name('recordings')" in shell and shell.count("RecordingsPage(self)") == 1
@@ -249,7 +249,7 @@ def test_the_real_window_passes_its_own_tour_on_a_virtual_display(tmp_path):
                 "a_yes_writes_the_small_file", "the_file_is_owner_only_and_small", "a_yes_is_said_in_the_result", "later_changes_are_written_without_asking", "the_page_says_where_they_are_kept",
                 "removing_lists_the_files_first", "removing_names_both_files", "a_no_to_removing_keeps_both", "a_yes_removes_them_and_the_window_asks_again_next_time",
                 "the_window_keeps_its_look_after_removing", "standard_look_comes_back",
-                "recordings_page_buttons_are_named", "the_steps_that_need_recordings_are_off_until_there_are_some", "bring_in_is_always_there", "import_form_opens_as_the_question_on_the_screen",
+                "recordings_page_buttons_are_named", "the_steps_that_need_recordings_are_off_until_there_are_some", "bring_in_is_always_there", "get_model_is_always_there", "the_listening_model_is_asked_about_before_anything_is_downloaded", "import_form_opens_as_the_question_on_the_screen",
                 "import_form_controls_are_named", "no_kind_is_chosen_for_the_person", "import_form_says_what_is_missing_and_stays_open", "a_package_is_picked_as_one_zip_file",
                 "files_are_picked_as_a_folder_or_a_zip", "the_table_name_shows_only_for_a_table", "changing_the_kind_forgets_the_place_chosen", "the_file_chooser_opens",
                 "the_file_chooser_closes_and_chooses_nothing", "files_are_picked_by_choosing_a_folder", "a_package_is_picked_by_choosing_a_file", "a_zip_of_files_is_picked_by_choosing_a_file", "cancel_closes_the_form_and_does_nothing", "import_shows_what_it_found_before_it_asks", "a_no_adds_nothing"):

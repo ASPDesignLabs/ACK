@@ -164,7 +164,7 @@ def _choose(args: Sequence[str], home: DataHome, registry: Registry, cat: Catalo
 
 # ---------------------------------------------------------------- get
 
-class _Download:
+class Download:
     """The lines a download says: how far it is in steps of PROGRESS_STEP percent, and what the connection is doing."""
 
     def __init__(self, cat: Catalog, io: IO):
@@ -272,7 +272,7 @@ def _get_steps(parsed: Parsed, voice_id: str, project: Project, home: DataHome, 
     else:
         io.say(cat.t("voices.get.already_agreed"))
 
-    shown = _Download(cat, io)
+    shown = Download(cat, io)
     io.say(cat.t("voices.get.downloading", size=size_text(entry.size_bytes), site=entry.host or "-"))
     path = sv.fetch_voice(project, registry, voice_id, home, on_wait=shown.wait, on_back=shown.back, sleep=sleep, clock=clock, fetcher=fetcher,
                           progress=shown.progress)

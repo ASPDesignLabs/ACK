@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import math
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Tuple
@@ -24,29 +25,31 @@ from freeform_studio import files_import
 from freeform_studio.ack_import import ImportProblem, NotEnoughRoom
 from freeform_studio.privacy import sync_warning
 
-from . import ackimport, commands, envfind, joblines, jobs, progress as prog, recordings as rec
+from . import ackimport, commands, envfind, fetch, joblines, jobs, progress as prog, recordings as rec
 from .cliargs import ArgError, parse_args
+from .consent import load_consent, make_consent, merge_consent, save_consent
 from .envbuild import EnvPaths
 from .paths import DataHome, ProjectPaths
 from .projects_flow import EXIT_NOTHING_DONE, EXIT_OK, EXIT_PROBLEM, resolve_project, say_bad_arg
 from .registry import Registry
 from .rounds_flow import Open, _confirmed, _say_parts, scratch_ready, scratch_root
 from .setup_flow import IO
+from .voices_flow import Download
 from .system import RealSystem, System
 from .text import Catalog, size_text
 
 RECORDINGS_COMMAND = "python3 -m voice_studio.recordings"
 ROUNDS_COMMAND = "python3 -m voice_studio.rounds"
-SETUP_COMMAND = "python3 -m voice_studio"
+MODEL_COMMAND = RECORDINGS_COMMAND + " model"
 BUILDENV_STUDIO_COMMAND = "python3 -m voice_studio.buildenv studio"
-COMMANDS = ("show", "import", "finish", "set", "help")
+COMMANDS = ("show", "import", "finish", "model", "set", "help")
 SHOW_NEXT = {"import": "recordings.show.next_import", "finish": "recordings.show.next_finish", "set": "recordings.show.next_set"}      # what `show` suggests next, besides waiting
 YES = {"--yes": "yes", "-y": "yes"}
 PROJECT = {"--project": "project"}
 IMPORT_VALUES = {**PROJECT, "--kind": "kind", "--table": "table"}
 SET_FLAGS = {**YES, "--preview": "preview"}
 SET_VALUES = {**PROJECT, "--max-gain-db": "gain"}
-OPTIONS = {"show": frozenset(PROJECT), "import": frozenset(YES) | frozenset(IMPORT_VALUES), "finish": frozenset(YES) | frozenset(PROJECT),
+OPTIONS = {"show": frozenset(PROJECT), "import": frozenset(YES) | frozenset(IMPORT_VALUES), "finish": frozenset(YES) | frozenset(PROJECT), "model": frozenset(YES),
            "set": frozenset(SET_FLAGS) | frozenset(SET_VALUES)}                              # the checklist is held to these
 MAX_ROWS_SHOWN = 20
 MAX_NOTES_SHOWN = 10
@@ -341,9 +344,9 @@ def _finish(args: Sequence[str], home: DataHome, registry: Registry, studio: Stu
     if model is None:
         own, hub = envfind.speech_places(home)
         if why == "incomplete":
-            io.say(cat.t("recordings.finish.model_incomplete", folder=own, command=SETUP_COMMAND))
+            io.say(cat.t("recordings.finish.model_incomplete", folder=own, command=MODEL_COMMAND))
         else:
-            io.say(cat.t("recordings.finish.no_model", command=SETUP_COMMAND))
+            io.say(cat.t("recordings.finish.no_model", command=MODEL_COMMAND))
             io.say(cat.t("recordings.finish.model_looked", own=own, hub=hub))
         return EXIT_NOTHING_DONE
     io.say(cat.count("recordings.finish.plan_count", view.waiting))
@@ -356,6 +359,62 @@ def _finish(args: Sequence[str], home: DataHome, registry: Registry, studio: Stu
     started = start(ctx.jobs_root, spec, now)
     io.say(cat.t("recordings.finish.started", job=started.id))
     io.say(cat.t("recordings.finish.follow", command=_command("show", ctx.project.id)))
+    return EXIT_OK
+
+
+# ---------------------------------------------------------------- model: get the listening model
+
+def _model(args: Sequence[str], home: DataHome, registry: Registry, speech: Speech, sleep: Callable[[float], None], clock: Callable[[], float], fetcher: Optional[Callable],
+           now: Optional[datetime], cat: Catalog, io: IO) -> int:
+    try:
+        parsed = parse_args(args, flags=YES, values={}, max_words=0)
+    except ArgError as error:
+        return say_bad_arg(error, cat, io)
+    io.say(cat.t("recordings.title"))
+    found, _why = speech()
+    if found is not None:
+        io.say(cat.t("recordings.model.ready", folder=found))
+        return EXIT_OK
+    files = envfind.speech_files(registry)
+    if not files or any(item.pin_problems() for item in files):
+        io.say(cat.t("recordings.model.not_pinned"))
+        return EXIT_NOTHING_DONE
+    folder = Path(envfind.speech_places(home)[0])
+    todo = [item for item in files if not fetch.is_fetched(item, folder)]
+    total = sum(item.size_bytes or 0 for item in todo)
+    site = next((item.url.split("/")[2] for item in todo if item.url), "-")
+    io.say(cat.t("recordings.model.about", size=size_text(total), site=site, folder=str(folder)))
+    declined = _confirmed(parsed, cat.t("recordings.model.question"), cat, io)
+    if declined is not None:
+        return declined
+    try:
+        save_consent(Path(home.consent_file), merge_consent(load_consent(Path(home.consent_file)), make_consent(todo, now=now)))
+    except OSError as error:                                      # nothing is downloaded on a yes that could not be kept
+        io.say(cat.t("voices.get.agree_not_saved"))
+        io.say("  " + cat.t("cli.technical", detail=error.strerror or type(error).__name__))
+        return EXIT_PROBLEM
+    io.say(cat.t("recordings.model.agree_saved"))
+    consent = load_consent(Path(home.consent_file))
+    io.say(cat.t("voices.get.downloading", size=size_text(total), site=site))
+    shown = Download(cat, io)
+    before = 0
+    try:
+        for item in todo:
+            fetch.fetch_patiently(item, folder, consent, on_wait=shown.wait, on_back=shown.back, sleep=sleep, clock=clock, fetcher=fetcher,
+                                  progress=lambda done, size, base=before: shown.progress(base + done, total))
+            before += item.size_bytes or 0
+    except fetch.FetchError as error:
+        _say_parts(cat, io, "fetch", error.code, error.detail)
+        return EXIT_PROBLEM
+    except KeyboardInterrupt:                                     # what arrived is kept, and the same command carries on
+        io.say(cat.t("voices.interrupted"))
+        return EXIT_PROBLEM
+    found, _why = speech()
+    if found is None:                                             # every file was fetched and checked one by one, so this is not expected; say so rather than claim success
+        io.say(cat.t("recordings.model.not_there", folder=str(folder)))
+        return EXIT_PROBLEM
+    io.say(cat.t("recordings.model.done", folder=found))
+    io.say(cat.t("recordings.model.next", command=_command("finish", "PROJECT")))
     return EXIT_OK
 
 
@@ -483,14 +542,15 @@ def _set(args: Sequence[str], home: DataHome, studio: Studio, tools_dir: str, no
 def _help(cat: Catalog, io: IO) -> int:
     io.say(cat.t("recordings.title"))
     io.say(cat.t("recordings.usage.head"))
-    for key in ("recordings.usage.show", "recordings.usage.import", "recordings.usage.finish", "recordings.usage.set", "recordings.usage.options"):
+    for key in ("recordings.usage.show", "recordings.usage.import", "recordings.usage.finish", "recordings.usage.model", "recordings.usage.set", "recordings.usage.options"):
         io.say("  " + cat.t(key))
     return EXIT_OK
 
 
 def run_recordings(argv: Sequence[str], home: DataHome, registry: Registry, cat: Catalog, io: IO, *, studio: Studio, speech: Optional[Speech] = None, tools_dir: Optional[str] = None,
                    now: Optional[datetime] = None, start: Callable = jobs.start_job, system: Optional[System] = None,
-                   plan_files: Callable[..., files_import.Plan] = files_import.make_plan) -> int:
+                   plan_files: Callable[..., files_import.Plan] = files_import.make_plan, sleep: Callable[[float], None] = time.sleep,
+                   clock: Callable[[], float] = time.monotonic, fetcher: Optional[Callable] = None) -> int:
     """`python3 -m voice_studio.recordings COMMAND ...`. Ctrl+C at any point stops cleanly: what was already added is kept, and listening that had started keeps going by itself."""
     command = argv[0] if argv else "help"
     rest = list(argv[1:])
@@ -506,6 +566,8 @@ def run_recordings(argv: Sequence[str], home: DataHome, registry: Registry, cat:
             return _import(rest, home, plan_files, cat, io)
         if command == "finish":
             return _finish(rest, home, registry, studio, listen, where, now, start, cat, io)
+        if command == "model":
+            return _model(rest, home, registry, listen, sleep, clock, fetcher, now, cat, io)
         if command == "set":
             return _set(rest, home, studio, where, now, system, cat, io)
         io.say(cat.t("cli.bad_command", command=command[:60]))

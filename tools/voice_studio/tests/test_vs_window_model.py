@@ -480,6 +480,7 @@ def test_the_recordings_buttons_are_the_words_of_the_terminal_command():
     assert "--table=x" not in wm.import_args("anna", "audio", "/d", "x")[1], "a table name goes only with the table kind"
     assert wm.import_args("anna", "audio", "--yes") == ("recordings", ["import", "--kind=audio", "--project", "anna", "--", "--yes"]), "a place that begins with hyphens is a place, never an option"
     assert wm.finish_args("anna") == ("recordings", ["finish", "--project", "anna"])
+    assert wm.get_model_args() == ("recordings", ["model"])
     assert wm.preview_set_args("anna") == ("recordings", ["set", "--preview", "--project", "anna"]) and wm.make_set_args("anna") == ("recordings", ["set", "--project", "anna"])
 
 

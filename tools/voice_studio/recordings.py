@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""python3 -m voice_studio.recordings [show | import | finish | set | help]: a project's recordings from a terminal.
+"""python3 -m voice_studio.recordings [show | import | finish | model | set | help]: a project's recordings from a terminal.
 
 The terminal front of core/recordings.py (plan task VS-2.10); the window runs the same flows. `show` only looks. `import` brings in an ACK package, a folder of audio files with a
 text file each, a folder of audio files with one table, or a folder of audio files alone; it shows what it found and asks before it adds anything. `finish` lets the computer
-listen to the recordings that are waiting, as a job of its own: closing the terminal does not stop it. `set` makes a training set from the recordings that are ready (`--preview`
+listen to the recordings that are waiting, as a job of its own: closing the terminal does not stop it. `model` gets the listening model that `finish` needs (it says where it comes
+from and asks first; nothing else downloads it). `set` makes a training set from the recordings that are ready (`--preview`
 only shows what it would hold). Everything that changes something shows what it will do and asks first.
 """
 from __future__ import annotations

@@ -309,6 +309,11 @@ def recordings_checks(shell, checks: Dict[str, object]) -> None:
     checks["recordings_page_buttons_are_named"] = a11y.unnamed_controls(page.widget) == []
     checks["the_steps_that_need_recordings_are_off_until_there_are_some"] = (before.waiting == 0) == (not page.listen.get_sensitive()) and (before.ready == 0) == (not page.make.get_sensitive()) and (before.ready == 0) == (not page.preview.get_sensitive())
     checks["bring_in_is_always_there"] = page.bring_in.get_sensitive()
+    checks["get_model_is_always_there"] = page.get_model.get_sensitive()
+    page.get_model.emit("clicked")
+    asked_model = answer(shell, False)
+    settled(shell)
+    checks["the_listening_model_is_asked_about_before_anything_is_downloaded"] = asked_model and shell.last_result[0] == 2 and not os.path.exists(home.downloads) and not os.path.exists(home.consent_file)
 
     page.bring_in.emit("clicked")
     form = shell.form

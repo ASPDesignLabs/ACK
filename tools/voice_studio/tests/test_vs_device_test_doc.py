@@ -673,10 +673,10 @@ def test_the_projects_and_recordings_commands_it_gives_exist_and_take_the_option
     body = section("I6.")
     found = re.findall(r"python3 -m voice_studio\.(projects|recordings) ([a-z]+)([^\n`;<]*)", body)
     assert {(m, c) for m, c, _ in found} >= {("projects", "new"), ("projects", "edit"), ("projects", "archive"), ("projects", "unarchive"), ("projects", "delete"), ("projects", "list"),
-                                              ("recordings", "show"), ("recordings", "import"), ("recordings", "finish"), ("recordings", "set")}
+                                              ("recordings", "show"), ("recordings", "import"), ("recordings", "finish"), ("recordings", "model"), ("recordings", "set")}
     takes_a_value = {"projects": set(pf.NEW_VALUES) | set(pf.EDIT_VALUES), "recordings": {"--project", "--kind", "--table", "--max-gain-db"}}
     words_wanted = {("projects", "new"): 0, ("projects", "edit"): 1, ("projects", "archive"): 1, ("projects", "unarchive"): 1, ("projects", "delete"): 1, ("projects", "list"): 0,
-                    ("recordings", "show"): 0, ("recordings", "import"): 1, ("recordings", "finish"): 0, ("recordings", "set"): 0}
+                    ("recordings", "show"): 0, ("recordings", "import"): 1, ("recordings", "finish"): 0, ("recordings", "model"): 0, ("recordings", "set"): 0}
     without_kind = 0
     for module, command, rest in found:
         table = (pf if module == "projects" else rcf).OPTIONS
@@ -690,7 +690,9 @@ def test_the_projects_and_recordings_commands_it_gives_exist_and_take_the_option
                 positional.append(words[i])
                 i += 1
         assert len(positional) == words_wanted[(module, command)], (module, command, positional)
-        if module == "recordings":
+        if module == "recordings" and command == "model":
+            assert "--project" not in words, "the listening model belongs to no project"
+        elif module == "recordings":
             assert "--project" in words and words[words.index("--project") + 1] == "voice-check", (command, words)
             if command == "import" and "--kind" not in words:
                 without_kind += 1
