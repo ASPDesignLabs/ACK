@@ -113,7 +113,7 @@ def test_the_entry_runs_this_python_with_the_tools_folder_and_has_the_marker_and
 
 
 @pytest.mark.parametrize("python, tools", [("/usr/bin/python 3", TOOLS), (PYTHON, "/home/an na/tools"), (PYTHON, "/home/anna/tools;rm"), (PYTHON, "/home/anna/$HOME"), ("python3", TOOLS),
-                                           (PYTHON, "/home/anna/\ntools"), (PYTHON, '/home/anna/"tools"'), (PYTHON, "/home/anna/%u")])
+                                           (PYTHON, "/home/anna/\ntools"), (PYTHON, '/home/anna/"tools"'), (PYTHON, "/home/anna/%u"), (PYTHON, TOOLS + "\n"), (PYTHON + "\n", TOOLS)])
 def test_a_path_with_a_space_or_a_symbol_is_refused_not_quoted(python, tools):
     with pytest.raises(launcher.LauncherError) as caught:
         launcher.desktop_text(python, tools, "N", "C")

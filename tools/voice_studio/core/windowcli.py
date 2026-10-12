@@ -1,17 +1,22 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The window's command line, before any window exists: `--check` (can the window start here, and if not, why in plain words), `--install-launcher` and `--remove-launcher` (the menu entry,
 shown first and asked about), and the plain start. No GTK is imported here; the caller says what GTK found (`Toolkit`) and how to start the window, so every sentence and every refusal
-is tested without a display. Exit codes as the other fronts: 0 done, 1 could not, 2 nothing done."""
+is tested without a display. Exit codes as the other fronts: 0 done, 1 could not, 2 nothing done.
+
+On WSL the menu entry is a shortcut in the person's own Windows Start menu, made through the Windows program that WSL lets Linux start (core/winshortcut.py): it needs no `sudo` and no
+administrator rights. Only when Windows cannot be reached from Linux does the older way follow (a menu entry on the Linux side, and the commands that put it where WSL reads, printed
+for the person; this tool never runs them)."""
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence, Tuple
 
-from . import launcher
+from . import iconmake, launcher, winshortcut
 from .cliargs import ArgError, parse_args
 from .projects_flow import EXIT_NOTHING_DONE, EXIT_OK, EXIT_PROBLEM, say_bad_arg
 from .setup_flow import IO, _said_yes
+from .system import System
 from .text import Catalog
 
 WINDOW_COMMAND = "/usr/bin/python3 -m voice_studio.window"
@@ -30,6 +35,8 @@ class Toolkit:
 
 
 PLAN_WORDS = {"new": "window.launcher.plan_new", "update": "window.launcher.plan_update"}
+WIN_SHORTCUT_WORDS = {"new": "window.launcher.win_shortcut_new", "update": "window.launcher.win_shortcut_update"}
+WIN_ICON_WORDS = {"new": "window.launcher.win_icon_new", "update": "window.launcher.win_icon_update"}
 REASON_WORDS = {"no_gi": "window.check.no_gi", "no_gtk4": "window.check.no_gtk4", "gtk_too_old": "window.check.gtk_too_old", "no_display": "window.check.no_display"}
 
 
@@ -81,8 +88,68 @@ def _wsl_notes(home: str, exists: Callable[[str], bool], cat: Catalog, io: IO) -
     io.say(cat.t("window.launcher.wsl_undo", command=launcher.system_remove_command()))
 
 
-def _install(parsed, home: str, python: str, tools_dir: str, icon_text: str, cat: Catalog, io: IO, on_wsl: bool, exists: Callable[[str], bool]) -> int:
+def _install_on_windows(parsed, system: System, python: str, tools_dir: str, cat: Catalog, io: IO, icon_bytes: Callable[[], bytes], exists: Callable[[str], bool]) -> Optional[int]:
+    """The Start menu shortcut on the Windows side. Returns the exit code, or None when the Windows side cannot be reached (the older steps then follow)."""
+    if exists(launcher.SYSTEM_ENTRY):
+        io.say(cat.t("window.launcher.wsl_present", path=launcher.SYSTEM_ENTRY))
+        io.say(cat.t("window.launcher.nothing_changed"))
+        return EXIT_OK
+    reach = winshortcut.route(system)
+    if reach is None:
+        io.say(cat.t("window.launcher.no_windows_route"))
+        return None
+    try:
+        want = winshortcut.wanted(reach.distro, tools_dir, python, cat.t("window.launcher.name"), cat.t("window.launcher.comment"), icon_bytes())
+    except launcher.LauncherError as error:
+        return _launcher_problem(error, cat, io)
+    io.say(cat.t("window.launcher.win_looking"))
+    found = winshortcut.probe(system, reach, want.name, want.distro)
+    if found is None:
+        io.say(cat.t("window.launcher.no_windows_route"))
+        return None
+    plan = winshortcut.plan_install(found, want)
+    if plan.state == "no_wslg":
+        return _launcher_problem(launcher.LauncherError("no_wslg"), cat, io)
+    if plan.state == "wslg":
+        io.say(cat.t("window.launcher.wslg_has_it", path=plan.wslg_shortcut))
+        io.say(cat.t("window.launcher.nothing_changed"))
+        return EXIT_OK
+    if plan.state == "foreign":
+        io.say(cat.t("window.launcher.foreign", path=plan.shortcut_path))
+        io.say(cat.t("window.launcher.nothing_changed"))
+        return EXIT_PROBLEM
+    if plan.state == "same":
+        io.say(cat.t("window.launcher.already"))
+        io.say(cat.t("window.launcher.win_look", name=want.name))
+        return EXIT_OK
+    io.say(cat.t("window.launcher.win_plan_head"))
+    if plan.shortcut_change != "same":
+        io.say("  " + cat.t(WIN_SHORTCUT_WORDS[plan.shortcut_change], path=plan.shortcut_path, folder=plan.folder))
+    if plan.icon_change != "same":
+        io.say("  " + cat.t(WIN_ICON_WORDS[plan.icon_change], path=plan.icon_path))
+    io.say(cat.t("window.launcher.win_plan_only"))
+    declined = _confirm(parsed, cat.t("window.launcher.question"), cat, io)
+    if declined is not None:
+        return declined
+    io.say(cat.t("window.launcher.win_making"))
+    try:
+        winshortcut.install(system, reach, want)
+    except launcher.LauncherError as error:
+        return _launcher_problem(error, cat, io)
+    io.say(cat.t("window.launcher.win_done"))
+    io.say(cat.t("window.launcher.win_look", name=want.name))
+    io.say(cat.t("window.launcher.win_slow"))
+    io.say(cat.t("window.launcher.win_undo"))
+    return EXIT_OK
+
+
+def _install(parsed, home: str, python: str, tools_dir: str, icon_text: str, cat: Catalog, io: IO, on_wsl: bool, exists: Callable[[str], bool], system: Optional[System],
+             icon_bytes: Callable[[], bytes]) -> int:
     io.say(cat.t("window.launcher.title"))
+    if on_wsl and system is not None:
+        outcome = _install_on_windows(parsed, system, python, tools_dir, cat, io, icon_bytes, exists)
+        if outcome is not None:
+            return outcome
     try:
         plan = launcher.plan_install(home, python, tools_dir, cat.t("window.launcher.name"), cat.t("window.launcher.comment"), icon_text)
     except launcher.LauncherError as error:
@@ -118,25 +185,55 @@ def _install(parsed, home: str, python: str, tools_dir: str, icon_text: str, cat
     return EXIT_OK
 
 
-def _remove(parsed, home: str, cat: Catalog, io: IO, on_wsl: bool, exists: Callable[[str], bool]) -> int:
+def _windows_removal(system: System, cat: Catalog, io: IO) -> Optional[Tuple[winshortcut.Route, str, winshortcut.RemovalPlan]]:
+    """What is on the Windows side to remove, or None when that side cannot be reached (a line says so)."""
+    reach = winshortcut.route(system)
+    if reach is not None:
+        try:
+            name = winshortcut.shortcut_name(cat.t("window.launcher.name"), reach.distro)
+        except launcher.LauncherError:
+            reach = None
+    if reach is None:
+        io.say(cat.t("window.launcher.no_windows_route_remove"))
+        return None
+    io.say(cat.t("window.launcher.win_looking"))
+    found = winshortcut.probe(system, reach, name, reach.distro)
+    if found is None:
+        io.say(cat.t("window.launcher.no_windows_route_remove"))
+        return None
+    return reach, name, winshortcut.plan_remove(found)
+
+
+def _remove(parsed, home: str, cat: Catalog, io: IO, on_wsl: bool, exists: Callable[[str], bool], system: Optional[System]) -> int:
     io.say(cat.t("window.launcher.title"))
     plan = launcher.plan_remove(home)
     for path in plan.foreign:
         io.say(cat.t("window.launcher.foreign_left", path=path))
+    windows = _windows_removal(system, cat, io) if (on_wsl and system is not None) else None
+    windows_paths: Tuple[str, ...] = ()
+    if windows is not None:
+        if windows[2].state == "foreign":
+            io.say(cat.t("window.launcher.foreign_left", path=windows[2].foreign))
+        elif windows[2].state == "ours":
+            windows_paths = windows[2].paths
     copy_left = on_wsl and exists(launcher.SYSTEM_ENTRY)
-    if not plan.paths:
+    if not plan.paths and not windows_paths:
         io.say(cat.t("window.launcher.none"))
         if copy_left:
             io.say(cat.t("window.launcher.wsl_remove", command=launcher.system_remove_command()))
         return EXIT_OK
     io.say(cat.t("window.launcher.remove_head"))
-    for path in plan.paths:
+    for path in windows_paths + tuple(plan.paths):
         io.say("  " + path)
     declined = _confirm(parsed, cat.t("window.launcher.remove_question"), cat, io)
     if declined is not None:
         return declined
     try:
-        launcher.remove(plan)
+        if windows_paths and windows is not None and system is not None:
+            io.say(cat.t("window.launcher.win_removing"))
+            winshortcut.remove(system, windows[0], windows[1], windows[0].distro)
+        if plan.paths:
+            launcher.remove(plan)
     except launcher.LauncherError as error:
         return _launcher_problem(error, cat, io)
     io.say(cat.t("window.launcher.removed"))
@@ -155,8 +252,10 @@ def _launcher_problem(error: launcher.LauncherError, cat: Catalog, io: IO) -> in
 
 
 def run_window_cli(argv: Sequence[str], home: str, python: str, tools_dir: str, icon_text: str, cat: Catalog, io: IO, *, toolkit: Callable[[], Toolkit],
-                   start: Callable[[], int], selftest: Optional[Callable[[], int]] = None, on_wsl: bool = False, exists: Callable[[str], bool] = os.path.exists) -> int:
-    """`python3 -m voice_studio.window [--check | --install-launcher | --remove-launcher] [--yes]`. With none of them the window starts, if GTK can."""
+                   start: Callable[[], int], selftest: Optional[Callable[[], int]] = None, on_wsl: bool = False, exists: Callable[[str], bool] = os.path.exists, system: Optional[System] = None,
+                   icon_bytes: Callable[[], bytes] = iconmake.ico_bytes) -> int:
+    """`python3 -m voice_studio.window [--check | --install-launcher | --remove-launcher] [--yes]`. With none of them the window starts, if GTK can.
+    `system` is how the Windows side is reached on WSL; without it only the Linux side is looked at."""
     try:
         parsed = parse_args(argv, flags=FLAGS, values={}, max_words=0)
     except ArgError as error:
@@ -168,9 +267,9 @@ def run_window_cli(argv: Sequence[str], home: str, python: str, tools_dir: str, 
     if "check" in parsed.flags:
         return _check(toolkit(), python, cat, io)
     if "install" in parsed.flags:
-        return _install(parsed, home, python, tools_dir, icon_text, cat, io, on_wsl, exists)
+        return _install(parsed, home, python, tools_dir, icon_text, cat, io, on_wsl, exists, system, icon_bytes)
     if "remove" in parsed.flags:
-        return _remove(parsed, home, cat, io, on_wsl, exists)
+        return _remove(parsed, home, cat, io, on_wsl, exists, system)
     if "selftest" in parsed.flags:
         return selftest() if selftest is not None else EXIT_PROBLEM
     tk = toolkit()

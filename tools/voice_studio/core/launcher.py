@@ -17,7 +17,7 @@ APP_ID = "org.aspdesignlabs.AckVoiceStudio"
 MARKER = "X-ACK-Voice-Studio-Launcher=1"
 SYSTEM_ENTRY = "/usr/share/applications/%s.desktop" % APP_ID                      # the folder WSLg reads (its own log lists it): on WSL the Start menu is made from system folders only
 SYSTEM_ICON = "/usr/share/icons/hicolor/scalable/apps/%s.svg" % APP_ID
-SAFE_PATH = re.compile(r"^/[A-Za-z0-9_./+@:,=~-]+$")           # no space or symbol that the Desktop Entry format would need quoting rules for
+SAFE_PATH = re.compile(r"^/[A-Za-z0-9_./+@:,=~-]+\Z")          # no space or symbol that the Desktop Entry format would need quoting rules for. \Z, not $: a $ also matches before a trailing line break
 STATES = ("new", "same", "update", "foreign")                   # foreign: a file of that name is there and is not ours
 
 

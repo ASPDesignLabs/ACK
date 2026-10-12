@@ -35,7 +35,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return tour.run(services)
 
     return run_window_cli(args, home_dir, sys.executable, str(jobs.TOOLS_DIR), ICON.read_text(encoding="utf-8"), cat, TerminalIO(), toolkit=toolkit, start=start, selftest=selftest,
-                          on_wsl=showfolder.on_wsl(services.system))
+                          on_wsl=showfolder.on_wsl(services.system), system=services.system)
 
 
 if __name__ == "__main__":
