@@ -77,6 +77,16 @@ def test_a_pipe_table_with_three_columns_uses_the_second_as_the_sentence_and_quo
     assert rows.rows == (("LJ001-0001", "Printing, in the only sense with which we are at present concerned"), ("LJ001-0002", 'He said "yes" and left.'))
 
 
+def test_a_pipe_table_is_still_a_pipe_table_when_every_sentence_has_commas_in_it():
+    rows = fi.parse_table("001|One, two, three.\n002|Well, that was long, wasn't it?\n003|Yes, yes.\n")
+    assert rows.delimiter == "|" and rows.rows == (("001", "One, two, three."), ("002", "Well, that was long, wasn't it?"), ("003", "Yes, yes."))
+
+
+def test_a_pipe_table_sentence_that_starts_with_a_quote_keeps_its_quotes():
+    rows = fi.parse_table('001|"Come here," she said.|x\n002|He said "no".|x\n')
+    assert rows.rows == (("001", '"Come here," she said.'), ("002", 'He said "no".'))
+
+
 def test_a_comma_table_may_quote_a_sentence_that_has_commas_and_its_header_row_is_not_a_row():
     rows = fi.parse_table('file,text\n001.wav,"Well, that was long, wasn\'t it?"\n002.wav,Short one.\n')
     assert rows.delimiter == "," and rows.header and rows.rows == (("001.wav", "Well, that was long, wasn't it?"), ("002.wav", "Short one."))
@@ -284,6 +294,14 @@ def test_more_than_one_table_uses_the_one_nearest_the_top_and_says_so_and_a_name
     assert [p.code for p in fi.make_plan(root, "table", out_dir, table="nothing.csv").problems] == ["table_missing"]
 
 
+def test_a_table_nearer_the_top_beats_one_that_sorts_first_by_name(tmp_path, out_dir):
+    root = folder_with_table(tmp_path, "001|From the top.\n")
+    (root / "a").mkdir()
+    (root / "a" / "metadata.csv").write_text("001|From a folder that sorts first.\n", encoding="utf-8")
+    plan = fi.make_plan(root, "table", out_dir)
+    assert plan.table == "metadata.csv" and plan.items[0].text == "From the top." and [p.code for p in plan.problems] == [], "one at the top and one below are not 'many at the same level'"
+
+
 def test_rows_with_no_sentence_are_counted(tmp_path, out_dir):
     names = ("001", "002", "003", "004", "005", "006", "007", "008")
     root = folder_with_table(tmp_path, "001|One.\n002\n|x\n003|Three.\n004|Four.\n005|Five.\n006|Six.\n007|Seven.\n008|Eight.\n", files=names)
@@ -314,12 +332,15 @@ def test_a_zip_is_unpacked_only_into_this_programs_own_folder_and_only_the_names
     archive = zip_of(tmp_path / "voice.zip", [("set/001.wav", data), ("set/001.txt", b"One."), ("../escape.wav", data), ("/abs.wav", data), ("set/link.wav", ("link", "/etc/passwd")),
                                               ("set/.hidden.wav", data), ("__MACOSX/set/001.wav", data), ("set/readme.exe", b"MZ"), ("set\\win.wav", data), ("set/sub/002.wav", data)])
     before = archive.read_bytes()
+    absolute_before = os.stat("/abs.wav").st_mtime_ns if os.path.exists("/abs.wav") else None
     plan = fi.make_plan(archive, "pairs", out_dir)
     assert plan.unpacked and plan.source.parent == Config(output_dir=out_dir).root / "incoming" and plan.source.name.startswith("files-")
-    assert sorted(i.rel for i in plan.items) == ["set/001.wav", "set/sub/002.wav", "set/win.wav"] or sorted(i.rel for i in plan.items) == ["set/001.wav", "set/sub/002.wav", "set\\win.wav"] or True
+    assert sorted(i.rel for i in plan.items) == ["set/001.wav", "set/sub/002.wav", "set/win.wav"], "a backslash in a name is a folder separator, and nothing else gets through"
     names = sorted(os.path.relpath(os.path.join(b, f), plan.source) for b, _d, fs in os.walk(plan.source) for f in fs)
     assert ".complete" in names and "set/001.wav" in names and "set/001.txt" in names and "set/sub/002.wav" in names
-    assert not (tmp_path / "escape.wav").exists() and not os.path.exists("/abs.wav") and not any("link" in n or "hidden" in n or "MACOSX" in n or n.endswith(".exe") for n in names)
+    assert not any(f == "escape.wav" for _b, _d, fs in os.walk(tmp_path) for f in fs), "a name that climbs out is written nowhere at all, not even beside the unpacked folder"
+    assert (os.stat("/abs.wav").st_mtime_ns if os.path.exists("/abs.wav") else None) == absolute_before, "an absolute name is not written at the root of the disk (and a file that was already there is not touched)"
+    assert not any("link" in n or "hidden" in n or "MACOSX" in n or n.endswith(".exe") for n in names)
     assert archive.read_bytes() == before, "the .zip itself is only read"
     assert [i.text for i in plan.items if i.rel == "set/001.wav"] == ["One."]
     again = fi.make_plan(archive, "pairs", out_dir)

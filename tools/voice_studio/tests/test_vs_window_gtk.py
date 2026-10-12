@@ -252,7 +252,7 @@ def test_the_real_window_passes_its_own_tour_on_a_virtual_display(tmp_path):
                 "recordings_page_buttons_are_named", "the_steps_that_need_recordings_are_off_until_there_are_some", "bring_in_is_always_there", "import_form_opens_as_the_question_on_the_screen",
                 "import_form_controls_are_named", "no_kind_is_chosen_for_the_person", "import_form_says_what_is_missing_and_stays_open", "a_package_is_picked_as_one_zip_file",
                 "files_are_picked_as_a_folder_or_a_zip", "the_table_name_shows_only_for_a_table", "changing_the_kind_forgets_the_place_chosen", "the_file_chooser_opens",
-                "the_file_chooser_closes_and_chooses_nothing", "cancel_closes_the_form_and_does_nothing", "import_shows_what_it_found_before_it_asks", "a_no_adds_nothing"):
+                "the_file_chooser_closes_and_chooses_nothing", "files_are_picked_by_choosing_a_folder", "a_package_is_picked_by_choosing_a_file", "a_zip_of_files_is_picked_by_choosing_a_file", "cancel_closes_the_form_and_does_nothing", "import_shows_what_it_found_before_it_asks", "a_no_adds_nothing"):
         assert report[key] is True, key
     assert report["import_yes_check"] in ("ran", "skipped: no ffmpeg on this computer")
     if report["import_yes_check"] == "ran":

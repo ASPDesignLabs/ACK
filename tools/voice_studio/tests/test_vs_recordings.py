@@ -181,6 +181,25 @@ def test_a_job_that_ended_is_not_active_whichever_way_it_ended(tmp_path, how):
     assert rec.listening_job(root, PROJECT).active is False
 
 
+def test_a_newer_job_of_another_kind_or_another_project_does_not_hide_the_listening_one(tmp_path):
+    root = str(tmp_path / "jobs")
+    os.makedirs(root)
+    mine = fake_job(root, ["x"], "finished", kind="process", project=PROJECT, name="20261011-100000-process-0001")
+    fake_job(root, ["x"], "running", kind="train", project=PROJECT, name="20261011-100001-train-0002")
+    fake_job(root, ["x"], "running", kind="process", project="ben", name="20261011-100002-process-0003")
+    fake_job(root, ["x"], "failed", kind="dataset", project=PROJECT, name="20261011-100003-dataset-0004")
+    found = rec.listening_job(root, PROJECT)
+    assert found.job.id == mine.id and found.active is False
+
+
+def test_a_recording_that_failed_is_not_the_one_the_job_is_on(tmp_path):
+    root = str(tmp_path / "jobs")
+    os.makedirs(root)
+    log(fake_job(root, ["x"], "running", kind="process"), '{"take": "t1", "status": "transcribing", "label": "first", "progress": 0.4}', '{"take": "t2", "status": "error", "label": "second", "error": "no sound"}')
+    found = rec.listening_job(root, PROJECT)
+    assert (found.doing, found.percent) == ("first", 40)
+
+
 def test_what_the_job_is_on_and_how_far_comes_from_its_own_log(tmp_path):
     root = str(tmp_path / "jobs")
     os.makedirs(root)

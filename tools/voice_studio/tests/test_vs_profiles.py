@@ -212,6 +212,20 @@ def test_a_folder_that_is_a_link_or_has_no_project_file_is_not_planned(home, tmp
     assert caught.value.code == "unsafe" and (other / "project.json").exists()
 
 
+def test_a_project_whose_id_climbs_out_of_the_projects_folder_is_never_planned_or_deleted(home):
+    project, paths = make(home)
+    victim = os.path.dirname(home.projects) + "/victim"
+    put(victim + "/project.json", 20)
+    put(victim + "/precious.wav", 50)
+    sneaky = replace(project, id="../victim")
+    with pytest.raises(pf.ProfileError) as caught:
+        pf.plan_delete(home, sneaky)
+    assert caught.value.code == "unsafe"
+    with pytest.raises(pf.ProfileError) as caught:
+        pf.delete_project(home, sneaky, pf.plan_delete(home, project))
+    assert caught.value.code == "unsafe" and os.path.isfile(victim + "/precious.wav") and os.path.isfile(victim + "/project.json") and os.path.isfile(paths.project_json)
+
+
 def test_a_link_inside_the_profile_is_counted_as_a_link_and_its_target_is_not_walked(home, tmp_path):
     project, paths = make(home)
     big = tmp_path / "big"
@@ -323,6 +337,22 @@ def test_project_json_is_removed_last_so_a_failed_delete_leaves_a_profile_that_i
     monkeypatch.setattr(pf, "_remove_tree", real)
     again = pf.delete_project(home, project, pf.plan_delete(home, project))
     assert again.gone and again.failed == () and not os.path.lexists(paths.root)
+
+
+def test_a_part_that_cannot_be_removed_stops_the_delete_before_the_parts_after_it(home, monkeypatch):
+    project, paths = make(home)
+    fill(paths)
+    real = pf._remove_tree
+
+    def breaks_on_recordings(path, failed):
+        if path == paths.recordings:
+            failed.append((path, "Device or resource busy"))
+            return
+        real(path, failed)
+    monkeypatch.setattr(pf, "_remove_tree", breaks_on_recordings)
+    result = pf.delete_project(home, project, pf.plan_delete(home, project))
+    assert not result.gone and result.failed == ((paths.recordings, "Device or resource busy"),)
+    assert os.path.isfile(paths.rounds_file) and os.path.isfile(paths.project_json), "nothing after the part that failed was touched, and the project file is still there"
 
 
 def test_a_file_that_no_longer_exists_when_the_delete_reaches_it_is_not_an_error(home):

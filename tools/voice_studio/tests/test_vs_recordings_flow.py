@@ -190,6 +190,28 @@ def test_show_cuts_a_long_list_and_says_how_many_more(home, anna):
     assert sum(1 for line in io.lines if line.startswith("  rec ")) == rf.MAX_ROWS_SHOWN and "  And 5 more." in io.lines
 
 
+@pytest.mark.parametrize("status, words", [("ready", "ready"), ("finishing", "waiting to be listened to"), ("queued", "waiting to be listened to"), ("transcribing", "waiting to be listened to"),
+                                           ("error", "could not be finished"), ("importing", "still coming in"), ("recording", "still coming in"), ("something-new", "still coming in"), ("", "still coming in")])
+def test_every_status_is_shown_as_one_of_four_plain_words(home, anna, status, words):
+    write_take(anna.recordings, OLD, status=status, duration=None, label="Words")
+    _code, io = go(home, "show")
+    assert "  Words: " + words in io.lines
+
+
+def test_a_list_that_just_fits_does_not_say_there_are_more(home, anna):
+    for n in range(rf.MAX_ROWS_SHOWN):
+        write_take(anna.recordings, "t20261001-1%05d-aaaa" % n, label="rec %02d" % n)
+    _code, io = go(home, "show")
+    assert sum(1 for line in io.lines if line.startswith("  rec ")) == rf.MAX_ROWS_SHOWN and not any(line.startswith("  And ") for line in io.lines)
+
+
+def test_an_earlier_listening_that_stopped_is_not_mentioned_when_nothing_is_waiting_any_more(home, anna):
+    write_take(anna.recordings, OLD, status="ready", duration=60.0)
+    made_job(home, ["x"], "interrupted", kind="process", project="anna")
+    _code, io = go(home, "show")
+    assert not any("did not finish" in line for line in io.lines)
+
+
 def test_show_changes_nothing(home, anna):
     write_take(anna.recordings, OLD)
     made_job(home, ["x"], "failed", kind="process", project="anna")
@@ -258,6 +280,7 @@ def test_the_plan_is_shown_before_the_question_and_a_no_writes_nothing(home, ann
     assert code == 2 and io.prompts == ["Add 3 files to Anna? Type yes to go on. "] and "Nothing was done." in io.text
     assert io.events.index(("say", "3 of them come with a sentence.")) < io.events.index(("ask", io.prompts[0]))
     assert "Looked at voice (Audio files, each with a text file)." in io.lines and "Found 3 audio files." in io.lines
+    assert not any("no sentence" in line for line in io.lines), "every file came with its sentence, so none is said to lack one"
     assert tree(anna.recordings) == {} and tree(folder) == source_before
 
 

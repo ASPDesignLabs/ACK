@@ -330,11 +330,23 @@ def recordings_checks(shell, checks: Dict[str, object]) -> None:
     form.set_source("/somewhere")
     form.radios["audio"].set_active(True)
     checks["changing_the_kind_forgets_the_place_chosen"] = form.source == "" and form.source_label.get_label() == cat.t("window.import.nothing_chosen") and not form.table_box.get_visible()
-    form.pick_main.emit("clicked")
-    checks["the_file_chooser_opens"] = pump(lambda: form.chooser is not None and form.chooser.is_visible(), 3.0)
-    if form.chooser is not None:
-        form.chooser.response(Gtk.ResponseType.CANCEL)
-    checks["the_file_chooser_closes_and_chooses_nothing"] = pump(lambda: form.chooser is None, 3.0) and form.source == ""
+    def chooser_action(button: Gtk.Button):
+        """Press a button that opens the system's file chooser, say which kind of choosing it offers, and close it with Cancel."""
+        button.emit("clicked")
+        opened = pump(lambda: form.chooser is not None and form.chooser.is_visible(), 3.0)
+        action = form.chooser.get_action() if opened else None
+        if form.chooser is not None:
+            form.chooser.response(Gtk.ResponseType.CANCEL)
+        closed = pump(lambda: form.chooser is None, 3.0) and form.source == ""
+        return opened, action, closed
+    opened, action, closed = chooser_action(form.pick_main)
+    checks["the_file_chooser_opens"] = opened
+    checks["files_are_picked_by_choosing_a_folder"] = action == Gtk.FileChooserAction.SELECT_FOLDER
+    checks["the_file_chooser_closes_and_chooses_nothing"] = closed
+    form.radios["package"].set_active(True)
+    checks["a_package_is_picked_by_choosing_a_file"] = chooser_action(form.pick_main)[1] == Gtk.FileChooserAction.OPEN
+    form.radios["pairs"].set_active(True)
+    checks["a_zip_of_files_is_picked_by_choosing_a_file"] = chooser_action(form.pick_zip)[1] == Gtk.FileChooserAction.OPEN
     form.dialog.response(Gtk.ResponseType.CANCEL)
     checks["cancel_closes_the_form_and_does_nothing"] = pump(lambda: shell.form is None and shell.dialog is None) and rec.read_takes(wm.open_project(home, pid).paths.recordings).total == before.total
 
