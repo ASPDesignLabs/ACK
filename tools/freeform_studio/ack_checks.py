@@ -167,8 +167,12 @@ def _common_flags(m: Optional[Dict[str, Any]], peak: int, clipped: int) -> List[
 
 def check_script(segments: List[Dict[str, Any]], clip_of: List[int], notes: Dict[str, Any], db: np.ndarray, hop: float,
                  wav_path: Path) -> Dict[str, Any]:
-    """Annotate the pieces of a script session in place (flags and tags). Returns the measurements, to be saved beside the take."""
+    """Annotate the pieces of a script session, or of a set of files brought in from a folder, in place (flags and tags). Returns the measurements, to be saved beside the take.
+
+    A folder's files have no phone behind them, so what only the phone can say is left out: no `phone_disagrees` and no `phone_stumble`, and no `cut_off`, because a file trimmed close to the
+    speech is how voice data is normally kept (the phone's clips have quiet at both ends on purpose, so speech touching an end means a word was cut)."""
     clips = notes["clips"]
+    from_phone = notes.get("mode") != "files"
     thr = speech_threshold_for(db, notes)
     floor = room_level(db, notes)
     peaks, clipped = sample_checks(wav_path, [(s["start"], s["end"]) for s in segments])
@@ -188,19 +192,19 @@ def check_script(segments: List[Dict[str, Any]], clip_of: List[int], notes: Dict
         clip_state[k] = {"pc_speech": bool(win and win["has_speech"]), "phone_speech": bool(c.get("speech")),
                          "start_edge": start_edge, "end_edge": end_edge}
 
-    report: Dict[str, Any] = {"schema": 1, "mode": "script", "threshold_dbfs": round(float(thr), 1), "noise_floor_dbfs": round(floor, 1),
+    report: Dict[str, Any] = {"schema": 1, "mode": "script" if from_phone else "files", "threshold_dbfs": round(float(thr), 1), "noise_floor_dbfs": round(floor, 1),
                               "pieces": {}}
     for i, (s, k) in enumerate(zip(segments, clip_of)):
         m = measure_range(db, hop, s["start"], s["end"], thr, floor)
         add = _common_flags(m, peaks[i], clipped[i])
         st, clip = clip_state[k], clips[k]
-        if (i == first[k] and st["start_edge"]) or (i == last[k] and st["end_edge"]):
+        if from_phone and ((i == first[k] and st["start_edge"]) or (i == last[k] and st["end_edge"])):
             add.append("cut_off")
         if clip.get("text") and reads_differently(clip["text"], " ".join(t for t in heard[k] if t)):
             add.append("reads_differently")
-        if st["phone_speech"] != st["pc_speech"]:
+        if from_phone and st["phone_speech"] != st["pc_speech"]:
             add.append("phone_disagrees")
-        user = [f for f in (clip.get("flags") or []) if isinstance(f, str)]
+        user = [f for f in (clip.get("flags") or []) if isinstance(f, str)] if from_phone else []
         if "stumble" in user:
             add.append("phone_stumble")
         s["tags"] = sorted(set(s.get("tags") or []) | {t for t in user if t in PHONE_TAGS and TAG_RE.match(t)})[:8]

@@ -28,7 +28,7 @@ def usable_notes(notes: Any) -> bool:
     """Whether ack_clips.json holds what this module needs. Anything else falls back to cutting by sentences."""
     if not isinstance(notes, dict):
         return False
-    if notes.get("mode") == "script":
+    if notes.get("mode") in ("script", "files"):
         clips = notes.get("clips")
         return isinstance(clips, list) and bool(clips) and all(
             isinstance(c, dict) and isinstance(c.get("start_s"), (int, float)) and isinstance(c.get("end_s"), (int, float))
@@ -111,7 +111,7 @@ def propose_segments_ack(asr: Dict[str, Any], wav_path: Path, duration: float, n
     o = opts or SegOptions()
     db, hop = rms_envelope(wav_path)
     refined, stats = refine_word_times(asr, db, hop)
-    if notes.get("mode") == "script":
+    if notes.get("mode") in ("script", "files"):
         segs, clip_of = script_segments_with_clips(refined, duration, notes, o)
         stats["ack_checks"] = check_script(segs, clip_of, notes, db, hop, wav_path)
     else:
