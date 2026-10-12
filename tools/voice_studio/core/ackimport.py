@@ -25,7 +25,7 @@ from freeform_studio.config import Config
 from freeform_studio.health import free_mb
 from freeform_studio.privacy import private_umask, sync_warning
 
-NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._ -]{0,100}\.zip$")      # the same rule the Review page uses for a package in the incoming folder
+NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._ -]{0,100}\.zip\Z")      # the same rule the Review page uses for a package in the incoming folder
 ZIP_STARTS = (b"PK\x03\x04", b"PK\x05\x06")
 MAX_PACKAGE_BYTES = 4 * 1024 ** 3                                        # more than a package from ACK can be
 CHUNK = 1 << 20

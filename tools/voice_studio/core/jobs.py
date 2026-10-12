@@ -32,7 +32,7 @@ from typing import Callable, Dict, List, Mapping, Optional, Tuple
 from .system import is_network_command
 
 SCHEMA = 1
-KIND = re.compile(r"^[a-z0-9][a-z0-9-]{0,19}$")
+KIND = re.compile(r"^[a-z0-9][a-z0-9-]{0,19}\Z")
 START_GRACE_S = 15.0
 ERROR_CODES = ("bad_spec", "network_program", "gpu_busy", "launch_failed", "no_start", "not_found")           # each has words in the text catalog
 STOP_REASONS = ("disk",)                       # why a stop was asked for by the runner itself rather than by a person; each has words in the text catalog
@@ -238,7 +238,7 @@ def gpu_busy(jobs_root: str) -> Optional[JobInfo]:
 def _check_spec(spec: JobSpec) -> None:
     if not KIND.match(spec.kind) or not spec.argv or any((not isinstance(a, str)) or "\x00" in a for a in spec.argv) or not spec.argv[0]:
         raise JobError("bad_spec")
-    if spec.project and not re.match(r"^[a-z0-9][a-z0-9-]{0,63}$", spec.project):
+    if spec.project and not re.match(r"^[a-z0-9][a-z0-9-]{0,63}\Z", spec.project):
         raise JobError("bad_spec", "project")
     if spec.cwd is not None and not os.path.isdir(spec.cwd):
         raise JobError("bad_spec", "cwd")

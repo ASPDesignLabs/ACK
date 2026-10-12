@@ -30,8 +30,8 @@ BATCH_SIZE = 12                 # measured on one 8 GiB card (RTX 4060, four run
 NUM_WORKERS = 4                 # PROVISIONAL
 CHECK_VAL_EVERY_N_EPOCH = 10   # PROVISIONAL
 ROUND_MINUTES = 25              # PROVISIONAL (decision D12)
-SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
-CHECKPOINT_DIR = re.compile(r"^version_(\d+)$")
+SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z")
+CHECKPOINT_DIR = re.compile(r"^version_(\d+)\Z")
 
 
 class CommandError(Exception):

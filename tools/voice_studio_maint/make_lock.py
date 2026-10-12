@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 PACKAGE_SITE = "https://pypi.org/pypi/%s/%s/json"
-LINE = re.compile(r"^(?P<name>[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?)==(?P<version>[A-Za-z0-9][A-Za-z0-9._+!-]*)$")
+LINE = re.compile(r"^(?P<name>[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?)==(?P<version>[A-Za-z0-9][A-Za-z0-9._+!-]*)\Z")
 Minor = Tuple[int, int]
 
 

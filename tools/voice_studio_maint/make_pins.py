@@ -38,10 +38,10 @@ HOST = "https://huggingface.co"
 HERE = Path(__file__).resolve().parent
 WANTED = HERE / "pins" / "wanted.json"
 REGISTRY = HERE.parent / "voice_studio" / "data" / "sources.json"
-SHA256 = re.compile(r"^[0-9a-f]{64}$")
-COMMIT = re.compile(r"^[0-9a-f]{40}$")
-SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
-SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._=+-]{0,149}$")          # the same rule as core/registry.py
+SHA256 = re.compile(r"^[0-9a-f]{64}\Z")
+COMMIT = re.compile(r"^[0-9a-f]{40}\Z")
+SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}\Z")
+SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._=+-]{0,149}\Z")          # the same rule as core/registry.py
 USER_AGENT = "ack-voice-studio-pin-maker"
 CHUNK = 1 << 20
 
@@ -110,7 +110,7 @@ def folders(text: str) -> List[str]:
 def next_page(link_header: Optional[str]) -> Optional[str]:
     """The address of the next page of a listing, from the `Link` header, or None."""
     for part in (link_header or "").split(","):
-        match = re.match(r'\s*<([^>]+)>\s*;\s*rel="next"\s*$', part)
+        match = re.match(r'\s*<([^>]+)>\s*;\s*rel="next"\s*\Z', part)
         if match:
             return match.group(1)
     return None

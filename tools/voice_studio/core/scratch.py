@@ -24,7 +24,7 @@ from .system import System
 SCRATCH_DIRNAME = "ack-voice-scratch"
 MARKER_NAME = ".ack-voice-scratch"
 MARKER_SCHEMA = 1
-PROJECT_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+PROJECT_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}\Z")
 
 SYSTEM_PREFIXES = ("/proc", "/sys", "/dev", "/run", "/boot", "/etc", "/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32", "/snap",
                    "/var", "/root")

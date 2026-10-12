@@ -17,15 +17,15 @@ from urllib.parse import urlparse
 SCHEMA = 1
 KINDS = ("voice", "model", "file", "source")          # source: a program's own files at one commit, unpacked and installed from the archive
 ALLOWED_HOSTS = ("huggingface.co", "github.com")        # where a registry address may point; a download may be redirected to a CDN over https
-SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._=+-]{0,149}$")
-SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
-SHA256 = re.compile(r"^[0-9a-f]{64}$")
+SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._=+-]{0,149}\Z")
+SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}\Z")
+SHA256 = re.compile(r"^[0-9a-f]{64}\Z")
 MAX_FILE_BYTES = 8 * 2**30                              # a hostile or mistaken entry cannot ask for more than this
 DEFAULT_PATH = Path(__file__).resolve().parent.parent / "data" / "sources.json"
 
 PIN_FIELDS = ("url", "filename", "revision", "size_bytes", "sha256")
 MAX_PAGE_LENGTH = 300
-PAGE_ADDRESS = re.compile(r"^[\x21-\x7e]+$")             # printable ASCII with no white space: an address that can be read aloud and copied
+PAGE_ADDRESS = re.compile(r"^[\x21-\x7e]+\Z")             # printable ASCII with no white space: an address that can be read aloud and copied
 
 
 class RegistryError(Exception):

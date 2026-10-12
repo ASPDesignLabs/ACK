@@ -21,12 +21,12 @@ SCHEMA = 1
 DEFAULT_PATH = Path(__file__).resolve().parent.parent / "data" / "environments.json"
 LOCKS_DIR = Path(__file__).resolve().parent.parent / "data" / "locks"
 NATIVE_DIR = Path(__file__).resolve().parent.parent / "data" / "native"
-SHA256 = re.compile(r"^[0-9a-f]{64}$")
-SAFE_LOCK_NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{0,79}\.txt$")
-SAFE_RELATIVE = re.compile(r"^[A-Za-z0-9._*/+-]{1,200}$")
-DIST_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
-NATIVE_FILE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,79}\.pyx$")
-NATIVE_MODULE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,39}$")
+SHA256 = re.compile(r"^[0-9a-f]{64}\Z")
+SAFE_LOCK_NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{0,79}\.txt\Z")
+SAFE_RELATIVE = re.compile(r"^[A-Za-z0-9._*/+-]{1,200}\Z")
+DIST_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\Z")
+NATIVE_FILE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,79}\.pyx\Z")
+NATIVE_MODULE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,39}\Z")
 MAX_PRELUDE_LINES = 20
 MAX_LINE = 300
 
@@ -115,8 +115,8 @@ class EnvSpec:
 # ---------------------------------------------------------------- the lock file
 
 _NAME = r"[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?"
-_REQUIREMENT = re.compile(r"^(?P<name>%s)(?P<extras>\[[A-Za-z0-9._,-]+\])?==(?P<version>[A-Za-z0-9][A-Za-z0-9._+!-]*)(?P<marker>\s*;[^#]*)?$" % _NAME)
-_HASH = re.compile(r"^--hash=sha256:(?P<digest>[0-9a-f]{64})$")
+_REQUIREMENT = re.compile(r"^(?P<name>%s)(?P<extras>\[[A-Za-z0-9._,-]+\])?==(?P<version>[A-Za-z0-9][A-Za-z0-9._+!-]*)(?P<marker>\s*;[^#]*)?\Z" % _NAME)
+_HASH = re.compile(r"^--hash=sha256:(?P<digest>[0-9a-f]{64})\Z")
 
 
 def normalise_name(name: str) -> str:

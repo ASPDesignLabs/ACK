@@ -22,7 +22,7 @@ from .diskbudget import size_parts
 SCHEMA = 1
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "text"
 PLACEHOLDER = re.compile(r"\{\{|\}\}|\{([a-z][a-z0-9_]*)\}")
-LANGUAGE = re.compile(r"^[a-z]{2,3}(-[a-z0-9]{2,8})?$")
+LANGUAGE = re.compile(r"^[a-z]{2,3}(-[a-z0-9]{2,8})?\Z")
 PLURAL_FORMS = ("zero", "one", "two", "few", "many", "other")
 
 
