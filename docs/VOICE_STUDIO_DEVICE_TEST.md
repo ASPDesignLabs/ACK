@@ -1,7 +1,7 @@
 # ACK VOICE STUDIO: checking the first slice on your own computers (terminal only)
 
 Everything in ACK Voice Studio's first slice was written and tested **without** the things that matter most in the end: a real graphics card,
-a real WSL, a real phone, and a real training run. There is no window yet, so this list uses the terminal. It follows the path a voice takes:
+a real WSL, a real phone, and a real training run. Most of this list uses the terminal; the window is checked in sections I5 to I7. It follows the path a voice takes:
 **recordings from the phone → this computer → a training set → one short training round → a voice file → ACK on the phone.** Each
 line is *do this → expect that*. If something does not match, the last section says what to send back.
 
@@ -915,6 +915,48 @@ section I1. Run one command at a time, and wait for it to finish before you type
 - [ ] **A screen reader, if you use one:** move through the form with Tab. Write down what is read for each of the four kinds, `Choose the folder…`, and the problems that appear when the form is not whole.
 - [ ] Clean up what this section made: `rm -r ~/ack-voice-check/import-test`. The recordings you imported are inside the project, `~/ack-voice-studio/projects/voice-check/recordings`, and stay until you delete the project or remove them yourself; `second-check` is already gone (section M has the rest).
 
+## I7. Installing from scratch, with the two installation guides
+
+**New, and not yet run on a clean Windows or on a native Ubuntu.** The guides are `docs/ACK_Voice_Studio_Installation_Guide.MD` (Windows, from PowerShell) and `docs/ACK_Voice_Studio_Installation_Guide_Ubuntu.MD`. They stand on their own, so do this
+section **with only the guide open**, as a person who has nothing else would. Write down every sentence in a guide that is unclear, and every command that did not do what the guide said. Until a release is tagged the commands fetch
+`main`, so this can only be run after the branch is merged; before that, use `-Ref claude/voice-studio-guided-setup` (Windows) or `ACK_VOICE_TAG=claude/voice-studio-guided-setup` (Ubuntu), and say so when you write results down.
+
+**A. A Windows that has never had WSL** (a spare computer, or one where `wsl --list` says there is none). Everything here is the Windows guide's section 2 and 3.
+
+- [ ] **Look only.** In an ordinary (not administrator) PowerShell:
+  ```powershell
+  $env:ACK_VOICE_CHECK = '1'
+  irm https://raw.githubusercontent.com/ASPDesignLabs/ACK/main/tools/voice_studio/install.ps1 | iex
+  Remove-Item Env:ACK_VOICE_CHECK
+  ```
+  → `Looking at this computer. Nothing is changed at this step.`, a line for the Windows build, the Nvidia driver (or the note that there is none) and the free room, then `WSL (Windows Subsystem for Linux) is not set up on this computer yet.`,
+  `It would install Ubuntu 24.04 with: wsl --install -d Ubuntu-24.04` and `Not ready yet. Run the same command without -Check to set it up.` **Your PowerShell window must still be open afterwards** (the script must not close it). Check that nothing was installed: `wsl --list` still says there is nothing.
+- [ ] **Dry run.** The same with `ACK_VOICE_DRYRUN` instead. → `Nothing was changed. This is what would run:` and the `wsl.exe` lines, one of them the Ubuntu command in double quotes. Nothing runs.
+- [ ] **Without administrator rights.** Run the one command with no setting. → The first look, then `Installing WSL needs PowerShell opened as administrator.` and it stops. Nothing was installed.
+- [ ] **A no.** In an administrator PowerShell, run the one command and type `no` (or press Enter) at `Install WSL and Ubuntu 24.04 now? It downloads Ubuntu from Microsoft, needs administrator rights, and needs a restart afterwards. Type yes to go on.` → `Nothing was done.`
+- [ ] **The real install.** Again in the administrator window, type `yes`. → `Installing Ubuntu. Windows shows its own progress. When Ubuntu asks for a user name and a password, choose them: they are for Ubuntu only.` Write down: whether Windows asked for a restart, whether Ubuntu opened by itself and asked for a user name,
+  and the exact lines Windows printed. If it says `WSL is installed but needs the computer to restart first. Restart it, then run the same command again. It carries on from here.`, restart.
+- [ ] **No user yet.** If you did not finish Ubuntu's first run, run the command in an ordinary PowerShell. → `Ubuntu is installed but has no user yet.` and the instructions; it starts nothing. Open Ubuntu 24.04 from the Start menu, choose a user, close it.
+- [ ] **The hand-over.** Run the one command in an ordinary PowerShell. → `Ubuntu found: Ubuntu-24.04.`, then `Starting the Ubuntu part. Ubuntu will ask for the password you chose, in this window, to install a few Ubuntu programs.` Write down, in this order: whether `git` was offered,
+  whether the password prompt accepted typing, whether `y` and `yes` reach the questions (the Ubuntu script reads its answers from the terminal), whether Ctrl+C stops it and the same command carries on, how long each set of programs took, and where it first looked slow.
+- [ ] **The window.** → `The Ubuntu part has ended.`, then `Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it can stop Ubuntu, and the window with it. When you close the Voice Studio window, this PowerShell window is free again.` The Voice Studio window appears on the Windows desktop and the PowerShell prompt does **not** come back yet. Write down how long after that line the window appeared. Close the Voice Studio window: → `The Voice Studio window was closed.` and the prompt returns.
+- [ ] **Why PowerShell stays busy (the reason this design was chosen, not yet proven).** Open the window again with the one command, then close **only the PowerShell window** and watch the Voice Studio window for two minutes. Write down whether it stays. (WSL stops an Ubuntu that has no session open from Windows about a minute after the last one ends; a window left behind by a session that has ended might go with it. If it stays, the helper could let PowerShell go free after opening the window.)
+- [ ] **Again.** Run the one command a second time. → It finds Ubuntu, finds everything in place and opens the window without installing or downloading anything.
+
+**B. A Windows that already has Ubuntu (the developer's own).**
+
+- [ ] The one command goes straight to `Ubuntu found: …` with no question before the Ubuntu part, and the Ubuntu part ends at the window.
+- [ ] `-Distro Ubuntu-22.04` (or the other one) uses that one; `-Distro Debian` is refused with `The name Debian is not an Ubuntu name. …` and nothing runs.
+
+**C. A native Ubuntu desktop, 22.04 and then 24.04.** This is the Ubuntu guide's section 2.
+
+- [ ] Run its one command in a terminal. → `Looking at this computer. Nothing is changed at this step.`, the list of Ubuntu programs, `Install these now? Type y for yes, or press Enter for no:`, then the steps in the guide's section 3. Write down every difference from the guide.
+- [ ] `--dry-run` after `bash -s --` prints what would run and installs nothing.
+- [ ] After the window opens, run `PYTHONPATH=~/ack-tools/tools /usr/bin/python3 -m voice_studio.window --install-launcher`. → The applications list gets an entry. Does it open the window?
+- [ ] A job that trains, with the terminal closed: does it keep running? (This was not tested on native Ubuntu; on WSL it stops by default.)
+
+**D. The guides.** Read each guide once more from the top and tick: every command worked as typed; every quoted sentence appeared; every button has the name the guide gives it; nothing needed another file.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -992,6 +1034,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I2: whether round 2 started from round 1's file (the `--ckpt_path` lines), how long a stop by hand took, every `False` from the saved-file check, the two epochs for each round, and any sentence that was hard to follow.
 - Section I: the card, the memory used, the batch size that worked, the seconds per epoch, how long `max_time` took, whether `last.ckpt` was in the folder you started from, the exit code, and how long Ctrl+C took.
 - Section I6: whether every `--kind` brought the right files in, what the tool said when a file could not be read, how long listening took for how many minutes of audio, whether the file chooser was easy to use, and any sentence in the projects steps (especially the two delete questions) that left you unsure what would be removed.
+- Section I7: for each part (A to D), the exact lines the one command printed, where it stopped or asked something this list did not expect, what you typed, how long each step took, and every sentence in a guide that was unclear or a command that did not work as typed. If the one command is not run on a clean Windows or a plain Ubuntu desktop yet, say so.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 

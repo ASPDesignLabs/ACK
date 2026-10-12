@@ -61,6 +61,16 @@ sudo apt-get install -y python3-venv python3-dev build-essential git ffmpeg pyth
 On a freshly installed Ubuntu 24.04 this pulled **206 new packages and upgraded 15** (233 MB to download, 552 MB on disk), mostly `ffmpeg` and
 the GTK toolkit with their dependencies. The script runs `--check` (changes nothing) and `--dry-run` (prints the commands) first if you ask it to.
 
+**On Windows: `install.ps1`.** Someone with only PowerShell can run one line (`irm <address of install.ps1> | iex`, or save the file, read it and run it with `powershell -ExecutionPolicy Bypass -File`, which changes no setting) and end with the window open. The script is plain text of about three hundred lines in `tools/voice_studio/install.ps1`, written for Windows PowerShell 5.1 as well as 7. What it does:
+
+* **Reads** the Windows build number, whether virtualization is on (`Win32_ComputerSystem`, `Win32_Processor`), the Nvidia driver through `nvidia-smi.exe` if there is one, and the free room on the system drive. It writes nothing on Windows.
+* **Runs `wsl.exe`** to list distributions (`wsl.exe -l -v`), to read the Ubuntu user id (`wsl.exe -d <name> --exec id -u`, to make sure Ubuntu has a user and the tool is never put in root's home), and, only if there is no Ubuntu 22.04 or 24.04 and only after a yes, `wsl.exe --install -d Ubuntu-24.04`. That one needs PowerShell opened as administrator and a restart; the script does not elevate itself, it says how to open an administrator window.
+* **Starts the Ubuntu part** with `wsl.exe -d <name> --cd ~ --exec bash -c <one command>`: fetch `get.sh` with `curl` (or `wget`) from `raw.githubusercontent.com`, then run it with `--no-window`. From there it is section 4 and the rest of this page, in the same console.
+* **Opens the window** as a second `wsl.exe` session that it stays attached to until the window is closed (`wsl.exe -d <name> --cd ~ --exec bash -c 'PYTHONPATH=$HOME/ack-tools/tools exec /usr/bin/python3 -m voice_studio.window'`). WSL stops an Ubuntu that has no session open from Windows about a minute after the last one ends; a session that stays attached keeps the window up. The PowerShell window is busy until the Voice Studio window is closed.
+* **Does not**: ask for or see a password, change the PowerShell execution policy, touch the registry, add a scheduled task or service, install anything on Windows beyond what `wsl --install` itself installs, or make a web request of its own. A test reads the file and fails if it does.
+* **Release.** The script and `get.sh` fetch the release named in `ACK_VOICE_TAG` (`-Ref`), `main` by default. To pin a reviewed release, set that name; both scripts use it for the fetch.
+* **Tested** with PowerShell on Linux, with stand-ins for `wsl.exe`, for the questions and for the facts about the computer, covering every branch; **not yet run on a clean Windows**.
+
 ## 5. Network: what is contacted, when and why
 
 All of it is **HTTPS on port 443**, outbound, during set-up. By design nothing is contacted by timer or in the background, and only one module of the tool (`core/fetch.py`) may use the network at all (a test enforces that). The tool shows every download, with its
@@ -74,6 +84,8 @@ address, size and checksum, and asks **before** it starts; the person's yes is s
 | `*.hf.co` (observed: `us.aws.cdn.hf.co`) | The large files are served from here after a redirect from `huggingface.co` | included above | same |
 | `archive.ubuntu.com`, `security.ubuntu.com` (or the organisation's own Ubuntu mirror) | The Ubuntu packages in section 4 | about 233 MB | once, with administrator rights |
 | `github.com` | To fetch the tool itself (`git clone`) and its updates | about 7 MB | install; updates only when someone runs `git pull` |
+| `raw.githubusercontent.com` | The two small setup scripts, install.ps1 (Windows) and get.sh (Ubuntu), fetched when someone runs the one-line install command | a few kilobytes | install |
+| Microsoft's servers (reached by the Windows program wsl.exe, never by the tool) | WSL and the Ubuntu image, only on a Windows that does not have them yet | the Ubuntu image | once, on Windows |
 
 **About the redirect host.** Hugging Face decides where the large files are served from, and that can differ by region and over time. `us.aws.cdn.hf.co` is
 what was observed from one place on 2026-10-11. If a large download is blocked, the tool's error names what failed; you can see where an address

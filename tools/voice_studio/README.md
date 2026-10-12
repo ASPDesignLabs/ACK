@@ -1,29 +1,39 @@
 # ACK Voice Studio
 
-A guided, graphical way to record, train and export a custom voice for ACK, on Ubuntu LTS (22.04, 24.04) and on WSL. One command
-sets it up; a native window (GTK 4) walks a helper and a person through recording, training and sending the finished voice to a phone.
+A guided, graphical way to record, train and export a custom voice for ACK, on Ubuntu LTS (22.04, 24.04) and on Windows through WSL. One command sets it up
+and opens a native window (GTK 4) that walks a helper and a person through bringing in recordings, training and sending the finished voice to a phone.
 
-**Status: foundations only.** Nothing here runs a window yet. The first terminal step exists: it looks at the computer, lists what is missing, asks once
-and installs it. The plan, every decision behind it and what is built so far:
-[`docs/VOICE_STUDIO_SETUP_PLAN.md`](../../docs/VOICE_STUDIO_SETUP_PLAN.md).
+**Status.** The window exists (projects, recordings, training rounds, the voice file, freeing up space, display) and every step is also a terminal command. It has been run on one
+computer (Windows with WSL2, Ubuntu 22.04 and 24.04, an RTX 4060). The installation guides are the place to start:
+
+- **Windows, with only PowerShell:** [`docs/ACK_Voice_Studio_Installation_Guide.MD`](../../docs/ACK_Voice_Studio_Installation_Guide.MD). One command (`install.ps1`) sets up WSL and Ubuntu if needed, then does the Ubuntu steps below, then opens the window.
+- **Ubuntu:** [`docs/ACK_Voice_Studio_Installation_Guide_Ubuntu.MD`](../../docs/ACK_Voice_Studio_Installation_Guide_Ubuntu.MD). One command (`get.sh`) fetches ACK, sets everything up and opens the window.
+
+The plan, every decision behind it and what is built so far: [`docs/VOICE_STUDIO_SETUP_PLAN.md`](../../docs/VOICE_STUDIO_SETUP_PLAN.md).
 
 ## Getting started (Ubuntu 22.04 or 24.04, native or under WSL)
 
-If you already have ACK's files:
+On Windows, `install.ps1` does the Windows part and then runs the Ubuntu command below inside Ubuntu (see the Windows guide). On Ubuntu, one command does everything and ends at the window:
 
 ```bash
-./tools/voice_studio/setup.sh              # look at this computer, list what is missing, ask once, install it
+curl -fsSL https://raw.githubusercontent.com/ASPDesignLabs/ACK/main/tools/voice_studio/get.sh | bash
+```
+
+`get.sh` installs git (after asking), fetches ACK into `~/ack-tools` (or `ACK_VOICE_DIR`) at the release in `ACK_VOICE_TAG` (default `main`), and runs `setup.sh`. It never touches a folder that is
+already there and never edits your shell settings. The only password prompt is Ubuntu's own `sudo`, in your terminal; this program never sees it. If you already have ACK's files:
+
+```bash
+./tools/voice_studio/setup.sh              # packages, then the two sets of programs, then the window; each step asks first
 ./tools/voice_studio/setup.sh --check      # only look; exit 0 when ready, 1 when something needs fixing
 ./tools/voice_studio/setup.sh --dry-run    # show the exact commands that would run; change nothing
 ./tools/voice_studio/setup.sh --yes        # you have already said yes, so do not ask
+./tools/voice_studio/setup.sh --no-window  # set the programs up but do not open the window
 ```
 
-If you have neither git nor ACK's files, `get.sh` installs git (after asking), fetches one named release of ACK into `~/ack-tools` (or `ACK_VOICE_DIR`), and
-starts the step above. It needs `ACK_VOICE_TAG` set to a release name; there are no releases of this tool yet, so there is nothing to run it against.
-It never touches a folder that is already there and never edits your shell settings. The only password prompt is Ubuntu's own `sudo`, in your terminal;
-this program never sees it.
+The steps after the Ubuntu packages are `core/guided_flow.py`: the small programs (listen to recordings, make training sets), the large ones (training), then the window. A no to one set does not stop the
+next; a failure stops everything after it, because the window would open on programs that are not there. Running the command again carries on from where it stopped.
 
-Until the window exists, the training programs are set up from a terminal (it asks once before it downloads anything, from the package site only):
+Each set of programs can also be set up on its own from a terminal (it asks once before it downloads anything, from the package site only):
 
 ```bash
 PYTHONPATH=tools python3 -m voice_studio.buildenv training --check    # only look; exit 0 when ready, 1 when not
@@ -34,7 +44,7 @@ If the internet connection drops while it downloads, it says so, waits, and carr
 If it still has to stop, or you stop it, run the same command again: it carries on from where it stopped and does not ask the same question twice
 (`core/connection.py` has the rules; it was measured against real pip, not guessed).
 
-Projects, starting voices and training rounds, also from a terminal until the window exists. Anything you leave out is asked one question at a time, and nothing is made or changed without a yes:
+Projects, starting voices and training rounds, recordings and the voice file can all be run from a terminal too. Anything you leave out is asked one question at a time, and nothing is made or changed without a yes:
 
 ```bash
 PYTHONPATH=tools python3 -m voice_studio.projects list                       # the projects there are

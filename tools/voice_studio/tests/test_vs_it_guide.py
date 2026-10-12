@@ -75,7 +75,7 @@ def test_the_hosts_the_code_knows_are_all_in_the_network_table_and_no_other_inte
     for host in list(sp.PACKAGE_HOSTS) + list(reg.ALLOWED_HOSTS):
         assert "`%s`" % host in table or host in table, host
     mentioned = {m for m in re.findall(r"`([a-z0-9*.-]+\.[a-z]{2,})`", table) if not m.endswith((".conf", ".json", ".txt"))}      # file names are not hosts
-    assert mentioned <= {"pypi.org", "files.pythonhosted.org", "huggingface.co", "*.hf.co", "us.aws.cdn.hf.co", "archive.ubuntu.com", "security.ubuntu.com", "github.com"}, mentioned
+    assert mentioned <= {"pypi.org", "files.pythonhosted.org", "huggingface.co", "*.hf.co", "us.aws.cdn.hf.co", "archive.ubuntu.com", "security.ubuntu.com", "github.com", "raw.githubusercontent.com"}, mentioned
 
 
 def test_only_port_443_is_asked_for_and_nothing_is_said_to_be_inbound_by_voice_studio():
