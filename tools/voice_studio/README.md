@@ -39,6 +39,12 @@ Projects, starting voices and training rounds, also from a terminal until the wi
 ```bash
 PYTHONPATH=tools python3 -m voice_studio.projects list                       # the projects there are
 PYTHONPATH=tools python3 -m voice_studio.projects new --own --name "Anna"    # make one (shows it first, then asks)
+PYTHONPATH=tools python3 -m voice_studio.projects edit anna --hours 2        # change its details (shows what changes, then asks); also: archive / unarchive (hide and bring back, nothing removed)
+PYTHONPATH=tools python3 -m voice_studio.projects delete anna                # delete one for good: lists what goes, then asks TWICE (--yes never answers the second question)
+PYTHONPATH=tools python3 -m voice_studio.recordings show --project anna      # what is in the project, what the computer is doing, what to do next; changes nothing
+PYTHONPATH=tools python3 -m voice_studio.recordings import ~/voice-files --kind pairs --project anna   # bring in audio files, each with a text file (shows what it found, then asks); kinds: package, pairs, table, audio
+PYTHONPATH=tools python3 -m voice_studio.recordings finish --project anna    # let the computer listen to what was brought in (a job of its own; asks first)
+PYTHONPATH=tools python3 -m voice_studio.recordings set --project anna       # make a training set from what was heard (--preview only shows what it would hold; asks first)
 PYTHONPATH=tools python3 -m voice_studio.voices show mike                    # where a starting voice comes from; changes nothing
 PYTHONPATH=tools python3 -m voice_studio.voices get mike --project anna      # confirm you read that, agree to the download, then download
 PYTHONPATH=tools python3 -m voice_studio.rounds list --project anna          # the training rounds, which one is chosen; changes nothing
@@ -46,11 +52,11 @@ PYTHONPATH=tools python3 -m voice_studio.rounds free --project anna          # w
 PYTHONPATH=tools python3 -m voice_studio.rounds start --set dataset-1 --project anna    # one more round, from the chosen round (shows the plan, then asks)
 PYTHONPATH=tools python3 -m voice_studio.voicefile make --project anna        # the voice file for ACK from the chosen round, in one new folder (shows the plan, then asks)
 PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window --check             # can the window start here? (needs the system Python: python3-gi, gir1.2-gtk-4.0)
-PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window                     # the window: rounds, voice file, free up space; every change asks first
+PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window                     # the window: projects, recordings, rounds, voice file, free up space; every change asks first
 ```
 
 `get` keeps two things apart on purpose: **`--acknowledge`** (or answering `yes` to its first question) says you read where the voice comes from, and **`--yes`** (or its second `yes`) agrees to the download. Neither can stand in for the other.
-Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices), I2 (training rounds), I3 (freeing up space), I4 (the voice file) and I5 (the window) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
+Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices), I2 (training rounds), I3 (freeing up space), I4 (the voice file), I5 (the window) and I6 (more than one project, and bringing in voice recordings you already have) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
 
 **For an IT department:** `docs/VOICE_STUDIO_IT_GUIDE.md` says what to allow (hosts, ports, packages, disk), what runs and what listens, how to install offline, and what has and has not been tested.
 

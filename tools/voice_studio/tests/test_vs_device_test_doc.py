@@ -23,7 +23,7 @@ import vs_voice_helpers as vh
 REPO = Path(__file__).resolve().parents[3]
 TOOLS = REPO / "tools"
 DOC = REPO / "docs" / "VOICE_STUDIO_DEVICE_TEST.md"
-SNIPPETS = ("jobs-start", "jobs-list", "jobs-stop", "package-summary", "flip-a-byte", "disk-guard", "checkpoint-check", "voice-zip")
+SNIPPETS = ("jobs-start", "jobs-list", "jobs-stop", "package-summary", "flip-a-byte", "disk-guard", "checkpoint-check", "make-test-files", "voice-zip")
 
 
 def doc_text():
@@ -341,8 +341,8 @@ def says(sentence, truncated=False):
     ends with an ellipsis may be only the start of one. A template that begins with a placeholder ("{question} {answer}") would match almost any text, so it cannot
     vouch for anything and is left out."""
     for template in text_catalog_strings():
-        if template.startswith("{") or (truncated and template[:6] != sentence[:6]):
-            continue
+        if (template.startswith("{") and len(re.sub(r"\{[a-z_0-9]+\}", "", template)) < 12) or (truncated and template[:6] != sentence[:6]):
+            continue                                       # a template that starts with a placeholder vouches only when it carries a good deal of wording of its own ("{count} audio files would be added, ...")
         if sentence in template:
             return True
         units = [u for part in re.split(r"(\{[a-z_0-9]+\})", template) for u in ([part] if part.startswith("{") else list(part))]
@@ -368,6 +368,8 @@ def test_the_check_that_a_quoted_sentence_is_one_the_tool_says_can_actually_fail
     assert not says("Download this voice now? It is 846 MB from huggingface.co and will be kept in"), "a cut-off quote is only allowed when the checklist marks it with an ellipsis"
     assert not says("Make this project? Type y to make it.") and not says("A sentence nobody wrote.") and not says("Made the projects voice-check.")
     assert not says("Saved: project voice-check has acknowledged that voice", truncated=True) and not says("Anything goes here at all", truncated=True)
+    assert says("3 audio files would be added, about 0.1 minutes.") and not says("3 apples would be added, about 0.1 minutes.") and not says("3 audio files would be added, about 0.1 minutes")
+    assert not says("{question} {answer}") and not says("Whatever anybody wants to write here.")
 
 
 def test_every_sentence_the_section_quotes_as_the_tools_output_is_one_the_tool_says():
@@ -662,3 +664,178 @@ def test_the_window_section_says_what_is_not_tested_why_the_command_names_the_sy
     assert "GSK_RENDERER=cairo" in body and "Narrator" in body and "no animation except the bar" in body
     names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
     assert names.index("I4") < names.index("I5") < names.index("J")
+
+
+# ---------------------------------------------------------------- section I6: more than one project, and voice recordings brought in
+
+def test_the_projects_and_recordings_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import projects_flow as pf, recordings_flow as rcf
+    body = section("I6.")
+    found = re.findall(r"python3 -m voice_studio\.(projects|recordings) ([a-z]+)([^\n`;<]*)", body)
+    assert {(m, c) for m, c, _ in found} >= {("projects", "new"), ("projects", "edit"), ("projects", "archive"), ("projects", "unarchive"), ("projects", "delete"), ("projects", "list"),
+                                              ("recordings", "show"), ("recordings", "import"), ("recordings", "finish"), ("recordings", "set")}
+    takes_a_value = {"projects": set(pf.NEW_VALUES) | set(pf.EDIT_VALUES), "recordings": {"--project", "--kind", "--table", "--max-gain-db"}}
+    words_wanted = {("projects", "new"): 0, ("projects", "edit"): 1, ("projects", "archive"): 1, ("projects", "unarchive"): 1, ("projects", "delete"): 1, ("projects", "list"): 0,
+                    ("recordings", "show"): 0, ("recordings", "import"): 1, ("recordings", "finish"): 0, ("recordings", "set"): 0}
+    without_kind = 0
+    for module, command, rest in found:
+        table = (pf if module == "projects" else rcf).OPTIONS
+        assert command in table, (module, command)
+        words, i, positional = shlex.split(rest), 0, []
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert words[i] in table[command], (module, command, words[i])
+                i += 2 if words[i] in takes_a_value[module] else 1
+            else:
+                positional.append(words[i])
+                i += 1
+        assert len(positional) == words_wanted[(module, command)], (module, command, positional)
+        if module == "recordings":
+            assert "--project" in words and words[words.index("--project") + 1] == "voice-check", (command, words)
+            if command == "import" and "--kind" not in words:
+                without_kind += 1
+            elif command == "import":
+                assert words[words.index("--kind") + 1] in ("package", "pairs", "table", "audio"), words
+        if module == "projects" and command in ("edit", "archive", "unarchive", "delete"):
+            assert positional == ["second-check"], (command, positional)
+    assert without_kind == 1, "exactly one command leaves the kind out: the one that shows it is never guessed"
+
+
+def test_every_sentence_the_section_quotes_as_the_tools_output_is_one_the_tool_says_in_the_new_section():
+    spans = re.findall(r"`([^`\n]+)`", section("I6."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans if " " in s and s.rstrip()[-1] in ".?…" and not s.startswith(("PYTHONPATH", "~/", "rm ", "ls ", "cp ", "mkdir "))]
+    assert len(quoted) >= 60 and sum(1 for _, cut in quoted if cut) >= 8, len(quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_new_section_comes_after_the_window_and_before_the_manual_steps_and_says_what_it_changes_and_what_it_only_reads():
+    names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I5") < names.index("I6") < names.index("J")
+    body = " ".join(section("I6.").split())
+    assert "**You always say which kind it is**" in body and "the tool never guesses" in body
+    assert "A folder you choose is **only read**" in body and "Nothing here uses the internet." in body
+    assert "`--yes` on the line answers the first question only; the second is always asked" in body
+    assert "Six** pages on the left: Projects, Recordings, Training rounds, Voice file, Free up space and Display" in body
+    assert "none chosen for you" in body and "a folder is never taken for a package" in body
+
+
+def test_the_test_files_snippet_makes_the_four_folders_it_says_and_never_writes_into_one_that_is_there(tmp_path):
+    from voice_studio.core import recordings as rec
+    root = tmp_path / "made"
+    done = run_snippet("make-test-files", tmp_path, root, use_doc_args=False)
+    assert done.returncode == 0 and ("made: %s" % root) in done.stdout, done.stderr[-500:]
+    assert sorted(p.name for p in root.iterdir()) == ["audio", "mixed", "pairs", "table"]
+    assert sorted(p.name for p in (root / "pairs").iterdir()) == ["001.txt", "001.wav", "002.txt", "002.wav", "003.txt", "003.wav"]
+    assert sorted(p.name for p in (root / "table").rglob("*") if p.is_file()) == ["001.wav", "002.wav", "003.wav", "metadata.csv"]
+    assert sorted(p.name for p in (root / "audio").iterdir()) == ["clip1.wav", "clip2.wav"] and sorted(p.name for p in (root / "mixed").iterdir()) == ["broken.wav", "good.wav"]
+    assert (root / "pairs" / "002.txt").read_text() == "It rained all day long.\n" and (root / "table" / "metadata.csv").read_text().splitlines()[0] == "001|The tide came in slowly."
+    before = {str(p): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    again = run_snippet("make-test-files", tmp_path, root, use_doc_args=False)
+    assert again.returncode == 1 and "This folder is already there, so nothing was made:" in again.stdout
+    assert {str(p): p.read_bytes() for p in root.rglob("*") if p.is_file()} == before, "a second run changes nothing"
+    assert rec.KINDS == ("package", "pairs", "table", "audio")
+
+
+def in_process(tmp_path):
+    """The flows run in this process with a terminal that answers from a list (a real terminal is asked through a keyboard, and a piped one is never asked), in a home folder of its own."""
+    from vs_fakes import FakeSystem
+    from vs_recordings_helpers import Runner, Starter
+    from vs_startvoice_helpers import NOW, Terminal, leaked_keys
+    from voice_studio.core import projects_flow as pf, recordings_flow as rcf, text
+    from voice_studio.core.paths import DataHome
+    from voice_studio.core.registry import load_registry
+    cat, home = text.load_catalog("en"), DataHome(str(tmp_path / "home"))
+
+    def projects(*argv, answers=()):
+        io = Terminal(answers)
+        code = pf.run_projects(list(argv), FakeSystem(disks={home.home: (1000 * 2 ** 30, 500 * 2 ** 30)}), home, load_registry(), cat, io, NOW)
+        assert leaked_keys(io.text) == []
+        return code, io
+
+    def recordings(*argv, answers=()):
+        io = Terminal(answers)
+        code = rcf.run_recordings(list(argv), home, load_registry(), cat, io, studio=lambda: (None, "absent"), speech=lambda: (None, "missing"), tools_dir="/tools", now=NOW, start=Starter(), system=Runner())
+        assert leaked_keys(io.text) == []
+        return code, io
+    return home, projects, recordings
+
+
+def test_the_new_section_runs_as_it_says_against_the_made_up_files(tmp_path):
+    """The recordings steps of the section: what is shown before each question, that a no writes nothing and leaves the chosen folder as it was, and (where ffmpeg is installed) what a yes adds."""
+    import shutil
+    from voice_studio.core import recordings as rec
+    home, projects, recordings = in_process(tmp_path)
+    assert projects("new", "--own", "--name", "Voice check", "--yes")[0] == 0
+    files = tmp_path / "ack-voice-check" / "import-test"
+    assert run_snippet("make-test-files", tmp_path, files, use_doc_args=False).returncode == 0
+    recordings_folder = home.projects + "/voice-check/recordings"
+    code, io = recordings("show", "--project", "voice-check")
+    assert code == 0 and "There are no recordings in this project yet." in io.lines and any(line.startswith("To bring recordings in, run: ") for line in io.lines)
+    code, io = recordings("import", str(files / "pairs"), "--project", "voice-check")
+    assert code == 2 and "Say what kind of data it is, with --kind. The choices are:" in io.lines and io.prompts == []
+    for kind in ("package", "pairs", "table", "audio"):
+        assert any(line.strip().startswith(kind + ":") for line in io.lines), kind
+    for folder, kind, expect in (("pairs", "pairs", ["Looked at pairs (Audio files, each with a text file).", "Found 3 audio files.", "3 of them come with a sentence.",
+                                                    "The sentences you give are kept as a check. The computer listens too, and marks a piece if it hears something different."]),
+                                 ("table", "table", ["Looked at table (Audio files with one table of sentences).", "3 of them come with a sentence."]),
+                                 ("table", "audio", ["The computer will listen to them and write down what it hears."]),
+                                 ("audio", "pairs", ["None of them came with a sentence, so the computer will write them all itself. Check that you chose the right kind."])):
+        before = {str(p): p.read_bytes() for p in files.rglob("*") if p.is_file()}
+        code, io = recordings("import", str(files / folder), "--kind", kind, "--project", "voice-check", answers=["no"])
+        assert code == 2 and "Nothing was done." in io.lines, (folder, kind, io.text)
+        for line in expect:
+            assert line in io.lines, (folder, kind, line, io.text)
+        assert {str(p): p.read_bytes() for p in files.rglob("*") if p.is_file()} == before, "the folder that was chosen is only read"
+        assert rec.read_takes(recordings_folder).total == 0, "a no adds nothing"
+    code, io = recordings("import", str(files / "pairs"), "--kind", "pairs", "--project", "voice-check", answers=["no"])
+    assert io.prompts == ["Add 3 files to Voice check? Type yes to go on. "] and any(line.startswith("3 audio files would be added, about 0.") for line in io.lines)
+    if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
+        pytest.skip("ffmpeg is not installed here, so the steps that add recordings cannot run")
+    code, io = recordings("import", str(files / "pairs"), "--kind", "pairs", "--project", "voice-check", answers=["yes"])
+    assert code == 0 and "3 audio files were added." in io.lines and "1 recording was made from them." in io.lines and io.lines[-1].startswith("Next, let the computer listen to them. Run: ")
+    code, io = recordings("import", str(files / "pairs"), "--kind", "pairs", "--project", "voice-check")
+    assert code == 0 and io.prompts == [] and "3 files are already in this project and will be skipped." in io.lines and "There is nothing new to add. Nothing was done." in io.lines
+    assert recordings("import", str(files / "table"), "--kind", "table", "--project", "voice-check", answers=["yes"])[0] == 0
+    code, io = recordings("import", str(files / "audio"), "--kind", "audio", "--project", "voice-check", answers=["yes"])
+    assert code == 0 and "2 audio files were added." in io.lines and "2 recordings were made from them." in io.lines
+    code, io = recordings("import", str(files / "mixed"), "--kind", "audio", "--project", "voice-check", answers=["yes"])
+    assert code == 0 and "1 audio file was added." in io.lines and "  broken.wav: the computer could not read the sound" in io.lines and "1 file was left out." in io.lines
+    code, io = recordings("show", "--project", "voice-check")
+    assert "5 recordings in all." in io.lines and "Ready: 0. Waiting to be listened to: 5. Could not be finished: 0. Still coming in: 0." in io.lines
+    assert io.lines[-1].startswith("To let the computer listen to the waiting recordings, run: ")
+    code, io = recordings("finish", "--project", "voice-check")
+    assert code == 2 and "The studio programs are not ready (Not set up yet)." in " ".join(io.lines), "without the studio programs the tool says so and starts nothing"
+    code, io = recordings("set", "--preview", "--project", "voice-check")
+    assert code == 2 and "No recording is ready to use yet." in io.text
+
+
+def test_the_project_steps_run_as_the_section_says_and_the_second_question_of_a_delete_is_never_skipped(tmp_path):
+    home, projects, _recordings = in_process(tmp_path)
+    folder = home.projects + "/second-check"
+    assert projects("new", "--own", "--name", "Voice check", "--yes")[0] == 0
+    code, io = projects("new", "--own", "--name", "Second check", "--yes")
+    assert code == 0 and "Made the project second-check." in io.lines
+    code, io = projects("edit", "second-check", "--hours", "2", answers=["no"])
+    assert code == 2 and "These details of second-check would change:" in io.lines and "  Planned hours: from 1 to 2" in io.lines and "Nothing was changed." in io.lines
+    code, io = projects("edit", "second-check", "--hours", "2", answers=["yes"])
+    assert code == 0 and "Saved. The details of second-check are changed." in io.lines and os.path.isfile(folder + "/project.json.previous")
+    code, io = projects("archive", "second-check", answers=["yes"])
+    assert code == 0 and any(line.startswith("Done. second-check is put away. To bring it back, run: ") for line in io.lines)
+    code, io = projects("list")
+    assert "1 project is put away. To see it, run: python3 -m voice_studio.projects list --away" in io.lines and not any(line.strip().startswith("second-check:") for line in io.lines)
+    assert any(line.strip().startswith("second-check:") for line in projects("list", "--away")[1].lines)
+    code, io = projects("edit", "second-check", "--hours", "3", "--yes")
+    assert code == 2 and any(line.startswith("The project second-check is put away, so this does not use it. Bring it back first with: ") for line in io.lines) and os.path.isfile(folder + "/project.json")
+    code, io = projects("unarchive", "second-check", answers=["yes"])
+    assert code == 0 and "Done. second-check is back in the list." in io.lines
+    code, io = projects("delete", "second-check", answers=["no"])
+    assert code == 2 and "Nothing was removed." in io.lines and os.path.isfile(folder + "/project.json")
+    assert "This would remove the project second-check: Second check. It cannot be brought back." in io.lines
+    code, io = projects("delete", "second-check", answers=["yes", "no"])
+    assert code == 2 and any(line.startswith("Last question. Remove Second check, ") for line in io.prompts) and os.path.isfile(folder + "/project.json")
+    code, io = projects("delete", "second-check", "--yes", answers=["no"])
+    assert code == 2 and any(line.startswith("Last question. Remove Second check, ") for line in io.prompts) and os.path.exists(folder), "--yes answers the first question only"
+    code, io = projects("delete", "second-check", answers=["yes", "yes"])
+    assert code == 0 and any(line.startswith("Done. The project second-check is deleted. About ") for line in io.lines)
+    assert sorted(os.listdir(home.projects)) == ["voice-check"]

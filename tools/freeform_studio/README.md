@@ -236,6 +236,16 @@ changes nothing but the recordings that were waiting. `--json` prints one JSON o
 The package format is written down in `docs/ACK_TRAINING_CAPTURE_FORMAT.md`, and both programs are tested against the same
 shared test cases, so a rule can not quietly differ between the phone and this computer.
 
+**Recordings that ACK did not make.** If you already have voice recordings (a folder of audio files), `python -m freeform_studio.files_import FOLDER --kind K --output <recordings folder>`
+brings them in the same careful way. **You say what kind they are; it never guesses:** `pairs` (a `.txt` with the same name beside each audio file),
+`table` (one `metadata.csv`-style table: file name and sentence on each line, separated by `|`, a tab or a comma) or `audio` (nothing else; the computer listens and
+writes the sentences). `FOLDER` may also be a `.zip` of such a folder. `--dry-run` looks and writes nothing; without it, it shows the plan and asks.
+The folder is only read. Each file is recognised by its content, so running it twice, or with a renamed copy, adds nothing; a file that cannot be read is named and left out
+without stopping the rest. Files that come with a sentence are joined into recordings of up to 20 minutes (like a script session), a file with no sentence is a recording of its own, and
+all of them are then listened to and cut like any other. The sentence you give is kept as a **reference**: if what the computer hears differs, the piece is marked and waits for you.
+Unlike a recording from the phone there are no *cut off* or phone-only marks, since a file trimmed close to the speech is normal for voice data. (ACK Voice Studio's Recordings page and
+`python3 -m voice_studio.recordings import` use this same code.)
+
 ## Training clips: export approved pieces into your recorder's folders
 
 Open **Training clips (export)** on the Review page (this recording) or on the recordings list (all recordings), or use the

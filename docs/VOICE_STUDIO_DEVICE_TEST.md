@@ -724,8 +724,8 @@ It needs the system Python, the one that has Ubuntu's GTK package, so the comman
   ```bash
   PYTHONPATH=~/ack-tools/tools /usr/bin/python3 -m voice_studio.window
   ```
-  → A window titled `ACK Voice Studio - Voice check` with five pages on the left (Projects, Training rounds, Voice file, Free up space, Display) and `Last result` at the bottom with `Nothing has been done in this window yet.` Write down: **how many seconds until it appeared**, whether anything is garbled, black or flickering,
-  whether the text is easy to read at your Windows scaling, and whether it opened on the Training rounds page by itself (it should, because there is only one project). If the picture is garbled, close it, run the same command with `GSK_RENDERER=cairo` in front of `PYTHONPATH` and say whether that fixes it.
+  → A window titled `ACK Voice Studio - Voice check` with six pages on the left (Projects, Recordings, Training rounds, Voice file, Free up space, Display) and `Last result` at the bottom with `Nothing has been done in this window yet.` Write down: **how many seconds until it appeared**, whether anything is garbled, black or flickering,
+  whether the text is easy to read at your Windows scaling, and whether it opened on the Recordings page by itself (it should, because there is only one project; the Recordings page is new, see section I6). If the picture is garbled, close it, run the same command with `GSK_RENDERER=cairo` in front of `PYTHONPATH` and say whether that fixes it.
 - [ ] Use it with the keyboard only (no mouse): Tab and Shift+Tab move between controls, the arrow keys move in a list, Enter or Space press a button. Visit every page. Write down: any control you could not reach, any place where you could not see where the focus was, and any button whose purpose was not clear from its words alone.
   *Confirmed on the developer's computer (2026-10-12): `--check` said yes with GTK 4.6.9; the window opened with no warning or error; the text felt a little small (the look and feel was done after this: see the next two items); Enter and Escape in a question both meant no; Free up space worked by keyboard alone and the focus was always visible. Make the voice file worked from the window (the bar moved, about ten seconds), Show the folder opened Windows File Explorer, and Copy the path pasted correctly into a Windows program. The dialogues felt wordy: the language pass shortened 14 sentences afterwards (plan, VS-2.1b); say whether the boxes now read well.*
 - [ ] **The look.** The window now looks like ACK on the phone: a black background, cyan lines and text, buttons and panels with the top left and bottom right corners cut, headings and buttons in a monospace font, sentences in the system's font, and a header with `ACK`, `Voice Studio`, the project's name and the two text size buttons `Smaller text` and `Bigger text`. Write down: whether the corners are cut cleanly or look jagged (they are drawn by the style sheet alone), whether any text is cut off or overlaps, whether you can tell where the focus is on every kind of control (buttons, the page list, tick boxes, the number boxes), and whether any grey text is too faint for you to read. Press `Bigger text` twice and then `Smaller text` twice: the text should grow and shrink at once, and the layout should keep up.
@@ -774,6 +774,141 @@ It needs the system Python, the one that has Ubuntu's GTK package, so the comman
 - [ ] **A screen reader, if you use one on Windows.** Start Narrator (Windows logo key + Ctrl + Enter) or NVDA, click into the window and move with Tab. Write down what is read for: a page name, a button such as `Choose round 1`, a tick box, the box that asks a question, and the `Last result` text after something finishes. This is the question the plan needs answered for WSLg;
   it is fine if the answer is "nothing is read".
 - [ ] Write down: anything that felt slow, anything that moved or flashed (the window is meant to have no animation except the bar), any word that was hard to understand, and whether you would rather the pages were arranged another way.
+
+## I6. More than one project, and bringing in voice recordings you already have (terminal first, then the window)
+
+**New, and not yet run on a real computer.** Two things the window could not do before. The first is to keep several projects (one per voice) and to change, put away, bring back or delete one. The second is to bring in voice data that ACK did not make: a package ACK saved on the phone, a folder of
+audio files with a text file for each, a folder of audio files with one table of sentences (such as a `metadata.csv`), or a folder of audio files alone. Then to let the computer listen to them and make a training set from what it heard. **You always say which kind it is** (`--kind`, or the choice in the window): the tool never guesses,
+because a wrong guess would quietly give a recording the wrong words. Everything that changes something shows what it will do and asks first. A folder you choose is **only read**; nothing in it is moved, renamed or deleted, and the copies go inside the project. Every command takes `--project voice-check` so that it works on the project from
+section I1. Run one command at a time, and wait for it to finish before you type the next. The second project this section makes (`second-check`) is made and deleted by the section itself. **Nothing here uses the internet.**
+
+### Projects, from the terminal
+
+- [ ] Make a second project, only for this check: `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects new --own --name "Second check" --yes`. → `Made the project second-check.` Then `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects list` shows both.
+- [ ] **Change a detail.** This asks first and keeps the earlier file:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects edit second-check --hours 2
+  ```
+  → `These details of second-check would change:` and a line `Planned hours: from 1 to 2`, then `Save these changes? Type yes to save them.` Type **`no`**: `Nothing was changed.` Run it again and type **`yes`**: `Saved. The details of second-check are changed.` and the line that the version from before is kept as `project.json.previous`.
+- [ ] **Put it away, and bring it back.** Putting away only hides it; nothing is removed:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects archive second-check
+  ```
+  → `Put Second check away? Nothing is removed. It leaves the list, and no command uses it until you bring it back. Type yes to put it away.` Type **`yes`**: `Done. second-check is put away. To bring it back, run: …` Then `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects list` shows only voice-check and ends with `1 project is put away. To see it, run: …`; `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects list --away` shows it. Try a command that changes things on it, such as
+  `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects edit second-check --hours 3`: it refuses and says to bring it back first, and `ls ~/ack-voice-studio/projects/second-check` still shows its files. Bring it back with `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects unarchive second-check`: `Bring Second check back? It returns to the list exactly as it was. Type yes to bring it back.` Type **`yes`**: `Done. second-check is back in the list.`
+- [ ] **Delete it, which asks twice.** This one cannot be undone, so it lists what goes and says to copy anything you want first:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects delete second-check
+  ```
+  → `This would remove the project second-check: Second check. It cannot be brought back.` then what is in it (a project file and empty folders), `Before you go on, copy anything you may want later. Nothing here can be brought back.` and `Delete the project Second check for good? Type yes to go on.` Type **`no`**: `Nothing was removed.` and the folder is still there. Run it again, type **`yes`**, and see that it asks
+  **a second time**: `Last question. Remove Second check, …` Type **`no`**: `Nothing was removed.` Run it a third time and answer **yes** and **yes**: `Done. The project second-check is deleted. About …` and `ls ~/ack-voice-studio/projects` shows only voice-check. **`--yes` on the line answers the first question only; the second is always asked.** Write down: any sentence that was hard to follow, and whether you were ever unsure what a command was about to remove.
+
+### Voice recordings, from the terminal
+
+- [ ] Make some made-up test files, so that you can try the four kinds without using your own recordings. This writes only a new folder, and refuses if it is already there:
+  <!-- snippet: make-test-files -->
+  ```bash
+  python3 - ~/ack-voice-check/import-test <<'EOF'
+  import math, struct, sys, wave
+  from pathlib import Path
+
+  root = Path(sys.argv[1]).expanduser()
+  if root.exists():
+      print("This folder is already there, so nothing was made:", root)
+      sys.exit(1)
+  SENTENCES = ["The tide came in slowly.", "It rained all day long.", "Gulls circled over the pier."]
+
+  def tone(path, pitch):
+      path.parent.mkdir(parents=True, exist_ok=True)
+      rate, seconds, frames = 22050, 2.4, bytearray()
+      for n in range(int(rate * seconds)):
+          t = n / rate
+          frames += struct.pack("<h", int(math.sin(2 * math.pi * pitch * t) * 0.4 * 32767) if 0.3 <= t < seconds - 0.3 else 0)
+      with wave.open(str(path), "wb") as handle:
+          handle.setnchannels(1)
+          handle.setsampwidth(2)
+          handle.setframerate(rate)
+          handle.writeframes(bytes(frames))
+
+  for i, sentence in enumerate(SENTENCES, 1):
+      tone(root / "pairs" / ("%03d.wav" % i), 200 + 20 * i)
+      (root / "pairs" / ("%03d.txt" % i)).write_text(sentence + "\n", encoding="utf-8")
+      tone(root / "table" / "wavs" / ("%03d.wav" % i), 300 + 20 * i)
+  (root / "table" / "metadata.csv").write_text("".join("%03d|%s\n" % (i, s) for i, s in enumerate(SENTENCES, 1)), encoding="utf-8")
+  for i in (1, 2):
+      tone(root / "audio" / ("clip%d.wav" % i), 400 + 20 * i)
+  tone(root / "mixed" / "good.wav", 560)
+  (root / "mixed" / "broken.wav").write_bytes(b"This is not really sound. " * 40)
+  print("made:", root)
+  EOF
+  ```
+  → `made: …/ack-voice-check/import-test`: four folders, `pairs` (three `.wav` and three `.txt`), `table` (three `.wav` in `wavs` and one `metadata.csv`), `audio` (two `.wav`) and `mixed` (one good `.wav` and one `broken.wav` that is not sound at all). They are tones, not speech: they are enough to see how the tool brings files in, not how the computer hears them (that needs your own voice, below).
+- [ ] Look at the project's recordings. This changes nothing:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings show --project voice-check
+  ```
+  → `There are no recordings in this project yet.` (or what the project already has) and `To bring recordings in, run: …`
+- [ ] **The kind is never guessed.** Leave `--kind` out:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings import ~/ack-voice-check/import-test/pairs --project voice-check
+  ```
+  → `Say what kind of data it is, with --kind. The choices are:` and four lines, `package`, `pairs`, `table` and `audio`, each with what it means. Nothing is read and nothing is written.
+- [ ] **Audio files with a text file each, and say no.** The tool shows what it found before it asks:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings import ~/ack-voice-check/import-test/pairs --kind pairs --project voice-check
+  ```
+  → `Looked at pairs (Audio files, each with a text file).`, `Found 3 audio files.`, `3 audio files would be added, about 0.1 minutes.`, `3 of them come with a sentence.`, `The sentences you give are kept as a check. The computer listens too, and marks a piece if it hears something different.` and `Add 3 files to Voice check? Type yes to go on.`
+  Type **`no`**: `Nothing was done.` Check that the project has nothing new: `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings show --project voice-check` still says there are none, and the folder you chose is exactly as it was (`ls -l ~/ack-voice-check/import-test/pairs`).
+- [ ] Run the same command and type **`yes`**. → `3 audio files were added.`, `1 recording was made from them.` and `Next, let the computer listen to them. Run: …` (the three short files are joined, with a short quiet gap, into one recording, as ACK does for a script). Then run it a **third** time: it should say `3 files are already in this project and will be skipped.` and
+  `There is nothing new to add. Nothing was done.` with **no question**: a file is recognised by its content, so a second run or a renamed copy adds nothing.
+- [ ] **A table of sentences.** Name the kind `table`; the tool finds `metadata.csv` by itself:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings import ~/ack-voice-check/import-test/table --kind table --project voice-check
+  ```
+  → `Looked at table (Audio files with one table of sentences).` and `3 of them come with a sentence.` Type **`yes`**. Then the same folder with the **wrong** kind, `--kind audio`, and say **no**: it says `The computer will listen to them and write down what it hears.` and shows no sentences, so a wrong choice is visible before anything is added.
+  And `--kind pairs` on the `audio` folder says `None of them came with a sentence, so the computer will write them all itself. Check that you chose the right kind.`
+- [ ] **Audio only.** `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings import ~/ack-voice-check/import-test/audio --kind audio --project voice-check`, **yes**. → `2 audio files were added.` and `2 recordings were made from them.` (a file with no sentence is a recording of its own). Look: `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings show --project voice-check`. → the counts, each recording with `waiting to be listened to`, and
+  `To let the computer listen to the waiting recordings, run: …`
+- [ ] **A file that cannot be used.** The `mixed` folder holds one good file and one that is not sound at all:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings import ~/ack-voice-check/import-test/mixed --kind audio --project voice-check
+  ```
+  Type **`yes`**. → It adds what it can and names what it left out: `1 audio file was added.`, then `broken.wav: the computer could not read the sound` and `1 file was left out.` The one good file is not stopped by the bad one, and the bad one is left where it was.
+- [ ] **Your own voice, the real test.** Put three or more of your own recordings (any common audio format: `.wav`, `.mp3`, `.m4a`, `.ogg`, `.flac`), each saying one sentence, in `~/ack-voice-check/import-test/real`, and beside each a text file of the same name that holds that sentence. Import it as `--kind pairs`. Write down: whether your file formats were accepted, and
+  what happened with any that were not. **An ACK package from the phone** is brought in with `--kind package` and the zip file's path: it shows each session (Script or Free speech) and asks as above; the same package a second time says there is nothing new, and a package you decline leaves no copy of itself inside the project.
+- [ ] **Let the computer listen.** This needs the studio programs (section I0 or the guided setup) and the speech model (section E); if one is missing the tool says which, and what to run, and does nothing:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings finish --project voice-check
+  ```
+  → `5 recordings are waiting to be listened to.` (the test files make five; yours may differ), what it will do, `Start listening now? Type yes to go on.` Type **`no`**: `Nothing was done.` Run it again and type **`yes`**: `Listening has started (…).` and `To see how it is going, run: …`. You can close the terminal: it carries on by itself. Run `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings show --project voice-check` every minute: `The computer is listening to the recordings now.` and, for the one it is on,
+  how far through it is. Run `finish` while it is still going: `The computer is already listening to this project's recordings. To see how it is going, run: …` and no second job starts. When it ends, `show` says `Ready:` with the number it finished. Write down: how long it took for how many minutes of audio, and what happened to the recordings made of tones (they have no speech, so expect
+  them to be marked and left out of the training set).
+- [ ] **See what a training set would hold.** This only looks:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings set --preview --project voice-check
+  ```
+  → `This is what the training set would hold. Nothing was written.`, `Pieces in it:` and the minutes of speech, `Pieces left out:` and for each reason how many (for example `left out, because they were flagged as doubtful`), how much usable speech there is against the hours you planned, and `That was only a preview. Nothing was written. To make the training set, run: …` Check that `ls ~/ack-voice-studio/projects/voice-check/scratch/datasets` shows nothing new.
+- [ ] **Make it.** Without `--preview`, it shows the same and then asks, and writes only a new folder named from the time:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.recordings set --project voice-check
+  ```
+  → `Make this training set now? It is written to a new folder. Type yes to go on.` Type **`yes`**: `The training set is ready.`, `The training set is in …` and the new folder named `dataset-` with the date and time, how many pieces it holds, and `To train on it, run: …` with the `rounds start --set` command from section I2, which now lists this set. Run `set` again: a **new** folder is made each time, and the earlier one is untouched.
+  If the studio programs are not ready, the tool says so and what to run, and writes nothing.
+
+### The same things in the window
+
+- [ ] Start the window as in section I5. → **Six** pages on the left: Projects, Recordings, Training rounds, Voice file, Free up space and Display. It opens on **Recordings** when a project is opened.
+- [ ] **Projects.** Press `New project…`, leave it empty and press `Make this project…`: the form stays open and says `Please fix these first:` with what is missing; what you typed is kept. Make `Second check` again (my own voice). A box shows the project and asks `Make this project?` with **No** where the focus starts. Then, with it chosen in the list, try `Edit details…`, `Put away…` (it leaves the list; tick `Show projects that are put away` and use `Bring back…`),
+  `Show the folder`, and `Delete…`: it asks **twice**, and the first box lists what goes. Answer **No** to the second, then do it for real. Write down any button whose purpose was not clear, and whether a box ever left you unsure what would be changed.
+- [ ] **Recordings.** Open the Recordings page. → `Recordings in Voice check`, the counts, one sentence on what to do next, and six buttons: `Bring in recordings…`, `Let the computer listen…`, `See what a training set would hold`, `Make a training set…`, `Look again` and `Show the folder`. The two steps that need recordings are greyed out until there are some.
+- [ ] Press `Bring in recordings…`. → A form: `What kind of data is it?` with four choices **and none chosen for you**, each with one line on what it is; `Where is it?`. Press `Look at it…` with nothing chosen: the form stays open and says `Choose what kind of data it is.` and `Choose where it is.` Choose **Audio files with one table of sentences**: a box for the table's file name appears (leave it empty).
+  Choose **An ACK package**: only one button is left, for the zip file; choose **Audio files, each with a text file** again and the place you picked before is forgotten, so a folder is never taken for a package.
+- [ ] Press `Choose the folder…`. → The system's own file chooser, in your Windows or Ubuntu look. Choose `~/ack-voice-check/import-test/pairs` (a folder that was already imported is fine: it will say there is nothing new; try `real` if you made it). The form shows the path. `Choose a zip file instead…` takes a zip of the same files.
+  Press `Look at it…`. → The form closes, and the same box as in the terminal appears with what was found, then the terminal's question, `Add 3 files to Voice check? Type yes to go on.`, without its last sentence (the box has Yes and No buttons), with **No** where the focus starts. Press **No**: `Nothing was done.` Press it all again and **Yes**.
+- [ ] After a yes the page lists the new recording as `waiting to be listened to` and `Let the computer listen…` is usable. Press it: the same questions as the terminal. While it listens the page says `The computer is listening now. This page looks again by itself every few seconds.` and shows how far it has got; nothing else starts by itself. When it ends, press `See what a training set would hold`, then `Make a training set…`.
+  → Same words as the terminal. Open **Training rounds**: the new set is in the list of sets. Write down: whether the file chooser was easy to use, how long the page took to notice the listening had ended, anything that moved or flashed, and whether any word was hard to understand.
+- [ ] **A screen reader, if you use one:** move through the form with Tab. Write down what is read for each of the four kinds, `Choose the folder…`, and the problems that appear when the form is not whole.
+- [ ] Clean up what this section made: `rm -r ~/ack-voice-check/import-test`. The recordings you imported are inside the project, `~/ack-voice-studio/projects/voice-check/recordings`, and stay until you delete the project or remove them yourself; `second-check` is already gone (section M has the rest).
 
 ## J. Making the voice file
 
@@ -851,6 +986,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I1: every sentence of the notes that was hard to follow or sounded like permission, how long the voice took to download, whether the refusals refused, and whether Amy's checkpoint trained.
 - Section I2: whether round 2 started from round 1's file (the `--ckpt_path` lines), how long a stop by hand took, every `False` from the saved-file check, the two epochs for each round, and any sentence that was hard to follow.
 - Section I: the card, the memory used, the batch size that worked, the seconds per epoch, how long `max_time` took, whether `last.ckpt` was in the folder you started from, the exit code, and how long Ctrl+C took.
+- Section I6: whether every `--kind` brought the right files in, what the tool said when a file could not be read, how long listening took for how many minutes of audio, whether the file chooser was easy to use, and any sentence in the projects steps (especially the two delete questions) that left you unsure what would be removed.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
