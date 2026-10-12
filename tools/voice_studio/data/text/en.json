@@ -524,6 +524,113 @@
     "projects.which": "There is more than one project: {ids}. Say which one you mean.",
     "projects.whose.own": "own voice",
     "projects.whose.someone_else": "someone else's voice",
+    "recordings.error.bad_kind.changed": "Nothing was copied or changed.",
+    "recordings.error.bad_kind.next": "Choose package, pairs, table or audio.",
+    "recordings.error.bad_kind.what": "That kind of data is not one that can be brought in.",
+    "recordings.error.no_audio.changed": "Nothing was copied or changed.",
+    "recordings.error.no_audio.next": "Choose the folder that holds the audio files.",
+    "recordings.error.no_audio.what": "No audio files were found there.",
+    "recordings.error.not_a_folder.changed": "Nothing was copied or changed.",
+    "recordings.error.not_a_folder.next": "Choose the folder again.",
+    "recordings.error.not_a_folder.what": "The place you chose is not a folder, or a zip file that holds one.",
+    "recordings.error.too_big.changed": "Nothing was copied or changed.",
+    "recordings.error.too_big.next": "Unpack it yourself and choose the folder, or split it into smaller zip files.",
+    "recordings.error.too_big.what": "That zip file is larger than a set of recordings can be.",
+    "recordings.error.too_many_files.changed": "Nothing was copied or changed.",
+    "recordings.error.too_many_files.next": "Split the files into smaller folders and bring them in one folder at a time.",
+    "recordings.error.too_many_files.what": "There are more audio files there than one import can take.",
+    "recordings.error.unreadable.changed": "Nothing was copied or changed.",
+    "recordings.error.unreadable.next": "Choose another place, or change who may read it, then try again.",
+    "recordings.error.unreadable.what": "This tool is not allowed to read that place.",
+    "recordings.finish.already": "The computer is already listening to this project's recordings. To see how it is going, run: {command}",
+    "recordings.finish.follow": "To see how it is going, run: {command}",
+    "recordings.finish.no_environment": "The studio programs are not ready ({state}). Set them up with: {command}",
+    "recordings.finish.no_model": "The listening model is not on this computer yet. The guided setup downloads it after asking you. Run: {command}",
+    "recordings.finish.nothing_waiting": "No recording is waiting to be listened to.",
+    "recordings.finish.plan_how": "The computer will listen, write down what it hears and mark where each piece begins and ends. Your recordings are not changed.",
+    "recordings.finish.plan_time": "This can take a while for long recordings. It carries on by itself if you close this screen.",
+    "recordings.finish.question": "Start listening now? Type yes to go on.",
+    "recordings.finish.started": "Listening has started ({job}).",
+    "recordings.import.kind_unknown": "I do not know the kind {kind}. The choices are {kinds}. Nothing was done.",
+    "recordings.import.looked_at": "Looked at {name} ({kind}).",
+    "recordings.import.more_notes": "And {count} more.",
+    "recordings.import.next": "Next, let the computer listen to them. Run: {command}",
+    "recordings.import.no_room": "There is not enough free space. Adding this needs about {need} and {spare} kept spare, but only {free} is free. Nothing was added.",
+    "recordings.import.no_sentences": "None of them came with a sentence, so the computer will write them all itself. Check that you chose the right kind.",
+    "recordings.import.no_sentences_asked": "The computer will listen to them and write down what it hears.",
+    "recordings.import.none_added": "No file could be added.",
+    "recordings.import.nothing_new": "There is nothing new to add. Nothing was done.",
+    "recordings.import.sentences_note": "The sentences you give are kept as a check. The computer listens too, and marks a piece if it hears something different.",
+    "recordings.import.session_row": "{label} ({mode}, about {minutes} minutes): {state}",
+    "recordings.import.skipped_row": "{name}: {reason}",
+    "recordings.import.table_only": "--table only goes with --kind table. Nothing was done.",
+    "recordings.import.which_kind": "Say what kind of data it is, with --kind. The choices are:",
+    "recordings.import.which_source": "Say what to bring in. For example: {example}",
+    "recordings.interrupted": "Stopped. Anything already added is kept, and listening that had started carries on by itself. To see where things stand, run: {command}",
+    "recordings.kind.audio": "Audio files only",
+    "recordings.kind.package": "An ACK package",
+    "recordings.kind.pairs": "Audio files, each with a text file",
+    "recordings.kind.table": "Audio files with one table of sentences",
+    "recordings.kind_help.audio": "A folder of audio files and nothing else. The computer listens and writes down what it hears.",
+    "recordings.kind_help.package": "A .zip file that ACK saved on the phone.",
+    "recordings.kind_help.pairs": "A folder of audio files. Next to each one is a text file with the same name that says what is spoken in it.",
+    "recordings.kind_help.table": "A folder of audio files and one table, often called metadata.csv, with a file name and a sentence on each line.",
+    "recordings.note.link_skipped": "{what} is a shortcut to somewhere else, so it was left out.",
+    "recordings.note.other": "A problem was found with {what}.",
+    "recordings.note.table_bad_rows": "{detail} lines of the table {what} could not be understood and were left out.",
+    "recordings.note.table_many": "There is more than one table. {what} was used. The others were not: {detail}.",
+    "recordings.note.table_missing": "The table of sentences was not found. The files will be added without sentences.",
+    "recordings.note.table_row_ambiguous": "The table line for {what} fits more than one audio file, so it was not used.",
+    "recordings.note.table_row_no_audio": "The table has a line for {what}, but there is no audio file with that name.",
+    "recordings.note.table_row_repeated": "The table has more than one line for {what}. Only the first was used.",
+    "recordings.note.table_unreadable": "The table {what} could not be read, so the files will be added without sentences.",
+    "recordings.note.text_too_long": "The sentence for {what} is too long for one clip, so that file will be skipped.",
+    "recordings.note.text_unreadable": "The text file for {what} could not be read, so that file has no sentence.",
+    "recordings.note.too_big": "{what} is too large to use.",
+    "recordings.note.too_short": "{what} is too short to use.",
+    "recordings.note.unreadable": "{what} could not be read.",
+    "recordings.note_line": "Note: {text}",
+    "recordings.reason.too_short": "it is too short to use",
+    "recordings.reason.unreadable": "the computer could not read the sound",
+    "recordings.set.bad_gain": "The most a quiet piece may be turned up must be a number from 0 to {limit}. Nothing was done.",
+    "recordings.set.checking": "Looking at what the training set would hold. Nothing is written yet.",
+    "recordings.set.flag_row": "{count} of them: {flag}",
+    "recordings.set.holds": "Pieces in it: {count}. Speech in it: about {minutes} minutes.",
+    "recordings.set.kept_folder": "Whatever was written was left in {folder}. Nothing was deleted.",
+    "recordings.set.left_out": "Pieces left out: {count}.",
+    "recordings.set.next": "To train on it, run: {command}",
+    "recordings.set.no_answer": "The studio program did not give an answer that can be read, so no training set was made.",
+    "recordings.set.none_ready": "No recording is ready to use yet. Let the computer listen to them first: {command}",
+    "recordings.set.preview_only": "That was only a preview. Nothing was written. To make the training set, run: {command}",
+    "recordings.set.question": "Make this training set now? It is written to a new folder. Type yes to go on.",
+    "recordings.set.reason_row": "{count} left out, because {reason}",
+    "recordings.set.scratch_not_ready": "This project's working place is not available. Plug in the drive or change the place, then try again. Nothing was done.",
+    "recordings.set.where": "The training set is in {folder}.",
+    "recordings.show.counts": "Ready: {ready}. Waiting to be listened to: {waiting}. Could not be finished: {failed}. Still coming in: {other}.",
+    "recordings.show.heading": "Recordings in {name}",
+    "recordings.show.length": "The ones the computer has listened to add up to about {minutes} minutes.",
+    "recordings.show.listening_now": "The computer is listening to the recordings now.",
+    "recordings.show.listening_on": "It is on {name}: {percent} percent done.",
+    "recordings.show.listening_stopped": "The last time the computer listened, it did not finish ({state}).",
+    "recordings.show.more": "And {count} more.",
+    "recordings.show.next_finish": "To let the computer listen to the waiting recordings, run: {command}",
+    "recordings.show.next_import": "To bring recordings in, run: {command}",
+    "recordings.show.next_set": "To make a training set, run: {command}",
+    "recordings.show.next_wait": "Run this again in a little while to see how it is going.",
+    "recordings.show.none": "There are no recordings in this project yet.",
+    "recordings.show.row": "{label}: {status}, about {minutes} minutes",
+    "recordings.show.row_unknown": "{label}: {status}",
+    "recordings.status.failed": "could not be finished",
+    "recordings.status.other": "still coming in",
+    "recordings.status.ready": "ready",
+    "recordings.status.waiting": "waiting to be listened to",
+    "recordings.title": "Recordings",
+    "recordings.usage.finish": "finish [--project name]: let the computer listen to the recordings that are waiting. It carries on by itself if you close the screen. Asks first.",
+    "recordings.usage.head": "Commands:",
+    "recordings.usage.import": "import source --kind package|pairs|table|audio [--table name] [--project name]: bring in an ACK package, or a folder of audio files. Shows what it found and asks first.",
+    "recordings.usage.options": "--yes answers yes to the question a command asks. Kinds: package is a zip that ACK saved. pairs is audio files with a text file each. table is audio files and one table. audio is audio files only.",
+    "recordings.usage.set": "set [--preview] [--max-gain-db n] [--project name]: make a training set from the recordings that are ready. With --preview it only shows what the set would hold. Asks first.",
+    "recordings.usage.show": "show [--project name]: show what is in the project and what to do next. Changes nothing.",
     "report.free_of": "{free} free of {total}",
     "report.hidden": "Things that were hidden: {count}",
     "report.intro": "This file was made by ACK Voice Studio so that someone can help work out what went wrong. Read it before you share it. Nothing in it was sent anywhere.",
@@ -1207,6 +1314,78 @@
     "projects.list.away_count": {
       "one": "1 project is put away. To see it, run: {command}",
       "other": "{count} projects are put away. To see them, run: {command}"
+    },
+    "recordings.finish.plan_count": {
+      "one": "{count} recording is waiting to be listened to.",
+      "other": "{count} recordings are waiting to be listened to."
+    },
+    "recordings.import.already": {
+      "one": "{count} file is already in this project and will be skipped.",
+      "other": "{count} files are already in this project and will be skipped."
+    },
+    "recordings.import.done_files": {
+      "one": "{count} audio file was added.",
+      "other": "{count} audio files were added."
+    },
+    "recordings.import.duplicate": {
+      "one": "{count} file is a copy of another file in this folder and will be skipped.",
+      "other": "{count} files are copies of other files in this folder and will be skipped."
+    },
+    "recordings.import.found": {
+      "one": "Found {count} audio file.",
+      "other": "Found {count} audio files."
+    },
+    "recordings.import.made": {
+      "one": "{count} recording was made from them.",
+      "other": "{count} recordings were made from them."
+    },
+    "recordings.import.question_files": {
+      "one": "Add {count} file to {name}? Type yes to go on.",
+      "other": "Add {count} files to {name}? Type yes to go on."
+    },
+    "recordings.import.question_package": {
+      "one": "Add {count} session to {name}? Type yes to go on.",
+      "other": "Add {count} sessions to {name}? Type yes to go on."
+    },
+    "recordings.import.sessions": {
+      "one": "This package holds {count} session.",
+      "other": "This package holds {count} sessions."
+    },
+    "recordings.import.skipped": {
+      "one": "{count} file was left out.",
+      "other": "{count} files were left out."
+    },
+    "recordings.import.unusable": {
+      "one": "{count} file cannot be used and will be skipped. The reasons are below.",
+      "other": "{count} files cannot be used and will be skipped. The reasons are below."
+    },
+    "recordings.import.will_add": {
+      "one": "{count} audio file would be added, about {minutes} minutes.",
+      "other": "{count} audio files would be added, about {minutes} minutes."
+    },
+    "recordings.import.with_sentences": {
+      "one": "{count} of them comes with a sentence.",
+      "other": "{count} of them come with a sentence."
+    },
+    "recordings.import.without_sentences": {
+      "one": "{count} of them has no sentence, so the computer will write it.",
+      "other": "{count} of them have no sentence, so the computer will write them."
+    },
+    "recordings.set.ready": {
+      "one": "It holds {count} piece and takes up {size}.",
+      "other": "It holds {count} pieces and takes up {size}."
+    },
+    "recordings.set.waiting_note": {
+      "one": "{count} recording is still waiting to be listened to, so it will not be included.",
+      "other": "{count} recordings are still waiting to be listened to, so they will not be included."
+    },
+    "recordings.show.total": {
+      "one": "{count} recording in all.",
+      "other": "{count} recordings in all."
+    },
+    "recordings.show.unreadable": {
+      "one": "The notes of {count} recording could not be read, so it was left alone.",
+      "other": "The notes of {count} recordings could not be read, so they were left alone."
     },
     "rounds.free.busy": {
       "one": "Not touched: {count} file of the round that is running.",

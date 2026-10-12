@@ -219,6 +219,19 @@ def prepare(source: str, recordings: Path, code: str = LANGUAGE, progress: Optio
     return Prepared(str(source_path), copy, was_new, plan, _summarise(copy, pkg, plan))
 
 
+def discard_copy(prepared: Prepared) -> bool:
+    """Take away the checked copy `prepare` made, for when the person decided not to add after all or there is nothing new in it. Only a copy this very call made is removed (a copy that
+    was already there, byte for byte the same, is somebody's earlier work and stays), only a plain file inside the project's incoming folder, and never the original. True if it was removed."""
+    if not prepared.copy_was_new:
+        return False
+    copy = prepared.copy
+    folder = copy.parent
+    if copy.is_symlink() or not copy.is_file() or folder.name != "incoming" or not NAME_RE.match(copy.name):
+        return False
+    _remove_quietly(copy)
+    return not copy.exists()
+
+
 def add(prepared: Prepared, progress: Optional[Callable[[str], None]] = None) -> List[Created]:
     """Add the recordings the plan lists. Only ever adds; a session already in is skipped. If there is not room, nothing is written."""
     with private_umask():

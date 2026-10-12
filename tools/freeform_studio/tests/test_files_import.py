@@ -575,3 +575,21 @@ def test_every_code_the_importer_uses_is_listed():
     used_stops = set(re.findall(r'FilesImportProblem\("([a-z_]+)"', source))
     assert used_problems <= set(fi.PROBLEM_CODES) | {"unreadable"} and used_stops <= set(fi.STOP_CODES), (used_problems - set(fi.PROBLEM_CODES), used_stops - set(fi.STOP_CODES))
     assert {i.reason for i in []} == set()
+
+
+def test_the_importer_needs_no_numpy_so_the_window_can_use_it_and_its_rate_is_freeform_studios_own():
+    import subprocess
+    import sys
+    probe = "import sys; sys.modules['numpy'] = None; import freeform_studio.files_import as f; print(f.WORK_RATE)"
+    done = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, cwd=str(Path(fi.__file__).resolve().parents[1]))
+    assert done.returncode == 0 and done.stdout.strip() == "48000", done.stderr
+    from freeform_studio import audio
+    assert fi.WORK_RATE == audio.WORK_RATE
+
+
+def test_a_missing_ffmpeg_is_said_in_a_word_and_leaves_the_file_out(tmp_path, out_dir, monkeypatch):
+    root = folder_of_pairs(tmp_path, 1)
+    plan = fi.make_plan(root, "audio", out_dir)
+    monkeypatch.setattr(fi.shutil, "which", lambda name: None)
+    result = fi.apply_import(plan)
+    assert result.created == [] and [s.reason for s in result.skipped] == ["unreadable"]

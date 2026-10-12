@@ -39,7 +39,6 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from .ack_import import GAP_S, ImportProblem, NotEnoughRoom, PartWriter, Created, _move_aside, _reference_text, wav_header
-from .audio import WORK_RATE, FfmpegError, decode_to_wav, wav_info
 from .config import Config
 from .health import free_mb
 from .privacy import private_umask, sync_warning
@@ -52,6 +51,7 @@ TABLE_NAMES = ("metadata.csv", "metadata.tsv", "metadata.txt", "transcript.csv",
 HEADER_FILE_CELLS = ("file", "filename", "file_name", "id", "audio", "audio_file", "path", "wav", "wav_file", "name", "clip")
 HEADER_TEXT_CELLS = ("text", "transcript", "transcription", "sentence", "normalized", "normalised", "utterance", "label")
 
+WORK_RATE = 48000                   # the rate Freeform Studio decodes every recording to (audio.WORK_RATE; a test keeps the two equal). This file imports no numpy, so the window can use it.
 MAX_FILES = 20_000                  # audio files in one import: more than a person records by hand, a firewall against a wrong folder
 MAX_DEPTH = 6                       # folders below the chosen one
 MAX_FILE_BYTES = 2 * 1024 ** 3
@@ -459,6 +459,37 @@ def _give_text(item: Item, raw: str, origin: str) -> None:
     item.text, item.text_from = sentence, origin if sentence else ""
 
 
+# ---------------------------------------------------------------- decoding
+
+class DecodeError(Exception):
+    """A file could not be turned into audio: it is not audio, is damaged, or ffmpeg is not there."""
+
+
+def decode_to_wav(src: Path, dst: Path, sample_rate: int = WORK_RATE) -> None:
+    """Decode any audio ffmpeg knows to mono 16-bit PCM wav, written under a temporary name first and then moved into place (the same command Freeform Studio's own decoder runs)."""
+    exe = shutil.which("ffmpeg")
+    if not exe:
+        raise DecodeError("ffmpeg is not installed")
+    tmp = dst.with_name(dst.name + ".tmp.wav")
+    command = [exe, "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-vn", "-ac", "1", "-ar", str(sample_rate), "-c:a", "pcm_s16le", str(tmp)]
+    try:
+        done = subprocess.run(command, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=3600)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise DecodeError(type(exc).__name__)
+    if done.returncode != 0 or not tmp.exists():
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise DecodeError((done.stderr or "ffmpeg failed").strip()[-200:])
+    tmp.replace(dst)
+
+
+def wav_frames(path: Path) -> int:
+    with wave.open(str(path), "rb") as handle:
+        return handle.getnframes()
+
+
 # ---------------------------------------------------------------- a .zip
 
 def unpack_zip(archive: Path, incoming: Path, progress: Optional[Progress] = None) -> Path:
@@ -522,7 +553,7 @@ def _copy_decoded(wav: Path, writer: PartWriter) -> int:
     frames = 0
     with wave.open(str(wav), "rb") as handle:
         if handle.getsampwidth() != 2 or handle.getnchannels() != 1 or handle.getframerate() != WORK_RATE:
-            raise FfmpegError("the decoded copy is not 48 kHz mono 16 bit")
+            raise DecodeError("the decoded copy is not 48 kHz mono 16 bit")
         while True:
             block = handle.readframes(1 << 18)
             if not block:
@@ -620,7 +651,7 @@ def _add_group(plan: Plan, store: TakeStore, group: List[Item], number: int, tot
         decoded = scratch / ("item-%d.wav" % index)
         try:
             decode_to_wav(item.path, decoded, WORK_RATE)
-            rate_frames = wav_info(decoded)[0]
+            rate_frames = wav_frames(decoded)
             if rate_frames < WORK_RATE * MIN_SECONDS:
                 result.skipped.append(Skipped(item.rel, "too_short"))
                 continue
@@ -628,7 +659,7 @@ def _add_group(plan: Plan, store: TakeStore, group: List[Item], number: int, tot
             if clips:
                 writer.write(b"\x00" * (gap * 2))
             frames = _copy_decoded(decoded, writer)
-        except (FfmpegError, OSError, wave.Error, EOFError):
+        except (DecodeError, OSError, wave.Error, EOFError):
             result.skipped.append(Skipped(item.rel, "unreadable"))
             continue
         finally:

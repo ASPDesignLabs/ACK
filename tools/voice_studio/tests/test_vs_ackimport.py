@@ -333,3 +333,43 @@ def test_not_enough_room_to_add_writes_nothing(tmp_path, recordings):
 def test_the_error_codes_are_listed_once_each():
     assert len(set(ai.ERROR_CODES)) == len(ai.ERROR_CODES) == 8
     assert str(ai.AckImportError("package", "why")) == "package: why" and ai.AckImportError("package", "", ["a", "b"]).problems == ("a", "b")
+
+
+# ---------------------------------------------------------------- taking away the checked copy
+
+def test_the_copy_this_call_made_can_be_taken_away_and_the_original_is_never_touched(tmp_path, recordings):
+    path = make_package(tmp_path)
+    before = path.read_bytes()
+    prepared = ai.prepare(str(path), recordings)
+    assert prepared.copy.exists() and ai.discard_copy(prepared) is True
+    assert not prepared.copy.exists() and path.read_bytes() == before and not takes(recordings).ids()
+
+
+def test_a_copy_that_was_already_there_is_not_ours_to_take_away(tmp_path, recordings):
+    path = make_package(tmp_path)
+    ai.add(ai.prepare(str(path), recordings))
+    again = ai.prepare(str(path), recordings)
+    assert again.copy_was_new is False and ai.discard_copy(again) is False and again.copy.exists()
+
+
+def test_only_a_plain_file_in_the_incoming_folder_with_a_safe_name_is_taken_away(tmp_path, recordings):
+    from dataclasses import replace
+    path = make_package(tmp_path)
+    prepared = ai.prepare(str(path), recordings)
+    elsewhere = tmp_path / "somewhere" / "p.zip"
+    elsewhere.parent.mkdir()
+    elsewhere.write_bytes(b"precious")
+    assert ai.discard_copy(replace(prepared, copy=elsewhere)) is False and elsewhere.read_bytes() == b"precious"
+    odd = prepared.copy.with_name("not a safe name.txt")
+    odd.write_bytes(b"x")
+    assert ai.discard_copy(replace(prepared, copy=odd)) is False and odd.exists()
+    link = prepared.copy.with_name("link.zip")
+    os.symlink(str(path), str(link))
+    assert ai.discard_copy(replace(prepared, copy=link)) is False and link.is_symlink() and path.exists()
+    assert ai.discard_copy(replace(prepared, copy=prepared.copy.with_name("missing.zip"))) is False
+    assert ai.discard_copy(prepared) is True
+
+
+def test_taking_the_copy_away_twice_is_harmless(tmp_path, recordings):
+    prepared = ai.prepare(str(make_package(tmp_path)), recordings)
+    assert ai.discard_copy(prepared) is True and ai.discard_copy(prepared) is False
