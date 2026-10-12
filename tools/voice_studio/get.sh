@@ -7,11 +7,12 @@
 # shell settings. Answers are read from the terminal (/dev/tty), because when this is piped into bash its input is the script itself.
 #   --yes       you have already said yes (to installing git); do not ask
 #   --check, --dry-run   show what would run and change nothing
-# Settings (environment):  ACK_VOICE_TAG (the release to fetch, required)   ACK_VOICE_DIR (where to put it; default ~/ack-tools)
+# Settings (environment):  ACK_VOICE_TAG (the release, tag or branch to fetch; default below)   ACK_VOICE_DIR (where to put it; default ~/ack-tools)
 set -u
 
 REPO_URL="https://github.com/ASPDesignLabs/ACK.git"
-TAG="${ACK_VOICE_TAG:-}"
+DEFAULT_TAG="main"          # what is fetched when nothing is chosen. When a release is cut, this one word becomes its name (install.ps1 holds the same word)
+TAG="${ACK_VOICE_TAG:-$DEFAULT_TAG}"
 DEST="${ACK_VOICE_DIR:-$HOME/ack-tools}"
 
 say() { printf '%s\n' "$*"; }
@@ -37,11 +38,6 @@ hand_over() {
   if { : </dev/tty; } 2>/dev/null; then exec "$DEST/tools/voice_studio/setup.sh" "$@" </dev/tty; fi
   exec "$DEST/tools/voice_studio/setup.sh" "$@"
 }
-
-if [ -z "$TAG" ]; then
-  say "No release was chosen, so nothing was fetched. Choose one by running this again with ACK_VOICE_TAG set to the release name."
-  exit 2
-fi
 
 if [ -x "$DEST/tools/voice_studio/setup.sh" ]; then
   say "ACK is already at $DEST, so that copy is being used and nothing is fetched."

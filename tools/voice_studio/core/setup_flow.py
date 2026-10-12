@@ -3,6 +3,7 @@
 
 The password is typed into the terminal the person already has open, to `sudo`, which asks for it itself; nothing here reads or sees it. Every
 sentence comes from the text catalog, and every decision is made from a `System` and an `IO` handed in, so it is tested without a terminal.
+This file is the first step only (the system packages). What follows it, up to opening the window, is core/guided_flow.py.
 Exit codes: 0 ready (or installed), 1 something blocks or failed, 2 nothing was done (declined, could not ask, or an unknown option).
 """
 from __future__ import annotations
@@ -34,11 +35,12 @@ class Options:
     check: bool = False          # only look: exit 0 if ready, 1 if anything needs fixing
     dry_run: bool = False        # show what would run, change nothing, ask nothing
     yes: bool = False            # the person already said yes (typed on the command line)
+    no_window: bool = False      # set up the programs but do not open the window at the end (the guided steps after the packages: core/guided_flow.py)
 
 
 def parse_options(argv: Sequence[str]) -> Tuple[Optional[Options], str]:
     """(options, "") or (None, the first option that is not known)."""
-    flags = {"--check": "check", "--dry-run": "dry_run", "--yes": "yes", "-y": "yes"}
+    flags = {"--check": "check", "--dry-run": "dry_run", "--yes": "yes", "-y": "yes", "--no-window": "no_window"}
     chosen = {}
     for arg in argv:
         if arg not in flags:
@@ -124,7 +126,6 @@ def run_setup(opts: Options, system: System, cat: Catalog, io: IO, run_apt: AptR
             return EXIT_PROBLEM
         io.say(cat.t("setup.installed"))
     io.say(cat.t("setup.ready"))
-    io.say(cat.t("setup.window_not_built"))
     return EXIT_OK
 
 

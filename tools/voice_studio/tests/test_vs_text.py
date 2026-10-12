@@ -23,7 +23,7 @@ from voice_studio.core.text import Catalog, TextError
 PKG = Path(__file__).resolve().parents[1]
 CAT = text.load_catalog("en")
 SHIPPED_PY = sorted([p for p in (PKG / "core").glob("*.py") if p.name not in {"text.py", "describe.py"}] + list((PKG / "window").glob("*.py")))
-NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup", "env", "newproject", "ackimport", "voicezip", "dataset", "commands", "progress", "copyin", "buildenv", "connection", "startvoice", "cli", "projects", "profiles", "recordings", "voices", "rounds", "freeup", "voicefile", "window")
+NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup", "env", "newproject", "ackimport", "voicezip", "dataset", "commands", "progress", "copyin", "buildenv", "connection", "startvoice", "cli", "projects", "profiles", "recordings", "voices", "rounds", "freeup", "voicefile", "window", "guided")
 KEY = re.compile(r"^(%s)\.[a-z0-9_]+(\.[a-z0-9_]+)*$" % "|".join(NAMESPACES))
 
 

@@ -62,7 +62,7 @@ class Terminal:
         return "\n".join(self.lines)
 
 
-KEY_SHAPE = re.compile(r"\b(?:cli|projects|profiles|voices|startvoice|newproject|project|fetch|connection|rounds|freeup|voicefile|voicezip|commands|recordings|dataset|progress|ackimport|job)\.[a-z_]+(?:\.[a-z_]+)+\b")
+KEY_SHAPE = re.compile(r"\b(?:cli|projects|profiles|voices|startvoice|newproject|project|fetch|connection|rounds|freeup|voicefile|voicezip|commands|recordings|dataset|progress|ackimport|job|guided)\.[a-z_]+(?:\.[a-z_]+)+\b")
 
 
 def leaked_keys(text):

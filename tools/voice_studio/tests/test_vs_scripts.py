@@ -189,10 +189,16 @@ def test_setup_end_to_end_with_the_real_program_names_a_mistyped_option_and_does
 
 # ================================================================ get.sh
 
-def test_get_says_so_and_fetches_nothing_when_no_release_was_chosen(box):
+def test_get_fetches_the_default_release_when_none_was_chosen_and_says_which(box):
     box.git_that_clones()
-    code, out = box.bash(GET)
-    assert code == 2 and "ACK_VOICE_TAG" in out and box.calls() == [] and not box.dest.exists()
+    code, out = box.bash(GET, env=box.env(ACK_VOICE_DIR=str(box.dest)))
+    assert code == 0 and box.calls()[0] == "git clone --depth 1 --branch main %s %s" % (URL, box.dest) and "Fetching ACK main into %s." % box.dest in out
+
+
+def test_get_treats_an_empty_release_name_as_none_chosen(box):
+    box.git_that_clones()
+    code, _ = box.bash(GET, env=box.env(ACK_VOICE_TAG="", ACK_VOICE_DIR=str(box.dest)))
+    assert code == 0 and "--branch main " in box.calls()[0]
 
 
 def test_get_uses_an_existing_copy_and_fetches_nothing(box):
@@ -372,7 +378,7 @@ def test_get_reads_answers_from_the_terminal_not_from_its_own_input():
     assert "read -r" not in code.replace("read -r answer </dev/tty", "")
 
 
-def test_get_never_fetches_without_a_named_release():
+def test_get_names_what_it_fetches_in_one_place_and_a_chosen_name_replaces_it():
     code = GET.read_text()
-    assert 'TAG="${ACK_VOICE_TAG:-}"' in code and '--branch "$TAG"' in code
-    assert "main" not in code.replace("remaining", "") and "master" not in code
+    assert code.count('DEFAULT_TAG="main"') == 1 and 'TAG="${ACK_VOICE_TAG:-$DEFAULT_TAG}"' in code and '--branch "$TAG"' in code
+    assert "master" not in code and [l for l in code.splitlines() if re.search(r"\bmain\b", l)] == [l for l in code.splitlines() if l.startswith('DEFAULT_TAG="main"')], "the default name is written in one place"
