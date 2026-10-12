@@ -487,8 +487,8 @@ def test_the_options_the_commands_publish_are_exactly_the_ones_they_accept(home)
     """The checklist is held to `OPTIONS`; so `OPTIONS` is held to what the commands really do."""
     values = {"--name": "Anna", "--given-by": "a", "--agreed-to": "b", "--when": "c", "--withdraw": "d", "--how-given": "spoken", "--how-given-other": "e",
               "--hours": "1", "--voice": "mike"}
-    every = set(values) | {"--own", "--someone-else", "--yes", "-y", "--nope"}
-    assert set(pf.OPTIONS) == {"list", "show", "new"}
+    every = set(values) | {"--own", "--someone-else", "--yes", "-y", "--away", "--nope"}
+    assert set(pf.OPTIONS) == {"list", "show", "new", "edit", "archive", "unarchive", "delete"}
     for command, accepted in pf.OPTIONS.items():
         for option in sorted(every):
             code, io = go(home, command, option, *([values[option]] if option in values else []), interactive=False)

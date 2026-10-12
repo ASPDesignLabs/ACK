@@ -76,10 +76,11 @@ class Project:
     consent: Consent = field(default_factory=Consent)
     scratch: Scratch = field(default_factory=Scratch)
     acknowledgments: Tuple[Acknowledgment, ...] = ()
+    archived: bool = False                                    # hidden from the lists and not opened by a command until brought back; nothing is removed (core/profiles.py)
     extra: Dict[str, Any] = field(default_factory=dict)       # fields this version does not know, kept so saving never loses them
 
 
-KNOWN_FIELDS = {"schema", "id", "name", "whose_voice", "created", "planned_hours", "starting_voice", "consent", "scratch", "acknowledgments"}
+KNOWN_FIELDS = {"schema", "id", "name", "whose_voice", "created", "planned_hours", "starting_voice", "consent", "scratch", "acknowledgments", "archived"}
 
 
 # ---------------------------------------------------------------- text the person typed
@@ -149,6 +150,8 @@ def project_to_dict(p: Project) -> Dict[str, Any]:
                     "how_given": p.consent.how_given, "how_given_other": p.consent.how_given_other},
         "scratch": {"mode": p.scratch.mode, "place": p.scratch.place},
         "acknowledgments": [{"voice": a.voice, "at": a.at, "revision": a.revision} for a in p.acknowledgments]})
+    if p.archived:
+        data["archived"] = True                                 # written only when it is true, so a project that was never archived keeps the very same file
     return data
 
 
@@ -195,12 +198,15 @@ def project_from_text(text: str) -> Project:
     voice = raw.get("starting_voice")
     if voice is not None and not isinstance(voice, str):
         raise ProjectError("damaged", "starting_voice")
+    archived = raw.get("archived", False)
+    if not isinstance(archived, bool):
+        raise ProjectError("damaged", "archived")
     project = Project(
         id=_text(raw, "id", 64), name=_text(raw, "name", MAX_NAME), whose_voice=_text(raw, "whose_voice", 20), created=_text(raw, "created", 40),
         planned_hours=float(hours), starting_voice=voice,
         consent=Consent(*(_text(consent_raw, k, MAX_NOTE) for k in ("given_by", "what_to", "when", "withdraw", "how_given", "how_given_other"))),
         scratch=Scratch(_text(scratch_raw, "mode", 20, SCRATCH_DEFAULT) or SCRATCH_DEFAULT, place or None),
-        acknowledgments=tuple(acks), extra={k: v for k, v in raw.items() if k not in KNOWN_FIELDS})
+        acknowledgments=tuple(acks), archived=archived, extra={k: v for k, v in raw.items() if k not in KNOWN_FIELDS})
     try:
         validate(project)
     except ProjectError as exc:
@@ -310,6 +316,10 @@ def with_scratch_place(project: Project, place: Optional[str]) -> Project:
 
 def with_starting_voice(project: Project, voice_id: Optional[str]) -> Project:
     return replace(project, starting_voice=voice_id)
+
+
+def with_archived(project: Project, archived: bool) -> Project:
+    return replace(project, archived=bool(archived))
 
 
 def with_acknowledgment(project: Project, voice: str, revision: str, now: Optional[datetime] = None) -> Project:
