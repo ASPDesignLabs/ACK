@@ -4,6 +4,8 @@
 `python3 -m voice_studio.window --selftest` builds the real window against whatever is under HOME, visits every page, checks that every control has an accessible name and that text is
 12 pt or larger, then presses the real buttons: a Choose answered No and then Yes, a Free up space answered No, and a Make the voice file that is refused. It prints one JSON object of
 checks and exits 0 when all hold. Run it only on a copy of a project (HOME set to a folder made for the test): Yes really changes the record of that project.
+If a folder named `tour-files` (a few audio files, each with a text file of the same name) is under HOME, the tour also brings it in through the Recordings page: first answered No (nothing is added),
+then, where ffmpeg is installed, Yes.
 """
 from __future__ import annotations
 
@@ -13,6 +15,7 @@ import sys
 import time
 from typing import Callable, Dict, List, Optional
 
+from ..core import recordings as rec
 from ..core import rounds as rd
 from ..core import windowmodel as wm
 from ..core import windowprefs as wp
@@ -74,7 +77,7 @@ def run(services: wm.Services) -> int:
 
     unnamed: Dict[str, List[str]] = {}
     smallest = 99.0
-    for key, page in zip(("projects", "rounds", "voicefile", "free", "display"), shell.pages):
+    for key, page in zip(shell.page_names, shell.pages):
         shell.stack.set_visible_child_name(key)
         page.refresh()
         pump(lambda: True, 0.05)
@@ -95,12 +98,12 @@ def run(services: wm.Services) -> int:
     chosen = record.current
 
     shell.stack.set_visible_child_name("rounds")
-    shell.pages[1].refresh()
+    shell.page("rounds").refresh()
     other = next((i.number for i in wm.rounds_view(services.home, pid, cat).items if i.can_choose), None)
     checks["a_round_can_be_chosen"] = other is not None
-    checks["the_chosen_round_has_no_choose_button"] = find(shell.pages[1].widget, cat.t("window.rounds.choose_name", number=chosen)) is None
+    checks["the_chosen_round_has_no_choose_button"] = find(shell.page("rounds").widget, cat.t("window.rounds.choose_name", number=chosen)) is None
     if other is not None:
-        button = find(shell.pages[1].widget, cat.t("window.rounds.choose_name", number=other))
+        button = find(shell.page("rounds").widget, cat.t("window.rounds.choose_name", number=other))
         checks["choose_button_found"] = button is not None
         button.emit("clicked")
         checks["choose_question_shown"] = pump(lambda: shell.dialog is not None)
@@ -121,8 +124,8 @@ def run(services: wm.Services) -> int:
         checks["pages_unlocked_after"] = shell.stack.get_sensitive() and shell.sidebar.get_sensitive()
         checks["result_head_for_nothing"] = shell.result_label.get_label().splitlines()[0] == cat.t("window.result.nothing") and "Nothing was done." in shell.result_label.get_label()
         checks["no_changed_nothing"] = rd.load(wm.open_project(services.home, pid).paths).current == chosen
-        shell.pages[1].refresh()
-        find(shell.pages[1].widget, cat.t("window.rounds.choose_name", number=other)).emit("clicked")
+        shell.page("rounds").refresh()
+        find(shell.page("rounds").widget, cat.t("window.rounds.choose_name", number=other)).emit("clicked")
         pump(lambda: shell.dialog is not None)
         shell.dialog.response(Gtk.ResponseType.YES) if shell.dialog is not None else None
         checks["yes_answered"] = pump(lambda: not shell.busy and shell.dialog is None and shell.last_result[0] == 0)
@@ -130,8 +133,8 @@ def run(services: wm.Services) -> int:
         checks["yes_chose_it"] = rd.load(wm.open_project(services.home, pid).paths).current == other
 
     shell.stack.set_visible_child_name("free")
-    shell.pages[3].refresh()
-    free_page = shell.pages[3]
+    shell.page("free").refresh()
+    free_page = shell.page("free")
     if free_page.checks:
         checks["remove_button_off_when_nothing_is_ticked"] = not free_page.remove.get_sensitive()
         free_page.checks[0][0].set_active(True)
@@ -147,8 +150,8 @@ def run(services: wm.Services) -> int:
     checks["free_listed"] = len(free_page.checks)
 
     shell.stack.set_visible_child_name("voicefile")
-    shell.pages[2].refresh()
-    make = find(shell.pages[2].widget, cat.t("window.voicefile.make"))
+    shell.page("voicefile").refresh()
+    make = find(shell.page("voicefile").widget, cat.t("window.voicefile.make"))
     checks["make_button_found"] = make is not None
     if make is not None:
         make.emit("clicked")
@@ -158,6 +161,7 @@ def run(services: wm.Services) -> int:
         checks["result_head_for_a_problem"] = shell.result_label.get_label().splitlines()[0] == cat.t("window.result.problem")
 
     profile_checks(shell, checks)
+    recordings_checks(shell, checks)
     look_checks(shell, checks)
     checks["not_busy_at_the_end"] = not shell.busy
     shell.destroy()
@@ -189,7 +193,7 @@ def profile_checks(shell, checks: Dict[str, object]) -> None:
     """Making, changing, putting away, bringing back and deleting a project, by the real buttons: a form that is not whole stays open and says why, a whole one closes and the command asks once
     more, a No changes nothing, a project that is put away leaves the list and is closed if it was open, and a delete needs two Yes answers and removes only that project."""
     cat, home = shell.cat, shell.services.home
-    page = shell.pages[0]
+    page = shell.page("projects")
     keep_open = shell.project_id
     shell.stack.set_visible_child_name("projects")
     page.refresh()
@@ -291,6 +295,85 @@ def profile_checks(shell, checks: Dict[str, object]) -> None:
         shell.open_project(keep_open, announce=False)
 
 
+def recordings_checks(shell, checks: Dict[str, object]) -> None:
+    """The Recordings page and the form that brings recordings in: nothing in the project says so and the steps that need recordings are off, the form says what it lacks and stays open, the kind decides
+    which buttons and fields show, the system's file chooser opens and closes, and (when the tour was given a folder of files) a No adds nothing and a Yes adds them as recordings waiting to be listened to."""
+    cat, home = shell.cat, shell.services.home
+    page = shell.page("recordings")
+    pid = shell.project_id
+    if pid is None:
+        return
+    shell.stack.set_visible_child_name("recordings")
+    page.refresh()
+    before = rec.read_takes(wm.open_project(home, pid).paths.recordings)
+    checks["recordings_page_buttons_are_named"] = a11y.unnamed_controls(page.widget) == []
+    checks["the_steps_that_need_recordings_are_off_until_there_are_some"] = (before.waiting == 0) == (not page.listen.get_sensitive()) and (before.ready == 0) == (not page.make.get_sensitive()) and (before.ready == 0) == (not page.preview.get_sensitive())
+    checks["bring_in_is_always_there"] = page.bring_in.get_sensitive()
+
+    page.bring_in.emit("clicked")
+    form = shell.form
+    checks["import_form_opens_as_the_question_on_the_screen"] = form is not None and shell.dialog is form.dialog
+    if form is None:
+        return
+    checks["import_form_controls_are_named"] = a11y.unnamed_controls(form.dialog) == []
+    checks["no_kind_is_chosen_for_the_person"] = form.kind() == "" and not form.pick_main.get_sensitive()
+    form.dialog.response(Gtk.ResponseType.OK)
+    pump(lambda: False, 0.05)
+    said = form.problems.get_label()
+    checks["import_form_says_what_is_missing_and_stays_open"] = shell.form is form and form.problems.get_visible() and cat.t("window.import.need_kind") in said and cat.t("window.import.need_source") in said
+    form.radios["package"].set_active(True)
+    checks["a_package_is_picked_as_one_zip_file"] = form.pick_main.get_label() == cat.t("window.import.choose_file") and not form.pick_zip.get_visible() and not form.table_box.get_visible()
+    form.radios["pairs"].set_active(True)
+    checks["files_are_picked_as_a_folder_or_a_zip"] = form.pick_main.get_label() == cat.t("window.import.choose_folder") and form.pick_zip.get_visible() and not form.table_box.get_visible()
+    form.radios["table"].set_active(True)
+    checks["the_table_name_shows_only_for_a_table"] = form.table_box.get_visible()
+    form.set_source("/somewhere")
+    form.radios["audio"].set_active(True)
+    checks["changing_the_kind_forgets_the_place_chosen"] = form.source == "" and form.source_label.get_label() == cat.t("window.import.nothing_chosen") and not form.table_box.get_visible()
+    form.pick_main.emit("clicked")
+    checks["the_file_chooser_opens"] = pump(lambda: form.chooser is not None and form.chooser.is_visible(), 3.0)
+    if form.chooser is not None:
+        form.chooser.response(Gtk.ResponseType.CANCEL)
+    checks["the_file_chooser_closes_and_chooses_nothing"] = pump(lambda: form.chooser is None, 3.0) and form.source == ""
+    form.dialog.response(Gtk.ResponseType.CANCEL)
+    checks["cancel_closes_the_form_and_does_nothing"] = pump(lambda: shell.form is None and shell.dialog is None) and rec.read_takes(wm.open_project(home, pid).paths.recordings).total == before.total
+
+    files = os.path.join(home.home, "tour-files")
+    if not os.path.isdir(files):
+        return
+    paths = wm.open_project(home, pid).paths
+    page.bring_in.emit("clicked")
+    form = shell.form
+    form.radios["pairs"].set_active(True)
+    form.set_source(files)
+    form.dialog.response(Gtk.ResponseType.OK)
+    asked = pump(lambda: shell.dialog is not None and shell.form is None, 8.0)
+    checks["import_shows_what_it_found_before_it_asks"] = asked and shell.dialog is not None and cat.t("recordings.import.sentences_note") in message_of(shell.dialog)
+    answer(shell, False)
+    settled(shell)
+    checks["a_no_adds_nothing"] = rec.read_takes(paths.recordings).total == before.total and shell.last_result[0] == 2
+    if not shell.services.system.which("ffmpeg"):
+        checks["import_yes_check"] = "skipped: no ffmpeg on this computer"
+        return
+    checks["import_yes_check"] = "ran"
+    page.bring_in.emit("clicked")
+    form = shell.form
+    form.radios["pairs"].set_active(True)
+    form.set_source(files)
+    form.dialog.response(Gtk.ResponseType.OK)
+    answer(shell, True)
+    settled(shell)
+    after = rec.read_takes(paths.recordings)
+    checks["a_yes_adds_the_files_as_a_recording_waiting_to_be_listened_to"] = after.total == before.total + 1 and after.waiting == before.waiting + 1 and shell.last_result[0] == 0
+    page.refresh()
+    checks["the_page_now_offers_listening"] = page.listen.get_sensitive()
+    page.listen.emit("clicked")
+    answer(shell, True)
+    settled(shell)
+    checks["listening_without_the_studio_programs_says_so_and_starts_nothing"] = shell.last_result[0] == 2 and rec.listening_job(home.jobs, pid) is None
+    checks["recordings_page_controls_are_named_after"] = a11y.unnamed_controls(page.widget) == []
+
+
 def every_look() -> List[wt.Look]:
     looks = [wt.Look("ack", accent, 14, 100) for accent in range(len(wt.ACCENTS))]
     looks += [wt.Look("ack", 0, pt, pct) for pt in (wt.TEXT_STEPS[0], wt.TEXT_STEPS[-1]) for pct in (wt.SCALE_STEPS[0], wt.SCALE_STEPS[-1])]
@@ -307,7 +390,7 @@ def look_checks(shell, checks: Dict[str, object]) -> None:
     small file, and removing it is listed first and asked about."""
     cat, appearance = shell.cat, shell.appearance
     start = appearance.look
-    page = shell.pages[4]
+    page = shell.page("display")
     shell.stack.set_visible_child_name("display")
     page.refresh()
     bad = []

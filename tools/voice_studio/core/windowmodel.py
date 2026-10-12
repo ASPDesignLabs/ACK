@@ -13,13 +13,14 @@ import os
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence, Tuple
 
-from . import commands, freeup, jobs, rounds as rd, voicefile as vf
+from . import commands, freeup, jobs, recordings as rec, rounds as rd, voicefile as vf
 from .describe import error_text
 from .paths import DataHome, ProjectPaths
 from .project import OWN, SOMEONE_ELSE, Consent, Project, list_projects
 from .newproject import FormInput
 from .profiles import EditInput, split
 from .projects_flow import WHOSE_WORDS, _hours, edit_form_problems, new_form_problems, run_projects
+from .recordings_flow import Studio, next_step as recordings_next_step, run_recordings, show_lines as recordings_lines
 from .registry import Registry
 from .startvoice import voices as starting_voices
 from .rounds_flow import Open, TrainingEnv, free_row_text, round_lines, run_rounds, scratch_ready, scratch_root
@@ -27,8 +28,15 @@ from .system import RealSystem, System
 from .text import Catalog, size_text
 from .voicefile_flow import run_voicefile
 
-TOOLS = ("projects", "rounds", "voicefile")
+TOOLS = ("projects", "recordings", "rounds", "voicefile")
 MAX_NOTE_SHOWN = 500
+MAX_TABLE_NAME = 200
+NEXT_WORDS = {"import": "window.recordings.next_import", "wait": "window.recordings.next_wait", "finish": "window.recordings.next_finish", "set": "window.recordings.next_set"}
+
+
+def no_studio() -> Tuple[None, str]:
+    """The studio programs when nobody said where they are: not there."""
+    return None, "absent"
 
 
 # ---------------------------------------------------------------- the computer the window works on
@@ -43,13 +51,16 @@ class Services:
     training: TrainingEnv
     system: System
     tools_dir: str = str(jobs.TOOLS_DIR)
+    studio: Studio = no_studio
 
     def titles(self) -> Tuple[str, ...]:
-        return (self.cat.t("projects.title"), self.cat.t("rounds.title"), self.cat.t("voicefile.title"))
+        return (self.cat.t("projects.title"), self.cat.t("recordings.title"), self.cat.t("rounds.title"), self.cat.t("voicefile.title"))
 
     def run(self, tool: str, argv: Sequence[str], io) -> int:
         if tool == "projects":
             return run_projects(argv, self.system, self.home, self.registry, self.cat, io)
+        if tool == "recordings":
+            return run_recordings(argv, self.home, self.registry, self.cat, io, studio=self.studio, system=self.system, tools_dir=self.tools_dir)
         if tool == "rounds":
             return run_rounds(argv, self.home, self.registry, self.cat, io, training=self.training, system=self.system)
         if tool == "voicefile":
@@ -57,8 +68,8 @@ class Services:
         raise ValueError("unknown tool: " + tool)
 
 
-def real_services(home: DataHome, registry: Registry, cat: Catalog, training: TrainingEnv) -> Services:
-    return Services(home, registry, cat, training, RealSystem())
+def real_services(home: DataHome, registry: Registry, cat: Catalog, training: TrainingEnv, studio: Studio = no_studio) -> Services:
+    return Services(home, registry, cat, training, RealSystem(), studio=studio)
 
 
 # ---------------------------------------------------------------- projects
@@ -101,6 +112,48 @@ def open_project(home: DataHome, project_id: str) -> Optional[Open]:
         return None
     paths = ProjectPaths(home.projects + "/" + project.id)
     return Open(project, paths, scratch_root(project, paths), home.jobs)
+
+
+# ---------------------------------------------------------------- recordings
+
+@dataclass(frozen=True)
+class RecordingsView:
+    project_id: str
+    project_name: str
+    lines: Tuple[str, ...]                       # the very lines the terminal's `recordings show` prints
+    next_line: str                               # one sentence on what to do next
+    next_step: str                               # "import", "wait", "finish" or "set"
+    listening: bool                              # the computer is listening now: the page looks again by itself
+    can_listen: bool                             # recordings are waiting and nothing is listening
+    can_make: bool                               # at least one recording is ready to use
+    folder: str
+
+
+def recordings_view(home: DataHome, project_id: str, cat: Catalog) -> Optional[RecordingsView]:
+    """None when there is no such project in use. Reads the recordings' own notes and the listening job's files; changes nothing."""
+    ctx = open_project(home, project_id)
+    if ctx is None:
+        return None
+    view = rec.read_takes(ctx.paths.recordings)
+    listening = rec.listening_job(ctx.jobs_root, ctx.project.id)
+    lines = list(recordings_lines(view, listening, cat))
+    if view.failed:
+        lines.append(cat.count("progress.takes.failed", view.failed))
+    step = recordings_next_step(view, listening)
+    active = listening is not None and listening.active
+    return RecordingsView(ctx.project.id, ctx.project.name, tuple(lines), cat.t(NEXT_WORDS[step]), step, active, view.waiting > 0 and not active, view.ready > 0, ctx.paths.recordings)
+
+
+def check_import(cat: Catalog, kind: str, source: str, table: str) -> Tuple[str, ...]:
+    """The sentences for everything the import form lacks (empty when it can go on). Changes nothing."""
+    problems: List[str] = []
+    if kind not in rec.KINDS:
+        problems.append(cat.t("window.import.need_kind"))
+    if not source or "\x00" in source or "\n" in source:
+        problems.append(cat.t("window.import.need_source"))
+    if kind == "table" and (len(table) > MAX_TABLE_NAME or any(ch in table for ch in "\r\n\x00")):
+        problems.append(cat.t("window.import.bad_table"))
+    return tuple(problems)
 
 
 # ---------------------------------------------------------------- rounds
@@ -326,6 +379,27 @@ def unarchive_args(project_id: str) -> Tuple[str, List[str]]:
 
 def delete_args(project_id: str) -> Tuple[str, List[str]]:
     return "projects", ["delete", project_id]
+
+
+def import_args(project_id: str, kind: str, source: str, table: str = "") -> Tuple[str, List[str]]:
+    """`recordings import --kind=K [--table=T] --project P -- SOURCE`: every answer given as an option, so the flow shows what it found and asks only its one question, with Yes and No buttons.
+    The values use the `--option=value` form and the source comes after `--`, so a name that begins with hyphens is a name and never another option. A table name goes only with the table kind."""
+    argv = ["import", "--kind=" + kind]
+    if kind == "table" and table:
+        argv.append("--table=" + table)
+    return "recordings", argv + _project(project_id) + ["--", source]
+
+
+def finish_args(project_id: str) -> Tuple[str, List[str]]:
+    return "recordings", ["finish"] + _project(project_id)
+
+
+def preview_set_args(project_id: str) -> Tuple[str, List[str]]:
+    return "recordings", ["set", "--preview"] + _project(project_id)
+
+
+def make_set_args(project_id: str) -> Tuple[str, List[str]]:
+    return "recordings", ["set"] + _project(project_id)
 
 
 def choose_args(project_id: str, number: int) -> Tuple[str, List[str]]:

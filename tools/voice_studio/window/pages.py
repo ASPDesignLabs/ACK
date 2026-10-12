@@ -55,6 +55,29 @@ def action_bar(buttons: List[Gtk.Button]) -> Gtk.FlowBox:
     return bar
 
 
+class Refreshing:
+    """A page that reads again by itself while something it shows is going on (a round training, the computer listening). Reading changes nothing and nothing is started: the tick only calls `refresh`."""
+
+    timer = 0
+
+    def _arm_refresh(self, running: bool) -> None:
+        if self.timer:
+            GLib.source_remove(self.timer)
+            self.timer = 0
+        if running:
+            self.timer = GLib.timeout_add_seconds(REFRESH_SECONDS, self._tick)
+
+    def _tick(self) -> bool:
+        self.timer = 0
+        if self.shell.project_id is None:
+            return False
+        if not self.shell.busy and self.shell.stack.get_visible_child() is self.widget:
+            self.refresh()
+        else:
+            self._arm_refresh(True)
+        return False
+
+
 class Page:
     """A page is a box inside a scrolled window. `build` makes the part that does not change, `refresh` the part that does."""
 
@@ -235,7 +258,7 @@ class ProjectsPage(Page):
             self.shell.set_result(1, (self.cat.t("window.projects.folder_failed", path=folder),))
 
 
-class RoundsPage(Page):
+class RoundsPage(Refreshing, Page):
     """The list is rebuilt on every refresh; the form that starts a round is built once and updated in place, so what the person picked (the training set, the minutes) survives a refresh
     and a drop-down is never destroyed and rebuilt under them."""
 
@@ -341,22 +364,48 @@ class RoundsPage(Page):
                 self.shell.run(wm.note_args(pid, number, note))
         self.shell.show_entry(self.cat.t("window.note.prompt", number=number), current, got, limit=wm.MAX_NOTE_SHOWN)
 
-    def _arm_refresh(self, running: bool) -> None:
-        if self.timer:
-            GLib.source_remove(self.timer)
-            self.timer = 0
-        if running:
-            self.timer = GLib.timeout_add_seconds(REFRESH_SECONDS, self._tick)
+class RecordingsPage(Refreshing, Page):
+    """What is in the project and the three steps in order: bring recordings in, let the computer listen to them, make a training set. Each button is the words of a terminal command, which
+    shows what it will do and asks first; nothing here reads, copies or changes a recording by itself."""
 
-    def _tick(self) -> bool:
-        self.timer = 0
-        if self.shell.project_id is None:
-            return False
-        if not self.shell.busy and self.shell.stack.get_visible_child() is self.widget:
-            self.refresh()
+    def build(self) -> None:
+        self.refresh()
+
+    def refresh(self) -> None:
+        cat, shell = self.cat, self.shell
+        clear(self.content)
+        self.bring_in = self.listen = self.preview = self.make = None
+        if not self.need_project():
+            return
+        view = wm.recordings_view(shell.services.home, shell.project_id, cat)
+        if view is None:
+            self.content.append(text(cat.t("window.no_project")))
+            return
+        pid = view.project_id
+        self.content.append(text(cat.t("window.recordings.heading", name=view.project_name), ("page-heading",)))
+        self.content.append(text(cat.t("window.recordings.hint"), ("dim-text",)))
+        self.content.append(text("\n".join(view.lines), selectable=True))
+        if view.listening:
+            self.content.append(text(cat.t("window.recordings.listening"), ("dim-text",)))
+        self.content.append(text(view.next_line, ("section-heading",)))
+        self.bring_in = button(cat.t("window.recordings.bring_in"), self._bring_in)
+        self.listen = button(cat.t("window.recordings.listen"), lambda: shell.run(wm.finish_args(pid)), sensitive=view.can_listen)
+        self.preview = button(cat.t("window.recordings.preview"), lambda: shell.run(wm.preview_set_args(pid)), sensitive=view.can_make)
+        self.make = button(cat.t("window.recordings.make_set"), lambda: shell.run(wm.make_set_args(pid)), sensitive=view.can_make)
+        self.content.append(action_bar([self.bring_in, self.listen, self.preview, self.make, button(cat.t("window.recordings.refresh"), self.refresh),
+                                        button(cat.t("window.recordings.show_folder"), lambda: self._show_folder(view.folder, view.project_name))]))
+        self._arm_refresh(view.listening)
+
+    def _bring_in(self) -> None:
+        if self.shell.project_id is not None:
+            forms.open_import(self.shell, self.shell.project_id)
+
+    def _show_folder(self, folder: str, name: str) -> None:
+        """Open the recordings folder in the computer's file manager. It only looks."""
+        if showfolder.open_folder(folder, self.shell.services.system):
+            self.shell.set_result(0, (self.cat.t("window.recordings.folder_shown", name=name),))
         else:
-            self._arm_refresh(True)
-        return False
+            self.shell.set_result(1, (self.cat.t("window.recordings.folder_failed", path=folder),))
 
 
 class VoiceFilePage(Page):

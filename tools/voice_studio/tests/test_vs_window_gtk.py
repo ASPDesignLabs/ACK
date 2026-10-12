@@ -136,11 +136,48 @@ def test_managing_projects_goes_only_through_the_terminals_commands_after_a_form
     # a form closes only when nothing is wrong with it, and then it hands over the words of the command
     answer = forms.split("def _on_response(")[1].split("\n    def ")[0]
     assert answer.index("self._problems()") < answer.index("if problems:") < answer.index("dialog.destroy()") < answer.index("self.shell.run(command")
-    assert forms.count("self.shell.run(") == 1 and "wm.check_new(" in forms and "wm.check_edit(" in forms and "wm.new_args(" in forms and "wm.edit_args(" in forms
+    assert forms.count("self.shell.run(") == 2 and "wm.check_new(" in forms and "wm.check_edit(" in forms and "wm.new_args(" in forms and "wm.edit_args(" in forms
     # each button of the page is one command, run as the one task
     for call in ("wm.archive_args(self.selected)", "wm.unarchive_args(self.selected)", "wm.delete_args(self.selected)"):
         assert pages.count("self.shell.run(" + call + ")") == 1, call
     assert pages.count("forms.open_new(") == 1 and pages.count("forms.open_edit(") == 1
+
+
+def test_bringing_recordings_in_goes_only_through_the_terminals_command_after_a_form_that_is_whole():
+    forms = code_only(PKG / "window" / "forms.py")
+    pages = code_only(PKG / "window" / "pages.py")
+    shell = code_only(PKG / "window" / "shell.py")
+    selftest = code_only(PKG / "window" / "selftest.py")
+    # the window never reads, copies or unpacks what was chosen: it only learns a path, and the command does the rest
+    for path in WINDOW:
+        code = code_only(path)
+        for word in ("files_import", "ackimport", "make_plan", "apply_import", "unpack_zip", "discard_copy", "read_takes(") if path.name not in ("selftest.py",) else ("files_import", "ackimport", "make_plan", "apply_import", "unpack_zip", "discard_copy"):
+            assert word not in code, (path.name, word)
+    assert "import os" not in forms and "listdir" not in forms and "shutil" not in forms
+    # the same order as the other forms: check, show what is wrong and stay open, and only then close and hand over the command
+    answer = forms.split("class ImportForm")[1].split("def _on_response(")[1].split("\n    def ")[0]
+    assert answer.index("self._problems()") < answer.index("if problems:") < answer.index("self._close(dialog)") < answer.index("self.shell.run(command")
+    problems = forms.split("class ImportForm")[1].split("def _problems(")[1].split("\n    def ")[0]
+    assert "wm.check_import(" in problems and "wm.import_args(" in problems
+    # the system's file chooser can only pick something to open, never a place to save to, and is closed with the form
+    assert forms.count("Gtk.FileChooserDialog(") == 1 and "SELECT_FOLDER" in forms and "Gtk.FileChooserAction.OPEN" in forms and "FileChooserAction.SAVE" not in forms and "CREATE_FOLDER" not in forms
+    assert "Gtk.FileDialog" not in forms and "Gtk.FileChooserNative" not in forms
+    close = forms.split("class ImportForm")[1].split("def _close(")[1].split("\n    def ")[0]
+    assert "self.chooser.destroy()" in close
+    # each button of the page is one command, run as the one task, and the form is opened from one place
+    for call in ("wm.finish_args(pid)", "wm.preview_set_args(pid)", "wm.make_set_args(pid)"):
+        assert pages.count("shell.run(" + call + ")") == 1, call
+    assert pages.count("forms.open_import(") == 1 and "wm.import_args(" not in pages and "wm.import_args(" not in shell
+    assert "self.stack.set_visible_child_name('recordings')" in shell and shell.count("RecordingsPage(self)") == 1
+    assert "forms.open_import" not in selftest and "wm.import_args" not in selftest
+
+
+def test_the_recordings_page_reads_again_by_itself_only_while_the_computer_is_listening():
+    pages = code_only(PKG / "window" / "pages.py")
+    recordings = pages.split("class RecordingsPage")[1].split("\nclass ")[0]
+    assert "self._arm_refresh(view.listening)" in recordings and "GLib." not in recordings
+    mixin = pages.split("class Refreshing")[1].split("\nclass ")[0]
+    assert mixin.count("GLib.timeout_add_seconds(") == 1 and "shell.run" not in mixin
 
 
 def test_a_project_that_is_put_away_or_deleted_is_closed_and_a_new_one_is_chosen_after_it_is_made():
@@ -185,6 +222,8 @@ def _tour(tmp_path):
     os.makedirs(working + "/train")
     Path(working + "/train/a.pt").write_bytes(b"c" * 2000)
     home = work / "home"
+    from vs_recordings_helpers import pairs_folder
+    pairs_folder(home, 3, "tour-files")                  # the tour brings these in through the Recordings page
     if RUNNER:
         inside = "/mnt/scratch/" + work.name + "/home"
         argv = RUNNER.split() + ["env", "HOME=" + inside, "PYTHONPATH=/mnt/tools", "PYTHONDONTWRITEBYTECODE=1", "G_DEBUG=fatal-criticals", "xvfb-run", "-a", "python3", "-m", "voice_studio.window", "--selftest"]
@@ -200,7 +239,7 @@ def test_the_real_window_passes_its_own_tour_on_a_virtual_display(tmp_path):
     assert done.returncode == 0, done.stdout[-1500:] + done.stderr[-1500:]
     report = json.loads(done.stdout.strip().splitlines()[-1])
     assert report["failed"] == [] and report["unnamed_controls"] == {} and report["smallest_text_pt"] >= 12.0 and report["animations_off"] is True
-    assert report["pages"] == ["Projects", "Training rounds", "Voice file", "Free up space", "Display"] and report["project_opened"] == "voice-check"
+    assert report["pages"] == ["Projects", "Recordings", "Training rounds", "Voice file", "Free up space", "Display"] and report["project_opened"] == "voice-check"
     for key in ("the_chosen_round_has_no_choose_button", "no_is_the_default_widget", "pages_locked_while_a_question_waits", "a_second_task_is_refused_while_busy", "pages_unlocked_after",
                 "result_head_for_nothing", "result_head_for_done", "remove_button_off_when_nothing_is_ticked", "free_question_names_only_the_ticked", "result_head_for_a_problem",
                 "no_is_where_the_focus_starts", "yes_is_not_the_default", "question_has_no_typed_instruction", "choose_question_shown", "no_answered", "no_changed_nothing", "yes_answered", "yes_chose_it", "free_question_shown", "free_no_answered", "make_finished", "make_said_why",
@@ -209,8 +248,18 @@ def test_the_real_window_passes_its_own_tour_on_a_virtual_display(tmp_path):
                 "a_no_is_said_in_the_result", "after_a_no_nothing_asks_and_nothing_is_written", "smaller_text_is_off_at_the_smallest_step", "asks_again_after_a_fresh_start",
                 "a_yes_writes_the_small_file", "the_file_is_owner_only_and_small", "a_yes_is_said_in_the_result", "later_changes_are_written_without_asking", "the_page_says_where_they_are_kept",
                 "removing_lists_the_files_first", "removing_names_both_files", "a_no_to_removing_keeps_both", "a_yes_removes_them_and_the_window_asks_again_next_time",
-                "the_window_keeps_its_look_after_removing", "standard_look_comes_back"):
+                "the_window_keeps_its_look_after_removing", "standard_look_comes_back",
+                "recordings_page_buttons_are_named", "the_steps_that_need_recordings_are_off_until_there_are_some", "bring_in_is_always_there", "import_form_opens_as_the_question_on_the_screen",
+                "import_form_controls_are_named", "no_kind_is_chosen_for_the_person", "import_form_says_what_is_missing_and_stays_open", "a_package_is_picked_as_one_zip_file",
+                "files_are_picked_as_a_folder_or_a_zip", "the_table_name_shows_only_for_a_table", "changing_the_kind_forgets_the_place_chosen", "the_file_chooser_opens",
+                "the_file_chooser_closes_and_chooses_nothing", "cancel_closes_the_form_and_does_nothing", "import_shows_what_it_found_before_it_asks", "a_no_adds_nothing"):
         assert report[key] is True, key
+    assert report["import_yes_check"] in ("ran", "skipped: no ffmpeg on this computer")
+    if report["import_yes_check"] == "ran":
+        for key in ("a_yes_adds_the_files_as_a_recording_waiting_to_be_listened_to", "the_page_now_offers_listening", "listening_without_the_studio_programs_says_so_and_starts_nothing", "recordings_page_controls_are_named_after"):
+            assert report[key] is True, key
+    else:
+        assert RUNNER or not shutil.which("ffmpeg"), "the yes part of the tour is skipped only where ffmpeg is not installed (the 4.6 chroot has none)"
     assert "Gtk-CRITICAL" not in done.stderr and "Gtk-WARNING" not in done.stderr
     if RUNNER:
         assert report["gtk"].startswith("4.6.")

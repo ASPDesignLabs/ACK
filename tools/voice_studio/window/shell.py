@@ -10,7 +10,7 @@ from ..core import windowmodel as wm
 from ..core import windowprefs as wp
 from . import a11y, dialogs, sizing
 from .gtkload import GLib, Gtk
-from .pages import DisplayPage, FreePage, Page, ProjectsPage, RoundsPage, VoiceFilePage
+from .pages import DisplayPage, FreePage, Page, ProjectsPage, RecordingsPage, RoundsPage, VoiceFilePage
 from .theme import Appearance
 
 PULSE_MS = 150
@@ -63,10 +63,10 @@ class Shell(Gtk.ApplicationWindow):
         middle = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, vexpand=True)
         sizing.track(middle, spacing=12)
         self.stack = Gtk.Stack(hexpand=True, vexpand=True, transition_type=Gtk.StackTransitionType.NONE)
-        self.pages: List[Page] = [ProjectsPage(self), RoundsPage(self), VoiceFilePage(self), FreePage(self), DisplayPage(self)]
-        names = ("projects", "rounds", "voicefile", "free", "display")
-        titles = (cat.t("window.nav.projects"), cat.t("window.nav.rounds"), cat.t("window.nav.voicefile"), cat.t("window.nav.free"), cat.t("window.nav.display"))
-        for page, key, title in zip(self.pages, names, titles):
+        self.pages: List[Page] = [ProjectsPage(self), RecordingsPage(self), RoundsPage(self), VoiceFilePage(self), FreePage(self), DisplayPage(self)]
+        self.page_names = ("projects", "recordings", "rounds", "voicefile", "free", "display")
+        titles = (cat.t("window.nav.projects"), cat.t("window.nav.recordings"), cat.t("window.nav.rounds"), cat.t("window.nav.voicefile"), cat.t("window.nav.free"), cat.t("window.nav.display"))
+        for page, key, title in zip(self.pages, self.page_names, titles):
             self.stack.add_titled(page.widget, key, title)
         self.sidebar = Gtk.StackSidebar(stack=self.stack, css_classes=["ack-nav"])
         sizing.track(self.sidebar, width_request=230)
@@ -76,6 +76,10 @@ class Shell(Gtk.ApplicationWindow):
         outer.append(middle)
         outer.append(self._build_result())
         self.set_child(outer)
+
+    def page(self, name: str) -> Page:
+        """The page with this name (one of `page_names`)."""
+        return self.pages[self.page_names.index(name)]
 
     def _build_header(self) -> Gtk.Widget:
         """ACK's header: the name large, what this is under it, the project, and the two buttons that change the size of the text (the rest of the display choices are on their own page)."""
@@ -196,7 +200,7 @@ class Shell(Gtk.ApplicationWindow):
         if announce:
             self.set_result(0, (self.cat.t("window.projects.opened", name=project.name),))
         self.refresh()
-        self.stack.set_visible_child_name("rounds")
+        self.stack.set_visible_child_name("recordings")
 
     def refresh(self) -> None:
         self._close_project_if_gone()

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from vs_recordings_helpers import needs_ffmpeg, pairs_folder
 from vs_rounds_helpers import DATASET, NOW, slurp
 from vs_voicefile_helpers import ProjectRig, TOOLS, finished_rounds, tree_of, write_settings
 from voice_studio.core import freeup, rounds as rd, rounds_flow as rf, text, windowio as wio, windowmodel as wm
@@ -389,3 +390,123 @@ def test_deleting_a_project_asks_twice_with_the_list_in_the_first_question_and_a
 
 def test_the_projects_command_is_one_of_the_tools_and_its_heading_is_the_windows_own(rig):
     assert "projects" in wm.TOOLS and CAT.t("projects.title") in full_services(rig).titles()
+
+
+# ---------------------------------------------------------------- recordings from the window
+
+def press_recordings(rig, button, sink):
+    tool, argv = button
+    svc = full_services(rig)
+    wio.start_run(lambda io: svc.run(tool, argv, io), sink, svc.titles())
+    assert sink.done.wait(30)
+    return sink.result
+
+
+def test_the_recordings_command_is_one_of_the_tools_and_its_heading_is_the_windows_own(rig):
+    assert "recordings" in wm.TOOLS and CAT.t("recordings.title") in full_services(rig).titles()
+    assert wm.Services(rig.home, None, CAT, rig.training_env, rig.system).studio() == (None, "absent"), "with nobody saying where the studio programs are, they are not there"
+
+
+def test_a_project_with_no_recordings_says_so_offers_to_bring_some_in_and_has_nothing_to_listen_to_or_make(rig):
+    view = wm.recordings_view(rig.home, "voice-check", CAT)
+    assert view.lines == ("There are no recordings in this project yet.",) and view.next_step == "import" and view.next_line == "Bring some recordings in to begin."
+    assert (view.listening, view.can_listen, view.can_make, view.project_name, view.folder) == (False, False, False, "Voice check", rig.paths.recordings)
+
+
+def test_the_recordings_view_uses_the_very_lines_the_terminal_prints_and_names_what_failed(rig):
+    from vs_recordings_helpers import write_take
+    from voice_studio.core import recordings_flow as rcf, recordings as rec
+    write_take(rig.paths.recordings, "t20261001-100000-aaaa", status="ready", duration=120.0, label="Morning")
+    write_take(rig.paths.recordings, "t20261002-100000-bbbb", status="error", label="Broken")
+    view = wm.recordings_view(rig.home, "voice-check", CAT)
+    shown = rcf.show_lines(rec.read_takes(rig.paths.recordings), None, CAT)
+    assert view.lines[:len(shown)] == tuple(shown) and view.lines[-1] == "1 recording could not be finished. Look at it on the Review page."
+
+
+@pytest.mark.parametrize("takes, listening, step, can_listen, can_make", [
+    ([("ready", 60.0)], None, "set", False, True),
+    ([("ready", 60.0), ("finishing", None)], None, "finish", True, True),
+    ([("finishing", None)], None, "finish", True, False),
+    ([("transcribing", None)], "running", "wait", False, False),
+    ([("ready", 60.0), ("transcribing", None)], "running", "wait", False, True),
+    ([("transcribing", None)], "interrupted", "finish", True, False),
+])
+def test_what_the_page_offers_follows_what_is_in_the_project(rig, takes, listening, step, can_listen, can_make):
+    from vs_recordings_helpers import write_take
+    from vs_rounds_helpers import fake_job
+    for n, (status, duration) in enumerate(takes):
+        write_take(rig.paths.recordings, "t20261001-10000%d-aaaa" % n, status=status, duration=duration)
+    if listening:
+        os.makedirs(rig.home.jobs, exist_ok=True)
+        fake_job(rig.home.jobs, ["x"], listening, kind="process", project="voice-check")
+    view = wm.recordings_view(rig.home, "voice-check", CAT)
+    assert (view.next_step, view.can_listen, view.can_make, view.listening) == (step, can_listen, can_make, listening == "running")
+    assert view.next_line == {"set": "When there is enough speech, make a training set.", "finish": "Let the computer listen to the recordings that are waiting.",
+                              "wait": "The computer is listening. Look again in a little while."}[step]
+
+
+def test_the_recordings_of_a_project_that_is_not_there_or_put_away_are_none(rig):
+    from voice_studio.core.project import load_project, save_project, with_archived
+    assert wm.recordings_view(rig.home, "nobody", CAT) is None
+    save_project(rig.paths, with_archived(load_project(rig.paths), True))
+    assert wm.recordings_view(rig.home, "voice-check", CAT) is None
+
+
+def test_looking_at_the_recordings_writes_nothing(rig):
+    from vs_recordings_helpers import write_take
+    write_take(rig.paths.recordings, "t20261001-100000-aaaa", status="finishing", duration=None)
+    before = tree_of(rig.home.home)
+    wm.recordings_view(rig.home, "voice-check", CAT)
+    assert tree_of(rig.home.home) == before
+
+
+def test_the_import_form_says_everything_it_lacks_before_anything_runs():
+    assert wm.check_import(CAT, "pairs", "/a/folder", "") == ()
+    assert wm.check_import(CAT, "", "", "") == ("Choose what kind of data it is.", "Choose where it is.")
+    assert wm.check_import(CAT, "zip", "/a", "") == ("Choose what kind of data it is.",)
+    assert wm.check_import(CAT, "audio", "", "") == ("Choose where it is.",)
+    assert wm.check_import(CAT, "pairs", "/a\nb", "") == ("Choose where it is.",) and wm.check_import(CAT, "pairs", "/a\x00b", "") == ("Choose where it is.",)
+    assert wm.check_import(CAT, "table", "/a", "metadata.csv") == () and wm.check_import(CAT, "table", "/a", "x" * wm.MAX_TABLE_NAME) == ()
+    assert wm.check_import(CAT, "table", "/a", "x" * (wm.MAX_TABLE_NAME + 1)) == ("The table's file name must be one line of text.",)
+    assert wm.check_import(CAT, "table", "/a", "one\ntwo") == ("The table's file name must be one line of text.",)
+    assert wm.check_import(CAT, "pairs", "/a", "one\ntwo") == (), "a table name is not looked at for any other kind"
+
+
+def test_the_recordings_buttons_are_the_words_of_the_terminal_command():
+    assert wm.import_args("anna", "pairs", "/data/voice") == ("recordings", ["import", "--kind=pairs", "--project", "anna", "--", "/data/voice"])
+    assert wm.import_args("anna", "package", "/data/p.zip") == ("recordings", ["import", "--kind=package", "--project", "anna", "--", "/data/p.zip"])
+    assert wm.import_args("anna", "table", "/d", "metadata.csv") == ("recordings", ["import", "--kind=table", "--table=metadata.csv", "--project", "anna", "--", "/d"])
+    assert wm.import_args("anna", "table", "/d", "") == ("recordings", ["import", "--kind=table", "--project", "anna", "--", "/d"])
+    assert "--table=x" not in wm.import_args("anna", "audio", "/d", "x")[1], "a table name goes only with the table kind"
+    assert wm.import_args("anna", "audio", "--yes") == ("recordings", ["import", "--kind=audio", "--project", "anna", "--", "--yes"]), "a place that begins with hyphens is a place, never an option"
+    assert wm.finish_args("anna") == ("recordings", ["finish", "--project", "anna"])
+    assert wm.preview_set_args("anna") == ("recordings", ["set", "--preview", "--project", "anna"]) and wm.make_set_args("anna") == ("recordings", ["set", "--project", "anna"])
+
+
+def test_a_place_that_begins_with_hyphens_is_taken_as_a_place_by_the_command_itself(rig, tmp_path):
+    code, lines = press_recordings(rig, wm.import_args("voice-check", "audio", "--yes"), Script())
+    assert code == 1 and "The place you chose is not a folder, or a zip file that holds one." in " ".join(lines)
+
+
+def test_finishing_without_the_studio_programs_says_so_and_starts_nothing(rig):
+    from vs_recordings_helpers import write_take
+    write_take(rig.paths.recordings, "t20261001-100000-aaaa", status="finishing", duration=None)
+    sink = Script(True)
+    code, lines = press_recordings(rig, wm.finish_args("voice-check"), sink)
+    assert code == 2 and "The studio programs are not ready (Not set up yet)." in " ".join(lines) and sink.questions == []
+    assert not os.path.exists(rig.home.jobs) or os.listdir(rig.home.jobs) == []
+
+
+@needs_ffmpeg
+def test_bringing_files_in_asks_once_with_buttons_and_only_a_yes_adds_them(rig, tmp_path):
+    from voice_studio.core import recordings as rec
+    folder = pairs_folder(tmp_path, 2)
+    sink = Script(False)
+    code, lines = press_recordings(rig, wm.import_args("voice-check", "pairs", str(folder)), sink)
+    assert code == 2 and sink.questions[0][1] == "Add 2 files to Voice check?" and "The sentences you give are kept as a check." in " ".join(sink.questions[0][0])
+    assert rec.read_takes(rig.paths.recordings).total == 0
+    sink = Script(True)
+    code, lines = press_recordings(rig, wm.import_args("voice-check", "pairs", str(folder)), sink)
+    assert code == 0 and rec.read_takes(rig.paths.recordings).waiting == 1 and "2 audio files were added." in " ".join(lines)
+    view = wm.recordings_view(rig.home, "voice-check", CAT)
+    assert view.can_listen and view.next_step == "finish"

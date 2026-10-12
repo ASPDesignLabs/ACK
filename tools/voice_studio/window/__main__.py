@@ -8,9 +8,10 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from ..__main__ import TerminalIO
-from ..core import jobs, windowmodel as wm
+from ..core import envfind, jobs, windowmodel as wm
 from ..core import showfolder
 from ..core.registry import load_registry
+from ..core.system import RealSystem
 from ..core.paths import DataHome
 from ..core.text import load_catalog
 from ..core.windowcli import run_window_cli
@@ -24,7 +25,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     home_dir = os.path.expanduser("~")
     home, registry, cat = DataHome(home_dir), load_registry(), load_catalog("en")
-    services = wm.real_services(home, registry, cat, training_environment(home, registry))
+    services = wm.real_services(home, registry, cat, training_environment(home, registry), envfind.resolver("studio", home, registry, RealSystem()))
 
     def start() -> int:
         from . import app
