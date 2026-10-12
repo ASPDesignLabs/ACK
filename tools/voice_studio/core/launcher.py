@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 APP_ID = "org.aspdesignlabs.AckVoiceStudio"
 MARKER = "X-ACK-Voice-Studio-Launcher=1"
+SYSTEM_ENTRY = "/usr/share/applications/%s.desktop" % APP_ID                      # the folder WSLg reads (its own log lists it): on WSL the Start menu is made from system folders only
+SYSTEM_ICON = "/usr/share/icons/hicolor/scalable/apps/%s.svg" % APP_ID
 SAFE_PATH = re.compile(r"^/[A-Za-z0-9_./+@:,=~-]+$")           # no space or symbol that the Desktop Entry format would need quoting rules for
 STATES = ("new", "same", "update", "foreign")                   # foreign: a file of that name is there and is not ours
 
@@ -34,6 +37,16 @@ def desktop_path(home: str) -> str:
 
 def icon_path(home: str) -> str:
     return "%s/.local/share/icons/hicolor/scalable/apps/%s.svg" % (home.rstrip("/"), APP_ID)
+
+
+def system_copy_commands(home: str) -> Tuple[str, ...]:
+    """The commands that put the two files where WSLg reads them. They are only ever printed for the person to run (the tool never asks for a password and never runs sudo)."""
+    return ("sudo install -D -m 0644 %s %s" % (shlex.quote(desktop_path(home)), shlex.quote(SYSTEM_ENTRY)),
+            "sudo install -D -m 0644 %s %s" % (shlex.quote(icon_path(home)), shlex.quote(SYSTEM_ICON)))
+
+
+def system_remove_command() -> str:
+    return "sudo rm %s %s" % (shlex.quote(SYSTEM_ENTRY), shlex.quote(SYSTEM_ICON))
 
 
 def desktop_text(python: str, tools_dir: str, name: str, comment: str) -> str:

@@ -740,9 +740,11 @@ It needs the system Python, the one that has Ubuntu's GTK package, so the comman
   ```bash
   PYTHONPATH=~/ack-tools/tools /usr/bin/python3 -m voice_studio.window --install-launcher
   ```
-  → `This would write, in your own folders:` and the two paths (under `~/.local/share`), `It changes nothing else and needs no administrator rights.` and `Write these files now?`. Type **`no`** first: `Nothing was done.` and no file exists. Run it again and type **`yes`**: `Done. The menu entry is in place.` Then look in the Windows Start menu for **ACK Voice Studio** (it can take a minute, or need `wsl --shutdown` from Windows and a new Ubuntu window).
-  Write down: whether it appears, how long it took, whether it has the icon (five white bars on a dark blue square), whether it starts the window with no terminal open, and whether the window then looks the same.
-- [ ] **Take the menu entry away again** (only if you want to; the files are only ever removed if this tool made them):
+  → `This would write, in your own folders:` and the two paths (under `~/.local/share`), `It changes nothing else and needs no administrator rights.` and `Write these files now?`. Type **`no`** first: `Nothing was done.` and no file exists. Run it again and type **`yes`**: `Done. The menu entry is in place.`
+  **On WSL that is not enough, and the tool says so:** `WSL fills the Windows Start menu from the system folders only, not from your own. So the entry is not in the Start menu yet.` (the developer's first try, 2026-10-12, showed exactly that, and WSLg's own log, `/mnt/wslg/weston.log`, lists the folders it watches: `/usr/share/applications` and the snap folder; `/usr/local/share/applications` and the Flatpak folder were skipped because they do not exist;
+  your own `~/.local/share/applications` is not on the list). It then prints two `sudo install` commands and says that they ask for your password and that this tool never runs them. Run those two commands yourself, in the same terminal, when you are ready; then `WSL watches that folder, so it needs no restart.`
+  Look in the Windows Start menu for **ACK Voice Studio**. Write down: whether it appears and how long it took, whether it has the icon (five white bars on a dark blue square; whether WSLg shows an SVG icon at all is not known, so a plain default icon is a result worth reporting), whether it starts the window with no terminal open, and whether the window then looks the same.
+- [ ] **Take the menu entry away again** (only if you want to; the files in your own folders are only ever removed if this tool made them, and a copy you made with `sudo` is never removed by the tool, which prints the command for it):
   ```bash
   PYTHONPATH=~/ack-tools/tools /usr/bin/python3 -m voice_studio.window --remove-launcher
   ```

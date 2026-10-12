@@ -210,11 +210,11 @@ def test_a_failed_write_says_so_and_leaves_no_half_written_file(tmp_path, monkey
 
 # ---------------------------------------------------------------- the command line
 
-def cli(tmp_path, *argv, toolkit=None, answers=(), interactive=True, started=None, tools=TOOLS, python=PYTHON):
+def cli(tmp_path, *argv, toolkit=None, answers=(), interactive=True, started=None, tools=TOOLS, python=PYTHON, wsl=False, system_entry=False):
     io = Terminal(answers, interactive)
     tk = toolkit or wc.Toolkit(True, version="4.6.9")
     code = wc.run_window_cli(list(argv), str(tmp_path), python, tools, ICON, CAT, io, toolkit=lambda: tk, start=lambda: (started.append(1) if started is not None else None) or 0,
-                             selftest=lambda: 7)
+                             selftest=lambda: 7, on_wsl=wsl, exists=lambda path: system_entry and path == launcher.SYSTEM_ENTRY)
     assert leaked_keys(io.text + "\n".join(io.prompts)) == [] and implies_permission(io.text) == []
     return code, io
 
@@ -280,9 +280,57 @@ def test_a_terminal_with_nobody_at_it_is_never_asked_even_if_answers_are_waiting
 def test_install_with_yes_or_a_typed_yes_writes_and_a_second_run_changes_nothing(tmp_path):
     code, io = cli(tmp_path, "--install-launcher", answers=["yes"])
     assert code == 0 and Path(launcher.desktop_path(str(tmp_path))).exists() and "Done. The menu entry is in place." in io.lines
-    assert any(l.startswith("On Windows with WSL it appears in the Start menu") for l in io.lines)
+    assert "It appears in the applications list of your desktop." in io.lines and not any("WSL" in l or "sudo" in l for l in io.lines)
     code, io = cli(tmp_path, "--install-launcher", "--yes")
     assert code == 0 and "The menu entry is already in place and up to date. Nothing was changed." in io.lines and io.prompts == []
+
+
+def test_on_wsl_install_says_why_the_entry_is_not_in_the_start_menu_and_prints_the_commands_it_never_runs(tmp_path):
+    code, io = cli(tmp_path, "--install-launcher", "--yes", wsl=True)
+    assert code == 0 and "Done. The menu entry is in place." in io.lines
+    assert "WSL fills the Windows Start menu from the system folders only, not from your own. So the entry is not in the Start menu yet." in io.lines
+    assert "To put it there, copy the two files with these commands. They ask for your password, and this tool never runs them:" in io.lines
+    assert "  sudo install -D -m 0644 %s /usr/share/applications/%s.desktop" % (launcher.desktop_path(str(tmp_path)), launcher.APP_ID) in io.lines
+    assert "  sudo install -D -m 0644 %s /usr/share/icons/hicolor/scalable/apps/%s.svg" % (launcher.icon_path(str(tmp_path)), launcher.APP_ID) in io.lines
+    assert "WSL watches that folder, so it needs no restart." in io.lines
+    assert "To take it away again later, run: sudo rm /usr/share/applications/%s.desktop /usr/share/icons/hicolor/scalable/apps/%s.svg" % (launcher.APP_ID, launcher.APP_ID) in io.lines
+    assert "It appears in the applications list of your desktop." not in io.lines
+
+
+def test_the_notes_are_given_again_when_the_entry_was_already_in_place_and_not_when_a_question_is_declined(tmp_path):
+    cli(tmp_path, "--install-launcher", "--yes", wsl=True)
+    code, io = cli(tmp_path, "--install-launcher", "--yes", wsl=True)
+    assert code == 0 and "The menu entry is already in place and up to date. Nothing was changed." in io.lines and any(l.startswith("  sudo install -D") for l in io.lines)
+    other = tmp_path / "other"
+    other.mkdir()
+    code, io = cli(other, "--install-launcher", answers=["no"], wsl=True)
+    assert code == 2 and not any("sudo" in l for l in io.lines)
+
+
+def test_when_the_system_copy_is_already_there_the_commands_are_not_repeated(tmp_path):
+    code, io = cli(tmp_path, "--install-launcher", "--yes", wsl=True, system_entry=True)
+    assert code == 0 and "The copy that WSL reads is already in the system folder: %s" % launcher.SYSTEM_ENTRY in io.lines and not any(l.startswith("  sudo") for l in io.lines)
+
+
+def test_removing_on_wsl_says_how_to_remove_a_system_copy_and_never_removes_it(tmp_path):
+    cli(tmp_path, "--install-launcher", "--yes")
+    code, io = cli(tmp_path, "--remove-launcher", "--yes", wsl=True, system_entry=True)
+    assert code == 0 and any(l.startswith("A copy in the system folder is still there, and this tool does not remove it. To remove it, run: sudo rm ") for l in io.lines)
+    code, io = cli(tmp_path, "--remove-launcher", "--yes", wsl=True, system_entry=True)
+    assert "There is no menu entry made by this tool to remove." in io.lines and any(l.startswith("A copy in the system folder is still there") for l in io.lines)
+    code, io = cli(tmp_path, "--remove-launcher", "--yes", wsl=True, system_entry=False)
+    assert not any("system folder" in l for l in io.lines)
+    code, io = cli(tmp_path, "--remove-launcher", "--yes", wsl=False, system_entry=True)
+    assert not any("system folder" in l for l in io.lines)
+
+
+def test_the_commands_quote_a_home_folder_with_a_space_and_the_tool_itself_runs_nothing():
+    first, second = launcher.system_copy_commands("/home/an na")
+    assert first == "sudo install -D -m 0644 '/home/an na/.local/share/applications/%s.desktop' /usr/share/applications/%s.desktop" % (launcher.APP_ID, launcher.APP_ID)
+    assert second.startswith("sudo install -D -m 0644 '/home/an na/.local/share/icons/")
+    for name in ("launcher.py", "windowcli.py"):
+        code = (Path(__file__).resolve().parents[1] / "core" / name).read_text()
+        assert "subprocess" not in code and "os.system" not in code and ".run(" not in code and ".start(" not in code, name
 
 
 def test_install_refuses_a_file_it_did_not_make_and_says_which(tmp_path):

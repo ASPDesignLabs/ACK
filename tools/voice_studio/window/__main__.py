@@ -9,6 +9,7 @@ from typing import Optional, Sequence
 
 from ..__main__ import TerminalIO
 from ..core import jobs, windowmodel as wm
+from ..core import showfolder
 from ..core.registry import load_registry
 from ..core.paths import DataHome
 from ..core.text import load_catalog
@@ -33,7 +34,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         from . import selftest as tour
         return tour.run(services)
 
-    return run_window_cli(args, home_dir, sys.executable, str(jobs.TOOLS_DIR), ICON.read_text(encoding="utf-8"), cat, TerminalIO(), toolkit=toolkit, start=start, selftest=selftest)
+    return run_window_cli(args, home_dir, sys.executable, str(jobs.TOOLS_DIR), ICON.read_text(encoding="utf-8"), cat, TerminalIO(), toolkit=toolkit, start=start, selftest=selftest,
+                          on_wsl=showfolder.on_wsl(services.system))
 
 
 if __name__ == "__main__":

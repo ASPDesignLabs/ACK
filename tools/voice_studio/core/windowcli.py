@@ -67,7 +67,21 @@ def _confirm(parsed, question: str, cat: Catalog, io: IO) -> Optional[int]:
     return None
 
 
-def _install(parsed, home: str, python: str, tools_dir: str, icon_text: str, cat: Catalog, io: IO) -> int:
+def _wsl_notes(home: str, exists: Callable[[str], bool], cat: Catalog, io: IO) -> None:
+    """On WSL the Start menu is made from the system folders only (WSLg's own log lists them, and the person's `~/.local/share/applications` is not among them), so the entry is not in the
+    Start menu until the two files are copied there. That needs a password, so the commands are shown for the person to run and the tool runs nothing."""
+    if exists(launcher.SYSTEM_ENTRY):
+        io.say(cat.t("window.launcher.wsl_present", path=launcher.SYSTEM_ENTRY))
+        return
+    io.say(cat.t("window.launcher.wsl_why"))
+    io.say(cat.t("window.launcher.wsl_ask"))
+    for command in launcher.system_copy_commands(home):
+        io.say("  " + command)
+    io.say(cat.t("window.launcher.wsl_after"))
+    io.say(cat.t("window.launcher.wsl_undo", command=launcher.system_remove_command()))
+
+
+def _install(parsed, home: str, python: str, tools_dir: str, icon_text: str, cat: Catalog, io: IO, on_wsl: bool, exists: Callable[[str], bool]) -> int:
     io.say(cat.t("window.launcher.title"))
     try:
         plan = launcher.plan_install(home, python, tools_dir, cat.t("window.launcher.name"), cat.t("window.launcher.comment"), icon_text)
@@ -81,6 +95,8 @@ def _install(parsed, home: str, python: str, tools_dir: str, icon_text: str, cat
         return EXIT_PROBLEM
     if not plan.changes:
         io.say(cat.t("window.launcher.already"))
+        if on_wsl:
+            _wsl_notes(home, exists, cat, io)
         return EXIT_OK
     io.say(cat.t("window.launcher.plan_head"))
     for target in plan.targets:
@@ -95,17 +111,23 @@ def _install(parsed, home: str, python: str, tools_dir: str, icon_text: str, cat
     except launcher.LauncherError as error:
         return _launcher_problem(error, cat, io)
     io.say(cat.t("window.launcher.done"))
-    io.say(cat.t("window.launcher.where"))
+    if on_wsl:
+        _wsl_notes(home, exists, cat, io)
+    else:
+        io.say(cat.t("window.launcher.where"))
     return EXIT_OK
 
 
-def _remove(parsed, home: str, cat: Catalog, io: IO) -> int:
+def _remove(parsed, home: str, cat: Catalog, io: IO, on_wsl: bool, exists: Callable[[str], bool]) -> int:
     io.say(cat.t("window.launcher.title"))
     plan = launcher.plan_remove(home)
     for path in plan.foreign:
         io.say(cat.t("window.launcher.foreign_left", path=path))
+    copy_left = on_wsl and exists(launcher.SYSTEM_ENTRY)
     if not plan.paths:
         io.say(cat.t("window.launcher.none"))
+        if copy_left:
+            io.say(cat.t("window.launcher.wsl_remove", command=launcher.system_remove_command()))
         return EXIT_OK
     io.say(cat.t("window.launcher.remove_head"))
     for path in plan.paths:
@@ -118,6 +140,8 @@ def _remove(parsed, home: str, cat: Catalog, io: IO) -> int:
     except launcher.LauncherError as error:
         return _launcher_problem(error, cat, io)
     io.say(cat.t("window.launcher.removed"))
+    if copy_left:
+        io.say(cat.t("window.launcher.wsl_remove", command=launcher.system_remove_command()))
     return EXIT_OK
 
 
@@ -131,7 +155,7 @@ def _launcher_problem(error: launcher.LauncherError, cat: Catalog, io: IO) -> in
 
 
 def run_window_cli(argv: Sequence[str], home: str, python: str, tools_dir: str, icon_text: str, cat: Catalog, io: IO, *, toolkit: Callable[[], Toolkit],
-                   start: Callable[[], int], selftest: Optional[Callable[[], int]] = None) -> int:
+                   start: Callable[[], int], selftest: Optional[Callable[[], int]] = None, on_wsl: bool = False, exists: Callable[[str], bool] = os.path.exists) -> int:
     """`python3 -m voice_studio.window [--check | --install-launcher | --remove-launcher] [--yes]`. With none of them the window starts, if GTK can."""
     try:
         parsed = parse_args(argv, flags=FLAGS, values={}, max_words=0)
@@ -144,9 +168,9 @@ def run_window_cli(argv: Sequence[str], home: str, python: str, tools_dir: str, 
     if "check" in parsed.flags:
         return _check(toolkit(), python, cat, io)
     if "install" in parsed.flags:
-        return _install(parsed, home, python, tools_dir, icon_text, cat, io)
+        return _install(parsed, home, python, tools_dir, icon_text, cat, io, on_wsl, exists)
     if "remove" in parsed.flags:
-        return _remove(parsed, home, cat, io)
+        return _remove(parsed, home, cat, io, on_wsl, exists)
     if "selftest" in parsed.flags:
         return selftest() if selftest is not None else EXIT_PROBLEM
     tk = toolkit()
