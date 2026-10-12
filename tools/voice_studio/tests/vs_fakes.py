@@ -58,6 +58,14 @@ class FakeSystem:
         self.dirs, self.unwritable = set(dirs), set(unwritable)
         self.devices, self.symlinks, self.lsblk, self.listings = dict(devices or {}), dict(symlinks or {}), lsblk, dict(listings or {})
         self.ran = []
+        self.started = []                    # programs started and left (System.start), in order
+        self.cannot_start = set()            # names of programs that cannot be started
+
+    def start(self, argv):
+        if os.path.basename(argv[0]) in self.cannot_start:
+            return False
+        self.started.append(tuple(argv))
+        return True
 
     def read_text(self, path):
         return self.files.get(path)

@@ -6,16 +6,9 @@ its window opens, so a program that could be started counts as success and nothi
 """
 from __future__ import annotations
 
-import subprocess
-from typing import Callable, List, Optional, Sequence, Tuple
+from typing import List, Tuple
 
 from .system import System
-
-Spawn = Callable[[Sequence[str]], object]
-
-
-def _spawn(argv: Sequence[str]) -> object:
-    return subprocess.Popen(list(argv), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 
 
 def on_wsl(system: System) -> bool:
@@ -37,13 +30,9 @@ def attempts(path: str, system: System) -> List[Tuple[str, ...]]:
     return found
 
 
-def open_folder(path: str, system: System, spawn: Optional[Spawn] = None) -> bool:
-    """True when a file manager could be started for the folder; False when there is none to try or none could be started."""
-    start = spawn or _spawn
+def open_folder(path: str, system: System) -> bool:
+    """True when a file manager could be started for the folder; False when there is none to try or none could be started. Starting a program goes through System (plan section 3)."""
     for argv in attempts(path, system):
-        try:
-            start(argv)
-        except (OSError, subprocess.SubprocessError):
-            continue
-        return True
+        if system.start(argv):
+            return True
     return False

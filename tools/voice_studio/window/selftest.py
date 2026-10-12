@@ -95,6 +95,7 @@ def run(services: wm.Services) -> int:
     shell.pages[1].refresh()
     other = next((i.number for i in wm.rounds_view(services.home, pid, cat).items if i.can_choose), None)
     checks["a_round_can_be_chosen"] = other is not None
+    checks["the_chosen_round_has_no_choose_button"] = find(shell.pages[1].widget, cat.t("window.rounds.choose_name", number=chosen)) is None
     if other is not None:
         button = find(shell.pages[1].widget, cat.t("window.rounds.choose_name", number=other))
         checks["choose_button_found"] = button is not None
@@ -106,25 +107,38 @@ def run(services: wm.Services) -> int:
             no_button = shell.dialog.get_widget_for_response(Gtk.ResponseType.CANCEL)
             checks["no_is_where_the_focus_starts"] = shell.dialog.get_focus() is no_button and no_button.get_label() == cat.t("window.dialog.no")
             checks["yes_is_not_the_default"] = shell.dialog.get_widget_for_response(Gtk.ResponseType.YES).get_label() == cat.t("window.dialog.yes")
+            checks["no_is_the_default_widget"] = shell.dialog.get_default_widget() is no_button
+            checks["pages_locked_while_a_question_waits"] = not shell.stack.get_sensitive() and not shell.sidebar.get_sensitive()
+            handle = shell.run_handle
+            shell.run(wm.back_args(pid))
+            checks["a_second_task_is_refused_while_busy"] = shell.run_handle is handle
             checks["question_has_no_typed_instruction"] = "Type yes" not in " ".join(w.get_label() for w in labels(shell.dialog.get_content_area()))
-        shell.dialog.response(Gtk.ResponseType.CANCEL) if question_ok else None
+        shell.dialog.response(Gtk.ResponseType.DELETE_EVENT) if question_ok else None        # any answer that is not Yes is a No
         checks["no_answered"] = pump(lambda: not shell.busy and shell.dialog is None and shell.last_result[0] == 2)
+        checks["pages_unlocked_after"] = shell.stack.get_sensitive() and shell.sidebar.get_sensitive()
+        checks["result_head_for_nothing"] = shell.result_label.get_label().splitlines()[0] == cat.t("window.result.nothing") and "Nothing was done." in shell.result_label.get_label()
         checks["no_changed_nothing"] = rd.load(wm.open_project(services.home, pid).paths).current == chosen
         shell.pages[1].refresh()
         find(shell.pages[1].widget, cat.t("window.rounds.choose_name", number=other)).emit("clicked")
         pump(lambda: shell.dialog is not None)
         shell.dialog.response(Gtk.ResponseType.YES) if shell.dialog is not None else None
         checks["yes_answered"] = pump(lambda: not shell.busy and shell.dialog is None and shell.last_result[0] == 0)
+        checks["result_head_for_done"] = shell.result_label.get_label().splitlines()[0] == cat.t("window.result.ok")
         checks["yes_chose_it"] = rd.load(wm.open_project(services.home, pid).paths).current == other
 
     shell.stack.set_visible_child_name("free")
     shell.pages[3].refresh()
     free_page = shell.pages[3]
     if free_page.checks:
+        checks["remove_button_off_when_nothing_is_ticked"] = not free_page.remove.get_sensitive()
         free_page.checks[0][0].set_active(True)
         checks["remove_button_ready"] = free_page.remove.get_sensitive()
         free_page.remove.emit("clicked")
         checks["free_question_shown"] = pump(lambda: shell.dialog is not None)
+        if shell.dialog is not None:
+            shown = " ".join(w.get_label() for w in labels(shell.dialog.get_content_area()))
+            others = [item.line for _check, item in free_page.checks[1:]]
+            checks["free_question_names_only_the_ticked"] = free_page.checks[0][1].line.split(":")[0] in shown and not any(o.split(":")[0] in shown for o in others if o.split(":")[0] != free_page.checks[0][1].line.split(":")[0])
         shell.dialog.close() if shell.dialog is not None else None                  # closing the question any way but Yes is a No
         checks["free_no_answered"] = pump(lambda: not shell.busy and shell.dialog is None and shell.last_result[0] == 2)
     checks["free_listed"] = len(free_page.checks)
@@ -138,6 +152,7 @@ def run(services: wm.Services) -> int:
         pump(lambda: shell.busy or shell.last_result[1])
         checks["make_finished"] = pump(lambda: not shell.busy)
         checks["make_said_why"] = bool(shell.last_result[1]) and shell.last_result[0] in (1, 2)
+        checks["result_head_for_a_problem"] = shell.result_label.get_label().splitlines()[0] == cat.t("window.result.problem")
 
     checks["not_busy_at_the_end"] = not shell.busy
     shell.destroy()

@@ -708,6 +708,48 @@ round that is chosen (`rounds list` says which), and it does not run while a rou
   *Confirmed on the developer's computer and phone (2026-10-11): `make` ran the real export, patcher and zip in 10.7 seconds and produced a 64 MB zip that read back clean; the folder held exactly the four files, the zip held exactly `model.onnx` and `model.onnx.json`, the settings file was identical to round 3's own; the phone took the zip the first time and MY VOICE spoke, better than the earlier runs. The refusal step (moving the settings file aside) was not run.*
 - [ ] Write down: how long it took, whether any wording confused you (the plan, the five steps, the `Done.` lines), whether you wanted the file somewhere else than the project's `exports` folder, and whether you wanted a name of your own for it.
 
+## I5. The window (WSL only for now)
+
+**New, and not yet run on a real computer.** This is the first window: the same steps as the terminal commands in sections I2 to I4, with buttons. It does nothing the terminal does not do: every button runs the very command, shows what it will do and asks first, in a box
+with **No** where the keyboard focus starts (Enter and Escape both mean no) and **Yes** beside it. It runs on **WSL with its graphical support (WSLg)**, which you have; a native Ubuntu desktop and the Orca screen reader are **not tested yet** (no computer for it at the moment) and are marked as pending in the plan.
+It needs the system Python, the one that has Ubuntu's GTK package, so the commands below say `/usr/bin/python3` and **not** `python3`: if your terminal has a virtual environment switched on, plain `python3` is that environment's Python and cannot see GTK. It uses the project from section I2, and
+`make` in it writes a new folder like section I4 does. Run one block at a time, and write down what the paragraph after it asks.
+
+- [ ] Can the window start here? This only looks:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools /usr/bin/python3 -m voice_studio.window --check
+  ```
+  → `The program running this check: …`, `GTK: 4.6.9` and `Yes. Start the window with: …`. If it says `This program cannot find the GTK bindings. Use the system one, or install them with: …` or `There is no desktop to show a window on.`, copy the whole output and stop there.
+- [ ] Start the window. Leave the terminal open (closing it closes the window; the menu entry below is for starting without one):
+  ```bash
+  PYTHONPATH=~/ack-tools/tools /usr/bin/python3 -m voice_studio.window
+  ```
+  → A window titled `ACK Voice Studio - Voice check` with four pages on the left (Projects, Training rounds, Voice file, Free up space) and `Last result` at the bottom with `Nothing has been done in this window yet.` Write down: **how many seconds until it appeared**, whether anything is garbled, black or flickering,
+  whether the text is easy to read at your Windows scaling, and whether it opened on the Training rounds page by itself (it should, because there is only one project). If the picture is garbled, close it, run the same command with `GSK_RENDERER=cairo` in front of `PYTHONPATH` and say whether that fixes it.
+- [ ] Use it with the keyboard only (no mouse): Tab and Shift+Tab move between controls, the arrow keys move in a list, Enter or Space press a button. Visit every page. Write down: any control you could not reach, any place where you could not see where the focus was, and any button whose purpose was not clear from its words alone.
+- [ ] **Training rounds.** Press `Look again`. The list is the same as `rounds list` and a round that is chosen says so. Press **Write a note…** on round 1, type `first window try`, press Save. → A box shows what will be saved and asks; press **Yes**. `Last result` says it was done and the round's lines now show the note. Then do it again with an empty note to remove it.
+- [ ] **Choose a round, and say no.** Press `Choose this round` on a round that is not the chosen one. → A box with the plan lines and the question `Choose round 1? The next round will continue from it. …` (with your round's number, and that every round and all their files stay where they are). Press **No**: `Nothing was done.` in `Last result`, and the list is unchanged.
+  Pressing Enter or Escape in that box must also be a no. (Choosing a different round for good is a real edit: it only changes which round the next one continues from, and choosing the old one again undoes it. Do it only if you want to.)
+- [ ] **Free up space, and say no.** On Free up space, tick one box (clicking the words ticks it too). `Remove the ticked items…` becomes usable and `Ticked: about …` appears. Press it. → A box that begins `This removes:` and names exactly the ticked items, then a question with the size and that it cannot be undone. Close the box with the window's close button or Escape: that is a no.
+  Nothing is removed: look again at the list. Untick the box.
+- [ ] **Make the voice file.** On Voice file press `Make the voice file…`. → A box with `The voice file would be made like this:` and the room check, and the question `Make the voice file from round`, then your round's number. Press **Yes**. Write down whether the bar at the bottom moves while it works, and how long it takes (about 11 seconds in section I4).
+  Afterwards `Last result` says where the file is and the list `Voice files made so far` has one more row.
+- [ ] **Show the folder, and copy the path.** On that new row press `Show the folder`. → Windows File Explorer opens on the folder with the zip in it. If it does not, `Last result` says the path instead (`The folder could not be opened from here. Its path is: …`); write down which happened. Then press `Copy the path`, open Notepad in Windows and paste (Ctrl+V): write down whether the path is there.
+- [ ] **The Start menu.** This writes two small files in your own folders, after showing you which and asking:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools /usr/bin/python3 -m voice_studio.window --install-launcher
+  ```
+  → `This would write, in your own folders:` and the two paths (under `~/.local/share`), `It changes nothing else and needs no administrator rights.` and `Write these files now?`. Type **`no`** first: `Nothing was done.` and no file exists. Run it again and type **`yes`**: `Done. The menu entry is in place.` Then look in the Windows Start menu for **ACK Voice Studio** (it can take a minute, or need `wsl --shutdown` from Windows and a new Ubuntu window).
+  Write down: whether it appears, how long it took, whether it has the icon (five white bars on a dark blue square), whether it starts the window with no terminal open, and whether the window then looks the same.
+- [ ] **Take the menu entry away again** (only if you want to; the files are only ever removed if this tool made them):
+  ```bash
+  PYTHONPATH=~/ack-tools/tools /usr/bin/python3 -m voice_studio.window --remove-launcher
+  ```
+  → `This would remove these files that this tool made:`, the two paths, and a question. Type **`yes`**: `Done. The menu entry is removed. Nothing else was changed.`
+- [ ] **A screen reader, if you use one on Windows.** Start Narrator (Windows logo key + Ctrl + Enter) or NVDA, click into the window and move with Tab. Write down what is read for: a page name, a button such as `Choose round 1`, a tick box, the box that asks a question, and the `Last result` text after something finishes. This is the question the plan needs answered for WSLg;
+  it is fine if the answer is "nothing is read".
+- [ ] Write down: anything that felt slow, anything that moved or flashed (the window is meant to have no animation except the bar), any word that was hard to understand, and whether you would rather the pages were arranged another way.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:

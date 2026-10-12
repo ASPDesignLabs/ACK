@@ -89,6 +89,18 @@ def test_while_a_round_trains_nothing_can_be_chosen_or_started_and_the_window_sa
     assert "Round 3 is training now." in view.summary
 
 
+def test_a_round_cannot_start_while_the_chosen_place_for_working_files_is_not_ready(rig, tmp_path):
+    from voice_studio.core.project import load_project, save_project, with_scratch_place
+    from voice_studio.core.scratch import MARKER_NAME, marker_text
+    folder = tmp_path / "usb" / "ack-voice-scratch" / "voice-check"
+    (folder / "datasets" / "dataset-x").mkdir(parents=True)
+    save_project(rig.paths, with_scratch_place(load_project(rig.paths), str(tmp_path / "usb")))
+    view = wm.rounds_view(rig.home, "voice-check", CAT)
+    assert view.sets == ("dataset-x",) and view.can_start is False                                   # a training set is there, but nothing says the drive is this project's
+    (folder / MARKER_NAME).write_text(marker_text("voice-check"))
+    assert wm.rounds_view(rig.home, "voice-check", CAT).can_start is True
+
+
 def test_the_training_sets_are_the_real_folders_with_safe_names_and_links_are_left_out(rig, tmp_path):
     rig.world.dataset("dataset-b")
     rig.world.dataset("dataset-a")
@@ -152,6 +164,18 @@ def test_what_could_be_freed_is_the_terminals_list_with_the_option_each_row_goes
     assert [i.line for i in view.items] == [rf.free_row_text(o, CAT) for o in plan.offers]
     assert view.notes[-1] == "Recordings, notes, the project file, backups, exports and the starting voices are never on this list."
     assert any(n.startswith("Kept for sure, never on this list: 2 files") for n in view.notes) and view.problem == ""
+
+
+def test_what_is_in_use_and_what_is_not_ours_is_counted_in_the_notes_and_never_offered(rig):
+    rig.finish(1)
+    rig.world.trainer_makes(7)                                                   # a folder no round made
+    rig.world.dataset()
+    plan = rig.world.begin()
+    rd.attach_job(rig.paths, plan.number, rig.world.job_for(plan, "running").id)
+    rig.world.trainer_makes(1)                                                   # the running round's own
+    view = wm.free_view(rig.home, "voice-check", CAT)
+    assert "Not touched: 3 files of the round that is running." in view.notes and "Not touched: 3 files in a folder that no round of this tool made." in view.notes
+    assert not any(i.round == 2 for i in view.items)
 
 
 def test_with_nothing_to_free_the_list_is_empty_and_still_says_what_is_never_offered(rig):

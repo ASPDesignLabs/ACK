@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import threading
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -72,6 +73,7 @@ class System(Protocol):
     def read_text(self, path: str) -> Optional[str]: ...
     def run(self, argv: Sequence[str], timeout: float = 15.0, cwd: Optional[str] = None,
             env: Optional[Mapping[str, str]] = None) -> Optional[CommandResult]: ...         # None: could not run it at all; `env` adds to the usual
+    def start(self, argv: Sequence[str]) -> bool: ...        # start a program and leave it: nothing is waited for or read from it. False when it could not be started
     def which(self, name: str) -> Optional[str]: ...
     def environ(self) -> Mapping[str, str]: ...
     def exists(self, path: str) -> bool: ...
@@ -109,6 +111,17 @@ class RealSystem:
         except (OSError, subprocess.SubprocessError):
             return None
         return CommandResult(done.returncode, done.stdout, done.stderr)
+
+    def start(self, argv: Sequence[str]) -> bool:
+        """For a program that shows something to the person (a file manager): it is started apart from this one, with no input and its output thrown away, and not waited for."""
+        if is_network_command(argv):
+            raise NetworkBlocked(os.path.basename(argv[0]))
+        try:
+            child = subprocess.Popen(list(argv), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        except (OSError, subprocess.SubprocessError):
+            return False
+        threading.Thread(target=child.wait, name="voice-studio-reap", daemon=True).start()          # so the finished program is collected, not left as a zombie, and Python has no complaint
+        return True
 
     def which(self, name: str) -> Optional[str]:
         return shutil.which(name)

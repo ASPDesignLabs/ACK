@@ -29,7 +29,7 @@ NEWER_THAN_4_6 = ("FileDialog", "AlertDialog", "ColorDialog", "FontDialog", "Uri
                   "set_can_shrink", "set_limit_events", "get_accessible_label", "Gtk.Spinner", "Adw", "Gtk.Picture.set_content_fit", "set_content_fit", "TextureFromPaintable",
                   "Gtk.ColumnView.set_tab_behavior", "Gtk.Scale.set_", "StringFilter")
 # network, a browser or anything that talks to another computer (plan section 3: nothing leaves the computer)
-NETWORK = ("Soup", "NetworkMonitor", "GUPnP", "WebKit", "urllib", "http.client", "socket", "requests", "xdg-open http", "show_uri", "launch_default_for_uri", "AppInfo.launch")
+NETWORK = ("subprocess", "Soup", "NetworkMonitor", "GUPnP", "WebKit", "urllib", "http.client", "socket", "requests", "xdg-open http", "show_uri", "launch_default_for_uri", "AppInfo.launch")
 
 
 def source(path):
@@ -148,7 +148,9 @@ def test_the_real_window_passes_its_own_tour_on_a_virtual_display(tmp_path):
     report = json.loads(done.stdout.strip().splitlines()[-1])
     assert report["failed"] == [] and report["unnamed_controls"] == {} and report["smallest_text_pt"] >= 12.0 and report["animations_off"] is True
     assert report["pages"] == ["Projects", "Training rounds", "Voice file", "Free up space"] and report["project_opened"] == "voice-check"
-    for key in ("no_is_where_the_focus_starts", "yes_is_not_the_default", "question_has_no_typed_instruction", "choose_question_shown", "no_answered", "no_changed_nothing", "yes_answered", "yes_chose_it", "free_question_shown", "free_no_answered", "make_finished", "make_said_why",
+    for key in ("the_chosen_round_has_no_choose_button", "no_is_the_default_widget", "pages_locked_while_a_question_waits", "a_second_task_is_refused_while_busy", "pages_unlocked_after",
+                "result_head_for_nothing", "result_head_for_done", "remove_button_off_when_nothing_is_ticked", "free_question_names_only_the_ticked", "result_head_for_a_problem",
+                "no_is_where_the_focus_starts", "yes_is_not_the_default", "question_has_no_typed_instruction", "choose_question_shown", "no_answered", "no_changed_nothing", "yes_answered", "yes_chose_it", "free_question_shown", "free_no_answered", "make_finished", "make_said_why",
                 "not_busy_at_the_end"):
         assert report[key] is True, key
     assert "Gtk-CRITICAL" not in done.stderr and "Gtk-WARNING" not in done.stderr

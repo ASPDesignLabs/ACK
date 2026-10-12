@@ -56,6 +56,8 @@ def test_the_instruction_to_type_a_word_is_dropped_from_a_question_a_window_asks
     assert wio.question_text("Set the note on round 1 to this? Type yes now. Type yes to save it.") == "Set the note on round 1 to this? Type yes now."      # the person's words stay
     assert wio.question_text("Set the note on round 1 to this? say Type yes to save it. Type yes to save it.") == "Set the note on round 1 to this? say Type yes to save it."
     assert wio.question_text("Type yes to go. Then more words.") == "Type yes to go. Then more words."                                                  # not at the end: not the instruction
+    assert wio.question_text("Is it fine? Type yes to go. Then more words.") == "Is it fine? Type yes to go. Then more words."                          # and the words after it are never lost
+    assert wio.question_text("  Is this fine?  ") == "Is this fine?"                                                                                    # an untouched question is only trimmed
 
 
 def test_every_question_the_flows_ask_for_a_yes_loses_only_its_instruction():

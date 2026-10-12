@@ -17,15 +17,20 @@ ICON = '<?xml version="1.0"?><!-- ack-voice-studio-icon --><svg/>\n'
 
 # ---------------------------------------------------------------- showing a folder
 
+ODD_FOLDERS = ["relative/folder", "/home/anna/fol\nder", "/home/anna/fol\x00der"]
+
+
 class FolderSystem(FakeSystem):
-    def __init__(self, *, wsl=False, tools=(), windows_name="\\\\wsl.localhost\\Ubuntu\\home\\anna\\folder", **kw):
-        kw.setdefault("dirs", ["/home/anna/folder"])
+    def __init__(self, *, wsl=False, tools=(), windows_name="\\\\wsl.localhost\\Ubuntu\\home\\anna\\folder", version=None, wslpath_fails=False, **kw):
+        kw.setdefault("dirs", ["/home/anna/folder"] + ODD_FOLDERS)                       # they all "exist": it is the rule on the words that must refuse the odd ones
         super().__init__(tools={t: "/usr/bin/" + t for t in tools}, **kw)
-        self.files["/proc/version"] = "Linux version 5.15.0-microsoft-standard-WSL2" if wsl else "Linux version 6.8.0-generic"
-        self.windows_name = windows_name
+        self.files["/proc/version"] = version or ("Linux version 5.15.0-microsoft-standard-WSL2" if wsl else "Linux version 6.8.0-generic")
+        self.windows_name, self.wslpath_fails = windows_name, wslpath_fails
 
     def run(self, argv, timeout=15.0, cwd=None, env=None):
         if argv[0] == "wslpath":
+            if self.wslpath_fails:
+                return CommandResult(1, "wslpath: some error text\n", "")
             return CommandResult(0, self.windows_name + "\n") if self.windows_name is not None else CommandResult(1, "", "no")
         return super().run(argv, timeout, cwd, env)
 
@@ -41,34 +46,56 @@ def test_off_wsl_only_the_linux_opener_is_tried_and_with_no_program_nothing_is()
     assert showfolder.attempts("/home/anna/folder", FolderSystem(wsl=True, tools=("xdg-open",))) == [("xdg-open", "/home/anna/folder")]            # Windows interop is off: explorer is not there
 
 
+def test_the_older_wsl_that_writes_microsoft_with_a_capital_is_still_wsl():
+    system = FolderSystem(tools=("explorer.exe", "wslpath"), version="Linux version 4.4.0-19041-Microsoft (Microsoft@Microsoft.com)")
+    assert [a[0] for a in showfolder.attempts("/home/anna/folder", system)] == ["explorer.exe"]
+
+
+def test_explorer_is_not_tried_without_wslpath_and_a_failed_wslpath_is_not_believed():
+    assert showfolder.attempts("/home/anna/folder", FolderSystem(wsl=True, tools=("explorer.exe", "xdg-open"))) == [("xdg-open", "/home/anna/folder")]
+    assert showfolder.attempts("/home/anna/folder", FolderSystem(wsl=True, tools=("explorer.exe", "wslpath"), wslpath_fails=True)) == []
+
+
 def test_a_windows_name_that_cannot_be_worked_out_is_not_guessed():
     for name in (None, "", "two\nlines"):
         assert showfolder.attempts("/home/anna/folder", FolderSystem(wsl=True, tools=("explorer.exe", "wslpath"), windows_name=name)) == []
 
 
-@pytest.mark.parametrize("path", ["relative/folder", "/home/anna/missing", "/home/anna/fol\nder", "/home/anna/fol\x00der", ""])
+@pytest.mark.parametrize("path", ODD_FOLDERS + ["/home/anna/missing", ""])
 def test_nothing_odd_or_missing_is_ever_handed_to_a_program(path):
     assert showfolder.attempts(path, FolderSystem(wsl=True, tools=("explorer.exe", "wslpath", "xdg-open"))) == []
 
 
 def test_the_first_program_that_starts_wins_and_one_that_cannot_start_is_skipped():
     system = FolderSystem(wsl=True, tools=("explorer.exe", "wslpath", "xdg-open"))
-    started = []
-    assert showfolder.open_folder("/home/anna/folder", system, started.append) is True and started == [("explorer.exe", "\\\\wsl.localhost\\Ubuntu\\home\\anna\\folder")]
-    tried = []
-
-    def explorer_missing(argv):
-        tried.append(argv[0])
-        if argv[0] == "explorer.exe":
-            raise FileNotFoundError("explorer.exe")
-    assert showfolder.open_folder("/home/anna/folder", system, explorer_missing) is True and tried == ["explorer.exe", "xdg-open"]
+    assert showfolder.open_folder("/home/anna/folder", system) is True and system.started == [("explorer.exe", "\\\\wsl.localhost\\Ubuntu\\home\\anna\\folder")]
+    system = FolderSystem(wsl=True, tools=("explorer.exe", "wslpath", "xdg-open"))
+    system.cannot_start = {"explorer.exe"}
+    assert showfolder.open_folder("/home/anna/folder", system) is True and system.started == [("xdg-open", "/home/anna/folder")]
 
 
 def test_with_nothing_that_starts_the_answer_is_no_and_the_window_says_the_path_instead():
-    def never(argv):
-        raise OSError("no")
-    assert showfolder.open_folder("/home/anna/folder", FolderSystem(tools=("xdg-open",)), never) is False
-    assert showfolder.open_folder("/home/anna/folder", FolderSystem(tools=()), lambda argv: None) is False
+    system = FolderSystem(tools=("xdg-open",))
+    system.cannot_start = {"xdg-open"}
+    assert showfolder.open_folder("/home/anna/folder", system) is False and system.started == []
+    assert showfolder.open_folder("/home/anna/folder", FolderSystem(tools=())) is False
+    assert showfolder.open_folder("/home/anna/missing", FolderSystem(tools=("xdg-open",))) is False        # nothing is started for a folder that is not there
+
+
+def test_the_real_system_starts_a_program_apart_and_says_when_it_cannot_and_refuses_a_network_one(tmp_path):
+    import sys as _sys
+    from voice_studio.core.system import NetworkBlocked, RealSystem
+    marker = tmp_path / "started"
+    assert RealSystem().start([_sys.executable, "-c", "open(%r, 'w').write('x')" % str(marker)]) is True
+    import time
+    for _ in range(100):
+        if marker.exists():
+            break
+        time.sleep(0.05)
+    assert marker.read_text() == "x"
+    assert RealSystem().start(["/nonexistent/program"]) is False
+    with pytest.raises(NetworkBlocked):
+        RealSystem().start(["curl", "http://example.invalid"])
 
 
 # ---------------------------------------------------------------- the menu entry
@@ -108,6 +135,29 @@ def test_a_new_install_writes_two_files_in_the_persons_own_folders_and_nothing_e
     assert sorted(str(f.relative_to(tmp_path)) for f in tmp_path.rglob("*") if f.is_file()) == [".local/share/applications/%s.desktop" % launcher.APP_ID,
                                                                                                 ".local/share/icons/hicolor/scalable/apps/%s.svg" % launcher.APP_ID]
     assert [t.state for t in plan(tmp_path).targets] == ["same", "same"] and not plan(tmp_path).changes
+
+
+def test_a_file_that_is_already_right_is_not_written_again(tmp_path):
+    launcher.install(plan(tmp_path))
+    stale = 1_000_000_000
+    for path in (launcher.desktop_path(str(tmp_path)), launcher.icon_path(str(tmp_path))):
+        os.utime(path, (stale, stale))
+    again = plan(tmp_path)
+    assert [t.state for t in again.targets] == ["same", "same"]
+    launcher.install(again)
+    assert all(os.stat(p).st_mtime == stale for p in (launcher.desktop_path(str(tmp_path)), launcher.icon_path(str(tmp_path))))
+    assert not Path(launcher.desktop_path(str(tmp_path)) + ".previous").exists()
+
+
+def test_an_icon_that_someone_else_made_is_not_ours_even_though_it_is_an_svg(tmp_path):
+    path = Path(launcher.icon_path(str(tmp_path)))
+    path.parent.mkdir(parents=True)
+    path.write_text("<svg>someone else's</svg>")
+    p = plan(tmp_path)
+    assert p.icon.state == "foreign" and p.refused and launcher.plan_remove(str(tmp_path)).foreign == (str(path),)
+    with pytest.raises(launcher.LauncherError):
+        launcher.install(p)
+    assert path.read_text() == "<svg>someone else's</svg>" and not Path(launcher.desktop_path(str(tmp_path))).exists()
 
 
 def test_a_file_this_tool_made_is_updated_and_the_old_one_is_kept_beside_it(tmp_path):
@@ -216,6 +266,15 @@ def test_install_shows_exactly_what_it_will_write_before_it_asks_and_writes_noth
 def test_install_asks_first_and_nobody_to_ask_writes_nothing(tmp_path, answers, interactive):
     code, io = cli(tmp_path, "--install-launcher", answers=answers, interactive=interactive)
     assert code == 2 and not (tmp_path / ".local").exists()
+
+
+def test_a_terminal_with_nobody_at_it_is_never_asked_even_if_answers_are_waiting(tmp_path):
+    for flag in ("--install-launcher", "--remove-launcher"):
+        code, io = cli(tmp_path, flag, answers=["yes", "yes"], interactive=False)
+        assert code in (0, 2) and io.prompts == [] and not (tmp_path / ".local" / "share" / "applications" / (launcher.APP_ID + ".desktop")).exists()
+    cli(tmp_path, "--install-launcher", "--yes")
+    code, io = cli(tmp_path, "--remove-launcher", answers=["yes"], interactive=False)
+    assert code == 2 and Path(launcher.desktop_path(str(tmp_path))).exists() and io.prompts == []
 
 
 def test_install_with_yes_or_a_typed_yes_writes_and_a_second_run_changes_nothing(tmp_path):

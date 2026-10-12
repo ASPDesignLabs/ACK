@@ -626,3 +626,39 @@ def test_the_voice_file_section_says_it_writes_only_a_new_folder_and_puts_the_mo
 def test_the_voice_file_section_follows_the_free_up_section_and_comes_before_the_manual_one():
     names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
     assert names.index("I3") < names.index("I4") < names.index("J")
+
+
+# ---------------------------------------------------------------- section I5: the window
+
+def test_the_window_commands_it_gives_exist_start_the_system_python_and_take_the_options_it_gives():
+    from voice_studio.core import windowcli
+    body = section("I5.")
+    lines = re.findall(r"^\s*(PYTHONPATH=~/ack-tools/tools /usr/bin/python3 -m voice_studio\.window[^\n]*)$", body, flags=re.M)
+    assert len(lines) >= 4
+    options = set()
+    for line in lines:
+        words = shlex.split(line)
+        assert words[:4] == ["PYTHONPATH=~/ack-tools/tools", "/usr/bin/python3", "-m", "voice_studio.window"], line
+        for word in words[4:]:
+            assert word in windowcli.OPTIONS, word
+            options.add(word)
+    assert options == {"--check", "--install-launcher", "--remove-launcher"}
+    assert not re.search(r"^\s*(PYTHONPATH=\S+ )?python3 -m voice_studio\.window", body, flags=re.M), "plain python3 may be a virtual environment's, which has no GTK"
+    assert "--selftest" not in body
+
+
+def test_every_sentence_the_window_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I5."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans if " " in s and s.rstrip()[-1] in ".?…" and not s.startswith(("PYTHONPATH", "GSK_", "~/", "wsl "))]
+    assert len(quoted) >= 12 and any(cut for _, cut in quoted), quoted
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_window_section_says_what_is_not_tested_why_the_command_names_the_system_python_and_that_no_is_where_the_focus_starts():
+    body = " ".join(section("I5.").split())
+    assert "a native Ubuntu desktop and the Orca screen reader are **not tested yet**" in body and "**not** `python3`" in body
+    assert "with **No** where the keyboard focus starts (Enter and Escape both mean no)" in body and "It does nothing the terminal does not do" in body
+    assert "GSK_RENDERER=cairo" in body and "Narrator" in body and "no animation except the bar" in body
+    names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I4") < names.index("I5") < names.index("J")

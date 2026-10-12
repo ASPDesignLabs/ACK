@@ -108,6 +108,7 @@ is shipped in the repository: the person's own computer installs or fetches it.
 | Item | License | Checked | Note |
 |---|---|---|---|
 | GTK 4 and PyGObject (Ubuntu packages `gir1.2-gtk-4.0` and `python3-gi`), for the window | PyGObject: LGPL-2.1-or-later (PyPI classifier "LGPLv2+", license text is LGPL 2.1). GTK 4: LGPL-2.1-or-later | PyGObject: PyPI metadata. GTK: not verified | Installed by the person's own `apt`, not distributed by this project. LGPL libraries can be linked from GPL-3.0-or-later code. |
+| The window's icon (`tools/voice_studio/data/icons/org.aspdesignlabs.AckVoiceStudio.svg`) and style (`tools/voice_studio/data/style.css`) | Drawn and written for this project (five rounded bars on a square; sizes and spacing only), no outside artwork or font | Not applicable (original) | GPL-3.0-or-later like the rest. The window runs with the person's own GTK; it was tested on a copy of Ubuntu 22.04 (GTK 4.6.9, python3-gi 3.42.1) made in the build sandbox, which is not shipped. |
 | segno (QR codes) | BSD (PyPI classifier "BSD License"; which BSD variant was not checked) | PyPI metadata | |
 | cryptography (the phone-recording certificate authority) | Apache-2.0 OR BSD-3-Clause | PyPI metadata (license expression) | |
 | sherpa-onnx (Python package, to check a finished voice on the PC with the engine the phone uses) | Apache-2.0 (PyPI: "Apache licensed, as found in the LICENSE file"; section 2 read its repository) | PyPI metadata | |
