@@ -7,9 +7,11 @@ from typing import Callable, List, Optional, Sequence, Tuple
 
 from ..core import windowio as wio
 from ..core import windowmodel as wm
-from . import a11y, dialogs
+from ..core import windowprefs as wp
+from . import a11y, dialogs, sizing
 from .gtkload import GLib, Gtk
-from .pages import FreePage, Page, ProjectsPage, RoundsPage, VoiceFilePage
+from .pages import DisplayPage, FreePage, Page, ProjectsPage, RoundsPage, VoiceFilePage
+from .theme import Appearance
 
 PULSE_MS = 150
 
@@ -34,9 +36,10 @@ class GtkSink:
 
 
 class Shell(Gtk.ApplicationWindow):
-    def __init__(self, app: Gtk.Application, services: wm.Services):
-        super().__init__(application=app, title=services.cat.t("window.title"), default_width=1020, default_height=760)
+    def __init__(self, app: Gtk.Application, services: wm.Services, appearance: Appearance):
+        super().__init__(application=app, title=services.cat.t("window.title"), default_width=1100, default_height=820)
         self.services = services
+        self.appearance = appearance
         self.cat = services.cat
         self.project_id: Optional[str] = None
         self.run_handle: Optional[wio.Run] = None
@@ -52,29 +55,65 @@ class Shell(Gtk.ApplicationWindow):
 
     def _build(self) -> None:
         cat = self.cat
-        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, css_classes=["ack-frame"])
+        sizing.track(outer, spacing=12)
+        outer.append(self._build_header())
         middle = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, vexpand=True)
+        sizing.track(middle, spacing=12)
         self.stack = Gtk.Stack(hexpand=True, vexpand=True, transition_type=Gtk.StackTransitionType.NONE)
-        self.pages: List[Page] = [ProjectsPage(self), RoundsPage(self), VoiceFilePage(self), FreePage(self)]
-        names = ("projects", "rounds", "voicefile", "free")
-        titles = (cat.t("window.nav.projects"), cat.t("window.nav.rounds"), cat.t("window.nav.voicefile"), cat.t("window.nav.free"))
+        self.pages: List[Page] = [ProjectsPage(self), RoundsPage(self), VoiceFilePage(self), FreePage(self), DisplayPage(self)]
+        names = ("projects", "rounds", "voicefile", "free", "display")
+        titles = (cat.t("window.nav.projects"), cat.t("window.nav.rounds"), cat.t("window.nav.voicefile"), cat.t("window.nav.free"), cat.t("window.nav.display"))
         for page, key, title in zip(self.pages, names, titles):
             self.stack.add_titled(page.widget, key, title)
-        self.sidebar = Gtk.StackSidebar(stack=self.stack, width_request=210)
+        self.sidebar = Gtk.StackSidebar(stack=self.stack, css_classes=["ack-nav"])
+        sizing.track(self.sidebar, width_request=230)
         a11y.name(self.sidebar, cat.t("window.nav.label"))
         middle.append(self.sidebar)
-        middle.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
         middle.append(self.stack)
         outer.append(middle)
-        outer.append(Gtk.Separator())
         outer.append(self._build_result())
         self.set_child(outer)
 
+    def _build_header(self) -> Gtk.Widget:
+        """ACK's header: the name large, what this is under it, the project, and the two buttons that change the size of the text (the rest of the display choices are on their own page)."""
+        cat = self.cat
+        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, css_classes=["ack-header"])
+        sizing.track(header, spacing=16)
+        left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        sizing.track(left, spacing=2)
+        left.append(Gtk.Label(label="ACK", xalign=0, css_classes=["brand"]))
+        left.append(Gtk.Label(label=cat.t("window.header.tagline"), xalign=0, css_classes=["tagline"]))
+        self.project_label = Gtk.Label(label=cat.t("window.header.no_project"), xalign=0, wrap=True, css_classes=["dim-text"])
+        left.append(self.project_label)
+        header.append(left)
+        controls = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, valign=Gtk.Align.START)
+        sizing.track(controls, spacing=8)
+        self.smaller_text = Gtk.Button(label="A\u2212", css_classes=["ack-button"])
+        self.bigger_text = Gtk.Button(label="A+", css_classes=["ack-button"])
+        a11y.name(self.smaller_text, cat.t("window.display.smaller_text_name"))
+        a11y.name(self.bigger_text, cat.t("window.display.bigger_text_name"))
+        self.smaller_text.connect("clicked", lambda _b: self.change_look(self.appearance.look.smaller_text()))
+        self.bigger_text.connect("clicked", lambda _b: self.change_look(self.appearance.look.bigger_text()))
+        controls.append(self.smaller_text)
+        controls.append(self.bigger_text)
+        header.append(controls)
+        self.appearance.listen(self._look_changed)
+        self._look_changed()
+        return header
+
+    def _look_changed(self) -> None:
+        look = self.appearance.look
+        self.smaller_text.set_sensitive(look.smaller_text() != look)
+        self.bigger_text.set_sensitive(look.bigger_text() != look)
+
     def _build_result(self) -> Gtk.Widget:
         cat = self.cat
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, css_classes=["panel"])
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, css_classes=["panel"])
+        sizing.track(box, spacing=4)
         box.append(Gtk.Label(label=cat.t("window.result.heading"), xalign=0, css_classes=["section-heading"]))
-        self.busy_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, visible=False)
+        self.busy_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, visible=False)
+        sizing.track(self.busy_row, spacing=10)
         self.busy_label = Gtk.Label(label=cat.t("window.busy"), xalign=0)
         self.progress = Gtk.ProgressBar(hexpand=True, valign=Gtk.Align.CENTER)
         a11y.name(self.progress, cat.t("window.busy"))
@@ -82,10 +121,59 @@ class Shell(Gtk.ApplicationWindow):
         self.busy_row.append(self.progress)
         box.append(self.busy_row)
         self.result_label = Gtk.Label(label=cat.t("window.result.none"), wrap=True, xalign=0, selectable=True, css_classes=["result-text"], accessible_role=Gtk.AccessibleRole.STATUS)
-        scroll = Gtk.ScrolledWindow(min_content_height=70, max_content_height=170, propagate_natural_height=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
+        scroll = Gtk.ScrolledWindow(propagate_natural_height=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
+        sizing.track(scroll, min_content_height=70, max_content_height=170)
         scroll.set_child(self.result_label)
         box.append(scroll)
         return box
+
+    # ---------------------------------------------------------------- the display
+
+    def change_look(self, look) -> None:
+        """Show a new look, and keep it the way the person has agreed to. The first change asks (the window has never written a file of its own); a No keeps the change for this session only."""
+        outcome = self.appearance.change(look)
+        if outcome == "failed":
+            self.set_result(1, (self.cat.t("window.display.not_saved"),))
+        elif outcome == "ask" and self.dialog is None:
+            self.ask_to_keep()
+
+    def ask_to_keep(self) -> None:
+        cat, appearance = self.cat, self.appearance
+        lines = (cat.t("window.display.keep_plan_head"), "  " + appearance.path, cat.t("window.display.keep_plan_holds"), cat.t("window.display.keep_plan_private"))
+
+        def reply(yes: bool) -> None:
+            if not yes:
+                appearance.keeper.said_no()
+                self.set_result(2, (cat.t("window.display.session_only"),))
+                return
+            appearance.keeper.said_yes()
+            if appearance.save() == "saved":
+                self.set_result(0, (cat.t("window.display.kept", path=appearance.path),))
+            else:
+                appearance.keeper.said_no()
+                self.set_result(1, (cat.t("window.display.not_saved"),))
+        self.show_confirm(lines, cat.t("window.display.keep_question"), reply)
+
+    def ask_to_forget(self) -> None:
+        cat, appearance = self.cat, self.appearance
+        shown = wp.plan_forget(appearance.path)
+        if not shown:
+            self.set_result(0, (cat.t("window.display.nothing_kept"),))
+            return
+
+        def reply(yes: bool) -> None:
+            if not yes:
+                self.set_result(2, ())
+                return
+            try:
+                wp.forget(shown)
+            except OSError:
+                self.set_result(1, (cat.t("window.display.not_removed"),))
+                return
+            appearance.keeper.forgot()
+            self.set_result(0, (cat.t("window.display.forgotten"),))
+            self.refresh()
+        self.show_confirm((cat.t("window.display.forget_plan_head"),) + tuple("  " + p for p in shown), cat.t("window.display.forget_question"), reply)
 
     # ---------------------------------------------------------------- the project
 
@@ -102,6 +190,7 @@ class Shell(Gtk.ApplicationWindow):
             return
         self.project_id = project.id
         self.set_title("%s - %s" % (self.cat.t("window.title"), project.name))
+        self.project_label.set_label(self.cat.t("window.header.project", name=project.name))
         if announce:
             self.set_result(0, (self.cat.t("window.projects.opened", name=project.name),))
         self.refresh()

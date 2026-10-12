@@ -8,13 +8,16 @@ checks and exits 0 when all hold. Run it only on a copy of a project (HOME set t
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from typing import Callable, Dict, List, Optional
 
 from ..core import rounds as rd
 from ..core import windowmodel as wm
-from . import a11y, style
+from ..core import windowprefs as wp
+from ..core import windowtheme as wt
+from . import a11y, sizing
 from .gtkload import Gio, GLib, Gtk, Pango, version_text
 
 TIMEOUT_S = 15.0
@@ -71,7 +74,7 @@ def run(services: wm.Services) -> int:
 
     unnamed: Dict[str, List[str]] = {}
     smallest = 99.0
-    for key, page in zip(("projects", "rounds", "voicefile", "free"), shell.pages):
+    for key, page in zip(("projects", "rounds", "voicefile", "free", "display"), shell.pages):
         shell.stack.set_visible_child_name(key)
         page.refresh()
         pump(lambda: True, 0.05)
@@ -154,9 +157,148 @@ def run(services: wm.Services) -> int:
         checks["make_said_why"] = bool(shell.last_result[1]) and shell.last_result[0] in (1, 2)
         checks["result_head_for_a_problem"] = shell.result_label.get_label().splitlines()[0] == cat.t("window.result.problem")
 
+    look_checks(shell, checks)
     checks["not_busy_at_the_end"] = not shell.busy
     shell.destroy()
-    failed = sorted(k for k, v in checks.items() if v is False or (k == "unnamed_controls" and v) or (k == "smallest_text_pt" and float(v) < style.BASE_PT - 0.05))
+    failed = sorted(k for k, v in checks.items() if v is False or (k == "unnamed_controls" and v) or (k == "smallest_text_pt" and float(v) < wt.TEXT_STEPS[0] - 0.05))
     checks["failed"] = failed
     print(json.dumps(checks, sort_keys=True))
     return 1 if failed else 0
+
+
+def every_look() -> List[wt.Look]:
+    looks = [wt.Look("ack", accent, 14, 100) for accent in range(len(wt.ACCENTS))]
+    looks += [wt.Look("ack", 0, pt, pct) for pt in (wt.TEXT_STEPS[0], wt.TEXT_STEPS[-1]) for pct in (wt.SCALE_STEPS[0], wt.SCALE_STEPS[-1])]
+    looks += [wt.Look("system", 0, pt, pct) for pt in (wt.TEXT_STEPS[0], wt.TEXT_STEPS[-1]) for pct in (wt.SCALE_STEPS[0], wt.SCALE_STEPS[-1])]
+    return looks
+
+
+def message_of(dialog: Gtk.Dialog) -> str:
+    return " ".join(w.get_label() for w in labels(dialog.get_content_area()))
+
+
+def look_checks(shell, checks: Dict[str, object]) -> None:
+    """The display page: every look is a style sheet GTK takes without a complaint, a change is shown at once, the first change asks before it writes anything, a No writes nothing, a Yes writes the
+    small file, and removing it is listed first and asked about."""
+    cat, appearance = shell.cat, shell.appearance
+    start = appearance.look
+    page = shell.pages[4]
+    shell.stack.set_visible_child_name("display")
+    page.refresh()
+    bad = []
+    for look in every_look():
+        appearance.look = look
+        appearance.apply()
+        pump(lambda: False, 0.02)
+        if appearance.errors:
+            bad.append((look, appearance.errors[:2]))
+    checks["every_look_is_a_sheet_gtk_accepts"] = bad == []
+    checks["sheet_errors"] = [str(b) for b in bad][:3]
+    appearance.look = wt.Look("ack", 0, 14, 200)
+    appearance.apply()
+    checks["scale_reaches_python_sizes"] = shell.sidebar.get_size_request()[0] == 460 and sizing.px(10) == 20
+    appearance.look = wt.Look()
+    appearance.apply()
+    checks["scale_goes_back"] = shell.sidebar.get_size_request()[0] == 230 and sizing.px(10) == 10
+
+    path = appearance.path
+    checks["no_file_before_any_choice"] = not os.path.exists(path) and appearance.keeper.state == "undecided"
+    system = find(page.widget, cat.t("window.display.theme_system_name"))
+    checks["theme_buttons_are_named"] = system is not None and find(page.widget, cat.t("window.display.theme_ack_name")) is not None
+    checks["accent_buttons_are_named"] = all(find(page.widget, cat.t("window.display.accent_name", name=cat.t(w))) is not None for w in (
+        "window.display.accent_cyan", "window.display.accent_pink"))
+    system.set_active(True)
+    checks["first_change_asks"] = pump(lambda: shell.dialog is not None)
+    if shell.dialog is not None:
+        said = message_of(shell.dialog)
+        checks["question_names_the_file_and_what_it_holds"] = path in said and "colour theme" in said and "Keep your choices in this file?" in said
+        no_button = shell.dialog.get_widget_for_response(Gtk.ResponseType.CANCEL)
+        checks["keep_question_starts_on_no"] = no_button is not None and no_button.get_label() == cat.t("window.dialog.no")
+        shell.dialog.response(Gtk.ResponseType.CANCEL)
+    pump(lambda: shell.dialog is None, 2.0)
+    checks["the_change_is_shown_though_not_kept"] = appearance.look.theme == "system" and not os.path.exists(path)
+    checks["a_no_is_said_in_the_result"] = shell.last_result[0] == 2 and cat.t("window.display.session_only") in shell.last_result[1]
+    shell.bigger_text.emit("clicked")
+    pump(lambda: False, 0.05)
+    checks["after_a_no_nothing_asks_and_nothing_is_written"] = shell.dialog is None and not os.path.exists(path) and appearance.look.text_pt == 16
+    smaller_ends = wt.Look(text_pt=wt.TEXT_STEPS[0])
+    appearance.look = smaller_ends
+    appearance.apply()
+    checks["smaller_text_is_off_at_the_smallest_step"] = not shell.smaller_text.get_sensitive() and shell.bigger_text.get_sensitive()
+
+    appearance.keeper.forgot()
+    appearance.look = wt.Look()
+    appearance.apply()
+    shell.bigger_text.emit("clicked")
+    checks["asks_again_after_a_fresh_start"] = pump(lambda: shell.dialog is not None)
+    if shell.dialog is not None:
+        shell.dialog.response(Gtk.ResponseType.YES)
+    pump(lambda: shell.dialog is None, 2.0)
+    saved = wp.load(path)
+    checks["a_yes_writes_the_small_file"] = saved == appearance.look and saved.text_pt == 16 and appearance.keeper.state == "kept"
+    checks["the_file_is_owner_only_and_small"] = oct(os.stat(path).st_mode & 0o777) == "0o600" and os.path.getsize(path) < 200
+    checks["a_yes_is_said_in_the_result"] = shell.last_result[0] == 0 and path in " ".join(shell.last_result[1])
+    shell.bigger_text.emit("clicked")
+    pump(lambda: False, 0.05)
+    checks["later_changes_are_written_without_asking"] = shell.dialog is None and wp.load(path).text_pt == 18 and os.path.exists(wp.previous_path(path))
+    page.refresh()
+    checks["the_page_says_where_they_are_kept"] = path in page.status.get_label() and page.forget.get_visible() and not page.keep.get_visible()
+
+    page.forget.emit("clicked")
+    checks["removing_lists_the_files_first"] = pump(lambda: shell.dialog is not None)
+    if shell.dialog is not None:
+        said = message_of(shell.dialog)
+        checks["removing_names_both_files"] = path in said and wp.previous_path(path) in said
+        shell.dialog.response(Gtk.ResponseType.CANCEL)
+    pump(lambda: shell.dialog is None, 2.0)
+    checks["a_no_to_removing_keeps_both"] = os.path.exists(path) and os.path.exists(wp.previous_path(path))
+    page.forget.emit("clicked")
+    pump(lambda: shell.dialog is not None)
+    if shell.dialog is not None:
+        shell.dialog.response(Gtk.ResponseType.YES)
+    pump(lambda: shell.dialog is None, 2.0)
+    checks["a_yes_removes_them_and_the_window_asks_again_next_time"] = not os.path.exists(path) and not os.path.exists(wp.previous_path(path)) and appearance.keeper.state == "undecided"
+    checks["the_window_keeps_its_look_after_removing"] = appearance.look.text_pt == 18
+
+    # a change is shown whatever becomes of the file, and what it reports is true
+    scratch = shell.services.home.root
+    blocker = os.path.abspath(__file__)                      # a file that is there: a path "inside" it can never be made, so a save under it fails
+    kept_path, kept_keeper = appearance.path, appearance.keeper
+    shown = {}
+    for name, state, target in (("saved", "kept", kept_path), ("ask", "undecided", os.path.join(scratch, "tour-ask.json")),
+                                ("session", "declined", os.path.join(scratch, "tour-session.json")), ("failed", "kept", os.path.join(blocker, "choices-file"))):
+        appearance.path, appearance.keeper = target, wp.Keeper(state)
+        wanted = wt.Look("ack", 3, 20, 125)
+        shown[name] = appearance.change(wanted) == name and appearance.applied == wanted
+    appearance.path, appearance.keeper = kept_path, kept_keeper
+    wp.forget(wp.plan_forget(kept_path))                     # the file the "saved" case made (this is a copy of a home folder made for the tour)
+    checks["a_change_is_shown_and_reported_truly_whatever_becomes_of_the_file"] = all(shown.values())
+    appearance.keeper = wp.Keeper("kept")
+    appearance.path = os.path.join(blocker, "choices-file")
+    shell.change_look(wt.Look("ack", 0, 18, 100))
+    checks["a_failed_save_says_so_in_the_window"] = shell.last_result[0] == 1 and cat.t("window.display.not_saved") in shell.last_result[1]
+    appearance.path, appearance.keeper = kept_path, kept_keeper
+
+    # the system theme hands the dark setting back, the ACK theme asks for dark
+    settings = Gtk.Settings.get_default()
+    was_dark = appearance._system_dark
+    handed_back = []
+    for system_dark in (False, True):
+        appearance._system_dark = system_dark
+        appearance.look = wt.Look("system")
+        appearance.apply()
+        handed_back.append(settings.get_property("gtk-application-prefer-dark-theme") == system_dark)
+        appearance.look = wt.Look("ack")
+        appearance.apply()
+        handed_back.append(settings.get_property("gtk-application-prefer-dark-theme") is True)
+    appearance._system_dark = was_dark
+    checks["the_system_theme_hands_the_dark_setting_back_and_ack_asks_for_dark"] = all(handed_back)
+
+    page.reset.emit("clicked")
+    pump(lambda: shell.dialog is not None, 1.0)
+    if shell.dialog is not None:
+        shell.dialog.response(Gtk.ResponseType.CANCEL)
+    pump(lambda: shell.dialog is None, 2.0)
+    checks["standard_look_comes_back"] = appearance.look == wt.Look(theme=appearance.look.theme)
+    appearance.look = start
+    appearance.apply()

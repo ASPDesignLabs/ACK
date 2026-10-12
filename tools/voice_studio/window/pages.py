@@ -7,8 +7,10 @@ from typing import Callable, List, Optional, Tuple
 
 from ..core import showfolder
 from ..core import windowmodel as wm
+from ..core import windowprefs as wp
+from ..core import windowtheme as wt
 from ..core.text import size_text
-from . import a11y
+from . import a11y, sizing
 from .gtkload import GLib, Gtk
 
 MINUTES_DEFAULT = 25
@@ -35,7 +37,7 @@ def text(label: str, css: Tuple[str, ...] = (), selectable: bool = False) -> Gtk
 
 
 def button(label: str, on_click: Callable[[], None], name: str = "", sensitive: bool = True) -> Gtk.Button:
-    widget = Gtk.Button(label=label, sensitive=sensitive)
+    widget = Gtk.Button(label=label, sensitive=sensitive, css_classes=["ack-button"], halign=Gtk.Align.START)
     widget.connect("clicked", lambda _b: on_click())
     if name:
         a11y.name(widget, name)
@@ -48,8 +50,9 @@ class Page:
     def __init__(self, shell):
         self.shell = shell
         self.cat = shell.cat
-        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=14, margin_bottom=14, margin_start=18, margin_end=18)
-        self.widget = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, hexpand=True, vexpand=True)
+        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        sizing.track(self.content, spacing=10, margin_top=16, margin_bottom=16, margin_start=20, margin_end=20)
+        self.widget = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, hexpand=True, vexpand=True, css_classes=["ack-page"])
         self.widget.set_child(self.content)
         self.build()
 
@@ -118,7 +121,7 @@ class RoundsPage(Page):
     def build(self) -> None:
         cat = self.cat
         self.timer = 0
-        self.dynamic = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self.dynamic = sizing.track(Gtk.Box(orientation=Gtk.Orientation.VERTICAL), spacing=10)
         self.start_box = self._build_start_box()
         self.content.append(self.dynamic)
         self.content.append(self.start_box)
@@ -126,11 +129,11 @@ class RoundsPage(Page):
 
     def _build_start_box(self) -> Gtk.Box:
         cat = self.cat
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box = sizing.track(Gtk.Box(orientation=Gtk.Orientation.VERTICAL), spacing=10)
         box.append(text(cat.t("window.rounds.start_heading"), ("section-heading",)))
         self.no_sets = text(cat.t("window.rounds.no_sets"), selectable=True)
         box.append(self.no_sets)
-        self.form = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.form = sizing.track(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL), spacing=10)
         self.set_names = Gtk.StringList.new([])
         self.choices = Gtk.DropDown(model=self.set_names)
         a11y.name(self.choices, cat.t("window.rounds.set_label"))
@@ -179,7 +182,7 @@ class RoundsPage(Page):
         for line in view.summary:
             self.dynamic.append(text(line, selectable=True))
         pid = shell.project_id
-        controls = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        controls = sizing.track(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL), spacing=8)
         controls.append(button(cat.t("window.rounds.refresh"), self.refresh))
         if view.back_target is not None:
             controls.append(button(cat.t("window.rounds.back", target=view.back_target), lambda: shell.run(wm.back_args(pid))))
@@ -199,11 +202,11 @@ class RoundsPage(Page):
     def _row(self, item: wm.RoundItem, pid: str) -> Gtk.ListBoxRow:
         cat, shell = self.cat, self.shell
         row = Gtk.ListBoxRow(activatable=False, selectable=False)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, css_classes=["row-box"])
+        box = sizing.track(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, css_classes=["row-box"]), spacing=4)
         box.append(text(item.lines[0], ("round-head",), selectable=True))
         if len(item.lines) > 1:
             box.append(text("\n".join(line.strip() for line in item.lines[1:]), selectable=True))
-        actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        actions = sizing.track(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL), spacing=8)
         if item.can_choose:
             actions.append(button(cat.t("window.rounds.choose"), lambda n=item.number: shell.run(wm.choose_args(pid, n)), cat.t("window.rounds.choose_name", number=item.number)))
         actions.append(button(cat.t("window.rounds.note"), lambda n=item.number, current=item.note: self._write_note(pid, n, current), cat.t("window.rounds.note_name", number=item.number)))
@@ -261,10 +264,10 @@ class VoiceFilePage(Page):
         a11y.name(rows, cat.t("window.voicefile.made_heading"))
         for item in view.items:
             row = Gtk.ListBoxRow(activatable=False, selectable=False)
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, css_classes=["row-box"])
+            box = sizing.track(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, css_classes=["row-box"]), spacing=4)
             box.append(text(item.line, ("round-head",), selectable=True))
             box.append(text(item.zip_path, selectable=True))
-            actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            actions = sizing.track(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL), spacing=8)
             actions.append(button(cat.t("window.voicefile.show"), lambda i=item: self._show(i), cat.t("window.voicefile.show_name", name=item.name)))
             actions.append(button(cat.t("window.voicefile.copy"), lambda i=item: self._copy(i), cat.t("window.voicefile.copy_name", name=item.name)))
             box.append(actions)
@@ -307,7 +310,7 @@ class FreePage(Page):
         if not view.items:
             self.content.append(text(cat.t("rounds.free.nothing"), selectable=True))
         for item in view.items:
-            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, css_classes=["row-box"])
+            row = sizing.track(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, css_classes=["row-box"]), spacing=10)
             check = Gtk.CheckButton(valign=Gtk.Align.START)
             a11y.name(check, item.line)
             check.connect("toggled", lambda _c: self._update())
@@ -339,3 +342,135 @@ class FreePage(Page):
         picked = self.ticked()
         if picked:
             self.shell.run(wm.free_args(self.shell.project_id, picked))
+
+
+ACCENT_WORDS = {"cyan": "window.display.accent_cyan", "red": "window.display.accent_red", "green": "window.display.accent_green", "orange": "window.display.accent_orange",
+                "purple": "window.display.accent_purple", "yellow": "window.display.accent_yellow", "blue": "window.display.accent_blue", "magenta": "window.display.accent_magenta",
+                "lime": "window.display.accent_lime", "pink": "window.display.accent_pink"}
+
+
+class DisplayPage(Page):
+    """The display choices. Built once and updated in place (a choice does not rebuild the page under the person's keyboard focus). Every change is shown at once; the first one asks whether to keep
+    the choices in a small file (Shell.change_look), and nothing is written before the person says yes."""
+
+    def build(self) -> None:
+        cat, shell = self.cat, self.shell
+        self.appearance = shell.appearance
+        self._updating = False
+        c = self.content
+        c.append(text(cat.t("window.display.heading"), ("page-heading",)))
+        c.append(text(cat.t("window.display.intro")))
+
+        c.append(text(cat.t("window.display.colours_heading"), ("section-heading",)))
+        row = sizing.track(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL), spacing=8)
+        self.theme_buttons = {}
+        group = None
+        for key, label_key, name_key in (("ack", "window.display.theme_ack", "window.display.theme_ack_name"), ("system", "window.display.theme_system", "window.display.theme_system_name")):
+            widget = Gtk.ToggleButton(label=cat.t(label_key), css_classes=["ack-button"])
+            if group is not None:
+                widget.set_group(group)
+            group = group or widget
+            a11y.name(widget, cat.t(name_key))
+            widget.connect("toggled", lambda w, k=key: self._pick_theme(k, w))
+            row.append(widget)
+            self.theme_buttons[key] = widget
+        c.append(row)
+        self.system_note = text(cat.t("window.display.theme_system_note"), ("dim-text",))
+        c.append(self.system_note)
+
+        self.accent_box = sizing.track(Gtk.Box(orientation=Gtk.Orientation.VERTICAL), spacing=10)
+        self.accent_box.append(text(cat.t("window.display.accent_heading"), ("section-heading",)))
+        swatches = sizing.track(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL), spacing=8)
+        self.swatches = []
+        group = None
+        for index, (name, _color) in enumerate(wt.ACCENTS):
+            widget = Gtk.ToggleButton(css_classes=["swatch", "swatch-" + name])
+            if group is not None:
+                widget.set_group(group)
+            group = group or widget
+            a11y.name(widget, cat.t("window.display.accent_name", name=cat.t(ACCENT_WORDS[name])))
+            widget.connect("toggled", lambda w, i=index: self._pick_accent(i, w))
+            swatches.append(widget)
+            self.swatches.append(widget)
+        self.accent_box.append(swatches)
+        c.append(self.accent_box)
+
+        c.append(text(cat.t("window.display.text_heading"), ("section-heading",)))
+        c.append(self._stepper("text"))
+        c.append(text(cat.t("window.display.scale_heading"), ("section-heading",)))
+        c.append(text(cat.t("window.display.scale_note"), ("dim-text",)))
+        c.append(self._stepper("scale"))
+
+        c.append(text(cat.t("window.display.keep_heading"), ("section-heading",)))
+        self.status = text("", selectable=True)
+        c.append(self.status)
+        actions = sizing.track(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL), spacing=8)
+        self.keep = button(cat.t("window.display.keep_button"), self._keep)
+        self.forget = button(cat.t("window.display.forget_button"), shell.ask_to_forget)
+        self.reset = button(cat.t("window.display.reset_button"), lambda: shell.change_look(wt.Look(theme=self.appearance.look.theme)))
+        for widget in (self.keep, self.forget, self.reset):
+            actions.append(widget)
+        c.append(actions)
+        self.appearance.listen(self.refresh)
+        self.refresh()
+
+    def _stepper(self, kind: str) -> Gtk.Box:
+        """A smaller button, the value, a bigger button."""
+        cat = self.cat
+        box = sizing.track(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, valign=Gtk.Align.CENTER), spacing=10)
+        names = {"text": ("window.display.smaller_text_name", "window.display.bigger_text_name"), "scale": ("window.display.smaller_scale_name", "window.display.bigger_scale_name")}[kind]
+        smaller = button("−", lambda: self._step(kind, -1), cat.t(names[0]))
+        bigger = button("+", lambda: self._step(kind, 1), cat.t(names[1]))
+        value = Gtk.Label(label="", css_classes=["round-head"], width_chars=8)
+        sizing.track(value, margin_start=4, margin_end=4)
+        box.append(smaller)
+        box.append(value)
+        box.append(bigger)
+        setattr(self, kind + "_smaller", smaller)
+        setattr(self, kind + "_bigger", bigger)
+        setattr(self, kind + "_value", value)
+        return box
+
+    def _step(self, kind: str, direction: int) -> None:
+        look = self.appearance.look
+        if kind == "text":
+            look = look.bigger_text() if direction > 0 else look.smaller_text()
+        else:
+            look = look.bigger_scale() if direction > 0 else look.smaller_scale()
+        self.shell.change_look(look)
+
+    def _pick_theme(self, key: str, widget: Gtk.ToggleButton) -> None:
+        if not self._updating and widget.get_active() and self.appearance.look.theme != key:
+            self.shell.change_look(wt.Look(key, self.appearance.look.accent, self.appearance.look.text_pt, self.appearance.look.scale_pct))
+
+    def _pick_accent(self, index: int, widget: Gtk.ToggleButton) -> None:
+        if not self._updating and widget.get_active() and self.appearance.look.accent != index:
+            look = self.appearance.look
+            self.shell.change_look(wt.Look(look.theme, index, look.text_pt, look.scale_pct))
+
+    def _keep(self) -> None:
+        if self.shell.dialog is None:
+            self.shell.ask_to_keep()
+
+    def refresh(self) -> None:
+        look, cat = self.appearance.look, self.cat
+        self._updating = True
+        try:
+            for key, widget in self.theme_buttons.items():
+                widget.set_active(look.theme == key)
+            for index, widget in enumerate(self.swatches):
+                widget.set_active(look.accent == index)
+        finally:
+            self._updating = False
+        self.accent_box.set_visible(look.theme == "ack")
+        self.system_note.set_visible(look.theme == "system")
+        self.text_value.set_label(cat.t("window.display.text_value", points=look.text_pt))
+        self.text_smaller.set_sensitive(look.smaller_text() != look)
+        self.text_bigger.set_sensitive(look.bigger_text() != look)
+        self.scale_value.set_label(cat.t("window.display.scale_value", percent=look.scale_pct))
+        self.scale_smaller.set_sensitive(look.smaller_scale() != look)
+        self.scale_bigger.set_sensitive(look.bigger_scale() != look)
+        kept = bool(wp.plan_forget(self.appearance.path)) and self.appearance.keeper.state == "kept"
+        self.status.set_label(cat.t("window.display.status_kept", path=self.appearance.path) if kept else cat.t("window.display.status_session"))
+        self.keep.set_visible(not kept)
+        self.forget.set_visible(kept)

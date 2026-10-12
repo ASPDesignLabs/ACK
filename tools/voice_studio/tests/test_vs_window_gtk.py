@@ -47,11 +47,12 @@ def code_only(path):
 
 
 def test_there_are_window_files_and_each_has_the_licence_line():
-    assert len(WINDOW) >= 8
+    assert len(WINDOW) >= 12
     for path in WINDOW:
         assert source(path).splitlines()[0] == "# SPDX-License-Identifier: GPL-3.0-or-later", path.name
-    for path in (PKG / "data" / "style.css", PKG / "data" / "icons" / "org.aspdesignlabs.AckVoiceStudio.svg"):
+    for path in (PKG / "data" / "icons" / "org.aspdesignlabs.AckVoiceStudio.svg",):
         assert "SPDX-License-Identifier: GPL-3.0-or-later" in "\n".join(source(path).splitlines()[:3]), path.name
+    assert not (PKG / "data" / "style.css").exists() and not (PKG / "window" / "style.py").exists(), "the style sheet is made by core/windowtheme.py now"
 
 
 @pytest.mark.parametrize("path", WINDOW, ids=lambda p: p.name)
@@ -69,19 +70,25 @@ def test_the_window_talks_to_no_other_computer_and_opens_no_web_address(path):
     assert not re.search(r"https?://", source(path)), path.name
 
 
-def test_a_style_is_loaded_from_a_file_because_the_way_to_pass_text_differs_between_gtk_versions():
+def test_the_style_sheet_is_text_made_in_core_and_loaded_as_bytes_which_gtk_4_6_and_4_14_both_accept():
+    code = code_only(PKG / "window" / "theme.py")
+    assert "load_from_data(text.encode('utf-8'))" in code and "css_for(self.look)" in code
     for path in WINDOW:
-        assert "load_from_data" not in code_only(path) and "load_from_string" not in code_only(path), path.name
-    assert "load_from_file" in code_only(PKG / "window" / "style.py")
+        assert "load_from_string" not in code_only(path) and "load_from_file" not in code_only(path), path.name
 
 
-def test_the_style_file_sets_sizes_only_no_colour_so_the_systems_contrast_theme_decides():
-    css = source(PKG / "data" / "style.css")
-    rules = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
-    assert not re.search(r"(?<![-\w])(color|background|border-color|background-color|box-shadow|text-shadow|opacity)\s*:", rules)
-    assert re.search(r"window,\s*dialog\s*\{\s*font-size:\s*12pt;", rules) and "transition: none" in rules and "animation: none" in rules
-    sizes = [float(m) for m in re.findall(r"font-size:\s*([0-9.]+)pt", rules)]
-    assert sizes and min(sizes) >= 12
+def test_the_window_files_hold_no_colour_of_their_own_every_colour_comes_from_the_core_palette():
+    for path in WINDOW:
+        code = code_only(path)
+        assert not re.search(r"#[0-9a-fA-F]{6}\b|Gdk\.RGBA|rgb\(", code), path.name
+        assert "set_property('gtk-application-prefer-dark-theme'" not in code or path.name == "theme.py", path.name
+
+
+def test_every_pixel_size_set_from_python_goes_through_the_scale():
+    for name in ("pages.py", "shell.py", "dialogs.py"):
+        code = code_only(PKG / "window" / name)
+        loose = re.findall(r"Gtk\.\w+\([^()]*\b(?:spacing|margin_\w+|width_request|height_request|min_content_height|max_content_height)=\d+", code)
+        assert loose == [], (name, loose)
 
 
 def test_the_only_timers_are_the_progress_bar_and_a_read_only_refresh_and_nothing_starts_by_itself():
@@ -95,10 +102,29 @@ def test_the_only_timers_are_the_progress_bar_and_a_read_only_refresh_and_nothin
     assert "self.refresh" in pages and "shell.run" not in pages.split("def _tick")[1].split("\n    def ")[0]          # the tick only reads again
 
 
-def test_every_change_goes_through_a_flow_and_the_window_writes_no_file_of_its_own():
+def test_every_change_goes_through_a_flow_and_the_window_itself_writes_no_file():
     for path in WINDOW:
         code = code_only(path)
         assert not re.search(r"\bopen\([^)]*['\"][wa]b?['\"]", code) and "os.remove" not in code and "os.unlink" not in code and "shutil" not in code and "rmtree" not in code, path.name
+
+
+def test_the_one_file_the_window_keeps_is_written_by_the_core_only_after_a_yes_and_removed_only_after_a_yes():
+    shell = code_only(PKG / "window" / "shell.py")
+    theme = code_only(PKG / "window" / "theme.py")
+    pages = code_only(PKG / "window" / "pages.py")
+    # saving: only the theme's own save(), and that is called only when the keeper says write, or straight after a yes
+    assert theme.count("wp.save(") == 1 and "wp.save(" not in shell and "wp.save(" not in pages
+    change = theme.split("def change(")[1].split("\n    def ")[0]
+    assert change.index("action = self.keeper.on_change()") < change.index("if action == 'write'") < change.index("return self.save()")
+    ask = shell.split("def ask_to_keep(")[1].split("\n    def ")[0]
+    assert ask.index("if not yes:") < ask.index("appearance.keeper.said_yes()") < ask.index("appearance.save()") and "said_no" in ask.split("if not yes:")[1].split("return")[0]
+    assert "self.show_confirm(" in ask and ask.index("def reply") < ask.index("self.show_confirm(")
+    # removing: listed first, and only inside the answer to the question, after a No has returned
+    forget = shell.split("def ask_to_forget(")[1].split("\n    def ")[0]
+    assert forget.index("shown = wp.plan_forget(") < forget.index("def reply") < forget.index("if not yes:") < forget.index("wp.forget(shown)") < forget.index("self.show_confirm(")
+    assert shell.count("wp.forget(") == 1 and "wp.forget(" not in pages and "wp.forget(" not in theme
+    # a change never writes by itself in the page code
+    assert "appearance.change(" not in pages and "shell.change_look(" in pages
 
 
 def test_no_control_is_icon_only_and_there_is_no_sound_call():
@@ -147,11 +173,16 @@ def test_the_real_window_passes_its_own_tour_on_a_virtual_display(tmp_path):
     assert done.returncode == 0, done.stdout[-1500:] + done.stderr[-1500:]
     report = json.loads(done.stdout.strip().splitlines()[-1])
     assert report["failed"] == [] and report["unnamed_controls"] == {} and report["smallest_text_pt"] >= 12.0 and report["animations_off"] is True
-    assert report["pages"] == ["Projects", "Training rounds", "Voice file", "Free up space"] and report["project_opened"] == "voice-check"
+    assert report["pages"] == ["Projects", "Training rounds", "Voice file", "Free up space", "Display"] and report["project_opened"] == "voice-check"
     for key in ("the_chosen_round_has_no_choose_button", "no_is_the_default_widget", "pages_locked_while_a_question_waits", "a_second_task_is_refused_while_busy", "pages_unlocked_after",
                 "result_head_for_nothing", "result_head_for_done", "remove_button_off_when_nothing_is_ticked", "free_question_names_only_the_ticked", "result_head_for_a_problem",
                 "no_is_where_the_focus_starts", "yes_is_not_the_default", "question_has_no_typed_instruction", "choose_question_shown", "no_answered", "no_changed_nothing", "yes_answered", "yes_chose_it", "free_question_shown", "free_no_answered", "make_finished", "make_said_why",
-                "not_busy_at_the_end"):
+                "not_busy_at_the_end", "every_look_is_a_sheet_gtk_accepts", "scale_reaches_python_sizes", "scale_goes_back", "no_file_before_any_choice", "theme_buttons_are_named",
+                "accent_buttons_are_named", "first_change_asks", "question_names_the_file_and_what_it_holds", "keep_question_starts_on_no", "the_change_is_shown_though_not_kept",
+                "a_no_is_said_in_the_result", "after_a_no_nothing_asks_and_nothing_is_written", "smaller_text_is_off_at_the_smallest_step", "asks_again_after_a_fresh_start",
+                "a_yes_writes_the_small_file", "the_file_is_owner_only_and_small", "a_yes_is_said_in_the_result", "later_changes_are_written_without_asking", "the_page_says_where_they_are_kept",
+                "removing_lists_the_files_first", "removing_names_both_files", "a_no_to_removing_keeps_both", "a_yes_removes_them_and_the_window_asks_again_next_time",
+                "the_window_keeps_its_look_after_removing", "standard_look_comes_back"):
         assert report[key] is True, key
     assert "Gtk-CRITICAL" not in done.stderr and "Gtk-WARNING" not in done.stderr
     if RUNNER:
