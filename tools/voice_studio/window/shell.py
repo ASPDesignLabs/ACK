@@ -44,6 +44,8 @@ class Shell(Gtk.ApplicationWindow):
         self.project_id: Optional[str] = None
         self.run_handle: Optional[wio.Run] = None
         self.dialog: Optional[Gtk.Dialog] = None            # the question on the screen, kept so a test can answer it
+        self.form = None                                    # the form on the screen (window/forms.py), kept so a test can fill it
+        self._then: Optional[Callable[[int], None]] = None  # told the exit code when the task that is running ends
         self.last_result: Tuple[int, Tuple[str, ...]] = (0, ())
         self._pulse_id = 0
         self._run_lines: List[str] = []
@@ -197,8 +199,17 @@ class Shell(Gtk.ApplicationWindow):
         self.stack.set_visible_child_name("rounds")
 
     def refresh(self) -> None:
+        self._close_project_if_gone()
         for page in self.pages:
             page.refresh()
+
+    def _close_project_if_gone(self) -> None:
+        """A project that was put away or deleted is no longer open: nothing keeps working on a project that is not in use."""
+        if self.project_id is not None and wm.find_project(self.services.home, self.project_id) is None:
+            self.project_id = None
+            self.set_title(self.cat.t("window.title"))
+            self.project_label.set_label(self.cat.t("window.header.no_project"))
+            self.add_to_result(self.cat.t("window.projects.closed"))
 
     # ---------------------------------------------------------------- the one task at a time
 
@@ -206,11 +217,12 @@ class Shell(Gtk.ApplicationWindow):
     def busy(self) -> bool:
         return self.run_handle is not None and self.run_handle.active
 
-    def run(self, button: Tuple[str, Sequence[str]]) -> None:
-        """Run what a button asks for (the words of a terminal command) as the one task. A second click while one runs does nothing."""
+    def run(self, button: Tuple[str, Sequence[str]], then: Optional[Callable[[int], None]] = None) -> None:
+        """Run what a button asks for (the words of a terminal command) as the one task. A second click while one runs does nothing. `then` is told the exit code when the task ends."""
         if self.busy:
             return
         tool, argv = button
+        self._then = then
         self._run_lines = []
         self._set_busy(True)
         services, crashed = self.services, self.cat.t("window.crashed")
@@ -239,7 +251,16 @@ class Shell(Gtk.ApplicationWindow):
     def on_finished(self, code: int, lines: Sequence[str]) -> None:
         self._set_busy(False)
         self.set_result(code, tuple(lines))
+        then, self._then = self._then, None
         self.refresh()
+        if then is not None:
+            then(code)
+
+    def add_to_result(self, line: str) -> None:
+        """One more line under what the last task said (the task's own words stay)."""
+        code, lines = self.last_result
+        self.last_result = (code, tuple(lines) + (line,))
+        self.result_label.set_label(self.result_label.get_label() + "\n" + line)
 
     def set_result(self, code: int, lines: Sequence[str]) -> None:
         self.last_result = (code, tuple(lines))

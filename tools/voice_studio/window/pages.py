@@ -10,7 +10,7 @@ from ..core import windowmodel as wm
 from ..core import windowprefs as wp
 from ..core import windowtheme as wt
 from ..core.text import size_text
-from . import a11y, sizing
+from . import a11y, forms, sizing
 from .gtkload import GLib, Gtk
 
 MINUTES_DEFAULT = 25
@@ -44,6 +44,17 @@ def button(label: str, on_click: Callable[[], None], name: str = "", sensitive: 
     return widget
 
 
+def action_bar(buttons: List[Gtk.Button]) -> Gtk.FlowBox:
+    """Buttons side by side that wrap onto the next line when the page is too narrow (a longer word in another language, a larger text size or scale). A page cannot scroll sideways, so a
+    row of buttons that is wider than the page would be squeezed below its smallest size. The wrapper boxes GTK adds take no keyboard focus of their own: Tab goes from button to button."""
+    bar = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=False, min_children_per_line=1, max_children_per_line=8, hexpand=True)          # it fills the page's width: a wrapping box measured at a narrower width than it is given would overlap what is under it
+    sizing.track(bar, column_spacing=8, row_spacing=8)
+    for widget in buttons:
+        bar.insert(widget, -1)
+        bar.get_last_child().set_focusable(False)
+    return bar
+
+
 class Page:
     """A page is a box inside a scrolled window. `build` makes the part that does not change, `refresh` the part that does."""
 
@@ -72,46 +83,156 @@ class Page:
 
 
 class ProjectsPage(Page):
+    """The projects in use, then (when asked for) the ones put away. A row is chosen, then a button under the list acts on it. Every change is a terminal command that shows what it will do and
+    asks first; nothing here removes or changes a file by itself."""
+
     def build(self) -> None:
         self.selected: Optional[str] = None
+        self.selected_away = False
+        self.show_away = False
         self.refresh()
+
+    def _list(self, items, away: bool) -> Gtk.ListBox:
+        rows = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE, css_classes=["boxed-list"])
+        a11y.name(rows, self.cat.t("window.projects.away_heading") if away else self.cat.t("window.nav.projects"))
+        ids: List[str] = []
+        for item in items:
+            row = Gtk.ListBoxRow(activatable=True)
+            row.set_child(text(item.line, ("row-box",)))
+            a11y.name(row, item.line)
+            rows.append(row)
+            ids.append(item.id)
+        rows.connect("row-selected", lambda _l, row, a=away, i=ids: self._chosen(row, a, i))
+        if not away:
+            rows.connect("row-activated", lambda _l, _r: self._open())
+        return rows
 
     def refresh(self) -> None:
         cat, services = self.cat, self.shell.services
         clear(self.content)
         view = wm.projects_view(services.home, cat)
+        in_use = [i.id for i in view.items]
+        away_ids = [i.id for i in view.away]
+        if self.selected is not None and self.selected not in (away_ids if self.selected_away else in_use):
+            self.selected = None
+        self.rows: Optional[Gtk.ListBox] = None
+        self.away_rows: Optional[Gtk.ListBox] = None
         self.content.append(text(cat.t("window.nav.projects"), ("page-heading",)))
         self.content.append(text(cat.t("projects.where", folder=view.folder), selectable=True))
-        if not view.items and not view.problems:
-            self.content.append(text(cat.t("window.projects.none", command="python3 -m voice_studio.projects new"), selectable=True))
-        self.open_button = button(cat.t("window.projects.open"), self._open, sensitive=False)
-        self.rows = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE, css_classes=["boxed-list"])
-        a11y.name(self.rows, cat.t("window.nav.projects"))
-        self.ids: List[str] = []
-        for item in view.items:
-            row = Gtk.ListBoxRow(activatable=True)
-            row.set_child(text(item.line, ("row-box",)))
-            a11y.name(row, item.line)
-            self.rows.append(row)
-            self.ids.append(item.id)
-        self.rows.connect("row-selected", self._selected)
-        self.rows.connect("row-activated", lambda _l, _r: self._open())
+        self.new_button = button(cat.t("window.projects.new"), self._new)
+        self.content.append(self.new_button)
+        if not view.items and not view.problems and not view.away:
+            self.content.append(text(cat.t("window.projects.none"), selectable=True))
+        self.actions: List[Tuple[Gtk.Button, bool]] = []                 # (button, acts on a project in use)
         if view.items:
+            self.rows = self._list(view.items, False)
             self.content.append(self.rows)
-            self.content.append(self.open_button)
+            self.content.append(text(cat.t("window.projects.pick"), ("dim-text",)))
+            made = []
+            for label, handler in ((cat.t("window.projects.open"), self._open), (cat.t("window.projects.edit"), self._edit), (cat.t("window.projects.away"), self._put_away),
+                                   (cat.t("window.projects.show_folder"), self._show_folder), (cat.t("window.projects.delete"), self._delete)):
+                action = button(label, handler, sensitive=False)
+                made.append(action)
+                self.actions.append((action, True))
+            self.content.append(action_bar(made))
+            if self.selected is not None and not self.selected_away:
+                self.rows.select_row(self.rows.get_row_at_index(in_use.index(self.selected)))
+            elif self.shell.project_id in in_use and self.selected is None:
+                self.rows.select_row(self.rows.get_row_at_index(in_use.index(self.shell.project_id)))
+        self.away_toggle = None
+        if view.away:
+            self.away_toggle = Gtk.CheckButton(label=cat.t("window.projects.show_away"), active=self.show_away)
+            self.away_toggle.connect("toggled", self._toggled)
+            self.content.append(self.away_toggle)
+            if self.show_away:
+                self.content.append(text(cat.t("window.projects.away_heading"), ("section-heading",)))
+                self.away_rows = self._list(view.away, True)
+                self.content.append(self.away_rows)
+                made = []
+                for label, handler in ((cat.t("window.projects.back"), self._bring_back), (cat.t("window.projects.delete"), self._delete)):
+                    action = button(label, handler, sensitive=False)
+                    made.append(action)
+                    self.actions.append((action, False))
+                self.content.append(action_bar(made))
+                if self.selected is not None and self.selected_away:
+                    self.away_rows.select_row(self.away_rows.get_row_at_index(away_ids.index(self.selected)))
         for problem in view.problems:
             self.content.append(text(problem, selectable=True))
-        current = self.shell.project_id
-        if current in self.ids:
-            self.rows.select_row(self.rows.get_row_at_index(self.ids.index(current)))
+        self._update_actions()
 
-    def _selected(self, _box: Gtk.ListBox, row: Optional[Gtk.ListBoxRow]) -> None:
-        self.selected = self.ids[row.get_index()] if row is not None else None
-        self.open_button.set_sensitive(self.selected is not None)
+    # ---------------------------------------------------------------- choosing
+
+    def select(self, project_id: str) -> None:
+        """Choose a row by its project (used after a new project is made)."""
+        self.selected, self.selected_away = project_id, False
+        self.refresh()
+
+    def _chosen(self, row: Optional[Gtk.ListBoxRow], away: bool, ids: List[str]) -> None:
+        if row is None:
+            return                                                  # a list was cleared because the other one was chosen from
+        self.selected, self.selected_away = ids[row.get_index()], away
+        other = self.rows if away else self.away_rows
+        if other is not None:
+            other.unselect_all()
+        self._update_actions()
+
+    def _update_actions(self) -> None:
+        for widget, for_use in self.actions:
+            widget.set_sensitive(self.selected is not None and self.selected_away != for_use)
+
+    def _toggled(self, check: Gtk.CheckButton) -> None:
+        self.show_away = check.get_active()
+        if not self.show_away and self.selected_away:
+            self.selected = None
+        self.refresh()
+
+    # ---------------------------------------------------------------- what the buttons do
+
+    def _name_of(self, project_id: str) -> str:
+        project = wm.find_project(self.shell.services.home, project_id, include_away=True)
+        return project.name if project else project_id
 
     def _open(self) -> None:
-        if self.selected is not None:
+        if self.selected is not None and not self.selected_away:
             self.shell.open_project(self.selected)
+
+    def _new(self) -> None:
+        before = {i.id for i in wm.projects_view(self.shell.services.home, self.cat).items} | {i.id for i in wm.projects_view(self.shell.services.home, self.cat).away}
+
+        def made(code: int) -> None:
+            if code != 0:
+                return
+            now = [i.id for i in wm.projects_view(self.shell.services.home, self.cat).items if i.id not in before]
+            if now:
+                self.select(now[0])
+        forms.open_new(self.shell, made)
+
+    def _edit(self) -> None:
+        project = wm.find_project(self.shell.services.home, self.selected) if self.selected else None
+        if project is not None:
+            forms.open_edit(self.shell, project)
+
+    def _put_away(self) -> None:
+        if self.selected is not None and not self.selected_away:
+            self.shell.run(wm.archive_args(self.selected))
+
+    def _bring_back(self) -> None:
+        if self.selected is not None and self.selected_away:
+            self.shell.run(wm.unarchive_args(self.selected))
+
+    def _delete(self) -> None:
+        if self.selected is not None:
+            self.shell.run(wm.delete_args(self.selected))
+
+    def _show_folder(self) -> None:
+        """Open the project's folder in the computer's file manager, so what is in it can be copied before anything is removed. It only looks."""
+        if self.selected is None:
+            return
+        folder = self.shell.services.home.projects + "/" + self.selected
+        if showfolder.open_folder(folder, self.shell.services.system):
+            self.shell.set_result(0, (self.cat.t("window.projects.folder_shown", name=self._name_of(self.selected)),))
+        else:
+            self.shell.set_result(1, (self.cat.t("window.projects.folder_failed", path=folder),))
 
 
 class RoundsPage(Page):

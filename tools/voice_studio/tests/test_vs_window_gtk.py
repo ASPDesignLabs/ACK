@@ -85,9 +85,9 @@ def test_the_window_files_hold_no_colour_of_their_own_every_colour_comes_from_th
 
 
 def test_every_pixel_size_set_from_python_goes_through_the_scale():
-    for name in ("pages.py", "shell.py", "dialogs.py"):
+    for name in ("pages.py", "shell.py", "dialogs.py", "forms.py"):
         code = code_only(PKG / "window" / name)
-        loose = re.findall(r"Gtk\.\w+\([^()]*\b(?:spacing|margin_\w+|width_request|height_request|min_content_height|max_content_height)=\d+", code)
+        loose = re.findall(r"Gtk\.\w+\([^()]*\b(?:spacing|column_spacing|row_spacing|margin_\w+|width_request|height_request|min_content_height|max_content_height)=\d+", code)
         assert loose == [], (name, loose)
 
 
@@ -125,6 +125,33 @@ def test_the_one_file_the_window_keeps_is_written_by_the_core_only_after_a_yes_a
     assert shell.count("wp.forget(") == 1 and "wp.forget(" not in pages and "wp.forget(" not in theme
     # a change never writes by itself in the page code
     assert "appearance.change(" not in pages and "shell.change_look(" in pages
+
+
+def test_managing_projects_goes_only_through_the_terminals_commands_after_a_form_that_is_whole():
+    forms = code_only(PKG / "window" / "forms.py")
+    pages = code_only(PKG / "window" / "pages.py")
+    shell = code_only(PKG / "window" / "shell.py")
+    for word in ("save_project(", "delete_project(", "with_archived(", "plan_delete(", "rmtree", "os.remove", "os.unlink", "create_project("):
+        assert word not in forms and word not in pages and word not in shell, word
+    # a form closes only when nothing is wrong with it, and then it hands over the words of the command
+    answer = forms.split("def _on_response(")[1].split("\n    def ")[0]
+    assert answer.index("self._problems()") < answer.index("if problems:") < answer.index("dialog.destroy()") < answer.index("self.shell.run(command")
+    assert forms.count("self.shell.run(") == 1 and "wm.check_new(" in forms and "wm.check_edit(" in forms and "wm.new_args(" in forms and "wm.edit_args(" in forms
+    # each button of the page is one command, run as the one task
+    for call in ("wm.archive_args(self.selected)", "wm.unarchive_args(self.selected)", "wm.delete_args(self.selected)"):
+        assert pages.count("self.shell.run(" + call + ")") == 1, call
+    assert pages.count("forms.open_new(") == 1 and pages.count("forms.open_edit(") == 1
+
+
+def test_a_project_that_is_put_away_or_deleted_is_closed_and_a_new_one_is_chosen_after_it_is_made():
+    shell = code_only(PKG / "window" / "shell.py")
+    pages = code_only(PKG / "window" / "pages.py")
+    refresh = shell.split("def refresh(")[1].split("\n    def ")[0]
+    assert "self._close_project_if_gone()" in refresh and refresh.index("self._close_project_if_gone()") < refresh.index("page.refresh()")
+    assert "wm.find_project(self.services.home, self.project_id) is None" in shell and "include_away" not in shell
+    finished = shell.split("def on_finished(")[1].split("\n    def ")[0]
+    assert finished.index("self.refresh()") < finished.index("then(code)")
+    assert "made(code: int)" in pages and "self.select(now[0])" in pages
 
 
 def test_no_control_is_icon_only_and_there_is_no_sound_call():

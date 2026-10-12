@@ -277,6 +277,19 @@ def _judge(form: FormInput, home: DataHome, registry: Registry, free: Optional[i
     return evaluate(form, taken_ids=_taken(home), voice_ids=[c.voice_id for c in voices(registry)], free={"project": free})
 
 
+def new_form_problems(form: FormInput, home: DataHome, registry: Registry, cat: Catalog) -> Tuple[str, ...]:
+    """The sentences for everything wrong with a new-project form, in the form's order; empty when it is whole. The window's form asks this before it closes, so what a person typed is
+    never lost to a flow that says no afterwards."""
+    state = _judge(form, home, registry, None)
+    return tuple(_problem_text(cat, problem) for problem in state.problems)
+
+
+def edit_form_problems(project: Project, form: EditInput, cat: Catalog) -> Tuple[Tuple[str, ...], bool]:
+    """(the sentences for everything wrong with an edit form, whether saving it would change anything)."""
+    state = evaluate_edit(project, form)
+    return tuple(_problem_text(cat, problem) for problem in state.problems), bool(state.changes)
+
+
 def _new(args: Sequence[str], system: System, home: DataHome, registry: Registry, cat: Catalog, io: IO, now: Optional[datetime]) -> int:
     try:
         parsed = parse_args(args, flags=NEW_FLAGS, values=NEW_VALUES, max_words=0)

@@ -280,3 +280,112 @@ def test_a_refusal_comes_back_as_words_and_asks_nothing(rig):
 def test_an_unknown_tool_is_refused_loudly(rig):
     with pytest.raises(ValueError):
         services(rig).run("nothing", [], wio.ChannelIO(Script()))
+
+
+# ---------------------------------------------------------------- managing projects from the window
+
+def full_services(rig):
+    from voice_studio.core.registry import load_registry
+    return wm.Services(rig.home, load_registry(), CAT, rig.training_env, rig.system, str(TOOLS))
+
+
+def press_projects(rig, button, sink):
+    tool, argv = button
+    svc = full_services(rig)
+    wio.start_run(lambda io: svc.run(tool, argv, io), sink, svc.titles())
+    assert sink.done.wait(10)
+    return sink.result
+
+
+def test_projects_that_are_put_away_are_listed_apart_and_found_only_when_asked_for(rig):
+    from voice_studio.core.project import load_project, save_project, with_archived
+    create_project(rig.home.projects, "Ben", "own")
+    paths = rig.paths.__class__(rig.home.projects + "/ben")
+    save_project(paths, with_archived(load_project(paths), True))
+    view = wm.projects_view(rig.home, CAT)
+    assert [i.id for i in view.items] == ["voice-check"] and [i.id for i in view.away] == ["ben"] and view.away[0].away and not view.items[0].away
+    assert wm.find_project(rig.home, "ben") is None and wm.find_project(rig.home, "ben", include_away=True).id == "ben" and wm.find_project(rig.home, "voice-check").id == "voice-check"
+
+
+def test_the_new_project_buttons_are_the_words_of_the_terminal_command(rig):
+    own = wm.NewFields(name="Anna", whose="own", hours="2")
+    assert wm.new_args(own) == ("projects", ["new", "--name=Anna", "--hours=2", "--own"])
+    other = wm.NewFields(name="Ben", whose="someone_else", hours="1,5", given_by="his mother", what_to="to record", when="9 Oct", withdraw="tell me", how_given="spoken", voice="voice-mike")
+    assert wm.new_args(other) == ("projects", ["new", "--name=Ben", "--hours=1,5", "--someone-else", "--given-by=his mother", "--agreed-to=to record", "--when=9 Oct", "--withdraw=tell me",
+                                               "--how-given=spoken", "--voice=voice-mike"])
+    assert "--how-given-other=in writing" in wm.new_args(wm.NewFields(name="Ben", whose="someone_else", how_given="other", how_given_other="in writing"))[1]
+    assert wm.new_args(wm.NewFields(name="--own", whose="own")) == ("projects", ["new", "--name=--own", "--hours=1", "--own"])
+    assert not any(a.startswith("--given") for a in wm.new_args(wm.NewFields(name="Anna", whose="own", given_by="ignored"))[1]), "a note typed and then switched to my own voice is not sent"
+
+
+def test_the_starting_voices_the_form_offers_are_the_registrys_own_in_the_plans_order(rig):
+    from voice_studio.core.registry import load_registry
+    assert wm.voice_choices(load_registry()) and all(v.startswith("voice-") for v in wm.voice_choices(load_registry()))
+
+
+def test_the_new_form_says_everything_wrong_with_it_before_anything_runs(rig):
+    from voice_studio.core.registry import load_registry
+    registry = load_registry()
+    assert wm.check_new(rig.home, registry, CAT, wm.NewFields(name="Anna", whose="own", hours="1")) == ()
+    problems = wm.check_new(rig.home, registry, CAT, wm.NewFields(name="", whose="", hours="lots"))
+    assert problems == ("Please type a name.", "Please choose whose voice this is.", "Please type the hours as a number, for example 2 or 1.5.")
+    missing = wm.check_new(rig.home, registry, CAT, wm.NewFields(name="Ben", whose="someone_else"))
+    assert len(missing) == 5 and all(p.endswith("This is needed before recording someone else's voice.") for p in missing) and missing[0].startswith("Who agreed?")
+    assert wm.check_new(rig.home, registry, CAT, wm.NewFields(name="Anna", whose="own", voice="voice-nobody")) == ("That starting voice is not one this tool offers.",)
+    assert wm.check_new(rig.home, registry, CAT, wm.NewFields(name="Anna", whose="own", given_by="x" * 600)) == (), "a note for my own voice is not looked at"
+
+
+def test_the_edit_buttons_carry_only_what_changed(rig):
+    from voice_studio.core.project import load_project
+    project = load_project(rig.paths)
+    old = wm.edit_fields_of(project)
+    assert old.name == "Voice check" and old.hours == "1"
+    assert wm.edit_args(project, old) == ("projects", ["edit", "voice-check"])
+    assert wm.edit_args(project, wm.EditFields("Voice check 2", "1")) == ("projects", ["edit", "voice-check", "--name=Voice check 2"])
+    assert wm.edit_args(project, wm.EditFields("Voice check", "2,5", given_by="me")) == ("projects", ["edit", "voice-check", "--hours=2,5", "--given-by=me"])
+    assert wm.archive_args("anna") == ("projects", ["archive", "anna"]) and wm.unarchive_args("anna") == ("projects", ["unarchive", "anna"]) and wm.delete_args("anna") == ("projects", ["delete", "anna"])
+
+
+def test_the_edit_form_says_what_is_wrong_and_whether_saving_would_change_anything(rig):
+    from voice_studio.core.project import load_project
+    project = load_project(rig.paths)
+    assert wm.check_edit(project, CAT, wm.edit_fields_of(project)) == ((), False)
+    assert wm.check_edit(project, CAT, wm.EditFields("Voice check 2", "1")) == ((), True)
+    problems, changes = wm.check_edit(project, CAT, wm.EditFields(" ", "0"))
+    assert problems == ("Please type a name.", "The plan needs at least half an hour of recording.") and not changes
+
+
+def test_making_a_project_asks_once_with_buttons_and_a_no_makes_nothing(rig):
+    before = sorted(os.listdir(rig.home.projects))
+    sink = Script(False)
+    code, lines = press_projects(rig, wm.new_args(wm.NewFields(name="Anna", whose="own", hours="2")), sink)
+    assert code == 2 and sorted(os.listdir(rig.home.projects)) == before and sink.questions[0][1] == "Make this project?"
+    assert "This is the project that would be made:" in sink.questions[0][0] and "  Whose voice: own voice" in sink.questions[0][0]
+    sink = Script(True)
+    code, lines = press_projects(rig, wm.new_args(wm.NewFields(name="Anna", whose="own", hours="2")), sink)
+    assert code == 0 and sorted(os.listdir(rig.home.projects)) == sorted(before + ["anna"]) and "Made the project anna." in " ".join(lines)
+
+
+def test_putting_a_project_away_and_bringing_it_back_ask_once_and_move_it_between_the_two_lists(rig):
+    sink = Script(True)
+    assert press_projects(rig, wm.archive_args("voice-check"), sink)[0] == 0 and sink.questions[0][1].startswith("Put Voice check away? Nothing is removed.")
+    view = wm.projects_view(rig.home, CAT)
+    assert view.items == () and [i.id for i in view.away] == ["voice-check"]
+    sink = Script(True)
+    assert press_projects(rig, wm.unarchive_args("voice-check"), sink)[0] == 0
+    assert [i.id for i in wm.projects_view(rig.home, CAT).items] == ["voice-check"]
+
+
+def test_deleting_a_project_asks_twice_with_the_list_in_the_first_question_and_a_no_removes_nothing(rig):
+    sink = Script(True, False)
+    code, lines = press_projects(rig, wm.delete_args("voice-check"), sink)
+    assert code == 2 and os.path.isfile(rig.paths.project_json) and len(sink.questions) == 2
+    assert sink.questions[0][0][0].startswith("This would remove the project voice-check: Voice check.") and sink.questions[0][1] == "Delete the project Voice check for good?"
+    assert sink.questions[1][0] == () and sink.questions[1][1].startswith("Last question. Remove Voice check, ")
+    sink = Script(True, True)
+    code, lines = press_projects(rig, wm.delete_args("voice-check"), sink)
+    assert code == 0 and not os.path.lexists(rig.paths.root) and wm.projects_view(rig.home, CAT).items == ()
+
+
+def test_the_projects_command_is_one_of_the_tools_and_its_heading_is_the_windows_own(rig):
+    assert "projects" in wm.TOOLS and CAT.t("projects.title") in full_services(rig).titles()

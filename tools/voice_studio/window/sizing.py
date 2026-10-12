@@ -11,7 +11,7 @@ from typing import Dict, Tuple
 
 from .gtkload import Gtk
 
-PROPERTIES = ("spacing", "margin_top", "margin_bottom", "margin_start", "margin_end", "width_request", "height_request", "min_content_height", "max_content_height", "min_content_width")
+PROPERTIES = ("spacing", "column_spacing", "row_spacing", "margin_top", "margin_bottom", "margin_start", "margin_end", "width_request", "height_request", "min_content_height", "max_content_height", "min_content_width")
 
 _scale = 1.0
 _tracked: Dict[int, Tuple["weakref.ReferenceType", Dict[str, int]]] = {}

@@ -157,6 +157,7 @@ def run(services: wm.Services) -> int:
         checks["make_said_why"] = bool(shell.last_result[1]) and shell.last_result[0] in (1, 2)
         checks["result_head_for_a_problem"] = shell.result_label.get_label().splitlines()[0] == cat.t("window.result.problem")
 
+    profile_checks(shell, checks)
     look_checks(shell, checks)
     checks["not_busy_at_the_end"] = not shell.busy
     shell.destroy()
@@ -164,6 +165,130 @@ def run(services: wm.Services) -> int:
     checks["failed"] = failed
     print(json.dumps(checks, sort_keys=True))
     return 1 if failed else 0
+
+
+def answer(shell, yes: bool, timeout: float = 8.0) -> bool:
+    """Wait for the question on the screen (not a form) and answer it with its Yes or its No button."""
+    if not pump(lambda: shell.dialog is not None and shell.form is None, timeout):
+        return False
+    shell.dialog.response(Gtk.ResponseType.YES if yes else Gtk.ResponseType.CANCEL)
+    return pump(lambda: shell.dialog is None, 3.0)
+
+
+def settled(shell, timeout: float = 8.0) -> bool:
+    return pump(lambda: not shell.busy and shell.dialog is None and shell.form is None, timeout)
+
+
+def fill_new(form, name: str, hours: str = "2") -> None:
+    form.name.set_text(name)
+    form.hours.set_text(hours)
+    form.own.set_active(True)
+
+
+def profile_checks(shell, checks: Dict[str, object]) -> None:
+    """Making, changing, putting away, bringing back and deleting a project, by the real buttons: a form that is not whole stays open and says why, a whole one closes and the command asks once
+    more, a No changes nothing, a project that is put away leaves the list and is closed if it was open, and a delete needs two Yes answers and removes only that project."""
+    cat, home = shell.cat, shell.services.home
+    page = shell.pages[0]
+    keep_open = shell.project_id
+    shell.stack.set_visible_child_name("projects")
+    page.refresh()
+    folder = home.projects + "/tour-anna"
+
+    page.new_button.emit("clicked")
+    form = shell.form
+    checks["new_form_opens_as_the_question_on_the_screen"] = form is not None and shell.dialog is form.dialog
+    if form is None:
+        return
+    form.dialog.response(Gtk.ResponseType.OK)
+    pump(lambda: False, 0.05)
+    said = form.problems.get_label()
+    checks["new_form_says_what_is_wrong_and_stays_open"] = shell.form is form and form.problems.get_visible() and cat.t("newproject.problem.name.blank") in said and cat.t("newproject.problem.whose_voice.missing") in said
+    checks["form_controls_are_named"] = a11y.unnamed_controls(form.dialog) == []
+    form.other.set_active(True)
+    checks["agreement_shows_for_someone_elses_voice"] = form.consent_box.get_visible()
+    form.name.set_text("Tour Ben")
+    form.dialog.response(Gtk.ResponseType.OK)
+    pump(lambda: False, 0.05)
+    checks["a_missing_agreement_is_named_in_the_form"] = cat.t("project.consent.missing.given_by") in form.problems.get_label() and not os.path.exists(home.projects + "/tour-ben")
+    form.own.set_active(True)
+    checks["agreement_hides_for_my_own_voice"] = not form.consent_box.get_visible()
+    fill_new(form, "Tour Anna")
+    form.dialog.response(Gtk.ResponseType.OK)
+    checks["a_whole_form_closes_and_the_command_asks_once_more"] = pump(lambda: shell.form is None and shell.dialog is not None) and "Make this project?" in message_of(shell.dialog)
+    answer(shell, False)
+    settled(shell)
+    checks["a_no_makes_no_project"] = not os.path.exists(folder) and shell.last_result[0] == 2
+
+    page.new_button.emit("clicked")
+    fill_new(shell.form, "Tour Anna")
+    shell.form.dialog.response(Gtk.ResponseType.OK)
+    answer(shell, True)
+    settled(shell)
+    checks["a_yes_makes_the_project_and_chooses_its_row"] = os.path.isfile(folder + "/project.json") and page.selected == "tour-anna" and shell.last_result[0] == 0
+
+    find(page.widget, cat.t("window.projects.edit")).emit("clicked")
+    form = shell.form
+    checks["edit_form_is_filled_in"] = form is not None and form.name.get_text() == "Tour Anna" and form.hours.get_text() == "2" and not form.consent_box.get_visible()
+    if form is not None:
+        form.dialog.response(Gtk.ResponseType.OK)
+        pump(lambda: False, 0.05)
+        checks["edit_with_nothing_different_says_so_and_stays_open"] = shell.form is form and cat.t("window.form.no_changes") in form.problems.get_label()
+        form.name.set_text("Tour Anna B")
+        form.dialog.response(Gtk.ResponseType.OK)
+        answer(shell, True)
+        settled(shell)
+        checks["edit_saves_after_a_yes"] = wm.find_project(home, "tour-anna").name == "Tour Anna B"
+
+    find(page.widget, cat.t("window.projects.away")).emit("clicked")
+    answer(shell, False)
+    settled(shell)
+    checks["a_no_keeps_the_project_in_the_list"] = "tour-anna" in [i.id for i in wm.projects_view(home, cat).items]
+    find(page.widget, cat.t("window.projects.away")).emit("clicked")
+    answer(shell, True)
+    settled(shell)
+    view = wm.projects_view(home, cat)
+    checks["put_away_moves_it_to_the_other_list"] = "tour-anna" in [i.id for i in view.away] and "tour-anna" not in [i.id for i in view.items] and os.path.isfile(folder + "/project.json")
+    checks["the_away_list_is_offered_not_shown"] = page.away_toggle is not None and page.away_rows is None
+    page.away_toggle.set_active(True)
+    checks["the_away_list_shows_when_asked"] = page.away_rows is not None
+    page.away_rows.select_row(page.away_rows.get_row_at_index(0))
+    checks["bring_back_is_ready_for_a_project_that_is_away"] = find(page.widget, cat.t("window.projects.back")).get_sensitive() and not find(page.widget, cat.t("window.projects.edit")).get_sensitive()
+    find(page.widget, cat.t("window.projects.back")).emit("clicked")
+    answer(shell, True)
+    settled(shell)
+    checks["bring_back_returns_it_to_the_list"] = "tour-anna" in [i.id for i in wm.projects_view(home, cat).items] and wm.find_project(home, "tour-anna") is not None
+
+    shell.open_project("tour-anna", announce=False)
+    shell.stack.set_visible_child_name("projects")
+    page.select("tour-anna")
+    find(page.widget, cat.t("window.projects.away")).emit("clicked")
+    answer(shell, True)
+    settled(shell)
+    checks["an_open_project_that_is_put_away_is_closed"] = shell.project_id is None and cat.t("window.projects.closed") in shell.last_result[1]
+    shell.run(wm.unarchive_args("tour-anna"))
+    answer(shell, True)
+    settled(shell)
+
+    page.select("tour-anna")
+    find(page.widget, cat.t("window.projects.delete")).emit("clicked")
+    asked = pump(lambda: shell.dialog is not None)
+    first = message_of(shell.dialog) if shell.dialog is not None else ""
+    checks["delete_lists_what_goes_before_it_asks"] = asked and "tour-anna" in first and cat.t("projects.delete.backup") in first
+    answer(shell, True)
+    second = pump(lambda: shell.dialog is not None)
+    checks["delete_asks_a_second_time"] = second and "Last question." in message_of(shell.dialog)
+    answer(shell, False)
+    settled(shell)
+    checks["a_no_to_the_second_question_removes_nothing"] = os.path.isfile(folder + "/project.json")
+    find(page.widget, cat.t("window.projects.delete")).emit("clicked")
+    answer(shell, True)
+    answer(shell, True)
+    settled(shell)
+    checks["two_yes_answers_delete_only_that_project"] = not os.path.lexists(folder) and "tour-anna" not in [i.id for i in wm.projects_view(home, cat).items] and wm.find_project(home, keep_open) is not None
+    checks["projects_page_controls_are_named"] = a11y.unnamed_controls(page.widget) == []
+    if keep_open is not None:
+        shell.open_project(keep_open, announce=False)
 
 
 def every_look() -> List[wt.Look]:
