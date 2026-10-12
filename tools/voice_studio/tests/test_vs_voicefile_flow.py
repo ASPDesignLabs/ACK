@@ -76,7 +76,7 @@ def test_make_shows_what_it_will_do_and_checks_the_room_before_it_asks(rig):
     assert code == 2 and rig.exports() == [] and rig.system.kinds() == []
     assert "The voice file would be made like this:" in said and "Checked before starting:" in said
     plan = vf.plan_voice(rig.paths, rd.load(rig.paths), "voice-check", jobs.utc_stamp(NOW), None)
-    assert "  take the saved point of round 2, the chosen round (%s), which has about %d minutes of training in it" % (size_text(plan.checkpoint_bytes), plan.trained_minutes) in said
+    assert "  use the saved point of round 2, the chosen round (%s, about %d minutes of training)" % (size_text(plan.checkpoint_bytes), plan.trained_minutes) in said
     assert "  take that round's own settings file" in said and "  make the voice, give it its settings file, and prepare it for the phone" in said
     assert "  make the zip file ACK takes, then read it back as the phone would" in said
     assert "  write everything into a new folder, %s/%s, and change nothing that is already there" % (rig.paths.exports, FOLDER % 2) in said
@@ -157,8 +157,8 @@ def test_make_with_yes_does_everything_in_order_and_says_where_the_file_is(rig):
                      "Step 3 of 5: preparing it for the phone.", "Step 4 of 5: making the zip file.", "Step 5 of 5: reading the zip file back as the phone would."]
     assert io.lines.index(steps[0]) < io.lines.index(steps[4]) < io.lines.index("Done. The file to give to ACK is: " + zip_path)
     assert "It is %s, and read back as the phone would, it has no problems." % size_text(os.stat(zip_path).st_size) in io.lines
-    assert "Everything is in %s/%s: the voice, its settings file, the original before it was prepared, and the zip file." % (rig.paths.exports, FOLDER % 2) in io.lines
-    assert io.lines[-1].startswith("Copy the zip file to the phone, then in ACK open the audio screen")
+    assert "Everything is in %s/%s: the voice, its settings file, the original, and the zip file." % (rig.paths.exports, FOLDER % 2) in io.lines
+    assert io.lines[-1].startswith("Copy the zip file to the phone. In ACK, open the audio screen")
     assert rig.exports() == [FOLDER % 2]
 
 

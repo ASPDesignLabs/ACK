@@ -70,7 +70,7 @@ def test_each_round_is_described_by_the_terminals_own_lines_and_only_a_whole_oth
     for item, r in zip(view.items, record.rounds):
         assert item.lines == tuple(rf.round_lines(r, r.number == record.current, rig.paths, CAT))
     assert view.items[2].lines[0] == "Round 3 (chosen): Finished." and view.back_target == 2
-    assert view.summary == ("Chosen: round 3. The next round continues from it. About %d minutes of training went into this voice." % rd.trained_minutes(record, 3),)
+    assert view.summary == ("Chosen: round 3. The next round continues from it. About %d minutes of training so far." % rd.trained_minutes(record, 3),)
 
 
 def test_a_round_whose_saved_point_is_not_whole_cannot_be_chosen(rig):
@@ -243,7 +243,7 @@ def test_choosing_a_round_shows_the_question_with_buttons_and_only_a_yes_changes
     sink = Script(False)
     code, lines = press(rig, wm.choose_args("voice-check", 1), sink)
     assert code == 2 and slurp(rig.paths.rounds_file) == before and lines[-1] == "Nothing was done."
-    assert sink.questions == [((), "Choose round 1? The next round will continue from it. Every round and all their files stay where they are.")]
+    assert sink.questions == [((), "Choose round 1? The next round will continue from it. Nothing is deleted.")]
     sink = Script(True)
     code, lines = press(rig, wm.choose_args("voice-check", 1), sink)
     assert code == 0 and rd.load(rig.paths).current == 1 and "Done." in " ".join(lines)

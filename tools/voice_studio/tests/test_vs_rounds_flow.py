@@ -143,7 +143,7 @@ def test_list_shows_every_round_with_what_it_continued_from_and_marks_the_chosen
     lines = io.lines
     assert code == 0 and rig.record_bytes() == before
     assert "Round 1: Finished." in lines and "Round 2 (chosen): Finished." in lines
-    assert "  Asked to train for 25 minutes, starting from the starting voice voice-mike, on the training set %s." % DATASET in lines
+    assert "  Asked for 25 minutes of training, from the starting voice voice-mike, on the training set %s." % DATASET in lines
     assert "  Asked to train for 25 minutes, continuing from round 1, on the training set %s." % DATASET in lines
     assert "  Note: clearer on the S sounds" in lines and "  The saved point is there" in lines and "  Started 2026-10-11 12:00:00 UTC." in lines
     assert any(l.startswith("Chosen: round 2.") and "About 50 minutes of training" in l for l in lines) and "To train another round" in io.text
@@ -398,7 +398,7 @@ def test_stop_asks_first_and_then_asks_the_round_to_stop_once(rig):
     info = rig.world.job_for(plan, "running")
     rd.attach_job(rig.paths, 1, info.id)
     code, io = rig.run("stop", "--project", "anna", answers=["no"])
-    assert code == 2 and not os.path.exists(info.dir + "/stop.json") and "can lose the last few minutes" in io.prompts[0]
+    assert code == 2 and not os.path.exists(info.dir + "/stop.json") and "the last few minutes of training can be lost" in io.prompts[0]
     code, io = rig.run("stop", "--project", "anna", answers=[], interactive=False)
     assert code == 2 and not os.path.exists(info.dir + "/stop.json")
     code, io = rig.run("stop", "--project", "anna", answers=["yes"])
@@ -419,7 +419,7 @@ def test_choose_asks_first_and_changes_only_which_round_is_chosen(rig):
     rig.finish_rounds(2)
     files = sorted(str(p) for p in Path(rig.paths.run).rglob("*") if p.is_file())
     code, io = rig.run("choose", "1", "--project", "anna", answers=["no"])
-    assert code == 2 and rd.load(rig.paths).current == 2 and "Every round and all their files stay where they are" in io.prompts[0]
+    assert code == 2 and rd.load(rig.paths).current == 2 and "Nothing is deleted" in io.prompts[0]
     code, io = rig.run("choose", "1", "--project", "anna", answers=["yes"])
     assert code == 0 and rd.load(rig.paths).current == 1 and "Done. Round 1 is chosen." in io.lines and len(rd.load(rig.paths).rounds) == 2
     assert sorted(str(p) for p in Path(rig.paths.run).rglob("*") if p.is_file()) == files
@@ -458,7 +458,7 @@ def test_choose_is_refused_while_a_round_runs(rig):
 def test_back_asks_with_both_round_numbers_and_chooses_the_one_before(rig):
     rig.finish_rounds(2)
     code, io = rig.run("back", "--project", "anna", answers=["no"])
-    assert code == 2 and rd.load(rig.paths).current == 2 and io.prompts[0].startswith("Go back to round 1? Round 2 is chosen now, and it continued from round 1.")
+    assert code == 2 and rd.load(rig.paths).current == 2 and io.prompts[0].startswith("Go back to round 1? Round 2 is chosen now. The next round will continue from round 1 instead.")
     code, io = rig.run("back", "--project", "anna", answers=["yes"])
     assert code == 0 and rd.load(rig.paths).current == 1 and any(l.startswith("Done. Round 1 is chosen now. Round 2 is still in the list") for l in io.lines)
     assert os.path.isfile(rig.paths.run + "/lightning_logs/version_1/checkpoints/last.ckpt")
@@ -760,7 +760,7 @@ def test_another_program_holding_the_card_is_a_warning_and_then_a_refusal(rig, u
     code, io = rig.run(*start_args("--yes"))
     free = 8188 - used
     if outcome == "refused":
-        assert code == 2 and rig.started == [] and rig.record_bytes() is None and "Close programs that use the graphics card" in io.text and "Nothing was started" in io.text
+        assert code == 2 and rig.started == [] and rig.record_bytes() is None and "Close programs that use it, such as a browser" in io.text and "Nothing was started" in io.text
     else:
         assert code == 0 and len(rig.started) == 1 and (("It may run out of memory" in io.text) == (outcome == "tight"))
     assert size_text(free * MIB) in io.text
@@ -775,7 +775,7 @@ def test_a_disk_that_would_be_left_too_full_is_a_warning_and_then_a_refusal(rig,
         assert code == 2 and rig.started == [] and rig.record_bytes() is None and "There is not enough free space for this round" in io.text and rig.system and io.prompts == []
         assert size_text(FLOORS.low + NEED - (NEED + extra)) in io.text                          # how much more is needed
     else:
-        assert code == 0 and len(rig.started) == 1 and (("Free space is getting tight" in io.text) == (outcome == "tight"))
+        assert code == 0 and len(rig.started) == 1 and (("Free space is getting low" in io.text) == (outcome == "tight"))
 
 
 def test_a_disk_that_cannot_be_read_is_not_judged_and_is_said(rig):
