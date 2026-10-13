@@ -49,7 +49,7 @@ It is safe to run the command again at any point. It looks at what is already do
    - It lists the few Ubuntu programs it needs and asks once. Ubuntu then asks for your Ubuntu password, here in this window. The tool never sees it.
    - It sets up the programs that listen to your recordings and make training sets. They are small. It shows the size and asks first.
    - It sets up the programs that train the voice. They are large (about 10 GB free is needed while they are built). It asks first, and you can say no now and do it later.
-5. **It opens the window.** The Ubuntu part does not open the window itself: PowerShell does, as the very last step, so that Windows keeps a session open to Ubuntu. While the window is open, this PowerShell window stays busy and shows nothing. Leave it open: closing it can stop Ubuntu, and the window with it. When you close the Voice Studio window, PowerShell is free again.
+5. **It opens the window.** The Ubuntu part does not open the window itself: PowerShell does, as the very last step, so that Windows keeps a session open to Ubuntu. While the window is open, this PowerShell window stays busy and shows nothing. Leave it open: closing it closes the Voice Studio window. When you close the Voice Studio window, PowerShell is free again.
 
 ### Looking first, changing nothing
 
@@ -107,7 +107,7 @@ The sentences below are what the tool prints, word for word. Your numbers and na
 | `Next: the programs that listen to your recordings and make training sets. They are small.` | The first set of programs. | Read what it shows, then type `yes` at `Download and set it up now? Type yes to go on.` |
 | `Next: the programs that train the voice. They are large, and the next question says how much room they need. You can say no now and do this later: everything before training works without them.` | The second set. | Type `yes` to set them up now, or `no` to do it later. |
 | `The internet connection stopped. Nothing is lost and you do not need to do anything.` | A download was cut off. | Wait. It tries again by itself, and carries on from where it stopped. |
-| `Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it can stop Ubuntu, and the window with it. When you close the Voice Studio window, this PowerShell window is free again.` | The last step. | The Voice Studio window appears. Leave PowerShell open while you use it. |
+| `Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it closes the Voice Studio window. When you close the Voice Studio window, this PowerShell window is free again.` | The last step. | The Voice Studio window appears. Leave PowerShell open while you use it. |
 | `The Voice Studio window was closed.` | You closed the window. | Nothing. PowerShell is free again. |
 
 If you press Ctrl+C at any time, it stops cleanly, keeps what was finished, and the same command carries on later.

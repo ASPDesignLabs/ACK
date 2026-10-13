@@ -652,7 +652,7 @@ def test_the_window_is_opened_after_the_ubuntu_part_ended_well_and_the_person_is
     got = run_install(tmp_path)
     said = got["said"]
     assert "The Ubuntu part has ended." in said
-    opening = "Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it can stop Ubuntu, and the window with it. When you close the Voice Studio window, this PowerShell window is free again."
+    opening = "Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it closes the Voice Studio window. When you close the Voice Studio window, this PowerShell window is free again."
     assert opening in said and "The Voice Studio window was closed." in said
     assert said.index("The Ubuntu part has ended.") < said.index(opening) < said.index("The Voice Studio window was closed.")
     assert got["calls"].index(lives(got)[0]) < got["calls"].index(lives(got)[1]) and got["code"] == 0
@@ -834,6 +834,57 @@ def test_the_script_run_for_real_never_calls_wsl_when_only_looking(tmp_path):
     assert marker.read_text().count("called") == 1, "-DryRun looks (wsl.exe -l -v once) and installs nothing: it was called only to list"
 
 
+# ================================================================ the real wsl.exe calls (found wrong on the first run on a real Windows)
+
+def with_stub_wsl(tmp_path, body):
+    """A `wsl.exe` on the path that is a script, so the real functions that start it can be run."""
+    bin_dir = tmp_path / "stub"
+    bin_dir.mkdir()
+    stub = bin_dir / "wsl.exe"
+    stub.write_text("#!/bin/sh\n" + body)
+    stub.chmod(0o755)
+    return {"PATH": "%s:%s" % (bin_dir, os.environ["PATH"])}
+
+
+@needs_pwsh
+def test_what_wsl_prints_in_a_live_call_reaches_the_screen_and_is_not_swallowed_into_the_result(tmp_path):
+    """The first version called `& wsl.exe` inside the function, so everything Ubuntu said (and its questions) went into the function's result and the person saw nothing."""
+    env = with_stub_wsl(tmp_path, 'echo "said by ubuntu"\nexit 3\n')
+    driver = tmp_path / "live.ps1"
+    driver.write_text("$env:ACK_VOICE_NO_AUTORUN = '1'\n. %s\n$r = Invoke-AckVsWslLive -WslArguments @('x')\n'RESULT ' + $r.GetType().Name + ' ' + $r.Ran + ' ' + $r.Code\n" % lit(str(SCRIPT)))
+    done = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", str(driver)], capture_output=True, text=True, env=dict(os.environ, **env), timeout=60)
+    assert done.returncode == 0, done.stderr
+    assert "said by ubuntu" in done.stdout.splitlines(), "printed on the person's screen"
+    assert "RESULT Hashtable True 3" in done.stdout.splitlines(), "one result, with the exit code, not an array holding the program's output"
+
+
+@needs_pwsh
+def test_every_argument_reaches_wsl_as_one_piece_and_the_exit_code_is_handed_back(tmp_path):
+    env = with_stub_wsl(tmp_path, 'for a in "$@"; do echo "[$a]"; done\nexit 0\n')
+    driver = tmp_path / "args.ps1"
+    command = "PYTHONPATH=$HOME/x exec /usr/bin/python3 -m voice_studio.window"
+    driver.write_text("$env:ACK_VOICE_NO_AUTORUN = '1'\n. %s\n$r = Invoke-AckVsWslLive -WslArguments @('-d', 'Ubuntu-24.04', '--cd', '~', '--exec', 'bash', '-c', %s)\n'CODE ' + $r.Code\n" % (lit(str(SCRIPT)), lit(command)))
+    done = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", str(driver)], capture_output=True, text=True, env=dict(os.environ, **env), timeout=60)
+    lines = done.stdout.splitlines()
+    assert lines[:7] == ["[-d]", "[Ubuntu-24.04]", "[--cd]", "[~]", "[--exec]", "[bash]", "[-c]"] and "[%s]" % command in lines and "CODE 0" in lines, done.stdout
+
+
+@needs_pwsh
+def test_a_live_call_when_wsl_is_not_there_is_reported_as_not_run_not_as_done(tmp_path):
+    driver = tmp_path / "missing.ps1"
+    driver.write_text("$env:ACK_VOICE_NO_AUTORUN = '1'\n. %s\n$r = Invoke-AckVsWslLive -WslArguments @('x')\n'RAN ' + $r.Ran + ' ' + $r.Code\n" % lit(str(SCRIPT)))
+    done = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", str(driver)], capture_output=True, text=True, env=dict(os.environ, PATH="/usr/bin:/bin"), timeout=60)
+    assert "RAN False 1" in done.stdout.splitlines(), done.stdout + done.stderr
+
+
+def test_the_live_call_starts_wsl_on_the_persons_own_console_and_nothing_else_starts_a_program():
+    code = SCRIPT.read_text()
+    live = code.split("function Invoke-AckVsWslLive", 1)[1].split("\nfunction ", 1)[0]
+    assert "Start-Process" in live and "-NoNewWindow" in live and "-Wait" in live and "-PassThru" in live and "-Verb" not in live
+    assert "& wsl.exe" not in live, "a native call inside a function is captured into its result"
+    assert len(re.findall(r"Start-Process -FilePath", code)) == 1, "one place starts a program; its comment only names the cmdlet"
+
+
 # ================================================================ what the file may and may not do
 
 def code_lines():
@@ -873,8 +924,7 @@ def test_the_file_parses_without_a_single_error(tmp_path):
 
 def test_it_never_asks_for_a_password_changes_the_script_rules_the_registry_or_asks_windows_for_more_rights():
     code = "\n".join(code_lines()).lower()
-    for word in ("get-credential", "securestring", "-assecurestring", "set-executionpolicy", "set-itemproperty", "new-itemproperty", "reg add", "reg.exe", "start-process", "-verb runas",
-                 "runas", "enable-windowsoptionalfeature", "dism", "setx", "[environment]::setenvironmentvariable", "icacls", "takeown", "netsh", "schtasks", "new-service", "sc.exe"):
+    for word in ("get-credential", "securestring", "-assecurestring", "set-executionpolicy", "set-itemproperty", "new-itemproperty", "reg add", "reg.exe", "-verb", "runas", "enable-windowsoptionalfeature", "dism", "setx", "[environment]::setenvironmentvariable", "icacls", "takeown", "netsh", "schtasks", "new-service", "sc.exe"):
         assert word not in code, word
 
 
@@ -928,7 +978,8 @@ def test_the_functions_are_taken_away_again_after_a_run_so_nothing_is_left_in_th
 
 def test_it_uses_wsl_exe_by_its_whole_name_with_no_shell_in_between():
     code = "\n".join(code_lines())
-    assert code.count("& wsl.exe @WslArguments") == 2 and "cmd /c" not in code.lower() and "cmd.exe" not in code.lower() and "bash.exe" not in code.lower()
+    assert code.count("& wsl.exe @WslArguments") == 1, "the only call that captures what wsl.exe prints is the one for looking"
+    assert "cmd /c" not in code.lower() and "cmd.exe" not in code.lower() and "bash.exe" not in code.lower()
     assert "'--exec'" in code, "the Ubuntu command is run with --exec so that no second shell rewrites it"
 
 

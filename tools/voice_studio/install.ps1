@@ -70,7 +70,7 @@ function Get-AckVsText {
         first_run      = 'Ubuntu is installed but has no user yet. Open Ubuntu 24.04 from the Start menu once. Choose a user name and a password, which are for Ubuntu only. Close it, then run the same command again.'
         handing_over   = 'Starting the Ubuntu part. Ubuntu will ask for the password you chose, in this window, to install a few Ubuntu programs.'
         handed_back    = 'The Ubuntu part has ended.'
-        window_opening = 'Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it can stop Ubuntu, and the window with it. When you close the Voice Studio window, this PowerShell window is free again.'
+        window_opening = 'Opening the window. Leave this PowerShell window open while you use Voice Studio: closing it closes the Voice Studio window. When you close the Voice Studio window, this PowerShell window is free again.'
         window_closed  = 'The Voice Studio window was closed.'
         window_failed  = 'The window stopped with code {code}. What it said is above. To try again, run the same command.'
         handover_failed = 'The Ubuntu part stopped with code {code}. What it said is above. Run the same command again to carry on from where it stopped.'
@@ -281,11 +281,19 @@ function Invoke-AckVsWslCapture {
 }
 
 function Invoke-AckVsWslLive {
-    <# Runs wsl.exe with the person's own window: they see everything it says and can type to it (the Ubuntu first run, the password prompt). #>
+    <# Runs wsl.exe on the person's own console: they see everything it says and can type to it (the Ubuntu first run, the password prompt, the answers). It is started with Start-Process
+       and -NoNewWindow so that it shares this console. A native program called inside a function has its output captured into the function's result (and gets a pipe, not a console),
+       which swallowed everything Ubuntu said and left it no terminal to ask on; that was found on the first run on a real Windows. The command line is built here, quoting only what has a space. #>
     param([string[]]$WslArguments)
     try {
-        & wsl.exe @WslArguments
-        return @{ Ran = $true; Code = $LASTEXITCODE }
+        $program = Get-Command -Name 'wsl.exe' -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($null -eq $program) { return @{ Ran = $false; Code = 1 } }
+        $line = Format-AckVsCommandLine -CommandArguments $WslArguments
+        $process = Start-Process -FilePath $program.Source -ArgumentList $line -NoNewWindow -Wait -PassThru -ErrorAction Stop
+        $process.WaitForExit()
+        $code = 1
+        if ($null -ne $process.ExitCode) { $code = [int]$process.ExitCode }
+        return @{ Ran = $true; Code = $code }
     } catch {
         return @{ Ran = $false; Code = 1 }
     }

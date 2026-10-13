@@ -41,13 +41,13 @@ If your Ubuntu has no `curl`, this does the same with `wget`:
 wget -qO- https://raw.githubusercontent.com/ASPDesignLabs/ACK/main/tools/voice_studio/get.sh | bash
 ```
 
-The script it fetches is short. It fetches ACK's files into `ack-tools` in your home folder, and hands over to the setup. It never touches a folder that is already there, and it never edits your shell settings.
+The script it fetches is short. It fetches ACK's files into `ack-tools` in your home folder, and hands over to the setup. It never changes a folder that is already there unless you say yes to updating it (step 1), and it never edits your shell settings.
 
 It is safe to run the command again at any point. It finds what is done and carries on.
 
 ### What it does, in order
 
-1. **It fetches ACK's files.** If `git` is missing it says so and asks before installing it: `Install git now? Type y for yes, or press Enter for no:`. If ACK is already at `ack-tools`, it uses that copy and fetches nothing.
+1. **It fetches ACK's files.** If `git` is missing it says so and asks before installing it: `Install git now? Type y for yes, or press Enter for no:`. If ACK is already at `ack-tools`, it uses that copy and fetches nothing. If that copy is not the release you asked for (an older copy, for example, which can stop with `Unknown option`), it says so and asks `Update the copy now? Type y for yes, or press Enter to use it as it is:`. A yes runs `git pull --ff-only` in that folder and nothing else; your projects and recordings are in `ack-voice-studio`, not there. A copy with changes of your own is never updated, and with nobody to ask it is left as it is.
 2. **It looks at the computer** and lists the few Ubuntu programs it needs. It asks once. Ubuntu then asks for your password in your own terminal.
 3. **It sets up the programs that listen to your recordings and make training sets.** They are small. It shows the size and asks first.
 4. **It sets up the programs that train the voice.** They are large (about 10 GB free is needed while they are built). It asks first, and you can say no now and do it later.
