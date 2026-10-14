@@ -1,5 +1,7 @@
 # Guided voice setup (ACK Voice Studio): plan
 
+> **Picking this up? Read `docs/VOICE_STUDIO_HANDOFF.md` first** (where the work stands as of 2026-10-14, what is asked next, and the rules the tests enforce).
+
 **Status: DRAFT for review.** The question-and-answer session is done (27 decisions, section 6); nothing is built yet. Branch:
 `claude/voice-studio-guided-setup` (started from `claude/nice-johnson-38v0sw`). Each decision in section 6 is the developer's; the
 "proposed defaults" in section 6 were **not** asked about and are there to be vetoed. Tasks are cut so that one session can finish one

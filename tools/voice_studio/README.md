@@ -10,6 +10,7 @@ computer (Windows with WSL2, Ubuntu 22.04 and 24.04, an RTX 4060). The installat
 - **Ubuntu:** [`docs/ACK_Voice_Studio_Installation_Guide_Ubuntu.MD`](../../docs/ACK_Voice_Studio_Installation_Guide_Ubuntu.MD). One command (`get.sh`) fetches ACK, sets everything up and opens the window.
 
 The plan, every decision behind it and what is built so far: [`docs/VOICE_STUDIO_SETUP_PLAN.md`](../../docs/VOICE_STUDIO_SETUP_PLAN.md).
+Picking the work up: [`docs/VOICE_STUDIO_HANDOFF.md`](../../docs/VOICE_STUDIO_HANDOFF.md) says where it stands and what is asked next.
 
 ## Getting started (Ubuntu 22.04 or 24.04, native or under WSL)
 
