@@ -25,8 +25,8 @@ def words(text: str) -> Tuple[str, ...]:
 
 
 def for_the_screen(text: str) -> str:
-    """The heard text as one tidy line: control characters and line breaks become one space, runs of space one, and a very long text is cut with an ellipsis."""
-    line = " ".join("".join(" " if unicodedata.category(c).startswith("C") or c.isspace() else c for c in text).split())
+    """The heard text as one tidy line: control characters become spaces, then every run of white space (line breaks and no-break spaces included) becomes one space, and a very long text is cut with an ellipsis."""
+    line = " ".join("".join(" " if unicodedata.category(c).startswith("C") else c for c in text).split())
     return line if len(line) <= MAX_SHOWN else line[:MAX_SHOWN - 1].rstrip() + "…"
 
 

@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from vs_listen_helpers import SENTENCES, FlowRig, SYMBOLS
-from vs_rounds_helpers import NOW
+from vs_rounds_helpers import NOW, end_job, stamp
 from vs_voicefile_helpers import TOOLS, tree_of, write_settings
 from voice_studio.core import jobs, listen, phonemes, rounds as rd, voicefile as vf
 from voice_studio.core.paths import ScratchPaths
@@ -76,6 +76,15 @@ def test_without_that_room_nothing_is_planned_and_with_it_barely_it_is(rig):
     from voice_studio.core.diskbudget import Level
     assert plan_round(rig, free=10**12).room is not Level.NOT_ENOUGH
     assert plan_round(rig, free=None).free_bytes is None
+
+
+def test_the_room_check_for_a_round_is_the_big_one_and_not_the_one_for_a_made_voice_file(tmp_path):
+    from voice_studio.core.diskbudget import DEFAULT_TABLE, floors_for
+    rig = FlowRig(tmp_path)
+    rig.finish_rounds(1)
+    between = listen.NEED_BYTES + floors_for(DEFAULT_TABLE, holds_recordings=True).stop + 2**20          # room for the sounds and nothing like the voice copy
+    listen.plan_listen(rig.paths, ScratchPaths(rig.paths.default_scratch), None, SENTENCES, rig.training, rig.system, STAMP, between)
+    assert code_of(plan_round, rig, free=between) == "no_room"
 
 
 def test_a_round_that_does_not_exist_is_refused_with_its_number(rig):
@@ -473,3 +482,28 @@ def test_the_listing_of_voice_files_and_an_earlier_voice_file_are_unaffected(tmp
     before = tree_of(rig.paths.exports)
     code, io = rig.run("--round", "chosen", "--yes", answers=["yes", "yes"])
     assert code == 0 and tree_of(rig.paths.exports) == before
+
+
+def test_a_record_that_is_out_of_date_is_read_as_brought_up_to_date_but_never_written(rig):
+    plan = rig.world.begin()
+    info = rig.world.job_for(plan, "running")
+    rd.attach_job(rig.paths, plan.number, info.id)
+    rig.world.trainer_makes(2)
+    end_job(info.dir, "finished", ended_at=stamp(26))                    # the round ended since the record was last written
+    before = {p: Path(p).read_bytes() for p in tree_of(rig.paths.rounds)}
+    assert rd.active(rd.load(rig.paths)) is not None
+    code, io = rig.run("--round", "1", "--yes", answers=["yes", "no"])
+    assert code == 0 and rig.made() == ["round-001-heard-20261011-120000"]
+    assert {p: Path(p).read_bytes() for p in tree_of(rig.paths.rounds)} == before and rd.active(rd.load(rig.paths)) is not None
+
+
+def test_when_there_is_no_voice_copy_left_to_ask_about_nothing_is_asked(rig, monkeypatch):
+    monkeypatch.setattr(listen, "voice_copy", lambda plan: [])
+    code, io = rig.run("--round", "chosen", "--yes", answers=["yes", "yes"])
+    assert code == 0 and [p.strip()[:10] for p in io.prompts] == ["Did you he"] and "Remove" not in io.text and "Kept." not in io.text
+
+
+def test_a_copy_that_could_not_be_wholly_removed_is_said_so_and_not_called_removed(rig, monkeypatch):
+    monkeypatch.setattr(listen, "remove_voice_copy", lambda plan: (["my_voice.onnx"], ["my_voice.onnx.json"]))
+    _code, io = rig.run("--round", "chosen", "--yes", answers=["yes", "yes"])
+    assert "Some of it could not be removed. What is left is in " in io.text and "Removed." not in io.text

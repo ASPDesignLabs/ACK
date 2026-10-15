@@ -53,6 +53,12 @@ if args[:2] == ["-m", "voice_studio.hear_runner"] and len(args) == 3:
         sys.exit(0)
     if hear_mode == "hear_extra":
         print(json.dumps({"event": "heard", "n": 1, "text": "x"})); print(json.dumps({"event": "heard", "n": 1, "text": "y"})); print(json.dumps({"event": "done", "clips": 2})); sys.exit(0)
+    if hear_mode == "hear_duplicate":
+        for n in (1, 1, 2, 3): print(json.dumps({"event": "heard", "n": n, "text": "x"}))
+        print(json.dumps({"event": "done", "clips": 3})); sys.exit(0)
+    if hear_mode == "hear_not_text_full":
+        print(json.dumps({"event": "heard", "n": 1, "text": 5})); print(json.dumps({"event": "heard", "n": 2, "text": "y"})); print(json.dumps({"event": "heard", "n": 3, "text": "z"}))
+        print(json.dumps({"event": "done", "clips": 3})); sys.exit(0)
     if hear_mode == "hear_out_of_range":
         print(json.dumps({"event": "heard", "n": 9, "text": "x"})); sys.exit(0)
     if hear_mode == "hear_not_text":

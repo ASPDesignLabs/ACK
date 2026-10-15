@@ -114,7 +114,7 @@ def test_a_program_that_dies_gives_the_end_of_what_it_said(rig):
     assert caught.value.code == "hear_failed" and "fell over" in caught.value.detail
 
 
-@pytest.mark.parametrize("mode", ["hear_nothing", "hear_extra", "hear_out_of_range", "hear_not_text"])
+@pytest.mark.parametrize("mode", ["hear_nothing", "hear_extra", "hear_out_of_range", "hear_not_text", "hear_duplicate", "hear_not_text_full"])
 def test_an_answer_that_is_missing_repeated_out_of_range_or_not_text_is_not_believed(rig, mode):
     rig.set_hear_mode(mode)
     _plan, heard = listened(rig)

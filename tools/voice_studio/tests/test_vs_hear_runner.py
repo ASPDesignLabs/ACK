@@ -178,6 +178,15 @@ def test_a_job_with_no_clip_too_many_or_one_that_is_not_there_is_refused_before_
     assert lines(capsys)[0] == [{"code": "bad_job", "event": "error"}]
 
 
+def test_a_model_folder_that_exists_but_is_given_by_a_relative_path_is_refused(place, capsys, monkeypatch):
+    monkeypatch.chdir(place)
+    path = place / "job.json"
+    path.write_text(json.dumps({"model_dir": "model", "clips": [str(place / "clip-1.wav")]}))
+    loaded = []
+    assert hr.main([str(path)], engine_factory=lambda d: loaded.append(d)) == 1 and loaded == []
+    assert lines(capsys)[0] == [{"code": "bad_job", "event": "error"}]
+
+
 def test_a_job_that_carries_a_sentence_or_anything_else_extra_is_refused(place, capsys):
     loaded = []
     assert hr.main([job_file(place, sentences=["Hello."])], engine_factory=lambda d: loaded.append(d)) == 1 and loaded == []

@@ -59,6 +59,15 @@ def test_a_very_long_heard_text_is_cut_with_an_ellipsis_at_the_limit():
     assert hc.for_the_screen(exact) == exact and hc.for_the_screen(exact + "w").endswith("…")
 
 
+def test_the_cut_is_exactly_the_limit_long_whatever_the_text_looks_like():
+    assert len(hc.for_the_screen("w" * 500)) == hc.MAX_SHOWN and hc.for_the_screen("w" * 500) == "w" * (hc.MAX_SHOWN - 1) + "\u2026"
+
+
+@pytest.mark.parametrize("space", ["\u00a0", "\u2003", "\u2028", "\u3000", "\t"])
+def test_every_kind_of_white_space_becomes_one_plain_space(space):
+    assert hc.for_the_screen("a" + space + space + "b") == "a b"
+
+
 def test_comparing_never_changes_the_wanted_text_and_gives_back_what_was_heard_cleaned():
     check = hc.compare("Hello, my name is Anna.", "Hello, my name is Anna.")
     assert check == hc.Check(hc.SAME, "Hello, my name is Anna.")
