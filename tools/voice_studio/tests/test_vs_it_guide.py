@@ -116,9 +116,9 @@ def test_the_package_counts_and_the_nvidia_count_are_the_locks():
     studio = (lock_dir / "studio.lock.txt").read_text()
     count = lambda text: len(re.findall(r"^[A-Za-z0-9_.-]+==", text, flags=re.M))
     nvidia = len(re.findall(r"^nvidia-[a-z0-9-]+==", training, flags=re.M))
-    assert (count(training), count(studio), nvidia) == (91, 44, 15)
+    assert (count(training), count(studio), nvidia) == (91, 46, 15)
     text = section(5) + section(8) + section(10)
-    assert "91 packages" in text and "44 packages" in text and "**91**" in text and "**44**" in text and "**15**" in text and "15 packages" in text
+    assert "91 packages" in text and "46 packages" in text and "**91**" in text and "**46**" in text and "**15**" in text and "15 packages" in text
     assert not re.search(r"^nvidia-", studio, flags=re.M), "the page says the studio list has none"
 
 
@@ -196,3 +196,30 @@ def test_the_status_box_and_section_eleven_say_what_was_not_tested():
 def test_the_sections_are_numbered_without_a_gap():
     numbers = [int(n) for n in re.findall(r"^## (\d+)\. ", GUIDE, flags=re.M)]
     assert numbers == list(range(1, 14))
+
+
+# ---------------------------------------------------------------- hearing a voice (plan task VS-5.4)
+
+def test_the_page_names_every_audio_player_the_tool_may_start_and_the_one_windows_command():
+    from voice_studio.core import listen, playback
+    text = section(7)
+    for name in set(playback.NATIVE_ORDER) | set(playback.WSL_ORDER):
+        assert ("`%s`" % name in text) or name == "windows", name
+    assert "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand" in text and "System.Media.SoundPlayer" in text and "PlaySync()" in text and "wslpath -w" in text
+    assert listen.RUNNER_MODULE in text and "python3 -m voice_studio.voicefile listen" in text and "scratch/listening" in text and "sherpa-onnx 1.13.8" in text
+    assert "opens no network connection" in text and "prints no sentence" in text
+
+
+def test_the_player_order_the_page_gives_is_the_order_in_the_code():
+    from voice_studio.core import playback
+    text = section(7)
+    native = ", ".join("`%s`" % n for n in playback.NATIVE_ORDER)
+    assert native in text
+    wsl = ", ".join("`%s`" % n if n != "windows" else "Windows' own player" for n in playback.WSL_ORDER[:-1]) + ", then `%s`" % playback.WSL_ORDER[-1]
+    assert wsl in text
+
+
+def test_the_engine_version_the_page_gives_is_the_one_in_the_lock_and_the_one_the_phone_is_pinned_to():
+    lock = (PKG / "data" / "locks" / "studio.lock.txt").read_text(encoding="utf-8")
+    phone = (REPO / "app" / "libs" / "README.md").read_text(encoding="utf-8")
+    assert "sherpa-onnx==1.13.8" in lock and "sherpa-onnx-core==1.13.8" in lock and "sherpa-onnx-1.13.8.aar" in phone and "sherpa-onnx 1.13.8" in section(7)

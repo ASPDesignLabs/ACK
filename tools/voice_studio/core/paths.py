@@ -137,3 +137,8 @@ class ScratchPaths:
     @property
     def caches(self) -> str:
         return self.root + "/caches"
+
+    @property
+    def listening(self) -> str:
+        """The short sound files made to hear a finished voice (core/listen.py): small, and made again whenever wanted, so they are disposable (plan P11)."""
+        return self.root + "/listening"

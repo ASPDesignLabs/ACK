@@ -240,7 +240,7 @@ def test_workers_left_behind_by_a_command_that_dies_or_fails_are_cleaned_up(root
             "open(sys.argv[1], 'w').write(str(p.pid))\n"
             "time.sleep(0.5)\n" + how + "\n")
     info = jb.start_job(root, JobSpec("train", "", py(code, str(pidfile))))
-    wait_until(pidfile.exists, what="the worker to start")
+    wait_until(lambda: pidfile.exists() and pidfile.read_text().strip(), what="the worker to start")      # the file exists a moment before the process id is in it
     worker = int(pidfile.read_text())
     done = finish(info)
     assert done.status is expected_status

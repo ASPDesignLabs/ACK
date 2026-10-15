@@ -171,12 +171,14 @@ def test_the_build_command_the_checklist_gives_takes_the_options_it_gives_and_ch
     for given in commands_given:
         parsed, unknown = parse_build_options(shlex.split(given))
         assert parsed is not None, given
-        assert parsed.env_id == "training"
+        assert parsed.env_id in ("training", "studio")
+    assert {shlex.split(c)[0] for c in commands_given} == {"training", "studio"}
     assert any("--check" in c for c in commands_given) and any("--check" not in c for c in commands_given)
     env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(TOOLS))
-    done = subprocess.run([sys.executable, "-m", "voice_studio.buildenv", "training", "--check"], cwd=str(home), env=env, text=True, capture_output=True, timeout=120)
-    assert done.returncode == 1 and done.stdout.startswith("ACK Voice Studio: setting up one set of programs"), done.stdout + done.stderr
-    assert not (Path(home) / "ack-voice-studio").exists() and sorted(p.name for p in Path(home).iterdir()) == []
+    for which in ("training", "studio"):
+        done = subprocess.run([sys.executable, "-m", "voice_studio.buildenv", which, "--check"], cwd=str(home), env=env, text=True, capture_output=True, timeout=120)
+        assert done.returncode == 1 and done.stdout.startswith("ACK Voice Studio: setting up one set of programs"), done.stdout + done.stderr
+        assert not (Path(home) / "ack-voice-studio").exists() and sorted(p.name for p in Path(home).iterdir()) == []
 
 
 def test_the_folders_the_checklist_names_for_the_tool_built_programs_are_where_the_tool_puts_them():
@@ -841,3 +843,71 @@ def test_the_project_steps_run_as_the_section_says_and_the_second_question_of_a_
     code, io = projects("delete", "second-check", answers=["yes", "yes"])
     assert code == 0 and any(line.startswith("Done. The project second-check is deleted. About ") for line in io.lines)
     assert sorted(os.listdir(home.projects)) == ["voice-check"]
+
+
+# ---------------------------------------------------------------- section I8: hearing the voice before it goes to the phone
+
+def test_the_listen_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import voicefile_flow as vff
+    found = re.findall(r"python3 -m voice_studio\.voicefile ([a-z]+)([^\n`;<]*)", section("I8."))
+    assert {c for c, _ in found} == {"listen", "list"}
+    seen = set()
+    for command, rest in found:
+        assert command in vff.OPTIONS, command
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            assert words[i].startswith("-") and words[i] in vff.OPTIONS[command], (command, words[i])
+            seen.add(words[i])
+            i += 2 if words[i] in ("--project", "--folder") else 1
+    assert seen >= {"--project", "--folder", "--yes"} and any(c == "listen" for c, _ in found)
+
+
+def test_every_sentence_the_listening_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I8."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "ls ", "head ", "du ", "time ", "~/", "python3 "))]
+    assert len(quoted) >= 8 and any(cut for _, cut in quoted), quoted
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_three_sentences_the_section_names_are_the_ones_the_tool_says():
+    from voice_studio.core import listen_flow
+    body = " ".join(section("I8.").split())
+    sentences = listen_flow.sentences(__import__("voice_studio.core.text", fromlist=["x"]).load_catalog("en"))
+    assert len(sentences) == 3 and " ".join(sentences) in body.replace("(", "").replace(")", "")
+
+
+def test_the_player_the_section_tries_first_is_the_command_the_tool_runs():
+    from voice_studio.core import playback
+    body = section("I8.")
+    line = next(l.strip() for l in body.splitlines() if l.strip().startswith("ffplay "))
+    tool = playback.Playback(type("S", (), {"which": staticmethod(lambda n: n), "read_text": staticmethod(lambda p: "")})()).argv("ffplay", '"$T/tone.wav"')
+    assert line.split(";")[0] == " ".join(tool), (line, tool)
+
+
+def test_the_section_asks_for_a_probe_of_each_way_and_names_every_way_the_tool_may_use():
+    from voice_studio.core import playback
+    body = section("I8.")
+    for name in set(playback.NATIVE_ORDER) | set(playback.WSL_ORDER):
+        assert (name if name != "windows" else "powershell.exe") in body, name
+    assert "mktemp -d" in body and 'rm -r "$T"' in body, "the probe cleans up after itself"
+
+
+def test_the_places_the_listening_section_names_are_where_the_tool_puts_things():
+    from voice_studio.core.paths import DataHome, ProjectPaths, ScratchPaths
+    body = section("I8.")
+    paths = ProjectPaths(DataHome("~").projects + "/voice-check")
+    listening = ScratchPaths(paths.default_scratch).listening
+    assert listening in body.replace("~", "~") or listening.replace(DataHome("~").projects, "~/ack-voice-studio/projects") in body
+    assert "scratch/listening" in body and paths.exports.replace(DataHome("~").projects, "~/ack-voice-studio/projects") in body
+
+
+def test_the_listening_section_says_it_changes_nothing_and_what_to_send_back():
+    body = " ".join(section("I8.").split())
+    assert "changes nothing that was there" in body and "uses no network after the engine is installed" in body and "Nothing about sound from this tool has been seen on a real computer yet" in body
+    assert "Section I8:" in doc_text() and "scratch/listening" in section("M.")
+
+
+def test_the_listening_section_follows_the_install_section_and_comes_before_the_manual_one():
+    names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I7") < names.index("I8") < names.index("J")

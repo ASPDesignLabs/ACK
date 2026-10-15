@@ -64,7 +64,7 @@ class Services:
         if tool == "rounds":
             return run_rounds(argv, self.home, self.registry, self.cat, io, training=self.training, system=self.system)
         if tool == "voicefile":
-            return run_voicefile(argv, self.home, self.registry, self.cat, io, training=self.training, system=self.system, tools_dir=self.tools_dir)
+            return run_voicefile(argv, self.home, self.registry, self.cat, io, training=self.training, system=self.system, tools_dir=self.tools_dir, studio=self.studio)
         raise ValueError("unknown tool: " + tool)
 
 

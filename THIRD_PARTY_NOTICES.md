@@ -111,7 +111,8 @@ is shipped in the repository: the person's own computer installs or fetches it.
 | The window's icon (`tools/voice_studio/data/icons/org.aspdesignlabs.AckVoiceStudio.svg`) and look (`tools/voice_studio/core/windowtheme.py`, which writes the style sheet when the window starts) | Drawn and written for this project (a cut-corner square with five rounded bars, in ACK's own colours, the same as the Android app's `Color.kt`), no outside artwork. No font is shipped: the style sheet names the system's own font for sentences and a list of monospace fonts many systems have (DejaVu Sans Mono, Ubuntu Mono, Liberation Mono, then the system's monospace) for headings and buttons | Not applicable (original) | GPL-3.0-or-later like the rest. The window runs with the person's own GTK; it was tested on a copy of Ubuntu 22.04 (GTK 4.6.9, python3-gi 3.42.1) made in the build sandbox, which is not shipped. The Windows Start menu shortcut needs an `.ico`, which `tools/voice_studio/core/iconmake.py` draws from the same shapes and colours (plain Python, no image library, no binary file committed); a test compares it with the SVG. |
 | segno (QR codes) | BSD (PyPI classifier "BSD License"; which BSD variant was not checked) | PyPI metadata | |
 | cryptography (the phone-recording certificate authority) | Apache-2.0 OR BSD-3-Clause | PyPI metadata (license expression) | |
-| sherpa-onnx (Python package, to check a finished voice on the PC with the engine the phone uses) | Apache-2.0 (PyPI: "Apache licensed, as found in the LICENSE file"; section 2 read its repository) | PyPI metadata | |
+| sherpa-onnx 1.13.8 (Python wheel, in the studio lock, to hear a finished voice on the PC with the engine and version the phone uses) | Apache-2.0 (the wheel's metadata: "Apache licensed, as found in the LICENSE file"; the LICENSE file is in the wheel) | wheel metadata and contents, read 2026-10-15 | **The engine has espeak-ng (GPL-3.0-or-later) compiled in** (its binaries name it), as the Android library does (section 2), so in effect it is the same family as ACK. The wheel also carries ALSA's `libasound` (LGPL-2.1-or-later; **not verified here**). Installed by the person's own computer from the package site; none of it is part of this repository. |
+| sherpa-onnx-core 1.13.8 (the engine's native libraries, the second half of the same install) | Apache-2.0 (the wheel's metadata: `License: Apache-2.0`; the wheel carries no licence file) | wheel metadata and contents, read 2026-10-15 | Bundles ONNX Runtime (`libonnxruntime.so`; MIT, **not verified here**) and the engine's C and C++ interface; espeak-ng is compiled in, as above. |
 | The training stack (piper1-gpl, torch and the rest) | see section 5 and the lock's table below | PyPI metadata (training lock, 2026-10-10) | The guided setup pins exact versions; each pinned package is re-checked when the lock file is made. The studio lock is below. |
 
 **The training environment's lock** (`tools/voice_studio/data/locks/training.lock.txt`, 91 packages, made 2026-10-11). Each package's licence was read from the package
@@ -136,15 +137,15 @@ computer from the package site; none is part of this repository.
 | **LGPL-2.1-or-later** | soxr (a dependency of librosa; the wheel carries the libsoxr library). Fine to link from GPL-3.0-or-later code; the person's computer installs it. |
 | **NVIDIA proprietary, or no licence stated** | The 15 `nvidia-*` CUDA libraries (cuBLAS, cuDNN, NCCL, cuFFT, cuRAND, cuSOLVER, cuSPARSE, cuSPARSELt, NVSHMEM, NVTX, nvJitLink, cuFile, CUDA runtime, NVRTC, CUPTI) that `torch` needs, and the `cuda-toolkit` meta-package. Ten say proprietary (`LicenseRef-NVIDIA-Proprietary` or "NVIDIA Proprietary Software"); `nvidia-nvtx` says "Apache 2.0" but carries the proprietary classifier; `nvidia-cuda-runtime`, `nvidia-cudnn-cu13`, `nvidia-nccl-cu13`, `nvidia-nvshmem-cu13` and `cuda-toolkit` state nothing. **NVIDIA's licence text was not read** (not reachable from where this was checked). |
 
-**The studio environment's lock** (`tools/voice_studio/data/locks/studio.lock.txt`, 44 packages, made 2026-10-11): the packages Freeform Studio runs on, as section 3 lists them for its own installer, at the exact versions the
+**The studio environment's lock** (`tools/voice_studio/data/locks/studio.lock.txt`, 46 packages, made 2026-10-11 and again 2026-10-15, when sherpa-onnx and sherpa-onnx-core were added): the packages Freeform Studio runs on, as section 3 lists them for its own installer, at the exact versions the
 developer's computer runs, **without** the three `nvidia-*` CUDA 12 libraries that `install.sh --gpu` adds (the guided setup recognises speech on the processor). Each licence was read from the package site's metadata for
-that version; the licence texts were not read. Nothing is GPL-only, AGPL or proprietary.
+that version; the licence texts were not read. Nothing is AGPL or proprietary; sherpa-onnx has GPL-3.0-or-later espeak-ng compiled in (see its row above).
 
 | License (as the package states it) | Packages |
 |---|---|
 | MIT | anyio, blinker, coloredlogs, ctranslate2, exceptiongroup, faster-whisper, filelock, h11, h2, hpack, humanfriendly, hypercorn, hyperframe, onnxruntime, priority, PyYAML, Quart, toml, tomli, wsproto |
 | BSD-3-Clause / "BSD" | av (PyAV), click, Flask, fsspec, httpcore, httpx, idna, itsdangerous, Jinja2, MarkupSafe, mpmath, numpy (also bundles other permissive parts), protobuf, sympy, Werkzeug |
-| Apache-2.0 | aiofiles, flatbuffers, hf-xet, huggingface_hub, tokenizers |
+| Apache-2.0 | aiofiles, flatbuffers, hf-xet, huggingface_hub, sherpa-onnx, sherpa-onnx-core, tokenizers |
 | Apache-2.0 OR BSD-2-Clause | packaging |
 | MPL-2.0 | certifi; tqdm (MPL-2.0 AND MIT) |
 | PSF-2.0 | typing_extensions |

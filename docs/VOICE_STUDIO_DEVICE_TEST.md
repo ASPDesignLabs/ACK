@@ -957,6 +957,64 @@ section **with only the guide open**, as a person who has nothing else would. Wr
 
 **D. The guides.** Read each guide once more from the top and tick: every command worked as typed; every quoted sentence appeared; every button has the name the guide gives it; nothing needed another file.
 
+## I8. Hearing the voice before it goes to the phone
+
+**New, and not yet run on a real computer.** This plays three short sentences in the voice file you made in section I4, on this computer, with the same speech engine (sherpa-onnx 1.13.8), the same list of sounds and the same settings file that ACK uses on the phone. It is for judging a round and for checking the voice file by ear before it is sent. It makes one new folder of small sound files under the project's working place (`scratch/listening`), changes nothing that was there, and uses no network after the engine is installed. It needs two things: the studio programs rebuilt (they gained the speech engine; part A) and the training programs (they carry the pronunciation data). **Nothing about sound from this tool has been seen on a real computer yet, so part B comes first: it decides how the tool plays.**
+
+*Built and tried in the build sandbox only, with a stand-in for the voice's network and a real public-domain voice: the real engine, the real patcher and the real pronunciation data made three sentences that the listening model heard back word for word. Not heard by a person, and not played through a speaker.*
+
+**A. The studio programs gained the speech engine.**
+
+- [ ] Look, then build. The studio lock changed, so the programs are built again beside the old ones (nothing is deleted). It asks once and downloads about 145 MB from the package site only:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.buildenv studio --check
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.buildenv studio
+  ```
+  → The first says the studio programs need setting up (the lock changed); the second shows what it will do, asks, and ends ready with the self-test passing. Write down how long it took and the size of the new folder (`du -sh ~/ack-voice-studio/tool/environments/studio-*`). Your old studio folder is still there; say whether that surprised you.
+
+**B. Does sound come out of this computer at all?** One block. It makes a one-second tone in a temporary folder, plays it each way the tool might play it, and removes the folder. A line saying `command not found` only means that way is not installed here. Write down, for each way, whether you **heard** the tone and what `exit` number it printed (0 is a normal end; hearing it is what matters).
+
+- [ ] Run it with your speakers on and the volume up a little:
+  ```bash
+  T=$(mktemp -d) && ffmpeg -v error -f lavfi -i "sine=frequency=440:duration=1" "$T/tone.wav" && ls -l "$T/tone.wav"
+  pw-play "$T/tone.wav"; echo "pw-play exit: $?"
+  ffplay -nodisp -autoexit -loglevel error -i "$T/tone.wav"; echo "ffplay exit: $?"
+  paplay "$T/tone.wav"; echo "paplay exit: $?"
+  aplay -q "$T/tone.wav"; echo "aplay exit: $?"
+  powershell.exe -NoProfile -NonInteractive -Command "(New-Object System.Media.SoundPlayer '$(wslpath -w "$T/tone.wav")').PlaySync()"; echo "windows exit: $?"
+  rm -r "$T"
+  ```
+  → A tone of one second for each way that works. The last line is for WSL only (it asks Windows' own player, which needs Ubuntu to be able to start Windows programs). Write down: which ones you heard, which printed something other than 0, any words they printed, and (WSL) whether Windows showed anything.
+
+**C. The command.**
+
+- [ ] Look, and say no:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile listen --project voice-check
+  ls ~/ack-voice-studio/projects/voice-check/scratch/listening
+  ```
+  → `The voice file would be heard like this:` and under it the voice file it will use, the three sentences (Hello, my name is Anna. I need some help, please. Thank you, that is all.), the new folder, and the room check. Then `Make the sound files and play them now? Type yes to go on.` Type **`no`**: `Nothing was done.` and the `ls` finds nothing new. **Write down whether you want different sentences** (they are proposals, see the plan) and whether the plan read clearly.
+- [ ] Run it and say yes:
+  ```bash
+  time PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile listen --project voice-check
+  ```
+  → `Step 1 of 2: getting the voice ready.`, `Step 2 of 2: making the sounds. This takes a few seconds.`, `The sound files are ready in …`, a line for each sentence with how long it is, then `Playing 1 of 3: Hello, my name is Anna.` and the sentence is heard, then 2 and 3. A line that starts `Technical detail:` says `played with` and the name of the way that played them, and then `Did you hear them all? Type yes if you did.` Answer honestly: **no** is a fine answer and tells the tool nothing is wrong with the voice. Write down: the seconds it took in all, which way played (it should be one of the ways you heard in part B), whether it was clear and in the voice you expect, and anything it mispronounced.
+  If it says `No way of playing sound worked on this computer.`, copy that line and the `tried:` line under it, and open the folder from Windows (File Explorer) to play the files there.
+- [ ] Look at what it made, and what it left alone:
+  ```bash
+  ls -l ~/ack-voice-studio/projects/voice-check/scratch/listening/*/
+  head -3 ~/ack-voice-studio/projects/voice-check/scratch/listening/*/tokens.txt
+  ls -l ~/ack-voice-studio/projects/voice-check/exports/*/
+  ```
+  → The new folder holds `clip-1.wav`, `clip-2.wav`, `clip-3.wav`, `job.json` and `tokens.txt`, all readable by you only (`-rw-------`). The first lines of `tokens.txt` are the voice's first sounds with their numbers. The voice file folder under `exports` has exactly the files it had (the model, its settings file, the original, the zip): nothing added, nothing changed.
+- [ ] **The honest test: say the same sentences on the phone.** Take the zip to the phone (section K), choose MY VOICE, and say the same three sentences. Write down any word that sounds different on the phone from the computer. The phone has its own copy of the pronunciation data; for English the two were identical on thousands of words in the build sandbox, but nobody has compared them on your phone.
+- [ ] Listen to a named voice file, and to a second run a minute later:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile listen --project voice-check --folder voice-check-round-003-20261011-130000 --yes
+  ```
+  → Replace the folder name with one from `python3 -m voice_studio.voicefile list`. `--yes` skips the first question only; the question about hearing is still asked. A second run makes a second folder with a different time in its name, and the first is untouched. An unknown name says `That voice file folder was not found.`
+- [ ] Write down: anything that felt slow, any sentence that was hard to follow, whether three sentences is the right number, whether you wanted to hear a sentence of your own, and whether you would use this before every export or only now and then.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -1035,6 +1093,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I: the card, the memory used, the batch size that worked, the seconds per epoch, how long `max_time` took, whether `last.ckpt` was in the folder you started from, the exit code, and how long Ctrl+C took.
 - Section I6: whether every `--kind` brought the right files in, what the tool said when a file could not be read, how long listening took for how many minutes of audio, whether the file chooser was easy to use, and any sentence in the projects steps (especially the two delete questions) that left you unsure what would be removed.
 - Section I7: for each part (A to D), the exact lines the one command printed, where it stopped or asked something this list did not expect, what you typed, how long each step took, and every sentence in a guide that was unclear or a command that did not work as typed. If the one command is not run on a clean Windows or a plain Ubuntu desktop yet, say so.
+- Section I8: part B for each way of playing (heard or not, the exit number, any words it printed, and whether this is WSL or a native desktop), then the seconds `listen` took, which way played, whether the voice was clear, any word said differently on the phone, and whether you want other sentences.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
@@ -1045,4 +1104,5 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
+- [ ] The small sound files section I8 made are under the project's `scratch/listening` folder, a few hundred kilobytes each time. The tool never deletes them; look with `du -sh ~/ack-voice-studio/projects/voice-check/scratch/listening` and remove the folder yourself when you no longer want them.
 - [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.

@@ -1,8 +1,6 @@
-# ACK Voice Studio, the studio environment (Freeform Studio's recorder, review and dataset programs). Made by tools/voice_studio_maint/make_lock.py from tools/voice_studio_maint/locks/studio.versions.txt; do not edit by hand.
-# Every package is at the exact version the developer's own computer runs Freeform Studio with (Ubuntu 22.04 on WSL2, Python 3.10, 2026-10-11), without the optional CUDA 12 libraries.
-# Installed with --require-hashes --only-binary=:all: --no-deps, so every package the programs need is listed.
+# Every package is at the exact version the developer's own computer runs Freeform Studio with (Ubuntu 22.04 on WSL2, Python 3.10, 2026-10-11), without the optional CUDA 12 libraries. Added 2026-10-15: sherpa-onnx and sherpa-onnx-core 1.13.8, the version ACK's phone app uses, to hear a finished voice on this computer.
 # Python versions covered: 3.10, 3.11, 3.12. Linux x86_64 wheels only; Python 3.13 and newer are not covered.
-# Input list sha256: 93b5af75313aef040d4804aa20698589ca48facd1cc0bdd04afc5a22f9f3f32c
+# Input list sha256: 36aa6a796b4aae19a2677696c5bd0308a7ff131f81fad0825b6d7be5b9012cd4
 
 aiofiles==25.1.0 \
     --hash=sha256:abe311e527c862958650f9438e859c1fa7568a141b22abcd015e120e86a85695
@@ -88,6 +86,12 @@ PyYAML==6.0.3 \
     --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc
 Quart==0.20.0 \
     --hash=sha256:003c08f551746710acb757de49d9b768986fd431517d0eb127380b656b98b8f1
+sherpa-onnx==1.13.8 \
+    --hash=sha256:6949773017647febc0c3696dffb2c67dd3febd4737b87e3dd135a42773704a06 \
+    --hash=sha256:94fd1476b56ed36b851da8db9bd5144e92f669007ad54e0d8094913e4fbf1418 \
+    --hash=sha256:e4dc9c672a089c94c7bcb2439c2413928de58b98418907dc639c07dd557eacd7
+sherpa-onnx-core==1.13.8 \
+    --hash=sha256:4da90acf435373d7b2ba9cc0be806e7e274d28f63f5780880b5dea6721626e36
 sympy==1.14.0 \
     --hash=sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5
 tokenizers==0.23.2 \
