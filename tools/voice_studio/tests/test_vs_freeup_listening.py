@@ -237,7 +237,7 @@ def test_a_number_that_is_not_on_the_list_removes_nothing(rig):
     assert len(os.listdir(rig.paths.listening + "/round-002/" + RUN)) == 6
 
 
-@pytest.mark.parametrize("make_bad", ["link", "directory", "wrong_depth", "wrong_name", "outside"])
+@pytest.mark.parametrize("make_bad", ["link", "directory", "wrong_depth", "too_deep", "wrong_name", "outside", "odd_source", "odd_run"])
 def test_the_check_made_at_the_moment_of_removal_refuses_a_file_that_is_no_longer_what_it_was_shown_as(rig, tmp_path, make_bad):
     folder = make_run(rig, clips=("clip-1.wav",), copy=("my_voice.onnx",))
     target = folder / "clip-1.wav"
@@ -251,6 +251,14 @@ def test_the_check_made_at_the_moment_of_removal_refuses_a_file_that_is_no_longe
     elif make_bad == "wrong_depth":
         target = folder.parent / "clip-1.wav"
         target.write_bytes(b"x")
+    elif make_bad == "too_deep":
+        (folder / "extra").mkdir()
+        target = folder / "extra" / "clip-1.wav"
+        target.write_bytes(b"x")
+    elif make_bad == "odd_source":
+        target = make_run(rig, "bad name", RUN, clips=("clip-1.wav",), copy=()) / "clip-1.wav"
+    elif make_bad == "odd_run":
+        target = make_run(rig, "round-002", "heard-2026", clips=("clip-1.wav",), copy=()) / "clip-1.wav"
     elif make_bad == "wrong_name":
         target = folder / "notes.txt"
         target.write_bytes(b"x")
@@ -258,6 +266,12 @@ def test_the_check_made_at_the_moment_of_removal_refuses_a_file_that_is_no_longe
         target = tmp_path / "clip-1.wav"
         target.write_bytes(b"x")
     assert not freeup._may_remove_listening_file(rig.paths, str(target), "clips")
+
+
+def test_listenings_of_one_round_are_listed_in_the_order_of_their_times(rig):
+    for run in ("heard-20261012-080000", "heard-20261010-090000", RUN):
+        make_run(rig, "round-002", run, copy=())
+    assert [o.when for o in planned(rig).offers if o.kind == "clips"] == ["2026-10-10 09:00 UTC", "2026-10-11 12:00 UTC", "2026-10-12 08:00 UTC"]
 
 
 def test_each_kind_accepts_only_its_own_names(rig):
@@ -368,3 +382,8 @@ def test_the_window_lists_them_with_the_option_each_takes_and_asks_for_the_comma
     command, argv = wm.free_args("voice-check", heard)
     assert command == "rounds" and argv == ["free", "--copies", "2", "--clips", "2", "--project", "voice-check"]
     assert wm.free_args("voice-check", [i for i in heard if i.kind == "clips"])[1] == ["free", "--clips", "2", "--project", "voice-check"]
+
+
+def test_removing_only_saved_files_does_not_talk_about_test_clips(rig):
+    code, io = free(rig, "--saved", "1", answers=["yes"])
+    assert "Test clips and voices made for hearing, removed" not in io.text

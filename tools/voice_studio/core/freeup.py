@@ -146,26 +146,26 @@ def plan(paths: ProjectPaths, scratch: ScratchPaths, record: rd.Record) -> Plan:
     by_round = {}
     for number, file in kept.spare:
         by_round.setdefault(number, []).append(file)
-    # (group, round, tie-break, kind, takes the saved point, paths, size, source, when): the saved files first, then the working folders, then the large voice copies, then the small test clips
-    rows: List[Tuple[int, int, str, str, bool, Tuple[str, ...], int, str, str]] = []
+    # (group, round, kind, takes the saved point, paths, size, source, when): the saved files first, then the working folders, then the large voice copies, then the small test clips
+    rows: List[Tuple[int, int, str, bool, Tuple[str, ...], int, str, str]] = []
     for number in sorted(by_round):
         files = sorted(by_round[number], key=lambda f: (f.version, f.name))
-        rows.append((0, number, "", "files", any(f.name == rd.LAST for f in files), tuple(f.path for f in files), sum(f.size for f in files), "", ""))
+        rows.append((0, number, "files", any(f.name == rd.LAST for f in files), tuple(f.path for f in files), sum(f.size for f in files), "", ""))
     for r in record.rounds:
         if r.state in rd.ACTIVE_STATES:
             continue
         folder = rd.cache_dir_for(scratch, r.dataset, r.number)
         if os.path.isdir(folder) and not os.path.islink(folder):
-            rows.append((1, r.number, "", "folder", False, (folder,), _size_of_folder(folder), "", ""))
+            rows.append((1, r.number, "folder", False, (folder,), _size_of_folder(folder), "", ""))
     for source, run, folder in _listenings(paths):
         number = listen.round_of_source(source)
         for group, kind in ((2, "copy"), (3, "clips")):
             files = _listening_files(folder, kind)
             if files:
-                rows.append((group, number, "%s/%s" % (source, run), kind, False, tuple(path for path, _size in files), sum(size for _path, size in files), source, _when(run)))
-    rows.sort(key=lambda row: (row[0], row[1], row[2]))
+                rows.append((group, number, kind, False, tuple(path for path, _size in files), sum(size for _path, size in files), source, _when(run)))
+    rows.sort(key=lambda row: (row[0], row[1]))                      # a stable sort: listenings of one round stay in the order of their folders' names, which is their time
     offers = tuple(Offer(i + 1, kind, number, _relation(record, number), includes, files, size, source, when)
-                   for i, (_g, number, _t, kind, includes, files, size, source, when) in enumerate(rows))
+                   for i, (_g, number, kind, includes, files, size, source, when) in enumerate(rows))
     return Plan(offers, kept.keep, len(kept.busy), len(kept.unclaimed))
 
 

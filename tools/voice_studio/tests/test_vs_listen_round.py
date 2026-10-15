@@ -506,3 +506,14 @@ def test_a_copy_that_could_not_be_wholly_removed_is_said_so_and_not_called_remov
     monkeypatch.setattr(listen, "remove_voice_copy", lambda plan: (["my_voice.onnx"], ["my_voice.onnx.json"]))
     _code, io = rig.run("--round", "chosen", "--yes", answers=["yes", "yes"])
     assert "Some of it could not be removed. What is left is in " in io.text and "Removed." not in io.text
+
+
+def test_a_kept_copy_says_how_to_remove_it_later_with_the_command_for_this_project(rig):
+    _code, io = rig.run("--round", "chosen", "--yes", answers=["yes", "no"])
+    assert "Free up space can remove it later." in io.text
+    assert "To remove it later from here, run: python3 -m voice_studio.rounds free --project voice-check" in io.text
+
+
+def test_a_removed_copy_does_not_say_how_to_remove_it_later(rig):
+    _code, io = rig.run("--round", "chosen", "--yes", answers=["yes", "yes"])
+    assert "To remove it later" not in io.text and "Free up space can remove it later." not in io.text
