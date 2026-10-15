@@ -15,7 +15,7 @@ from vs_voicefile_helpers import TOOLS
 from voice_studio.core import jobs, listen
 from voice_studio.core.system import CommandResult
 
-FOLDER = "%s-heard-20261011-120000" % VOICE_FOLDER
+FOLDER = "%s/heard-20261011-120000" % VOICE_FOLDER
 
 
 @pytest.fixture(autouse=True)
@@ -30,16 +30,8 @@ def rig(tmp_path):
 
 def listened(rig, **kw):
     """The sound files, made by the real speaking program, for the core tests."""
-    plan = listen.plan_listen(rig.paths, rig.scratch_of(), None, SENTENCES, rig.training, rig.system, jobs.utc_stamp(NOW), 10**12)
+    plan = listen.plan_listen(rig.paths, None, SENTENCES, rig.training, rig.system, jobs.utc_stamp(NOW), 10**12)
     return plan, listen.listen(plan, rig.studio, rig.system, str(TOOLS))
-
-
-def _scratch(self):
-    from voice_studio.core.paths import ScratchPaths
-    return ScratchPaths(self.paths.default_scratch)
-
-
-FlowRig.scratch_of = _scratch
 
 
 # ---------------------------------------------------------------- listen.hear: what is sent and what is believed

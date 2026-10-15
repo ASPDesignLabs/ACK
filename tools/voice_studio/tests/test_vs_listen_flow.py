@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from vs_listen_helpers import VOICE_FOLDER, ListenRig
+from vs_listen_helpers import VOICE_FOLDER, ListenRig, made_listenings
 from vs_rounds_helpers import NOW
 from vs_startvoice_helpers import Terminal, implies_permission, leaked_keys
 from vs_voicefile_helpers import TOOLS
@@ -15,7 +15,7 @@ from voice_studio.core.diskbudget import DEFAULT_TABLE, floors_for
 from voice_studio.core.system import CommandResult
 
 CAT = text.load_catalog("en")
-FOLDER = "%s-heard-20261011-120000" % VOICE_FOLDER
+FOLDER = "%s/heard-20261011-120000" % VOICE_FOLDER
 
 
 class Rig(ListenRig):
@@ -27,8 +27,7 @@ class Rig(ListenRig):
         return code, io
 
     def made(self):
-        folder = Path(self.paths.default_scratch, "listening")
-        return sorted(os.listdir(folder)) if folder.is_dir() else []
+        return made_listenings(self.paths)
 
 
 @pytest.fixture(autouse=True)
@@ -66,8 +65,8 @@ def test_a_yes_makes_the_files_plays_each_in_turn_and_asks_whether_they_were_hea
         assert "Playing %d of 3: %s" % (number, sentence) in io.text
     assert io.prompts[1].strip() == "Did you hear them all? Type yes if you did."
     assert "Good. These sounds were made from the very files in the zip" in io.text and "copy the zip file to the phone" in io.text
-    assert "They are small, and this tool never deletes them." in io.text
-    folder = str(Path(rig.paths.default_scratch, "listening", FOLDER))
+    assert "They are small, and only Free up space removes them, when you ask." in io.text
+    folder = str(Path(rig.paths.listening, FOLDER))
     assert "The sound files are ready in " + folder in io.text and rig.system.played[0][1][-1] == folder + "/clip-1.wav"
     assert "played with ffplay" in io.text
 
@@ -207,7 +206,7 @@ def test_an_unknown_folder_name_is_refused_with_what_to_do(rig):
 def test_a_named_folder_is_listened_to(rig):
     rig.make_voice("voice-check-round-002-20261011-150000")
     code, io = rig.run("--folder", "voice-check-round-002-20261011-150000", "--yes", answers=["yes"])
-    assert code == 0 and rig.made() == ["voice-check-round-002-20261011-150000-heard-20261011-120000"]
+    assert code == 0 and rig.made() == ["voice-check-round-002-20261011-150000/heard-20261011-120000"]
 
 
 def test_a_voice_the_phone_would_refuse_lists_why_in_plain_words(tmp_path):
@@ -242,10 +241,10 @@ def test_no_pronunciation_data_is_a_plain_refusal(tmp_path):
     assert code == 1 and "pronunciation data for this voice's language was not found" in io.text and rig.made() == []
 
 
-def test_a_working_place_that_is_not_ready_stops_before_anything(rig, monkeypatch):
-    monkeypatch.setattr(lf, "scratch_ready", lambda project, paths: False)
-    code, io = rig.run("--yes")
-    assert code == 2 and "is not ready, and nothing was started" in io.text and rig.made() == []
+def test_a_working_place_that_is_not_ready_does_not_matter_because_the_sound_files_are_kept_with_the_project(rig, monkeypatch):
+    monkeypatch.setattr(lf, "scratch_ready", lambda project, paths: False, raising=False)           # the name is no longer used here; if it were, this would stop the run
+    code, io = rig.run("--yes", answers=["yes"])
+    assert code == 0 and rig.made() == [FOLDER] and "is not ready, and nothing was started" not in io.text
 
 
 def test_a_project_that_does_not_exist_is_named(rig):
@@ -333,12 +332,12 @@ def test_a_run_where_only_one_sound_came_out_silent_plays_the_others_and_says_so
     assert "Playing 1 of 3" not in io.text and "Playing 2 of 3" in io.text and "Playing 3 of 3" in io.text
 
 
-def test_the_room_that_matters_is_the_one_where_the_sound_files_go(rig):
+def test_the_room_that_matters_is_the_one_where_the_sound_files_go_which_is_the_projects_drive(rig):
     floors = floors_for(DEFAULT_TABLE, holds_recordings=True)
     short, plenty = (10 ** 12, 1), (10 ** 12, 10 ** 12)
-    rig.system.free = {rig.paths.rounds: plenty, rig.paths.default_scratch: short}
+    rig.system.free = {rig.paths.rounds: short, rig.paths.default_scratch: plenty}
     code, io = rig.run(answers=["yes"])
     assert code == 1 and "not enough free space" in io.text and rig.made() == []
-    rig.system.free = {rig.paths.rounds: short, rig.paths.default_scratch: plenty}
+    rig.system.free = {rig.paths.rounds: plenty, rig.paths.default_scratch: short}
     code, io = rig.run(answers=["yes", "yes"])
     assert code == 0 and rig.made() == [FOLDER]

@@ -2,11 +2,11 @@
 """The words and the order of hearing a voice file on this computer (plan task VS-5.4): `python3 -m voice_studio.voicefile listen`.
 
 It shows what it will do, checks the room, and asks first (a typed yes, or `--yes`; the window asks with its Yes and No buttons); a terminal with nobody at it is never asked. It writes
-only a new folder of small sound files under the project's scratch place. When a step fails it says which, where the folder is, and that nothing was deleted. Afterwards it asks whether
+only a new folder of small sound files in the project's own `listening` folder (with the training they came from; only *Free up space* removes them). When a step fails it says which, where the folder is, and that nothing was deleted. Afterwards it asks whether
 the sounds were heard, because a player that ran to the end does not prove that a speaker made a sound.
 
 `--round` listens straight to a round (a number, or the word chosen) with no zip file: it makes the voice from that round's saved point in the new folder first, and afterwards asks
-whether to remove that voice copy (only a yes removes it; the sound files stay). When the listening model is set up and the voice is English, it also writes down what the computer
+whether to remove that voice copy (only a yes removes it; the sound files stay; if it is kept, *Free up space* offers it later). When the listening model is set up and the voice is English, it also writes down what the computer
 hears in each sound and shows it beside the sentence, as a hint and never a verdict; when it cannot, it says why and goes on.
 
 The decisions are in core/listen.py and core/playback.py; every sentence a person reads is in the text catalog. Exit codes: 0 done, 1 something failed or could not be done,
@@ -22,7 +22,7 @@ from .cliargs import ArgError, parse_args
 from .diskbudget import Level
 from .paths import DataHome
 from .projects_flow import EXIT_NOTHING_DONE, EXIT_OK, EXIT_PROBLEM, say_bad_arg
-from .rounds_flow import BUILDENV_COMMAND, PROJECT, YES, TrainingEnv, _ask_yes, _confirmed, _free, _look, _number, _open, _say_parts, scratch_ready
+from .rounds_flow import BUILDENV_COMMAND, PROJECT, ROUNDS_COMMAND, YES, TrainingEnv, _ask_yes, _confirmed, _free, _look, _number, _open, _say_parts
 from .setup_flow import IO
 from .system import System
 from .text import Catalog, size_text
@@ -98,8 +98,9 @@ def _hearing_kind(plan: listen.ListenPlan, speech_dir: Optional[str]) -> str:
     return "yes" if speech_dir else "no_model"
 
 
-def _tidy_voice_copy(plan: listen.ListenPlan, cat: Catalog, io: IO) -> None:
-    """Listening to a round leaves a large copy of the voice in the new folder. Ask whether to remove it; only a yes does, and nothing else in the folder is touched."""
+def _tidy_voice_copy(plan: listen.ListenPlan, project_id: str, cat: Catalog, io: IO) -> None:
+    """Listening to a round leaves a large copy of the voice in the new folder. Ask whether to remove it; only a yes does, and nothing else in the folder is touched. A copy that is kept is
+    still offered later by *Free up space*, and this says so and how."""
     copy = listen.voice_copy(plan)
     if not copy:
         return
@@ -109,6 +110,7 @@ def _tidy_voice_copy(plan: listen.ListenPlan, cat: Catalog, io: IO) -> None:
         io.say(cat.t("listen.copy_failed", folder=plan.folder) if failed else cat.t("listen.copy_removed", folder=plan.folder))
     else:
         io.say(cat.t("listen.copy_kept", folder=plan.folder, size=size))
+        io.say(cat.t("listen.copy_kept_how", command="%s free --project %s" % (ROUNDS_COMMAND, project_id)))
 
 
 def _present(plan: listen.ListenPlan, heard: listen.Heard, hearing: str, speech_dir: Optional[str], speaker, system: System, tools_dir: str, stage: Callable[[str], None],
@@ -184,9 +186,6 @@ def run_listen(args: Sequence[str], home: DataHome, now: Optional[datetime], tra
     ctx, code = _open(parsed, home, cat, io)
     if ctx is None:
         return code
-    if not scratch_ready(ctx.project, ctx.paths):
-        io.say(cat.t("rounds.start.scratch_not_ready"))
-        return EXIT_NOTHING_DONE
     pronunciation, state = training()
     if pronunciation is None:
         io.say(cat.t("voicefile.make.no_environment", state=_state_words(cat, state), command=BUILDENV_COMMAND))
@@ -195,13 +194,13 @@ def run_listen(args: Sequence[str], home: DataHome, now: Optional[datetime], tra
     if speaker is None:
         io.say(cat.t("listen.no_studio", state=_state_words(cat, state), command=STUDIO_COMMAND))
         return EXIT_PROBLEM
-    free = _free(system, ctx)["scratch"]
+    free = _free(system, ctx)["project"]                       # the sound files are kept with the project, not in scratch
     try:
         if wanted_round is None:
-            plan = listen.plan_listen(ctx.paths, ctx.scratch, parsed.values.get("folder"), sentences(cat), pronunciation, system, jobs.utc_stamp(now), free)
+            plan = listen.plan_listen(ctx.paths, parsed.values.get("folder"), sentences(cat), pronunciation, system, jobs.utc_stamp(now), free)
         else:
             record = _look(ctx, now, cat, io, write=False)
-            plan = listen.plan_listen_round(ctx.paths, ctx.scratch, record, number, sentences(cat), pronunciation, system, jobs.utc_stamp(now), free)
+            plan = listen.plan_listen_round(ctx.paths, record, number, sentences(cat), pronunciation, system, jobs.utc_stamp(now), free)
     except listen.ListenError as error:
         _say_listen_error(error, cat, io)
         return EXIT_PROBLEM
@@ -246,5 +245,5 @@ def run_listen(args: Sequence[str], home: DataHome, now: Optional[datetime], tra
         return EXIT_PROBLEM
     code = _present(plan, heard, hearing, speech_dir, speaker, system, tools_dir, stage, cat, io)
     if plan.round is not None:
-        _tidy_voice_copy(plan, cat, io)
+        _tidy_voice_copy(plan, ctx.project.id, cat, io)
     return code

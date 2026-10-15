@@ -206,7 +206,8 @@ def test_the_page_names_every_audio_player_the_tool_may_start_and_the_one_window
     for name in set(playback.NATIVE_ORDER) | set(playback.WSL_ORDER):
         assert ("`%s`" % name in text) or name == "windows", name
     assert "powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand" in text and "System.Media.SoundPlayer" in text and "PlaySync()" in text and "wslpath -w" in text
-    assert listen.RUNNER_MODULE in text and "python3 -m voice_studio.voicefile listen" in text and "scratch/listening" in text and "sherpa-onnx 1.13.8" in text
+    assert listen.RUNNER_MODULE in text and "python3 -m voice_studio.voicefile listen" in text and "scratch/listening" not in text and "sherpa-onnx 1.13.8" in text
+    assert "the project's own `listening` folder" in text and "removed only by the tool's *Free up space* page or command" in text
     assert "opens no network connection" in text and "prints no sentence" in text
 
 

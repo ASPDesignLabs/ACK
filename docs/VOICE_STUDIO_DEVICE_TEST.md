@@ -616,8 +616,8 @@ round keeps about 4.8 GB of saved files, so have about 25 GB free for the whole 
 
 ## I3. Freeing up space
 
-**New, and not yet run on a real computer. This is the one section that removes files you made**, so it is written to be done slowly, and the first steps remove nothing. `free` only ever offers two things, and only from rounds
-that have ended: a round's spare saved files (every saved file of it except the chosen round's saved point and the one before it), and a round's working files (the training program's scratch folder, which is never read again).
+**New, and not yet run on a real computer. This is the one section that removes files you made**, so it is written to be done slowly, and the first steps remove nothing. `free` offers two things from rounds
+that have ended: a round's spare saved files (every saved file of it except the chosen round's saved point and the one before it), and a round's working files (the training program's scratch folder, which is never read again). Once section I8 has been done it also offers the test clips and the voices made for hearing a round, which are kept in the project's `listening` folder (last step below).
 It never offers recordings, notes, the project file, backups, finished voice files, the starting voices, the files of a round that is running, or anything the tool did not make. It always shows exactly what it will remove and asks first,
 and what was removed cannot be brought back, so **if you want every round kept as it is, stop after the first two steps.** It uses the project from section I2 and needs at least two rounds there.
 
@@ -657,6 +657,22 @@ and what was removed cannot be brought back, so **if you want every round kept a
   ```
   → `Done. Saved files removed: …`; then `list` still says `The saved point is there` under the chosen round, and `keep` still lists the chosen round's `last.ckpt` and the one before it. The `ls -l` of the `version_` folder you picked shows only `last.ckpt` is left if that round's saved point was not on the list.
   If `list` says `The saved point is missing` for the **chosen** round, stop and send it back: that is the one thing this command must never do.
+- [ ] **Test clips and the voices made for hearing** (only after section I8 part E has been done with a **no** to the last question, so a voice copy was kept; these can be made again, so they are the least precious files on the list). Look:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --project voice-check
+  ```
+  → A line `Test clips of round …, made on … UTC: …` for each time you listened to a round or to its voice file, `The voice made for hearing round … on … UTC: …` and `The test clips stay.` for each voice copy that was kept, and `Test clips and the voices made for hearing a round are chosen by round too, with --clips and --copies.` with an example. Ask to remove one round's voice copies, say **no**, then **yes**:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --copies 2 --project voice-check
+  ls -l ~/ack-voice-studio/projects/voice-check/listening/round-*/*/
+  ```
+  → `This removes:` and the line for that copy, the question (about the size shown), and after the **yes** `Test clips and voices made for hearing, removed:` and a number of files. The `ls` still lists the sound files, `job.json` and `tokens.txt` and no longer lists `my_voice.onnx`. Then the clips, the same way:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --clips 2 --project voice-check
+  ls ~/ack-voice-studio/projects/voice-check/listening
+  ```
+  → The folder for that listening is gone, and `listening` itself is still there. A file you put in one of those folders yourself is never listed and is still there afterwards, and its folder stays.
+- [ ] In the window (section I5), the Free up space page shows the same items, each with a tick box and its size.
 - [ ] Write down: how long it took, whether any wording confused you (the lines for a round's files, the question, the `Done.` line), whether you wanted a way to see the files before choosing, and whether the numbers in `--saved` were easy to read off the list.
 
 ## I4. Making the voice file with one command
@@ -959,7 +975,7 @@ section **with only the guide open**, as a person who has nothing else would. Wr
 
 ## I8. Hearing the voice before it goes to the phone
 
-**New, and not yet run on a real computer.** This plays three short sentences in the voice file you made in section I4, on this computer, with the same speech engine (sherpa-onnx 1.13.8), the same list of sounds and the same settings file that ACK uses on the phone. It is for judging a round and for checking the voice file by ear before it is sent. It makes one new folder of small sound files under the project's working place (`scratch/listening`), changes nothing that was there, and uses no network after the engine is installed. It can also write down what the computer hears in each sound and show it beside the sentence (part D), and listen straight to a round with no zip file (part E). It needs two things: the studio programs rebuilt (they gained the speech engine; part A) and the training programs (they carry the pronunciation data). **Nothing about sound from this tool has been seen on a real computer yet, so part B comes first: it decides how the tool plays.**
+**New, and not yet run on a real computer.** This plays three short sentences in the voice file you made in section I4, on this computer, with the same speech engine (sherpa-onnx 1.13.8), the same list of sounds and the same settings file that ACK uses on the phone. It is for judging a round and for checking the voice file by ear before it is sent. It makes one new folder of small sound files in the project's own `listening` folder (kept with the project and the training they came from: one folder for each round or voice file, and inside it one for each time), changes nothing that was there, and uses no network after the engine is installed. It can also write down what the computer hears in each sound and show it beside the sentence (part D), and listen straight to a round with no zip file (part E). It needs two things: the studio programs rebuilt (they gained the speech engine; part A) and the training programs (they carry the pronunciation data). **Nothing about sound from this tool has been seen on a real computer yet, so part B comes first: it decides how the tool plays.**
 
 *Built and tried in the build sandbox only, with a stand-in for the voice's network and a real public-domain voice: the real engine, the real patcher and the real pronunciation data made three sentences that the listening model heard back word for word, offline, in about 45 seconds. Round mode (part E) was tried only with stand-ins for the export and the patcher. Not heard by a person, and not played through a speaker.*
 
@@ -991,7 +1007,7 @@ section **with only the guide open**, as a person who has nothing else would. Wr
 - [ ] Look, and say no:
   ```bash
   PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile listen --project voice-check
-  ls ~/ack-voice-studio/projects/voice-check/scratch/listening
+  ls ~/ack-voice-studio/projects/voice-check/listening
   ```
   → `The voice file would be heard like this:` and under it the voice file it will use, the three sentences (Hello, my name is Anna. I need some help, please. Thank you, that is all.), the new folder, and the room check. Then `Make the sound files and play them now? Type yes to go on.` Type **`no`**: `Nothing was done.` and the `ls` finds nothing new. **Write down whether you want different sentences** (they are proposals, see the plan) and whether the plan read clearly.
 - [ ] Run it and say yes:
@@ -1002,11 +1018,11 @@ section **with only the guide open**, as a person who has nothing else would. Wr
   If it says `No way of playing sound worked on this computer.`, copy that line and the `tried:` line under it, and open the folder from Windows (File Explorer) to play the files there.
 - [ ] Look at what it made, and what it left alone:
   ```bash
-  ls -l ~/ack-voice-studio/projects/voice-check/scratch/listening/*/
-  head -3 ~/ack-voice-studio/projects/voice-check/scratch/listening/*/tokens.txt
+  ls -l ~/ack-voice-studio/projects/voice-check/listening/*/*/
+  head -3 ~/ack-voice-studio/projects/voice-check/listening/*/*/tokens.txt
   ls -l ~/ack-voice-studio/projects/voice-check/exports/*/
   ```
-  → The new folder holds `clip-1.wav`, `clip-2.wav`, `clip-3.wav`, `job.json` and `tokens.txt` (and `hear-job.json` once part D has run), all readable by you only (`-rw-------`). The first lines of `tokens.txt` are the voice's first sounds with their numbers. The voice file folder under `exports` has exactly the files it had (the model, its settings file, the original, the zip): nothing added, nothing changed.
+  → The new folder (named `heard-` and the date and time, inside a folder named after the voice file) holds `clip-1.wav`, `clip-2.wav`, `clip-3.wav`, `job.json` and `tokens.txt` (and `hear-job.json` once part D has run), all readable by you only (`-rw-------`). The first lines of `tokens.txt` are the voice's first sounds with their numbers. The voice file folder under `exports` has exactly the files it had (the model, its settings file, the original, the zip): nothing added, nothing changed.
 - [ ] **The honest test: say the same sentences on the phone.** Take the zip to the phone (section K), choose MY VOICE, and say the same three sentences. Write down any word that sounds different on the phone from the computer. The phone has its own copy of the pronunciation data; for English the two were identical on thousands of words in the build sandbox, but nobody has compared them on your phone.
 - [ ] Listen to a named voice file, and to a second run a minute later:
   ```bash
@@ -1036,7 +1052,7 @@ section **with only the guide open**, as a person who has nothing else would. Wr
   ```bash
   time PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile listen --project voice-check --round chosen
   ```
-  → `Making the voice from the saved point. This is the slow step.`, `Preparing it for the phone.`, then the same as part C, and last `Remove the voice made for this (…` Say **no**: `Kept. The voice made for this is still in …`. Look: `ls -l ~/ack-voice-studio/projects/voice-check/scratch/listening/round-*/` → the three sound files, `job.json`, `tokens.txt`, and `my_voice.onnx`, `my_voice.onnx.before-patch` and `my_voice.onnx.json`. Write down how long the export took and the size of the copy.
+  → `Making the voice from the saved point. This is the slow step.`, `Preparing it for the phone.`, then the same as part C, and last `Remove the voice made for this (…` Say **no**: `Kept. The voice made for this is still in …` with how big it is, `Free up space can remove it later.` and the command to run (`To remove it later from here, run:`). Look: `ls -l ~/ack-voice-studio/projects/voice-check/listening/round-*/*/` → the three sound files, `job.json`, `tokens.txt`, and `my_voice.onnx`, `my_voice.onnx.before-patch` and `my_voice.onnx.json`. Write down how long the export took and the size of the copy.
 - [ ] Run it again with a round number (`--round 1`, or any other round), and this time say **yes** to the last question. → `Removed. The sound files are still in …`, and the folder holds only the sounds, `job.json` and `tokens.txt`. The first run's folder is untouched.
 - [ ] Check that nothing else moved: `ls -l ~/ack-voice-studio/projects/voice-check/exports/*/` is as it was, and `python3 -m voice_studio.rounds list --project voice-check` shows the same chosen round.
 - [ ] Mistakes are refused before anything is written: `--round 0`, `--round x` and `--round 99` each print a plain sentence (`I did not understand …` or `There is no round with that number in this project.`) and make nothing; `--round chosen --folder anything` says `Give --folder or --round, not both.`
@@ -1131,5 +1147,5 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
-- [ ] The small sound files section I8 made are under the project's `scratch/listening` folder, a few hundred kilobytes each time. The tool never deletes them; look with `du -sh ~/ack-voice-studio/projects/voice-check/scratch/listening` and remove the folder yourself when you no longer want them.
+- [ ] The small sound files section I8 made are under the project's `listening` folder, a few hundred kilobytes each time (and a large voice copy for each time you kept one in part E). Free up space offers them (section I3); or look with `du -sh ~/ack-voice-studio/projects/voice-check/listening` and remove the folder yourself when you no longer want them.
 - [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.

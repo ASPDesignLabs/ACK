@@ -13,7 +13,6 @@ from vs_rounds_helpers import NOW
 from vs_voicefile_helpers import TOOLS
 from voice_studio.core import jobs, listen, phonemes
 from voice_studio.core.diskbudget import DEFAULT_TABLE, Level, floors_for
-from voice_studio.core.paths import ScratchPaths
 
 SENTENCES = ("One sentence.", "Another sentence.", "A third sentence.")
 STAMP = jobs.utc_stamp(NOW)                                 # 2026-10-11T12:00:00Z
@@ -29,12 +28,8 @@ def rig(tmp_path):
     return ListenRig(tmp_path)
 
 
-def scratch(rig):
-    return ScratchPaths(rig.paths.default_scratch)
-
-
 def plan(rig, name=None, free=None, sentences=SENTENCES):
-    return listen.plan_listen(rig.paths, scratch(rig), name, sentences, rig.training, rig.system, STAMP, free)
+    return listen.plan_listen(rig.paths, name, sentences, rig.training, rig.system, STAMP, free)
 
 
 def refused(rig, code, **kw):
@@ -174,10 +169,10 @@ def test_english_voices_are_told_from_the_rest_by_their_language_name(tmp_path):
 def test_a_plan_names_where_everything_goes_and_writes_nothing(rig):
     before = sorted(str(p) for p in rig.tmp.rglob("*"))
     made = plan(rig)
-    assert made.folder == "%s/listening/%s-heard-20261011-120000" % (rig.paths.default_scratch, VOICE_FOLDER)
+    assert made.folder == "%s/listening/%s/heard-20261011-120000" % (rig.paths.root, VOICE_FOLDER)
     assert made.sentences == SENTENCES and made.skipped_symbols == 1 and made.room is Level.ENOUGH and made.language == "en-us"
     assert sorted(str(p) for p in rig.tmp.rglob("*")) == before
-    assert not os.path.exists(scratch(rig).listening)
+    assert not os.path.exists(rig.paths.listening)
 
 
 def test_the_room_check_has_its_edges_at_the_floors(rig):
@@ -194,9 +189,9 @@ def test_the_folder_name_needs_a_whole_time_stamp_and_a_safe_voice_name(rig):
     from voice_studio.core import commands
     for stamp in ("", "2026-10-11", "x"):
         with pytest.raises(commands.CommandError):
-            listen.listening_folder(scratch(rig), VOICE_FOLDER, stamp)
+            listen.listening_folder(rig.paths, VOICE_FOLDER, stamp)
     with pytest.raises(commands.CommandError):
-        listen.listening_folder(scratch(rig), "../x", STAMP)
+        listen.listening_folder(rig.paths, "../x", STAMP)
 
 
 # ---------------------------------------------------------------- the run
@@ -367,6 +362,37 @@ def test_the_same_clip_reported_twice_is_not_three_clips(rig, monkeypatch):
     assert caught.value.code == "no_clips"
 
 
-def test_the_listening_folder_above_the_new_one_is_private_too(rig):
+def test_the_listening_folders_above_the_new_one_are_private_too(rig):
+    made = run(rig)
+    for folder in (rig.paths.listening, os.path.dirname(made.folder), made.folder):
+        assert stat.S_IMODE(os.stat(folder).st_mode) & 0o077 == 0, folder
+
+
+# ---------------------------------------------------------------- where the sound files are kept (decision D43)
+
+@pytest.mark.parametrize("source, number", [("round-003", 3), ("round-12", 12), ("round-000001", 1), ("voice-check-round-003-20261011-130000", 3), ("a-round-7-20261011-130000", 7),
+                                            ("round-3x", 0), ("round--3", 0), ("round-1234567", 0), ("my-round-3", 0), ("voice-round-003-2026-130000", 0), ("round-003-20261011-130000x", 0),
+                                            ("", 0), ("something-else", 0)])
+def test_the_round_a_listening_belongs_to_is_told_from_its_source_folder_name(source, number):
+    assert listen.round_of_source(source) == number
+
+
+def test_the_sound_files_go_in_the_projects_own_listening_folder_grouped_by_what_they_were_made_from(rig):
+    made = run(rig)
+    assert made.folder == "%s/listening/%s/heard-20261011-120000" % (rig.paths.root, VOICE_FOLDER)
+    assert os.path.isdir(rig.paths.listening) and not os.path.exists(rig.paths.default_scratch + "/listening")
+
+
+def test_listening_again_adds_a_second_folder_beside_the_first_under_the_same_source(rig):
+    first = run(rig).folder
+    later = listen.plan_listen(rig.paths, None, SENTENCES, rig.training, rig.system, "2026-10-12T08:30:00Z", 10**12)
+    second = listen.listen(later, rig.studio, rig.system, str(TOOLS)).folder
+    assert os.path.dirname(first) == os.path.dirname(second) and first != second
+    assert sorted(os.listdir(os.path.dirname(first))) == ["heard-20261011-120000", "heard-20261012-083000"]
+    assert os.path.exists(first + "/clip-1.wav")                                    # the first is untouched
+
+
+def test_the_scratch_place_is_not_used_at_all(rig):
+    before = sorted(str(p) for p in Path(rig.paths.default_scratch).rglob("*"))
     run(rig)
-    assert stat.S_IMODE(os.stat(scratch(rig).listening).st_mode) & 0o077 == 0
+    assert sorted(str(p) for p in Path(rig.paths.default_scratch).rglob("*")) == before

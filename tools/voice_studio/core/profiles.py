@@ -123,7 +123,7 @@ def split(projects: Iterable[Project]) -> Tuple[Tuple[Project, ...], Tuple[Proje
 
 @dataclass(frozen=True)
 class Part:
-    kind: str                       # recordings, rounds, exports, scratch, record, other
+    kind: str                       # recordings, rounds, exports, listening, scratch, record, other
     path: str
     bytes: int
     files: int
@@ -146,7 +146,7 @@ class DeletePlan:
     @property
     def by_kind(self) -> Tuple[Tuple[str, int, int], ...]:
         """(kind, bytes, files) with the parts of one kind added together, in the order the screens show them."""
-        order = ("recordings", "rounds", "exports", "scratch", "record", "other")
+        order = ("recordings", "rounds", "exports", "listening", "scratch", "record", "other")
         return tuple((kind, sum(p.bytes for p in self.parts if p.kind == kind), sum(p.files for p in self.parts if p.kind == kind)) for kind in order if any(p.kind == kind for p in self.parts))
 
 
@@ -174,7 +174,7 @@ def measure(path: str) -> Tuple[int, int]:
 
 
 def _kind(paths: ProjectPaths, entry: str) -> str:
-    return {paths.recordings: "recordings", paths.rounds: "rounds", paths.exports: "exports", paths.default_scratch: "scratch"}.get(entry, "record" if os.path.basename(entry) in KEPT_LAST else "other")
+    return {paths.recordings: "recordings", paths.rounds: "rounds", paths.exports: "exports", paths.listening: "listening", paths.default_scratch: "scratch"}.get(entry, "record" if os.path.basename(entry) in KEPT_LAST else "other")
 
 
 def _custom_scratch(project: Project) -> Tuple[str, str]:

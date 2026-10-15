@@ -534,7 +534,7 @@ def test_the_free_commands_it_gives_exist_and_take_the_options_it_gives():
     from voice_studio.core import rounds_flow as rf
     found = re.findall(r"python3 -m voice_studio\.rounds (free)([^\n`;<]*)", section("I3."))
     assert len(found) >= 6
-    takes_a_value = {"--project", "--saved", "--working"}
+    takes_a_value = {"--project", "--saved", "--working", "--clips", "--copies"}
     seen = set()
     for command, rest in found:
         words, i = shlex.split(rest), 0
@@ -543,7 +543,7 @@ def test_the_free_commands_it_gives_exist_and_take_the_options_it_gives():
             seen.add(words[i])
             i += 2 if words[i] in takes_a_value else 1
         assert words[words.index("--project") + 1] == "voice-check"
-    assert seen >= {"--saved", "--working", "--all", "--project"}
+    assert seen >= {"--saved", "--working", "--all", "--project", "--clips", "--copies"}
 
 
 def test_every_sentence_the_free_section_quotes_as_the_tools_output_is_one_the_tool_says():
@@ -907,20 +907,31 @@ def test_the_section_asks_for_a_probe_of_each_way_and_names_every_way_the_tool_m
 
 
 def test_the_places_the_listening_section_names_are_where_the_tool_puts_things():
-    from voice_studio.core.paths import DataHome, ProjectPaths, ScratchPaths
+    from voice_studio.core.paths import DataHome, ProjectPaths
     body = section("I8.")
     paths = ProjectPaths(DataHome("~").projects + "/voice-check")
-    listening = ScratchPaths(paths.default_scratch).listening
-    assert listening in body.replace("~", "~") or listening.replace(DataHome("~").projects, "~/ack-voice-studio/projects") in body
-    assert "scratch/listening" in body and paths.exports.replace(DataHome("~").projects, "~/ack-voice-studio/projects") in body
+    listening = paths.listening.replace(DataHome("~").projects, "~/ack-voice-studio/projects")
+    assert listening in body and paths.exports.replace(DataHome("~").projects, "~/ack-voice-studio/projects") in body
+    assert "scratch/listening" not in body and "scratch/listening" not in section("M."), "the sound files are kept with the project, not in scratch (decision D43)"
 
 
 def test_the_listening_section_says_it_changes_nothing_and_what_to_send_back():
     body = " ".join(section("I8.").split())
     assert "changes nothing that was there" in body and "uses no network after the engine is installed" in body and "Nothing about sound from this tool has been seen on a real computer yet" in body
-    assert "Section I8:" in doc_text() and "scratch/listening" in section("M.")
+    assert "Section I8:" in doc_text() and "voice-check/listening" in section("M.") and "Free up space offers them" in section("M.")
 
 
 def test_the_listening_section_follows_the_install_section_and_comes_before_the_manual_one():
     names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
     assert names.index("I7") < names.index("I8") < names.index("J")
+
+
+def test_the_free_up_space_section_names_the_new_options_and_the_texts_the_tool_says_for_listenings():
+    from voice_studio.core import rounds_flow as rf
+    body = section("I3.")
+    for option in ("--clips", "--copies"):
+        assert option in rf.FREE_VALUES and option in body, option
+    for sentence in ("The test clips stay.", "Test clips and voices made for hearing, removed:", "chosen by round too, with --clips and --copies."):
+        assert says(sentence), sentence
+        assert sentence in body, sentence
+    assert "section I8 part E" in body and "listening` folder" in body

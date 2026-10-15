@@ -115,7 +115,7 @@ def test_the_options_each_command_publishes_are_the_options_it_accepts():
     assert set(rf.OPTIONS) == {"list", "start", "stop", "choose", "back", "note", "keep", "free"}
     long = {c: {o for o in options if o.startswith("--")} for c, options in rf.OPTIONS.items()}
     assert long["list"] == {"--project"} and long["keep"] == {"--project"} and {"--set", "--minutes", "--yes", "--project"} == long["start"]
-    assert {"--all", "--saved", "--working", "--yes", "--project"} == long["free"]
+    assert {"--all", "--saved", "--working", "--clips", "--copies", "--yes", "--project"} == long["free"]
     assert {"--text", "--yes", "--project"} == long["note"] and {"--yes", "--project"} == long["stop"] == long["choose"] == long["back"]
 
 

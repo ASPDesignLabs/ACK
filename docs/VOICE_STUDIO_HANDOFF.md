@@ -15,6 +15,9 @@ Everything under `tools/voice_studio/` is the tool; `tools/freeform_studio/` is 
 > **listen straight to a round with no zip file** (`--round chosen` or a number): it makes the voice in the new listening folder with the same three steps as `make`, then asks whether to remove the
 > large voice copy (only a yes removes it, only by exact names). The developer's answers are recorded as D42 (three sentences kept; show what was heard; no offer at the end of `make`). **Checklist
 > I8 parts D and E are new and not yet run on a real computer**; the real listening model heard the sandbox's real clips word for word, offline.
+>
+> **Then (third slice, D43, task VS-5.6):** the test clips moved out of scratch into the project's own `listening` folder (grouped by the round or voice file they came from), and Free up space (terminal and
+> window) now offers them and the `--round` voice copies: `rounds free --clips N` / `--copies N` / `--all`. The end-of-run question about the voice copy stays.
 
 **What the developer wants next (two things; the first is now built, see the update above):**
 
@@ -100,8 +103,8 @@ Where things live on the person's computer: `~/ack-voice-studio/` holds `project
 - Nothing leaves the computer: no network, no upload, no "share" step. The sentences are fixed by the tool; a person's own sentence is shown exactly as typed and never logged.
 
 **Open questions for the developer** (do not decide these for them): *answered 2026-10-15 (D42):* the three sentences stay, the preview does not play at the end of `make`, and the visual aid is the words the
-computer heard. *Still open:* where the test clips are kept and how long (they are small, rebuildable and disposable; today they stay under the project's scratch place and the tool never deletes them), and the
-round-mode voice copy is the one large thing the tool now offers to delete on a yes.
+computer heard. *Decided later the same day (D43):* the test clips are kept in the project's own `listening` folder, grouped by the round or voice file they came from; the large voice copy of `--round` is offered for
+removal at the end of the run; and both are offered by Free up space (`rounds free --clips N`, `--copies N`, `--all`, and the window's page). Task VS-5.6, checklist I8 part E and I3.
 
 ## 4. A full GUI flow for install, update, refresh and uninstall
 

@@ -389,3 +389,17 @@ def test_the_parts_are_added_together_by_kind_in_the_order_the_screens_show_them
     assert kinds == ["recordings", "rounds", "exports", "scratch", "record"] and len(kinds) == len(set(kinds))
     record = dict((k, (b, f)) for k, b, f in plan.by_kind)["record"]
     assert record[1] == 2 and sum(b for _k, b, _f in plan.by_kind) == plan.total_bytes and sum(f for _k, _b, f in plan.by_kind) == plan.total_files
+
+
+def test_the_sound_files_made_for_hearing_a_voice_are_a_part_of_their_own_in_what_a_delete_would_remove(home):
+    project, paths = make(home)
+    fill(paths)
+    run = paths.listening + "/round-001/heard-20261011-120000"
+    os.makedirs(run)
+    with open(run + "/clip-1.wav", "wb") as handle:
+        handle.write(b"RIFF" * 100)
+    plan = pf.plan_delete(home, project)
+    kinds = [k for k, _b, _f in plan.by_kind]
+    assert kinds == ["recordings", "rounds", "exports", "listening", "scratch", "record"] or kinds == ["recordings", "rounds", "exports", "listening", "scratch"]
+    assert dict((k, (b, f)) for k, b, f in plan.by_kind)["listening"] == (400, 1)
+    assert "other" not in kinds

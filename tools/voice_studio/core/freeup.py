@@ -1,14 +1,17 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Free up space (plan task VS-4.7, decision P11): what could be removed, shown with its size, and removed only when asked for exactly that.
 
-Two kinds of thing are ever offered, both made by a round of this project and both of the kinds P11 calls disposable or rebuildable:
+Four kinds of thing are ever offered, all made by a round of this project (or from one) and all of the kinds P11 calls disposable or rebuildable:
 
 * **a round's spare saved files** (core/rounds.py::classify): every checkpoint file of a round that has ended, except the chosen round's `last.ckpt` and the `last.ckpt` of the
   round it continued from (going back needs that one). A round that is neither of those is offered whole, `last.ckpt` included, and the offer says so, because once it is
   gone that round cannot be chosen any more;
-* **a round's working folder** in scratch (the trainer's cache), of a round that has ended: every round uses a new one, so an old one is never read again.
+* **a round's working folder** in scratch (the trainer's cache), of a round that has ended: every round uses a new one, so an old one is never read again;
+* **a listening's test clips**, and **the voice made for hearing a round**, kept in the project's `listening` folder (core/listen.py; decision D43). Both are offered one listening at a time,
+  as exactly the files a listening makes (the sound files, the list of sounds and the job files; or the three files of the voice copy), never anything else that might be in that folder, and a
+  folder left empty is removed with the last of them. The voice copy is large; the clips are small; either can be made again.
 
-Never offered, and never removable from here: recordings, transcripts, the project file and the consent note, backups, finished exports, the files of the round that is running
+Never offered, and never removable from here: recordings, transcripts, the project file and the consent note, backups, finished exports (and the voice files in them), the files of the round that is running
 (and its working folder), files in a folder no round claims, links, the starting voices, and the `version_N` folders themselves (the trainer numbers its next folder from them,
 so removing one could make a later round reuse a number). What is removed is **only what the person was shown**: the removal takes the lock that keeps a round from beginning,
 works out the offers again, and refuses (removing nothing) if they are not the same as the ones that were shown. Paths are never taken from what a person types.
@@ -23,10 +26,10 @@ import sys
 from dataclasses import dataclass
 from typing import List, Sequence, Tuple
 
-from . import rounds as rd
+from . import commands, listen, rounds as rd
 from .paths import ProjectPaths, ScratchPaths
 
-KINDS = ("files", "folder")                                    # a round's spare saved files, a round's working folder
+KINDS = ("files", "folder", "copy", "clips")                   # a round's spare saved files, a round's working folder, the voice made for hearing a round, a listening's test clips
 RELATIONS = ("chosen", "before", "other")                      # how the round stands to the chosen one: it is, it is what the chosen one continued from, or neither
 ERROR_CODES = ("changed", "nothing_to_remove", "unknown_choice")    # each has words in the text catalog
 
@@ -47,6 +50,8 @@ class Offer:
     includes_saved_point: bool        # a "files" offer that takes the round's `last.ckpt` too: the round could not be chosen afterwards
     paths: Tuple[str, ...]            # the files, or the one folder
     bytes: int
+    source: str = ""                  # a "copy" or "clips" offer: the folder of the round or voice file the listening was made from (`round-003`, or the voice file's folder name)
+    when: str = ""                    # a "copy" or "clips" offer: when the listening was made, such as 2026-10-11 12:00 UTC
 
 
 @dataclass(frozen=True)
@@ -82,24 +87,85 @@ def _relation(record: rd.Record, number: int) -> str:
     return "other"
 
 
+def _listenings(paths: ProjectPaths) -> List[Tuple[str, str, str]]:
+    """(source, run, folder) of every listening in the project's `listening` folder, in name order. Only folders (never links) with the names this tool gives are looked at."""
+    found: List[Tuple[str, str, str]] = []
+    root = paths.listening
+    if not os.path.isdir(root) or os.path.islink(root):
+        return found
+    try:
+        sources = sorted(os.listdir(root))
+    except OSError:
+        return found
+    for source in sources:
+        folder = "%s/%s" % (root, source)
+        if not commands.SAFE_NAME.match(source) or os.path.islink(folder) or not os.path.isdir(folder):
+            continue
+        try:
+            runs = sorted(os.listdir(folder))
+        except OSError:
+            continue
+        for run in runs:
+            where = "%s/%s" % (folder, run)
+            if listen.RUN_FOLDER.match(run) and not os.path.islink(where) and os.path.isdir(where):
+                found.append((source, run, where))
+    return found
+
+
+def _when(run: str) -> str:
+    """`heard-20261011-120000` -> `2026-10-11 12:00 UTC` (the time in the name is UTC)."""
+    found = listen.RUN_FOLDER.match(run)
+    if not found:
+        return ""
+    date, time = found.groups()
+    return "%s-%s-%s %s:%s UTC" % (date[:4], date[4:6], date[6:], time[:2], time[2:4])
+
+
+def _listening_files(folder: str, kind: str) -> List[Tuple[str, int]]:
+    """(path, size) of the plain files of one kind in a listening's folder: exactly the three files of the voice copy, or exactly the small files a listening makes. Nothing else is ever listed."""
+    names = listen.VOICE_COPY_NAMES if kind == "copy" else None
+    try:
+        entries = sorted(os.listdir(folder))
+    except OSError:
+        return []
+    found = []
+    for name in entries:
+        if (name in names) if names is not None else listen.CLIP_FILES.match(name) is not None:
+            path = "%s/%s" % (folder, name)
+            try:
+                if os.path.isfile(path) and not os.path.islink(path):
+                    found.append((path, os.lstat(path).st_size))
+            except OSError:
+                continue
+    return found
+
+
 def plan(paths: ProjectPaths, scratch: ScratchPaths, record: rd.Record) -> Plan:
     """What could be removed right now. Reads the disk and changes nothing."""
     kept = rd.retention(paths, record)
     by_round = {}
     for number, file in kept.spare:
         by_round.setdefault(number, []).append(file)
-    rows: List[Tuple[int, int, str, int, bool, Tuple[str, ...], int]] = []
+    # (group, round, tie-break, kind, takes the saved point, paths, size, source, when): the saved files first, then the working folders, then the large voice copies, then the small test clips
+    rows: List[Tuple[int, int, str, str, bool, Tuple[str, ...], int, str, str]] = []
     for number in sorted(by_round):
         files = sorted(by_round[number], key=lambda f: (f.version, f.name))
-        rows.append((0, number, "files", number, any(f.name == rd.LAST for f in files), tuple(f.path for f in files), sum(f.size for f in files)))
+        rows.append((0, number, "", "files", any(f.name == rd.LAST for f in files), tuple(f.path for f in files), sum(f.size for f in files), "", ""))
     for r in record.rounds:
         if r.state in rd.ACTIVE_STATES:
             continue
         folder = rd.cache_dir_for(scratch, r.dataset, r.number)
         if os.path.isdir(folder) and not os.path.islink(folder):
-            rows.append((1, r.number, "folder", r.number, False, (folder,), _size_of_folder(folder)))
-    rows.sort(key=lambda row: (row[0], row[1]))
-    offers = tuple(Offer(i + 1, kind, number, _relation(record, number), includes, files, size) for i, (_k, _n, kind, number, includes, files, size) in enumerate(rows))
+            rows.append((1, r.number, "", "folder", False, (folder,), _size_of_folder(folder), "", ""))
+    for source, run, folder in _listenings(paths):
+        number = listen.round_of_source(source)
+        for group, kind in ((2, "copy"), (3, "clips")):
+            files = _listening_files(folder, kind)
+            if files:
+                rows.append((group, number, "%s/%s" % (source, run), kind, False, tuple(path for path, _size in files), sum(size for _path, size in files), source, _when(run)))
+    rows.sort(key=lambda row: (row[0], row[1], row[2]))
+    offers = tuple(Offer(i + 1, kind, number, _relation(record, number), includes, files, size, source, when)
+                   for i, (_g, number, _t, kind, includes, files, size, source, when) in enumerate(rows))
     return Plan(offers, kept.keep, len(kept.busy), len(kept.unclaimed))
 
 
@@ -109,10 +175,33 @@ class Result:
     removed_folders: int
     removed_bytes: int
     failed: Tuple[Tuple[str, str], ...]      # (path, the system's reason): left where they were
+    removed_heard: int = 0                   # test clips and voice copies from listening (not counted in removed_files)
 
 
 def _under(path: str, folder: str) -> bool:
     return os.path.realpath(path).startswith(os.path.realpath(folder) + os.sep)
+
+
+def _may_remove_listening_file(paths: ProjectPaths, path: str, kind: str) -> bool:
+    """Whether this is, right now, a plain file with one of the exact names a listening of this kind makes, at exactly `<listening>/<source>/<run>/<name>` and nowhere else."""
+    if os.path.islink(paths.listening) or os.path.islink(path) or not os.path.isfile(path) or not _under(path, paths.listening):
+        return False
+    parts = os.path.relpath(os.path.realpath(path), os.path.realpath(paths.listening)).split(os.sep)
+    if len(parts) != 3:
+        return False
+    source, run, name = parts
+    named = name in listen.VOICE_COPY_NAMES if kind == "copy" else listen.CLIP_FILES.match(name) is not None
+    return named and commands.SAFE_NAME.match(source) is not None and listen.RUN_FOLDER.match(run) is not None
+
+
+def _remove_if_empty(paths: ProjectPaths, folder: str) -> None:
+    """Take away a listening's folder, or its source's, once nothing is left in it. A folder with anything else in it is left as it is."""
+    if os.path.islink(folder) or not os.path.isdir(folder) or not _under(folder, paths.listening):
+        return
+    try:
+        os.rmdir(folder)
+    except OSError:
+        pass
 
 
 def remove(paths: ProjectPaths, scratch: ScratchPaths, shown: Plan, wanted: Sequence[int]) -> Result:
@@ -128,7 +217,7 @@ def remove(paths: ProjectPaths, scratch: ScratchPaths, shown: Plan, wanted: Sequ
         if fresh.fingerprint != shown.fingerprint:
             raise FreeError("changed")
         keep = {f.path for _n, f in fresh.kept}
-        files = folders = size = 0
+        files = folders = size = heard = 0
         failed: List[Tuple[str, str]] = []
         for offer in fresh.offers:
             if offer.number not in chosen:
@@ -146,6 +235,22 @@ def remove(paths: ProjectPaths, scratch: ScratchPaths, shown: Plan, wanted: Sequ
                         continue
                     files += 1
                     size += gone
+            elif offer.kind in ("copy", "clips"):
+                for path in offer.paths:
+                    if not _may_remove_listening_file(paths, path, offer.kind):
+                        failed.append((path, "not a file this may remove"))
+                        continue
+                    try:
+                        gone = os.lstat(path).st_size
+                        os.unlink(path)
+                    except OSError as exc:
+                        failed.append((path, exc.strerror or type(exc).__name__))
+                        continue
+                    heard += 1                                   # counted on its own: the "files" count is the saved files of rounds
+                    size += gone
+                run = os.path.dirname(offer.paths[0])
+                _remove_if_empty(paths, run)
+                _remove_if_empty(paths, os.path.dirname(run))
             else:
                 folder = offer.paths[0]
                 if os.path.islink(folder) or not os.path.isdir(folder) or not _under(folder, scratch.caches):
@@ -164,4 +269,4 @@ def remove(paths: ProjectPaths, scratch: ScratchPaths, shown: Plan, wanted: Sequ
                     size += gone
                 else:
                     size += max(0, gone - _size_of_folder(folder))
-        return Result(files, folders, size, tuple(failed))
+        return Result(files, folders, size, tuple(failed), heard)

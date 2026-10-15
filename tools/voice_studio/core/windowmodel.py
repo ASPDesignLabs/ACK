@@ -23,7 +23,7 @@ from .projects_flow import WHOSE_WORDS, _hours, edit_form_problems, new_form_pro
 from .recordings_flow import Studio, next_step as recordings_next_step, run_recordings, show_lines as recordings_lines
 from .registry import Registry
 from .startvoice import voices as starting_voices
-from .rounds_flow import Open, TrainingEnv, free_row_text, round_lines, run_rounds, scratch_ready, scratch_root
+from .rounds_flow import FREE_OPTION, Open, TrainingEnv, free_row_text, round_lines, run_rounds, scratch_ready, scratch_root
 from .system import RealSystem, System
 from .text import Catalog, size_text
 from .voicefile_flow import run_voicefile
@@ -246,7 +246,7 @@ def voicefiles_view(home: DataHome, project_id: str, cat: Catalog) -> Optional[V
 
 @dataclass(frozen=True)
 class FreeItem:
-    kind: str                                    # 'saved' or 'working': the option the terminal command takes
+    kind: str                                    # 'saved', 'working', 'copies' or 'clips': the option the terminal command takes
     round: int
     line: str
     bytes: int
@@ -270,7 +270,7 @@ def free_view(home: DataHome, project_id: str, cat: Catalog, now=None) -> Option
     except rd.RoundsError as error:
         return FreeView(ctx.project.id, (), (), error_text(cat, "rounds", error.code).what)
     plan = freeup.plan(ctx.paths, ctx.scratch, record)
-    items = tuple(FreeItem("working" if o.kind == "folder" else "saved", o.round, free_row_text(o, cat), o.bytes, o.includes_saved_point) for o in plan.offers)
+    items = tuple(FreeItem(FREE_OPTION[o.kind], o.round, free_row_text(o, cat), o.bytes, o.includes_saved_point) for o in plan.offers)
     notes: List[str] = []
     if plan.kept:
         notes.append(cat.count("rounds.free.kept", len(plan.kept), size=size_text(sum(f.size for _n, f in plan.kept))))
@@ -437,7 +437,7 @@ def make_args(project_id: str) -> Tuple[str, List[str]]:
 def free_args(project_id: str, items: Sequence[FreeItem]) -> Tuple[str, List[str]]:
     """The command for the items that are ticked: each kind lists its rounds. Nothing ticked is not a command (the window keeps the button off)."""
     argv = ["free"]
-    for kind in ("saved", "working"):
+    for kind in FREE_OPTION.values():
         rounds_for_kind = sorted({i.round for i in items if i.kind == kind})
         if rounds_for_kind:
             argv += ["--" + kind, ",".join(str(n) for n in rounds_for_kind)]

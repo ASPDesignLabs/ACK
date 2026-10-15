@@ -49,7 +49,7 @@ MAX_FAILED_SHOWN = 5
 FIELD_WORDS = {"name": "projects.field.name", "hours": "projects.field.hours", "consent.given_by": "projects.field.consent.given_by", "consent.what_to": "projects.field.consent.what_to",
                "consent.when": "projects.field.consent.when", "consent.withdraw": "projects.field.consent.withdraw", "consent.how_given": "projects.field.consent.how_given",
                "consent.how_given_other": "projects.field.consent.how_given_other"}
-PART_WORDS = {"recordings": "projects.delete.what.recordings", "rounds": "projects.delete.what.rounds", "exports": "projects.delete.what.exports", "scratch": "projects.delete.what.scratch",
+PART_WORDS = {"recordings": "projects.delete.what.recordings", "rounds": "projects.delete.what.rounds", "exports": "projects.delete.what.exports", "listening": "projects.delete.what.listening", "scratch": "projects.delete.what.scratch",
               "record": "projects.delete.what.record", "other": "projects.delete.what.other"}
 ARG_ERRORS = {"unknown": "cli.bad_option", "missing_value": "cli.missing_value", "repeated": "cli.repeated", "extra_word": "cli.extra_word"}
 

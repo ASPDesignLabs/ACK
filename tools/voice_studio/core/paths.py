@@ -120,6 +120,12 @@ class ProjectPaths:
         return self.root + "/scratch"
 
     @property
+    def listening(self) -> str:
+        """The short sound files made to hear a voice (core/listen.py), and the voice made for hearing a round: kept with the project and the training they came from, one folder for each
+        round or voice file they were made from, one folder inside for each time. Small and made again whenever wanted, so *Free up space* offers them (plan decision D43). Made when first needed."""
+        return self.root + "/listening"
+
+    @property
     def folders(self) -> tuple:
         return (self.recordings, self.rounds, self.exports, self.default_scratch)
 
@@ -127,7 +133,8 @@ class ProjectPaths:
 @dataclass(frozen=True)
 class ScratchPaths:
     """Inside a project's scratch folder (the default one, or the folder core/scratch.py made on the place the person chose): the training sets and the
-    working files of each round. Both can be made again from the recordings, so both are for *Free up space* (plan P11)."""
+    working files of each round. Both can be made again from the recordings, so both are for *Free up space* (plan P11). The sound files made to hear a voice are not here: they are kept
+    with the project (`ProjectPaths.listening`)."""
     root: str
 
     @property
@@ -138,7 +145,3 @@ class ScratchPaths:
     def caches(self) -> str:
         return self.root + "/caches"
 
-    @property
-    def listening(self) -> str:
-        """The short sound files made to hear a finished voice (core/listen.py): small, and made again whenever wanted, so they are disposable (plan P11)."""
-        return self.root + "/listening"

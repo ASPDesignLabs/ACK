@@ -1,0 +1,370 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Free up space offers the test clips and the voices made for hearing a round (decision D43): exactly the files a listening makes, one listening at a time, chosen by round, removed only
+when shown and asked for, and nothing else in that folder ever touched. The listenings are made by the real flows where that matters and written by hand where an exact state is needed."""
+import os
+from pathlib import Path
+
+import pytest
+
+from vs_listen_helpers import SENTENCES, VOICE_FOLDER, FlowRig
+from vs_rounds_helpers import NOW
+from vs_startvoice_helpers import Terminal, leaked_keys
+from voice_studio.core import freeup, listen, rounds as rd, rounds_flow as rf, text, windowmodel as wm
+from voice_studio.core.paths import ScratchPaths
+from vs_voicefile_helpers import tree_of
+
+CAT = text.load_catalog("en")
+RUN = "heard-20261011-120000"
+
+
+@pytest.fixture(autouse=True)
+def no_inherited_path(monkeypatch):
+    monkeypatch.delenv("PYTHONPATH", raising=False)
+
+
+@pytest.fixture
+def rig(tmp_path):
+    r = FlowRig(tmp_path)
+    r.finish_rounds(2)
+    return r
+
+
+def planned(rig):
+    return freeup.plan(rig.paths, ScratchPaths(rig.paths.default_scratch), rd.load(rig.paths))
+
+
+def make_run(rig, source="round-002", run=RUN, clips=("clip-1.wav", "clip-2.wav", "tokens.txt", "job.json"), copy=("my_voice.onnx", "my_voice.onnx.json"), size=100):
+    folder = Path(rig.paths.listening, source, run)
+    folder.mkdir(parents=True, exist_ok=True)
+    for name in tuple(clips) + tuple(copy):
+        (folder / name).write_bytes(b"x" * size)
+    return folder
+
+
+def free(rig, *argv, answers=("yes",)):
+    io = Terminal(list(answers))
+    code = rf.run_rounds(["free", *argv, "--project", "voice-check"], rig.home, None, CAT, io, training=rig.training_env, now=NOW, system=rig.system)
+    assert leaked_keys(io.text + "\n".join(io.prompts)) == [], "a catalog key was printed instead of words"
+    return code, io
+
+
+# ---------------------------------------------------------------- what is offered
+
+def test_a_project_with_no_listening_has_nothing_of_this_kind_on_the_list(rig):
+    assert [o for o in planned(rig).offers if o.kind in ("copy", "clips")] == []
+
+
+def test_a_listening_is_offered_as_its_voice_copy_and_its_test_clips_with_their_sizes_and_where_they_came_from(rig):
+    make_run(rig)
+    offers = [o for o in planned(rig).offers if o.kind in ("copy", "clips")]
+    assert [o.kind for o in offers] == ["copy", "clips"]
+    copy, clips = offers
+    run = rig.paths.listening + "/round-002/" + RUN
+    assert copy.paths == (run + "/my_voice.onnx", run + "/my_voice.onnx.json") and copy.bytes == 200 and copy.round == 2 and copy.source == "round-002" and copy.when == "2026-10-11 12:00 UTC"
+    assert clips.paths == (run + "/clip-1.wav", run + "/clip-2.wav", run + "/job.json", run + "/tokens.txt") and clips.bytes == 400 and clips.round == 2 and clips.when == copy.when
+
+
+def test_the_list_numbers_run_on_across_the_kinds_and_the_large_voice_copies_come_before_the_small_clips(rig):
+    make_run(rig, "round-001", "heard-20261010-090000")
+    make_run(rig, "round-002", RUN)
+    offers = planned(rig).offers
+    assert [o.number for o in offers] == list(range(1, len(offers) + 1))
+    heard = [(o.kind, o.round) for o in offers if o.kind in ("copy", "clips")]
+    assert heard == [("copy", 1), ("copy", 2), ("clips", 1), ("clips", 2)]
+    assert max(i for i, o in enumerate(offers) if o.kind in ("files", "folder")) < min(i for i, o in enumerate(offers) if o.kind in ("copy", "clips"))
+
+
+def test_a_voice_files_listening_belongs_to_the_round_its_name_says(rig):
+    make_run(rig, VOICE_FOLDER, RUN, copy=())
+    clips = [o for o in planned(rig).offers if o.kind == "clips"]
+    assert len(clips) == 1 and clips[0].round == 1 and clips[0].source == VOICE_FOLDER
+
+
+def test_a_source_whose_round_cannot_be_told_is_round_zero(rig):
+    make_run(rig, "an-older-name", RUN, copy=())
+    assert [o.round for o in planned(rig).offers if o.kind == "clips"] == [0]
+
+
+def test_a_run_with_only_the_copy_or_only_the_clips_makes_one_offer(rig):
+    make_run(rig, "round-001", "heard-20261010-090000", copy=())
+    make_run(rig, "round-002", RUN, clips=())
+    assert sorted((o.kind, o.round) for o in planned(rig).offers if o.kind in ("copy", "clips")) == [("clips", 1), ("copy", 2)]
+
+
+def test_the_hearing_job_file_is_one_of_the_clips(rig):
+    make_run(rig, clips=("clip-1.wav", "hear-job.json"), copy=())
+    assert [os.path.basename(p) for p in [o for o in planned(rig).offers if o.kind == "clips"][0].paths] == ["clip-1.wav", "hear-job.json"]
+
+
+def test_only_the_exact_names_are_offered_and_everything_else_is_left_out(rig):
+    folder = make_run(rig, clips=("clip-1.wav",), copy=("my_voice.onnx",))
+    for name in ("notes.txt", "clip-1.wav.part", "clip-1234.wav", "my_voice.onnx.bak", "my_voice.onnx.before-patch.old", "tokens.txt.keep", "MY_VOICE.ONNX"):
+        (folder / name).write_bytes(b"mine")
+    (folder / "extra").mkdir()
+    (folder / "extra" / "clip-2.wav").write_bytes(b"mine")
+    (folder / "clip-7.wav").symlink_to(folder / "clip-1.wav")
+    heard = [o for o in planned(rig).offers if o.kind in ("copy", "clips")]
+    assert sorted(os.path.basename(p) for o in heard for p in o.paths) == ["clip-1.wav", "my_voice.onnx"]
+
+
+def test_a_link_for_a_folder_and_names_this_tool_does_not_give_are_not_looked_into(rig, tmp_path):
+    elsewhere = tmp_path / "elsewhere" / RUN
+    elsewhere.mkdir(parents=True)
+    (elsewhere / "clip-1.wav").write_bytes(b"x")
+    os.makedirs(rig.paths.listening)
+    os.symlink(str(elsewhere.parent), rig.paths.listening + "/round-003")                      # a source that is a link
+    os.makedirs(rig.paths.listening + "/round-004")
+    os.symlink(str(elsewhere), rig.paths.listening + "/round-004/" + RUN)                      # a run that is a link
+    make_run(rig, "bad name", RUN)                                                              # a source name this tool never gives
+    make_run(rig, "round-005", "heard-2026")                                                    # a run name this tool never gives
+    make_run(rig, "round-006", "heard-20261011-120000-x")
+    assert [o for o in planned(rig).offers if o.kind in ("copy", "clips")] == []
+
+
+def test_a_listening_folder_that_is_itself_a_link_is_not_looked_into(rig, tmp_path):
+    other = tmp_path / "other-listening"
+    (other / "round-002" / RUN).mkdir(parents=True)
+    (other / "round-002" / RUN / "clip-1.wav").write_bytes(b"x")
+    os.symlink(str(other), rig.paths.listening)
+    assert [o for o in planned(rig).offers if o.kind in ("copy", "clips")] == []
+
+
+def test_planning_changes_nothing_on_the_disk(rig):
+    make_run(rig)
+    before = tree_of(rig.paths.root)
+    planned(rig)
+    assert tree_of(rig.paths.root) == before
+
+
+def test_the_real_flows_leave_exactly_what_the_list_offers(rig):
+    rig.set_heard(SENTENCES)
+    rig.run("--round", "chosen", "--yes", answers=["yes", "no"], speech="ready")          # keeps the voice copy
+    rig.run("--yes", answers=["yes"])                                                       # the made voice file of round 1
+    offers = [o for o in planned(rig).offers if o.kind in ("copy", "clips")]
+    by = {(o.kind, o.source): sorted(os.path.basename(p) for p in o.paths) for o in offers}
+    assert by[("copy", "round-002")] == ["my_voice.onnx", "my_voice.onnx.before-patch", "my_voice.onnx.json"]
+    assert by[("clips", "round-002")] == ["clip-1.wav", "clip-2.wav", "clip-3.wav", "hear-job.json", "job.json", "tokens.txt"]
+    assert by[("clips", VOICE_FOLDER)] == ["clip-1.wav", "clip-2.wav", "clip-3.wav", "job.json", "tokens.txt"] and ("copy", VOICE_FOLDER) not in by
+    listed = {p for o in offers for p in o.paths}
+    on_disk = {str(p) for p in Path(rig.paths.listening).rglob("*") if p.is_file()}
+    assert listed == on_disk, "the list holds every file a listening makes and nothing it does not"
+
+
+# ---------------------------------------------------------------- removing
+
+def test_removing_the_clips_leaves_the_voice_copy_and_the_folder(rig):
+    folder = make_run(rig)
+    shown = planned(rig)
+    clips = next(o for o in shown.offers if o.kind == "clips")
+    result = freeup.remove(rig.paths, ScratchPaths(rig.paths.default_scratch), shown, [clips.number])
+    assert (result.removed_heard, result.removed_files, result.removed_folders, result.removed_bytes, result.failed) == (4, 0, 0, 400, ())
+    assert sorted(os.listdir(folder)) == ["my_voice.onnx", "my_voice.onnx.json"]
+
+
+def test_removing_the_copy_leaves_the_clips(rig):
+    folder = make_run(rig)
+    shown = planned(rig)
+    copy = next(o for o in shown.offers if o.kind == "copy")
+    result = freeup.remove(rig.paths, ScratchPaths(rig.paths.default_scratch), shown, [copy.number])
+    assert (result.removed_heard, result.removed_bytes) == (2, 200) and sorted(os.listdir(folder)) == ["clip-1.wav", "clip-2.wav", "job.json", "tokens.txt"]
+
+
+def test_removing_both_takes_the_listenings_folder_and_its_source_when_nothing_else_is_in_them(rig):
+    make_run(rig)
+    shown = planned(rig)
+    numbers = [o.number for o in shown.offers if o.kind in ("copy", "clips")]
+    result = freeup.remove(rig.paths, ScratchPaths(rig.paths.default_scratch), shown, numbers)
+    assert result.removed_heard == 6 and not os.path.exists(rig.paths.listening + "/round-002") and os.path.isdir(rig.paths.listening)
+
+
+def test_a_source_with_another_listening_in_it_stays(rig):
+    make_run(rig, "round-002", "heard-20261010-090000")
+    make_run(rig, "round-002", RUN)
+    shown = planned(rig)
+    numbers = [o.number for o in shown.offers if o.kind in ("copy", "clips") and o.when.startswith("2026-10-11")]
+    freeup.remove(rig.paths, ScratchPaths(rig.paths.default_scratch), shown, numbers)
+    assert os.listdir(rig.paths.listening + "/round-002") == ["heard-20261010-090000"]
+    assert len(os.listdir(rig.paths.listening + "/round-002/heard-20261010-090000")) == 6
+
+
+def test_a_folder_with_something_else_in_it_is_never_removed_and_that_something_is_untouched(rig):
+    folder = make_run(rig)
+    (folder / "my notes.txt").write_text("mine")
+    (folder / "extra").mkdir()
+    (folder / "extra" / "x.txt").write_text("mine")
+    shown = planned(rig)
+    freeup.remove(rig.paths, ScratchPaths(rig.paths.default_scratch), shown, [o.number for o in shown.offers if o.kind in ("copy", "clips")])
+    assert sorted(os.listdir(folder)) == ["extra", "my notes.txt"] and (folder / "my notes.txt").read_text() == "mine" and (folder / "extra" / "x.txt").read_text() == "mine"
+
+
+def test_nothing_else_in_the_project_is_touched(rig):
+    make_run(rig)
+    elsewhere = {p: Path(p).read_bytes() for p in tree_of(rig.paths.root) if "/listening/" not in p}
+    shown = planned(rig)
+    freeup.remove(rig.paths, ScratchPaths(rig.paths.default_scratch), shown, [o.number for o in shown.offers if o.kind in ("copy", "clips")])
+    assert {p: Path(p).read_bytes() for p in tree_of(rig.paths.root) if "/listening/" not in p} == elsewhere
+
+
+def test_a_list_that_changed_since_it_was_shown_removes_nothing(rig):
+    folder = make_run(rig)
+    shown = planned(rig)
+    make_run(rig, "round-001", "heard-20261010-090000")                      # another listening appeared
+    with pytest.raises(freeup.FreeError) as caught:
+        freeup.remove(rig.paths, ScratchPaths(rig.paths.default_scratch), shown, [o.number for o in shown.offers if o.kind == "clips"])
+    assert caught.value.code == "changed" and len(os.listdir(folder)) == 6
+
+
+def test_a_file_that_cannot_be_removed_is_reported_and_the_others_still_go(rig, monkeypatch):
+    folder = make_run(rig)
+    shown = planned(rig)
+    real = os.unlink
+
+    def unlink(path, *a, **k):
+        if str(path).endswith("clip-2.wav"):
+            raise PermissionError("no")
+        return real(path, *a, **k)
+    monkeypatch.setattr(os, "unlink", unlink)
+    result = freeup.remove(rig.paths, ScratchPaths(rig.paths.default_scratch), shown, [o.number for o in shown.offers if o.kind == "clips"])
+    assert result.removed_heard == 3 and [os.path.basename(p) for p, _r in result.failed] == ["clip-2.wav"] and "clip-2.wav" in os.listdir(folder)
+
+
+def test_a_number_that_is_not_on_the_list_removes_nothing(rig):
+    make_run(rig)
+    shown = planned(rig)
+    for wanted in ([], [999]):
+        with pytest.raises(freeup.FreeError):
+            freeup.remove(rig.paths, ScratchPaths(rig.paths.default_scratch), shown, wanted)
+    assert len(os.listdir(rig.paths.listening + "/round-002/" + RUN)) == 6
+
+
+@pytest.mark.parametrize("make_bad", ["link", "directory", "wrong_depth", "wrong_name", "outside"])
+def test_the_check_made_at_the_moment_of_removal_refuses_a_file_that_is_no_longer_what_it_was_shown_as(rig, tmp_path, make_bad):
+    folder = make_run(rig, clips=("clip-1.wav",), copy=("my_voice.onnx",))
+    target = folder / "clip-1.wav"
+    if make_bad == "link":
+        target.unlink()
+        (tmp_path / "precious").write_bytes(b"p")
+        target.symlink_to(tmp_path / "precious")
+    elif make_bad == "directory":
+        target.unlink()
+        target.mkdir()
+    elif make_bad == "wrong_depth":
+        target = folder.parent / "clip-1.wav"
+        target.write_bytes(b"x")
+    elif make_bad == "wrong_name":
+        target = folder / "notes.txt"
+        target.write_bytes(b"x")
+    else:
+        target = tmp_path / "clip-1.wav"
+        target.write_bytes(b"x")
+    assert not freeup._may_remove_listening_file(rig.paths, str(target), "clips")
+
+
+def test_each_kind_accepts_only_its_own_names(rig):
+    folder = make_run(rig)
+    assert freeup._may_remove_listening_file(rig.paths, str(folder / "clip-1.wav"), "clips") and freeup._may_remove_listening_file(rig.paths, str(folder / "my_voice.onnx"), "copy")
+    assert not freeup._may_remove_listening_file(rig.paths, str(folder / "my_voice.onnx"), "clips") and not freeup._may_remove_listening_file(rig.paths, str(folder / "clip-1.wav"), "copy")
+
+
+def test_nothing_is_removed_through_a_listening_folder_that_is_a_link(rig, tmp_path):
+    folder = make_run(rig)
+    moved = tmp_path / "moved-listening"
+    os.rename(rig.paths.listening, moved)
+    os.symlink(str(moved), rig.paths.listening)
+    assert not freeup._may_remove_listening_file(rig.paths, str(Path(rig.paths.listening, "round-002", RUN, "clip-1.wav")), "clips")
+    assert (moved / "round-002" / RUN / "clip-1.wav").exists()
+
+
+# ---------------------------------------------------------------- the command
+
+def test_the_list_shows_each_in_words_with_its_round_time_and_size_and_how_to_choose_them(rig):
+    make_run(rig)
+    make_run(rig, VOICE_FOLDER, "heard-20261010-090000", copy=())
+    code, io = free(rig)
+    assert code == 0
+    assert "The voice made for hearing round 2 on 2026-10-11 12:00 UTC: 200 B. The test clips stay." in io.text
+    assert "Test clips of round 2, made on 2026-10-11 12:00 UTC: 400 B. They can be made again." in io.text
+    assert "Test clips made on 2026-10-10 09:00 UTC from the voice file %s: 400 B. They can be made again." % VOICE_FOLDER in io.text
+    assert "are chosen by round too, with --clips and --copies. For example: python3 -m voice_studio.rounds free --copies 2 --project voice-check" in io.text
+
+
+def test_nothing_about_listening_is_said_when_there_is_nothing_to_say(rig):
+    code, io = free(rig)
+    assert "test clips" not in io.text.lower() and "--clips" not in io.text
+
+
+def test_clips_are_chosen_by_round_and_every_listening_of_that_round_goes(rig):
+    make_run(rig, "round-002", "heard-20261010-090000", copy=())
+    make_run(rig, "round-002", RUN)
+    make_run(rig, "round-001", RUN, copy=())
+    code, io = free(rig, "--clips", "2", answers=["yes"])
+    assert code == 0 and "Test clips and voices made for hearing, removed: 8 files." in io.text
+    left = sorted(str(p.relative_to(rig.paths.listening)) for p in Path(rig.paths.listening).rglob("*") if p.is_file())
+    assert left == ["round-001/%s/%s" % (RUN, n) for n in ("clip-1.wav", "clip-2.wav", "job.json", "tokens.txt")] + ["round-002/%s/my_voice.onnx" % RUN, "round-002/%s/my_voice.onnx.json" % RUN]
+
+
+def test_copies_are_chosen_by_round_and_the_clips_stay(rig):
+    make_run(rig)
+    code, io = free(rig, "--copies", "2", answers=["yes"])
+    assert code == 0 and "Test clips and voices made for hearing, removed: 2 files." in io.text and "Saved files removed: 0" in io.text
+    assert sorted(os.listdir(rig.paths.listening + "/round-002/" + RUN)) == ["clip-1.wav", "clip-2.wav", "job.json", "tokens.txt"]
+
+
+def test_the_question_names_what_goes_and_a_no_removes_nothing(rig):
+    make_run(rig)
+    before = tree_of(rig.paths.listening)
+    code, io = free(rig, "--clips", "2", answers=["no"])
+    assert code == 2 and "This removes:" in io.text and "Test clips of round 2" in io.text and tree_of(rig.paths.listening) == before
+
+
+def test_all_takes_the_test_clips_and_the_voice_copies_too(rig):
+    make_run(rig)
+    code, io = free(rig, "--all", answers=["yes"])
+    assert code == 0 and not os.path.exists(rig.paths.listening + "/round-002") and "removed: 6 files." in io.text
+
+
+def test_a_round_with_none_of_that_kind_is_said_plainly_and_nothing_is_removed(rig):
+    make_run(rig, copy=())
+    code, io = free(rig, "--copies", "2", answers=["yes"])
+    assert code == 2 and "The list has nothing for --copies 2. Nothing was removed." in io.text and len(os.listdir(rig.paths.listening + "/round-002/" + RUN)) == 4
+
+
+def test_round_zero_is_a_round_for_clips_and_copies_only(rig):
+    make_run(rig, "an-older-name", RUN, copy=())
+    code, io = free(rig, "--saved", "0", answers=["yes"])
+    assert code == 2 and "I did not understand 0." in io.text
+    code, io = free(rig, "--clips", "0", answers=["yes"])
+    assert code == 0 and not os.path.exists(rig.paths.listening + "/an-older-name")
+
+
+@pytest.mark.parametrize("word", ["x", "-1", "1.5", "", "1;2"])
+def test_a_round_that_is_not_a_number_is_not_understood_for_the_new_options_either(rig, word):
+    make_run(rig)
+    for option in ("--clips", "--copies"):
+        code, io = free(rig, option, word)
+        assert code == 2 and "I did not understand" in io.text and len(os.listdir(rig.paths.listening + "/round-002/" + RUN)) == 6
+
+
+def test_the_new_options_with_all_are_refused_like_the_old_ones(rig):
+    make_run(rig)
+    code, io = free(rig, "--all", "--clips", "2")
+    assert code == 2 and "Give either --all or a list of rounds, not both." in io.text
+
+
+def test_the_real_listening_is_removed_whole_by_the_command(rig):
+    rig.run("--round", "chosen", "--yes", answers=["yes", "no"])
+    assert rig.made() == ["round-002/" + RUN]
+    code, io = free(rig, "--copies", "2", "--clips", "2", answers=["yes"])
+    assert code == 0 and not os.path.exists(rig.paths.listening + "/round-002") and rig.made() == []
+
+
+# ---------------------------------------------------------------- the window
+
+def test_the_window_lists_them_with_the_option_each_takes_and_asks_for_the_command_that_removes_them(rig):
+    make_run(rig)
+    view = wm.free_view(rig.home, "voice-check", CAT)
+    heard = [i for i in view.items if i.kind in ("clips", "copies")]
+    assert sorted((i.kind, i.round) for i in heard) == [("clips", 2), ("copies", 2)] and all(i.line and i.bytes for i in heard)
+    command, argv = wm.free_args("voice-check", heard)
+    assert command == "rounds" and argv == ["free", "--copies", "2", "--clips", "2", "--project", "voice-check"]
+    assert wm.free_args("voice-check", [i for i in heard if i.kind == "clips"])[1] == ["free", "--clips", "2", "--project", "voice-check"]

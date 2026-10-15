@@ -94,6 +94,13 @@ sys.exit(lr.main(args[2:], engine_factory=factory))
 '''
 
 
+def made_listenings(paths):
+    base = Path(paths.listening)
+    if not base.is_dir():
+        return []
+    return sorted("%s/%s" % (source, run) for source in os.listdir(base) for run in os.listdir(base / source))
+
+
 class ListenSystem(RealSystem):
     """Really runs the stand-in Python and anything else that is not a sound player; records the players and answers for them."""
 
@@ -230,8 +237,8 @@ class FlowRig(ListenRig):
         return code, io
 
     def made(self):
-        folder = Path(self.paths.default_scratch, "listening")
-        return sorted(os.listdir(folder)) if folder.is_dir() else []
+        """Every listening that was made, as `<source>/<run>` under the project's listening folder."""
+        return made_listenings(self.paths)
 
     def folder_of(self, name):
-        return Path(self.paths.default_scratch, "listening", name)
+        return Path(self.paths.listening, name)

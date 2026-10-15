@@ -13,11 +13,10 @@ from vs_listen_helpers import SENTENCES, FlowRig, SYMBOLS
 from vs_rounds_helpers import NOW, end_job, stamp
 from vs_voicefile_helpers import TOOLS, tree_of, write_settings
 from voice_studio.core import jobs, listen, phonemes, rounds as rd, voicefile as vf
-from voice_studio.core.paths import ScratchPaths
 from voice_studio.core.system import CommandResult
 
 STAMP = jobs.utc_stamp(NOW)
-FOLDER_2 = "round-002-heard-20261011-120000"
+FOLDER_2 = "round-002/heard-20261011-120000"
 
 
 @pytest.fixture(autouse=True)
@@ -33,7 +32,7 @@ def rig(tmp_path):
 
 
 def plan_round(rig, number=None, free=10**12, record=None, training=None):
-    return listen.plan_listen_round(rig.paths, ScratchPaths(rig.paths.default_scratch), rd.load(rig.paths) if record is None else record, number, SENTENCES,
+    return listen.plan_listen_round(rig.paths, rd.load(rig.paths) if record is None else record, number, SENTENCES,
                                     training or rig.training, rig.system, STAMP, free)
 
 
@@ -47,7 +46,7 @@ def code_of(fn, *a, **kw):
 
 def test_the_plan_names_the_chosen_round_a_new_folder_and_no_zip(rig):
     plan = plan_round(rig)
-    folder = rig.paths.default_scratch + "/listening/" + FOLDER_2
+    folder = rig.paths.listening + "/" + FOLDER_2
     assert plan.round.number == 2 and plan.folder == folder and plan.voice.folder == folder and plan.voice.zip_path == ""
     assert plan.voice.model == folder + "/my_voice.onnx" and plan.voice.config == folder + "/my_voice.onnx.json" and plan.voice.name == "round-002"
     assert plan.round.settings == rig.paths.round_configs + "/round-002.json" and plan.round.checkpoint.endswith("version_1/checkpoints/last.ckpt")
@@ -56,7 +55,7 @@ def test_the_plan_names_the_chosen_round_a_new_folder_and_no_zip(rig):
 
 def test_a_number_picks_that_round_and_not_the_chosen_one(rig):
     plan = plan_round(rig, 1)
-    assert plan.round.number == 1 and plan.folder.endswith("/round-001-heard-20261011-120000") and plan.round.settings.endswith("round-001.json")
+    assert plan.round.number == 1 and plan.folder.endswith("/round-001/heard-20261011-120000") and plan.round.settings.endswith("round-001.json")
 
 
 def test_planning_changes_nothing_on_the_disk(rig):
@@ -83,7 +82,7 @@ def test_the_room_check_for_a_round_is_the_big_one_and_not_the_one_for_a_made_vo
     rig = FlowRig(tmp_path)
     rig.finish_rounds(1)
     between = listen.NEED_BYTES + floors_for(DEFAULT_TABLE, holds_recordings=True).stop + 2**20          # room for the sounds and nothing like the voice copy
-    listen.plan_listen(rig.paths, ScratchPaths(rig.paths.default_scratch), None, SENTENCES, rig.training, rig.system, STAMP, between)
+    listen.plan_listen(rig.paths, None, SENTENCES, rig.training, rig.system, STAMP, between)
     assert code_of(plan_round, rig, free=between) == "no_room"
 
 
@@ -199,7 +198,7 @@ def test_a_failed_export_leaves_the_folder_as_it_is_and_never_goes_on(tmp_path):
     rig.finish_rounds(1)
     with pytest.raises(vf.VoiceFileError) as caught:
         run_plan(rig)
-    assert caught.value.code == "export_failed" and caught.value.folder.endswith("/round-001-heard-20261011-120000") and rig.system.maker.kinds() == ["export"]
+    assert caught.value.code == "export_failed" and caught.value.folder.endswith("/round-001/heard-20261011-120000") and rig.system.maker.kinds() == ["export"]
     assert os.listdir(caught.value.folder) == [] and not rig.heard_ran()
 
 
@@ -289,7 +288,7 @@ def test_a_file_that_cannot_be_removed_is_reported_and_the_rest_still_go(rig, mo
 
 def test_a_plan_for_a_voice_file_that_was_made_earlier_never_has_a_copy_to_remove(tmp_path):
     rig = FlowRig(tmp_path)                                            # a voice file in exports, as made by the make command
-    plan = listen.plan_listen(rig.paths, ScratchPaths(rig.paths.default_scratch), None, SENTENCES, rig.training, rig.system, STAMP, 10**12)
+    plan = listen.plan_listen(rig.paths, None, SENTENCES, rig.training, rig.system, STAMP, 10**12)
     assert plan.round is None and listen.voice_copy(plan) == [] and listen.remove_voice_copy(plan) == ([], [])
     exports_before = tree_of(rig.paths.exports)
     heard = listen.listen(plan, rig.studio, rig.system, str(TOOLS))
@@ -299,7 +298,7 @@ def test_a_plan_for_a_voice_file_that_was_made_earlier_never_has_a_copy_to_remov
 def test_even_a_plan_that_points_at_the_files_of_a_made_voice_removes_nothing_unless_it_is_a_round_plan(tmp_path):
     rig = FlowRig(tmp_path)
     made = Path(rig.paths.exports, "voice-check-round-001-20261011-130000" if False else os.listdir(rig.paths.exports)[0])
-    plan = listen.plan_listen(rig.paths, ScratchPaths(rig.paths.default_scratch), None, SENTENCES, rig.training, rig.system, STAMP, 10**12)
+    plan = listen.plan_listen(rig.paths, None, SENTENCES, rig.training, rig.system, STAMP, 10**12)
     pointing_at_it = dataclasses.replace(plan, folder=str(made))
     assert listen.voice_copy(pointing_at_it) == [] and listen.remove_voice_copy(pointing_at_it) == ([], [])
     assert (made / "my_voice.onnx").exists() and (made / "my_voice.onnx.json").exists()
@@ -369,7 +368,7 @@ def test_when_the_sounds_cannot_be_played_the_copy_is_still_asked_about_and_the_
     rig.finish_rounds(1)
     code, io = rig.run("--round", "chosen", "--yes", answers=["yes"])
     assert code == 1 and "No way of playing sound worked on this computer." in io.text
-    assert io.prompts[0].startswith("Remove the voice made for this") and len([n for n in os.listdir(rig.folder_of("round-001-heard-20261011-120000")) if n.endswith(".wav")]) == 3
+    assert io.prompts[0].startswith("Remove the voice made for this") and len([n for n in os.listdir(rig.folder_of("round-001/heard-20261011-120000")) if n.endswith(".wav")]) == 3
 
 
 def test_every_clip_silent_still_asks_about_the_copy(tmp_path):
@@ -381,7 +380,7 @@ def test_every_clip_silent_still_asks_about_the_copy(tmp_path):
 
 def test_a_round_by_number_is_listened_to_without_being_chosen(rig):
     code, io = rig.run("--round", "1", "--yes", answers=["yes", "yes"])
-    assert code == 0 and rig.made() == ["round-001-heard-20261011-120000"] and "Round 1 would be heard like this:" in io.text
+    assert code == 0 and rig.made() == ["round-001/heard-20261011-120000"] and "Round 1 would be heard like this:" in io.text
     assert rd.chosen(rd.load(rig.paths)).number == 2
 
 
@@ -393,7 +392,7 @@ def test_the_word_chosen_is_taken_in_any_case(rig, word):
 
 def test_spaces_around_a_round_number_are_ignored(rig):
     code, io = rig.run("--round", " 1 ", "--yes", answers=["yes", "no"])
-    assert code == 0 and rig.made() == ["round-001-heard-20261011-120000"]
+    assert code == 0 and rig.made() == ["round-001/heard-20261011-120000"]
 
 
 @pytest.mark.parametrize("word", ["x", "0", "-1", "1.5", "1e3", "", "٣", "9999999", "chosen2", "one"])
@@ -429,7 +428,7 @@ def test_a_failed_export_says_what_happened_where_the_folder_is_and_asks_nothing
     rig = FlowRig(tmp_path, make=False, export="fail")
     rig.finish_rounds(1)
     code, io = rig.run("--round", "chosen", "--yes", answers=["yes", "yes"])
-    folder = rig.folder_of("round-001-heard-20261011-120000")
+    folder = rig.folder_of("round-001/heard-20261011-120000")
     assert code == 1 and "What was made so far is in " + str(folder) + ". Nothing was deleted." in io.text and io.prompts == []
     assert "Making the sounds" not in io.text and "Removed" not in io.text and "Kept." not in io.text
 
@@ -493,7 +492,7 @@ def test_a_record_that_is_out_of_date_is_read_as_brought_up_to_date_but_never_wr
     before = {p: Path(p).read_bytes() for p in tree_of(rig.paths.rounds)}
     assert rd.active(rd.load(rig.paths)) is not None
     code, io = rig.run("--round", "1", "--yes", answers=["yes", "no"])
-    assert code == 0 and rig.made() == ["round-001-heard-20261011-120000"]
+    assert code == 0 and rig.made() == ["round-001/heard-20261011-120000"]
     assert {p: Path(p).read_bytes() for p in tree_of(rig.paths.rounds)} == before and rd.active(rd.load(rig.paths)) is not None
 
 
