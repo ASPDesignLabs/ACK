@@ -4,7 +4,13 @@ Written 2026-10-14 by the agent that built the installation flow, for whoever pi
 Read this first, then `docs/VOICE_STUDIO_SETUP_PLAN.md` (the plan, every decision D1 to D40, every finding F1 to F34, every task VS-x.y with an "As built" note).
 Everything under `tools/voice_studio/` is the tool; `tools/freeform_studio/` is the older server it reuses for processing recordings.
 
-**What the developer wants next (two things, neither started):**
+> **Update 2026-10-15 (the next agent's first session).** The preview is **built and tested in the sandbox, not yet heard on a real computer**: `python3 -m voice_studio.voicefile listen`,
+> plan task VS-5.4, evidence F35, choices P15, checklist section I8 (part B decides how it plays). The studio environment's lock gained sherpa-onnx, so the studio programs build again beside
+> the old ones. **Refresh is defined** (D41, task VS-6.6): a reinstall that does not wipe data, with a check way and a full-rebuild way; it is not built. The window does not offer to listen
+> yet (a button on the Voice file page, and listening to a round without writing a zip, are the next slice). The four open questions about the preview are in the plan's "Still open".
+> A test-hygiene fix (F36) made the whole suite green under `-W error`; one Freeform Studio test still fails on Python 3.13 for an unrelated reason (also F36).
+
+**What the developer wants next (two things; the first is now built, see the update above):**
 
 1. **Preview voices on the PC before exporting.** Hear the trained voice say test sentences on the computer, so a round can be judged (and the voice file checked by ear)
    before it is sent to the phone.
