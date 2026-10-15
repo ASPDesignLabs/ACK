@@ -64,6 +64,7 @@ PYTHONPATH=tools python3 -m voice_studio.rounds free --project anna          # w
 PYTHONPATH=tools python3 -m voice_studio.rounds start --set dataset-1 --project anna    # one more round, from the chosen round (shows the plan, then asks)
 PYTHONPATH=tools python3 -m voice_studio.voicefile make --project anna        # the voice file for ACK from the chosen round, in one new folder (shows the plan, then asks)
 PYTHONPATH=tools python3 -m voice_studio.voicefile listen --project anna      # hear the voice file on this computer before it goes to the phone: three sentences, same engine as the phone (shows the plan, asks, plays, asks whether you heard it)
+PYTHONPATH=tools python3 -m voice_studio.voicefile listen --project anna --round chosen   # the same, straight from a round with no zip file (makes the voice in the new folder first, then asks whether to remove the large copy); with the listening model it also shows what the computer heard
 PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window --check             # can the window start here? (needs the system Python: python3-gi, gir1.2-gtk-4.0)
 PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window                     # the window: projects, recordings, rounds, voice file, free up space; every change asks first
 ```

@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional, Sequence
 
-from . import commands, jobs, listen_flow, rounds as rd, voicefile as vf, voicezip
+from . import commands, envfind, jobs, listen_flow, rounds as rd, voicefile as vf, voicezip
 from .cliargs import ArgError, parse_args
 from .diskbudget import Level
 from .paths import DataHome
@@ -137,8 +137,9 @@ def _no_studio() -> tuple:
 
 
 def run_voicefile(argv: Sequence[str], home: DataHome, registry: Registry, cat: Catalog, io, *, training: TrainingEnv, now: Optional[datetime] = None,
-                  system: Optional[System] = None, tools_dir: Optional[str] = None, studio: Optional[TrainingEnv] = None) -> int:
-    """`python3 -m voice_studio.voicefile COMMAND ...`. `studio` finds the studio programs (the ones that carry the speech engine) for `listen`."""
+                  system: Optional[System] = None, tools_dir: Optional[str] = None, studio: Optional[TrainingEnv] = None, speech: Optional[listen_flow.Speech] = None) -> int:
+    """`python3 -m voice_studio.voicefile COMMAND ...`. `studio` finds the studio programs (the ones that carry the speech engine) for `listen`; `speech` finds the listening model
+    (the one that writes down recordings), which `listen` uses to write down what it hears; by default it is looked for where the recordings commands look."""
     command = argv[0] if argv else "help"
     rest = list(argv[1:])
     system = system or RealSystem()
@@ -151,7 +152,8 @@ def run_voicefile(argv: Sequence[str], home: DataHome, registry: Registry, cat: 
         if command == "make":
             return _make(rest, home, now, training, system, tools, cat, io)
         if command == "listen":
-            return listen_flow.run_listen(rest, home, now, training, studio or _no_studio, system, tools, cat, io)
+            return listen_flow.run_listen(rest, home, now, training, studio or _no_studio, system, tools, cat, io,
+                                            speech=speech or (lambda: envfind.speech_model(home, registry)))
         io.say(cat.t("cli.bad_command", command=command[:60]))
         return EXIT_NOTHING_DONE
     except KeyboardInterrupt:

@@ -210,6 +210,18 @@ def test_the_page_names_every_audio_player_the_tool_may_start_and_the_one_window
     assert "opens no network connection" in text and "prints no sentence" in text
 
 
+def test_the_page_describes_the_two_additions_to_listening_the_way_the_code_does():
+    from voice_studio import hear_runner
+    from voice_studio.core import listen
+    from voice_studio.core.text import size_text
+    text = section(7)
+    assert listen.HEAR_MODULE in text and "python3 -m voice_studio.voicefile listen --round chosen" in text
+    for name in hear_runner.OFFLINE:
+        assert "`%s=1`" % name in text, name
+    assert size_text(listen.ROUND_NEED_BYTES) in text, "the disk a round-mode listen may need, as the tool prints it"
+    assert "makes no zip file" in text and "it is told no sentence" in text and "Neither addition opens a network connection" in text
+
+
 def test_the_player_order_the_page_gives_is_the_order_in_the_code():
     from voice_studio.core import playback
     text = section(7)

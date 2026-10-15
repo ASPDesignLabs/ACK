@@ -314,7 +314,7 @@ def test_a_sound_file_that_is_really_a_link_is_not_trusted(rig, monkeypatch):
 
 
 def test_every_error_code_the_module_can_raise_is_listed():
-    assert set(listen.ERROR_CODES) == {"no_voice", "folder_unknown", "voice_not_ready", "differs_from_zip", "no_pronunciation", "no_room", "exists", "no_engine", "runner_failed", "no_clips"}
+    assert set(listen.ERROR_CODES) == {"no_voice", "folder_unknown", "voice_not_ready", "differs_from_zip", "no_pronunciation", "no_room", "exists", "no_engine", "runner_failed", "no_clips", "hear_failed"}
 
 
 # ---------------------------------------------------------------- more edges

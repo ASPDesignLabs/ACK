@@ -12,6 +12,10 @@ or what is heard might not be what goes to the phone), makes a new folder of sma
 never deletes them), and plays them. It changes nothing that was there. The sentences are fixed by the tool; whatever a person types is only ever written into a job file, never into a
 log, and the program that speaks never prints a sentence (voice_studio/listen_runner.py).
 
+It can also listen to a round without a zip: it makes the voice from the round's saved point the way core/voicefile.py does (the same three steps), in the new listening folder, and
+afterwards offers to remove that voice copy, which is large (the sound files stay). And it can have the listening model write down what it hears in each sound file (voice_studio/hear_runner.py),
+so a person who cannot judge the sound can read whether the words came out (core/heardcheck.py compares); that step is a hint, never a verdict, and is skipped, with a reason, when it cannot be done.
+
 Decisions here, words in core/listen_flow.py. Starting programs goes through the `System` it is given.
 """
 from __future__ import annotations
@@ -23,7 +27,7 @@ import re
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from . import commands, phonemes, voicefile as vf, voicezip
 from .diskbudget import DEFAULT_TABLE, Level, check_step, floors_for
@@ -31,10 +35,15 @@ from .envbuild import EnvPaths
 from .paths import ProjectPaths, ScratchPaths
 from .system import CommandResult, System
 
-ERROR_CODES = ("no_voice", "folder_unknown", "voice_not_ready", "differs_from_zip", "no_pronunciation", "no_room", "exists", "no_engine", "runner_failed", "no_clips")      # each has words in the text catalog
+ERROR_CODES = ("no_voice", "folder_unknown", "voice_not_ready", "differs_from_zip", "no_pronunciation", "no_room", "exists", "no_engine", "runner_failed", "no_clips",
+               "hear_failed")      # each has words in the text catalog
 RUNNER_MODULE = "voice_studio.listen_runner"
+HEAR_MODULE = "voice_studio.hear_runner"
 NEED_BYTES = 32 * 1024 * 1024        # eight sentences of a minute each would be about 21 MB; the fixed ones are a few seconds: an upper bound, not a guess about this voice
+HEAR_TIMEOUT_S = 300.0               # loading the listening model and writing down a few short sounds, on a processor; room for a slow computer
 RUN_TIMEOUT_S = 180.0                # loading the voice takes a couple of seconds and a sentence a fraction of one, on a processor; this is room for a slow computer
+ROUND_NEED_BYTES = NEED_BYTES + 2 * voicezip.MAX_MODEL_BYTES + voicezip.MAX_CONFIG_BYTES      # listening to a round also holds the voice made from it: the model and its untouched copy, at the largest size ACK takes
+VOICE_COPY_NAMES = (vf.VOICE_NAME + ".onnx", vf.VOICE_NAME + ".onnx.before-patch", vf.VOICE_NAME + ".onnx.json")      # the exact files making a voice leaves in the folder; the only ones ever removed
 REQUIRED_DATA = ("phontab", "phondata", "phonindex", "intonations")     # the files every language needs in the pronunciation folder; the language's own dictionary is checked too
 TAIL_CHARS = 600
 THREADS = 2                          # what the phone uses; it changes how fast the sound is made, not the sound
@@ -71,6 +80,7 @@ class ListenPlan:
     need_bytes: int
     free_bytes: Optional[int]
     room: Level
+    round: Optional[vf.PickedRound] = None     # set when listening straight to a round: the voice is made in `folder` first, and `voice.zip_path` is ""
 
 
 @dataclass(frozen=True)
@@ -192,6 +202,29 @@ def plan_listen(paths: ProjectPaths, scratch: ScratchPaths, voice_name: Optional
                       NEED_BYTES, free_bytes, room)
 
 
+def plan_listen_round(paths: ProjectPaths, scratch: ScratchPaths, record, number: Optional[int], sentences: Sequence[str], training: EnvPaths, system: System, stamp: str,
+                      free_bytes: Optional[int]) -> ListenPlan:
+    """What listening straight to a round (the chosen one, or the one with this number) would do. Changes nothing. Refuses, with a code, when a voice cannot honestly be made from
+    that round (core/voicefile.py::pick_round: a VoiceFileError), when its settings file cannot give a list of sounds (core/phonemes.TokensError), or for no pronunciation data or no room."""
+    pick = vf.pick_round(paths, record, number)
+    try:
+        config_text = Path(pick.settings).read_text(encoding="utf-8", errors="strict")
+    except (OSError, UnicodeDecodeError):
+        raise phonemes.TokensError("not_json")
+    tokens = phonemes.tokens_text(config_text)
+    language = language_of(config_text)
+    data_dir = espeak_data(training, system, language)
+    if data_dir is None:
+        raise ListenError("no_pronunciation", language)
+    room = check_step(free_bytes, ROUND_NEED_BYTES, floors_for(DEFAULT_TABLE, holds_recordings=True))
+    if room is Level.NOT_ENOUGH:
+        raise ListenError("no_room", "%d free, %d needed" % (free_bytes or 0, ROUND_NEED_BYTES))
+    name = "round-%03d" % pick.number
+    folder = listening_folder(scratch, name, stamp)
+    voice = VoiceFolder(name, folder, "%s/%s.onnx" % (folder, vf.VOICE_NAME), "%s/%s.onnx.json" % (folder, vf.VOICE_NAME), "")
+    return ListenPlan(voice, folder, tuple(sentences), data_dir, language, language.lower().startswith("en"), len(tokens.skipped), ROUND_NEED_BYTES, free_bytes, room, pick)
+
+
 # ---------------------------------------------------------------- doing it
 
 def _tail(done: Optional[CommandResult]) -> str:
@@ -219,9 +252,12 @@ def _write_private(path: str, text: str) -> None:
         handle.write(text)
 
 
-def listen(plan: ListenPlan, studio: EnvPaths, system: System, tools_dir: str, stage: Optional[Callable[[str], None]] = None) -> Heard:
-    """Make the sound files. Any failure raises ListenError (the new folder is left as it is, and nothing is deleted)."""
+def listen(plan: ListenPlan, studio: EnvPaths, system: System, tools_dir: str, stage: Optional[Callable[[str], None]] = None, training: Optional[EnvPaths] = None) -> Heard:
+    """Make the sound files. Any failure raises ListenError (or, making a voice from a round, core/voicefile.py's VoiceFileError); the new folder is left as it is, and nothing is deleted.
+    A plan for a round needs `training` (the programs that make the voice)."""
     tell = stage or (lambda _name: None)
+    if plan.round is not None and training is None:
+        raise ListenError("runner_failed", "the training programs were not given")
     try:
         os.makedirs(os.path.dirname(plan.folder), mode=0o700, exist_ok=True)
         os.mkdir(plan.folder, 0o700)
@@ -230,6 +266,11 @@ def listen(plan: ListenPlan, studio: EnvPaths, system: System, tools_dir: str, s
     except OSError as error:
         raise ListenError("exists", error.strerror or type(error).__name__)
     here = plan.folder
+    if plan.round is not None:
+        vf.prepare_voice(here, plan.round.checkpoint, plan.round.settings, plan.voice.model, training, tools_dir, system, tell)      # type: ignore[arg-type]
+        found = voicezip.check_voice(Path(plan.voice.model), Path(plan.voice.config))
+        if found.problems:
+            raise ListenError("voice_not_ready", ",".join(found.problems), here)
     tell("sounds")
     tokens = phonemes.tokens_text(Path(plan.voice.config).read_text(encoding="utf-8", errors="strict"))
     tokens_path, job_path = here + "/tokens.txt", here + "/job.json"
@@ -263,3 +304,63 @@ def listen(plan: ListenPlan, studio: EnvPaths, system: System, tools_dir: str, s
         raise ListenError("no_clips", "%d of %d" % (len(clips), len(plan.sentences)), here)
     seconds_to_load = loaded.get("seconds")
     return Heard(here, tuple(clips), float(seconds_to_load) if isinstance(seconds_to_load, (int, float)) else 0.0)
+
+
+# ---------------------------------------------------------------- writing down what is heard
+
+def hear(heard: Heard, speech_dir: str, studio: EnvPaths, system: System, tools_dir: str) -> Dict[int, str]:
+    """What the listening model writes down for each sound that is not silent, by the clip's number. Never told what the voice was asked to say. Any failure raises
+    ListenError("hear_failed"); the sound files are as they were, so the person can still play them."""
+    audible = [clip for clip in heard.clips if not clip.silent]
+    if not audible:
+        return {}
+    job_path = heard.folder + "/hear-job.json"
+    try:
+        _write_private(job_path, json.dumps({"model_dir": speech_dir, "clips": [clip.path for clip in audible]}))
+    except OSError as error:
+        raise ListenError("hear_failed", error.strerror or type(error).__name__, heard.folder)
+    done = system.run([studio.python, "-m", HEAR_MODULE, job_path], timeout=HEAR_TIMEOUT_S, cwd=heard.folder, env={"PYTHONPATH": tools_dir})
+    events = _events(done.stdout) if done is not None else []
+    problem = next((e for e in events if e.get("event") == "error"), None)
+    if problem is not None:
+        raise ListenError("hear_failed", " ".join(str(problem.get(k)) for k in ("code", "kind", "n") if problem.get(k)), heard.folder)
+    if done is None:
+        raise ListenError("hear_failed", "the listening program could not be started or took too long", heard.folder)
+    if done.returncode != 0:
+        raise ListenError("hear_failed", _tail(done) or ("exit code %d" % done.returncode), heard.folder)
+    texts: Dict[int, str] = {}
+    for item in (e for e in events if e.get("event") == "heard"):
+        number, text = item.get("n"), item.get("text")
+        if not (isinstance(number, int) and 1 <= number <= len(audible) and isinstance(text, str) and audible[number - 1].number not in texts):
+            raise ListenError("hear_failed", "an answer was not as expected", heard.folder)
+        texts[audible[number - 1].number] = text
+    if len(texts) != len(audible):
+        raise ListenError("hear_failed", "%d of %d" % (len(texts), len(audible)), heard.folder)
+    return texts
+
+
+# ---------------------------------------------------------------- the voice copy a round leaves behind
+
+def voice_copy(plan: ListenPlan) -> List[Tuple[str, int]]:
+    """(name, bytes) of the voice copy that making a voice from a round left in the listening folder: exactly the files it makes, plain files only. Nothing for any other plan: a
+    voice file that was made earlier is never touched. Looks only."""
+    if plan.round is None:
+        return []
+    found = []
+    for name in VOICE_COPY_NAMES:
+        path = "%s/%s" % (plan.folder, name)
+        if os.path.isfile(path) and not os.path.islink(path):
+            found.append((name, os.stat(path).st_size))
+    return found
+
+
+def remove_voice_copy(plan: ListenPlan) -> Tuple[List[str], List[str]]:
+    """Remove the voice copy (see `voice_copy`). (names removed, names that could not be). The sound files, the list of sounds and the job files stay."""
+    removed, failed = [], []
+    for name, _size in voice_copy(plan):
+        try:
+            os.unlink("%s/%s" % (plan.folder, name))
+            removed.append(name)
+        except OSError:
+            failed.append(name)
+    return removed, failed

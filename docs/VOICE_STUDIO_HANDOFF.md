@@ -9,6 +9,12 @@ Everything under `tools/voice_studio/` is the tool; `tools/freeform_studio/` is 
 > the old ones. **Refresh is defined** (D41, task VS-6.6): a reinstall that does not wipe data, with a check way and a full-rebuild way; it is not built. The window does not offer to listen
 > yet (a button on the Voice file page, and listening to a round without writing a zip, are the next slice). The four open questions about the preview are in the plan's "Still open".
 > A test-hygiene fix (F36) made the whole suite green under `-W error`; one Freeform Studio test still fails on Python 3.13 for an unrelated reason (also F36).
+>
+> **Update 2026-10-15 (second slice, after the developer's answers).** `listen` now also (a) **writes down what the computer heard** in each sound and shows it under the sentence, as a hint and never a
+> verdict (task VS-5.5; `hear_runner.py`, `core/heardcheck.py`; English voices only; needs the listening model that `recordings model` fetches, and says so and goes on when it is missing), and (b) can
+> **listen straight to a round with no zip file** (`--round chosen` or a number): it makes the voice in the new listening folder with the same three steps as `make`, then asks whether to remove the
+> large voice copy (only a yes removes it, only by exact names). The developer's answers are recorded as D42 (three sentences kept; show what was heard; no offer at the end of `make`). **Checklist
+> I8 parts D and E are new and not yet run on a real computer**; the real listening model heard the sandbox's real clips word for word, offline.
 
 **What the developer wants next (two things; the first is now built, see the update above):**
 
@@ -93,8 +99,9 @@ Where things live on the person's computer: `~/ack-voice-studio/` holds `project
 - The phone ships the `espeak-ng-data` phonemization folder as a separate asset. Check whether the PC package carries it or needs it supplied, and account for its license (GPL-3.0-or-later) in the notices.
 - Nothing leaves the computer: no network, no upload, no "share" step. The sentences are fixed by the tool; a person's own sentence is shown exactly as typed and never logged.
 
-**Open questions for the developer** (do not decide these for them): which three sentences; whether the preview also plays after the last round before export; whether a person who cannot hear
-well needs a visual aid (a waveform, the text shown with the sound); and where the test clips are kept and how long (they are small, rebuildable and disposable).
+**Open questions for the developer** (do not decide these for them): *answered 2026-10-15 (D42):* the three sentences stay, the preview does not play at the end of `make`, and the visual aid is the words the
+computer heard. *Still open:* where the test clips are kept and how long (they are small, rebuildable and disposable; today they stay under the project's scratch place and the tool never deletes them), and the
+round-mode voice copy is the one large thing the tool now offers to delete on a yes.
 
 ## 4. A full GUI flow for install, update, refresh and uninstall
 

@@ -858,8 +858,8 @@ def test_the_listen_commands_it_gives_exist_and_take_the_options_it_gives():
         while i < len(words):
             assert words[i].startswith("-") and words[i] in vff.OPTIONS[command], (command, words[i])
             seen.add(words[i])
-            i += 2 if words[i] in ("--project", "--folder") else 1
-    assert seen >= {"--project", "--folder", "--yes"} and any(c == "listen" for c, _ in found)
+            i += 2 if words[i] in ("--project", "--folder", "--round") else 1
+    assert seen >= {"--project", "--folder", "--yes", "--round"} and any(c == "listen" for c, _ in found)
 
 
 def test_every_sentence_the_listening_section_quotes_as_the_tools_output_is_one_the_tool_says():
@@ -868,6 +868,19 @@ def test_every_sentence_the_listening_section_quotes_as_the_tools_output_is_one_
     assert len(quoted) >= 8 and any(cut for _, cut in quoted), quoted
     for sentence, cut in quoted:
         assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_parts_for_hearing_what_was_heard_and_for_a_round_name_the_real_options_texts_and_room():
+    from voice_studio.core import listen, listen_flow
+    from voice_studio.core.text import size_text
+    body = section("I8.")
+    assert "**D. Writing down what the computer hears.**" in body and "**E. Listening straight to a round, with no zip file.**" in body
+    assert size_text(listen.ROUND_NEED_BYTES) in body and listen_flow.MODEL_COMMAND in body
+    for option in ("--round chosen", "--round 1", "--round 0", "--round x", "--round 99", "--round chosen --folder"):
+        assert option in body, option
+    for name in listen.VOICE_COPY_NAMES:
+        assert "`%s`" % name in body, name
+    assert "tools/freeform" not in body
 
 
 def test_the_three_sentences_the_section_names_are_the_ones_the_tool_says():

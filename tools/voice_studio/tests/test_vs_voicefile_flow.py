@@ -59,7 +59,7 @@ def test_an_unknown_command_or_option_does_nothing_and_says_so(rig):
 
 def test_the_options_each_command_publishes_are_the_options_it_accepts():
     assert set(vff.OPTIONS) == {"make", "list", "listen"} and vff.OPTIONS["make"] == {"--yes", "-y", "--project"} and vff.OPTIONS["list"] == {"--project"}
-    assert vff.OPTIONS["listen"] == {"--yes", "-y", "--project", "--folder"}
+    assert vff.OPTIONS["listen"] == {"--yes", "-y", "--project", "--folder", "--round"}
 
 
 def test_a_project_that_does_not_exist_is_named_and_nothing_is_made(rig):

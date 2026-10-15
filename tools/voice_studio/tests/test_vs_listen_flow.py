@@ -294,7 +294,7 @@ def test_help_lists_listen_with_its_options(tmp_path):
     rig = Rig(tmp_path)
     io = Terminal()
     assert vff.run_voicefile(["help"], rig.home, None, CAT, io, training=rig.training_env, system=rig.system, tools_dir=str(TOOLS)) == 0
-    assert "listen [--yes] [--project name] [--folder name]: hear the voice file on this computer before it goes to the phone." in io.text
+    assert "listen [--yes] [--project name] [--folder name] [--round number]: hear the voice on this computer before it goes to the phone." in io.text
 
 
 def test_the_voice_file_command_reaches_listen_and_a_missing_studio_lookup_means_not_ready(tmp_path):
@@ -307,12 +307,13 @@ def test_the_voice_file_command_reaches_listen_and_a_missing_studio_lookup_means
 def test_the_command_runs_end_to_end_through_the_voice_file_command_with_a_studio_lookup(tmp_path):
     rig = Rig(tmp_path)
     io = Terminal(["yes"])
-    code = vff.run_voicefile(["listen", "--yes"], rig.home, None, CAT, io, training=rig.training_env, now=NOW, system=rig.system, tools_dir=str(TOOLS), studio=rig.studio_env)
+    code = vff.run_voicefile(["listen", "--yes"], rig.home, None, CAT, io, training=rig.training_env, now=NOW, system=rig.system, tools_dir=str(TOOLS), studio=rig.studio_env,
+                             speech=lambda: (None, "missing"))
     assert code == 0 and rig.made() == [FOLDER]
 
 
 def test_the_options_listen_publishes_are_the_options_it_accepts():
-    assert lf.OPTIONS == {"--yes", "-y", "--project", "--folder"} and vff.OPTIONS["listen"] == lf.OPTIONS
+    assert lf.OPTIONS == {"--yes", "-y", "--project", "--folder", "--round"} and vff.OPTIONS["listen"] == lf.OPTIONS
 
 
 def test_a_bare_y_counts_as_a_yes_like_everywhere_else_in_the_tool(rig):

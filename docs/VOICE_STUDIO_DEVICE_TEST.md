@@ -959,9 +959,9 @@ section **with only the guide open**, as a person who has nothing else would. Wr
 
 ## I8. Hearing the voice before it goes to the phone
 
-**New, and not yet run on a real computer.** This plays three short sentences in the voice file you made in section I4, on this computer, with the same speech engine (sherpa-onnx 1.13.8), the same list of sounds and the same settings file that ACK uses on the phone. It is for judging a round and for checking the voice file by ear before it is sent. It makes one new folder of small sound files under the project's working place (`scratch/listening`), changes nothing that was there, and uses no network after the engine is installed. It needs two things: the studio programs rebuilt (they gained the speech engine; part A) and the training programs (they carry the pronunciation data). **Nothing about sound from this tool has been seen on a real computer yet, so part B comes first: it decides how the tool plays.**
+**New, and not yet run on a real computer.** This plays three short sentences in the voice file you made in section I4, on this computer, with the same speech engine (sherpa-onnx 1.13.8), the same list of sounds and the same settings file that ACK uses on the phone. It is for judging a round and for checking the voice file by ear before it is sent. It makes one new folder of small sound files under the project's working place (`scratch/listening`), changes nothing that was there, and uses no network after the engine is installed. It can also write down what the computer hears in each sound and show it beside the sentence (part D), and listen straight to a round with no zip file (part E). It needs two things: the studio programs rebuilt (they gained the speech engine; part A) and the training programs (they carry the pronunciation data). **Nothing about sound from this tool has been seen on a real computer yet, so part B comes first: it decides how the tool plays.**
 
-*Built and tried in the build sandbox only, with a stand-in for the voice's network and a real public-domain voice: the real engine, the real patcher and the real pronunciation data made three sentences that the listening model heard back word for word. Not heard by a person, and not played through a speaker.*
+*Built and tried in the build sandbox only, with a stand-in for the voice's network and a real public-domain voice: the real engine, the real patcher and the real pronunciation data made three sentences that the listening model heard back word for word, offline, in about 45 seconds. Round mode (part E) was tried only with stand-ins for the export and the patcher. Not heard by a person, and not played through a speaker.*
 
 **A. The studio programs gained the speech engine.**
 
@@ -998,7 +998,7 @@ section **with only the guide open**, as a person who has nothing else would. Wr
   ```bash
   time PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile listen --project voice-check
   ```
-  → `Step 1 of 2: getting the voice ready.`, `Step 2 of 2: making the sounds. This takes a few seconds.`, `The sound files are ready in …`, a line for each sentence with how long it is, then `Playing 1 of 3: Hello, my name is Anna.` and the sentence is heard, then 2 and 3. A line that starts `Technical detail:` says `played with` and the name of the way that played them, and then `Did you hear them all? Type yes if you did.` Answer honestly: **no** is a fine answer and tells the tool nothing is wrong with the voice. Write down: the seconds it took in all, which way played (it should be one of the ways you heard in part B), whether it was clear and in the voice you expect, and anything it mispronounced.
+  → `Getting the voice ready.`, `Making the sounds. This takes a few seconds.`, `The sound files are ready in …`, a line for each sentence with how long it is, then `Playing 1 of 3: Hello, my name is Anna.` and the sentence is heard, then 2 and 3. A line that starts `Technical detail:` says `played with` and the name of the way that played them, and then `Did you hear them all? Type yes if you did.` Answer honestly: **no** is a fine answer and tells the tool nothing is wrong with the voice. Write down: the seconds it took in all, which way played (it should be one of the ways you heard in part B), whether it was clear and in the voice you expect, and anything it mispronounced.
   If it says `No way of playing sound worked on this computer.`, copy that line and the `tried:` line under it, and open the folder from Windows (File Explorer) to play the files there.
 - [ ] Look at what it made, and what it left alone:
   ```bash
@@ -1006,7 +1006,7 @@ section **with only the guide open**, as a person who has nothing else would. Wr
   head -3 ~/ack-voice-studio/projects/voice-check/scratch/listening/*/tokens.txt
   ls -l ~/ack-voice-studio/projects/voice-check/exports/*/
   ```
-  → The new folder holds `clip-1.wav`, `clip-2.wav`, `clip-3.wav`, `job.json` and `tokens.txt`, all readable by you only (`-rw-------`). The first lines of `tokens.txt` are the voice's first sounds with their numbers. The voice file folder under `exports` has exactly the files it had (the model, its settings file, the original, the zip): nothing added, nothing changed.
+  → The new folder holds `clip-1.wav`, `clip-2.wav`, `clip-3.wav`, `job.json` and `tokens.txt` (and `hear-job.json` once part D has run), all readable by you only (`-rw-------`). The first lines of `tokens.txt` are the voice's first sounds with their numbers. The voice file folder under `exports` has exactly the files it had (the model, its settings file, the original, the zip): nothing added, nothing changed.
 - [ ] **The honest test: say the same sentences on the phone.** Take the zip to the phone (section K), choose MY VOICE, and say the same three sentences. Write down any word that sounds different on the phone from the computer. The phone has its own copy of the pronunciation data; for English the two were identical on thousands of words in the build sandbox, but nobody has compared them on your phone.
 - [ ] Listen to a named voice file, and to a second run a minute later:
   ```bash
@@ -1014,6 +1014,33 @@ section **with only the guide open**, as a person who has nothing else would. Wr
   ```
   → Replace the folder name with one from `python3 -m voice_studio.voicefile list`. `--yes` skips the first question only; the question about hearing is still asked. A second run makes a second folder with a different time in its name, and the first is untouched. An unknown name says `That voice file folder was not found.`
 - [ ] Write down: anything that felt slow, any sentence that was hard to follow, whether three sentences is the right number, whether you wanted to hear a sentence of your own, and whether you would use this before every export or only now and then.
+
+**D. Writing down what the computer hears.** The same listening model that writes down your recordings (section E, `recordings model`) can listen to the sounds just made and show what it heard under each sentence. It is a hint, not a verdict: it can mishear names and unusual words, and what you hear matters more. It works for English voices only, runs on this computer only, and is skipped, with the reason, when the model is not here.
+
+- [ ] Without the model (skip this if you already fetched it): run `listen` and say **no**. → `skip writing down what the computer hears, because the program that does it has no model here yet.` and `To get it, run:` followed by the command `python3 -m voice_studio.recordings model`. Nothing else about the run changes.
+- [ ] With the model: run `listen` and say **no** first. → the plan has the line `write down what the computer hears in each sound, so you can read it.` Then run it and say yes:
+  ```bash
+  time PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile listen --project voice-check
+  ```
+  → After `The sound files are ready in …` comes `Writing down what the computer hears in them. This takes up to a minute.` and then, before any sound is played, each sentence with a line under it that starts `The computer heard:` and ends `The same words.` or `Different words.` (or says `The computer could not write down any words here.`). If any line is not the same, `This is a hint, not a verdict.` follows once. Write down: how long this part took (the first time is the slowest), what it wrote for each sentence, and whether a line that said different was a real mispronunciation when you listened.
+- [ ] If the listening step fails, the run goes on: `The computer could not write down what it heard.` and `The sound files were kept as they are.` are followed by the sounds being played as before. You are not asked to break anything on purpose; if you ever see it, copy the `Technical detail:` line under it.
+
+**E. Listening straight to a round, with no zip file.** This makes the voice from a round's saved point in the new listening folder (the same three steps as the make command, so the export is the slow part), plays it, and then asks whether to remove the large voice copy it made. Nothing under `exports` is made or changed, and the round record is not touched.
+
+- [ ] Look, and say no:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile listen --project voice-check --round chosen
+  ```
+  → `would be heard like this:` with the round's number, the saved point's size and the minutes of training, `It uses the same steps as the make command, but makes no zip file`, the new folder, `at the end, ask whether to remove the voice it made here, which is large.`, and the room check (about 664 MB at most). Type **`no`**: `Nothing was done.`
+- [ ] Run it, answer yes, hear them, and say **no** to the last question:
+  ```bash
+  time PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile listen --project voice-check --round chosen
+  ```
+  → `Making the voice from the saved point. This is the slow step.`, `Preparing it for the phone.`, then the same as part C, and last `Remove the voice made for this (…` Say **no**: `Kept. The voice made for this is still in …`. Look: `ls -l ~/ack-voice-studio/projects/voice-check/scratch/listening/round-*/` → the three sound files, `job.json`, `tokens.txt`, and `my_voice.onnx`, `my_voice.onnx.before-patch` and `my_voice.onnx.json`. Write down how long the export took and the size of the copy.
+- [ ] Run it again with a round number (`--round 1`, or any other round), and this time say **yes** to the last question. → `Removed. The sound files are still in …`, and the folder holds only the sounds, `job.json` and `tokens.txt`. The first run's folder is untouched.
+- [ ] Check that nothing else moved: `ls -l ~/ack-voice-studio/projects/voice-check/exports/*/` is as it was, and `python3 -m voice_studio.rounds list --project voice-check` shows the same chosen round.
+- [ ] Mistakes are refused before anything is written: `--round 0`, `--round x` and `--round 99` each print a plain sentence (`I did not understand …` or `There is no round with that number in this project.`) and make nothing; `--round chosen --folder anything` says `Give --folder or --round, not both.`
+- [ ] Write down: whether you would use this instead of making the voice file first, and whether the copy question was clear.
 
 ## J. Making the voice file
 

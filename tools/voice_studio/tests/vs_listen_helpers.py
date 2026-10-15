@@ -11,12 +11,13 @@ import sys
 from pathlib import Path
 
 from vs_voice_helpers import PATCHED, onnx_bytes, piper_config, write_voice
-from vs_voicefile_helpers import ProjectRig, TOOLS
+from vs_voicefile_helpers import MakerSystem, ProjectRig, TOOLS, write_settings
 from voice_studio.core import voicezip
 from voice_studio.core.envbuild import EnvPaths
 from voice_studio.core.system import CommandResult, RealSystem
 
 VOICE_FOLDER = "voice-check-round-001-20261011-130000"
+SENTENCES = ("Hello, my name is Anna.", "I need some help, please.", "Thank you, that is all.")
 SYMBOLS = {"_": [0], "^": [1], "$": [2], " ": [3], "a": [4], "b": [5], "e": [6], "eɪ": [7], "\n": [8]}      # one two-character sound and the line break: both left out of the list of sounds
 DATA_FILES = ("phontab", "phondata", "phonindex", "intonations", "en_dict")
 
@@ -27,6 +28,36 @@ mode = open(os.path.join(here, "mode.txt")).read().strip()
 args = sys.argv[1:]
 sys.path.insert(0, os.environ.get("PYTHONPATH", ""))
 seen = {"args": args, "cwd": os.getcwd(), "pythonpath": os.environ.get("PYTHONPATH", "")}
+if args[:2] == ["-m", "voice_studio.hear_runner"] and len(args) == 3:
+    hear_mode = open(os.path.join(here, "hear-mode.txt")).read().strip() if os.path.exists(os.path.join(here, "hear-mode.txt")) else "ok"
+    scripted = json.load(open(os.path.join(here, "heard.json"))) if os.path.exists(os.path.join(here, "heard.json")) else []
+    seen["job"] = json.load(open(args[2]))
+    seen["job_mode"] = oct(os.stat(args[2]).st_mode & 0o777)
+    json.dump(seen, open(os.path.join(here, "seen-hear.json"), "w"))
+    from voice_studio import hear_runner as hr
+    class Hearer:
+        calls = 0
+        def transcribe(self, samples):
+            self.calls += 1
+            if hear_mode == "hear_fail": raise RuntimeError("boom words")
+            return scripted[self.calls - 1] if self.calls <= len(scripted) else ""
+    def hear_factory(model_dir):
+        seen["offline"] = {k: os.environ.get(k) for k in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE")}       # set by the program itself before the model is asked for
+        json.dump(seen, open(os.path.join(here, "seen-hear.json"), "w"))
+        if hear_mode == "hear_no_engine": raise ImportError("no faster_whisper")
+        if hear_mode == "hear_load_failed": raise ValueError("cannot load")
+        return Hearer()
+    if hear_mode == "hear_crash":
+        print("Traceback: the listening model fell over", file=sys.stderr); sys.exit(1)
+    if hear_mode == "hear_nothing":
+        sys.exit(0)
+    if hear_mode == "hear_extra":
+        print(json.dumps({"event": "heard", "n": 1, "text": "x"})); print(json.dumps({"event": "heard", "n": 1, "text": "y"})); print(json.dumps({"event": "done", "clips": 2})); sys.exit(0)
+    if hear_mode == "hear_out_of_range":
+        print(json.dumps({"event": "heard", "n": 9, "text": "x"})); sys.exit(0)
+    if hear_mode == "hear_not_text":
+        print(json.dumps({"event": "heard", "n": 1, "text": 5})); sys.exit(0)
+    sys.exit(hr.main(args[2:], engine_factory=hear_factory))
 if args[:2] != ["-m", "voice_studio.listen_runner"] or len(args) != 3:
     print("unexpected arguments", args, file=sys.stderr); sys.exit(9)
 job = json.load(open(args[2]))
@@ -60,8 +91,9 @@ sys.exit(lr.main(args[2:], engine_factory=factory))
 class ListenSystem(RealSystem):
     """Really runs the stand-in Python and anything else that is not a sound player; records the players and answers for them."""
 
-    def __init__(self, studio_python, *, wsl=False, installed=("ffplay",), results=None, free=None):
+    def __init__(self, studio_python, *, wsl=False, installed=("ffplay",), results=None, free=None, export="ok", patch="ok"):
         self.studio_python, self.wsl, self.installed = studio_python, wsl, tuple(installed)
+        self.maker = MakerSystem(export=export, patch=patch)           # the export and the patcher are stood in for, as in the voice file tests
         self.results = dict(results or {})              # player name -> CommandResult (default: success)
         self.free = free
         self.wslpath_ok = True
@@ -88,6 +120,8 @@ class ListenSystem(RealSystem):
         name = os.path.basename(argv[0])
         if name == "wslpath":
             return CommandResult(0, self.windows_path + "\n") if self.wslpath_ok else CommandResult(1, "", "no")
+        if "piper.train.export_onnx" in argv or (len(argv) > 1 and str(argv[1]).endswith("patch_voice_for_sherpa_onnx.py")):
+            return self.maker.run(argv, timeout=timeout, cwd=cwd, env=env)
         if argv[0].startswith("/usr/bin/") and name != "wslpath":
             self.played.append((name, tuple(argv), timeout))
             return self.results.get(name, CommandResult(0))
@@ -97,7 +131,7 @@ class ListenSystem(RealSystem):
 class ListenRig(ProjectRig):
     """The shared project, a voice file in its exports, the two environments, and a way to run `listen` on a made-up terminal."""
 
-    def __init__(self, tmp_path, *, language="en-us", make=True, data=True, wsl=False, installed=("ffplay",), mode="ok", **kw):
+    def __init__(self, tmp_path, *, language="en-us", make=True, data=True, wsl=False, installed=("ffplay",), mode="ok", export="ok", patch="ok", **kw):
         super().__init__(tmp_path, **kw)
         self.tmp = tmp_path
         self.studio = EnvPaths(str(tmp_path / "environments" / "studio-xyz"))
@@ -107,7 +141,33 @@ class ListenRig(ProjectRig):
             self.write_data(language)
         if make:
             self.make_voice(VOICE_FOLDER, language=language)
-        self.system = ListenSystem(self.studio.python, wsl=wsl, installed=installed)
+        self.system = ListenSystem(self.studio.python, wsl=wsl, installed=installed, export=export, patch=patch)
+        self.speech_dir = tmp_path / "speech-model"
+
+    def speech_ready(self):
+        """A resolver that says the listening model is here (a folder; the stand-in never reads it)."""
+        self.speech_dir.mkdir(exist_ok=True)
+        return lambda: (str(self.speech_dir), "ready")
+
+    def set_hear_mode(self, mode):
+        (Path(self.studio.venv) / "bin" / "hear-mode.txt").write_text(mode)
+
+    def set_heard(self, texts):
+        (Path(self.studio.venv) / "bin" / "heard.json").write_text(json.dumps(list(texts)))
+
+    def seen_hear(self):
+        return json.loads((Path(self.studio.venv) / "bin" / "seen-hear.json").read_text())
+
+    def heard_ran(self):
+        return (Path(self.studio.venv) / "bin" / "seen-hear.json").exists()
+
+    def finish_rounds(self, count=2, language="en-us"):
+        """`count` finished rounds with their settings files, the last one chosen (the settings say the language)."""
+        self.finish(count)
+        for number in range(1, count + 1):
+            config = piper_config()
+            config["espeak"]["voice"] = language
+            write_settings(self.paths, number, config)
 
     def write_studio(self, mode="ok"):
         folder = Path(self.studio.venv) / "bin"
@@ -147,3 +207,25 @@ class ListenRig(ProjectRig):
 
     def studio_env(self):
         return (self.studio, "ready")
+
+
+class FlowRig(ListenRig):
+    """A rig that runs `listen` on a made-up terminal. `speech` is the listening-model lookup: None means it is not there; "ready" means it is."""
+
+    def run(self, *argv, answers=(), interactive=True, training=None, studio=None, speech=None):
+        from vs_rounds_helpers import NOW
+        from vs_startvoice_helpers import Terminal, implies_permission, leaked_keys
+        from voice_studio.core import listen_flow as lf, text
+        io = Terminal(answers, interactive)
+        lookup = self.speech_ready() if speech == "ready" else speech
+        code = lf.run_listen(list(argv), self.home, NOW, training or self.training_env, studio or self.studio_env, self.system, str(TOOLS), text.load_catalog("en"), io, speech=lookup)
+        assert leaked_keys(io.text + "\n".join(io.prompts)) == [], "a catalog key was printed instead of words"
+        assert implies_permission(io.text) == [], "something printed says or implies that use is permitted"
+        return code, io
+
+    def made(self):
+        folder = Path(self.paths.default_scratch, "listening")
+        return sorted(os.listdir(folder)) if folder.is_dir() else []
+
+    def folder_of(self, name):
+        return Path(self.paths.default_scratch, "listening", name)
