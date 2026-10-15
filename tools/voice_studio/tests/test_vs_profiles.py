@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Managing profiles (plan task VS-2.10): details that are changed only when the form is whole, a flag that puts a profile away without touching a file, and a delete that is worked out first,
 refuses when anything changed, never follows a link out of the profile's folder, and removes `project.json` last."""
+from pathlib import Path
 import json
 import os
 import stat
@@ -39,26 +40,26 @@ def put(path, size=10):
 
 def test_a_profile_that_was_never_put_away_keeps_exactly_the_same_file(home):
     project, paths = make(home)
-    before = open(paths.project_json, "rb").read()
+    before = Path(paths.project_json).read_bytes()
     pj.save_project(paths, project)
-    assert open(paths.project_json, "rb").read() == before and b"archived" not in before
+    assert Path(paths.project_json).read_bytes() == before and b"archived" not in before
 
 
 def test_putting_a_profile_away_writes_one_flag_and_bringing_it_back_removes_it(home):
     project, paths = make(home)
     away = pj.with_archived(project, True)
     pj.save_project(paths, away)
-    assert json.load(open(paths.project_json))["archived"] is True and pj.load_project(paths).archived is True
+    assert json.loads(Path(paths.project_json).read_text())["archived"] is True and pj.load_project(paths).archived is True
     pj.save_project(paths, pj.with_archived(away, False))
-    assert "archived" not in json.load(open(paths.project_json)) and pj.load_project(paths).archived is False
+    assert "archived" not in json.loads(Path(paths.project_json).read_text()) and pj.load_project(paths).archived is False
 
 
 @pytest.mark.parametrize("bad", ["yes", 1, 0, None, [], {}])
 def test_a_flag_that_is_not_true_or_false_is_a_damaged_file_not_a_guess(home, bad):
     project, paths = make(home)
-    data = json.load(open(paths.project_json))
+    data = json.loads(Path(paths.project_json).read_text())
     data["archived"] = bad
-    open(paths.project_json, "w").write(json.dumps(data))
+    Path(paths.project_json).write_text(json.dumps(data))
     with pytest.raises(ProjectError) as caught:
         pj.load_project(paths)
     assert caught.value.code == "damaged"
@@ -66,12 +67,12 @@ def test_a_flag_that_is_not_true_or_false_is_a_damaged_file_not_a_guess(home, ba
 
 def test_fields_a_newer_version_wrote_survive_putting_a_profile_away(home):
     project, paths = make(home)
-    data = json.load(open(paths.project_json))
+    data = json.loads(Path(paths.project_json).read_text())
     data["future_field"] = {"a": 1}
-    open(paths.project_json, "w").write(json.dumps(data))
+    Path(paths.project_json).write_text(json.dumps(data))
     loaded = pj.load_project(paths)
     pj.save_project(paths, pj.with_archived(loaded, True))
-    assert json.load(open(paths.project_json))["future_field"] == {"a": 1}
+    assert json.loads(Path(paths.project_json).read_text())["future_field"] == {"a": 1}
 
 
 def test_the_lists_split_into_in_use_and_put_away_in_the_order_given():
@@ -145,9 +146,9 @@ def test_whose_voice_and_the_starting_voice_and_the_place_are_never_changed_by_a
 
 def test_saving_an_edit_keeps_the_file_it_replaces(home):
     project, paths = make(home)
-    old = open(paths.project_json, "rb").read()
+    old = Path(paths.project_json).read_bytes()
     pj.save_project(paths, edit(project, name="Anna B").project)
-    assert open(paths.previous_json, "rb").read() == old and pj.load_project(paths).name == "Anna B"
+    assert Path(paths.previous_json).read_bytes() == old and pj.load_project(paths).name == "Anna B"
 
 
 # ---------------------------------------------------------------- what a delete would remove
@@ -246,7 +247,7 @@ def test_a_scratch_folder_on_another_drive_goes_only_if_its_marker_names_this_pr
     mine = pj.with_scratch_place(project, str(place))
     plan = pf.plan_delete(home, mine)
     assert plan.outside_scratch == folder and plan.left_scratch == "" and any(p.path == folder and p.bytes >= 600 for p in plan.parts)
-    open(folder + "/" + MARKER_NAME, "w").write(json.dumps({"schema": 1, "project": "someone-else"}) + "\n")
+    Path(folder + "/" + MARKER_NAME).write_text(json.dumps({"schema": 1, "project": "someone-else"}) + "\n")
     plan = pf.plan_delete(home, mine)
     assert plan.outside_scratch == "" and plan.left_scratch == folder and not any(p.path == folder for p in plan.parts)
     os.unlink(folder + "/" + MARKER_NAME)

@@ -2,6 +2,7 @@
 """The terminal front for managing profiles: edit, archive, unarchive, delete. Held to: nothing changes without a yes, what would change is shown before the question, a delete asks twice and
 the second question is never skipped by --yes, a delete names what goes and what to copy first, a task that is running stops it before any question, a profile that is put away is not used
 by any command that changes things, and a window's Yes and No buttons answer the very same questions."""
+from pathlib import Path
 import json
 import os
 
@@ -91,28 +92,28 @@ def test_help_names_the_new_commands_and_their_options(home):
 
 def test_edit_with_nothing_to_change_says_so_and_does_nothing(home):
     create_project(home.projects, "Anna", "own")
-    before = open(paths_of(home, "anna").project_json, "rb").read()
+    before = Path(paths_of(home, "anna").project_json).read_bytes()
     code, io = go(home, "edit", "anna")
     assert code == 2 and "Nothing was given to change" in io.text and io.prompts == []
-    assert open(paths_of(home, "anna").project_json, "rb").read() == before
+    assert Path(paths_of(home, "anna").project_json).read_bytes() == before
 
 
 def test_edit_shows_what_changes_before_it_asks_and_a_no_changes_nothing(home):
     create_project(home.projects, "Anna", "own", planned_hours=1)
-    before = open(paths_of(home, "anna").project_json, "rb").read()
+    before = Path(paths_of(home, "anna").project_json).read_bytes()
     code, io = go(home, "edit", "anna", "--name", "Anna B", "--hours", "2,5", answers=["no"])
     assert code == 2 and io.prompts == ["Save these changes? Type yes to save them. "]
     assert "These details of anna would change:" in io.text and "  Name: from Anna to Anna B" in io.lines and "  Planned hours: from 1 to 2.5" in io.lines
     assert io.events.index(("say", "  Name: from Anna to Anna B")) < io.events.index(("ask", io.prompts[0])) and "Nothing was changed." in io.text
-    assert open(paths_of(home, "anna").project_json, "rb").read() == before
+    assert Path(paths_of(home, "anna").project_json).read_bytes() == before
 
 
 def test_edit_with_a_yes_saves_and_keeps_the_version_from_before(home):
     create_project(home.projects, "Anna", "own")
-    before = open(paths_of(home, "anna").project_json, "rb").read()
+    before = Path(paths_of(home, "anna").project_json).read_bytes()
     code, io = go(home, "edit", "anna", "--name=Anna B", answers=["yes"])
     assert code == 0 and "Saved. The details of anna are changed." in io.text
-    assert load(home, "anna").name == "Anna B" and open(paths_of(home, "anna").previous_json, "rb").read() == before
+    assert load(home, "anna").name == "Anna B" and Path(paths_of(home, "anna").previous_json).read_bytes() == before
     assert "The version from before is kept as " + paths_of(home, "anna").previous_json in io.text
 
 
@@ -414,7 +415,7 @@ def test_delete_names_a_scratch_folder_it_will_not_remove(home, tmp_path):
     place.mkdir()
     folder = str(place / "ack-voice-scratch" / "anna")
     put(folder + "/x", 3)
-    open(folder + "/.ack-voice-scratch", "w").write(json.dumps({"schema": 1, "project": "someone-else"}) + "\n")
+    Path(folder + "/.ack-voice-scratch").write_text(json.dumps({"schema": 1, "project": "someone-else"}) + "\n")
     from voice_studio.core.project import with_scratch_place
     save_project(paths_of(home, "anna"), with_scratch_place(project, str(place)))
     code, io = go(home, "delete", "anna", answers=["yes", "yes"])

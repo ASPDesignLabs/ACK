@@ -62,7 +62,7 @@ def tree(root):
     for base, _dirs, files in os.walk(root):
         for name in files:
             path = os.path.join(base, name)
-            found[os.path.relpath(path, root)] = hashlib.sha256(open(path, "rb").read()).hexdigest()
+            found[os.path.relpath(path, root)] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
     return found
 
 
@@ -682,7 +682,7 @@ def test_model_after_a_yes_saves_the_agreement_then_fetches_each_file_into_the_t
     code, io = go(home, "model", answers=["yes"], registry=registry, speech=speech, fetcher=fetcher)
     assert code == 0
     assert fetcher.calls == [("a.bin", folder, True), ("b.bin", folder, True)], "each file is fetched, only after the agreement that names it was saved"
-    assert open(os.path.join(folder, "a.bin"), "rb").read() == A and open(os.path.join(folder, "b.bin"), "rb").read() == B
+    assert Path(os.path.join(folder, "a.bin")).read_bytes() == A and Path(os.path.join(folder, "b.bin")).read_bytes() == B
     assert "Saved your agreement to download these files." in io.lines
     assert "Done. The listening model is on this computer, in %s. Every file was checked against the one that was agreed to." % folder in io.lines
     assert io.lines[-1] == "To let the computer listen to a project's recordings, run: python3 -m voice_studio.recordings finish --project PROJECT"
@@ -718,8 +718,8 @@ def test_model_when_it_is_already_there_downloads_nothing_and_asks_nothing(home,
 def test_model_fetches_only_the_files_that_are_not_already_right(home, monkeypatch):
     registry, speech, fetcher, folder = model_world(home, monkeypatch)
     os.makedirs(folder)
-    open(os.path.join(folder, "a.bin"), "wb").write(A)
-    open(os.path.join(folder, "b.bin"), "wb").write(B[:-3])                    # cut short
+    Path(os.path.join(folder, "a.bin")).write_bytes(A)
+    Path(os.path.join(folder, "b.bin")).write_bytes(B[:-3])                    # cut short
     code, io = go(home, "model", answers=["yes"], registry=registry, speech=speech, fetcher=fetcher)
     assert code == 0 and [call[0] for call in fetcher.calls] == ["b.bin"]
     assert ("It is %s in all," % text.size_text(len(B))) in io.text
@@ -1072,10 +1072,10 @@ def test_a_name_already_taken_is_never_written_over(home, anna, tmp_path):
     studio, _ = world_with_ready(home, anna, tmp_path)
     taken = anna.root + "/scratch/datasets/dataset-20261011-123000"
     os.makedirs(taken)
-    open(taken + "/precious.txt", "w").write("mine")
+    Path(taken + "/precious.txt").write_text("mine")
     runner = Runner(build=write_dataset)
     code, io = go(home, "set", "--yes", studio=studio, system=runner)
-    assert code == 1 and runner.builds == [] and open(taken + "/precious.txt").read() == "mine"
+    assert code == 1 and runner.builds == [] and Path(taken + "/precious.txt").read_text() == "mine"
 
 
 def test_set_does_not_touch_the_recordings(home, anna, tmp_path):

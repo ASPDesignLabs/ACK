@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The recordings of a project as plain facts (plan task VS-2.10): reading each recording's own notes without ever writing, grouping them the way the screens do, the one error vocabulary for
 a folder import that cannot start, and reading what the listening job is doing from its own files."""
+from pathlib import Path
 import hashlib
 import os
 
@@ -20,7 +21,7 @@ def tree(root):
     for base, _dirs, files in os.walk(root):
         for name in files:
             path = os.path.join(base, name)
-            found[os.path.relpath(path, root)] = hashlib.sha256(open(path, "rb").read()).hexdigest()
+            found[os.path.relpath(path, root)] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
     return found
 
 
@@ -47,7 +48,7 @@ def test_the_newest_recording_comes_first_and_only_real_recording_folders_count(
     write_take(tmp_path, "t20261002-100000-bbbb", label="newer")
     takes = os.path.join(str(tmp_path), "_freeform", "en-US", "takes")
     os.makedirs(os.path.join(takes, "not-a-take"))
-    open(os.path.join(takes, "stray-file.txt"), "w").write("x")
+    Path(os.path.join(takes, "stray-file.txt")).write_text("x")
     os.makedirs(os.path.join(takes, "t20261003-100000-cccc.moved"))
     view = rec.read_takes(str(tmp_path))
     assert [r.label for r in view.rows] == ["newer", "older"] and view.unreadable == 0
