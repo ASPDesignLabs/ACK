@@ -404,6 +404,16 @@ def test_the_backup_command_is_one_of_the_tools_and_the_window_can_run_it_with_i
     assert code == 0 and sink.questions == [] and [n for n in os.listdir(dest) if n.endswith(".tar")] != []
 
 
+def test_the_refresh_command_is_one_of_the_tools_and_the_window_can_run_it_with_its_own_heading(rig):
+    svc = full_services(rig)
+    assert "refresh" in wm.TOOLS and CAT.t("refresh.title") in svc.titles() and len(svc.titles()) == len(wm.TOOLS)
+    sink = Script()
+    wio.start_run(lambda io: svc.run("refresh", ["older"], io), sink, svc.titles())
+    assert sink.done.wait(30)
+    code, lines = sink.result
+    assert code == 0 and sink.questions == [] and "No old copies of the programs are on the disk." in lines
+
+
 # ---------------------------------------------------------------- recordings from the window
 
 def press_recordings(rig, button, sink):

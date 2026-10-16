@@ -30,7 +30,7 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import connection, fetch
+from . import connection, envgen, fetch
 from .consent import ConsentRecord
 from .envspec import EnvSpec, NativePart, Pin, SourcePatch, lock_digest, normalise_name, parse_lock
 from .jobs import OFFLINE_ENV, boot_id, parse_proc_starttime, process_alive, read_json, read_text_file, utc_stamp, write_json
@@ -125,6 +125,7 @@ class Context:
     sleep: Callable[[float], None] = time.sleep                       # waiting for the connection to come back; tests hand in one that does not wait
     monotonic: Callable[[], float] = time.monotonic
     patience: connection.Patience = connection.DEFAULT_PATIENCE
+    generations: Callable[[DataHome, str], int] = envgen.generation_of          # which copy of each set of programs is in use (core/envgen.py); a rebuild builds the next one beside it
 
 
 @dataclass(frozen=True)
@@ -183,9 +184,10 @@ def sha256_file(path: str) -> Optional[str]:
 
 # ---------------------------------------------------------------- what an environment is called
 
-def fingerprint(spec: EnvSpec, lock_sha: str, source: Optional[Item], python_minor: Tuple[int, int]) -> str:
+def fingerprint(spec: EnvSpec, lock_sha: str, source: Optional[Item], python_minor: Tuple[int, int], generation: int = 0) -> str:
     """What makes a new folder necessary: the Python it runs on, the lock, the source archive and the source patches. The launcher's workarounds
-    are not here (they are rewritten in place), but a change to the source tree is: a patch removed from the list must not stay applied."""
+    are not here (they are rewritten in place), but a change to the source tree is: a patch removed from the list must not stay applied.
+    A generation above 0 (core/envgen.py: a rebuild beside the old copy) is part of it; generation 0 adds nothing, so no existing folder changes name."""
     data = {"builder": BUILDER_VERSION, "id": spec.id, "python": "%d.%d" % python_minor, "lock": lock_sha,
             "source": source.sha256 if source is not None else None,
             "install": bool(spec.source and spec.source.install), "dist": spec.source.dist if spec.source else None,
@@ -193,6 +195,8 @@ def fingerprint(spec: EnvSpec, lock_sha: str, source: Optional[Item], python_min
             "patches": [[p.id, p.file, sha256_bytes(p.old.encode()), sha256_bytes(p.new.encode())] for p in spec.patches]}
     if spec.native is not None:
         data["native_part"] = [spec.native.sha256, spec.native.module, spec.native.into]
+    if generation:
+        data["generation"] = generation
     return sha256_bytes(json.dumps(data, sort_keys=True).encode())
 
 
@@ -528,7 +532,7 @@ def _resolve(spec: EnvSpec, ctx: Context) -> Tuple[bytes, str, List[Pin], Option
 def environment_dir(spec: EnvSpec, ctx: Context) -> str:
     """Where this environment lives (or will). Raises EnvError if it cannot be built from what is listed."""
     _, sha, _, item, minor = _resolve(spec, ctx)
-    return "%s/%s" % (ctx.home.environments, env_dir_name(spec, fingerprint(spec, sha, item, minor)))
+    return "%s/%s" % (ctx.home.environments, env_dir_name(spec, fingerprint(spec, sha, item, minor, ctx.generations(ctx.home, spec.id))))
 
 
 def _claim(plan_dir: str, spec: EnvSpec, fp: str, minor: Tuple[int, int], ctx: Context) -> dict:
@@ -572,7 +576,7 @@ def build(spec: EnvSpec, ctx: Context) -> BuildResult:
         lock_bytes, lock_sha, pins, item, minor = _resolve(spec, ctx)
     except EnvError as error:
         return BuildResult(False, "", error)
-    fp = fingerprint(spec, lock_sha, item, minor)
+    fp = fingerprint(spec, lock_sha, item, minor, ctx.generations(ctx.home, spec.id))
     env_dir = "%s/%s" % (ctx.home.environments, env_dir_name(spec, fp))
     paths = EnvPaths(env_dir)
     try:
@@ -1013,28 +1017,69 @@ def _run_wrapper(plan: _Plan) -> None:
 
 # ---------------------------------------------------------------- the self-test
 
-def _self_test(plan: _Plan) -> List[str]:
-    """Run each probe in the finished environment. Returns the probes skipped because they need a graphics card the computer does not have."""
-    system, ctx = plan.ctx.system, plan.ctx
+class _MemoryLog:
+    """Keeps the end of what the probes printed and writes nothing anywhere: a look at an environment must not add to its log."""
+
+    def __init__(self) -> None:
+        self.tail: List[str] = []
+
+    def result(self, result: Optional[CommandResult]) -> None:
+        if result is None:
+            return
+        for text in (result.stdout + result.stderr).splitlines():
+            self.tail = (self.tail + [text])[-TAIL_LINES:]
+
+
+def _run_probes(spec: EnvSpec, ctx: Context, paths: EnvPaths, log, announce: Callable[[Event], None]) -> Tuple[Optional[EnvError], List[str]]:
+    """Run the launcher's check and each probe in the finished environment, offline. (the first failure as the error a build would raise, or None; the probes skipped because they need a
+    graphics card the computer does not have)."""
+    system = ctx.system
     skipped: List[str] = []
     env = dict(OFFLINE_ENV)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
-    log = _Log(plan.paths.log, "self_test", ctx.on_event)
-    if plan.spec.prelude:
-        result = system.run([plan.paths.python, plan.paths.launcher, "platform"], timeout=STEP_TIMEOUT_S["probe"], cwd=plan.paths.env_dir, env=env)
+    if spec.prelude:
+        result = system.run([paths.python, paths.launcher, "platform"], timeout=STEP_TIMEOUT_S["probe"], cwd=paths.env_dir, env=env)
         log.result(result)
         if result is None or result.returncode != 0:
-            raise EnvError("launcher_failed", "could not run" if result is None else "exit %d" % result.returncode, log.tail)
-    for probe in plan.spec.probes:
+            return EnvError("launcher_failed", "could not run" if result is None else "exit %d" % result.returncode, log.tail), skipped
+    for probe in spec.probes:
         if probe.needs_gpu and not ctx.gpu_ok:
             skipped.append(probe.id)
-            ctx.on_event(Event("skipped", probe.id))
+            announce(Event("skipped", probe.id))
             continue
-        result = system.run([plan.paths.python, "-c", probe.code], timeout=STEP_TIMEOUT_S["probe"], cwd=plan.paths.env_dir, env=env)
+        result = system.run([paths.python, "-c", probe.code], timeout=STEP_TIMEOUT_S["probe"], cwd=paths.env_dir, env=env)
         log.result(result)
         if result is None or result.returncode != 0:
-            raise EnvError("self_test_failed", probe.id, log.tail)
+            return EnvError("self_test_failed", probe.id, log.tail), skipped
+    return None, skipped
+
+
+def _self_test(plan: _Plan) -> List[str]:
+    """Run each probe in the finished environment. Returns the probes skipped because they need a graphics card the computer does not have."""
+    log = _Log(plan.paths.log, "self_test", plan.ctx.on_event)
+    failure, skipped = _run_probes(plan.spec, plan.ctx, plan.paths, log, plan.ctx.on_event)
+    if failure is not None:
+        raise failure
     return skipped
+
+
+@dataclass(frozen=True)
+class ProbeReport:
+    ok: bool
+    code: str = ""                    # when not ok: "launcher_failed" or "self_test_failed"
+    detail: str = ""                  # the probe that failed, or how the launcher did
+    tail: Tuple[str, ...] = ()        # the end of what it printed
+    skipped: Tuple[str, ...] = ()     # probes not tried, because they need a graphics card this computer does not have
+
+
+def probe(spec: EnvSpec, ctx: Context, env_dir: str) -> ProbeReport:
+    """The self-test of a build, run again on a finished environment and changing nothing (no record, no log, no folder). It is the one look that finds a package whose files are broken
+    while its record is in order."""
+    log = _MemoryLog()
+    failure, skipped = _run_probes(spec, ctx, EnvPaths(env_dir), log, _no_events)
+    if failure is not None:
+        return ProbeReport(False, failure.code, failure.detail, failure.tail, tuple(skipped))
+    return ProbeReport(True, skipped=tuple(skipped))
 
 
 # ---------------------------------------------------------------- looking without changing anything
@@ -1053,7 +1098,7 @@ def inspect(spec: EnvSpec, ctx: Context) -> Inspection:
         lock_bytes, lock_sha, pins, item, minor = _resolve(spec, ctx)
     except EnvError as error:
         return Inspection("not_buildable", "", (), error)
-    fp = fingerprint(spec, lock_sha, item, minor)
+    fp = fingerprint(spec, lock_sha, item, minor, ctx.generations(ctx.home, spec.id))
     env_dir = "%s/%s" % (ctx.home.environments, env_dir_name(spec, fp))
     if not os.path.lexists(env_dir):
         return Inspection("absent", env_dir)

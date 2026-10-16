@@ -10,18 +10,21 @@ Nothing here writes. The window's own questions and the changes they lead to bel
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence, Tuple
 
-from . import commands, freeup, jobs, recordings as rec, rounds as rd, voicefile as vf
+from . import commands, fetch, freeup, jobs, recordings as rec, rounds as rd, voicefile as vf
 from .backup_flow import run_backup
 from .describe import error_text
+from .envspec import load_environments
 from .paths import DataHome, ProjectPaths
 from .project import OWN, SOMEONE_ELSE, Consent, Project, list_projects
 from .newproject import FormInput
 from .profiles import EditInput, split
 from .projects_flow import WHOSE_WORDS, _hours, edit_form_problems, new_form_problems, run_projects
 from .recordings_flow import Studio, next_step as recordings_next_step, run_recordings, show_lines as recordings_lines
+from .refresh_flow import run_refresh
 from .registry import Registry
 from .startvoice import voices as starting_voices
 from .rounds_flow import FREE_OPTION, Open, TrainingEnv, free_row_text, round_lines, run_rounds, scratch_ready, scratch_root
@@ -29,7 +32,7 @@ from .system import RealSystem, System
 from .text import Catalog, size_text
 from .voicefile_flow import run_voicefile
 
-TOOLS = ("projects", "recordings", "rounds", "voicefile", "backup")
+TOOLS = ("projects", "recordings", "rounds", "voicefile", "backup", "refresh")
 MAX_NOTE_SHOWN = 500
 MAX_TABLE_NAME = 200
 NEXT_WORDS = {"import": "window.recordings.next_import", "wait": "window.recordings.next_wait", "finish": "window.recordings.next_finish", "set": "window.recordings.next_set"}
@@ -55,7 +58,7 @@ class Services:
     studio: Studio = no_studio
 
     def titles(self) -> Tuple[str, ...]:
-        return (self.cat.t("projects.title"), self.cat.t("recordings.title"), self.cat.t("rounds.title"), self.cat.t("voicefile.title"), self.cat.t("backup.title"))
+        return (self.cat.t("projects.title"), self.cat.t("recordings.title"), self.cat.t("rounds.title"), self.cat.t("voicefile.title"), self.cat.t("backup.title"), self.cat.t("refresh.title"))
 
     def run(self, tool: str, argv: Sequence[str], io) -> int:
         if tool == "projects":
@@ -68,6 +71,8 @@ class Services:
             return run_voicefile(argv, self.home, self.registry, self.cat, io, training=self.training, system=self.system, tools_dir=self.tools_dir, studio=self.studio)
         if tool == "backup":
             return run_backup(argv, self.home, self.cat, io, system=self.system)
+        if tool == "refresh":
+            return run_refresh(argv, self.home, self.cat, io, system=self.system, registry=self.registry, specs=load_environments(), networked=fetch.run_networked, clock=time.monotonic)
         raise ValueError("unknown tool: " + tool)
 
 
