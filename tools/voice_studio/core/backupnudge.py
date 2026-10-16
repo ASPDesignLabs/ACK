@@ -21,6 +21,23 @@ def when_text(stamp: str) -> str:
     return stamp.replace("T", " ").replace("+00:00", " UTC")
 
 
+def delete_line(home: DataHome, project: Project, paths: ProjectPaths, cat: Catalog) -> Optional[str]:
+    """The sentence that goes under "copy anything you may want later" when a project is about to be deleted: whether there is a backup, and where it is. Looks only. A damaged record of
+    rounds is for the delete to say, so nothing is added; a project with nothing to hold (no project record at all) gets no sentence either."""
+    try:
+        standing = pb.standing(home, paths, project.id)
+    except rd.RoundsError:
+        return None
+    command = "%s now --project %s" % (BACKUP_COMMAND, project.id)
+    if standing.state == pb.NEVER:
+        return cat.t("projects.delete.backup_never", name=project.name, command=command)
+    if standing.state == pb.CHANGED:
+        return cat.t("projects.delete.backup_changed", name=project.name, when=when_text(standing.last), folder=standing.folder, command=command)
+    if standing.last:
+        return cat.t("projects.delete.backup_current", name=project.name, when=when_text(standing.last), folder=standing.folder)
+    return None
+
+
 def nudge_lines(home: DataHome, project: Project, paths: ProjectPaths, cat: Catalog, record: Optional[rd.Record] = None) -> List[str]:
     """What to say before going on. Looks only. A damaged record of rounds is for the command that reads it to say, not for a reminder."""
     try:

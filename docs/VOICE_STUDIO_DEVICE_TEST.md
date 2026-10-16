@@ -823,7 +823,7 @@ section I1. Run one command at a time, and wait for it to finish before you type
   ```bash
   PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects delete second-check
   ```
-  → `This would remove the project second-check: Second check. It cannot be brought back.` then what is in it (a project file and empty folders), `Before you go on, copy anything you may want later. Nothing here can be brought back.` and `Delete the project Second check for good? Type yes to go on.` Type **`no`**: `Nothing was removed.` and the folder is still there. Run it again, type **`yes`**, and see that it asks
+  → `This would remove the project second-check: Second check. It cannot be brought back.` then what is in it (a project file and empty folders), `Before you go on, copy anything you may want later. Nothing here can be brought back.`, then, once section I9 exists, whether the project has been backed up (`Second check has not been backed up on this computer. To make a backup first, run:` and the command, or when and where the last backup was made) and `Delete the project Second check for good? Type yes to go on.` Type **`no`**: `Nothing was removed.` and the folder is still there. Run it again, type **`yes`**, and see that it asks
   **a second time**: `Last question. Remove Second check, …` Type **`no`**: `Nothing was removed.` Run it a third time and answer **yes** and **yes**: `Done. The project second-check is deleted. About …` and `ls ~/ack-voice-studio/projects` shows only voice-check. **`--yes` on the line answers the first question only; the second is always asked.** Write down: any sentence that was hard to follow, and whether you were ever unsure what a command was about to remove.
 
 ### Voice recordings, from the terminal

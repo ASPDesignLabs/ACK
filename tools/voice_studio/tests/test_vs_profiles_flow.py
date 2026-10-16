@@ -278,6 +278,64 @@ def test_delete_shows_exactly_what_goes_and_what_to_copy_first_before_it_asks(ho
     assert "Nothing was removed." in io.text and exists(home, "anna") and os.path.isfile(paths_of(home, "anna").rounds + "/rounds.json")
 
 
+def backed_up(home, project_id, destination):
+    from voice_studio.core import projectbackup as pb
+    paths = paths_of(home, project_id)
+    made = pb.create(pb.plan_backup(paths, home, project_id, destination, 10 ** 12), paths, NOW)
+    pb.record_backup(home, made, project_id, destination)
+    return made
+
+
+def test_delete_says_the_project_has_never_been_backed_up_and_how_to_make_one_before_it_asks(home):
+    create_project(home.projects, "Anna", "own")
+    code, io = go(home, "delete", "anna", answers=["no"])
+    line = "Anna has not been backed up on this computer. To make a backup first, run: python3 -m voice_studio.backup now --project anna"
+    assert line in io.lines and io.events.index(("say", line)) < io.events.index(("ask", io.prompts[0]))
+    assert io.lines.index("Before you go on, copy anything you may want later. Nothing here can be brought back.") < io.lines.index(line)
+    assert exists(home, "anna")
+
+
+def test_delete_says_where_the_last_backup_is_and_that_deleting_the_project_leaves_it(home, tmp_path):
+    create_project(home.projects, "Anna", "own")
+    folder = str(tmp_path / "away")
+    when = backed_up(home, "anna", folder).created.replace("T", " ").replace("+00:00", " UTC")
+    code, io = go(home, "delete", "anna", answers=["no"])
+    assert ("Anna was last backed up on %s in %s, and nothing precious has changed since. "
+            "That backup is outside the project, so deleting the project does not remove it." % (when, folder)) in io.lines and "has not been backed up" not in io.text
+
+
+def test_delete_says_when_the_project_changed_after_its_last_backup_and_how_to_back_up_again(home, tmp_path):
+    create_project(home.projects, "Anna", "own")
+    folder = str(tmp_path / "away")
+    when = backed_up(home, "anna", folder).created.replace("T", " ").replace("+00:00", " UTC")
+    later = os.stat(paths_of(home, "anna").project_json).st_mtime + 5
+    os.utime(paths_of(home, "anna").project_json, (later, later))
+    code, io = go(home, "delete", "anna", answers=["no"])
+    assert ("Anna has changed since the last backup, made on %s in %s. To back up again first, run: python3 -m voice_studio.backup now --project anna" % (when, folder)) in io.lines
+
+
+def test_delete_says_nothing_about_a_backup_when_the_record_of_rounds_cannot_be_read_and_still_asks_twice(home):
+    create_project(home.projects, "Anna", "own")
+    fill(paths_of(home, "anna"))                       # a record of rounds that is not one
+    code, io = go(home, "delete", "anna", answers=["yes", "no"])
+    assert code == 2 and "backed up" not in io.text and "changed since the last backup" not in io.text and len(io.prompts) == 2 and "" not in io.lines, "no empty line stands in for the missing sentence"
+
+
+def test_delete_with_yes_on_the_line_still_shows_the_backup_sentence_and_the_second_question(home):
+    create_project(home.projects, "Anna", "own")
+    code, io = go(home, "delete", "anna", "--yes", answers=["no"])
+    assert "Anna has not been backed up on this computer." in io.text and len(io.prompts) == 1 and io.prompts[0].startswith("Last question.")
+
+
+def test_a_project_with_nothing_to_hold_gets_no_sentence_about_backups(home, monkeypatch):
+    from voice_studio.core import backupnudge, projectbackup as pb
+    create_project(home.projects, "Anna", "own")
+    monkeypatch.setattr(pb, "standing", lambda *a, **k: pb.Standing(pb.CURRENT, "", ""))
+    assert backupnudge.delete_line(home, load(home, "anna"), paths_of(home, "anna"), CAT) is None
+    code, io = go(home, "delete", "anna", answers=["no"])
+    assert "backed up" not in io.text and "changed since the last backup" not in io.text and "" not in io.lines
+
+
 def test_delete_with_no_finished_voice_file_says_so(home):
     create_project(home.projects, "Anna", "own")
     code, io = go(home, "delete", "anna", answers=["no"])
