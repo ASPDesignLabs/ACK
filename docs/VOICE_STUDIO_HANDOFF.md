@@ -17,7 +17,8 @@ Everything under `tools/voice_studio/` is the tool; `tools/freeform_studio/` is 
 > I8 parts D and E are new and not yet run on a real computer**; the real listening model heard the sandbox's real clips word for word, offline.
 >
 > **Then (third slice, D43, task VS-5.6):** the test clips moved out of scratch into the project's own `listening` folder (grouped by the round or voice file they came from), and Free up space (terminal and
-> window) now offers them and the `--round` voice copies: `rounds free --clips N` / `--copies N` / `--all`. The end-of-run question about the voice copy stays.
+> window) now offers them and the `--round` voice copies: `rounds free --clips N` / `--copies N` / `--all`. The end-of-run question about the voice copy stays. A listening 30 days old or older gets a notice
+> (in `rounds free`, before `listen`'s plan, and at the top of the window page) and `rounds free --old` takes them all after asking; nothing is ever removed on its own.
 
 **What the developer wants next (two things; the first is now built, see the update above):**
 

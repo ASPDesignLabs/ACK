@@ -862,6 +862,10 @@
     "rounds.free.how_heard": "Test clips and the voices made for hearing a round are chosen by round too, with --clips and --copies. For example: {command}",
     "rounds.free.never": "Recordings, notes, the project file, backups, exports and the starting voices are never on this list.",
     "rounds.free.nothing": "There is nothing to free up. Every saved file that is left is kept for sure, in use, or not made by a round.",
+    "rounds.free.nothing_old": "Nothing is more than {days} days old. Nothing was removed.",
+    "rounds.free.old_alone": "Give --old on its own, without --all or a list of rounds. Nothing was removed.",
+    "rounds.free.old_how": "To remove them, run: {command}",
+    "rounds.free.old_note": "This is more than {days} days old and should be removed.",
     "rounds.free.question": "Remove all of that, about {size}? This cannot be undone. Type yes to remove it.",
     "rounds.free.total": "In all, about {size} could be freed.",
     "rounds.free.unknown": "The list has nothing for {option} {numbers}. Nothing was removed. See the list with: {command}",
@@ -1573,6 +1577,10 @@
     "rounds.free.kept": {
       "one": "Kept for sure, never on this list: {count} file, {size} (the chosen round's saved point and the one before it).",
       "other": "Kept for sure, never on this list: {count} files, {size} (the chosen round's saved point and the one before it)."
+    },
+    "rounds.free.old_notice": {
+      "one": "{count} earlier listening is more than {days} days old and should be removed.",
+      "other": "{count} earlier listenings are more than {days} days old and should be removed."
     },
     "rounds.free.unclaimed": {
       "one": "Not touched: {count} file in a folder that no round of this tool made.",

@@ -387,3 +387,226 @@ def test_the_window_lists_them_with_the_option_each_takes_and_asks_for_the_comma
 def test_removing_only_saved_files_does_not_talk_about_test_clips(rig):
     code, io = free(rig, "--saved", "1", answers=["yes"])
     assert "Test clips and voices made for hearing, removed" not in io.text
+
+
+# ---------------------------------------------------------------- listenings that have sat for 30 days (decision D43): a notice and an offer, never a removal
+
+OLD_RUN = "heard-20260901-090000"                                  # 40 days before NOW
+from datetime import datetime, timedelta, timezone
+
+
+def at(days=0, seconds=0):
+    return NOW + timedelta(days=days, seconds=seconds)
+
+
+def test_the_age_is_thirty_days_and_a_listening_exactly_that_old_is_old():
+    assert freeup.OLD_AFTER_DAYS == 30
+    made = datetime(2026, 10, 11, 12, 0, 0, tzinfo=timezone.utc)
+    assert freeup.is_old(RUN, made + timedelta(days=30))
+    assert not freeup.is_old(RUN, made + timedelta(days=30) - timedelta(seconds=1))
+    assert freeup.is_old(RUN, made + timedelta(days=31)) and not freeup.is_old(RUN, made + timedelta(days=29))
+
+
+def test_a_time_in_the_future_or_a_name_that_is_not_a_time_is_never_old():
+    assert not freeup.is_old("heard-20271011-120000", NOW)                       # the clock was set back
+    for name in ("heard-20261399-120000", "heard-20261011-256100", "heard-2026", "x", ""):
+        assert not freeup.is_old(name, NOW + timedelta(days=4000)), name
+
+
+def test_a_clock_without_a_zone_is_taken_as_utc():
+    assert freeup.is_old(OLD_RUN, datetime(2026, 10, 11, 12, 0, 0)) and not freeup.is_old(RUN, datetime(2026, 10, 12, 12, 0, 0))
+
+
+def test_the_plan_marks_only_the_old_listenings(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    make_run(rig, "round-002", RUN)
+    shown = freeup.plan(rig.paths, ScratchPaths(rig.paths.default_scratch), rd.load(rig.paths), NOW)
+    assert sorted((o.round, o.kind, o.old) for o in shown.offers if o.kind in ("copy", "clips")) == [(1, "clips", True), (1, "copy", True), (2, "clips", False), (2, "copy", False)]
+    assert shown.old_listenings == 1
+
+
+def test_a_listening_just_under_thirty_days_old_is_not_marked(rig):
+    make_run(rig, "round-002", RUN)
+    just_under = freeup.plan(rig.paths, ScratchPaths(rig.paths.default_scratch), rd.load(rig.paths), at(30, -1))
+    exactly = freeup.plan(rig.paths, ScratchPaths(rig.paths.default_scratch), rd.load(rig.paths), at(30))
+    assert not any(o.old for o in just_under.offers) and just_under.old_listenings == 0
+    assert all(o.old for o in exactly.offers if o.kind in ("copy", "clips")) and exactly.old_listenings == 1
+
+
+def test_a_voice_copy_and_clips_of_one_listening_count_as_one_and_two_listenings_as_two(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    make_run(rig, "round-001", "heard-20260902-090000")
+    make_run(rig, "round-002", "heard-20260801-090000", copy=())
+    assert freeup.plan(rig.paths, ScratchPaths(rig.paths.default_scratch), rd.load(rig.paths), NOW).old_listenings == 3
+    assert freeup.old_count(rig.paths, NOW) == 3
+
+
+def test_the_age_does_not_make_the_list_look_changed(rig):
+    make_run(rig, "round-002", RUN)
+    early = freeup.plan(rig.paths, ScratchPaths(rig.paths.default_scratch), rd.load(rig.paths), NOW)
+    late = freeup.plan(rig.paths, ScratchPaths(rig.paths.default_scratch), rd.load(rig.paths), at(40))
+    assert early.fingerprint == late.fingerprint and [o.old for o in early.offers if o.kind == "clips"] != [o.old for o in late.offers if o.kind == "clips"]
+    freeup.remove(rig.paths, ScratchPaths(rig.paths.default_scratch), early, [o.number for o in early.offers if o.kind == "clips"])       # shown young, removed after it turned old: still the list that was shown
+
+
+def test_a_folder_with_nothing_to_remove_is_not_counted_as_old(rig):
+    folder = make_run(rig, "round-001", OLD_RUN, clips=(), copy=())
+    (folder / "my notes.txt").write_text("mine")
+    assert freeup.old_count(rig.paths, NOW) == 0 and freeup.plan(rig.paths, ScratchPaths(rig.paths.default_scratch), rd.load(rig.paths), NOW).old_listenings == 0
+
+
+def test_an_old_row_says_it_should_be_removed_and_a_young_one_does_not(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    make_run(rig, "round-002", RUN)
+    code, io = free(rig)
+    note = "This is more than 30 days old and should be removed."
+    assert io.text.count(note) == 2
+    old_rows = [l for l in io.lines if "2026-09-01 09:00 UTC" in l]
+    new_rows = [l for l in io.lines if "2026-10-11 12:00 UTC" in l]
+    assert len(old_rows) == 2 and all(note in l for l in old_rows) and len(new_rows) == 2 and not any(note in l for l in new_rows)
+
+
+def test_the_list_gives_one_notice_with_the_count_and_the_command_to_remove_them(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    make_run(rig, "round-001", "heard-20260902-090000")
+    make_run(rig, "round-002", RUN)
+    code, io = free(rig)
+    assert code == 0
+    assert io.text.count("2 earlier listenings are more than 30 days old and should be removed.") == 1
+    assert "To remove them, run: python3 -m voice_studio.rounds free --old --project voice-check" in io.text
+
+
+def test_one_old_listening_is_said_in_the_singular(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    _code, io = free(rig)
+    assert "1 earlier listening is more than 30 days old and should be removed." in io.text
+
+
+def test_no_notice_when_nothing_is_old(rig):
+    make_run(rig, "round-002", RUN)
+    _code, io = free(rig)
+    assert "days old" not in io.text and "free --old" not in io.text
+
+
+def test_old_takes_every_old_listening_and_leaves_the_young_ones(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    make_run(rig, "round-001", "heard-20260902-090000", copy=())
+    young = make_run(rig, "round-002", RUN)
+    code, io = free(rig, "--old", answers=["yes"])
+    assert code == 0 and "removed: 10 files." in io.text
+    assert not os.path.exists(rig.paths.listening + "/round-001") and len(os.listdir(young)) == 6
+
+
+def test_old_shows_what_it_will_remove_and_asks_first_and_a_no_removes_nothing(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    before = tree_of(rig.paths.listening)
+    code, io = free(rig, "--old", answers=["no"])
+    assert code == 2 and "This removes:" in io.text and "should be removed" in io.text and tree_of(rig.paths.listening) == before and io.prompts
+
+
+def test_old_with_nobody_to_ask_removes_nothing(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    before = tree_of(rig.paths.listening)
+    io = Terminal([], interactive=False)
+    code = rf.run_rounds(["free", "--old", "--project", "voice-check"], rig.home, None, CAT, io, training=rig.training_env, now=NOW, system=rig.system)
+    assert code == 2 and tree_of(rig.paths.listening) == before
+
+
+def test_old_with_nothing_old_says_so_and_removes_nothing(rig):
+    make_run(rig, "round-002", RUN)
+    before = tree_of(rig.paths.listening)
+    code, io = free(rig, "--old", answers=["yes"])
+    assert code == 2 and "Nothing is more than 30 days old. Nothing was removed." in io.text and tree_of(rig.paths.listening) == before and io.prompts == []
+
+
+@pytest.mark.parametrize("more", [["--all"], ["--saved", "1"], ["--working", "1"], ["--clips", "1"], ["--copies", "1"]])
+def test_old_is_on_its_own(rig, more):
+    make_run(rig, "round-001", OLD_RUN)
+    before = tree_of(rig.paths.listening)
+    code, io = free(rig, "--old", *more, answers=["yes"])
+    assert code == 2 and "Give --old on its own, without --all or a list of rounds. Nothing was removed." in io.text and tree_of(rig.paths.listening) == before
+
+
+def test_old_never_takes_anything_that_is_not_a_listening(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    shown_before = [o for o in planned(rig).offers if o.kind in ("files", "folder")]
+    checkpoints = [p for o in shown_before for p in o.paths]
+    free(rig, "--old", answers=["yes"])
+    assert all(os.path.exists(p) for p in checkpoints)
+
+
+def test_a_notice_alone_never_removes_anything(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    before = tree_of(rig.paths.listening)
+    free(rig)
+    free(rig, "--clips", "1", answers=["no"])
+    rig.run(answers=["no"])
+    assert tree_of(rig.paths.listening) == before
+
+
+def test_listen_says_up_front_that_earlier_listenings_are_old_whatever_happens_next(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    make_run(rig, "round-001", "heard-20260902-090000")
+    code, io = rig.run(answers=["no"])
+    assert code == 2
+    notice = "2 earlier listenings are more than 30 days old and should be removed."
+    assert notice in io.text and "To remove them, run: python3 -m voice_studio.rounds free --old --project voice-check" in io.text
+    assert io.text.index(notice) < io.text.index("would be heard like this")
+
+
+def test_listen_says_nothing_about_age_when_nothing_is_old(rig):
+    make_run(rig, "round-001", RUN)
+    _code, io = rig.run(answers=["no"])
+    assert "days old" not in io.text
+
+
+def test_a_run_of_listen_does_not_count_its_own_listening_and_removes_nothing(rig):
+    old = make_run(rig, "round-001", OLD_RUN)
+    before = tree_of(old)
+    code, io = rig.run("--yes", answers=["yes"])
+    assert code == 0 and io.text.count("should be removed.") == 1 and "1 earlier listening is more than 30 days old" in io.text and tree_of(old) == before
+
+
+def test_the_window_page_gives_the_notice_first_and_marks_the_old_rows(rig):
+    make_run(rig, "round-001", OLD_RUN)
+    make_run(rig, "round-002", RUN)
+    view = wm.free_view(rig.home, "voice-check", CAT, NOW)
+    assert view.notes[0] == "1 earlier listening is more than 30 days old and should be removed."
+    marked = [i for i in view.items if "should be removed" in i.line]
+    assert sorted((i.kind, i.round) for i in marked) == [("clips", 1), ("copies", 1)]
+    assert wm.free_view(rig.home, "voice-check", CAT, at(-60)).notes[0] != view.notes[0]
+
+
+def test_the_window_has_no_notice_when_nothing_is_old(rig):
+    make_run(rig, "round-002", RUN)
+    assert not any("days old" in n for n in wm.free_view(rig.home, "voice-check", CAT, NOW).notes)
+
+
+@pytest.fixture
+def far_future_clock(monkeypatch):
+    """The computer's own clock says 2030, so anything that forgets the time it was given and asks the clock would call every listening old."""
+    class Future(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2030, 1, 1, tzinfo=tz or timezone.utc)
+    monkeypatch.setattr(freeup, "datetime", Future)
+
+
+def test_the_seconds_in_the_name_count_in_the_age():
+    exactly = datetime(2026, 11, 10, 12, 0, 30, tzinfo=timezone.utc)
+    assert freeup.is_old("heard-20261011-120030", exactly) and not freeup.is_old("heard-20261011-120030", exactly - timedelta(seconds=1))
+
+
+def test_with_no_time_given_the_computers_own_clock_is_used(far_future_clock):
+    assert freeup.is_old(RUN) and freeup.is_old(RUN, None)
+
+
+def test_every_front_uses_the_time_it_was_given_and_not_the_clock(rig, far_future_clock):
+    make_run(rig, "round-001", "heard-20260920-090000")                       # 21 days before NOW: young; the 2030 clock would call it old
+    assert freeup.old_count(rig.paths, NOW) == 0
+    _code, io = free(rig)
+    assert "days old" not in io.text
+    _code, io = rig.run(answers=["no"])
+    assert "days old" not in io.text
+    assert not any("days old" in n for n in wm.free_view(rig.home, "voice-check", CAT, NOW).notes)
+    assert not any(o.old for o in freeup.plan(rig.paths, ScratchPaths(rig.paths.default_scratch), rd.load(rig.paths), NOW).offers)

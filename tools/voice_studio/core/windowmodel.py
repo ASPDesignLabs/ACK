@@ -269,7 +269,7 @@ def free_view(home: DataHome, project_id: str, cat: Catalog, now=None) -> Option
         record = rd.reconcile(ctx.paths, ctx.scratch, ctx.jobs_root, ctx.project.id, now=now, write=False)
     except rd.RoundsError as error:
         return FreeView(ctx.project.id, (), (), error_text(cat, "rounds", error.code).what)
-    plan = freeup.plan(ctx.paths, ctx.scratch, record)
+    plan = freeup.plan(ctx.paths, ctx.scratch, record, now)
     items = tuple(FreeItem(FREE_OPTION[o.kind], o.round, free_row_text(o, cat), o.bytes, o.includes_saved_point) for o in plan.offers)
     notes: List[str] = []
     if plan.kept:
@@ -278,6 +278,8 @@ def free_view(home: DataHome, project_id: str, cat: Catalog, now=None) -> Option
         notes.append(cat.count("rounds.free.busy", plan.busy))
     if plan.unclaimed:
         notes.append(cat.count("rounds.free.unclaimed", plan.unclaimed))
+    if plan.old_listenings:
+        notes.insert(0, cat.count("rounds.free.old_notice", plan.old_listenings, days=freeup.OLD_AFTER_DAYS))
     notes.append(cat.t("rounds.free.never"))
     return FreeView(ctx.project.id, items, tuple(notes), "")
 

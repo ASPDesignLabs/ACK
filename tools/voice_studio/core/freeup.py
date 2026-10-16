@@ -9,7 +9,8 @@ Four kinds of thing are ever offered, all made by a round of this project (or fr
 * **a round's working folder** in scratch (the trainer's cache), of a round that has ended: every round uses a new one, so an old one is never read again;
 * **a listening's test clips**, and **the voice made for hearing a round**, kept in the project's `listening` folder (core/listen.py; decision D43). Both are offered one listening at a time,
   as exactly the files a listening makes (the sound files, the list of sounds and the job files; or the three files of the voice copy), never anything else that might be in that folder, and a
-  folder left empty is removed with the last of them. The voice copy is large; the clips are small; either can be made again.
+  folder left empty is removed with the last of them. The voice copy is large; the clips are small; either can be made again. A listening more than `OLD_AFTER_DAYS` (30) days old is marked
+  old: it gets a notice that it should be removed, and `--old` takes all of them at once. **Nothing is ever removed because it is old**; only what the person asked for, after being shown it.
 
 Never offered, and never removable from here: recordings, transcripts, the project file and the consent note, backups, finished exports (and the voice files in them), the files of the round that is running
 (and its working folder), files in a folder no round claims, links, the starting voices, and the `version_N` folders themselves (the trainer numbers its next folder from them,
@@ -23,14 +24,16 @@ from __future__ import annotations
 import os
 import shutil
 import sys
-from dataclasses import dataclass
-from typing import List, Sequence, Tuple
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional, Sequence, Tuple
 
 from . import commands, listen, rounds as rd
 from .paths import ProjectPaths, ScratchPaths
 
 KINDS = ("files", "folder", "copy", "clips")                   # a round's spare saved files, a round's working folder, the voice made for hearing a round, a listening's test clips
 RELATIONS = ("chosen", "before", "other")                      # how the round stands to the chosen one: it is, it is what the chosen one continued from, or neither
+OLD_AFTER_DAYS = 30                                            # a listening this many days old, or older, is marked old: noticed and offered, never removed on its own
 ERROR_CODES = ("changed", "nothing_to_remove", "unknown_choice")    # each has words in the text catalog
 
 
@@ -52,6 +55,7 @@ class Offer:
     bytes: int
     source: str = ""                  # a "copy" or "clips" offer: the folder of the round or voice file the listening was made from (`round-003`, or the voice file's folder name)
     when: str = ""                    # a "copy" or "clips" offer: when the listening was made, such as 2026-10-11 12:00 UTC
+    old: bool = field(default=False, compare=False)    # a "copy" or "clips" offer made OLD_AFTER_DAYS or more ago; time passing is not a change to the list, so it is left out of the comparison
 
 
 @dataclass(frozen=True)
@@ -60,6 +64,11 @@ class Plan:
     kept: Tuple[Tuple[int, rd.CheckpointFile], ...]      # (round, file): kept for sure, shown so the person sees what is not on the list
     busy: int                                            # files of the running round, never touched
     unclaimed: int                                       # files in a folder no round claims, never touched
+
+    @property
+    def old_listenings(self) -> int:
+        """How many listenings (each is a voice copy, test clips, or both) are marked old."""
+        return len({(o.source, o.when) for o in self.offers if o.old})
 
     @property
     def fingerprint(self) -> Tuple:
@@ -112,6 +121,32 @@ def _listenings(paths: ProjectPaths) -> List[Tuple[str, str, str]]:
     return found
 
 
+def _made_at(run: str) -> Optional[datetime]:
+    """The time in a listening's folder name (UTC), or None when it is not a real time."""
+    found = listen.RUN_FOLDER.match(run)
+    if not found:
+        return None
+    date, time = found.groups()
+    try:
+        return datetime(int(date[:4]), int(date[4:6]), int(date[6:]), int(time[:2]), int(time[2:4]), int(time[4:]), tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def is_old(run: str, now: Optional[datetime] = None) -> bool:
+    """Whether a listening made at the time in this folder name is OLD_AFTER_DAYS or more old. A time in the future (the clock was changed) is not old."""
+    made = _made_at(run)
+    if made is None:
+        return False
+    current = datetime.now(timezone.utc) if now is None else (now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc))
+    return current - made >= timedelta(days=OLD_AFTER_DAYS)
+
+
+def old_count(paths: ProjectPaths, now: Optional[datetime] = None) -> int:
+    """How many listenings in this project are marked old and still have something that could be removed. Looks only."""
+    return sum(1 for _source, run, folder in _listenings(paths) if is_old(run, now) and (_listening_files(folder, "copy") or _listening_files(folder, "clips")))
+
+
 def _when(run: str) -> str:
     """`heard-20261011-120000` -> `2026-10-11 12:00 UTC` (the time in the name is UTC)."""
     found = listen.RUN_FOLDER.match(run)
@@ -140,32 +175,32 @@ def _listening_files(folder: str, kind: str) -> List[Tuple[str, int]]:
     return found
 
 
-def plan(paths: ProjectPaths, scratch: ScratchPaths, record: rd.Record) -> Plan:
-    """What could be removed right now. Reads the disk and changes nothing."""
+def plan(paths: ProjectPaths, scratch: ScratchPaths, record: rd.Record, now: Optional[datetime] = None) -> Plan:
+    """What could be removed right now. Reads the disk and changes nothing. `now` is only used to mark listenings that are old."""
     kept = rd.retention(paths, record)
     by_round = {}
     for number, file in kept.spare:
         by_round.setdefault(number, []).append(file)
     # (group, round, kind, takes the saved point, paths, size, source, when): the saved files first, then the working folders, then the large voice copies, then the small test clips
-    rows: List[Tuple[int, int, str, bool, Tuple[str, ...], int, str, str]] = []
+    rows: List[Tuple[int, int, str, bool, Tuple[str, ...], int, str, str, bool]] = []
     for number in sorted(by_round):
         files = sorted(by_round[number], key=lambda f: (f.version, f.name))
-        rows.append((0, number, "files", any(f.name == rd.LAST for f in files), tuple(f.path for f in files), sum(f.size for f in files), "", ""))
+        rows.append((0, number, "files", any(f.name == rd.LAST for f in files), tuple(f.path for f in files), sum(f.size for f in files), "", "", False))
     for r in record.rounds:
         if r.state in rd.ACTIVE_STATES:
             continue
         folder = rd.cache_dir_for(scratch, r.dataset, r.number)
         if os.path.isdir(folder) and not os.path.islink(folder):
-            rows.append((1, r.number, "folder", False, (folder,), _size_of_folder(folder), "", ""))
+            rows.append((1, r.number, "folder", False, (folder,), _size_of_folder(folder), "", "", False))
     for source, run, folder in _listenings(paths):
         number = listen.round_of_source(source)
         for group, kind in ((2, "copy"), (3, "clips")):
             files = _listening_files(folder, kind)
             if files:
-                rows.append((group, number, kind, False, tuple(path for path, _size in files), sum(size for _path, size in files), source, _when(run)))
+                rows.append((group, number, kind, False, tuple(path for path, _size in files), sum(size for _path, size in files), source, _when(run), is_old(run, now)))
     rows.sort(key=lambda row: (row[0], row[1]))                      # a stable sort: listenings of one round stay in the order of their folders' names, which is their time
-    offers = tuple(Offer(i + 1, kind, number, _relation(record, number), includes, files, size, source, when)
-                   for i, (_g, number, kind, includes, files, size, source, when) in enumerate(rows))
+    offers = tuple(Offer(i + 1, kind, number, _relation(record, number), includes, files, size, source, when, old)
+                   for i, (_g, number, kind, includes, files, size, source, when, old) in enumerate(rows))
     return Plan(offers, kept.keep, len(kept.busy), len(kept.unclaimed))
 
 

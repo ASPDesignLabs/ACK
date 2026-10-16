@@ -672,7 +672,14 @@ and what was removed cannot be brought back, so **if you want every round kept a
   ls ~/ack-voice-studio/projects/voice-check/listening
   ```
   → The folder for that listening is gone, and `listening` itself is still there. A file you put in one of those folders yourself is never listed and is still there afterwards, and its folder stays.
-- [ ] In the window (section I5), the Free up space page shows the same items, each with a tick box and its size.
+- [ ] **Old listenings (30 days).** A listening made 30 or more days ago is marked old: its row ends `This is more than 30 days old and should be removed.`, `free` prints, for two of them, `2 earlier listenings are more than 30 days old and should be removed.` (or `1 earlier listening is more than 30 days old and should be removed.`) with `To remove them, run:` and the command, and `listen` says the same before it shows its plan. Nothing is removed because of it. You will not have anything that old yet, so make one: rename a listening's folder to a date more than 30 days back (only its `heard-` name changes; the files inside are untouched), for example
+  ```bash
+  cd ~/ack-voice-studio/projects/voice-check/listening/round-*/ && mv heard-2026* heard-20260101-090000
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --project voice-check
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds free --old --project voice-check
+  ```
+  → The first lists it with the notice. The second says `This removes:` with only the old listening, asks, and a **no** removes nothing; with nothing old it says `Nothing is more than 30 days old. Nothing was removed.` Put the name back (or say yes) when done. `--old` on its own: `--old --all` says `Give --old on its own, without --all or a list of rounds.`
+- [ ] In the window (section I5), the Free up space page shows the same items, each with a tick box and its size, and the old notice at the top when there is one.
 - [ ] Write down: how long it took, whether any wording confused you (the lines for a round's files, the question, the `Done.` line), whether you wanted a way to see the files before choosing, and whether the numbers in `--saved` were easy to read off the list.
 
 ## I4. Making the voice file with one command

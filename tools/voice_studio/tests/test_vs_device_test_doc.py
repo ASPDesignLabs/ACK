@@ -931,7 +931,20 @@ def test_the_free_up_space_section_names_the_new_options_and_the_texts_the_tool_
     body = section("I3.")
     for option in ("--clips", "--copies"):
         assert option in rf.FREE_VALUES and option in body, option
+    assert "--old" in rf.FREE_FLAGS and "free --old" in body and "30 days" in body
     for sentence in ("The test clips stay.", "Test clips and voices made for hearing, removed:", "chosen by round too, with --clips and --copies."):
         assert says(sentence), sentence
         assert sentence in body, sentence
     assert "section I8 part E" in body and "listening` folder" in body
+
+
+def test_the_old_listenings_step_quotes_what_the_tool_says_and_the_age_it_uses():
+    from voice_studio.core import freeup
+    body = section("I3.")
+    assert freeup.OLD_AFTER_DAYS == 30
+    for sentence in ("This is more than 30 days old and should be removed.", "To remove them, run:", "Nothing is more than 30 days old. Nothing was removed.",
+                     "Give --old on its own, without --all or a list of rounds."):
+        assert says(sentence), sentence
+        assert sentence in body, sentence
+    for sentence in ("2 earlier listenings are more than 30 days old and should be removed.", "1 earlier listening is more than 30 days old and should be removed."):
+        assert says(sentence) and sentence in body, sentence

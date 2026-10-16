@@ -17,12 +17,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Callable, Optional, Sequence, Tuple
 
-from . import commands, heardcheck, jobs, listen, phonemes, playback, voicefile as vf, voicezip
+from . import commands, freeup, heardcheck, jobs, listen, phonemes, playback, voicefile as vf, voicezip
 from .cliargs import ArgError, parse_args
 from .diskbudget import Level
 from .paths import DataHome
 from .projects_flow import EXIT_NOTHING_DONE, EXIT_OK, EXIT_PROBLEM, say_bad_arg
-from .rounds_flow import BUILDENV_COMMAND, PROJECT, ROUNDS_COMMAND, YES, TrainingEnv, _ask_yes, _confirmed, _free, _look, _number, _open, _say_parts
+from .rounds_flow import BUILDENV_COMMAND, PROJECT, ROUNDS_COMMAND, YES, TrainingEnv, _ask_yes, _confirmed, _free, _look, _number, _open, _say_parts, old_notice_lines
 from .setup_flow import IO
 from .system import System
 from .text import Catalog, size_text
@@ -186,6 +186,8 @@ def run_listen(args: Sequence[str], home: DataHome, now: Optional[datetime], tra
     ctx, code = _open(parsed, home, cat, io)
     if ctx is None:
         return code
+    for line in old_notice_lines(freeup.old_count(ctx.paths, now), ctx.project.id, cat):        # earlier listenings that have sat for 30 days: a notice up front (whatever happens next), never a removal
+        io.say(line)
     pronunciation, state = training()
     if pronunciation is None:
         io.say(cat.t("voicefile.make.no_environment", state=_state_words(cat, state), command=BUILDENV_COMMAND))

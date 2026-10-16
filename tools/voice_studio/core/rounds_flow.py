@@ -10,6 +10,7 @@ Every sentence comes from the text catalog. Exit codes: 0 done, 1 something fail
 """
 from __future__ import annotations
 
+import dataclasses
 import os
 from datetime import datetime
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
@@ -35,7 +36,7 @@ YES = {"--yes": "yes", "-y": "yes"}
 PROJECT = {"--project": "project"}
 START_VALUES = {**PROJECT, "--set": "dataset", "--minutes": "minutes"}
 NOTE_VALUES = {**PROJECT, "--text": "text"}
-FREE_FLAGS = {**YES, "--all": "all"}
+FREE_FLAGS = {**YES, "--all": "all", "--old": "old"}
 FREE_VALUES = {**PROJECT, "--saved": "saved", "--working": "working", "--copies": "copies", "--clips": "clips"}
 FREE_OPTION = {"files": "saved", "folder": "working", "copy": "copies", "clips": "clips"}         # the option of the free command that names each kind of offer, by round number
 MAX_FAILURES_SHOWN = 10
@@ -265,8 +266,18 @@ def _round_numbers(word: str, minimum: int = 1) -> Optional[List[int]]:
     return [n for n in found if n is not None]
 
 
+def old_notice_lines(count: int, project_id: str, cat: Catalog) -> List[str]:
+    """The notice that earlier listenings are old and should be removed, and how: said by `free`, at the end of `listen`, and by the window. Nothing is removed because of it."""
+    if count < 1:
+        return []
+    return [cat.count("rounds.free.old_notice", count, days=freeup.OLD_AFTER_DAYS),
+            cat.t("rounds.free.old_how", command="%s free --old --project %s" % (ROUNDS_COMMAND, project_id))]
+
+
 def free_row_text(offer: freeup.Offer, cat: Catalog) -> str:
     """What is said about one thing that could be freed. The terminal prints it and the window draws it."""
+    if offer.kind in ("copy", "clips") and offer.old:
+        return free_row_text(dataclasses.replace(offer, old=False), cat) + " " + cat.t("rounds.free.old_note", days=freeup.OLD_AFTER_DAYS)
     if offer.kind == "folder":
         return cat.t("rounds.free.working", round=offer.round, size=size_text(offer.bytes))
     if offer.kind == "copy":
@@ -292,6 +303,8 @@ def _free_list(shown: freeup.Plan, ctx: Open, cat: Catalog, io: IO) -> None:
         _free_row(offer, cat, io)
     if shown.offers:
         io.say(cat.t("rounds.free.total", size=size_text(sum(o.bytes for o in shown.offers))))
+    for line in old_notice_lines(shown.old_listenings, ctx.project.id, cat):
+        io.say(line)
     if shown.kept:
         io.say(cat.count("rounds.free.kept", len(shown.kept), size=size_text(sum(f.size for _n, f in shown.kept))))
     if shown.busy:
@@ -324,19 +337,27 @@ def _free_up(args: Sequence[str], home: DataHome, now: Optional[datetime], syste
             io.say(cat.t("rounds.free.bad_numbers", text=word[:40]))
             return EXIT_NOTHING_DONE
         numbers[kind] = found
-    selecting = "all" in parsed.flags or bool(named)
+    if "old" in parsed.flags and ("all" in parsed.flags or named):
+        io.say(cat.t("rounds.free.old_alone"))
+        return EXIT_NOTHING_DONE
+    selecting = "all" in parsed.flags or "old" in parsed.flags or bool(named)
     ctx, code = _open(parsed, home, cat, io)
     if ctx is None:
         return code
     record = _look(ctx, now, cat, io, write=selecting)
-    shown = freeup.plan(ctx.paths, ctx.scratch, record)
+    shown = freeup.plan(ctx.paths, ctx.scratch, record, now)
     if not selecting:
         _free_list(shown, ctx, cat, io)
         return EXIT_OK
     if not shown.offers:
         io.say(cat.t("rounds.free.nothing"))
         return EXIT_NOTHING_DONE
-    if "all" in parsed.flags:
+    if "old" in parsed.flags:
+        picked = [o for o in shown.offers if o.old]
+        if not picked:
+            io.say(cat.t("rounds.free.nothing_old", days=freeup.OLD_AFTER_DAYS))
+            return EXIT_NOTHING_DONE
+    elif "all" in parsed.flags:
         picked = list(shown.offers)
     else:
         picked = []
