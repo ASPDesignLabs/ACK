@@ -1187,6 +1187,93 @@ section **with only the guide open**, as a person who has nothing else would. Wr
   ```
   → A line beginning `Note:` says the folder may be uploaded to a cloud service, because recordings of a voice are personal data. Nothing is written. Replace `YOU` with your Windows user name.
 
+## I10. Checking the tool, and refreshing it
+
+**New, and not yet run on a real computer.** `refresh` is a reinstall that does not wipe data. It looks at the tool's own programs, the files it downloaded and the small notes it keeps, mends only what is broken, and can build a second whole copy of the programs beside the one in use. **It never touches a project, a recording, a round, a finished voice file or a backup.** It has four commands: `check` only looks; `repair` mends what `check` found; `rebuild` builds the second copy; `older` lists the copies that are no longer in use and removes them when you say so. The first three parts below use a pretend home folder, so nothing of yours is damaged on purpose. Parts E to G use your real programs and need section I0 done (the small set of programs, the studio ones, is enough; the large training set is optional and says how much room it needs).
+
+*Built and tried in the build sandbox only, with a stand-in for the computer and the network. The sandbox's own Python is newer than the programs accept, so the real command was only seen saying so there. Not run on a real computer.*
+
+**A. Look. Nothing is written.**
+
+- [ ] Look at everything, then look again without the programs' own check:
+  ```bash
+  time PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.refresh check
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.refresh check --quick
+  ```
+  → `Looking at the programs, the downloaded files and the tool's own notes. This changes nothing.`, a `Looking at …` line before each set of programs, the listening model and each starting voice you fetched, then one line for each thing: `[ok]`, `[problem]` or `[not here]` and a sentence such as `Every step is in place and its own check passed.` or `It is here and exactly what was agreed.` The last line is `Everything that is here is in order.` (or, if not, how many things need attention and the command to run). The second command has no `Looking at` line for the programs, because it does not run their own check. Write down how long the first took, and every line that surprised you.
+
+**B. A note that cannot be read, in a pretend home.** `T` is a new empty folder; nothing in it is yours.
+
+- [ ] Make a damaged note there and look:
+  ```bash
+  T=$(mktemp -d)
+  mkdir -p "$T/ack-voice-studio/state"
+  echo '{' > "$T/ack-voice-studio/state/environments.json"
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.refresh check
+  echo "exit: $?"
+  ```
+  → `[problem] The note of which copy of the programs is in use: It cannot be read.`, `1 thing needs attention.` and `To mend what can be mended, run:` with the command. The programs and the downloads are `[not here]`, because this home has none (and the way to set the programs up is named). `exit: 1`.
+
+**C. Mending it, which asks first.**
+
+- [ ] Ask for the repair and say no, then yes:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.refresh repair
+  cat "$T/ack-voice-studio/state/environments.json"
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.refresh repair
+  ls "$T/ack-voice-studio/state"
+  ```
+  → The first: `A repair would do this:` and `Set the note of which copy of the programs is in use aside under another name, beside itself. It is not deleted.`, then `Repair these now? Type yes to go on.` Type **`no`**: `Nothing was done.` and `cat` still prints `{`. The second, with **`yes`**: `Looking again.`, the note `was set aside as …environments.json.damaged-<date>-<time>`, and `Everything that is here is in order.` `ls` shows `environments.json.damaged-…` and no `environments.json`: the damaged note is kept, never deleted. With nobody to ask (a pipe, for instance) the command says `There was nobody to ask. To say yes on the command line, add --yes. Nothing was done.`
+
+**D. A damaged download is not hidden, and is not replaced without the agreement.** Still the pretend home.
+
+- [ ] Make a starting voice file that is not what was agreed (the real file is 846 MB; this one is 1,000 bytes of nothing) and ask for the repair:
+  ```bash
+  mkdir -p "$T/ack-voice-studio/tool/downloads/voices/voice-mike"
+  head -c 1000 /dev/zero > "$T/ack-voice-studio/tool/downloads/voices/voice-mike/epoch=5460-val_mos=4.2686.ckpt"
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.refresh check --quick
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.refresh repair --yes
+  ls -l "$T/ack-voice-studio/tool/downloads/voices/voice-mike"
+  ```
+  → `[problem] The starting voice Mike: The file is not what was agreed.` The repair says it would `Fetch the starting voice Mike again. The file in the way is replaced only after the new one has been checked.` and then `The download was not started because it has not been agreed to yet.` (this home has never agreed to the download), `The starting voice Mike could not be fetched again. The file that was there is as it was.` `ls` still shows the 1,000-byte file. Nothing was downloaded. When you have looked: `rm -r "$T"`.
+
+**E. A second copy of the studio programs, beside the first.** Real. It downloads the studio programs again (the question says how much and from where) and needs that much free room.
+
+- [ ] Note what is there now, then ask for the rebuild and say no:
+  ```bash
+  find ~/ack-voice-studio/projects -type f -printf '%p %s %T@\n' | sort | sha256sum
+  du -sh ~/ack-voice-studio/tool/environments/*
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.refresh rebuild --programs studio
+  ```
+  → `A rebuild of the programs that listen to recordings would work like this:` and `It builds a second, whole copy beside the one in use, from the same list as before.`, `The copy in use keeps working until the new one is built and its own check has passed. If anything fails, nothing changes.` and `No project, recording, round, finished voice or backup is touched.` If a project has no up-to-date backup it says which, with the command (`These projects have no up-to-date backup. A rebuild does not touch them, but a backup costs little:`). Then the same plan and question the first setup gave: where, how much room, from which site. Type **`no`**: `The new copy of the programs that listen to recordings is not in use. The copy that was in use still is.` The first command's output is one line of letters and numbers; write it down.
+- [ ] Do it, with **`yes`**:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.refresh rebuild --programs studio
+  du -sh ~/ack-voice-studio/tool/environments/*
+  ```
+  → The steps, each with how long it took, `Ready, after …`, then `The new copy of the programs that listen to recordings is now the one in use. The old copy is still on the disk.`, `1 old copy of the programs is on the disk:` with its folder and size, and `Remove this old copy, about …` Type **`no`**: `The old copy was kept. To remove it later, run:` and the command. `du` now shows two studio folders. Write down how long it took and how big each folder is.
+- [ ] Check that everything works on the new copy and that no project was touched:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.refresh check
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.buildenv studio --check
+  find ~/ack-voice-studio/projects -type f -printf '%p %s %T@\n' | sort | sha256sum
+  ```
+  → `check` ends `Everything that is here is in order.` and its line for the note of which copy of the programs is in use says `It can be read.`; `buildenv` says `Nothing needs doing. It is in` the **new** folder; the last line of letters and numbers is the same as the one you wrote down.
+- [ ] See the old copy, then remove it:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.refresh older
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.refresh older --remove
+  ```
+  → The first lists the old copy, `it was complete`, and `To remove them, run:` the command. The second asks `Remove this old copy, about …`: type **`yes`**: `Done. 1 old copy was removed. About …` and how much room came back. `du -sh ~/ack-voice-studio/tool/environments/*` shows only the new folder. If a training round is running, the command refuses with `A task is running, and it may be using one of the old copies.` and removes nothing.
+
+**F. Stopping a rebuild.** Optional.
+
+- [ ] Start the rebuild again, say **`yes`**, and press Ctrl+C during a step. `check` still says the copy in use is fine. Run the rebuild again: it says `You already said yes to this, so it carries on from where it stopped and does not ask again. Press Ctrl+C to stop.`, and ends the same way as in part E. Write down whether the old copy was ever not usable.
+
+**G. The training programs.** Optional, and only with a lot of free room (the question says how much; two copies exist until the old one is removed).
+
+- [ ] The same as part E with `--programs training`. The old copy of the training programs is about 6.6 GB; write down the figure `older` prints.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -1267,6 +1354,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I7: for each part (A to D), the exact lines the one command printed, where it stopped or asked something this list did not expect, what you typed, how long each step took, and every sentence in a guide that was unclear or a command that did not work as typed. If the one command is not run on a clean Windows or a plain Ubuntu desktop yet, say so.
 - Section I8: part B for each way of playing (heard or not, the exit number, any words it printed, and whether this is WSL or a native desktop), then the seconds `listen` took, which way played, whether the voice was clear, any word said differently on the phone, and whether you want other sentences.
 - Section I9: how long a backup took for how big a project, the file's size, whether the reminder in part B was easy to notice, whether `verify` caught the changed byte, what the second restore in part I said, whether the left-out list in part C matched what you know is in the project, which folder you chose and why, and any sentence that was hard to follow.
+- Section I10: how long `check` took, every line that was unclear, what each of parts B to D printed (especially the exit numbers and the files `ls` showed), how long the studio rebuild took and how big the two copies were, whether the line of letters and numbers before and after was the same, whether the old copy was ever unusable, and any sentence that was hard to follow.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
@@ -1277,6 +1365,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
+- [ ] The pretend home in section I10 is removed by its own last step (`rm -r "$T"`). The old copy of the programs from part E is removed by part E, and nothing else in `~/ack-voice-studio/tool` was made by this list.
 - [ ] The backups section I9 made are in `~/ack-voice-check-backups` (and `~/ack-voice-studio/backups` if you ever left the folder out). They are real backups, so keep them if you want them; look first with `du -sh ~/ack-voice-check-backups`, and when you are sure: `rm -r ~/ack-voice-check-backups`. The tool never removes a backup itself, and the project's delete question does not touch them.
 - [ ] The small sound files section I8 made are under the project's `listening` folder, a few hundred kilobytes each time (and a large voice copy for each time you kept one in part E). Free up space offers them (section I3); or look with `du -sh ~/ack-voice-studio/projects/voice-check/listening` and remove the folder yourself when you no longer want them.
 - [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.

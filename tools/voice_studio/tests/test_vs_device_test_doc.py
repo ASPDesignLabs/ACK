@@ -1116,3 +1116,108 @@ def test_the_backup_section_runs_as_it_says_against_a_project_with_everything_in
 
 
 PYBACKUP_LIST = 'PYTHONPATH=TOOLS PY -m voice_studio.backup list --project voice-check --to ~/ack-voice-check-backups | grep -c damaged'
+
+
+# ---------------------------------------------------------------- section I10: checking the tool, and refreshing it
+
+def i10_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I10."), flags=re.S | re.M)]
+
+
+def test_the_refresh_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import refresh_flow as rff
+    found = re.findall(r"python3 -m voice_studio\.(refresh|buildenv) ([a-z]+)([^\n`;<|&]*)", section("I10."))
+    assert {c for m, c, _ in found if m == "refresh"} == {"check", "repair", "rebuild", "older"} and {c for m, c, _ in found if m == "buildenv"} == {"studio"}
+    seen = set()
+    for module, command, rest in found:
+        if module == "buildenv":
+            assert shlex.split(rest) == ["--check"]
+            continue
+        assert command in rff.OPTIONS, command
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            assert words[i].startswith("-") and words[i] in rff.OPTIONS[command], (command, words[i])
+            seen.add(words[i])
+            i += 2 if words[i] == "--programs" else 1
+        if "--programs" in words:
+            assert words[words.index("--programs") + 1] in ("studio", "training")
+    assert seen >= {"--quick", "--yes", "--programs", "--remove"} and set(rff.COMMANDS) == {"check", "repair", "rebuild", "older", "help"}
+
+
+def test_every_sentence_the_refresh_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I10."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "cat ", "du ", "time ", "T=", "find ", "mkdir ", "head ", "echo ", "rm ", "["))]
+    assert len(quoted) >= 25 and any(cut for _, cut in quoted), (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_places_the_refresh_section_names_are_where_the_tool_keeps_things():
+    from voice_studio.core import envgen, startvoice
+    from voice_studio.core.paths import DataHome
+    from voice_studio.core.registry import load_registry
+    body = section("I10.")
+    item = next(i for i in load_registry().items if i.id == "voice-mike")
+    assert str(startvoice.voice_folder(DataHome("$T"), item) / item.filename).replace("$T/", '$T/') in body.replace('"', "")
+    assert envgen.path_of(DataHome("$T")).replace("$T", "$T") in body.replace('"', "") and envgen.FILE == "environments.json"
+    assert DataHome("~").projects in body and "~/ack-voice-studio/tool/environments/*" in body and ".damaged-" in body
+
+
+def test_the_refresh_section_says_what_it_never_touches_and_which_parts_use_a_pretend_home_and_what_was_not_run():
+    body = " ".join(section("I10.").split())
+    assert "It never touches a project, a recording, a round, a finished voice file or a backup." in body and "The first three parts below use a pretend home folder" in body
+    assert "Not run on a real computer." in body and "--programs studio" in body and "--programs training" in body
+    assert "Section I10:" in doc_text() and "rm -r \"$T\"" in section("M.")
+    names = re.findall(r"^## (I10|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I9") < names.index("I10") < names.index("J") and len(i10_blocks()) == 8
+
+
+def test_the_refresh_section_runs_as_it_says_in_a_pretend_home(tmp_path):
+    import shutil
+    for tool in ("bash", "head", "ls", "cat"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    blocks = i10_blocks()
+    mine, python = str(TOOLS), shlex.quote(sys.executable)
+
+    def adapted(index):
+        text = blocks[index].replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("python3 -m", python + " -m")
+        if index == 2:                       # a pipe cannot answer: the first repair is left unanswered (it says so), the second is told yes
+            first, second = text.split("cat ", 1)[0], "cat " + text.split("cat ", 1)[1]
+            text = first + "echo ---\n" + second.replace("refresh repair\n", "refresh repair --yes\n")
+        return text
+
+    home = tmp_path / "home"
+    home.mkdir()
+    script = []
+    for index in (1, 2, 3):
+        script.append('echo "@@ %d"' % index)
+        script.append(adapted(index))
+        if index == 1:
+            script.append('echo "@@ T $T"')
+    env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=240, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    parts = {chunk.split("\n", 1)[0].strip(): chunk.split("\n", 1)[1] for chunk in done.stdout.split("@@ ")[1:]}
+    pretend = Path(next(k for k in parts if k.startswith("T "))[2:])
+    assert "  [problem] The note of which copy of the programs is in use: It cannot be read." in parts["1"] and "exit: 1" in parts["1"]
+    assert "To mend what can be mended, run: python3 -m voice_studio.refresh repair" in parts["1"]
+    assert "A repair would do this:" in parts["2"] and "  Set the note of which copy of the programs is in use aside under another name, beside itself. It is not deleted." in parts["2"]
+    assert "There was nobody to ask. To say yes on the command line, add --yes. Nothing was done." in parts["2"].split("---")[0]
+    after = parts["2"].split("---")[1]
+    assert after.strip().splitlines()[0] == "{" and "was set aside as " in after and "environments.json.damaged-" in after and "Looking again." in after
+    state = pretend / "ack-voice-studio" / "state"
+    assert sorted(p.name for p in state.iterdir() if p.name.startswith("environments.json")) == [next(p.name for p in state.iterdir() if ".damaged-" in p.name)] and (state / next(p.name for p in state.iterdir() if ".damaged-" in p.name)).read_text().strip() == "{"
+    d = parts["3"]
+    assert "[problem] The starting voice Mike: The file is not what was agreed." in d and "  Fetch the starting voice Mike again. The file in the way is replaced only after the new one has been checked." in d
+    assert "The download was not started because it has not been agreed to yet." in d and "  The starting voice Mike could not be fetched again. The file that was there is as it was." in d
+    voice = pretend / "ack-voice-studio" / "tool" / "downloads" / "voices" / "voice-mike" / "epoch=5460-val_mos=4.2686.ckpt"
+    try:
+        assert voice.stat().st_size == 1000 and voice.read_bytes() == b"\0" * 1000 and " 1000 " in d
+        assert not (home / "ack-voice-studio").exists(), "the real home was not touched"
+    finally:
+        shutil.rmtree(pretend, ignore_errors=True)
+

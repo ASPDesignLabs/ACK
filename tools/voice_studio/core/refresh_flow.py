@@ -94,9 +94,9 @@ def _say_finding(finding: rf.Finding, cat: Catalog, io: IO) -> None:
     io.say("  %s %s: %s" % ("[%s]" % cat.t("refresh.tag." + finding.status), subject_name(cat, finding.area, finding.subject), reason_text(cat, finding)))
 
 
-def _say_next(problems: Sequence[rf.Finding], cat: Catalog, io: IO, include_repair: bool = True) -> None:
+def _say_next(problems: Sequence[rf.Finding], cat: Catalog, io: IO) -> None:
     """What to do about each problem: the one command that mends what can be mended, and for each problem that needs more, the command that does."""
-    if include_repair and any(f.fix in ("resume", "fetch", "set_aside") for f in problems):
+    if any(f.fix in ("resume", "fetch", "set_aside") for f in problems):
         io.say(cat.t("refresh.next_repair", command=REFRESH_COMMAND + " repair"))
     for finding in problems:
         name = mid(subject_name(cat, finding.area, finding.subject))
@@ -113,7 +113,7 @@ def _say_report(report: rf.Report, cat: Catalog, io: IO) -> None:
     not_set_up = tuple(f for f in report.findings if f.fix == "setup")
     if not problems:
         io.say(cat.t("refresh.in_order"))
-        _say_next(not_set_up, cat, io, include_repair=False)
+        _say_next(not_set_up, cat, io)
         return
     io.say(cat.count("refresh.problems", len(problems)))
     _say_next(problems + not_set_up, cat, io)
@@ -160,12 +160,12 @@ def _say_repair_plan(plan: rf.RepairPlan, cat: Catalog, io: IO) -> None:
         io.say("  " + cat.t("refresh.repair.set_aside", name=mid(subject_name(cat, finding.area, finding.subject))))
 
 
-def _fetch_again(finding: rf.Finding, home: DataHome, registry: Registry, ctx: envbuild.Context, clock: Callable[[], float], cat: Catalog, io: IO) -> bool:
+def _fetch_again(finding: rf.Finding, home: DataHome, registry: Registry, ctx: envbuild.Context, clock: Callable[[], float], cat: Catalog, io: IO) -> None:
     name = subject_name(cat, finding.area, finding.subject)
     wanted = rf.items_to_fetch(home, registry, [finding])
     if not wanted:
         io.say("  " + cat.t("refresh.repair.nothing_to_fetch", name=name))
-        return False
+        return
     for item, folder in wanted:
         io.say("  " + cat.t("refresh.repair.fetching", name=mid(name)))
         try:
@@ -176,9 +176,8 @@ def _fetch_again(finding: rf.Finding, home: DataHome, registry: Registry, ctx: e
             io.say("  " + cat.t("refresh.repair.fetch_failed", name=name))
             for line in (parts.what, parts.changed, parts.next):
                 io.say("  " + line)
-            return False
+            return
     io.say("  " + cat.t("refresh.repair.fetched", name=name))
-    return True
 
 
 def _repair(args: Sequence[str], home: DataHome, system: System, registry: Registry, specs: Sequence[EnvSpec], networked: Callable, clock: Callable[[], float], now: Optional[datetime],
@@ -199,18 +198,17 @@ def _repair(args: Sequence[str], home: DataHome, system: System, registry: Regis
         for finding in plan.needs_more:
             _say_finding(finding, cat, io)
         io.say(cat.t("refresh.repair.cannot"))
-        _say_next(plan.needs_more, cat, io, include_repair=False)
+        _say_next(plan.needs_more, cat, io)
         return EXIT_PROBLEM
     _say_repair_plan(plan, cat, io)
     if plan.needs_more:
         io.say(cat.t("refresh.repair.more_head"))
         for finding in plan.needs_more:
             _say_finding(finding, cat, io)
-        _say_next(plan.needs_more, cat, io, include_repair=False)
+        _say_next(plan.needs_more, cat, io)
     declined = _confirmed(parsed, cat.t("refresh.repair.question"), cat, io)
     if declined is not None:
         return declined
-    failed = False
     for finding in plan.set_aside:
         name = subject_name(cat, finding.area, finding.subject)
         try:
@@ -218,24 +216,18 @@ def _repair(args: Sequence[str], home: DataHome, system: System, registry: Regis
         except OSError as exc:
             io.say("  " + cat.t("refresh.repair.aside_failed", name=name))
             io.say("    " + cat.t("cli.technical", detail=exc.strerror or type(exc).__name__))
-            failed = True
             continue
         io.say("  " + cat.t("refresh.repair.aside_done", name=name, path=moved))
     for finding in plan.fetch:
-        failed = not _fetch_again(finding, home, registry, ctx, clock, cat, io) or failed
+        _fetch_again(finding, home, registry, ctx, clock, cat, io)
     for finding in plan.resume:
-        spec = next((s for s in specs if s.id == finding.subject), None)
-        if spec is None:
-            continue
-        code = run_build_env(BuildOptions(env_id=spec.id), system, home, specs, cat, io, networked, clock, registry, seams)
-        if code != EXIT_OK:
-            failed = True
-            if code == EXIT_PROBLEM:
-                break                                                       # a build that went wrong stops everything after it, as in the first setup
+        code = run_build_env(BuildOptions(env_id=finding.subject), system, home, specs, cat, io, networked, clock, registry, seams)
+        if code == EXIT_PROBLEM:
+            break                                                           # a build that went wrong stops everything after it, as in the first setup; one that was declined does not
     io.say(cat.t("refresh.repair.after"))
     again = rf.look(home, registry, specs, _context(home, system, registry, networked, seams), probes=probes)
     _say_report(again, cat, io)
-    return EXIT_OK if again.in_order and not failed else EXIT_PROBLEM
+    return EXIT_OK if again.in_order else EXIT_PROBLEM
 
 
 # ---------------------------------------------------------------- older copies
@@ -328,7 +320,7 @@ def _rebuild(args: Sequence[str], home: DataHome, system: System, registry: Regi
                              {**(seams or {}), "generations": rf.with_generation(ctx, spec.id, number).generations})
         if code != EXIT_OK:
             io.say(cat.t("refresh.rebuild.not_switched", name=mid(subject_name(cat, rf.PROGRAMS, spec.id))))
-            return EXIT_NOTHING_DONE if code == EXIT_NOTHING_DONE else EXIT_PROBLEM
+            return code
         try:
             rf.note_generation(home, spec.id, number)
         except rf.RefreshError as error:

@@ -187,3 +187,57 @@ def test_the_probes_run_offline_and_leave_no_compiled_files(rig):
     eb.probe(rig.spec, rig.ctx, rig.env_dir)
     (code, env, cwd), = rig.system.probe_runs
     assert env["PYTHONDONTWRITEBYTECODE"] == "1" and env["HF_HUB_OFFLINE"] == "1" and cwd == rig.env_dir
+
+
+def test_the_note_is_in_the_file_called_environments_json_under_the_tools_state_folder(tmp_path):
+    home = DataHome(str(tmp_path))
+    assert envgen.FILE == "environments.json" and envgen.path_of(home) == home.state + "/environments.json"
+
+
+def test_a_set_that_goes_back_to_generation_zero_leaves_no_entry_in_the_file(tmp_path):
+    home = DataHome(str(tmp_path))
+    envgen.write(home, "studio", 1)
+    envgen.write(home, "training", 2)
+    envgen.write(home, "studio", 0)
+    assert json.loads(Path(envgen.path_of(home)).read_text())["generations"] == {"training": 2}
+
+
+def test_generation_zero_names_a_folder_exactly_as_it_was_named_before_generations_existed(rig):
+    """The name of a folder before a generation was part of it, written out again here: a computer that has never rebuilt must find its programs where it left them."""
+    import hashlib
+    spec, item = rig.spec, rig.item
+    data = {"builder": eb.BUILDER_VERSION, "id": spec.id, "python": "3.12", "lock": lock_digest(LOCK), "source": item.sha256, "install": bool(spec.source and spec.source.install),
+            "dist": spec.source.dist if spec.source else None, "native": spec.source.native_build if spec.source else None,
+            "patches": [[p.id, p.file, eb.sha256_bytes(p.old.encode()), eb.sha256_bytes(p.new.encode())] for p in spec.patches]}
+    if spec.native is not None:
+        data["native_part"] = [spec.native.sha256, spec.native.module, spec.native.into]
+    before = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
+    assert eb.fingerprint(spec, lock_digest(LOCK), item, (3, 12)) == before == eb.fingerprint(spec, lock_digest(LOCK), item, (3, 12), 0)
+    assert eb.fingerprint(spec, lock_digest(LOCK), item, (3, 12), 1) != before
+
+
+def test_a_failed_probe_keeps_the_lines_it_printed_up_to_the_limit(rig):
+    assert rig.build().ok
+    rig.system.bad_probe_codes = {"import os"}
+    report = eb.probe(rig.spec, rig.ctx, rig.env_dir)
+    assert report.tail == ("Linux", "Traceback", "ImportError: nothing called that"), "the launcher's own line, then what the failed probe printed"
+
+
+def test_the_launcher_is_run_offline_and_without_leaving_compiled_files(rig):
+    assert rig.build().ok
+    rig.system.launcher_runs.clear()
+    eb.probe(rig.spec, rig.ctx, rig.env_dir)
+    (argv, env), = rig.system.launcher_runs
+    assert env["PYTHONDONTWRITEBYTECODE"] == "1" and env["HF_HUB_OFFLINE"] == "1" and argv[-1] == "platform"
+
+
+def test_a_launcher_that_cannot_be_run_at_all_is_named_as_that(rig):
+    assert rig.build().ok
+    real = rig.system.run
+
+    def run(argv, timeout=15.0, cwd=None, env=None):
+        return None if len(argv) >= 2 and str(argv[1]).endswith("ack_run.py") else real(argv, timeout, cwd, env)
+    rig.system.run = run
+    report = eb.probe(rig.spec, rig.ctx, rig.env_dir)
+    assert (report.ok, report.code, report.detail, report.tail) == (False, "launcher_failed", "could not run", ())
+

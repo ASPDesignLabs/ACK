@@ -69,12 +69,16 @@ PYTHONPATH=tools python3 -m voice_studio.backup now --project anna --to ~/anna-b
 PYTHONPATH=tools python3 -m voice_studio.backup list --project anna --to ~/anna-backups    # the backups there are, and whether the project has changed since the last one; changes nothing
 PYTHONPATH=tools python3 -m voice_studio.backup verify FILE                                # read a backup all the way through and check every file in it; changes nothing
 PYTHONPATH=tools python3 -m voice_studio.backup restore FILE                               # put a backup back: only adds what is missing and never replaces a file (shows the plan, then asks)
+PYTHONPATH=tools python3 -m voice_studio.refresh check                                     # look at the programs, the downloaded files and the tool's notes, and say what is broken; changes nothing (--quick skips the programs' own self-test)
+PYTHONPATH=tools python3 -m voice_studio.refresh repair                                    # mend only what check found: finish programs, fetch a damaged download again, set aside a note that cannot be read (shows the plan, then asks)
+PYTHONPATH=tools python3 -m voice_studio.refresh rebuild --programs studio                 # build a second whole copy beside the one in use and switch to it only when it works; nothing of yours is touched
+PYTHONPATH=tools python3 -m voice_studio.refresh older --remove                            # remove the copies of the programs that are no longer in use (lists them and asks first)
 PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window --check             # can the window start here? (needs the system Python: python3-gi, gir1.2-gtk-4.0)
 PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window                     # the window: projects, recordings, rounds, voice file, free up space; every change asks first
 ```
 
 `get` keeps two things apart on purpose: **`--acknowledge`** (or answering `yes` to its first question) says you read where the voice comes from, and **`--yes`** (or its second `yes`) agrees to the download. Neither can stand in for the other.
-Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices), I2 (training rounds), I3 (freeing up space), I4 (the voice file), I5 (the window), I6 (more than one project, and bringing in voice recordings you already have), I8 (hearing the voice before it goes to the phone) and I9 (backing up a project) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
+Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices), I2 (training rounds), I3 (freeing up space), I4 (the voice file), I5 (the window), I6 (more than one project, and bringing in voice recordings you already have), I8 (hearing the voice before it goes to the phone), I9 (backing up a project) and I10 (checking the tool and refreshing it) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
 
 **For an IT department:** `docs/VOICE_STUDIO_IT_GUIDE.md` says what to allow (hosts, ports, packages, disk), what runs and what listens, how to install offline, and what has and has not been tested.
 

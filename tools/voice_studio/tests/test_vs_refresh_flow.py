@@ -9,10 +9,14 @@ from pathlib import Path
 
 import pytest
 
-from vs_refresh_helpers import CAT, SPEECH, VOICE_BYTES, RefreshRig, TermIO
+from dataclasses import replace
+from types import SimpleNamespace
+
+from vs_refresh_helpers import CAT, SPEECH, VOICE_BYTES, RefreshRig, TermIO, ticking
 from vs_rounds_helpers import fake_job
 from vs_startvoice_helpers import implies_permission, leaked_keys
 from voice_studio.core import envbuild as eb, envfind, envgen, projectbackup as pb, refresh as rf, refresh_flow as rff
+from voice_studio.core.describe import error_text
 from voice_studio.core.project import create_project
 from voice_studio.core.paths import ProjectPaths
 
@@ -79,6 +83,10 @@ def test_the_options_each_command_publishes_are_the_options_it_accepts(rig):
         assert code == 2 and "--nonsense" in io.text, command
 
 
+def test_the_published_options_are_exactly_these():
+    assert rff.OPTIONS == {"check": {"--quick"}, "repair": {"--quick", "--yes", "-y"}, "rebuild": {"--yes", "-y", "--programs"}, "older": {"--remove", "--yes", "-y"}}
+
+
 def test_a_word_where_none_is_wanted_is_refused_and_nothing_is_done(rig):
     for command in ("check", "repair", "older"):
         code, io = run(rig, command, "extra")
@@ -95,8 +103,8 @@ def test_a_check_of_everything_in_order_says_each_thing_and_that_all_is_in_order
     assert "  [ok] The programs called demo: Every step is in place and its own check passed." in io.lines
     assert "  [ok] The listening model: It is here and exactly what was agreed." in io.lines
     assert "  [ok] The starting voice Mike: It is here and exactly what was agreed." in io.lines
-    assert "  [ok] What you agreed to download: It can be read." in io.lines
-    assert "  [not here] The window's choices: There is none yet. Nothing is wrong." in io.lines
+    assert "  [ok] The note of what you agreed to download: It can be read." in io.lines
+    assert "  [not here] The note of the window's choices: There is none yet. Nothing is wrong." in io.lines
     assert io.lines[-1] == "Everything that is here is in order." and "needs attention" not in io.text and "need attention" not in io.text
 
 
@@ -119,7 +127,7 @@ def test_a_check_names_each_problem_counts_them_and_says_what_to_run(rig):
     code, io = run(rig, "check")
     assert code == 1
     assert "  [problem] The programs called demo: Its own check failed at this step: imports. Some of its files may be damaged." in io.lines
-    assert "  [problem] The starting voice Mike: The file is not what was agreed." in io.lines and "  [problem] The window's choices: It cannot be read." in io.lines
+    assert "  [problem] The starting voice Mike: The file is not what was agreed." in io.lines and "  [problem] The note of the window's choices: It cannot be read." in io.lines
     assert "3 things need attention." in io.lines
     assert "To mend what can be mended, run: python3 -m voice_studio.refresh repair" in io.lines
     assert "To build a fresh copy of the programs called demo beside the old one, run: python3 -m voice_studio.refresh rebuild --programs demo" in io.lines
@@ -129,7 +137,7 @@ def test_one_problem_is_counted_as_one_and_a_thing_nobody_can_mend_here_gets_no_
     rig = RefreshRig(tmp_path, built=False, system_kw={"python": (3, 9, 0)})
     code, io = run(rig, "check")
     assert code == 1 and "1 thing needs attention." in io.lines and not any(l.startswith("To ") for l in io.lines)
-    assert any("It cannot be looked at:" in l for l in io.lines)
+    assert "  [problem] The programs called demo: It cannot be looked at: The system software that runs this tool is too old for this part. Update Ubuntu, then try again." in io.lines
 
 
 def test_programs_that_are_not_set_up_are_not_a_problem_but_the_way_to_set_them_up_is_said(tmp_path):
@@ -137,6 +145,19 @@ def test_programs_that_are_not_set_up_are_not_a_problem_but_the_way_to_set_them_
     code, io = run(rig, "check")
     assert code == 0 and io.lines[-2] == "Everything that is here is in order." and io.lines[-1] == "To set up the programs called demo, run: python3 -m voice_studio"
     assert "  [not here] The programs called demo: Not set up yet." in io.lines
+
+
+def test_a_note_that_cannot_be_read_alone_is_followed_by_the_repair_command(rig):
+    break_window_note(rig)
+    code, io = run(rig, "check")
+    assert code == 1 and io.lines[-2:] == ["1 thing needs attention.", "To mend what can be mended, run: python3 -m voice_studio.refresh repair"]
+
+
+def test_a_problem_and_programs_not_set_up_are_each_followed_by_their_own_command(tmp_path):
+    rig = RefreshRig(tmp_path, built=False)
+    damage_voice(rig)
+    code, io = run(rig, "check")
+    assert code == 1 and io.lines[-3:] == ["1 thing needs attention.", "To mend what can be mended, run: python3 -m voice_studio.refresh repair", "To set up the programs called demo, run: python3 -m voice_studio"]
 
 
 def test_a_check_changes_nothing_even_when_everything_is_broken(rig):
@@ -175,7 +196,7 @@ def test_the_plan_is_shown_before_the_one_question_and_a_no_changes_nothing(rig)
     said = [t for kind, t in io.events[:ask] if kind == "say"]
     assert "A repair would do this:" in said
     assert "  Fetch the starting voice Mike again. The file in the way is replaced only after the new one has been checked." in said
-    assert "  Set the window's choices aside under another name, beside itself. It is not deleted." in said
+    assert "  Set the note of the window's choices aside under another name, beside itself. It is not deleted." in said
     assert path.read_text() == "garbage"
 
 
@@ -191,7 +212,7 @@ def test_a_note_that_cannot_be_read_is_set_aside_beside_itself_on_a_yes(rig):
     code, io = run(rig, "repair", answers=["yes"])
     moved = str(path) + ".damaged-20261017-093000"
     assert code == 0 and not path.exists() and Path(moved).read_text() == "garbage"
-    assert "  The window's choices was set aside as %s." % moved in io.lines and "Looking again." in io.lines and io.lines[-1] == "Everything that is here is in order."
+    assert "  The note of the window's choices was set aside as %s." % moved in io.lines and "Looking again." in io.lines and io.lines[-1] == "Everything that is here is in order."
 
 
 def test_a_damaged_download_is_fetched_again_and_replaced_only_by_the_checked_file(rig):
@@ -209,6 +230,9 @@ def test_a_download_that_cannot_be_fetched_leaves_the_file_that_was_there_and_sa
     assert code == 1 and rig.voice_path().read_bytes() == b"z" * len(VOICE_BYTES)
     assert "  The starting voice Mike could not be fetched again. The file that was there is as it was." in io.lines
     assert not [l for l in io.lines if "is fetched again" in l]
+    parts = error_text(CAT, "fetch", "connection_lost")
+    start = io.lines.index("  The starting voice Mike could not be fetched again. The file that was there is as it was.")
+    assert len({parts.what, parts.changed, parts.next}) == 3 and io.lines[start + 1:start + 4] == ["  " + parts.what, "  " + parts.changed, "  " + parts.next]
 
 
 def test_a_download_with_no_saved_agreement_is_not_fetched(rig):
@@ -256,7 +280,7 @@ def test_everything_that_can_be_mended_is_mended_in_one_go_and_what_cannot_is_st
     assert [l for l in said if l.startswith("  ") and not l.startswith("  Looking")] == [
         "  Finish the programs called demo: Creating a separate space for the programs, Installing the programs this part needs, Building the part made for this computer. The next screen shows what it will download and asks again.",
         "  Fetch the starting voice Mike again. The file in the way is replaced only after the new one has been checked.",
-        "  Set the window's choices aside under another name, beside itself. It is not deleted."]
+        "  Set the note of the window's choices aside under another name, beside itself. It is not deleted."]
     assert io.lines[-1] == "Everything that is here is in order."
 
 
@@ -326,6 +350,7 @@ def test_the_old_copy_is_offered_for_removal_and_a_no_keeps_it(rig):
     assert code == 0 and os.path.isdir(old)
     assert any(l.startswith("1 old copy of the programs is on the disk:") for l in io.lines) and "The old copy was kept. To remove it later, run: python3 -m voice_studio.refresh older --remove" in io.lines
     assert io.prompts[-1].startswith("Remove this old copy, about ") and io.prompts[-1].endswith("now? Type yes to delete it. ")
+    assert io.prompts[-1] == "Remove this old copy, about %s, now? Type yes to delete it. " % together(io) and not together(io).startswith("0 ")
 
 
 def test_a_yes_to_the_offer_removes_the_old_copy_and_only_that(rig):
@@ -371,6 +396,7 @@ def test_a_switch_that_cannot_be_noted_is_said_and_the_old_copy_stays_in_use(rig
     monkeypatch.setattr(envgen, "write", broken)
     code, io = run(rig, "rebuild", answers=["yes", "no"])
     assert code == 1 and "The new copy is built, but it could not be marked as the one to use." in io.lines and "The old copy is still the one in use, and nothing was removed." in io.lines
+    assert "  Technical detail: No space left on device" in io.lines and not any(l.startswith("  Technical detail") and l != "  Technical detail: No space left on device" for l in io.lines)
     assert eb.environment_dir(rig.spec, rig.env.ctx) == old and envgen.read(rig.home) == {}
 
 
@@ -384,7 +410,7 @@ def test_a_second_rebuild_makes_the_third_copy_and_both_older_ones_are_offered(r
 def test_after_a_rebuild_a_check_looks_at_the_new_copy(rig):
     run(rig, "rebuild", answers=["yes", "no"])
     code, io = run(rig, "check")
-    assert code == 0 and "  [ok] The programs called demo: Every step is in place and its own check passed." in io.lines and "  [ok] Which copy of the programs is in use: It can be read." in io.lines
+    assert code == 0 and "  [ok] The programs called demo: Every step is in place and its own check passed." in io.lines and "  [ok] The note of which copy of the programs is in use: It can be read." in io.lines
 
 
 def test_no_copy_higher_than_the_last_can_be_made(rig):
@@ -412,9 +438,15 @@ def copies(rig, count):
         run(rig, "rebuild", "--yes")
 
 
+def together(io):
+    """The size the list says all the old copies take together."""
+    line = next(l for l in io.lines if l.startswith("Together they take "))
+    return line[len("Together they take "):].split(". They can be built again")[0]
+
+
 def test_with_no_old_copy_it_says_so(rig):
     code, io = run(rig, "older")
-    assert code == 0 and "No old copies of the programs are on the disk." in io.lines and io.prompts == []
+    assert code == 0 and "No old copies of the programs are on the disk." in io.lines and io.prompts == [] and "left alone" not in io.text
 
 
 def test_folders_it_did_not_make_are_counted_and_left_alone(rig):
@@ -452,6 +484,7 @@ def test_removing_asks_and_a_no_removes_nothing(rig):
     copies(rig, 1)
     code, io = run(rig, "older", "--remove", answers=["no"])
     assert code == 2 and os.path.isdir(old) and "Nothing was done." in io.lines and io.prompts[0].startswith("Remove this old copy, about ")
+    assert io.prompts[0] == "Remove this old copy, about %s, now? Type yes to delete it. " % together(io) and not together(io).startswith("0 ") and "left alone" not in io.text
 
 
 def test_a_yes_removes_the_old_copy_and_says_how_much_room_came_back(rig):
@@ -459,7 +492,7 @@ def test_a_yes_removes_the_old_copy_and_says_how_much_room_came_back(rig):
     copies(rig, 1)
     code, io = run(rig, "older", "--remove", answers=["yes"])
     assert code == 0 and not os.path.exists(old) and any(l.startswith("Done. 1 old copy was removed. About ") and l.endswith("is free again.") for l in io.lines)
-    assert "No old copies of the programs are on the disk." in run(rig, "older")[1].lines
+    assert "No old copies of the programs are on the disk." in run(rig, "older")[1].lines and "These could not be removed:" not in io.text
 
 
 def test_dash_dash_yes_answers_the_question_of_an_older_remove(rig):
@@ -537,3 +570,164 @@ def test_the_command_can_be_started_from_a_terminal(capsys):
     assert refresh.main(["help"]) == 0
     assert "ACK Voice Studio: refresh" in capsys.readouterr().out
 
+
+
+# ---------------------------------------------------------------- what a mutation run found untested
+
+def a_finding(reason, detail="", steps=(), fix="rebuild", status=rf.PROBLEM, subject="studio"):
+    return rf.Finding("programs:" + subject, rf.PROGRAMS, subject, status, reason, fix, detail, tuple(steps))
+
+
+def test_a_probe_is_named_in_words_when_the_catalog_has_them_and_as_it_is_when_it_does_not():
+    assert rff.reason_text(CAT, a_finding("probe_failed", "studio-imports")) == "Its own check failed at this step: The recording and review tools open. Some of its files may be damaged."
+    assert rff.reason_text(CAT, a_finding("probe_failed", "mystery-probe")) == "Its own check failed at this step: mystery-probe. Some of its files may be damaged."
+    untried = a_finding("ready_untried", "studio-imports, mystery-probe, trainer-graphics-card", status=rf.GOOD, fix="")
+    assert rff.reason_text(CAT, untried) == ("Every step is in place and its own check passed. Not tried on this computer: "
+                                             "The recording and review tools open, mystery-probe, The training program can use the graphics card.")
+
+
+def test_a_reason_the_programs_could_not_be_looked_at_is_the_sentence_in_two_parts_or_the_code_when_there_are_no_words():
+    assert rff.reason_text(CAT, a_finding("cannot_build", "python_old")) == "It cannot be looked at: The system software that runs this tool is too old for this part. Update Ubuntu, then try again."
+    assert rff.reason_text(CAT, a_finding("cannot_build", "no_words_for_this")) == "It cannot be looked at: no_words_for_this"
+    assert rff.reason_text(CAT, a_finding("cannot_build", "")) == "It cannot be looked at: "
+
+
+def test_programs_whose_last_step_was_done_but_never_checked_are_finished_by_the_check_alone(rig):
+    record = json.loads(Path(rig.env.paths.record).read_text())
+    record["state"] = "building"
+    Path(rig.env.paths.record).write_text(json.dumps(record))
+    code, io = run(rig, "repair", answers=["no"])
+    ask = io.events.index(("ask", io.prompts[0]))
+    said = [t for kind, t in io.events[:ask] if kind == "say"]
+    assert code == 2 and "  Finish the programs called demo: Checking it works. The next screen shows what it will download and asks again." in said
+
+
+def test_a_quick_repair_does_not_run_the_programs_own_check_before_or_after(rig):
+    rig.system.bad_probe_codes = {"import os"}
+    damage_voice(rig)
+    rig.system.probe_runs.clear()
+    code, io = run(rig, "repair", "--quick", "--yes")
+    assert code == 0 and rig.system.probe_runs == [] and rig.voice_path().read_bytes() == VOICE_BYTES
+    assert "  Looking at the programs called demo." not in io.lines and "Nothing needs repair." not in io.lines
+
+
+def test_a_full_repair_runs_the_programs_own_check_before_and_after(rig):
+    rig.system.probe_runs.clear()
+    run(rig, "check")
+    once = len(rig.system.probe_runs)
+    damage_voice(rig)
+    rig.system.probe_runs.clear()
+    run(rig, "repair", "--yes")
+    assert once > 0 and len(rig.system.probe_runs) == 2 * once
+
+
+def test_nothing_found_to_fetch_is_said_and_nothing_is_fetched(rig, monkeypatch):
+    damage_voice(rig)
+    monkeypatch.setattr(rf, "items_to_fetch", lambda home, registry, findings: [])
+    code, io = run(rig, "repair", "--yes")
+    assert code == 1 and rig.fetched == [] and "  Nothing could be found to fetch for The starting voice Mike." in io.lines
+    assert not [l for l in io.lines if "is fetched again" in l] and rig.voice_path().read_bytes() == b"z" * len(VOICE_BYTES)
+
+
+def test_dash_dash_yes_on_a_repair_does_not_answer_the_builders_own_question(rig):
+    shutil.rmtree(rig.env.paths.venv)
+    code, io = run(rig, "repair", "--yes", answers=["yes"])
+    assert code == 0 and io.prompts == ["Download and set it up now? Type yes to go on. "] and eb.inspect(rig.spec, rig.env.ctx).state == "ready"
+
+
+def many_sets(rig, ids):
+    return [replace(rig.spec, id=i) for i in ids]
+
+
+def run_with(rig, specs, *argv, answers=(), monkeypatch=None):
+    io = TermIO(answers, True)
+    built = []
+
+    def stub_build(options, *rest):
+        built.append(options.env_id)
+        return 0
+    monkeypatch.setattr(rff, "run_build_env", stub_build)
+    monkeypatch.setattr(rff.envbuild, "inspect", lambda spec, ctx: SimpleNamespace(state="ready"))
+    code = rff.run_refresh(list(argv), rig.home, CAT, io, system=rig.system, registry=rig.registry, specs=specs, networked=rig.env.doors.networked, clock=ticking(), seams=rig.seams)
+    return code, io, built
+
+
+def test_a_rebuild_goes_through_the_sets_in_the_order_of_the_first_setup_and_the_unnamed_ones_last(rig, monkeypatch):
+    specs = many_sets(rig, ["aaa", "training", "studio"])
+    code, io, built = run_with(rig, specs, "rebuild", "--yes", monkeypatch=monkeypatch)
+    assert code == 0 and built == ["studio", "training", "aaa"] and envgen.read(rig.home) == {"studio": 1, "training": 1, "aaa": 1}
+
+
+def test_a_rebuild_of_one_named_set_builds_that_one_only(rig, monkeypatch):
+    specs = many_sets(rig, ["aaa", "training", "studio"])
+    code, io, built = run_with(rig, specs, "rebuild", "--yes", "--programs", "training", monkeypatch=monkeypatch)
+    assert code == 0 and built == ["training"] and envgen.read(rig.home) == {"training": 1}
+
+
+def test_when_there_is_no_old_copy_to_offer_nothing_is_asked_after_a_rebuild(rig, monkeypatch):
+    code, io, built = run_with(rig, many_sets(rig, ["studio"]), "rebuild", "--yes", monkeypatch=monkeypatch)
+    assert code == 0 and io.prompts == [] and "of the programs is on the disk" not in io.text and "of the programs are on the disk" not in io.text
+
+
+def test_an_old_copy_that_cannot_be_removed_after_a_rebuild_fails_the_command_and_says_why(rig):
+    old = rig.env.env_dir
+    os.makedirs(rig.home.jobs, exist_ok=True)
+    fake_job(rig.home.jobs, ["x"], "running", project="voice-check")
+    code, io = run(rig, "rebuild", "--yes", answers=["yes"])
+    assert code == 1 and os.path.isdir(old) and envgen.read(rig.home) == {"demo": 1}
+    assert io.lines[-3:] == ["A task is running, and it may be using one of the old copies.", "Nothing was removed.", "Wait for the task to finish, or stop it, then try again."]
+
+
+def older_of(count):
+    return rf.Older(tuple(rf.OlderCopy("/old/%02d" % i, "demo", 1000 + i, 3, "ready", "") for i in range(count)), 0, ())
+
+
+def test_exactly_ten_old_copies_are_all_listed_with_no_more_line_and_eleven_have_one():
+    io = TermIO()
+    rff._say_older(older_of(10), CAT, io)
+    assert len([l for l in io.lines if l.startswith("  /old/")]) == 10 and not any(l.startswith("  And") for l in io.lines)
+    io = TermIO()
+    rff._say_older(older_of(11), CAT, io)
+    assert len([l for l in io.lines if l.startswith("  /old/")]) == 10 and "  And 1 more." in io.lines
+
+
+def test_only_ten_folders_that_could_not_be_removed_are_listed(monkeypatch):
+    failed = tuple(("/old/%02d" % i, "Permission denied") for i in range(12))
+    monkeypatch.setattr(rf, "remove_older", lambda home, specs, ctx, shown: rf.Removed((), failed))
+    io = TermIO()
+    assert rff._remove_older(older_of(12), None, [], None, CAT, io) == 1
+    assert [l for l in io.lines if l.startswith("  /old/")] == ["  /old/%02d: Permission denied" % i for i in range(10)] and "These could not be removed:" in io.lines
+
+
+def test_ctrl_c_stops_cleanly_says_so_and_is_not_a_success(rig, monkeypatch):
+    def interrupt(*args, **kwargs):
+        raise KeyboardInterrupt
+    monkeypatch.setattr(rf, "look", interrupt)
+    code, io = run(rig, "check")
+    assert code == 1 and io.lines[-1] == "Stopped. What was finished is kept, and the same command carries on."
+
+
+def test_a_build_that_goes_wrong_stops_the_ones_after_it_but_one_that_was_declined_does_not(rig, monkeypatch):
+    specs = many_sets(rig, ["training", "studio"])
+    monkeypatch.setattr(rff.envbuild, "inspect", lambda spec, ctx: SimpleNamespace(state="needs_work", stale=("venv",), env_dir="/nowhere"))
+    for codes, expected in (((1, 0), ["studio"]), ((2, 0), ["studio", "training"])):
+        built = []
+
+        def stub_build(options, *rest):
+            built.append(options.env_id)
+            return codes[len(built) - 1]
+        monkeypatch.setattr(rff, "run_build_env", stub_build)
+        io = TermIO()
+        code = rff.run_refresh(["repair", "--yes"], rig.home, CAT, io, system=rig.system, registry=rig.registry, specs=specs, networked=rig.env.doors.networked, clock=ticking(), seams=rig.seams)
+        assert built == expected and code == 1, codes
+
+
+def test_when_a_download_cannot_be_fetched_the_rest_of_that_download_is_not_tried_and_it_is_not_called_fetched(tmp_path):
+    rig = RefreshRig(tmp_path)
+    for name in SPEECH:
+        (Path(envfind.speech_places(rig.home)[0]) / name).write_bytes(b"zz")
+    import urllib.error
+    rig.opener.fail_with = urllib.error.HTTPError("https://huggingface.co/x", 503, "unavailable", {}, None)
+    code, io = run(rig, "repair", "--yes")
+    assert code == 1 and len([l for l in io.lines if l.endswith("could not be fetched again. The file that was there is as it was.")]) == 1
+    assert not [l for l in io.lines if "is fetched again" in l] and len([l for l in io.lines if l == "  Fetching the listening model."]) == 1

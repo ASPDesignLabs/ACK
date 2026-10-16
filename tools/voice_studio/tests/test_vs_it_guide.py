@@ -272,3 +272,34 @@ def test_the_page_says_a_backup_is_personal_data_not_encrypted_and_not_sent_anyw
     assert "Backing up a project (`python3 -m voice_studio.backup`)" in eleven and "checklist section I9" in eleven and "a folder that a cloud service really synchronises" in eleven
     assert "so a backup kept there is deleted with it" in twelve and "`--to`" in twelve
 
+
+# ---------------------------------------------------------------- checking the tool and refreshing it (plan task VS-6.6)
+
+def test_the_page_describes_refresh_the_way_the_code_does():
+    from voice_studio.core import envgen, refresh_flow
+    text = section(7)
+    for command in refresh_flow.COMMANDS:
+        if command != "help":
+            assert "python3 -m voice_studio.refresh %s" % command in text or "`%s`" % command in text or "%s --remove" % command in text, command
+    assert "`state/%s`" % envgen.FILE in text
+    for claim in ("writing nothing, not even to its log", "byte for byte", "reaches no network", "never deletes, a note that cannot be read", "a **second whole copy**", "a generation number",
+                  "the old copy stays in use until then", "`--yes` does not answer it", "never one that is being built", "never while a task is running", "only the list that was shown",
+                  "None of it touches a project, a recording, a round, a finished voice or a backup."):
+        assert claim in text, claim
+    assert "Checking and refreshing the tool (`python3 -m voice_studio.refresh`)" in section(11) and "checklist section I10" in section(11)
+
+
+def test_the_check_and_the_list_of_old_copies_reach_no_network_and_only_a_repair_fetches():
+    import ast
+    def uses(path, module):
+        return sorted({node.attr for node in ast.walk(ast.parse((PKG / path).read_text())) if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == module})
+    assert uses("core/refresh.py", "fetch") == ["is_fetched"], "the library only reads the disk against what was agreed"
+    assert uses("core/refresh_flow.py", "fetch") == ["FetchError", "fetch_patiently"]
+    flow = ast.parse((PKG / "core/refresh_flow.py").read_text())
+    callers = {fn.name for fn in ast.walk(flow) if isinstance(fn, ast.FunctionDef) and any(isinstance(n, ast.Attribute) and n.attr == "fetch_patiently" for n in ast.walk(fn))}
+    assert callers == {"_fetch_again"}
+    for name in ("core/refresh.py", "core/refresh_flow.py", "core/envgen.py", "refresh.py"):
+        imports = " ".join(re.findall(r"^\s*(?:from|import)\s+([A-Za-z_.]+)", (PKG / name).read_text(), flags=re.M))
+        for banned in ("socket", "urllib", "http", "requests", "ssl", "ftplib", "smtplib", "webbrowser", "subprocess"):
+            assert not re.search(r"(^| )%s(\.|$| )" % banned, imports), (name, banned)
+

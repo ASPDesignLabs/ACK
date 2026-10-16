@@ -545,3 +545,138 @@ def test_a_project_whose_record_of_rounds_cannot_be_read_is_left_out(rig):
 
 def test_with_no_projects_there_is_nobody_to_advise(rig):
     assert rf.unprotected(rig.home) == ()
+
+
+# ---------------------------------------------------------------- the edges found by breaking the library on purpose
+
+def test_a_note_that_is_a_link_to_nothing_is_there_and_cannot_be_read(rig):
+    path = Path(rf.note_path(rig.home, "window"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    os.symlink(str(path) + ".missing", str(path))
+    f = finding(rig.look(), "note:window")
+    assert (f.status, f.reason, f.fix) == (rf.PROBLEM, "unreadable", "set_aside")
+
+
+def test_a_repair_is_planned_from_the_fix_each_problem_names_and_never_from_what_is_not_a_problem():
+    def problem(fix, n):
+        return rf.Finding("programs:p%d" % n, rf.PROGRAMS, "p%d" % n, rf.PROBLEM, "damaged_record", fix)
+    absent = rf.Finding("programs:gone", rf.PROGRAMS, "gone", rf.ABSENT, "not_set_up", "setup")
+    report = rf.Report(tuple(problem(fix, n) for n, fix in enumerate(rf.FIXES)) + (absent,))
+    plan = rf.plan_repair(report)
+    assert tuple(f.fix for f in plan.resume) == ("resume",) and tuple(f.fix for f in plan.fetch) == ("fetch",) and tuple(f.fix for f in plan.set_aside) == ("set_aside",)
+    assert sorted(f.fix for f in plan.needs_more) == ["", "rebuild", "setup"], "a problem nothing here can mend is named, whatever fix it carries"
+    assert report.of("setup") == tuple(f for f in report.problems if f.fix == "setup") and len(report.of("setup")) == 1 and absent not in report.of("setup") and absent not in plan.needs_more and plan.work
+
+
+def test_a_problem_that_nothing_here_can_mend_is_named_by_a_repair(tmp_path):
+    rig = RefreshRig(tmp_path, built=False, system_kw={"python": (3, 9, 0)})
+    plan = rf.plan_repair(rig.look())
+    assert [(f.reason, f.fix) for f in plan.needs_more] == [("cannot_build", "")] and not plan.work
+    ok = RefreshRig(tmp_path / "second")
+    record = Path(ok.env.paths.record)
+    record.write_text(json.dumps(dict(json.loads(record.read_text()), schema=99)))
+    assert [(f.reason, f.fix) for f in rf.plan_repair(ok.look()).needs_more] == [("newer_record", "")]
+
+
+def test_the_time_in_the_name_of_a_set_aside_note_is_utc_whatever_clock_was_given(rig):
+    from datetime import timedelta
+    path = Path(rf.note_path(rig.home, "window"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("x")
+    plus_two = datetime(2026, 10, 17, 12, 0, 0, tzinfo=timezone(timedelta(hours=2)))
+    assert rf.set_aside(rig.home, "window", plus_two).endswith(".damaged-20261017-100000")
+
+
+def test_with_no_folder_of_programs_at_all_nothing_is_old_and_nothing_is_left_alone(tmp_path):
+    rig = RefreshRig(tmp_path, built=False)
+    older = rf.older_copies(rig.home, [rig.spec], rig.env.ctx)
+    assert older.copies == () and older.left_alone == 0
+
+
+def test_a_link_with_the_name_of_a_copy_is_left_alone_even_when_what_it_points_to_is_a_whole_copy(rig):
+    old = Path(rig.env.env_dir)
+    elsewhere = Path(rig.home.root) / "elsewhere"
+    shutil.copytree(old, elsewhere, symlinks=True)
+    build_next(rig)
+    envgen.write(rig.home, "demo", 1)
+    record = json.loads((old / eb.RECORD_NAME).read_text())
+    link = Path(rig.home.environments) / ("demo-" + record["fingerprint"][:10])
+    shutil.rmtree(old)
+    os.symlink(str(elsewhere), str(link))
+    older = rf.older_copies(rig.home, [rig.spec], rig.env.ctx)
+    assert older.copies == () and older.left_alone == 1 and elsewhere.is_dir()
+
+
+def test_a_folder_with_the_name_and_record_of_programs_this_tool_is_not_asked_about_is_left_alone(rig):
+    other = Path(rig.home.environments) / "other-0123456789"
+    other.mkdir()
+    (other / eb.RECORD_NAME).write_text(json.dumps({"schema": 1, "id": "other", "fingerprint": "0123456789" + "a" * 54, "steps": {}, "patches": {}, "state": "ready"}))
+    older = rf.older_copies(rig.home, [rig.spec], rig.env.ctx)
+    assert older.copies == () and older.left_alone == 1 and other.is_dir()
+
+
+def test_what_a_copy_takes_counts_plain_files_only_and_never_follows_a_link(rig, tmp_path):
+    old = Path(rig.env.env_dir)
+    base_size, base_files = rf._tree(str(old))
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "big.bin").write_bytes(b"x" * 5000)
+    (old / "link-to-a-file").symlink_to(outside / "big.bin")
+    (old / "link-to-a-folder").symlink_to(outside)
+    (old / "plain.txt").write_bytes(b"y" * 10)
+    assert rf._tree(str(old)) == (base_size + 10, base_files + 1)
+
+
+def test_copies_are_listed_in_the_order_of_their_names_whatever_order_the_disk_gives(rig, monkeypatch):
+    build_next(rig, 1)
+    build_next(rig, 2)
+    envgen.write(rig.home, "demo", 2)
+    real = os.listdir
+    monkeypatch.setattr(os, "listdir", lambda path: list(reversed(real(path))) if str(path) == rig.home.environments else real(path))
+    names = [c.folder for c in rf.older_copies(rig.home, [rig.spec], rig.env.ctx).copies]
+    assert names == sorted(names) and len(names) == 2
+
+
+@pytest.mark.parametrize("status", ["starting", "running", "stopping"])
+def test_a_task_that_is_starting_running_or_stopping_each_stops_the_removal(rig, status):
+    old, new = two_copies(rig)
+    shown = rf.older_copies(rig.home, [rig.spec], rig.env.ctx).copies
+    os.makedirs(rig.home.jobs, exist_ok=True)
+    fake_job(rig.home.jobs, ["x"], status, project="voice-check")
+    assert code_of(rf.remove_older, rig.home, [rig.spec], rig.env.ctx, shown) == "job_running" and os.path.isdir(old)
+
+
+def test_a_copy_swapped_for_a_file_after_the_list_was_made_is_not_removed_and_is_said_not_to_be_an_old_copy(rig):
+    old, new = two_copies(rig)
+    shown = rf.older_copies(rig.home, [rig.spec], rig.env.ctx).copies
+    real = rf.older_copies
+
+    def swapped(home, specs, ctx):
+        found = real(home, specs, ctx)
+        shutil.rmtree(old)
+        Path(old).write_text("a file now")
+        return found
+    rf.older_copies = swapped
+    try:
+        result = rf.remove_older(rig.home, [rig.spec], rig.env.ctx, shown)
+    finally:
+        rf.older_copies = real
+    assert result.removed == () and result.failed == ((old, "it is no longer an old copy"),) and Path(old).read_text() == "a file now"
+
+
+def test_a_copy_that_the_second_look_says_is_now_the_one_in_use_is_not_removed(rig, monkeypatch):
+    old, new = two_copies(rig)
+    shown = rf.older_copies(rig.home, [rig.spec], rig.env.ctx).copies
+    real = rf.older_copies
+    monkeypatch.setattr(rf, "older_copies", lambda home, specs, ctx: rf.Older(real(home, specs, ctx).copies, 0, (old,)))
+    result = rf.remove_older(rig.home, [rig.spec], rig.env.ctx, shown)
+    assert result.removed == () and result.failed == ((old, "it is no longer an old copy"),) and os.path.isdir(old)
+
+
+def test_the_room_that_comes_back_is_what_the_copies_take_when_they_are_removed_not_when_they_were_shown(rig):
+    old, new = two_copies(rig)
+    shown = rf.older_copies(rig.home, [rig.spec], rig.env.ctx).copies
+    Path(old, "more.bin").write_bytes(b"z" * 7000)
+    result = rf.remove_older(rig.home, [rig.spec], rig.env.ctx, shown)
+    assert result.bytes == shown[0].bytes + 7000 and [c.bytes for c in result.removed] == [shown[0].bytes + 7000]
+
