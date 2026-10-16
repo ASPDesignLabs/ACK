@@ -1071,3 +1071,43 @@ def test_free_in_a_damaged_record_changes_nothing(rig):
         code, io = rig.run(*argv, "--project", "anna")
         assert code == 1 and "damaged" in io.text
     assert Path(rig.paths.rounds_file).read_text() == "{broken"
+
+
+# ---------------------------------------------------------------- the reminder to back up before training (plan D7)
+
+def _back_up(rig, tmp_path):
+    from voice_studio.core import projectbackup as pb
+    plan = pb.plan_backup(rig.paths, rig.home, "anna", str(tmp_path / "bk"), None)
+    made = pb.create(plan, rig.paths, NOW)
+    pb.record_backup(rig.home, made, "anna", plan.destination)
+
+
+def test_starting_a_round_reminds_the_person_to_back_up_before_it_asks_and_does_not_stop_it(rig):
+    rig.world.dataset()
+    code, io = rig.run(*start_args(), answers=["yes"])
+    reminder = "Anna has not been backed up yet. A backup keeps the recordings and notes safe if something goes wrong with this computer. To make one, run: python3 -m voice_studio.backup now --project anna"
+    assert code == 0 and len(rig.started) == 1
+    assert reminder in io.lines and io.events.index(("say", reminder)) < next(i for i, e in enumerate(io.events) if e[0] == "ask")
+
+
+def test_after_a_backup_the_reminder_is_gone_until_something_precious_changes(rig, tmp_path):
+    rig.world.dataset()
+    _back_up(rig, tmp_path)
+    _code, io = rig.run(*start_args(), answers=["no"])
+    assert "backed up" not in io.text and "last backup" not in io.text
+    rig.world.run_round(version=0)
+    _code, io = rig.run(*start_args(), answers=["no"])
+    assert "Anna has changed since the last backup, made on 2026-10-11 12:00:00 UTC." in io.text
+
+
+def test_the_reminder_is_not_printed_when_the_round_cannot_start_anyway(rig):
+    rig.world.dataset()
+    rig.set_free(1)
+    _code, io = rig.run(*start_args(), answers=["yes"])
+    assert "backed up" not in io.text and rig.started == []
+
+
+def test_a_reminder_writes_nothing(rig):
+    rig.world.dataset()
+    rig.run(*start_args(), answers=["no"])
+    assert not os.path.exists(rig.home.state + "/backups.json") and not os.path.exists(rig.home.backups)

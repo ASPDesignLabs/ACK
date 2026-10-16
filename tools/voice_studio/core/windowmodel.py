@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence, Tuple
 
 from . import commands, freeup, jobs, recordings as rec, rounds as rd, voicefile as vf
+from .backup_flow import run_backup
 from .describe import error_text
 from .paths import DataHome, ProjectPaths
 from .project import OWN, SOMEONE_ELSE, Consent, Project, list_projects
@@ -28,7 +29,7 @@ from .system import RealSystem, System
 from .text import Catalog, size_text
 from .voicefile_flow import run_voicefile
 
-TOOLS = ("projects", "recordings", "rounds", "voicefile")
+TOOLS = ("projects", "recordings", "rounds", "voicefile", "backup")
 MAX_NOTE_SHOWN = 500
 MAX_TABLE_NAME = 200
 NEXT_WORDS = {"import": "window.recordings.next_import", "wait": "window.recordings.next_wait", "finish": "window.recordings.next_finish", "set": "window.recordings.next_set"}
@@ -54,7 +55,7 @@ class Services:
     studio: Studio = no_studio
 
     def titles(self) -> Tuple[str, ...]:
-        return (self.cat.t("projects.title"), self.cat.t("recordings.title"), self.cat.t("rounds.title"), self.cat.t("voicefile.title"))
+        return (self.cat.t("projects.title"), self.cat.t("recordings.title"), self.cat.t("rounds.title"), self.cat.t("voicefile.title"), self.cat.t("backup.title"))
 
     def run(self, tool: str, argv: Sequence[str], io) -> int:
         if tool == "projects":
@@ -65,6 +66,8 @@ class Services:
             return run_rounds(argv, self.home, self.registry, self.cat, io, training=self.training, system=self.system)
         if tool == "voicefile":
             return run_voicefile(argv, self.home, self.registry, self.cat, io, training=self.training, system=self.system, tools_dir=self.tools_dir, studio=self.studio)
+        if tool == "backup":
+            return run_backup(argv, self.home, self.cat, io, system=self.system)
         raise ValueError("unknown tool: " + tool)
 
 

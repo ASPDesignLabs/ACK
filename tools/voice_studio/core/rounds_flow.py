@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from . import commands, freeup, jobs, rounds as rd, startvoice as sv, trainguard as tg
+from .backupnudge import nudge_lines as backup_nudge
 from .buildenv_flow import duration_text
 from .diskbudget import DEFAULT_TABLE, MIB, DriveMap, Level, Role, Watch, floors_for, watch as disk_watch
 from .cliargs import ArgError, Parsed, parse_args
@@ -501,6 +502,8 @@ def _start(args: Sequence[str], home: DataHome, registry: Registry, training: Tr
             io.say("  " + cat.t("rounds.start.disk_ok", free=size_text(drive.free), need=size_text(drive.need)))
     if Level.NOT_ENOUGH in (room.level, disk.level):
         return EXIT_NOTHING_DONE                                          # said above, in words, with nothing started; --yes does not get past this
+    for line in backup_nudge(home, ctx.project, ctx.paths, cat, record):      # a reminder before training, never a stop (plan D7)
+        io.say(line)
     declined = _confirmed(parsed, cat.t("rounds.start.question", number=plan.number), cat, io)
     if declined is not None:
         return declined

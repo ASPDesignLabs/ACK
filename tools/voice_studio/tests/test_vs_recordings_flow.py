@@ -1122,3 +1122,45 @@ def test_from_a_folder_of_files_to_a_training_set_with_a_real_job_and_the_real_b
     assert code == 0 and "The training set is ready." in io.lines, io.text
     rows, size = commands.dataset_size(anna.root + "/scratch/datasets/dataset-20261011-123000")
     assert rows >= 1 and size > 0
+
+
+# ---------------------------------------------------------------- the reminder to back up (plan D7: nudged hard after recording)
+
+def _backed_up(home, anna, tmp_path):
+    from voice_studio.core import projectbackup as pb
+    plan = pb.plan_backup(anna, home, "anna", str(tmp_path / "bk"), None)
+    made = pb.create(plan, anna, NOW)
+    pb.record_backup(home, made, "anna", plan.destination)
+
+
+NEVER = "Anna has not been backed up yet. A backup keeps the recordings and notes safe if something goes wrong with this computer. To make one, run: python3 -m voice_studio.backup now --project anna"
+
+
+@needs_ffmpeg
+def test_bringing_audio_files_in_reminds_the_person_to_back_up_before_the_next_step(home, anna, tmp_path):
+    _code, io = go(home, "import", str(audio_folder(tmp_path, 2)), "--kind", "audio", answers=["yes"])
+    assert NEVER in io.lines
+    assert io.lines.index(NEVER) < next(i for i, l in enumerate(io.lines) if l.startswith("Next, let the computer listen")) == len(io.lines) - 1
+
+
+@needs_ffmpeg
+def test_the_reminder_says_when_the_last_backup_was_if_the_project_has_changed_since(home, anna, tmp_path):
+    _backed_up(home, anna, tmp_path)
+    _code, io = go(home, "import", str(audio_folder(tmp_path, 2)), "--kind", "audio", answers=["yes"])
+    assert "Anna has changed since the last backup, made on 2026-10-11 12:30:00 UTC. To back up again, run: python3 -m voice_studio.backup now --project anna" in io.lines
+    assert NEVER not in io.lines
+
+
+@needs_ffmpeg
+def test_no_reminder_is_printed_when_nothing_was_added_and_nothing_is_written_for_it(home, anna, tmp_path):
+    folder = tmp_path / "empty"
+    folder.mkdir()
+    _code, io = go(home, "import", str(folder), "--kind", "audio", answers=["yes"])
+    assert "has not been backed up" not in io.text
+    assert not os.path.exists(home.state + "/backups.json")
+
+
+def test_bringing_a_package_in_reminds_the_person_too(home, anna, tmp_path):
+    package = make_package(tmp_path)
+    _code, io = go(home, "import", str(package), "--kind", "package", "--yes")
+    assert NEVER in io.lines and io.lines.index(NEVER) < len(io.lines) - 1 and not os.path.exists(home.state + "/backups.json")

@@ -392,6 +392,18 @@ def test_the_projects_command_is_one_of_the_tools_and_its_heading_is_the_windows
     assert "projects" in wm.TOOLS and CAT.t("projects.title") in full_services(rig).titles()
 
 
+def test_the_backup_command_is_one_of_the_tools_and_the_window_can_run_it_with_its_own_heading(rig, tmp_path):
+    svc = full_services(rig)
+    assert "backup" in wm.TOOLS and CAT.t("backup.title") in svc.titles() and len(svc.titles()) == len(wm.TOOLS)
+    dest = tmp_path / "away"
+    dest.mkdir()
+    sink = Script()
+    wio.start_run(lambda io: svc.run("backup", ["now", "--to", str(dest), "--yes"], io), sink, svc.titles())
+    assert sink.done.wait(30)
+    code, lines = sink.result
+    assert code == 0 and sink.questions == [] and [n for n in os.listdir(dest) if n.endswith(".tar")] != []
+
+
 # ---------------------------------------------------------------- recordings from the window
 
 def press_recordings(rig, button, sink):

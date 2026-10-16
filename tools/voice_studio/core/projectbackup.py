@@ -47,6 +47,7 @@ from . import ackimport, commands, rounds as rd, voicefile as vf
 from .diskbudget import DEFAULT_TABLE, MIB, Level, check_step, floors_for
 from .paths import DataHome, ProjectPaths
 from .scratch import PROJECT_ID
+from .system import System
 
 SCHEMA = 1
 MANIFEST = "MANIFEST.json"
@@ -65,7 +66,7 @@ PARTS = ("record", "recordings", "packages", "rounds", "saved_points", "exports"
 PART_AREA = {"record": "record", "recordings": "recordings", "packages": "recordings", "rounds": "rounds", "saved_points": "rounds", "exports": "exports"}
 LEFT_OUT = ("scratch", "listening", "older_saved_points", "saved_points")                # what a backup does not hold, with words under `backup.left_out.<id>`
 ERROR_CODES = ("bad_destination", "inside_project", "not_a_folder", "nothing_to_back_up", "no_room", "busy", "write_failed", "changed", "not_read_back", "no_such_backup", "damaged",
-               "not_a_backup", "unsafe", "job_running", "not_a_project", "exists_elsewhere")                                  # each has words in the text catalog
+               "not_a_backup", "unsafe", "job_running", "not_a_project")                                  # each has words in the text catalog
 SAVED_POINT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.=-]{0,119}\.ckpt\Z")
 CONFIG_FILE = re.compile(r"round-\d{3,6}\.json\Z")
 
@@ -439,11 +440,12 @@ def _write_archive(partial: str, items: Sequence[Item], project_id: str, now: da
     return manifest
 
 
-def create(plan: BackupPlan, paths: ProjectPaths, now: Optional[datetime] = None, progress: Optional[Callable[[str, int, int], None]] = None) -> BackupMade:
+def create(plan: BackupPlan, paths: ProjectPaths, now: Optional[datetime] = None, progress: Optional[Callable[[str, int, int], None]] = None,
+           record: Optional[rd.Record] = None) -> BackupMade:
     """Make the backup the plan described, from the files as they are now. Written as `.partial`, read back in full and compared, then given its real name; any failure removes the
     partial and raises BackupError, leaving every earlier backup and the project exactly as they were."""
     now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    items, skipped = collect(paths, None, plan.saved_points)
+    items, skipped = collect(paths, record, plan.saved_points)
     if not items:
         raise BackupError("nothing_to_back_up")
     folder = plan.destination
@@ -459,6 +461,9 @@ def create(plan: BackupPlan, paths: ProjectPaths, now: Optional[datetime] = None
         try:
             with private_umask():
                 _write_archive(partial, items, plan.project_id, now, progress)
+            if progress is not None:
+                total = sum(i.size for i in items)
+                progress("read_back", total, total)
             problems, _manifest = verify(partial, check_names=True)
             if problems:
                 raise BackupError("not_read_back", "", problems[:5])
@@ -827,3 +832,22 @@ def _write_one(tar: tarfile.TarFile, member: tarfile.TarInfo, item: Planned) -> 
 def _temp_in(folder: str) -> Tuple[int, str]:
     import tempfile
     return tempfile.mkstemp(prefix=".restore-", suffix=".part", dir=folder)
+
+
+# ---------------------------------------------------------------- a better place, on WSL
+
+WINDOWS_USERS = "/mnt/c/Users"
+NOT_A_PERSON = ("public", "default", "default user", "all users", "defaultapppool")
+
+
+def windows_side_folder(system: System) -> Optional[str]:
+    """Under WSL, a folder on the Windows side (outside Documents and OneDrive) where a backup would survive the Linux disk failing, named only when the Windows user can be told
+    (exactly one real user folder). Looks only; nothing is made."""
+    from .playback import is_wsl
+    if not is_wsl(system):
+        return None
+    people = [n for n in (system.listdir(WINDOWS_USERS) or []) if n.lower() not in NOT_A_PERSON and not n.startswith((".", "$")) and system.is_dir(WINDOWS_USERS + "/" + n)]
+    if len(people) != 1:
+        return None
+    folder = "%s/%s/ACK Voice Studio backups" % (WINDOWS_USERS, people[0])
+    return None if sync_warning(Path(folder), "x") else folder
