@@ -15,9 +15,10 @@ from .core.paths import DataHome
 from .core.registry import load_registry
 from .core.text import load_catalog
 from .core.voices_flow import run_voices
-from .__main__ import TerminalIO
+from .__main__ import TerminalIO, reports_failures
 
 
+@reports_failures("voices")
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     return run_voices(args, DataHome(os.path.expanduser("~")), load_registry(), load_catalog("en"), TerminalIO(), sleep=time.sleep, clock=time.monotonic)

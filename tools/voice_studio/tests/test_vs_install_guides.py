@@ -18,7 +18,7 @@ import pytest
 import test_vs_device_test_doc as device_doc
 import test_vs_text as wording
 from voice_studio.core import diskbudget, envspec, preflight, registry as reg, setupplan as sp, startvoice
-from voice_studio.core import projects_flow as pf, voices_flow as vf, recordings_flow as rf, uninstall_flow as uf, update_flow as upf, windowcli
+from voice_studio.core import projects_flow as pf, voices_flow as vf, recordings_flow as rf, uninstall_flow as uf, update_flow as upf, reportcmd_flow as rcf, windowcli
 from voice_studio.core.setup_flow import parse_options
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -205,6 +205,8 @@ def test_every_voice_studio_command_names_a_real_module_and_options_it_takes(pat
             assert words[0] in pf.OPTIONS, words
         elif module == "voice_studio.uninstall":
             assert words[0] in uf.OPTIONS and set(options) <= set(uf.OPTIONS[words[0]]), words
+        elif module == "voice_studio.report":
+            assert words[0] in rcf.OPTIONS and set(options) <= set(rcf.OPTIONS[words[0]]), words
         elif module == "voice_studio.update":
             assert words[0] in upf.OPTIONS and set(options) <= set(upf.OPTIONS[words[0]]), words
         elif module == "voice_studio.voices":
@@ -213,7 +215,7 @@ def test_every_voice_studio_command_names_a_real_module_and_options_it_takes(pat
                 assert startvoice.find_voice(reg.load_registry(), words[1]) == "voice-mike", words
         else:
             pytest.fail("a command for a module this test does not know: " + module)
-    assert {"voice_studio.window", "voice_studio.projects", "voice_studio.voices", "voice_studio.uninstall", "voice_studio.update"} <= seen
+    assert {"voice_studio.window", "voice_studio.projects", "voice_studio.voices", "voice_studio.uninstall", "voice_studio.update", "voice_studio.report"} <= seen
 
 
 @pytest.mark.parametrize("path", GUIDES.values(), ids=GUIDES.keys())
@@ -454,3 +456,12 @@ def test_the_guides_say_updating_asks_first_never_touches_the_running_copy_and_i
                   "you type them", "If ACK has not named a release yet, `check` says so.", "no automatic update checks", "when you run the update command in section"):
         assert claim in body, claim
     assert "no update checks" not in body
+
+
+@pytest.mark.parametrize("path", GUIDES.values(), ids=GUIDES.keys())
+def test_the_guides_say_the_problem_report_is_shown_first_saved_where_you_say_and_never_sent(path):
+    body = " ".join(text_of(path).split())
+    for claim in ("A command that fails after it began ends with two lines about a problem report.", "with your names and folders blanked and no recordings, no text you made and no phrases",
+                  "You see all of it first, and it is saved only where you say", "`show` prints the report and changes nothing.", "never replaces a file unless you add `--replace`",
+                  "the tool never sends it anywhere", "give the file to the helper yourself"):
+        assert claim in body, claim

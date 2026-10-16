@@ -10,13 +10,14 @@ import os
 import sys
 from typing import Optional, Sequence
 
-from .__main__ import TerminalIO
+from .__main__ import TerminalIO, reports_failures
 from .core.envspec import load_environments
 from .core.paths import DataHome
 from .core.text import load_catalog
 from .core.uninstall_flow import run_uninstall
 
 
+@reports_failures("uninstall")
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     tools_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))          # the folder that holds the voice_studio package: what PYTHONPATH points at

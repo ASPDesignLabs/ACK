@@ -11,7 +11,7 @@ import sys
 import time
 from typing import Optional, Sequence
 
-from .__main__ import TerminalIO
+from .__main__ import TerminalIO, reports_failures
 from .core import fetch
 from .core.envspec import load_environments
 from .core.paths import DataHome
@@ -21,6 +21,7 @@ from .core.system import RealSystem
 from .core.text import load_catalog
 
 
+@reports_failures("refresh")
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     return run_refresh(args, DataHome(os.path.expanduser("~")), load_catalog("en"), TerminalIO(), system=RealSystem(), registry=load_registry(), specs=load_environments(),

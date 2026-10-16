@@ -400,3 +400,34 @@ def test_updating_reaches_the_network_only_through_the_download_module_and_repla
     library = (PKG / "core/update.py").read_text()
     assert library.count("networked(") == 2 and library.count("remove_tree(dest, [])") == 1, "two requests (the list and the fetch), and one remover that is only given the folder the fetch made"
     assert "mv " in (PKG / "core/update_flow.py").read_text() and "os.rename" not in (PKG / "core/update_flow.py").read_text(), "the switch is printed for the person to type, never done"
+
+
+# ---------------------------------------------------------------- the problem report (plan task VS-6.4)
+
+def test_the_page_describes_the_problem_report_the_way_the_code_does():
+    from voice_studio.core import report, reportcmd, reportcmd_flow
+    text = section(7)
+    for command in reportcmd_flow.COMMANDS:
+        if command != "help":
+            assert "python3 -m voice_studio.report %s" % command in text, command
+    for claim in ("prints all of it", "asks once", "writes exactly that text to the one file named", "the last 60 lines of that task's log, each cut to 300 characters", "**no place for a recording, a transcript or a phrase**",
+                  "**contacts no network and starts no program**", "makes no folder", "never replaces a file unless `--replace` is given", "readable by its owner only", "reads it back and removes it if it differs",
+                  "removes a half-written file of its own on a failure or Ctrl+C", "warns, and does not refuse, when the folder looks cloud-synchronised", "ends with two lines pointing at it",
+                  "a command that was declined or could not ask gets none", "when there was exactly one", "a name of one letter is not hidden", "which is why the log is opt-in"):
+        assert claim in text, claim
+    assert report.MAX_LOG_LINES == 60 and report.MAX_LINE_CHARS == 300 and report.MIN_NAME == 2 and report.SHORT_NAME == 4
+    assert "The problem report (`python3 -m voice_studio.report`)" in section(11) and "checklist section I14" in section(11)
+    assert "A problem report is a copy of facts about the computer" in section(9) and "never sent by the tool" in section(9)
+
+
+def test_the_problem_report_reaches_no_network_starts_no_program_and_writes_only_the_one_file_it_was_told():
+    import ast
+    for name in ("core/reportcmd.py", "core/reportcmd_flow.py", "report.py", "core/report.py"):
+        imports = " ".join(re.findall(r"^\s*(?:from|import)\s+([A-Za-z_.]+)", (PKG / name).read_text(), flags=re.M))
+        for banned in ("socket", "urllib", "http", "requests", "ssl", "ftplib", "smtplib", "webbrowser", "subprocess", "shutil"):
+            assert not re.search(r"(^| )%s(\.|$| )" % banned, imports), (name, banned)
+    for name in ("core/reportcmd_flow.py", "report.py"):
+        calls = {node.func.attr for node in ast.walk(ast.parse((PKG / name).read_text())) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)}
+        assert not calls & {"rmtree", "unlink", "removedirs", "rename", "replace", "write_text", "write_bytes", "system", "popen", "run", "Popen", "makedirs", "mkdir"}, (name, calls)
+    library = (PKG / "core/reportcmd.py").read_text()
+    assert library.count("os.unlink(") == 1 and "makedirs" not in library and "mkdir" not in library and library.count("write_report(") == 1, "one file is written, and only a half-written file of its own is removed"

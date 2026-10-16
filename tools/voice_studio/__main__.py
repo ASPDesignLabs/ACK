@@ -6,12 +6,13 @@ Run by setup.sh. First the Ubuntu packages (the only step that needs administrat
 """
 from __future__ import annotations
 
+import functools
 import os
 import sys
 import time
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence
 
-from .core import fetch, jobs
+from .core import describe, fetch, jobs, reportcmd
 from .core.envspec import load_environments
 from .core.guided_flow import run_guided
 from .core.paths import DataHome
@@ -35,6 +36,22 @@ class TerminalIO:
             return None
 
 
+def reports_failures(name: str) -> Callable:
+    """For the `main` of a command: when it ends because something failed after it began (exit 1), add the two lines that point at the problem report (plan task VS-6.4), naming the one
+    problem the command told the person about when there was exactly one. `name` is what the command is called in `python3 -m voice_studio.NAME`. A command that was declined or could not
+    be asked (exit 2) gets nothing, and the report command itself is not wrapped."""
+    def decorate(main: Callable[..., int]) -> Callable[..., int]:
+        @functools.wraps(main)
+        def wrapper(argv: Optional[Sequence[str]] = None) -> int:
+            args = list(sys.argv[1:] if argv is None else argv)
+            code = main(args)
+            for line in reportcmd.hint_lines(load_catalog("en"), name, args, describe.errors_shown(), code):
+                print(line, flush=True)
+            return code
+        return wrapper
+    return decorate
+
+
 def run_apt(consent, argv, ids) -> int:
     """The password prompt belongs to sudo, in this terminal: the command inherits it, and nothing here reads it."""
     try:
@@ -43,6 +60,7 @@ def run_apt(consent, argv, ids) -> int:
         return 1
 
 
+@reports_failures("setup")
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     cat = load_catalog("en")

@@ -10,7 +10,7 @@ import os
 import sys
 from typing import Optional, Sequence
 
-from .__main__ import TerminalIO
+from .__main__ import TerminalIO, reports_failures
 from .core import envfind
 from .core.paths import DataHome
 from .core.registry import load_registry
@@ -20,6 +20,7 @@ from .core.voicefile_flow import run_voicefile
 from .rounds import training_environment
 
 
+@reports_failures("voicefile")
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     home, registry = DataHome(os.path.expanduser("~")), load_registry()

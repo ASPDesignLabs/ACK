@@ -203,6 +203,15 @@ Run the same command again first: it carries on from where it stopped and does n
 | PowerShell cannot connect to the web address | Check the internet connection. On an older Windows 10, running `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12` first is the usual fix. On a work computer, a proxy may be in the way: ask whoever looks after it. |
 | No supported graphics card was found | Training is switched off. Everything else works. Install the Nvidia driver in **Windows** (not inside Ubuntu), restart, and run the command again. |
 
+**If you want a helper to look.** A command that fails after it began ends with two lines about a problem report. A problem report is a plain text file: the versions, the checks on this computer, the problem and how a task ended, with your names and folders blanked and no recordings, no text you made and no phrases. You see all of it first, and it is saved only where you say:
+
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report save --to ~/problem-report.txt
+```
+
+`show` prints the report and changes nothing. `save` prints it again, asks once, and writes exactly that text to the file you name. It never replaces a file unless you add `--replace`, and the tool never sends it anywhere: read it, then give the file to the helper yourself.
+
 If Ubuntu already works and only the PowerShell part gives you trouble, you do not need it: open Ubuntu from the Start menu and follow the separate Ubuntu guide from its one command.
 
 ---

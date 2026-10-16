@@ -1529,6 +1529,96 @@ section **with only the guide open**, as a person who has nothing else would. Wr
 - [ ] Only if you want the new copy to be the one you use, and only after a backup (`python3 -m voice_studio.backup`, section I9), close every window and terminal that runs the tool, then run that command. Run `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio` and `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.refresh check`. → The tool opens and the check runs; the setup says what it would build and asks first. `ls ~/ack-voice-studio` shows your projects and recordings where they were, and `~/ack-tools.old` still holds the old copy; remove it yourself when you no longer want it. Write down every sentence that left you unsure which folder was which.
 - [ ] When you have looked: `rm -r "$T"` (nothing else in this part was made by it).
 
+## I14. The problem report
+
+**New, and not yet run on a real computer.** When a command fails after it began, its last two lines point at `report` (the plan's decisions D22 and P22). `report show` builds a problem report for a helper: the versions, the checks on this computer, the problem you name, how a task ended and, only if you ask, the end of that task's log, with your names and folders blanked and no recordings, no text you made and no phrases. It prints **all** of it and changes nothing. `report save --to FILE` prints the same text, asks once, and writes exactly that text to that one file: it never replaces a file unless you add `--replace`, makes no folder, and sends nothing anywhere. A command that was declined, or could not be asked, gets no such lines.
+
+*Built and tried in the build sandbox only: on a computer with made-up names, and with one real failure made by pointing the proxy at a port nothing listens on. Not run on a real computer, and no helper has read one yet.*
+
+**A. Look at one.** Nothing is saved or sent.
+
+- [ ] Ask for the help, then for a report:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report help
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show
+  echo "exit: $?"
+  ```
+  → `help` lists `show` and `save`. `show` prints `ACK Voice Studio: problem report`, then `---- the report starts on the next line ----`, the whole report, and `---- the report ends on the line before this one ----`. Only what is between those two lines is the report. After it: `Nothing was saved and nothing was sent.` and how to keep it as a file, and `exit: 0`. **Read all of it.** Look for your login name, the name of this computer, your project names and the names of the people in them, and any folder under your home. Each should be a marker (`<user>`, `<computer>`, `<person-1>`, `~`, `<voice-studio>`). Write down anything of yours you can still read.
+
+**B. A pretend failure.** It cannot reach the internet, because the proxy it is told to use is a port nothing listens on, so nothing leaves the computer.
+
+- [ ] Make a command fail, and one that is only declined:
+  ```bash
+  HTTPS_PROXY=http://127.0.0.1:9 https_proxy=http://127.0.0.1:9 PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update check --yes
+  echo "exit: $?"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update check </dev/null
+  echo "exit: $?"
+  ```
+  → The first says `The place the releases are kept could not be asked, or it did not give the release.` with its Technical detail line and `exit: 1`, and **ends with two more lines**: `A problem report can be made for a helper: …` and `To see it, run: …`, a command with `--step 'update check' --problem update/unreachable` in it. The second only says there was nobody to ask, with `exit: 2` and **no** lines about a report.
+- [ ] Run the command the first one printed, and add the Technical detail line it showed:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show --step 'update check' --problem update/unreachable --detail "paste the Technical detail line here"
+  ```
+  → The report has `Step: update check`, `Problem: update / unreachable`, the three sentences for that problem, and a `More detail` line with what you pasted. Any folder or address in what you pasted is blanked. Write down whether the two lines at the end of the failed command were easy to find and to follow.
+- [ ] Ask for a problem that does not exist, and for a detail with no problem:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show --problem update/nothing_like_it
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show --detail "something"
+  ```
+  → The first says `That is not a problem name the tool knows.`, the second `--detail goes with --problem.`; both say `Nothing was built or saved.` and print no report.
+
+**C. Saving, which asks first.** `T` is a new empty folder.
+
+- [ ] Ask to save, say no, then yes:
+  ```bash
+  T=$(mktemp -d)
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report save --to "$T/problem.txt"
+  ls -A "$T"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report save --to "$T/problem.txt"
+  ls -l "$T"
+  wc -c "$T/problem.txt"
+  ```
+  → Each prints the whole report first and then asks `Save exactly this report to … now? Type yes to go on.` Type **`no`** the first time: `Nothing was done.`, and `ls -A` lists nothing. Type **`yes`** the second time: `Saved … bytes to …`, that it holds exactly the text shown and that only you can read it, and `Give the file to the helper yourself. The tool does not send it.` `ls -l` shows `-rw-------`, and `wc -c` gives the number of bytes it said. Open the file and compare it with what was on the screen between the two lines.
+
+**D. Places that cannot be used.**
+
+- [ ] Ask to save over the file, into a folder that does not exist, to a path that is not whole, and with no place:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report save --to "$T/problem.txt" --yes
+  echo "exit: $?"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report save --to "$T/nowhere/problem.txt" --yes
+  echo "exit: $?"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report save --to problem.txt --yes
+  echo "exit: $?"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report save --yes
+  echo "exit: $?"
+  ls -A "$T"
+  wc -c "$T/problem.txt"
+  ```
+  → Each says why in three sentences (`There is already a file at that place.`, `The folder for that file does not exist.`, `Give the whole path of the file, starting with a slash or with ~.`, `Say where to save the report.`), none prints a report, every `exit` is 2, `ls -A` lists only `problem.txt`, and its size is what it was.
+- [ ] Replace the file, which says so and asks:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report save --to "$T/problem.txt" --replace
+  ```
+  → After the report it says `The file … is there already and will be replaced.` and asks the same question. Type **`yes`**: it is replaced (`ls -l` shows `-rw-------` and a new time). When you have looked: `rm -r "$T"`.
+
+**E. A task, and its log.** Optional, and only with a training round you have run (section I2).
+
+- [ ] Add the newest task, then the end of its log:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show --job last
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show --job last --include-log
+  ```
+  → The first has a section about the task: its kind, how it ended and its exit number, and says the end of the log was left out. The second adds the end of the log (at most the last 60 lines, each cut short) with `These lines may contain words from recordings or names of folders. Names and folders were hidden, but check them before you share this.` Read every line. Write down any word of a recording that appears, and anything of yours that is not blanked. Without `--job`, `--include-log` is refused (`--include-log goes with --job.`).
+
+**F. Your own names.** This is the check that matters most, because only you know which names are yours.
+
+- [ ] Put your own names into the one place a person types words, and look at what comes out:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show --step "$USER on $(hostname), folder $HOME/ack-voice-studio, address 192.168.1.20, mail me@example.org"
+  ```
+  → `Step:` shows `<user>`, `<computer>`, `<voice-studio>`, `<address>` and `<email>` where your login, this computer's name, your data folder, the address and the mail address were, and the last line before the second rule says how many things were hidden. Do the same with the name of one of your projects and the name of the person whose voice it is. Write down any name that was **not** hidden. Known limits: a name of one letter is not hidden, and a name of four letters or fewer is hidden only as a whole word.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -1613,6 +1703,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I11: the total part A listed and whether any row surprised you, whether the sums in parts A and E were the same before and after, what parts B and C printed (especially the exit numbers and what `find` and `ls` showed), what part D said, how long the removal and the setup afterwards took, how much room came back, and whether the lines about the menu entry and the tool's own files were clear.
 - Section I12: what parts A to D printed (especially the exit numbers and that the line of letters and numbers was the same three times), how long the move to the real drive took and how big the scratch was, every warning the real drive gave, whether the lines of progress were steady, what the unplugged drive said in both places, and whether the sentences about the old place were clear.
 - Section I13: what parts A and B printed (especially the exit numbers), what part C printed and how long it took (and whether ACK had a tag yet), and if part D was possible: how long the fetch took, how big the new copy was, the rows the comparison printed and whether they matched what you know changed, whether your own copy was untouched, what part F left behind, and for part G which sentence left you unsure which folder was which.
+- Section I14: whether the two lines at the end of the failed command in part B were easy to find and follow, what parts A, C and D printed (especially the exit numbers), every name, folder or address of yours that was still readable in a report (parts A, B, E and F) and which kind it was, whether the report was something you would be willing to give a helper, and any sentence that was hard to follow.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
@@ -1623,7 +1714,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
-- [ ] The pretend homes in sections I10, I11 and I12 are each removed by their own last step (`rm -r "$T"`). The folder section I13 fetched a copy into is removed by that section's last step too; a copy you fetched with `--to` anywhere else is yours to remove, and the tool never removes one. The old copy of the programs from section I10 part E is removed by that part, and nothing else in `~/ack-voice-studio/tool` was made by this list except what section I11 part E removed and set up again.
+- [ ] The pretend homes in sections I10, I11 and I12 are each removed by their own last step (`rm -r "$T"`). The folder section I14 saved a report in is removed by its part D. The folder section I13 fetched a copy into is removed by that section's last step too; a copy you fetched with `--to` anywhere else is yours to remove, and the tool never removes one. The old copy of the programs from section I10 part E is removed by that part, and nothing else in `~/ack-voice-studio/tool` was made by this list except what section I11 part E removed and set up again.
 - [ ] The backups section I9 made are in `~/ack-voice-check-backups` (and `~/ack-voice-studio/backups` if you ever left the folder out). They are real backups, so keep them if you want them; look first with `du -sh ~/ack-voice-check-backups`, and when you are sure: `rm -r ~/ack-voice-check-backups`. The tool never removes a backup itself, and the project's delete question does not touch them.
 - [ ] The small sound files section I8 made are under the project's `listening` folder, a few hundred kilobytes each time (and a large voice copy for each time you kept one in part E). Free up space offers them (section I3); or look with `du -sh ~/ack-voice-studio/projects/voice-check/listening` and remove the folder yourself when you no longer want them.
 - [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.

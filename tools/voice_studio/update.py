@@ -11,7 +11,7 @@ import sys
 from typing import Optional, Sequence
 
 from . import __version__
-from .__main__ import TerminalIO
+from .__main__ import TerminalIO, reports_failures
 from .core import fetch
 from .core.registry import load_release_source
 from .core.system import RealSystem
@@ -19,6 +19,7 @@ from .core.text import load_catalog
 from .core.update_flow import run_update
 
 
+@reports_failures("update")
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     tools_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))          # the folder that holds the voice_studio package: what PYTHONPATH points at

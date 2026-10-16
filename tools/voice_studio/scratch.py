@@ -10,13 +10,14 @@ import os
 import sys
 from typing import Optional, Sequence
 
-from .__main__ import TerminalIO
+from .__main__ import TerminalIO, reports_failures
 from .core.paths import DataHome
 from .core.scratchmove_flow import run_scratch
 from .core.system import RealSystem
 from .core.text import load_catalog
 
 
+@reports_failures("scratch")
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     return run_scratch(args, RealSystem(), DataHome(os.path.expanduser("~")), load_catalog("en"), TerminalIO())
