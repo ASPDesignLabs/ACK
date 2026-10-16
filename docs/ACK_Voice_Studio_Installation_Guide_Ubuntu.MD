@@ -192,10 +192,19 @@ PYTHONPATH=~/ack-tools/tools python3 -m voice_studio
 
 The second line checks everything and asks before it rebuilds anything that changed. Nothing updates by itself. If `git pull` says you are not on a branch, you installed a fixed release: to use a newer one, run the one command with `ACK_VOICE_TAG` set to the new release name and `ACK_VOICE_DIR` set to a new folder, and your old folder stays as it was.
 
-**Removing.** There is no uninstall button yet. Everything below is permanent, so make a copy of your projects first: copy the folder `ack-voice-studio` from your home folder to a USB drive or an external disk that you control. Do not copy it into Dropbox, OneDrive or a similar synced folder.
+**Removing.** One command takes the programs the tool built and the files it downloaded off the disk. It does not touch your projects, your recordings, your backups or the starting voices you chose. Look first, then remove:
 
-- To take the applications-list entry away, run the `--remove-launcher` line from section 5.
-- To remove the tool and its programs, delete the folders `ack-tools` and `ack-voice-studio` in your home folder. **This deletes your projects and recordings.**
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall show
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall remove
+```
+
+`show` only looks. `remove` shows the same list, asks once, and removes only what it showed. It cannot remove the tool's own files or the entry in the applications list, so it prints the command for each and you run them:
+
+- To take the applications-list entry away, run the `--remove-launcher` line from section 5 (`show` prints it too).
+- To remove the tool's own files, delete the folder `ack-tools` in your home folder: `rm -r ~/ack-tools`. Do this last, because the commands above need it.
+- Your projects and recordings stay in `ack-voice-studio` in your home folder. To delete one project, use `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects delete`: it asks twice and names a backup first.
+- To delete everything, make a copy of your projects first: copy the folder `ack-voice-studio` from your home folder to a USB drive or an external disk that you control. Do not copy it into Dropbox, OneDrive or a similar synced folder. Then delete the folder `ack-voice-studio`. **This deletes your projects and recordings.** The backups the tool made are inside that folder too, in `backups`, so copy those out as well.
 - The Ubuntu programs it installed stay (they are ordinary Ubuntu programs and can be removed with `apt`).
 
 ---

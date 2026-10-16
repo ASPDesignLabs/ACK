@@ -1265,6 +1265,37 @@
     "ui.hide_details": "Hide details",
     "ui.save_problem_report": "Save problem report",
     "ui.show_details": "Show details",
+    "uninstall.again": "To set the tool up again later, run: {command}",
+    "uninstall.code": "This tool's own files are in {folder}. This program cannot remove the files it is running from. To remove them, run: {command}",
+    "uninstall.done": "Done. The programs and downloaded files were removed. About {size} is free again. Nothing of yours was touched.",
+    "uninstall.error.changed.changed": "Nothing was removed.",
+    "uninstall.error.changed.next": "Run the command again to see what is there now.",
+    "uninstall.error.changed.what": "The programs and downloaded files are not the ones that were shown.",
+    "uninstall.error.job_running.changed": "Nothing was removed.",
+    "uninstall.error.job_running.next": "Wait for the task to finish, or stop it, then try again.",
+    "uninstall.error.job_running.what": "A task is running, and it may be using the programs.",
+    "uninstall.failed_head": "These could not be removed:",
+    "uninstall.failed_row": "{path}: {reason}",
+    "uninstall.head": "An uninstall would remove these programs and downloaded files:",
+    "uninstall.how": "To remove the programs and downloaded files, run: {command}",
+    "uninstall.interrupted": "Stopped. What was removed stays removed, and the same command carries on.",
+    "uninstall.kept.backups": "Your backups, in {folder}.",
+    "uninstall.kept.state": "The tool's small notes, such as what you agreed to and the window's choices, in {folder}.",
+    "uninstall.kept.voices": "The starting voices you chose, in {folder}. They may not be possible to download again.",
+    "uninstall.kept_head": "These are kept:",
+    "uninstall.kind.downloads": "Downloaded file",
+    "uninstall.kind.programs": "Programs",
+    "uninstall.menu": "The entry in your applications list or Start menu, if you made one, is taken away by its own command: {command}",
+    "uninstall.none": "No programs or downloaded files of the tool are on the disk, so there is nothing to remove.",
+    "uninstall.promise": "No project, recording, round, finished voice or backup is touched.",
+    "uninstall.question": "Remove these programs and downloaded files, about {size}, now? Setting them up again means downloading them again. Type yes to delete them.",
+    "uninstall.row": "{what}: {path}, {size}",
+    "uninstall.title": "ACK Voice Studio: uninstall",
+    "uninstall.total": "Together they take {size}.",
+    "uninstall.usage.head": "Commands:",
+    "uninstall.usage.options": "No project, recording, round, finished voice, backup or starting voice is ever touched. --yes answers the question; nobody to ask means nothing is done.",
+    "uninstall.usage.remove": "remove [--yes]: remove them after showing the list and asking. The tool's own files and the menu entry are removed by the commands it names.",
+    "uninstall.usage.show": "show: list the programs and downloaded files an uninstall would remove, and what it keeps. It changes nothing.",
     "voicefile.error.exists.changed": "Nothing was made, and what is there was left as it is.",
     "voicefile.error.exists.next": "Wait a moment and try again.",
     "voicefile.error.exists.what": "The new folder could not be made, because that name is already there.",
@@ -1845,6 +1876,22 @@
     "setup.still_missing": {
       "one": "{count} extra program is still missing after installing. Look at the messages above, then try again.",
       "other": "{count} extra programs are still missing after installing. Look at the messages above, then try again."
+    },
+    "uninstall.failed_more": {
+      "one": "And {count} more.",
+      "other": "And {count} more."
+    },
+    "uninstall.kept.projects": {
+      "one": "Your {count} project, with everything in it, in {folder}.",
+      "other": "Your {count} projects, with everything in them, in {folder}."
+    },
+    "uninstall.left_alone": {
+      "one": "{count} other item in the tool's folders was left alone, because this tool did not make it or is still building it.",
+      "other": "{count} other items in the tool's folders were left alone, because this tool did not make them or is still building them."
+    },
+    "uninstall.more": {
+      "one": "And {count} more.",
+      "other": "And {count} more."
     }
   }
 }

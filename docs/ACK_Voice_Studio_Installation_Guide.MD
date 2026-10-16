@@ -218,10 +218,19 @@ PYTHONPATH=~/ack-tools/tools python3 -m voice_studio
 
 The second line checks everything and asks before it rebuilds anything that changed. Nothing updates by itself.
 
-**Removing.** There is no uninstall button yet. Everything below is permanent, so make a copy of your projects first: copy `ack-voice-studio` from your Ubuntu home folder to a USB drive or an external disk that you control. In Ubuntu, a Windows drive appears under `/mnt`, for example `/mnt/d`. Do not copy it into OneDrive, Dropbox or Documents, which may be synced.
+**Removing.** In Ubuntu, one command takes the programs the tool built and the files it downloaded off the disk. It does not touch your projects, your recordings, your backups or the starting voices you chose. Look first, then remove:
 
-- To take the Start menu shortcut away, run the `--remove-launcher` line from section 6.
-- To remove the tool and its programs, delete the folders `ack-tools` and `ack-voice-studio` in your Ubuntu home folder. **This deletes your projects and recordings.**
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall show
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall remove
+```
+
+`show` only looks. `remove` shows the same list, asks once, and removes only what it showed. It cannot remove the tool's own files or the Start menu shortcut, so it prints the command for each and you run them:
+
+- To take the Start menu shortcut away, run the `--remove-launcher` line from section 6 (`show` prints it too).
+- To remove the tool's own files, delete the folder `ack-tools` in your Ubuntu home folder: `rm -r ~/ack-tools`. Do this last, because the commands above need it.
+- Your projects and recordings stay in `ack-voice-studio` in your Ubuntu home folder. To delete one project, use `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects delete`: it asks twice and names a backup first.
+- To delete everything, make a copy of your projects first: copy `ack-voice-studio` from your Ubuntu home folder to a USB drive or an external disk that you control. In Ubuntu, a Windows drive appears under `/mnt`, for example `/mnt/d`. Do not copy it into OneDrive, Dropbox or Documents, which may be synced. Then delete the folder `ack-voice-studio`. **This deletes your projects and recordings.** The backups the tool made are inside that folder too, in `backups`, so copy those out as well.
 - The Ubuntu programs it installed stay (they are ordinary Ubuntu programs and can be removed with `apt`).
 - To remove Ubuntu from Windows completely, run `wsl --unregister Ubuntu-24.04` in PowerShell. **This deletes everything inside that Ubuntu, with no way back.**
 

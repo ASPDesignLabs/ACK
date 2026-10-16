@@ -18,7 +18,7 @@ import pytest
 import test_vs_device_test_doc as device_doc
 import test_vs_text as wording
 from voice_studio.core import diskbudget, envspec, preflight, registry as reg, setupplan as sp, startvoice
-from voice_studio.core import projects_flow as pf, voices_flow as vf, recordings_flow as rf, windowcli
+from voice_studio.core import projects_flow as pf, voices_flow as vf, recordings_flow as rf, uninstall_flow as uf, windowcli
 from voice_studio.core.setup_flow import parse_options
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -203,13 +203,15 @@ def test_every_voice_studio_command_names_a_real_module_and_options_it_takes(pat
             assert set(options) <= window_options, options
         elif module == "voice_studio.projects":
             assert words[0] in pf.OPTIONS, words
+        elif module == "voice_studio.uninstall":
+            assert words[0] in uf.OPTIONS and set(options) <= set(uf.OPTIONS[words[0]]), words
         elif module == "voice_studio.voices":
             assert words[0] in vf.OPTIONS and set(options) <= (set(vf.OPTIONS[words[0]]) | {"--project"}), words
             if words[0] == "get":
                 assert startvoice.find_voice(reg.load_registry(), words[1]) == "voice-mike", words
         else:
             pytest.fail("a command for a module this test does not know: " + module)
-    assert {"voice_studio.window", "voice_studio.projects", "voice_studio.voices"} <= seen
+    assert {"voice_studio.window", "voice_studio.projects", "voice_studio.voices", "voice_studio.uninstall"} <= seen
 
 
 @pytest.mark.parametrize("path", GUIDES.values(), ids=GUIDES.keys())

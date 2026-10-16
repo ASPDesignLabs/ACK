@@ -256,6 +256,9 @@ def _remove_tree(path: str, failed: List[Tuple[str, str]]) -> None:
         shutil.rmtree(path, onerror=note)
 
 
+remove_tree = _remove_tree        # the same remover for the other deletes (core/uninstall.py): a link is unlinked, never followed
+
+
 def delete_project(home: DataHome, project: Project, shown: DeletePlan) -> DeleteResult:
     """Remove what `shown` listed, after working it out again. Raises `job_running` when a task for the profile has started since, and `changed` (removing nothing) when what is
     there now is not what was shown. A part that cannot be removed is reported and stops the delete before `project.json`, so the profile stays listed."""

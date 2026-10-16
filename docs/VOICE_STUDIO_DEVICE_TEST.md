@@ -1274,6 +1274,83 @@ section **with only the guide open**, as a person who has nothing else would. Wr
 
 - [ ] The same as part E with `--programs training`. The old copy of the training programs is about 6.6 GB; write down the figure `older` prints.
 
+## I11. Removing the tool's programs and downloads
+
+**New, and not yet run on a real computer.** `uninstall` takes the programs the tool built and the files it downloaded off the disk, and nothing else. **It never touches a project, a recording, a round, a finished voice file, a backup, the starting voices you chose or the tool's small notes.** It has two commands: `show` only looks; `remove` shows the same list, asks once, and removes only what it showed. It cannot remove its own files or the menu entry itself, so it prints the commands that do. The first three parts below use a pretend home folder, so nothing of yours is at risk; the last part is real and optional, because the programs have to be built again afterwards.
+
+*Built and tried in the build sandbox only, with a stand-in for the computer. Not run on a real computer.*
+
+**A. Look at your real home. Nothing is written.**
+
+- [ ] Write down what is in your projects, look, and write it down again:
+  ```bash
+  find ~/ack-voice-studio/projects -type f -printf '%p %s %T@\n' | sort | sha256sum
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall show
+  find ~/ack-voice-studio/projects -type f -printf '%p %s %T@\n' | sort | sha256sum
+  ```
+  → `No project, recording, round, finished voice or backup is touched.`, `An uninstall would remove these programs and downloaded files:` and a row for each set of programs (`Programs`) and each download (`Downloaded file`) with its folder and size. Then `Together they take` the total, `These are kept:` with your projects, your backups, the starting voices you chose and the tool's small notes, and three lines of what it cannot do for itself: the menu entry, the folder of the tool's own files, and the command that removes the programs. The two lines of letters and numbers are the same. Write down the total and whether any row surprised you.
+
+**B. A pretend home with things in it that must survive.** `T` is a new empty folder; nothing in it is yours.
+
+- [ ] Make it, and look:
+  ```bash
+  T=$(mktemp -d)
+  H="$T/ack-voice-studio"
+  mkdir -p "$H/projects/anna/recordings" "$H/backups" "$H/state" "$H/tool/downloads/voices/voice-mike" "$H/tool/downloads/models/speech-small-en" "$H/tool/environments/somebody-elses"
+  head -c 2000 /dev/zero > "$H/projects/anna/recordings/take.wav"
+  head -c 3000 /dev/zero > "$H/backups/anna.tar"
+  head -c 100 /dev/zero > "$H/state/consent.json"
+  head -c 1000 /dev/zero > "$H/tool/downloads/voices/voice-mike/mike.ckpt"
+  head -c 5000 /dev/zero > "$H/tool/downloads/models/speech-small-en/a.bin"
+  head -c 700 /dev/zero > "$H/tool/downloads/archive.tar.gz"
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.uninstall show
+  echo "exit: $?"
+  ```
+  → The two downloads (`archive.tar.gz` and `models`) are listed, and nothing else: not the starting voice, not `take.wav`, not the backup, not the note. `These are kept:` names your backups, the starting voices and the small notes. `1 other item in the tool's folders was left alone, because this tool did not make it or is still building it.` is the folder `somebody-elses`. `exit: 0`.
+
+**C. Removing, which asks first.**
+
+- [ ] Ask for the removal and say no, then yes:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.uninstall remove
+  find "$H" -type f -printf '%P\n' | sort
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.uninstall remove
+  find "$H" -type f -printf '%P\n' | sort
+  ls "$H/tool/environments"
+  ```
+  → The first shows the same list and asks `Remove these programs and downloaded files, about 5.7 KB, now? Setting them up again means downloading them again. Type yes to delete them.` Type **`no`**: `Nothing was done.` and `find` still lists all six files. With nobody to ask (a pipe, for instance) the command says `There was nobody to ask. To say yes on the command line, add --yes. Nothing was done.` and the exit number is 2. The second, with **`yes`**: `Done. The programs and downloaded files were removed. About 5.7 KB is free again. Nothing of yours was touched.` and `To set the tool up again later, run:` the command. `find` now lists exactly four files: `backups/anna.tar`, `projects/anna/recordings/take.wav`, `state/consent.json` and `tool/downloads/voices/voice-mike/mike.ckpt`. `ls` still shows `somebody-elses`. When you have looked: `rm -r "$T"`.
+
+**D. A task that is running.** Optional, and only with a training round you can start and stop (section I2).
+
+- [ ] While a round is running, ask for the removal:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall remove
+  ```
+  → It shows the list, then `A task is running, and it may be using the programs.`, `Nothing was removed.` and `Wait for the task to finish, or stop it, then try again.` It does not ask the question. Write down whether the round carried on.
+
+**E. The real removal, and setting up again.** Real, slow and optional. It removes the programs the tool built (about 6.6 GB for the training programs and the studio programs together) and the listening model, so the setup has to download them again. Do it last, and only on a computer where that is fine.
+
+- [ ] Write down what is in your projects and the starting voices, remove, and look:
+  ```bash
+  find ~/ack-voice-studio/projects ~/ack-voice-studio/tool/downloads/voices -type f -printf '%p %s %T@\n' | sort | sha256sum
+  df -h ~ | tail -1
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall remove
+  df -h ~ | tail -1
+  find ~/ack-voice-studio/projects ~/ack-voice-studio/tool/downloads/voices -type f -printf '%p %s %T@\n' | sort | sha256sum
+  ls ~/ack-voice-studio/tool
+  ```
+  → Type **`yes`**. `Done.` and how much came back, which should be close to the total in part A. The two lines of letters and numbers are the same: no project and no starting voice changed. `ls` shows only `downloads`, and `df` shows more free room. Write down how long the removal took.
+- [ ] Set the tool up again, with the one command the last line told you:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio
+  ```
+  → The guided setup finds nothing built, shows what it will download and asks, as it did the first time (section I0). Say **`yes`** and let it finish. `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.refresh check` ends `Everything that is here is in order.` Write down how long the setup took and whether your projects still list (`python3 -m voice_studio.projects list`).
+
+**F. The menu entry and the tool's own files.** The command cannot do these for itself.
+
+- [ ] If you made the menu entry (section I5), run the `--remove-launcher` line that `show` printed. It lists what it will remove and asks: `Remove them now? Type yes to remove them.` Type **`no`** unless you mean it. On WSL it also prints the `sudo rm` line for the copy in the system folder; the tool never runs it.
+- [ ] The line `This tool's own files are in` names the folder the tool runs from, and the `rm -r` command that removes it. **Do not run it** unless you want the tool gone: it removes the tool, not your projects (they are in `ack-voice-studio`, a different folder). If that folder is a copy you work in, keep it.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -1355,6 +1432,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I8: part B for each way of playing (heard or not, the exit number, any words it printed, and whether this is WSL or a native desktop), then the seconds `listen` took, which way played, whether the voice was clear, any word said differently on the phone, and whether you want other sentences.
 - Section I9: how long a backup took for how big a project, the file's size, whether the reminder in part B was easy to notice, whether `verify` caught the changed byte, what the second restore in part I said, whether the left-out list in part C matched what you know is in the project, which folder you chose and why, and any sentence that was hard to follow.
 - Section I10: how long `check` took, every line that was unclear, what each of parts B to D printed (especially the exit numbers and the files `ls` showed), how long the studio rebuild took and how big the two copies were, whether the line of letters and numbers before and after was the same, whether the old copy was ever unusable, and any sentence that was hard to follow.
+- Section I11: the total part A listed and whether any row surprised you, whether the sums in parts A and E were the same before and after, what parts B and C printed (especially the exit numbers and what `find` and `ls` showed), what part D said, how long the removal and the setup afterwards took, how much room came back, and whether the lines about the menu entry and the tool's own files were clear.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
@@ -1365,7 +1443,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
-- [ ] The pretend home in section I10 is removed by its own last step (`rm -r "$T"`). The old copy of the programs from part E is removed by part E, and nothing else in `~/ack-voice-studio/tool` was made by this list.
+- [ ] The pretend homes in sections I10 and I11 are each removed by their own last step (`rm -r "$T"`). The old copy of the programs from section I10 part E is removed by that part, and nothing else in `~/ack-voice-studio/tool` was made by this list except what section I11 part E removed and set up again.
 - [ ] The backups section I9 made are in `~/ack-voice-check-backups` (and `~/ack-voice-studio/backups` if you ever left the folder out). They are real backups, so keep them if you want them; look first with `du -sh ~/ack-voice-check-backups`, and when you are sure: `rm -r ~/ack-voice-check-backups`. The tool never removes a backup itself, and the project's delete question does not touch them.
 - [ ] The small sound files section I8 made are under the project's `listening` folder, a few hundred kilobytes each time (and a large voice copy for each time you kept one in part E). Free up space offers them (section I3); or look with `du -sh ~/ack-voice-studio/projects/voice-check/listening` and remove the folder yourself when you no longer want them.
 - [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.

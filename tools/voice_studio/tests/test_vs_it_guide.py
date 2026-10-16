@@ -303,3 +303,35 @@ def test_the_check_and_the_list_of_old_copies_reach_no_network_and_only_a_repair
         for banned in ("socket", "urllib", "http", "requests", "ssl", "ftplib", "smtplib", "webbrowser", "subprocess"):
             assert not re.search(r"(^| )%s(\.|$| )" % banned, imports), (name, banned)
 
+
+
+# ---------------------------------------------------------------- removing the programs and downloads (plan task VS-6.3)
+
+def test_the_page_describes_uninstall_the_way_the_code_does():
+    from voice_studio.core import uninstall, uninstall_flow
+    text = section(7)
+    for command in uninstall_flow.COMMANDS:
+        if command != "help":
+            assert "python3 -m voice_studio.uninstall %s" % command in text, command
+    for claim in ("changes nothing", "asks once", "removes only what was shown", "a folder that carries this tool's own record and is not being built", "`tool/environments`", "`tool/downloads`",
+                  "never removes a project, a recording, a round, a finished voice, a backup (`backups/`), the starting voices (`tool/downloads/voices`", "`state/`", "refuses while any task is running",
+                  "removes a link as a link and never follows it", "removes nothing if what is there is no longer what it showed", "`--remove-launcher`", "It contacts no network."):
+        assert claim in text, claim
+    assert uninstall.KEPT_VOICES == "voices" and uninstall.KEPT == ("backups", "voices", "state")
+    assert "Removing the programs and downloads (`python3 -m voice_studio.uninstall`)" in section(11) and "checklist section I11" in section(11)
+    twelve = section(12)
+    assert "`python3 -m voice_studio.uninstall remove` takes the programs the tool built and the files it downloaded off the disk and nothing else" in twelve and "copy them out first" in twelve
+
+
+def test_uninstall_reaches_no_network_starts_no_program_and_removes_only_through_the_one_remover():
+    import ast
+    for name in ("core/uninstall.py", "core/uninstall_flow.py", "uninstall.py"):
+        imports = " ".join(re.findall(r"^\s*(?:from|import)\s+([A-Za-z_.]+)", (PKG / name).read_text(), flags=re.M))
+        for banned in ("socket", "urllib", "http", "requests", "ssl", "ftplib", "smtplib", "webbrowser", "subprocess", "shutil"):
+            assert not re.search(r"(^| )%s(\.|$| )" % banned, imports), (name, banned)
+    for name in ("core/uninstall.py", "core/uninstall_flow.py"):
+        calls = {node.func.attr for node in ast.walk(ast.parse((PKG / name).read_text())) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)}
+        assert not calls & {"rmtree", "unlink", "removedirs", "rename", "replace", "write_text", "write_bytes", "open", "system", "popen", "run", "Popen"}, (name, calls)
+        assert ("remove" in calls) == (name == "core/uninstall_flow.py"), "only the front calls the library's remove"
+    flow = (PKG / "core/uninstall_flow.py").read_text()
+    assert "un.remove(" in flow and flow.count("un.remove(") == 1, "the flow removes through the library's remove, called from one place"

@@ -1221,3 +1221,80 @@ def test_the_refresh_section_runs_as_it_says_in_a_pretend_home(tmp_path):
     finally:
         shutil.rmtree(pretend, ignore_errors=True)
 
+
+
+# ---------------------------------------------------------------- section I11: removing the tool's programs and downloads
+
+def i11_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I11."), flags=re.S | re.M)]
+
+
+def test_the_uninstall_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import uninstall_flow as uf
+    found = re.findall(r"python3 -m voice_studio\.(uninstall|refresh|projects|voices|window) ([a-z-]+)([^\n`;<|&]*)", section("I11."))
+    assert {c for m, c, _ in found if m == "uninstall"} == {"show", "remove"} and set(uf.COMMANDS) == {"show", "remove", "help"}
+    assert {(m, c) for m, c, _ in found if m != "uninstall"} == {("refresh", "check"), ("projects", "list")}
+    for module, command, rest in found:
+        if module == "uninstall":
+            assert command in uf.OPTIONS and all(w in uf.OPTIONS[command] for w in shlex.split(rest) if w.startswith("-")), (command, rest)
+
+
+def test_every_sentence_the_uninstall_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I11."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "cat ", "du ", "df ", "time ", "T=", "H=", "find ", "mkdir ", "head ", "echo ", "rm ", "["))]
+    assert len(quoted) >= 14, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_uninstall_section_says_what_it_never_touches_and_which_parts_are_pretend_and_what_was_not_run():
+    body = " ".join(section("I11.").split())
+    assert "It never touches a project, a recording, a round, a finished voice file, a backup, the starting voices you chose or the tool's small notes." in body
+    assert "The first three parts below use a pretend home folder" in body and "Not run on a real computer." in body and "Real, slow and optional." in body
+    assert "Section I11:" in doc_text() and "pretend homes in sections I10 and I11" in section("M.")
+    names = re.findall(r"^## (I11|I10|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I10") < names.index("I11") < names.index("J") and len(i11_blocks()) == 6
+
+
+def test_the_uninstall_section_runs_as_it_says_in_a_pretend_home(tmp_path):
+    import shutil
+    for tool in ("bash", "head", "find", "sort"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    blocks = i11_blocks()
+    mine, python = str(TOOLS), shlex.quote(sys.executable)
+
+    def adapted(text):
+        return text.replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("python3 -m", python + " -m")
+
+    lines, seen = blocks[2].splitlines(), 0
+    for i, line in enumerate(lines):                       # a pipe cannot answer: the first remove is left unanswered (it says so), the second is told --yes
+        if "uninstall remove" in line:
+            seen += 1
+            lines[i] = line + (" --yes" if seen == 2 else "") + '; echo "exit: $?"'
+    assert seen == 2
+    home = tmp_path / "home"
+    home.mkdir()
+    script = [adapted(blocks[1]), 'echo "@@ 1"', 'echo "@@ T $T"', "echo @@ 2", adapted("\n".join(lines))]
+    env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=120, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    out = done.stdout
+    pretend = Path(next(line for line in out.splitlines() if line.startswith("@@ T ")).split(" ", 2)[2])
+    try:
+        looked = out.split("@@ 1")[0]
+        removing = out.split("@@ 2")[1]
+        assert "  Downloaded file: " in looked and "archive.tar.gz" in looked and "voice-mike" not in looked.split("These are kept:")[0] and "take.wav" not in looked
+        assert "These are kept:" in looked and "1 other item in the tool's folders was left alone, because this tool did not make it or is still building it." in looked and "exit: 0" in looked
+        assert "There was nobody to ask. To say yes on the command line, add --yes. Nothing was done." in removing and "exit: 2" in removing and "exit: 0" in removing
+        assert "Done. The programs and downloaded files were removed. About 5.7 KB is free again. Nothing of yours was touched." in removing
+        found = removing.splitlines()
+        assert found.count("projects/anna/recordings/take.wav") == 2 and found.count("tool/downloads/archive.tar.gz") == 1 and found.count("tool/downloads/models/speech-small-en/a.bin") == 1, "all six files after the no, four after the yes"
+        kept = sorted(str(p.relative_to(pretend / "ack-voice-studio")) for p in (pretend / "ack-voice-studio").rglob("*") if p.is_file())
+        assert kept == ["backups/anna.tar", "projects/anna/recordings/take.wav", "state/consent.json", "tool/downloads/voices/voice-mike/mike.ckpt"]
+        assert (pretend / "ack-voice-studio/tool/environments/somebody-elses").is_dir() and not (home / "ack-voice-studio").exists(), "the real home was not touched"
+    finally:
+        shutil.rmtree(pretend, ignore_errors=True)
