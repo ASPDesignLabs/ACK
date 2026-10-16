@@ -52,6 +52,8 @@ def _say_here(cat: Catalog, io: IO, here: str, version: str) -> None:
 def _say_contact(cat: Catalog, io: IO, source: ReleaseSource) -> None:
     io.say(cat.t(source.why_key))
     io.say(cat.t("update.contact.sent"))
+    if source.tag_prefix:
+        io.say(cat.t("update.contact.prefix", prefix=source.tag_prefix))
 
 
 # ---------------------------------------------------------------- check
@@ -72,7 +74,7 @@ def _check(args: Sequence[str], system: System, here: str, version: str, source:
     if declined is not None:
         return declined
     try:
-        releases = up.sort_releases(up.list_releases(networked, make_consent([], extra_ids=[up.LIST_ID]), source.url))
+        releases = up.sort_releases(up.list_releases(networked, make_consent([], extra_ids=[up.LIST_ID]), source.url, source.tag_prefix))
     except UpdateError as error:
         _say_error(cat, io, error)
         return EXIT_PROBLEM
@@ -161,7 +163,7 @@ def _get(args: Sequence[str], system: System, here: str, version: str, source: R
     _say_contact(cat, io, source)
     io.say(cat.t("update.contact.get", name=name, host=source.host, folder=dest))
     io.say("  " + cat.t("update.contact.first", command="git ls-remote --tags " + source.url))
-    io.say("  " + cat.t("update.contact.second", command="git clone --depth 1 --branch %s %s %s" % (name, source.url, dest)))
+    io.say("  " + cat.t("update.contact.second", command="git clone --depth 1 --branch %s %s %s" % (source.tag_prefix + name, source.url, dest)))
     io.say(cat.t("update.contact.untouched"))
     io.say(cat.t("update.contact.room", need=size_text(up.ROOM_BYTES)) if free is None else cat.t("update.contact.room_known", need=size_text(up.ROOM_BYTES), free=size_text(free)))
     declined = _confirmed(parsed, cat.t("update.question.get", name=name), cat, io)
@@ -169,7 +171,7 @@ def _get(args: Sequence[str], system: System, here: str, version: str, source: R
         return declined
     consent = make_consent([], extra_ids=[up.LIST_ID, up.GET_ID])
     try:
-        releases = up.list_releases(networked, consent, source.url)
+        releases = up.list_releases(networked, consent, source.url, source.tag_prefix)
         release = next((r for r in releases if r.name == name), None)
         if release is None:
             raise UpdateError("unknown_release", name)

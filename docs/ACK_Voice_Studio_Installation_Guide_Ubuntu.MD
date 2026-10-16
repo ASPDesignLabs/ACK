@@ -203,14 +203,14 @@ The second line checks everything and asks before it rebuilds anything that chan
 
 If `git pull` says you are not on a branch, you installed a fixed release: to use a newer one, run the one command with `ACK_VOICE_TAG` set to the new release name and `ACK_VOICE_DIR` set to a new folder, and your old folder stays as it was.
 
-**Looking at the releases.** To see whether ACK has a named release and fetch one into a new folder beside this one, without changing this one:
+**Looking at the releases.** To see whether ACK Voice Studio has a named release and fetch one into a new folder beside this one, without changing this one:
 
 ```bash
 PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update check
 PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get RELEASE
 ```
 
-Each says first what it will ask github.com and shows the exact commands, then asks before it contacts anything. `get` never touches this copy: it prints two commands, one for trying the new copy and one for using it under the usual name, and you type them. Your projects and recordings stay in `ack-voice-studio` whichever copy you use. If ACK has not named a release yet, `check` says so.
+Each says first what it will ask github.com and shows the exact commands, then asks before it contacts anything. `get` never touches this copy: it prints two commands, one for trying the new copy and one for using it under the usual name, and you type them. Your projects and recordings stay in `ack-voice-studio` whichever copy you use. If ACK Voice Studio has not named a release yet, `check` says so. The phone app's own version names are not releases of this tool and are not listed.
 
 **Removing.** One command takes the programs the tool built and the files it downloaded off the disk. It does not touch your projects, your recordings, your backups or the starting voices you chose. Look first, then remove:
 

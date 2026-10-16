@@ -1434,10 +1434,13 @@ def test_every_sentence_the_update_section_quotes_as_the_tools_output_is_one_the
 
 
 def test_the_update_section_says_what_it_never_touches_that_no_release_exists_and_what_was_not_run():
-    from voice_studio.core import update as up
+    from voice_studio.core import registry as reg, update as up
     from voice_studio.core.text import size_text
     body = " ".join(section("I13.").split())
-    assert "It never touches the copy it runs from, your projects, your recordings or your backups." in body and "**ACK has no named release yet**" in body
+    assert "It never touches the copy it runs from, your projects, your recordings or your backups." in body and "**ACK Voice Studio has no named release yet**" in body
+    prefix = reg.load_release_source().tag_prefix
+    assert prefix == "voice-studio-" and body.count("`%s`" % prefix) >= 2, "the section names the prefix the registry really uses"
+    assert "the phone app's tags" in body and "`v1.0-beta.1`" in body and "ACK has no named release" not in body.replace("ACK Voice Studio has no named release", ""), "it must not say the repository has no tags at all"
     assert "Not run on a real computer, never over a real connection and never against github.com." in body
     assert "%s must be free beside this one" % size_text(up.ROOM_BYTES) in body and "usually under 100 MB" in body
     assert "it prints the commands, and you type them" in body and "The tool prints it and never runs it." in body

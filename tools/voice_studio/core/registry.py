@@ -26,6 +26,7 @@ DEFAULT_PATH = Path(__file__).resolve().parent.parent / "data" / "sources.json"
 PIN_FIELDS = ("url", "filename", "revision", "size_bytes", "sha256")
 MAX_PAGE_LENGTH = 300
 PAGE_ADDRESS = re.compile(r"^[\x21-\x7e]+\Z")             # printable ASCII with no white space: an address that can be read aloud and copied
+TAG_PREFIX = re.compile(r"^[A-Za-z0-9._-]{0,32}\Z")                    # what a release tag of the tool must begin with, so the phone app's tags are not taken for releases
 
 
 class RegistryError(Exception):
@@ -178,6 +179,7 @@ class ReleaseSource:
     """The one address the update command asks about ACK's own releases (plan task VS-6.2, decision P21): a git repository on an allowed host. It downloads no file of the registry."""
     url: str
     why_key: str
+    tag_prefix: str = ""          # only tags whose names begin with this are releases of the tool: the repository also holds the phone app's tags
 
     @property
     def host(self) -> str:
@@ -188,14 +190,14 @@ def parse_release_source(text: str) -> ReleaseSource:
     try:
         data = json.loads(text)
         raw = data["releases"]
-        url, why_key = raw["url"], raw["why_key"]
+        url, why_key, tag_prefix = raw["url"], raw["why_key"], raw.get("tag_prefix", "")
     except (ValueError, KeyError, TypeError):
         raise RegistryError("no address for releases")
     problem = page_problem(url)
     host = None if problem else urlparse(url).hostname
-    if host not in ALLOWED_HOSTS or not isinstance(why_key, str) or not why_key:          # a problem with the address leaves no host
+    if host not in ALLOWED_HOSTS or not isinstance(why_key, str) or not why_key or not isinstance(tag_prefix, str) or not TAG_PREFIX.match(tag_prefix):          # a problem with the address leaves no host
         raise RegistryError("the address for releases is not usable: %s" % (problem or "host"))
-    return ReleaseSource(url, why_key)
+    return ReleaseSource(url, why_key, tag_prefix)
 
 
 def load_release_source(path: Optional[Path] = None) -> ReleaseSource:

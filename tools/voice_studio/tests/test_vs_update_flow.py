@@ -62,9 +62,9 @@ def test_check_says_where_this_copy_is_what_it_will_ask_and_what_the_request_car
     assert code == 2 and rig.calls == [] and io.prompts == ["Look for new releases now? Type yes to go on. "] and "Nothing was done." in io.lines
     ask = io.events.index(("ask", io.prompts[0]))
     said = [t for kind, t in io.events[:ask] if kind == "say"]
-    assert said[:3] == ["ACK Voice Studio: update", "This copy is version 1.0.0, in %s." % rig.here, "It contacts the internet to ask which releases of ACK exist, and to fetch one when you choose."]
+    assert said[:3] == ["ACK Voice Studio: update", "This copy is version 1.0.0, in %s." % rig.here, "It contacts the internet to ask which releases of ACK Voice Studio exist, and to fetch one when you choose."]
     assert "Like any request on the internet it carries this computer's address and the name of the program asking. Nothing you recorded, typed or made is sent, and nothing is saved." in said
-    assert "This asks %s for the list of ACK's releases, with one command: git ls-remote --tags %s" % (rig.source.url, rig.source.url) in said
+    assert "This asks %s for the list of tags in ACK's repository, with one command: git ls-remote --tags %s" % (rig.source.url, rig.source.url) in said
 
 
 def test_with_nobody_to_ask_nothing_is_contacted(rig):
@@ -91,7 +91,7 @@ def test_a_copy_that_is_not_a_git_copy_says_so_before_asking(tmp_path):
 def test_check_lists_the_releases_newest_first_marks_this_copy_and_the_newer_ones_and_says_how_to_fetch(rig):
     code, io = run(rig, "check", answers=["yes"])
     assert code == 0 and rig.calls == [(["git", "ls-remote", "--tags", rig.url], [up.LIST_ID])]
-    assert io.lines[-6:] == ["It is the release v1.0.", "2 releases of ACK are listed:", "  v1.1: newer than this copy", "  v1.0: this copy", "1 release is newer than this copy.",
+    assert io.lines[-6:] == ["It is the release v1.0.", "2 releases of ACK Voice Studio are listed:", "  v1.1: newer than this copy", "  v1.0: this copy", "1 release is newer than this copy.",
                              "To fetch one into a new folder beside this copy, run: python3 -m voice_studio.update get v1.1"]
 
 
@@ -125,7 +125,7 @@ def test_check_with_no_releases_says_there_is_nothing_to_fetch(tmp_path):
     from vs_update_helpers import git
     git("tag", "-d", "v1.0", cwd=rig.repo)
     code, io = run(rig, "check", "--yes")
-    assert code == 0 and io.lines[-1] == "ACK has no named releases yet, so there is nothing to fetch." and not any("listed" in l for l in io.lines)
+    assert code == 0 and io.lines[-1] == "ACK Voice Studio has no named releases yet, so there is nothing to fetch." and not any("listed" in l for l in io.lines)
 
 
 def test_only_ten_releases_are_listed_and_all_are_counted(tmp_path):
@@ -133,7 +133,7 @@ def test_only_ten_releases_are_listed_and_all_are_counted(tmp_path):
     rig = UpdateRig(tmp_path, releases=names, here_at="v1.0")
     code, io = run(rig, "check", "--yes")
     rows = [l for l in io.lines if l.startswith("  v1.")]
-    assert "12 releases of ACK are listed:" in io.lines and len(rows) == 10 and "  And 2 more." in io.lines and rows[0].startswith("  v1.11")
+    assert "12 releases of ACK Voice Studio are listed:" in io.lines and len(rows) == 10 and "  And 2 more." in io.lines and rows[0].startswith("  v1.11")
     assert "11 releases are newer than this copy." in io.lines and io.lines[-1] == "To fetch one into a new folder beside this copy, run: python3 -m voice_studio.update get v1.11"
 
 
@@ -165,9 +165,9 @@ def test_get_says_where_the_copy_will_go_both_commands_and_what_is_not_touched_b
     assert code == 2 and rig.calls == [] and not os.path.lexists(dest) and io.prompts == ["Download the release v1.1 now? Type yes to go on. "] and "Nothing was done." in io.lines
     ask = io.events.index(("ask", io.prompts[0]))
     said = [t for kind, t in io.events[:ask] if kind == "say"]
-    assert said[:3] == ["ACK Voice Studio: update", "This copy is version 1.0.0, in %s." % rig.here, "It contacts the internet to ask which releases of ACK exist, and to fetch one when you choose."]
+    assert said[:3] == ["ACK Voice Studio: update", "This copy is version 1.0.0, in %s." % rig.here, "It contacts the internet to ask which releases of ACK Voice Studio exist, and to fetch one when you choose."]
     assert "Like any request on the internet it carries this computer's address and the name of the program asking. Nothing you recorded, typed or made is sent, and nothing is saved." in said
-    assert "This downloads the release v1.1 of ACK from %s into a new folder: %s" % (rig.source.host, dest) in said
+    assert "This downloads the release v1.1 of ACK Voice Studio from %s into a new folder: %s" % (rig.source.host, dest) in said
     assert "  First it looks the release up: git ls-remote --tags %s" % rig.url in said
     assert "  Then it fetches it: git clone --depth 1 --branch v1.1 %s %s" % (rig.url, dest) in said
     assert "This copy, and your projects, recordings and backups, are not touched." in said
@@ -405,7 +405,7 @@ def test_check_from_a_copy_that_is_not_a_git_copy_lists_the_releases_and_cannot_
     rig = UpdateRig(tmp_path, here_at=None)
     (rig.here / "tools" / "voice_studio").mkdir(parents=True)
     code, io = run(rig, "check", "--yes")
-    assert code == 0 and "2 releases of ACK are listed:" in io.lines and "This copy is not at a release, so none can be called newer." in io.lines
+    assert code == 0 and "2 releases of ACK Voice Studio are listed:" in io.lines and "This copy is not at a release, so none can be called newer." in io.lines
     assert "  v1.1" in io.lines and "  v1.0" in io.lines and not any("it is at the commit" in l or l.startswith("It is the release") for l in io.lines)
 
 
@@ -461,3 +461,62 @@ def test_the_sentence_about_programs_and_downloads_follows_any_kind_of_differenc
     lines = said_about(changes_of(**{kind: {part: ("a-file",)}}))
     assert sentence in lines and "    a-file" in lines
     assert not said_about(changes_of(**{kind: {"code": ("a-file",)}})).count(sentence)
+
+
+# ---------------------------------------------------------------- the phone app's tags are not releases of the tool
+
+PREFIX = "voice-studio-"
+
+
+@pytest.fixture
+def mixed(tmp_path):
+    return UpdateRig(tmp_path, releases=("v0.1.0", "v0.2.0"), here_at="v0.1.0", tag_prefix=PREFIX, app_tags=("v1.0-beta.1", "v1.0-beta.2", "v1.0-beta.7"))
+
+
+def test_check_lists_only_the_tools_releases_and_never_the_phone_apps(mixed):
+    code, io = run(mixed, "check", "--yes")
+    assert code == 0 and "2 releases of ACK Voice Studio are listed:" in io.lines and "  v0.2.0: newer than this copy" in io.lines and "  v0.1.0: this copy" in io.lines
+    assert not any("beta" in line for line in io.lines)
+    assert io.lines[-1] == "To fetch one into a new folder beside this copy, run: python3 -m voice_studio.update get v0.2.0"
+
+
+def test_check_says_which_tags_count_before_it_asks_and_not_when_there_is_no_prefix(mixed, tmp_path):
+    code, io = run(mixed, "check", answers=["no"])
+    ask = io.events.index(("ask", io.prompts[0]))
+    said = [t for kind, t in io.events[:ask] if kind == "say"]
+    assert "Only tags whose names begin with %s are releases of this tool. ACK's repository also holds the phone app's tags, and those are left out." % PREFIX in said
+    (tmp_path / "plain").mkdir()
+    plain = UpdateRig(tmp_path / "plain")
+    code, io = run(plain, "check", answers=["no"])
+    assert not any("Only tags whose names begin with" in line for line in io.lines)
+
+
+def test_a_repository_with_only_the_apps_tags_has_no_releases_of_the_tool(tmp_path):
+    rig = UpdateRig(tmp_path, releases=(), here_at=None, tag_prefix=PREFIX, app_tags=("v1.0-beta.1", "v1.0-beta.7"))
+    (rig.here / "tools" / "voice_studio").mkdir(parents=True)
+    code, io = run(rig, "check", "--yes")
+    assert code == 0 and io.lines[-1] == "ACK Voice Studio has no named releases yet, so there is nothing to fetch." and not any("listed" in line for line in io.lines)
+
+
+def test_get_shows_the_whole_tag_in_the_commands_and_fetches_it_into_a_folder_named_for_the_short_name(mixed):
+    dest = str(mixed.tmp / "ack-tools-v0.2.0")
+    code, io = run(mixed, "get", "v0.2.0", answers=["no"])
+    ask = io.events.index(("ask", io.prompts[0]))
+    said = [t for kind, t in io.events[:ask] if kind == "say"]
+    assert "  Then it fetches it: git clone --depth 1 --branch %sv0.2.0 %s %s" % (PREFIX, mixed.url, dest) in said and "This downloads the release v0.2.0 of ACK Voice Studio from %s into a new folder: %s" % (mixed.source.host, dest) in said
+    code, io = run(mixed, "get", "v0.2.0", "--yes")
+    assert code == 0 and up.head_commit(dest) == mixed.commits["v0.2.0"] and [argv for argv, ids in mixed.calls if argv[1] == "clone"] == [["git", "clone", "--depth", "1", "--branch", PREFIX + "v0.2.0", mixed.url, dest]]
+    assert "Fetched the release v0.2.0 (commit %s) into %s. It is version 1.1.0." % (mixed.commits["v0.2.0"][:10], dest) in io.lines
+
+
+def test_naming_a_phone_app_tag_is_an_unknown_release_and_fetches_nothing(mixed):
+    code, io = run(mixed, "get", "v1.0-beta.7", "--yes")
+    assert code == 1 and [argv[:2] for argv, ids in mixed.calls] == [["git", "ls-remote"]] and not os.path.lexists(str(mixed.tmp / "ack-tools-v1.0-beta.7"))
+    assert io.lines[-4] == "That is not one of the releases that are listed."
+    code, io = run(mixed, "get", PREFIX + "v0.2.0", "--yes")
+    assert code == 1 and io.lines[-4] == "That is not one of the releases that are listed.", "the whole tag is not a name the tool knows; the name is shown without the prefix"
+
+
+def test_the_copy_that_is_already_the_release_is_recognised_with_a_prefix(mixed):
+    code, io = run(mixed, "get", "v0.1.0", "--yes")
+    assert code == 2 and io.lines[-1] == "This copy is already the release v0.1.0. Nothing was fetched."

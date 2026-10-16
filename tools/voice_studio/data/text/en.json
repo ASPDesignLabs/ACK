@@ -1401,9 +1401,10 @@
     "uninstall.usage.show": "show: list the programs and downloaded files an uninstall would remove, and what it keeps. It changes nothing.",
     "update.already": "This copy is already the release {name}. Nothing was fetched.",
     "update.checked": "It was checked: it holds the commit the release was listed with, and it is a copy of this tool.",
-    "update.contact.check": "This asks {host} for the list of ACK's releases, with one command: {command}",
+    "update.contact.check": "This asks {host} for the list of tags in ACK's repository, with one command: {command}",
     "update.contact.first": "First it looks the release up: {command}",
-    "update.contact.get": "This downloads the release {name} of ACK from {host} into a new folder: {folder}",
+    "update.contact.get": "This downloads the release {name} of ACK Voice Studio from {host} into a new folder: {folder}",
+    "update.contact.prefix": "Only tags whose names begin with {prefix} are releases of this tool. ACK's repository also holds the phone app's tags, and those are left out.",
     "update.contact.room": "A copy is usually under 100 MB. {need} must be free beside this one.",
     "update.contact.room_known": "A copy is usually under 100 MB. {need} must be free beside this one, and {free} is.",
     "update.contact.second": "Then it fetches it: {command}",
@@ -1462,16 +1463,16 @@
     "update.releases.cannot_compare": "This copy is not at a release, so none can be called newer.",
     "update.releases.how": "To fetch one into a new folder beside this copy, run: {command}",
     "update.releases.no_newer": "No release is newer than this copy.",
-    "update.releases.none": "ACK has no named releases yet, so there is nothing to fetch.",
+    "update.releases.none": "ACK Voice Studio has no named releases yet, so there is nothing to fetch.",
     "update.releases.row": "{name}: {note}",
     "update.title": "ACK Voice Studio: update",
     "update.to_not_absolute": "Give the whole path after --to, starting with a slash. Nothing was done.",
-    "update.usage.check": "check [--yes]: ask for the list of ACK's releases and say which are newer than this copy. It asks first and changes nothing here.",
+    "update.usage.check": "check [--yes]: ask for the list of ACK Voice Studio's releases and say which are newer than this copy. It asks first and changes nothing here.",
     "update.usage.get": "get release [--to folder] [--yes]: fetch one release into a new folder beside this copy, check it, and say what is different. It asks first and never touches this copy.",
     "update.usage.head": "Commands:",
     "update.usage.options": "Nothing is contacted unless you say yes, nothing is checked in the background, and --yes answers the one question of that run only. No project, recording or backup is touched.",
     "update.which": "Say which release to fetch, for example: {command}. Nothing was done.",
-    "update.why": "It contacts the internet to ask which releases of ACK exist, and to fetch one when you choose.",
+    "update.why": "It contacts the internet to ask which releases of ACK Voice Studio exist, and to fetch one when you choose.",
     "voicefile.error.exists.changed": "Nothing was made, and what is there was left as it is.",
     "voicefile.error.exists.next": "Wait a moment and try again.",
     "voicefile.error.exists.what": "The new folder could not be made, because that name is already there.",
@@ -2082,8 +2083,8 @@
       "other": "And {count} more."
     },
     "update.releases.head": {
-      "one": "{count} release of ACK is listed:",
-      "other": "{count} releases of ACK are listed:"
+      "one": "{count} release of ACK Voice Studio is listed:",
+      "other": "{count} releases of ACK Voice Studio are listed:"
     },
     "update.releases.more": {
       "one": "And {count} more.",

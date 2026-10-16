@@ -38,35 +38,40 @@ class UpdateSystem(RealSystem):
 
 
 class UpdateRig:
-    def __init__(self, tmp_path, *, releases=("v1.0", "v1.1"), here_at="v1.0"):
+    def __init__(self, tmp_path, *, releases=("v1.0", "v1.1"), here_at="v1.0", tag_prefix="", app_tags=()):
+        """`releases` are the names the person sees; the repository's tags are `tag_prefix` + name. `app_tags` are tags of the phone app, made first, that must never be taken for releases."""
         self.tmp = Path(tmp_path)
         self.repo = self.tmp / "origin"
         self.repo.mkdir()
         git("init", "-q", "-b", "main", cwd=self.repo)
         self.url = "file://" + str(self.repo)
-        self.source = ReleaseSource(self.url, "update.why")
+        self.source = ReleaseSource(self.url, "update.why", tag_prefix)
+        self.tag_prefix = tag_prefix
         self.commits = {}
         files = (FIRST, SECOND)
+        for tag in app_tags:
+            self.release(tag, FIRST, tag=tag)
         for index, name in enumerate(releases):
-            self.release(name, files[min(index, 1)], annotated=(index % 2 == 1))
+            self.release(name, files[min(index, 1)], annotated=(index % 2 == 1), tag=tag_prefix + name)
         self.here = self.tmp / "ack-tools"
         if here_at:
-            git("clone", "-q", "--depth", "1", "--branch", here_at, self.url, str(self.here))
+            git("clone", "-q", "--depth", "1", "--branch", tag_prefix + here_at, self.url, str(self.here))
         self.system = UpdateSystem()
         self.calls = []                       # (argv, ids) of everything the download stand-in was asked
         self.offline = False
         self.refuse = None                    # an exception for the stand-in to raise
         self.after_clone = None
 
-    def release(self, name, files, annotated=False):
+    def release(self, name, files, annotated=False, tag=None):
+        tag = tag or name
         for rel, data in files.items():
             path = self.repo / rel
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(data)
         git("add", "-A", cwd=self.repo)
         git("commit", "-q", "--allow-empty", "-m", "release " + name, cwd=self.repo)
-        git(*(["tag", "-a", "-m", name, name] if annotated else ["tag", name]), cwd=self.repo)
-        self.commits[name] = git("rev-parse", name + "^{commit}", cwd=self.repo)
+        git(*(["tag", "-a", "-m", tag, tag] if annotated else ["tag", tag]), cwd=self.repo)
+        self.commits[name] = git("rev-parse", tag + "^{commit}", cwd=self.repo)
 
     def networked(self, consent, argv, item_ids, **kw):
         self.calls.append((list(argv), list(item_ids)))

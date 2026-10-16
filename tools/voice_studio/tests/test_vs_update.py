@@ -609,3 +609,89 @@ def test_a_registry_that_cannot_be_used_says_which_part_is_wrong():
     with pytest.raises(reg.RegistryError) as caught:
         reg.parse_release_source(doc_with({"url": "https://evil.example/x/y.git", "why_key": "update.why"}))
     assert "host" in str(caught.value)
+
+
+# ---------------------------------------------------------------- the phone app's tags are not releases of the tool (found when the real repository's tags were looked at)
+
+PREFIX = "voice-studio-"
+
+
+def test_only_tags_with_the_prefix_are_releases_and_the_person_sees_them_without_it():
+    text = "".join("%s\trefs/tags/%s\n" % (COMMIT, name) for name in ("v1.0-beta.1", "v1.0-beta.7", PREFIX + "v0.1.0", PREFIX + "v0.2.0", "voice-studio", "other-v1"))
+    found = up.parse_releases(text, PREFIX)
+    assert found == (up.Release("v0.1.0", COMMIT, PREFIX + "v0.1.0"), up.Release("v0.2.0", COMMIT, PREFIX + "v0.2.0"))
+    assert [r.full for r in found] == [PREFIX + "v0.1.0", PREFIX + "v0.2.0"] and up.parse_releases(text) != found, "with no prefix every safe tag counts, as before"
+    assert up.Release("v1.0", COMMIT).full == "v1.0" and up.Release("v1.0", COMMIT, PREFIX + "v1.0").full == PREFIX + "v1.0"
+
+
+def test_a_tag_that_is_only_the_prefix_or_leaves_an_unsafe_name_is_left_out():
+    text = "".join("%s\trefs/tags/%s\n" % (COMMIT, name) for name in (PREFIX, PREFIX + "-x", PREFIX + ".hidden", PREFIX + "a b", PREFIX + "x" * 60, PREFIX + "ok"))
+    assert [r.name for r in up.parse_releases(text, PREFIX)] == ["ok"]
+
+
+def test_a_tag_that_does_not_begin_with_the_prefix_is_left_out_however_long_it_is_and_wherever_the_prefix_sits():
+    longer = ("phone-app-release-candidate-v9.9.9", "x" + PREFIX + "v1", "old-" + PREFIX + "v2", PREFIX[:-1] + "v3", PREFIX.upper() + "v4")      # all longer than the prefix, so cutting it off would leave a safe name
+    assert all(len(name) > len(PREFIX) for name in longer)
+    text = "".join("%s\trefs/tags/%s\n" % (COMMIT, name) for name in longer + (PREFIX + "v5",))
+    assert [r.name for r in up.parse_releases(text, PREFIX)] == ["v5"]
+
+
+def test_a_release_whose_name_alone_would_not_be_safe_is_refused_even_when_its_whole_tag_is(tmp_path):
+    release = up.Release("-x", COMMIT, PREFIX + "-x")          # the whole tag is a safe name; the name the folder is made from is not
+    assert up.RELEASE_NAME.match(release.full) and not up.RELEASE_NAME.match(release.name)
+    rig = UpdateRig(tmp_path, releases=("v1.0",), here_at=None, tag_prefix=PREFIX)
+    assert code_of(up.get_release, rig.networked, consent(up.GET_ID), rig.url, release, str(tmp_path / "new")) == "bad_name" and rig.calls == []
+
+
+def test_an_annotated_tag_with_a_prefix_is_listed_with_the_commit_behind_it():
+    text = "%s\trefs/tags/%sv1\n%s\trefs/tags/%sv1^{}\n" % (OTHER, PREFIX, COMMIT, PREFIX)
+    assert up.parse_releases(text, PREFIX) == (up.Release("v1", COMMIT, PREFIX + "v1"),)
+
+
+@pytest.fixture
+def mixed(tmp_path):
+    return UpdateRig(tmp_path, releases=("v0.1.0", "v0.2.0"), here_at="v0.1.0", tag_prefix=PREFIX, app_tags=("v1.0-beta.1", "v1.0-beta.2"))
+
+
+def test_the_real_listing_of_a_repository_that_holds_app_tags_keeps_only_the_tools(mixed):
+    found = up.list_releases(mixed.networked, consent(up.LIST_ID), mixed.url, PREFIX)
+    assert sorted(r.name for r in found) == ["v0.1.0", "v0.2.0"] and {r.full for r in found} == {PREFIX + "v0.1.0", PREFIX + "v0.2.0"}
+    assert {r.name: r.commit for r in found} == {"v0.1.0": mixed.commits["v0.1.0"], "v0.2.0": mixed.commits["v0.2.0"]}
+    assert mixed.calls == [(["git", "ls-remote", "--tags", mixed.url], [up.LIST_ID])], "the request is the same whatever is kept"
+    assert sorted(r.name for r in up.list_releases(mixed.networked, consent(up.LIST_ID), mixed.url)) == sorted(["v1.0-beta.1", "v1.0-beta.2", PREFIX + "v0.1.0", PREFIX + "v0.2.0"])
+
+
+def test_a_release_with_a_prefix_is_fetched_by_its_whole_tag_and_checked(mixed):
+    dest = str(mixed.tmp / "ack-tools-v0.2.0")
+    release = next(r for r in up.list_releases(mixed.networked, consent(up.LIST_ID), mixed.url, PREFIX) if r.name == "v0.2.0")
+    mixed.calls.clear()
+    fetched = up.get_release(mixed.networked, consent(up.GET_ID), mixed.url, release, dest)
+    assert mixed.calls == [(["git", "clone", "--depth", "1", "--branch", PREFIX + "v0.2.0", mixed.url, dest], [up.GET_ID])]
+    assert fetched.release == release and up.head_commit(dest) == mixed.commits["v0.2.0"] and fetched.version == "1.1.0"
+
+
+def test_the_sort_and_the_newer_ones_use_the_name_without_the_prefix(mixed):
+    found = up.sort_releases(up.list_releases(mixed.networked, consent(up.LIST_ID), mixed.url, PREFIX))
+    assert [r.name for r in found] == ["v0.2.0", "v0.1.0"]
+    assert [r.name for r in up.newer_than(found, found[1])] == ["v0.2.0"] and up.release_at(found, mixed.commits["v0.1.0"]).name == "v0.1.0"
+
+
+def test_a_whole_tag_that_is_not_safe_is_refused_before_anything_is_asked(mixed):
+    assert code_of(up.get_release, mixed.networked, consent(up.GET_ID), mixed.url, up.Release("ok", COMMIT, "bad tag"), str(mixed.tmp / "new")) == "bad_name" and mixed.calls == []
+
+
+def test_the_prefix_the_registry_gives_is_plain_letters_and_not_long():
+    from voice_studio.core import registry as reg
+    good = {"url": "https://github.com/x/y.git", "why_key": "update.why"}
+    assert reg.parse_release_source(doc_with(good)).tag_prefix == "" and reg.parse_release_source(doc_with({**good, "tag_prefix": PREFIX})).tag_prefix == PREFIX
+    assert reg.parse_release_source(doc_with({**good, "tag_prefix": "a" * 32})).tag_prefix == "a" * 32
+    every_kind = "Aa0._-z9Z"          # a capital, a small letter, a digit, a dot, an underscore and a dash
+    assert reg.parse_release_source(doc_with({**good, "tag_prefix": every_kind})).tag_prefix == every_kind
+    for bad in ("a b", "a" * 33, "a/b", "é", "a;b", "a\n", "voice-\n", 5, None, ["x"]):
+        with pytest.raises(reg.RegistryError):
+            reg.parse_release_source(doc_with({**good, "tag_prefix": bad}))
+
+
+def test_the_shipped_registry_counts_only_tags_named_for_voice_studio():
+    from voice_studio.core import registry as reg
+    assert reg.load_release_source().tag_prefix == "voice-studio-"

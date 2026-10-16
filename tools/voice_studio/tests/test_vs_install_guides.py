@@ -453,7 +453,7 @@ def test_the_checklist_section_names_both_guides_and_the_commands_the_guides_giv
 def test_the_guides_say_updating_asks_first_never_touches_the_running_copy_and_is_not_automatic(path):
     body = " ".join(text_of(path).split())
     for claim in ("Each says first what it will ask github.com and shows the exact commands, then asks before it contacts anything.", "`get` never touches this copy",
-                  "you type them", "If ACK has not named a release yet, `check` says so.", "no automatic update checks", "when you run the update command in section"):
+                  "you type them", "If ACK Voice Studio has not named a release yet, `check` says so.", "The phone app's own version names are not releases of this tool and are not listed.", "no automatic update checks", "when you run the update command in section"):
         assert claim in body, claim
     assert "no update checks" not in body
 

@@ -7,8 +7,10 @@ a **new folder** that must not exist yet, so this copy, and everything in it tha
 then builds only the programs whose list changed, beside the old ones, and checks each before it counts). After the fetch the copy is checked: the commit it holds is the commit the
 release was listed with, and it is a copy of this tool. If either is not true, the folder this program made is removed again and nothing else is.
 
-What a release is, is its git tag. Tags that look like a number with dots (`v1.2`, `1.2.3`) are ordered; any other tag is listed and cannot be called newer. Whether this copy is at a release
-is read from the files of its `.git` folder (no program is started for that): a copy that is not at a release cannot be compared, and is told so.
+What a release is, is its git tag. ACK's repository also holds the phone app's tags (`v1.0-beta.7`), which are not releases of this tool, so the tags that count are the ones whose names begin with the
+prefix the registry gives (`voice-studio-`); the person types and sees the name without it (`v0.1.0` for the tag `voice-studio-v0.1.0`). Names that look like a number with dots (`v1.2`, `1.2.3`) are ordered;
+any other name is listed and cannot be called newer. Whether this copy is at a release is read from the files of its `.git` folder (no program is started for that): a copy that is not at a release cannot be
+compared, and is told so.
 
 Plain Python with no words and no network library; the words are in the text catalog under `update.*`.
 """
@@ -50,14 +52,20 @@ class UpdateError(Exception):
 
 @dataclass(frozen=True)
 class Release:
-    name: str
+    name: str                     # what the person types and sees: the tag without the registry's prefix
     commit: str
+    tag: str = ""                 # the tag as the repository names it, when that is not the same as `name`
+
+    @property
+    def full(self) -> str:
+        return self.tag or self.name
 
 
 # ---------------------------------------------------------------- the releases
 
-def parse_releases(text: str) -> Tuple[Release, ...]:
-    """The tags `git ls-remote --tags` listed: a name and the commit it points at (for an annotated tag, the commit behind it). A name that is not safe to pass on or to make a folder from is left out."""
+def parse_releases(text: str, prefix: str = "") -> Tuple[Release, ...]:
+    """The tags `git ls-remote --tags` listed that begin with `prefix`: the name after the prefix and the commit the tag points at (for an annotated tag, the commit behind it). A tag whose name, or whose
+    name without the prefix, is not safe to pass on or to make a folder from is left out, and so is every tag without the prefix."""
     seen: Dict[str, str] = {}
     peeled: Dict[str, str] = {}
     for line in text.splitlines():
@@ -69,8 +77,8 @@ def parse_releases(text: str) -> Tuple[Release, ...]:
             peeled[name[:-3]] = parts[0]
         else:
             seen[name] = parts[0]
-    found = {name: peeled.get(name, commit) for name, commit in seen.items() if RELEASE_NAME.match(name)}
-    return tuple(Release(name, found[name]) for name in found)
+    found = {name: peeled.get(name, commit) for name, commit in seen.items() if name.startswith(prefix) and RELEASE_NAME.match(name) and RELEASE_NAME.match(name[len(prefix):])}
+    return tuple(Release(name[len(prefix):], found[name], name if prefix else "") for name in found)
 
 
 def version_key(name: str) -> Optional[Tuple[int, ...]]:
@@ -146,15 +154,15 @@ def _tail(result: CommandResult) -> str:
     return lines[-1][:200] if lines else "exit %d" % result.returncode
 
 
-def list_releases(networked: Networked, consent: Optional[ConsentRecord], url: str) -> Tuple[Release, ...]:
-    """One `git ls-remote --tags`. Raises UpdateError('unreachable') when it cannot be done (no connection, a refused request, git missing)."""
+def list_releases(networked: Networked, consent: Optional[ConsentRecord], url: str, prefix: str = "") -> Tuple[Release, ...]:
+    """One `git ls-remote --tags`, kept to the tags that begin with `prefix`. Raises UpdateError('unreachable') when it cannot be done (no connection, a refused request, git missing)."""
     try:
         result = networked(consent, ["git", "ls-remote", "--tags", url], [LIST_ID])
     except fetch.FetchError as exc:
         raise UpdateError("unreachable", exc.detail or exc.code)
     if result.returncode != 0:
         raise UpdateError("unreachable", _tail(result))
-    return parse_releases(result.stdout or "")
+    return parse_releases(result.stdout or "", prefix)
 
 
 def folder_name(code_folder: str, release: str) -> str:
@@ -187,11 +195,11 @@ def get_release(networked: Networked, consent: Optional[ConsentRecord], url: str
                 remove_tree: Callable[[str, List[Tuple[str, str]]], None] = profiles.remove_tree) -> Fetched:
     """One `git clone --depth 1 --branch NAME URL DEST`, then the checks: the commit held is the commit the release was listed with, and the copy is a copy of this tool. `dest` must not exist
     (check_destination). A copy that fails to be made or checked is removed again, and only that folder. Raises UpdateError('bad_name', 'differs', 'not_a_release' or 'unreachable')."""
-    if not RELEASE_NAME.match(release.name):
+    if not RELEASE_NAME.match(release.name) or not RELEASE_NAME.match(release.full):
         raise UpdateError("bad_name", release.name[:64])
     check_destination(dest, None)                               # nothing may be there now: what is removed after a failure must be only what the clone made
     try:
-        result = networked(consent, ["git", "clone", "--depth", "1", "--branch", release.name, url, dest], [GET_ID])
+        result = networked(consent, ["git", "clone", "--depth", "1", "--branch", release.full, url, dest], [GET_ID])
     except fetch.FetchError as exc:
         _remove_made(dest, remove_tree)
         raise UpdateError("unreachable", exc.detail or exc.code)

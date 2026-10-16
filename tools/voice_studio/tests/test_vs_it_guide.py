@@ -377,10 +377,12 @@ def test_the_page_describes_updating_the_way_the_code_does():
         if command != "help":
             assert "python3 -m voice_studio.update %s" % command in text, command
     source = reg.load_release_source()
-    for claim in ("A release is a git tag", "asks once", "git ls-remote --tags " + source.url, "git clone --depth 1 --branch RELEASE " + source.url, "GIT_TERMINAL_PROMPT=0",
+    for claim in ("A release is a git tag", "asks once", "git ls-remote --tags " + source.url, "git clone --depth 1 --branch %sRELEASE %s" % (source.tag_prefix, source.url), "GIT_TERMINAL_PROMPT=0",
                   "nothing is saved and nothing is ever checked in the background", "(at most 64)", "no program started for that", "A folder that already exists is never used and never removed",
-                  "**cannot replace the folder it is running from**", "two `mv` commands", "touches no project, recording, round, finished voice or backup", "**No release has been tagged yet**"):
+                  "**cannot replace the folder it is running from**", "two `mv` commands", "touches no project, recording, round, finished voice or backup", "No tag beginning with `%s` exists yet" % source.tag_prefix, "A release is a git tag whose name begins with `%s`" % source.tag_prefix,
+                  "the phone app's tags (`v1.0-beta.1` and the rest)"):
         assert claim in text, claim
+    assert source.tag_prefix == "voice-studio-" and "**No release has been tagged yet**" not in text
     assert update.RELEASE_NAME.match("x" * 64) and not update.RELEASE_NAME.match("x" * 65)
     assert 'GIT_TERMINAL_PROMPT="0"' in (PKG / "core/fetch.py").read_text()
     assert "Updating the tool (`python3 -m voice_studio.update`)" in section(11) and "checklist section I13" in section(11)

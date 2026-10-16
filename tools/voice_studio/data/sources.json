@@ -1,9 +1,10 @@
 {
   "schema": 1,
-  "note": "Every download the guided setup can make is listed here, and only here (and, under \"releases\", the one address the update command asks about ACK's own releases, which downloads no file of this list): this file is the one place (with get.sh) allowed to hold a web address. An entry with no address is not fetchable yet: it is filled in, pinned to a revision, a size and a checksum, once it has been checked on a real machine (plan tasks VS-0.2 and VS-4.1). Sizes marked approx are the sizes the hosts show, used only for the disk estimate.",
+  "note": "Every download the guided setup can make is listed here, and only here (and, under \"releases\", the one address the update command asks about ACK Voice Studio's own releases, which are the tags whose names begin with tag_prefix; it downloads no file of this list): this file is the one place (with get.sh) allowed to hold a web address. An entry with no address is not fetchable yet: it is filled in, pinned to a revision, a size and a checksum, once it has been checked on a real machine (plan tasks VS-0.2 and VS-4.1). Sizes marked approx are the sizes the hosts show, used only for the disk estimate.",
   "releases": {
     "url": "https://github.com/ASPDesignLabs/ACK.git",
-    "why_key": "update.why"
+    "why_key": "update.why",
+    "tag_prefix": "voice-studio-"
   },
   "items": [
     {
