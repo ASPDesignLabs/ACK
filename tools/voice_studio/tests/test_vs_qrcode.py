@@ -49,7 +49,7 @@ def test_the_version_words_are_the_standards():
 
 
 def test_the_galois_field_arithmetic_is_the_one_the_standard_names():
-    assert qr._EXP[:10] == [1, 2, 4, 8, 16, 32, 64, 128, 29, 58] and qr._EXP[255] == 1 and qr._multiply(2, 128) == 29
+    assert qr._EXP[:10] == [1, 2, 4, 8, 16, 32, 64, 128, 29, 58] and len(qr._EXP) == 255 and qr._LOG[1] == 0 and qr._multiply(qr._EXP[254], 2) == 1 and qr._multiply(2, 128) == 29
     assert all(qr._multiply(a, 1) == a and qr._multiply(a, 0) == 0 for a in range(256))
     assert all(qr._multiply(a, b) == qr._multiply(b, a) for a in range(0, 256, 7) for b in range(0, 256, 11))
 
@@ -67,6 +67,16 @@ def test_a_text_that_fills_the_code_exactly_gets_no_pad_and_a_shortened_terminat
     assert len(bits) == 128 and bits[-4:] == "0000" and bits[:12] == "010000001110"        # 14 bytes: the terminator is only what fits; no pad bytes
     one_less = "".join(str(b) for b in qr.data_bits(b"x" * (qr.capacity(1) - 1), 1))
     assert one_less[-8:] == "11101100", "room for one pad byte"
+
+
+def test_data_for_a_code_that_is_too_small_is_refused_rather_than_cut():
+    assert len(qr.data_bits(b"x" * qr.capacity(1), 1)) == 128
+    with pytest.raises(qr.QrError) as caught:
+        qr.data_bits(b"x" * (qr.capacity(1) + 1), 1)
+    assert caught.value.code == "too_long"
+    assert len(qr.data_bits(b"x" * qr.capacity(10), 10)) == qr.data_codewords(10) * 8
+    with pytest.raises(qr.QrError):
+        qr.data_bits(b"x" * (qr.capacity(10) + 1), 10)
 
 
 def test_from_version_ten_the_length_has_sixteen_bits():
@@ -166,7 +176,9 @@ def decode(m):
                     bits.append(m[r][c] != MASK_RULES[mask](r, c))
         upward = not upward
         column -= 2
-    assert len(bits) == TOTAL_CODEWORDS[version] * 8 + {1: 0, 2: 7, 3: 7, 4: 7, 5: 7, 6: 7, 7: 0, 8: 0, 9: 0, 10: 0}[version]
+    remainder = {1: 0, 2: 7, 3: 7, 4: 7, 5: 7, 6: 7, 7: 0, 8: 0, 9: 0, 10: 0}[version]
+    assert len(bits) == TOTAL_CODEWORDS[version] * 8 + remainder
+    assert not any(bits[TOTAL_CODEWORDS[version] * 8:]), "the remainder bits of the standard are light before the mask"
     words = [int("".join("1" if b else "0" for b in bits[i:i + 8]), 2) for i in range(0, TOTAL_CODEWORDS[version] * 8, 8)]
     degree, groups = qr._BLOCKS[version]
     sizes = [size_ for count, size_ in groups for _ in range(count)]
@@ -198,6 +210,10 @@ def decode(m):
     length = int(stream[4:4 + count_bits], 2)
     body = stream[4 + count_bits:4 + count_bits + 8 * length]
     assert len(body) == 8 * length
+    after = stream[4 + count_bits + 8 * length:]
+    assert after[:4] == "0000" and len(after[4:]) % 8 == 0, "a four-bit terminator, and then whole bytes"
+    pads = [int(after[i:i + 8], 2) for i in range(4, len(after), 8)]
+    assert pads == ([0xEC, 0x11] * len(pads))[:len(pads)], "the pad bytes alternate, starting with 0xEC"
     return bytes(int(body[i:i + 8], 2) for i in range(0, len(body), 8)).decode("utf-8"), version, mask
 
 

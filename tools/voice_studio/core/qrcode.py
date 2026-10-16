@@ -27,8 +27,6 @@ _BLOCKS = {
 }
 # The standard's table of alignment pattern centres (ISO 18004 Annex E). With two numbers only the last pair is drawn, so the first (6) is never seen in versions 2 to 6; it is kept so the table reads as the standard's.
 _ALIGNMENT = {1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34], 7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46], 10: [6, 28, 50]}
-_REMAINDER_BITS = {1: 0, 2: 7, 3: 7, 4: 7, 5: 7, 6: 7, 7: 0, 8: 0, 9: 0, 10: 0}
-_FORMAT_LEVEL_M = 0                                 # the two bits for level M in the format information
 _PAD = (0xEC, 0x11)
 
 
@@ -43,9 +41,8 @@ def data_codewords(version: int) -> int:
 
 
 def capacity(version: int) -> int:
-    """How many bytes of text a code of this version holds."""
-    count_bits = 8 if version < 10 else 16
-    return (data_codewords(version) * 8 - 4 - count_bits) // 8
+    """How many bytes of text a code of this version holds: the mode (4 bits) and the length (8 bits, or 16 from version 10) take 2 whole bytes, or 3, of the data codewords."""
+    return data_codewords(version) - (2 if version < 10 else 3)
 
 
 def smallest_version(length: int) -> int:
@@ -57,21 +54,19 @@ def smallest_version(length: int) -> int:
 
 # ---------------------------------------------------------------- Reed-Solomon over GF(256)
 
-_EXP = [0] * 512
-_LOG = [0] * 256
+_EXP: List[int] = []                                # a^0 to a^254, where a = 2 and the field is made with 0x11D
+_LOG: dict = {}                                     # the power of a that gives each non-zero value
 _x = 1
 for _i in range(255):
-    _EXP[_i] = _x
+    _EXP.append(_x)
     _LOG[_x] = _i
     _x <<= 1
     if _x & 0x100:
         _x ^= 0x11D
-for _i in range(255, 512):
-    _EXP[_i] = _EXP[_i - 255]
 
 
 def _multiply(a: int, b: int) -> int:
-    return 0 if a == 0 or b == 0 else _EXP[_LOG[a] + _LOG[b]]
+    return 0 if a == 0 or b == 0 else _EXP[(_LOG[a] + _LOG[b]) % 255]
 
 
 def _generator(degree: int) -> List[int]:
@@ -100,7 +95,9 @@ def error_codewords(data: Sequence[int], degree: int) -> List[int]:
 # ---------------------------------------------------------------- the data
 
 def data_bits(payload: bytes, version: int) -> List[int]:
-    """Mode 0100 (bytes), the length, the bytes, a terminator, zeros to a whole byte, then the two pad bytes until the code is full."""
+    """Mode 0100 (bytes), the length, the bytes, a terminator, then the two pad bytes in turn until the code is full."""
+    if len(payload) > capacity(version):
+        raise QrError("too_long")
     bits: List[int] = []
 
     def put(value: int, width: int) -> None:
@@ -111,8 +108,7 @@ def data_bits(payload: bytes, version: int) -> List[int]:
     for byte in payload:
         put(byte, 8)
     total = data_codewords(version) * 8
-    bits.extend([0] * min(4, total - len(bits)))
-    bits.extend([0] * (-len(bits) % 8))
+    bits.extend([0] * 4)                                    # the terminator always fits (capacity leaves 4 bits) and ends on a whole byte, so no zeros are needed after it
     pad = 0
     while len(bits) < total:
         put(_PAD[pad % 2], 8)
@@ -151,7 +147,7 @@ def _bch(value: int, width: int, generator: int, check_bits: int) -> int:
 
 def format_bits(mask: int) -> int:
     """The 15 bits that say the level (M) and the mask: 5 data bits, 10 check bits, then XOR 0x5412 so that the pattern is never all light."""
-    data = (_FORMAT_LEVEL_M << 3) | mask
+    data = mask                                             # the two bits for level M are 00, ahead of the three bits of the mask
     return ((data << 10) | _bch(data, 10, 0x537, 10)) ^ 0x5412
 
 
