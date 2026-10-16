@@ -22,7 +22,7 @@ import sys
 from dataclasses import dataclass, replace
 from typing import Iterable, List, Optional, Sequence, Tuple
 
-from . import jobs, voicefile
+from . import areas, jobs, voicefile
 from .paths import DataHome, ProjectPaths
 from .newproject import CONSENT_TEXT_FIELDS, MAX_TYPED, Problem, parse_hours
 from .project import Consent, MAX_NAME, MAX_NOTE, Project, SCRATCH_CUSTOM, clean_text, consent_problems, validate
@@ -174,7 +174,9 @@ def measure(path: str) -> Tuple[int, int]:
 
 
 def _kind(paths: ProjectPaths, entry: str) -> str:
-    return {paths.recordings: "recordings", paths.rounds: "rounds", paths.exports: "exports", paths.listening: "listening", paths.default_scratch: "scratch"}.get(entry, "record" if os.path.basename(entry) in KEPT_LAST else "other")
+    """The area (core/areas.py) of something directly under the project's folder, or "other" when none claims it."""
+    area = areas.project_area(os.path.basename(entry))
+    return area.id if area is not None else "other"
 
 
 def _custom_scratch(project: Project) -> Tuple[str, str]:
