@@ -1762,3 +1762,12 @@ The guided desktop tool for recording, training and exporting a custom voice (`t
 - **The data-sovereignty rules apply here too** (see that section): `docs/DATA_SOVEREIGNTY.md` has the rows for this tool and `test_vs_data_sovereignty_doc.py` fails if a command that can
   reach the network is missing a row. Every source file carries `SPDX-License-Identifier: GPL-3.0-or-later`; `THIRD_PARTY_NOTICES.md` section 7 lists what the tool installs, with how each
   licence was checked (`test_vs_notices.py`).
+- **`voicefile send` is the only place the tool listens, and only `core/lansend.py` may do it** (plan VS-3.5 and VS-5.1, choices P25; the checklist is section I16). It hands the finished voice zip to a phone on the
+  home network once. `test_vs_network_rules.py` holds the module to: imports only `socket` and `ssl`, never dials (no `connect`, `create_connection`, `getaddrinfo`...), binds exactly once, never `0.0.0.0` or
+  IPv6, and serves one file by an exact path (`https://<ip>:<port>/<22-character token>/<zip name>`; any other request gets the same short 404; twelve of those stop it; ten minutes at most; TLS 1.2 or
+  newer; a half-sent file allows a retry). `core/phonecert.py` makes the certificates by starting the local `openssl` program (a program the tool starts, not a network program): a wizard-made authority limited by name
+  constraints to `10/8`, `172.16/12`, `192.168/16` and one name that cannot exist (so a re-issued leaf for a new address needs no change on the phone, which resolves the VS-0.3 question), kept in
+  `state/phone-certificate/` (not backed up, folder 0700, key 0600, never replaced, a damaged or ended one is reported and never used); the short-lived leaf is made per send in a work folder that is removed afterwards.
+  `core/qrcode.py` is a pure-Python encoder (tested against the standard's worked values and an independent decoder written from the specification); the QR is drawn only when the terminal can show black on white
+  (`io.ansi`), and the address is always printed. **Not confirmed on a phone: that Android enforces the name constraints, that the QR scans, and the network under WSL (VS-3.6 is not built).** When a statement elsewhere says the tool
+  "opens no listening port", it means outside this one command; keep the IT guide, `docs/DATA_SOVEREIGNTY.md` and the checklist in step with `core/lansend.py` (their tests read the code).

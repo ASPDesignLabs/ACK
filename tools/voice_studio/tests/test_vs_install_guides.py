@@ -437,7 +437,7 @@ def test_neither_guide_tells_the_reader_to_turn_off_a_security_feature_or_to_use
 
 def checklist_section():
     body = (ROOT / "docs" / "VOICE_STUDIO_DEVICE_TEST.md").read_text(encoding="utf-8")
-    return body.split("## I7. Installing from scratch", 1)[1].split("## J. Making the voice file", 1)[0]
+    return body.split("## I7. Installing from scratch", 1)[1].split("## I8. Hearing the voice", 1)[0]          # section I7 only: the sections after it quote their own tools (and openssl) and have their own tests
 
 
 def test_the_checklist_section_for_the_installation_quotes_only_what_the_tool_says():

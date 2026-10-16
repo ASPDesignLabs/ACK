@@ -39,6 +39,13 @@ def test_the_git_row_says_what_was_read_when_and_what_was_not():
         assert claim in row, claim
 
 
+def test_the_openssl_and_ip_row_says_what_was_read_and_what_was_not_and_names_the_command_that_runs_them():
+    row = next(r for r in rows(7) if r.startswith("| `openssl` and `ip`"))
+    for claim in ("`python3 -m voice_studio.voicefile send`", "Apache-2.0", "2026-10-16", "Ubuntu 24.04", "/usr/share/doc/openssl/copyright", "the 22.04 package was not read", "**not verified here**",
+                  "not installed in the build sandbox", "Neither is distributed by this project", "Running a program is not linking to it", "`socket` and `ssl`"):
+        assert claim in row, claim
+
+
 def test_the_build_tools_row_names_each_package_its_licences_and_what_was_not_read():
     row = next(r for r in rows(7) if r.startswith("| The build tools"))
     item = re.split(r"(?<!\\)\|", row.strip().strip("|"))[0]

@@ -1611,3 +1611,53 @@ def test_the_parts_of_the_report_section_that_contact_nothing_run_as_they_say(tm
     assert d.count("exit: 2") == 4 and "---- the report starts" not in d and re.search(r"^problem\.txt$", d, re.M)
     assert "is there already and will be replaced." in d2 and "Saved " in d2
     assert "Step: <user> on" in f and "folder <voice-studio>, address <address>, mail <email>" in f and "pretendlogin" not in f
+
+
+# ---------------------------------------------------------------- section I16: giving the voice file to the phone over Wi-Fi
+
+def i16_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I16."), flags=re.S | re.M)]
+
+
+def test_the_send_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import voicefile_flow as vff
+    found = re.findall(r"python3 -m voice_studio\.voicefile ([a-z]+)([^\n`;<|&]*)", section("I16."))
+    assert found and {c for c, _ in found} == {"send"}
+    table = vff.OPTIONS["send"]
+    seen = set()
+    for command, rest in found:
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert words[i] in table, words[i]
+                seen.add(words[i])
+                i += 2 if words[i] in ("--project", "--folder", "--address", "--port") else 1
+            else:
+                i += 1
+    assert seen >= {"--project", "--address", "--port", "--folder"}
+
+
+def test_every_sentence_the_send_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I16."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "wc ", "cat ", "T=", "echo ", "rm ", "mv ", "[", "<", "openssl ", "tar ", "ss ", "wsl ", "explorer.exe", "ACK ", "%"))]
+    assert len(quoted) >= 25, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_send_section_names_the_things_the_listener_really_does_and_says_what_was_not_run():
+    from voice_studio.core import lansend, phonecert
+    body = " ".join(section("I16.").split())
+    assert "**New, and not yet run on a real computer or a real phone.**" in body and "It is the one place the tool **listens** for a connection" in body
+    assert "for up to ten minutes" in body and lansend.MINUTES == 10 and "port 8443" in body and lansend.DEFAULT_PORT == 8443 and "TCP port 8443" in body
+    assert "**Not run on a real network, on WSL's network, through a real phone's browser, or with a phone camera**" in body
+    assert "`authority.key` (permissions `-rw-------`)" in body and phonecert.KEY_FILE == "authority.key" and "`%s`" % phonecert.CERT_FILE in body and "`drwx------`" in body
+    for pair in phonecert.PRIVATE_RANGES:
+        assert "`IP:%s/%s`" % pair in body, pair
+    assert "`DNS:%s`" % phonecert.NO_SUCH_NAME in body and "ss -ltn | grep 8443" in body
+    assert "move the folder aside, **never delete it**" in body and "no folder beginning `send-`" in body
+    assert "Section I16:" in doc_text() and "certificate file section I16 made" in section("M.")
+    names = re.findall(r"^## (I16|I15|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I15") < names.index("I16") < names.index("J") and len(i16_blocks()) == 9

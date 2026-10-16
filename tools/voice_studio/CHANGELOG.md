@@ -22,6 +22,11 @@ listed, section by section, in `docs/VOICE_STUDIO_DEVICE_TEST.md`; nothing here 
 - **Training rounds.** `python3 -m voice_studio.rounds` starts a round, shows how it is going, stops it, chooses the round to use, goes back to an earlier one, keeps a note, and
   frees the space a round used. Nothing is removed without a question that shows what goes.
 - **The voice file.** `python3 -m voice_studio.voicefile` makes the zip ACK takes from the chosen round, lists the ones made, and plays a finished voice on the computer.
+- **Sending the voice file over Wi-Fi.** `python3 -m voice_studio.voicefile send` gives the finished zip to a phone on the same home network, once, so that no cable is needed. The first
+  time it makes a small certificate file (limited to home-network addresses, kept in the tool's `state` folder, with its secret part readable only by you) and stops, because you put that
+  file on the phone once. After that it shows the plan, asks, and listens for up to ten minutes on one home-network address, over a secure connection, for one file, at an address that holds
+  a random secret; it stops by itself when the file has been sent, when the time is up, or after twelve requests for anything else. It prints the address and, on a terminal that can draw it,
+  a QR code. This is the first and only place the tool listens for a connection (`core/lansend.py`); it never contacts anything.
 - **Backup.** `python3 -m voice_studio.backup` copies a project's recordings, notes and finished voices to a folder (the one used last, or the tool's own backups folder, unless you
   name another), reads the copy back before it counts, and restores from it by adding what is missing. It never replaces or removes an earlier backup.
 - **Refresh.** `python3 -m voice_studio.refresh` looks at the tool's own programs, downloads and notes, mends what is broken, builds a fresh copy beside the old one, and lists the
@@ -47,5 +52,5 @@ listed, section by section, in `docs/VOICE_STUDIO_DEVICE_TEST.md`; nothing here 
 - **Nothing is deleted unless you ask.** Every command that changes or removes something shows what it will do first and asks; with nobody to ask it does nothing.
 
 ### Not done yet
-- A window page for getting a starting voice (it is still a typed command); sending recordings over Wi-Fi; the recording paths for helpers; a real run on native Ubuntu,
+- A window page for getting a starting voice (it is still a typed command); a window page for sending the voice file over Wi-Fi (it is a typed command; the code is never drawn in the window); sending recordings from the phone to the computer over Wi-Fi; help with the network under WSL; the recording paths for helpers; a real run on native Ubuntu,
   with a screen reader, on a real GPU, through a real speaker and over a real connection (all of these are rows in the device checklist).

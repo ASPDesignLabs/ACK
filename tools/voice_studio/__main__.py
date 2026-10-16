@@ -25,6 +25,7 @@ from .core.text import load_catalog
 class TerminalIO:
     def __init__(self) -> None:
         self.interactive = bool(sys.stdin and sys.stdin.isatty())
+        self.ansi = bool(sys.stdout and sys.stdout.isatty() and "NO_COLOR" not in os.environ and os.environ.get("TERM", "") not in ("", "dumb"))       # may colour be written? (the QR code is drawn only then)
 
     def say(self, text: str) -> None:
         print(text, flush=True)

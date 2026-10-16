@@ -52,6 +52,7 @@ The folders and names used below (change them if yours differ):
 | I13 | Updating the tool | Look for newer releases and fetch one beside this copy. |
 | I14 | The problem report | Make a report a helper can read. |
 | I15 | The window's pages for hearing, backup, checking, updates and problem reports | Press every button on the five pages that came after the first six, and answer what they ask. |
+| I16 | Giving the voice file to the phone over Wi-Fi | Put a certificate on the phone once, then send the voice file over the home network. |
 | J | Making the voice file | The same as I4, done by hand. |
 | K | On the phone | Put the voice on the phone and hear it in ACK. |
 | L | What to send back | What to write down and send back. |
@@ -1722,6 +1723,92 @@ Use the project from section I2 (`voice-check`, with at least two finished round
 - [ ] A screen reader, if you use one: visit each page and press each button. Write down what is read for the page heading, the tick boxes, the drop-downs and the shown report. It is fine if the answer is "nothing is read".
 - [ ] Write down: any page you could not find, any word you did not understand, any time the window seemed to do nothing, and whether the list of eleven pages is too long.
 
+## I16. Giving the voice file to the phone over Wi-Fi
+
+**New, and not yet run on a real computer or a real phone.** `voicefile send` gives the finished voice file to a phone on the same home network, once, so that no cable is needed (the plan's decision D10, choices P25). It is the one place the tool **listens** for a connection: for up to ten minutes, on one home-network address, over a secure connection, for one file, at an address that holds a random secret, and it stops by itself after the first complete download. Nothing is sent anywhere else, and the computer opens no connection to anything. It needs a voice file from section I4, the `openssl` program that Ubuntu already has, and a phone and this computer on the same Wi-Fi.
+
+*Built and tried in the build sandbox only: with the real `openssl` (a certificate for a home-network address passes, one for a public address or a name is refused by the authority itself) and real clients on this computer's own loopback address (the right address gets the whole file once, anything else gets a short "not found", a device that does not trust the certificate gets nothing, the listener ends by itself). The QR code was read back by a reader written separately from the specification. **Not run on a real network, on WSL's network, through a real phone's browser, or with a phone camera**, and no phone has been shown to honour the certificate's limits to home-network addresses (the authority itself does, by `openssl`). That is what this section is for.*
+
+**A. The certificate file for the phone (the first time only).** Nothing is made until you say yes.
+
+- [ ] Ask, and say no:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile send --project voice-check
+  ```
+  → `ACK Voice Studio: sending the voice file to the phone`, then `The phone needs a small certificate file first. Without it, the phone will not take a download from this computer without a warning.` and what will be made, where it is kept and that its secret part stays there. Then the question `Make the certificate file now? Type yes to make it.` Type **`no`**: `Nothing was done.` and no folder `~/ack-voice-studio/state/phone-certificate` exists. (`ls ~/ack-voice-studio/state` shows it is not there.)
+- [ ] Run it again and type **`yes`**:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile send --project voice-check
+  ls -la ~/ack-voice-studio/state/phone-certificate
+  ```
+  → `Put it on the phone once:` and four steps, then `When that is done, run this again to send the voice file: …`. It **stops there and sends nothing**: the phone has to have the file first. `ls` shows exactly two files, `authority.key` (permissions `-rw-------`) and `ack-voice-studio-phone-certificate.crt`, in a folder that is `drwx------`. Write down whether the four steps were clear.
+- [ ] Look at what the certificate allows (this only reads the file):
+  ```bash
+  openssl x509 -in ~/ack-voice-studio/state/phone-certificate/ack-voice-studio-phone-certificate.crt -noout -text | sed -n '/Name Constraints/,/Signature Algorithm/p'
+  ```
+  → `Name Constraints: critical` and, under `Permitted:`, exactly `IP:10.0.0.0/255.0.0.0`, `IP:172.16.0.0/255.240.0.0`, `IP:192.168.0.0/255.255.0.0` and `DNS:ack-voice-studio.invalid`, and nothing else. The date at the end of `Not After` is about two years away.
+- [ ] Run the command a third time with the folder in place and say **no** at the question: it must not ask to make the file again, and it must show the plan (part C) instead. (Do not answer yes yet.)
+
+**B. Put the file on the phone.** This is the part that has never been tried on a phone.
+
+- [ ] Copy `ack-voice-studio-phone-certificate.crt` to the phone the way you copied the zip in section K (on WSL, `explorer.exe "$(wslpath -w ~/ack-voice-studio/state/phone-certificate)"` opens the folder). On the phone, install it as a **CA certificate**. → Write down the phone's make and model, the Android version, the exact words of the menus you followed, whether they matched the four steps the tool showed, the warning the phone gave, and whether it let you install the file. **Do not install it on a phone you do not own.**
+- [ ] On the phone, look at the list of user certificates. → The new one is named `ACK Voice Studio phone certificate` with the day it was made.
+
+**C. Send the voice file.** The computer and the phone are on the same Wi-Fi.
+
+- [ ] Find the address the tool would use, and say no:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile send --project voice-check
+  ```
+  → `The voice file would be sent like this:` and these lines: the file's name and size (`Nothing else on this computer is offered.`), `It is offered at …, port 8443, over a secure connection, for up to 10 minutes.`, `Only a device that opens the exact address shown next can take it, and only once.`, `It stops by itself when the whole file has been sent, when the time is up, or when you press Ctrl+C.` and `This computer opens no connection to anything. It only waits for the phone to ask.` Then `Offer the voice file to the phone now? Type yes to start.` Type **`no`**: `Nothing was done.` Write down the address it chose, and whether it is the one your router gave this computer.
+  If it says `This computer has more than one home-network address:` and lists them, or `No home-network address was found for this computer.`, write down what it listed and choose with `--address` (below).
+- [ ] Send it (use your own address in place of `192.168.1.23`, and say **yes**):
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile send --project voice-check --address 192.168.1.23
+  ```
+  → `Waiting for the phone. Open this address on the phone, or scan the code if one is shown:`, a square code (only in a terminal that can show colour), and the address under it, then `Press Ctrl+C to stop.` Scan the code with the phone's camera, or type the address into the phone's browser. → The phone downloads `….zip` **with no warning page**, and the terminal says `The phone is fetching the file (…).` and then `Sent. The phone has the whole file (…). Nothing is listening any more.` and how to import it, and the command ends with `exit` 0 (check with `echo $?`). Write down: whether the code scanned at the first try, how long the download took for how many megabytes, and exactly what the phone showed.
+- [ ] Compare what arrived with what was sent. On the phone find the file in Downloads; on the computer:
+  ```bash
+  ls -l ~/ack-voice-studio/projects/voice-check/exports/*/*.zip
+  ```
+  → The size in bytes on the phone is the same as here. Then import it in ACK as in section K.
+- [ ] Try the address again after it said `Sent.`. → The phone's browser cannot connect: nothing is listening.
+
+**D. What it must refuse.** Each of these starts the command and ends it with Ctrl+C or by itself; none should show a Python error.
+
+- [ ] A device that was not given the certificate (a second phone or a laptop, or the same phone after you remove the certificate): open the address. → The browser warns that the connection is not private and **does not download the file**. The terminal says `A device connected but did not trust the certificate. If it was the phone, the certificate file has not been put on it yet.` once, however many times you try. (Do not click through the warning.)
+- [ ] On the phone, change one letter of the secret part of the address, or open only `https://<address>:8443/`. → `Not found`, and the file is not given. The listener goes on waiting (a request for something else is not announced in the terminal).
+- [ ] Open the right address, then stop the phone's download half way (switch Wi-Fi off). → `The transfer stopped part way. The phone can try again.` Then fetch it again properly. → `Sent.`
+- [ ] Leave it alone for ten minutes. → `Nobody fetched the file in 10 minutes, so it stopped listening. Nothing was sent.` and `exit` 1.
+- [ ] Press Ctrl+C while it waits. → `Stopped. Nothing is listening any more, and nothing more will be sent.` Check that no port stays open: `ss -ltn | grep 8443` prints nothing.
+- [ ] Ask for things it must refuse. Each of these must say what is wrong, in three sentences, and start nothing:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile send --project voice-check --address 8.8.8.8
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile send --project voice-check --port 80
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile send --project voice-check --folder nope
+  ```
+  → `That address is not a home-network address.`, then `The port must be a whole number from 1024 to 65535. Nothing was done.`, then `There is no voice file called nope in this project. These are the ones that were made:` and the list.
+- [ ] Start it twice at once (two terminals; say yes in both). → The second says `Something on this computer already uses that port.` and `Try another port with the port option, for example 8444.` (with the first still waiting).
+
+**E. Ubuntu under Windows (WSL).** The part most likely not to work, and the reason the plan has a later task (VS-3.6) for it. Nothing here changes a Windows setting.
+
+- [ ] Run part C's first step on WSL. → After the plan it adds `This is Ubuntu under Windows. A phone usually cannot reach the address that Ubuntu sees. If the phone cannot open the address, the checklist for this command says what to try.` Then send anyway. Write down the address Ubuntu chose (WSL's usual default network gives an address like `172.x.x.x` that only Windows can reach), and whether the phone could open it.
+- [ ] If it could not: in Windows, run `wsl --status` and write down the networking mode it prints (or look in `%UserProfile%\.wslconfig`). The tool does not change this, and does not open a Windows firewall port; those are the next task. If you know how, try "mirrored" networking and the Windows Defender Firewall rule for TCP port 8443 for private networks **yourself**, and write down exactly what you changed and what worked, so that the next task can explain it.
+
+**F. What it left behind.**
+
+- [ ] After a send, a time-out and a Ctrl+C:
+  ```bash
+  ls -la ~/ack-voice-studio/state/phone-certificate
+  ```
+  → Still exactly the two files and no folder beginning `send-` (the certificate made for one send is removed afterwards). The voice file in `exports` is unchanged.
+- [ ] Make a backup and look inside it (section I9), then:
+  ```bash
+  tar -tf ~/ack-voice-check-backups/*.tar | grep -c phone-certificate
+  ```
+  → `0`: the certificate and its secret part are not in a backup.
+- [ ] To make a new certificate file (it ends after two years, and the tool says so thirty days before): move the folder aside, **never delete it**: `mv ~/ack-voice-studio/state/phone-certificate ~/ack-voice-studio/state/phone-certificate-old`, run the send command, and put the new file on the phone. The old one on the phone can then be removed in the phone's settings.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -1808,6 +1895,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I13: what parts A and B printed (especially the exit numbers), what part C printed and how long it took (and whether any tag beginning with `voice-studio-` existed yet), and if part D was possible: how long the fetch took, how big the new copy was, the rows the comparison printed and whether they matched what you know changed, whether your own copy was untouched, what part F left behind, and for part G which sentence left you unsure which folder was which.
 - Section I14: whether the two lines at the end of the failed command in part B were easy to find and follow, what parts A, C and D printed (especially the exit numbers), every name, folder or address of yours that was still readable in a report (parts A, B, E and F) and which kind it was, whether the report was something you would be willing to give a helper, and any sentence that was hard to follow.
 - Section I15: for each of the five pages, whether you found it without help and whether the buttons did what their words said; **what the shown problem report held that you did not expect** (the most important line of this section); how long the look for releases took; whether the sounds played through the window in Hear the voice; and anything the keyboard or a screen reader could not reach.
+- Section I16: whether the four steps for putting the file on the phone matched what your phone showed (make, model, Android version, the words of the menus, and the warning it gave); whether the code scanned at the first try; the address it chose and whether the phone could open it; how long the download took for how many megabytes; whether a device without the certificate got a warning and no file; what each part of D printed (especially the exit numbers); on WSL, the address, the networking mode and what you changed to make it work; and what was left in the certificate folder.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
@@ -1819,6 +1907,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
 - [ ] The pretend homes in sections I10, I11 and I12 are each removed by their own last step (`rm -r "$T"`). The folder section I14 saved a report in is removed by its part D. The folder section I15 made for a backup and a report is removed by that section's part F. The backups section I15 made in the tool's own backups folder stay (the tool never removes a backup; remove them yourself if you want them gone). The folder section I13 fetched a copy into is removed by that section's last step too; a copy you fetched with `--to` anywhere else is yours to remove, and the tool never removes one. The old copy of the programs from section I10 part E is removed by that part, and nothing else in `~/ack-voice-studio/tool` was made by this list except what section I11 part E removed and set up again.
+- [ ] The certificate file section I16 made is the folder `~/ack-voice-studio/state/phone-certificate` (the certificate and its secret part, nothing else). Keep it if you will send to the phone again. The tool never removes it. When you are sure: `rm -r ~/ack-voice-studio/state/phone-certificate`, and remove the certificate from the phone in the phone's settings. If you moved it aside in part F, the same goes for `phone-certificate-old`.
 - [ ] The backups section I9 made are in `~/ack-voice-check-backups` (and `~/ack-voice-studio/backups` if you ever left the folder out). They are real backups, so keep them if you want them; look first with `du -sh ~/ack-voice-check-backups`, and when you are sure: `rm -r ~/ack-voice-check-backups`. The tool never removes a backup itself, and the project's delete question does not touch them.
 - [ ] The small sound files section I8 made are under the project's `listening` folder, a few hundred kilobytes each time (and a large voice copy for each time you kept one in part E). Free up space offers them (section I3); or look with `du -sh ~/ack-voice-studio/projects/voice-check/listening` and remove the folder yourself when you no longer want them.
 - [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.

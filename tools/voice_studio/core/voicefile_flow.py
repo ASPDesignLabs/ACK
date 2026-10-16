@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional, Sequence
 
-from . import commands, envfind, jobs, listen_flow, rounds as rd, voicefile as vf, voicezip
+from . import commands, envfind, jobs, listen_flow, rounds as rd, voicefile as vf, voicesend_flow, voicezip
 from .cliargs import ArgError, parse_args
 from .diskbudget import Level
 from .paths import DataHome
@@ -24,7 +24,7 @@ from .system import RealSystem, System
 from .text import Catalog, size_text
 
 VOICEFILE_COMMAND = "python3 -m voice_studio.voicefile"
-OPTIONS = {"make": frozenset(YES) | frozenset(PROJECT), "list": frozenset(PROJECT), "listen": listen_flow.OPTIONS}                 # the checklist is held to these
+OPTIONS = {"make": frozenset(YES) | frozenset(PROJECT), "list": frozenset(PROJECT), "listen": listen_flow.OPTIONS, "send": voicesend_flow.OPTIONS}                 # the checklist is held to these
 STAGE_TEXT = {"export": "voicefile.make.stage_export", "settings": "voicefile.make.stage_settings", "patch": "voicefile.make.stage_patch", "zip": "voicefile.make.stage_zip",
               "check": "voicefile.make.stage_check"}
 
@@ -32,7 +32,7 @@ STAGE_TEXT = {"export": "voicefile.make.stage_export", "settings": "voicefile.ma
 def _help(cat: Catalog, io: IO) -> int:
     io.say(cat.t("voicefile.title"))
     io.say(cat.t("voicefile.usage.head"))
-    for key in ("voicefile.usage.make", "voicefile.usage.list", "voicefile.usage.listen", "voicefile.usage.options"):
+    for key in ("voicefile.usage.make", "voicefile.usage.list", "voicefile.usage.listen", "voicefile.usage.send", "voicefile.usage.options"):
         io.say("  " + cat.t(key))
     return EXIT_OK
 
@@ -137,7 +137,8 @@ def _no_studio() -> tuple:
 
 
 def run_voicefile(argv: Sequence[str], home: DataHome, registry: Registry, cat: Catalog, io, *, training: TrainingEnv, now: Optional[datetime] = None,
-                  system: Optional[System] = None, tools_dir: Optional[str] = None, studio: Optional[TrainingEnv] = None, speech: Optional[listen_flow.Speech] = None) -> int:
+                  system: Optional[System] = None, tools_dir: Optional[str] = None, studio: Optional[TrainingEnv] = None, speech: Optional[listen_flow.Speech] = None,
+                  serve: Optional[voicesend_flow.Serve] = None) -> int:
     """`python3 -m voice_studio.voicefile COMMAND ...`. `studio` finds the studio programs (the ones that carry the speech engine) for `listen`; `speech` finds the listening model
     (the one that writes down recordings), which `listen` uses to write down what it hears; by default it is looked for where the recordings commands look."""
     command = argv[0] if argv else "help"
@@ -154,6 +155,8 @@ def run_voicefile(argv: Sequence[str], home: DataHome, registry: Registry, cat: 
         if command == "listen":
             return listen_flow.run_listen(rest, home, now, training, studio or _no_studio, system, tools, cat, io,
                                             speech=speech or (lambda: envfind.speech_model(home, registry)))
+        if command == "send":
+            return voicesend_flow.run_send(rest, home, cat, io, system=system, now=now, serve=serve)
         io.say(cat.t("cli.bad_command", command=command[:60]))
         return EXIT_NOTHING_DONE
     except KeyboardInterrupt:

@@ -22,7 +22,7 @@ PAGES = {"guide": GUIDE, "handout": HANDOUT}
 FLOWS = {"projects": projects_flow, "recordings": recordings_flow, "voices": voices_flow, "rounds": rounds_flow, "voicefile": voicefile_flow, "backup": backup_flow, "refresh": refresh_flow,
          "uninstall": uninstall_flow, "scratch": scratchmove_flow, "update": update_flow, "report": reportcmd_flow}
 TAKES_A_VALUE = {"--project", "--name", "--kind", "--table", "--set", "--minutes", "--to", "--round", "--folder", "--text", "--step", "--problem", "--detail", "--job", "--hours", "--programs",
-                 "--saved", "--working", "--copies", "--clips", "--max-gain-db"}
+                 "--saved", "--working", "--copies", "--clips", "--max-gain-db", "--address", "--port"}
 
 
 def text_of(path):

@@ -78,9 +78,26 @@ def test_the_hosts_the_code_knows_are_all_in_the_network_table_and_no_other_inte
     assert mentioned <= {"pypi.org", "files.pythonhosted.org", "huggingface.co", "*.hf.co", "us.aws.cdn.hf.co", "archive.ubuntu.com", "security.ubuntu.com", "github.com", "raw.githubusercontent.com"}, mentioned
 
 
-def test_only_port_443_is_asked_for_and_nothing_is_said_to_be_inbound_by_voice_studio():
-    assert "port 443" in section(5) and "No inbound ports" in section(2)
-    assert "opens no listening port" in section(7) or "open no listening port" in section(7)
+def test_only_port_443_is_asked_for_and_the_one_listener_is_said_to_be_the_send_command():
+    assert "port 443" in section(5) and "No inbound ports, except one optional command" in section(2)
+    assert "open no listening port" in section(7) and "listens only during `voicefile send`" in section(7)
+    assert "core/lansend.py" in section(5) and "core/lansend.py" in section(7)
+
+
+def test_what_the_guide_says_about_the_listener_is_what_the_code_does():
+    from voice_studio.core import lansend, phonecert
+    text = section(7)
+    assert "at most ten minutes" in text and lansend.MINUTES == 10
+    assert "port %d" % lansend.DEFAULT_PORT in text
+    assert "twelve requests" in text and lansend.MAX_STRANGERS == 12
+    assert "(seven days)" in text and phonecert.LEAF_DAYS == 7
+    assert "valid for two years" in text and phonecert.AUTHORITY_DAYS == 730
+    assert "22 characters" in text and len(lansend.new_token()) == 22
+    assert [low for low, _mask in phonecert.PRIVATE_RANGES] == ["10.0.0.0", "172.16.0.0", "192.168.0.0"]
+    assert "`10.`, `172.16.` to `172.31.` or `192.168.`" in text
+    assert "~/ack-voice-studio/state/phone-certificate/" in text and phonecert.folder(DataHome("~/ack-voice-studio")).endswith("/state/phone-certificate")
+    assert "`openssl`" in text
+    assert "I16" in text
 
 
 # ---------------------------------------------------------------- the machine

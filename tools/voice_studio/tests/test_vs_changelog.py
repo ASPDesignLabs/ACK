@@ -54,7 +54,7 @@ def test_every_file_it_points_at_exists():
 def test_it_does_not_claim_a_real_run_and_lists_what_is_not_done():
     body = " ".join(TEXT.split())
     assert "built and tested in a build sandbox" in body and "nothing here says a step works on a real computer unless that checklist records it" in body
-    assert "### Not done yet" in TEXT and "sending recordings over Wi-Fi" in body
+    assert "### Not done yet" in TEXT and "sending recordings from the phone to the computer over Wi-Fi" in body and "a window page for sending the voice file over Wi-Fi" in body
     assert "Unreleased" in TEXT.split("\n## ", 1)[1].splitlines()[0] or versions()[0] != (0, 0, 1), "a version with a date is a release that was cut"
 
 
@@ -66,3 +66,9 @@ def test_it_lists_the_window_pages_the_window_has_and_does_not_list_them_as_miss
     assert "The window has eleven pages: " + listed.replace(", and ", " and ") in body and len(windowmodel.PAGES) == 11
     assert "Updates and the mend and fresh-copy buttons of Check the tool can lead to the internet" in body
     assert "The window's pages for backup" not in body and "A window page for getting a starting voice" in body
+
+
+def test_it_says_the_send_command_is_the_one_place_the_tool_listens_and_which_module_does_it():
+    body = " ".join(TEXT.split())
+    assert "`python3 -m voice_studio.voicefile send`" in body and "`core/lansend.py`" in body and (PKG / "core" / "lansend.py").exists()
+    assert "the first and only place the tool listens" in body and "up to ten minutes" in body and "twelve requests" in body

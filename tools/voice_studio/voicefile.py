@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""python3 -m voice_studio.voicefile [make | list | listen | help]: make the voice file for ACK from the chosen training round, and hear it, from a terminal, until the window exists.
+"""python3 -m voice_studio.voicefile [make | list | listen | send | help]: make the voice file for ACK from the chosen training round, hear it, and give it to a phone over the home network, from a terminal.
 
 The terminal front of core/voicefile.py (plan task VS-5.2). `make` does the whole of checklist section J in one go: it shows what it will do, checks the room, asks first,
 and writes only into one new folder under the project's `exports`. `list` only looks.

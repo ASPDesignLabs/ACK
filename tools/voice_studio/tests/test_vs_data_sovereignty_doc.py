@@ -16,7 +16,7 @@ def section(number):
     return re.search(r"^## %s\..*?(?=^## |\Z)" % number, DOC, flags=re.S | re.M).group(0)
 
 
-MARKERS = ("ACK Voice Studio", "listening model", "newer release of the tool", "`refresh repair`")
+MARKERS = ("ACK Voice Studio", "listening model", "newer release of the tool", "`refresh repair`", "`voicefile send`")
 
 
 def rows(number):
@@ -58,6 +58,18 @@ def test_every_front_that_can_reach_the_network_has_a_row_in_section_two():
     for fragment in ("Setting up ACK Voice Studio", "`recordings model`", "`voices get`", "`python3 -m voice_studio.update`", "`refresh repair`", "`refresh rebuild`"):
         assert fragment in body, fragment
     assert "`refresh check` only looks, and reaches no network" in body and "**nobody**" in body
+
+
+def test_the_row_for_giving_the_voice_file_to_the_phone_says_what_the_listener_does():
+    from voice_studio.core import lansend, phonecert
+    row = next(r for r in rows(2) if "`voicefile send`" in r).replace("**", "")
+    for claim in ("no host on the internet", "one device on your own home network", "a secret token", "a secure connection", "stops after the first complete download", "Asks first", "shows the address",
+                  "ends by itself in %d minutes" % lansend.MINUTES, "nothing else on the computer can be fetched", "its secret part stays on this computer and is not in a backup", "copy the zip file by cable or USB drive"):
+        assert claim in row, claim
+    assert lansend.MINUTES == 10 and phonecert.folder(DataHome("~")) == "~/ack-voice-studio/state/phone-certificate"
+    assert {a.id: a.backed_up for a in areas.HOME_AREAS}["state"] is False, "the certificate's secret part lives under state, which no backup holds"
+    everything_else = next(r for r in rows(2) if "Everything else in ACK Voice Studio" in r)
+    assert "the voice file" not in everything_else.replace("making the voice file", ""), "giving it to a phone is not 'nobody'"
 
 
 def test_what_the_page_says_every_download_does_first_is_what_the_tool_does():
