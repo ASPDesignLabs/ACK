@@ -1721,3 +1721,37 @@ neighbours**; it is **always shown (no setting hides it)**; it follows the perso
   (the repository is stubbed in `stubs/app/PartnerCard.kt`); `MainActivity.kt`, `OutputService.kt`, `PartnerCardPlayer.kt`, `PartnerCardRepository.kt` and the backup files are syntax-checked only.
 - Not seen on a phone: the question with seven rows and its keyboard dialog on a small screen at the largest font, the switch rows as tap targets, the header on a small screen, the bubble as a tap target, how long the card stays up (it clears after about 10 s like any message; **whether that is long enough to read five sentences is an open question for the phone check**; `/s`-style hold
   is the person's own choice and the card does not force it), the Arabic mirrored header, and the card through Bluetooth or the watch. Part D of `docs/CLINICAL_USE_DEVICE_TEST.md` is the checklist.
+
+## ACK VOICE STUDIO — rules that must stay true
+
+The guided desktop tool for recording, training and exporting a custom voice (`tools/voice_studio/`, Python, Ubuntu or WSL; Windows has a helper installer). The plan and every decision
+(D = asked, P = chosen and open to veto) are in `docs/VOICE_STUDIO_SETUP_PLAN.md`; the running hand-off is `docs/VOICE_STUDIO_HANDOFF.md`; the person-facing documents are
+`docs/VOICE_STUDIO_GUIDE.md`, `docs/VOICE_STUDIO_HELPER_HANDOUT.md`, the two installation guides and `docs/VOICE_STUDIO_IT_GUIDE.md`; the checklist for a real computer is
+`docs/VOICE_STUDIO_DEVICE_TEST.md`; release steps are `docs/VOICE_STUDIO_RELEASE_RUNBOOK.md`. The tool's own changelog is `tools/voice_studio/CHANGELOG.md` (not the app's).
+
+- **Built without a screen, a GPU, a microphone or a phone.** Everything was tested in a sandbox (`tools/voice_studio/run_tests.sh`: warnings are errors; it needs only pytest). The window
+  (GTK), the training runs, real speakers and a real connection were **not** run, and the checklist's statuses say so. Never write that something "works" on a real computer unless the
+  checklist records a real run; the guide and handout tests fail on a claim the checklist's statuses do not allow.
+- **`core/` is plain Python: no GUI library, no network library.** It runs on Ubuntu's own Python 3.10 and 3.12, so nothing newer than 3.10 (`test_vs_package_rules.py` checks the syntax).
+  The only module that may reach the internet or start a program is `core/fetch.py` (`run_networked`, with `GIT_TERMINAL_PROMPT=0` for git); web addresses live only in
+  `data/sources.json` (on an allowed-host list) and the two bootstrap scripts, `get.sh` and `install.ps1` (`test_vs_network_rules.py`, `test_vs_install_ps1.py`). Every networked command says first what it will ask and what the request
+  carries, then asks (a typed yes or `--yes`, for that run only); nobody to ask means nothing is contacted. Nothing runs by a timer or at start-up.
+- **Every command that changes something shows it first and asks.** Exit codes: 0 done, 1 failed after it started, 2 nothing was done (declined, nobody to ask, a bad option). A failure
+  after starting (exit 1) ends with two lines pointing at the problem report (`@reports_failures`, `core/reportcmd.py`). **Nothing is deleted unless the person asked**, restores and
+  backups only add, and an earlier backup is never replaced or removed. The recordings, the transcripts and the trained voice never leave the computer except to a place the person names.
+- **Words are in `data/text/en.json`**, never in the code: sorted `strings` and `plurals`, keys `namespace.name`, and errors in three parts (`what`, `changed`, `next`, read with
+  `error_text(cat, ns, code)`). A new namespace or error code is registered in `test_vs_text.py` (its lists, the raise sites, which need the code as a literal in `Name("code")`). The
+  wording rules are tested: at most 300 characters and 25 words a sentence, no jargon list, no four-capital-letter words, and nothing that sounds like permission the person was not given.
+- **Documents are held to the code by tests.** A quoted sentence in a guide or the checklist must be one the tool really says (`device_doc.says`), every command and option named must exist,
+  and every figure must be the real one. When you change a sentence in `en.json`, search `docs/` and `tools/voice_studio/README.md` for it; the failing test names the file. Never "fix"
+  a doc test by loosening it.
+- **A release is a git tag named `voice-studio-vX.Y.Z`, never a bare `vX.Y`.** The repository also holds the phone app's tags (`v1.0-beta.1` to `v1.0-beta.7`), which are **not** releases
+  of this tool: the registry's `tag_prefix` (`data/sources.json`, `releases`) is what makes `update check` and `update get` count only the tool's own. An earlier version of the update
+  command, its tests and its docs wrongly said "ACK has no tagged release yet" and would have listed the app's tags; it was found by reading `git tag -l`. **Look at the real repository
+  before writing a claim about it.** `get.sh` and `install.ps1` fetch `main` until a release exists; the version in `tools/voice_studio/__init__.py` must match the tag (the runbook).
+- **Test new code by breaking it.** Copy the repository, change one line at a time (`>=` for `>`, a dropped check, a swapped argument), run the tests, and give every survivor a test, a
+  simplification of redundant code, or a written note that it is equivalent. Run the breaks in parallel with a separate `TMPDIR` for each copy, or the runs interfere. This found real
+  bugs more than once (a race that could delete a file someone else had just made; a path nested too deep crashing six readers).
+- **The data-sovereignty rules apply here too** (see that section): `docs/DATA_SOVEREIGNTY.md` has the rows for this tool and `test_vs_data_sovereignty_doc.py` fails if a command that can
+  reach the network is missing a row. Every source file carries `SPDX-License-Identifier: GPL-3.0-or-later`; `THIRD_PARTY_NOTICES.md` section 7 lists what the tool installs, with how each
+  licence was checked (`test_vs_notices.py`).

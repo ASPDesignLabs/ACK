@@ -22,6 +22,40 @@ The folders and names used below (change them if yours differ):
 | The starting voice's checkpoint (a download from the training guide) | `~/piper/checkpoints/mike.ckpt` (or the file you have there) |
 | Recordings folder used by this list | `~/ack-voice-check/recordings` |
 
+**Contents.** Every section of this list, in the order they are written. A section says when it needs an earlier one.
+
+| Section | Title | In a few words |
+|---|---|---|
+| 0 | Get this branch (a clone of the main branch does not have this tool) | Make sure your copy of the tool has the tool in it. |
+| A | Write down the computer first | Note which Ubuntu, kernel and Python you are on. |
+| B | The tool's own tests, on your Python | Run the tool's own tests once on your computer. |
+| C | The first terminal step | Ask the setup script to look. It changes nothing. |
+| D | A job that outlives its terminal | Start a job, close every terminal, and see that it kept going. |
+| E | The speech model and the first recognition | Fetch the listening model (asks first) and try it on a recording. |
+| F | Bringing in a package from the phone | Bring in a recording package that ACK saved on the phone. |
+| G | Finishing the recordings (listening to them) | Let the computer write down what it hears in the recordings. |
+| H | The training set | Build the training set from the recordings that are ready. |
+| I0 | Set up the training programs with the tool (before the round) | Let the tool build the training programs, after it asks. |
+| I1 | Make a project and get a starting voice with the tool | Make a project and fetch a starting voice, one step at a time. |
+| I | One short training round, on the graphics card | Run one short round on the graphics card and write down the numbers. |
+| I2 | Training rounds with the tool | Run rounds with the tool, each continuing from the one you chose. |
+| I3 | Freeing up space | Free the space old rounds use, slowly: the one section that removes files you made. |
+| I4 | Making the voice file with one command | Make the zip that ACK takes, from the round you chose. |
+| I5 | The window (WSL only for now) | Try the first window. |
+| I6 | More than one project, and bringing in voice recordings you already have (terminal first, then the window) | Keep several projects and bring in recordings you already have. |
+| I7 | Installing from scratch, with the two installation guides | Follow the installation guides on a computer with nothing set up. |
+| I8 | Hearing the voice before it goes to the phone | Play three sentences in the finished voice on this computer. |
+| I9 | Backing up a project | Back a project up, check the backup, and put it back. |
+| I10 | Checking the tool, and refreshing it | Look at the tool's own programs and mend or rebuild them. |
+| I11 | Removing the tool's programs and downloads | Take the tool's programs and downloads off the disk and keep your own work. |
+| I12 | Moving a project's scratch to another place | Move a project's working files to another place. |
+| I13 | Updating the tool | Look for newer releases and fetch one beside this copy. |
+| I14 | The problem report | Make a report a helper can read. |
+| J | Making the voice file | The same as I4, done by hand. |
+| K | On the phone | Put the voice on the phone and hear it in ACK. |
+| L | What to send back | What to write down and send back. |
+| M | Clean up (only the folders this list made) | Remove what this list made, and only that. |
+
 ## 0. Get this branch (a clone of the main branch does not have this tool)
 
 Voice Studio is only on the branch `claude/voice-studio-guided-setup` until it is merged. A `~/ack-tools` you made from the main branch (the Freeform Studio

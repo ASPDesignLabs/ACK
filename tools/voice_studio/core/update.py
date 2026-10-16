@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Updating the tool (plan task VS-6.2, decisions D11, P4 and P21): look at the releases of ACK, fetch one into a new folder beside this copy, check it, and say what is different.
+"""Updating the tool (plan task VS-6.2, decisions D11, P4 and P21): look at the releases of ACK Voice Studio, fetch one into a new folder beside this copy, check it, and say what is different.
 
 Nothing here runs by itself and nothing here replaces the copy that is running. Looking at the releases is one `git ls-remote --tags` and fetching one is one `git clone --depth 1`, both
 started through the download module (core/fetch.py `run_networked`, the only door to the network) and only after the person said yes to the very command that was shown. The new copy goes in
