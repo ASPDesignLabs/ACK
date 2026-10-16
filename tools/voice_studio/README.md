@@ -75,12 +75,14 @@ PYTHONPATH=tools python3 -m voice_studio.refresh rebuild --programs studio      
 PYTHONPATH=tools python3 -m voice_studio.refresh older --remove                            # remove the copies of the programs that are no longer in use (lists them and asks first)
 PYTHONPATH=tools python3 -m voice_studio.uninstall show                                    # list the programs and downloaded files an uninstall would remove, and what it keeps; changes nothing
 PYTHONPATH=tools python3 -m voice_studio.uninstall remove                                  # remove them after showing the list and asking; never a project, recording, round, finished voice, backup or starting voice
+PYTHONPATH=tools python3 -m voice_studio.scratch show                                       # where a project's scratch is, what it holds and whether it can be used; changes nothing
+PYTHONPATH=tools python3 -m voice_studio.scratch move --to /mnt/d/scratch                  # copy it to another place, check every file, switch to it only then, and ask before removing the old one
 PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window --check             # can the window start here? (needs the system Python: python3-gi, gir1.2-gtk-4.0)
 PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window                     # the window: projects, recordings, rounds, voice file, free up space; every change asks first
 ```
 
 `get` keeps two things apart on purpose: **`--acknowledge`** (or answering `yes` to its first question) says you read where the voice comes from, and **`--yes`** (or its second `yes`) agrees to the download. Neither can stand in for the other.
-Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices), I2 (training rounds), I3 (freeing up space), I4 (the voice file), I5 (the window), I6 (more than one project, and bringing in voice recordings you already have), I8 (hearing the voice before it goes to the phone), I9 (backing up a project), I10 (checking the tool and refreshing it) and I11 (removing the tool's programs and downloads) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
+Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices), I2 (training rounds), I3 (freeing up space), I4 (the voice file), I5 (the window), I6 (more than one project, and bringing in voice recordings you already have), I8 (hearing the voice before it goes to the phone), I9 (backing up a project), I10 (checking the tool and refreshing it), I11 (removing the tool's programs and downloads) and I12 (moving a project's scratch) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
 
 **For an IT department:** `docs/VOICE_STUDIO_IT_GUIDE.md` says what to allow (hosts, ports, packages, disk), what runs and what listens, how to install offline, and what has and has not been tested.
 

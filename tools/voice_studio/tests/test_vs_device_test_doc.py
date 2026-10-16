@@ -1253,7 +1253,7 @@ def test_the_uninstall_section_says_what_it_never_touches_and_which_parts_are_pr
     body = " ".join(section("I11.").split())
     assert "It never touches a project, a recording, a round, a finished voice file, a backup, the starting voices you chose or the tool's small notes." in body
     assert "The first three parts below use a pretend home folder" in body and "Not run on a real computer." in body and "Real, slow and optional." in body
-    assert "Section I11:" in doc_text() and "pretend homes in sections I10 and I11" in section("M.")
+    assert "Section I11:" in doc_text() and "pretend homes in sections I10, I11 and I12" in section("M.")
     names = re.findall(r"^## (I11|I10|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
     assert names.index("I10") < names.index("I11") < names.index("J") and len(i11_blocks()) == 6
 
@@ -1296,5 +1296,102 @@ def test_the_uninstall_section_runs_as_it_says_in_a_pretend_home(tmp_path):
         kept = sorted(str(p.relative_to(pretend / "ack-voice-studio")) for p in (pretend / "ack-voice-studio").rglob("*") if p.is_file())
         assert kept == ["backups/anna.tar", "projects/anna/recordings/take.wav", "state/consent.json", "tool/downloads/voices/voice-mike/mike.ckpt"]
         assert (pretend / "ack-voice-studio/tool/environments/somebody-elses").is_dir() and not (home / "ack-voice-studio").exists(), "the real home was not touched"
+    finally:
+        shutil.rmtree(pretend, ignore_errors=True)
+
+
+# ---------------------------------------------------------------- section I12: moving a project's scratch
+
+def i12_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I12."), flags=re.S | re.M)]
+
+
+def test_the_scratch_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import projects_flow as pf, rounds_flow as rf, scratchmove_flow as smf
+    found = re.findall(r"python3 -m voice_studio\.(scratch|projects|rounds) ([a-z]+)([^\n`;<|&]*)", section("I12."))
+    assert {c for m, c, _ in found if m == "scratch"} == {"show", "move"} and set(smf.COMMANDS) == {"show", "move", "help"}
+    assert {(m, c) for m, c, _ in found if m != "scratch"} == {("projects", "new"), ("rounds", "start")}
+    seen = set()
+    for module, command, rest in found:
+        table = {"scratch": smf.OPTIONS, "projects": pf.OPTIONS, "rounds": rf.OPTIONS}[module]
+        assert command in table, (module, command)
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert words[i] in table[command], (module, command, words[i])
+                seen.add(words[i])
+                i += 2 if words[i] in ("--to", "--name") else 1
+            else:
+                i += 1
+    assert seen >= {"--to", "--default", "--yes", "--own", "--name"}
+
+
+def test_every_sentence_the_scratch_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I12."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "cat ", "du ", "df ", "time ", "T=", "H=", "P=", "find ", "mkdir ", "head ", "echo ", "rm ", "[", "(cd"))]
+    assert len(quoted) >= 25, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_scratch_section_says_what_it_never_touches_which_parts_are_pretend_and_what_was_not_run():
+    body = " ".join(section("I12.").split())
+    assert "It never touches a recording, a round or a finished voice file." in body and "The first three parts below use a pretend home folder" in body
+    assert "Not run on a real computer, and never on a second drive." in body and "Real and slow;" in body
+    assert "Section I12:" in doc_text() and "I10, I11 and I12" in section("M.")
+    names = re.findall(r"^## (I12|I11|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I11") < names.index("I12") < names.index("J") and len(i12_blocks()) == 8
+
+
+def test_the_scratch_section_runs_as_it_says_in_a_pretend_home(tmp_path):
+    import shutil
+    for tool in ("bash", "head", "find", "sort", "sha256sum"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    blocks = i12_blocks()
+    mine, python = str(TOOLS), shlex.quote(sys.executable)
+
+    def adapted(text):
+        return text.replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("python3 -m", python + " -m")
+
+    def answered(text, yes_from):
+        """A pipe cannot answer: the first `move` is left unanswered (it says so) and every one after it is told --yes."""
+        lines, seen = text.splitlines(), 0
+        for i, line in enumerate(lines):
+            if "scratch move" in line:
+                seen += 1
+                lines[i] = line + (" --yes" if seen >= yes_from else "") + '; echo "exit: $?"'
+        return "\n".join(lines)
+    home = tmp_path / "home"
+    home.mkdir()
+    script = [adapted(blocks[0]), 'echo "@@ T $T"', "echo @@ B", adapted(blocks[1]), "echo @@ C", adapted(answered(blocks[2], 2)), "echo @@ D", adapted(answered(blocks[3], 1))]
+    env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=180, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    out = done.stdout
+    pretend = Path(next(line for line in out.splitlines() if line.startswith("@@ T ")).split(" ", 2)[2])
+    try:
+        a, rest = out.split("@@ B")
+        b, rest = rest.split("@@ C")
+        c, d = rest.split("@@ D")
+        assert "Made the project scratch-check." in a and "  4 files, 16 KB." in a and "exit: 0" in a and "To move it, run: " in a
+        sums = [line for line in a.splitlines() if re.fullmatch(r"[0-9a-f]{64}  -", line)]
+        assert len(sums) == 1
+        assert b.count("That place cannot be used:") == 2 and b.count("exit: 2") == 2 and b.count("Nothing was done.") == 2
+        assert "  That folder is inside this project's own folders. Choose somewhere else." in b and "  Please choose a folder from the list rather than typing a short name." in b
+        assert "ack-voice-scratch" not in b.split("exit: 2")[-1], "the refusals made nothing in the drive folder"
+        assert "There was nobody to ask. To say yes on the command line, add --yes. Nothing was done." in c and "exit: 2" in c
+        assert "The copy is made and checked: 4 files copied now, 0 already there." in c and "  Copied 4 of 4 files." in c
+        assert "The scratch of Scratch check is in the place you chose: " in c and "The old place was kept." in c
+        csums = [line for line in c.splitlines() if re.fullmatch(r"[0-9a-f]{64}  -", line)]
+        assert csums == sums
+        assert "The copy is made and checked: 0 files copied now, 4 already there." in d
+        dsums = [line for line in d.splitlines() if re.fullmatch(r"[0-9a-f]{64}  -", line)]
+        assert dsums == sums
+        assert (pretend / "ack-voice-studio/projects/scratch-check/scratch/datasets/d1/metadata.csv").read_text() == "a.wav|hello\n"
+        assert not (home / "ack-voice-studio").exists(), "the real home was not touched"
     finally:
         shutil.rmtree(pretend, ignore_errors=True)

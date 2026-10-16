@@ -1351,6 +1351,93 @@ section **with only the guide open**, as a person who has nothing else would. Wr
 - [ ] If you made the menu entry (section I5), run the `--remove-launcher` line that `show` printed. It lists what it will remove and asks: `Remove them now? Type yes to remove them.` Type **`no`** unless you mean it. On WSL it also prints the `sudo rm` line for the copy in the system folder; the tool never runs it.
 - [ ] The line `This tool's own files are in` names the folder the tool runs from, and the `rm -r` command that removes it. **Do not run it** unless you want the tool gone: it removes the tool, not your projects (they are in `ack-voice-studio`, a different folder). If that folder is a copy you work in, keep it.
 
+## I12. Moving a project's scratch to another place
+
+**New, and not yet run on a real computer.** Scratch is where a project keeps its training sets and each round's working files; it can be inside the project (the default) or on another drive you choose (the plan's decision D24). `scratch` says where it is and moves it. **It never touches a recording, a round or a finished voice file.** `show` only looks. `move` checks the new place with the same rules as a new project, shows what it will do, asks once, copies every file and reads each one back, checks the whole copy again, and only then points the project at the new place. The old place is not touched; it asks about that at the end, with a second typed yes. The first three parts below use a pretend home folder, so nothing of yours is at risk; the last parts are real and optional.
+
+*Built and tried in the build sandbox only, on folders on one disk. Not run on a real computer, and never on a second drive.*
+
+**A. A pretend project with some scratch in it.** `T` is a new empty folder; nothing in it is yours.
+
+- [ ] Make it and look. The last line before `show` is one line of letters and numbers: it stands for every file in the scratch.
+  ```bash
+  T=$(mktemp -d)
+  H="$T/ack-voice-studio"
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.projects new --own --name "Scratch check" --yes
+  P="$H/projects/scratch-check"
+  mkdir -p "$P/scratch/datasets/d1/wav" "$P/scratch/caches/d1-r001" "$T/drive"
+  head -c 4000 /dev/zero > "$P/scratch/datasets/d1/wav/a.wav"
+  head -c 3000 /dev/zero > "$P/scratch/datasets/d1/wav/b.wav"
+  echo "a.wav|hello" > "$P/scratch/datasets/d1/metadata.csv"
+  head -c 9000 /dev/zero > "$P/scratch/caches/d1-r001/mels.bin"
+  (cd "$P/scratch" && find . -type f -exec sha256sum {} + | sort -k2 | sha256sum)
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.scratch show
+  echo "exit: $?"
+  ```
+  → `Made the project scratch-check.` and then, from `show`, `The scratch of Scratch check is the folder inside the project: …` with its folder, the number of files and their size (4 files, about 16 KB), how much room that drive has, and `To move it, run: …` the command. `exit: 0`. Write the line of letters and numbers down.
+
+**B. A place that cannot be used.**
+
+- [ ] Ask for a place inside the project, and for a short name instead of a folder:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.scratch move --to "$P/inside" --yes
+  echo "exit: $?"
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.scratch move --to backup --yes
+  echo "exit: $?"
+  ls -A "$T/drive"
+  ```
+  → Each says `That place cannot be used:` with the reason (`That folder is inside this project's own folders. Choose somewhere else.` and `Please choose a folder from the list rather than typing a short name.`), then `Nothing was done.` Both are `exit: 2`, and `ls` shows nothing was made in the drive folder.
+
+**C. Moving, which asks first.**
+
+- [ ] Ask for the move and say no, then yes (and then no to the second question):
+  ```bash
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.scratch move --to "$T/drive"
+  find "$T/drive" -type f | sort
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.scratch move --to "$T/drive"
+  (cd "$T/drive/ack-voice-scratch/scratch-check" && find . -type f ! -name .ack-voice-scratch -exec sha256sum {} + | sort -k2 | sha256sum)
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.scratch show
+  ```
+  → The first shows `Moving the scratch of Scratch check:` with `From:` and `To:`, the size, `This is the same drive as the project, so it will not save any room.` (it is the same disk here), the three sentences of how it works, and `Move the scratch now? Type yes to go on.` Type **`no`**: `Nothing was done.` and `find` lists nothing. With nobody to ask (a pipe, for instance) it says `There was nobody to ask. To say yes on the command line, add --yes. Nothing was done.` and the exit number is 2. The second, with **`yes`**: `Copied 1 of 4 files.` and so on to 4, `The copy is made and checked: 4 files copied now, 0 already there.`, a line saying that Scratch check now uses the new folder for its scratch, `The old place still holds 4 files, about 16 KB: …` and its folder, and `Remove the old place now? It is not used any more. Type yes to delete it.` Type **`no`**: `The old place was kept.` and the command that would remove it. The line of letters and numbers is **the same** as in part A, `show` now says `The scratch of Scratch check is in the place you chose: …` and the new folder, and the old files are all still there.
+
+**D. Moving back, which reuses what is there.**
+
+- [ ] Move it back inside the project:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.scratch move --default
+  (cd "$P/scratch" && find . -type f -exec sha256sum {} + | sort -k2 | sha256sum)
+  ```
+  → The same plan and question; with **`yes`**, `The copy is made and checked: 0 files copied now, 4 already there.`, because the old files were never removed. Say **`no`** to the second question again. The line of letters and numbers is the same as in part A. When you have looked: `rm -r "$T"`.
+
+**E. A task that is running.** Optional, and only with a training round you can start and stop (section I2).
+
+- [ ] While a round is running, ask for a move of that project:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.scratch move --to /tmp --yes
+  ```
+  → `A task for this project is running, and it is using the scratch.`, `Nothing was moved.` and `Wait for the task to finish, or stop it, then try again.` It checks this before it looks at the place, and nothing is copied. Write down whether the round carried on.
+
+**F. A real second drive.** Real and slow; it needs a second drive with room for the project's scratch. On WSL a Windows drive is under `/mnt`, for example `/mnt/d`; on Ubuntu itself a USB drive is under `/media`. Use a folder on that drive, not the whole drive.
+
+- [ ] Look, then move, and write down how long it took:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.scratch show
+  time PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.scratch move --to /mnt/d/ack-scratch-check
+  ```
+  → `show` says how much the scratch holds (the training set is a few hundred files; a round's working files are several GB). The move names the drive's warnings in words (a Windows drive under WSL says `This is a Windows drive seen from WSL. It is much slower than Ubuntu's own disk.`; a drive that can be unplugged says so), and checks the room (`There is not enough room there.` if it is not). Answer **`yes`** and note the time, the seconds a file takes, and whether the lines `Copied n of m files.` came steadily. Say **`no`** to the second question.
+- [ ] Start a round on the new place (section I2) and let it run a minute, then stop it. → The round starts and its working files appear under `ack-scratch-check` on that drive, not inside the project.
+- [ ] Unplug the drive, or rename the folder `ack-scratch-check/ack-voice-scratch` to something else, and look:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.scratch show
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds start
+  ```
+  → `show` says `Its drive does not seem to be plugged in, so no training will start until it is back.` and `rounds start` says `The place chosen for this project's working files is not ready, and nothing was started. If it is a drive, check that it is plugged in.` Put the drive back, or the name back.
+- [ ] Move the scratch back inside the project, and remove the old place on the drive:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.scratch move --default
+  ```
+  → The copy says `0 files copied now` for every file that was already in the project's scratch and copies the rest; then type **`yes`** to `Remove the old place now? It is not used any more. Type yes to delete it.` → `Done. The old place is removed.` The drive's folder `ack-scratch-check` is left (the tool never removes a place you gave it); remove it yourself when you have looked.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -1433,6 +1520,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I9: how long a backup took for how big a project, the file's size, whether the reminder in part B was easy to notice, whether `verify` caught the changed byte, what the second restore in part I said, whether the left-out list in part C matched what you know is in the project, which folder you chose and why, and any sentence that was hard to follow.
 - Section I10: how long `check` took, every line that was unclear, what each of parts B to D printed (especially the exit numbers and the files `ls` showed), how long the studio rebuild took and how big the two copies were, whether the line of letters and numbers before and after was the same, whether the old copy was ever unusable, and any sentence that was hard to follow.
 - Section I11: the total part A listed and whether any row surprised you, whether the sums in parts A and E were the same before and after, what parts B and C printed (especially the exit numbers and what `find` and `ls` showed), what part D said, how long the removal and the setup afterwards took, how much room came back, and whether the lines about the menu entry and the tool's own files were clear.
+- Section I12: what parts A to D printed (especially the exit numbers and that the line of letters and numbers was the same three times), how long the move to the real drive took and how big the scratch was, every warning the real drive gave, whether the lines of progress were steady, what the unplugged drive said in both places, and whether the sentences about the old place were clear.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
@@ -1443,7 +1531,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
-- [ ] The pretend homes in sections I10 and I11 are each removed by their own last step (`rm -r "$T"`). The old copy of the programs from section I10 part E is removed by that part, and nothing else in `~/ack-voice-studio/tool` was made by this list except what section I11 part E removed and set up again.
+- [ ] The pretend homes in sections I10, I11 and I12 are each removed by their own last step (`rm -r "$T"`). The old copy of the programs from section I10 part E is removed by that part, and nothing else in `~/ack-voice-studio/tool` was made by this list except what section I11 part E removed and set up again.
 - [ ] The backups section I9 made are in `~/ack-voice-check-backups` (and `~/ack-voice-studio/backups` if you ever left the folder out). They are real backups, so keep them if you want them; look first with `du -sh ~/ack-voice-check-backups`, and when you are sure: `rm -r ~/ack-voice-check-backups`. The tool never removes a backup itself, and the project's delete question does not touch them.
 - [ ] The small sound files section I8 made are under the project's `listening` folder, a few hundred kilobytes each time (and a large voice copy for each time you kept one in part E). Free up space offers them (section I3); or look with `du -sh ~/ack-voice-studio/projects/voice-check/listening` and remove the folder yourself when you no longer want them.
 - [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.

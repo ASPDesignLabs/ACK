@@ -335,3 +335,34 @@ def test_uninstall_reaches_no_network_starts_no_program_and_removes_only_through
         assert ("remove" in calls) == (name == "core/uninstall_flow.py"), "only the front calls the library's remove"
     flow = (PKG / "core/uninstall_flow.py").read_text()
     assert "un.remove(" in flow and flow.count("un.remove(") == 1, "the flow removes through the library's remove, called from one place"
+
+
+# ---------------------------------------------------------------- moving a project's scratch (plan task VS-6.5)
+
+def test_the_page_describes_moving_scratch_the_way_the_code_does():
+    from voice_studio.core import scratchmove, scratchmove_flow
+    text = section(7)
+    for command in scratchmove_flow.COMMANDS:
+        if command != "help":
+            assert "python3 -m voice_studio.scratch %s" % command in text, command
+    for claim in ("changes nothing", "asks once", "only then", "`project.json.previous`", "the same command carries on", "`--yes` does not answer", "removes only a folder this tool made",
+                  "refuses while any task for the project is running", "checked again just before the switch", "readable by the person only", "never follows a link", "contacts no network",
+                  "a folder that looks cloud-synchronised", "cannot yet be rebuilt"):
+        assert claim in text, claim
+    assert scratchmove.PARTIAL == ".partial"
+    assert "Moving a project's scratch (`python3 -m voice_studio.scratch`)" in section(11) and "checklist section I12" in section(11)
+
+
+def test_moving_scratch_reaches_no_network_starts_no_program_and_switches_only_after_the_copy_is_checked():
+    import ast
+    for name in ("core/scratchmove.py", "core/scratchmove_flow.py", "scratch.py"):
+        imports = " ".join(re.findall(r"^\s*(?:from|import)\s+([A-Za-z_.]+)", (PKG / name).read_text(), flags=re.M))
+        for banned in ("socket", "urllib", "http", "requests", "ssl", "ftplib", "smtplib", "webbrowser", "subprocess", "shutil"):
+            assert not re.search(r"(^| )%s(\.|$| )" % banned, imports), (name, banned)
+    flow = ast.parse((PKG / "core/scratchmove_flow.py").read_text())
+    move = next(n for n in ast.walk(flow) if isinstance(n, ast.FunctionDef) and n.name == "_move")
+    order = [n.func.attr for n in ast.walk(move) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and isinstance(n.func.value, ast.Name) and n.func.value.id == "sm"
+             and n.func.attr in ("prepare_target", "copy_tree", "check_copy", "switch")]
+    assert order == ["prepare_target", "copy_tree", "check_copy", "switch"], "the project is switched only after the copy is made and checked"
+    source = (PKG / "core/scratchmove.py").read_text()
+    assert source.count("save_project(") == 1 and "def switch(" in source[:source.index("save_project(")], "the project's record is written in one place, the switch"
