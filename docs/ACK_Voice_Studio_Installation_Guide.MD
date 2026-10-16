@@ -218,6 +218,15 @@ PYTHONPATH=~/ack-tools/tools python3 -m voice_studio
 
 The second line checks everything and asks before it rebuilds anything that changed. Nothing updates by itself.
 
+**Looking at the releases.** To see whether ACK has a named release and fetch one into a new folder beside this one, without changing this one:
+
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update check
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get RELEASE
+```
+
+Each says first what it will ask github.com and shows the exact commands, then asks before it contacts anything. `get` never touches this copy: it prints two commands, one for trying the new copy and one for using it under the usual name, and you type them. Your projects and recordings stay in `ack-voice-studio` whichever copy you use. If ACK has not named a release yet, `check` says so.
+
 **Removing.** In Ubuntu, one command takes the programs the tool built and the files it downloaded off the disk. It does not touch your projects, your recordings, your backups or the starting voices you chose. Look first, then remove:
 
 ```bash
@@ -238,11 +247,11 @@ PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall remove
 
 ## 10. What it contacts, and what stays on your computer
 
-Nothing you record leaves your computer. There are no accounts, no usage reports and no update checks. Each place below is contacted only for the reason given.
+Nothing you record leaves your computer. There are no accounts, no usage reports and no automatic update checks. Each place below is contacted only for the reason given.
 
 | Place | Why | When |
 |---|---|---|
-| `raw.githubusercontent.com` and `github.com` | To fetch this script and ACK's files. | The first run. |
+| `raw.githubusercontent.com` and `github.com` | To fetch this script and ACK's files. | The first run, and when you run the update command in section 9 and say yes. |
 | Microsoft | To install WSL and Ubuntu. | Only if they are not installed yet. |
 | Ubuntu's package servers | The few Ubuntu programs in section 2. | Once, with your yes. |
 | The Python package site (`pypi.org` and `files.pythonhosted.org`) | The programs the tool runs on. | When you say yes to each set. |

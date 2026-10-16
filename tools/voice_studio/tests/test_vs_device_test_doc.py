@@ -1395,3 +1395,78 @@ def test_the_scratch_section_runs_as_it_says_in_a_pretend_home(tmp_path):
         assert not (home / "ack-voice-studio").exists(), "the real home was not touched"
     finally:
         shutil.rmtree(pretend, ignore_errors=True)
+
+
+# ---------------------------------------------------------------- section I13: updating the tool
+
+def i13_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I13."), flags=re.S | re.M)]
+
+
+def test_the_update_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import update_flow as uf
+    found = re.findall(r"python3 -m voice_studio\.(update|refresh|backup) ([a-z]+)([^\n`;<|&]*)", section("I13."))
+    assert {c for m, c, _ in found if m == "update"} == {"check", "get", "help"} == set(uf.COMMANDS)
+    assert {(m, c) for m, c, _ in found if m != "update"} == {("refresh", "check")}
+    seen = set()
+    for module, command, rest in found:
+        if module != "update":
+            continue
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert command in uf.OPTIONS and words[i] in uf.OPTIONS[command], (command, words[i])
+                seen.add(words[i])
+                i += 2 if words[i] == "--to" else 1
+            else:
+                i += 1
+    assert seen >= {"--to", "--yes"}
+
+
+def test_every_sentence_the_update_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I13."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "PATH=", "~/", "ls ", "cat ", "du ", "git ", "mv ", "rm ", "cd ", "echo ", "T=", "[", "(cd"))]
+    assert len(quoted) >= 30, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_update_section_says_what_it_never_touches_that_no_release_exists_and_what_was_not_run():
+    from voice_studio.core import update as up
+    from voice_studio.core.text import size_text
+    body = " ".join(section("I13.").split())
+    assert "It never touches the copy it runs from, your projects, your recordings or your backups." in body and "**ACK has no named release yet**" in body
+    assert "Not run on a real computer, never over a real connection and never against github.com." in body
+    assert "%s must be free beside this one" % size_text(up.ROOM_BYTES) in body and "usually under 100 MB" in body
+    assert "it prints the commands, and you type them" in body and "The tool prints it and never runs it." in body
+    assert "Section I13:" in doc_text() and "section I13 fetched a copy into" in section("M.") and "pretend homes in sections I10, I11 and I12" in section("M.")
+    names = re.findall(r"^## (I13|I12|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I12") < names.index("I13") < names.index("J") and len(i13_blocks()) == 8
+
+
+def test_the_parts_of_the_update_section_that_contact_nothing_run_as_they_say(tmp_path):
+    import shutil
+    for tool in ("bash", "git"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    blocks = i13_blocks()
+    mine, python = str(TOOLS), shlex.quote(sys.executable)
+
+    def adapted(text):
+        return text.replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("/usr/bin/python3 -m", python + " -m").replace("python3 -m", python + " -m")
+    home = tmp_path / "home"
+    home.mkdir()
+    script = [adapted(blocks[0]), "echo @@ A2", adapted(blocks[1]), "echo @@ B", adapted(blocks[2])]
+    env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=120, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    a, rest = done.stdout.split("@@ A2")
+    a2, b = rest.split("@@ B")
+    assert "Commands:" in a and "Nothing is contacted unless you say yes, nothing is checked in the background" in a and a.count("exit: 2") == 3
+    assert "There was nobody to ask. To say yes on the command line, add --yes. Nothing was done." in a and "A release name is made of letters, numbers, dots, dashes and underscores only." in a
+    assert "Give the whole path after --to, starting with a slash. Nothing was done." in a2 and "Something is already at the folder the copy would go to." in a2 and a2.count("exit: 2") == 2
+    assert "The program that fetches releases, git, is not installed on this computer." in b and "exit: 2" in b
+    assert not (home / "ack-voice-studio").exists(), "the real home was not touched"

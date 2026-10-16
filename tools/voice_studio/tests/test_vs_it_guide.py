@@ -366,3 +366,37 @@ def test_moving_scratch_reaches_no_network_starts_no_program_and_switches_only_a
     assert order == ["prepare_target", "copy_tree", "check_copy", "switch"], "the project is switched only after the copy is made and checked"
     source = (PKG / "core/scratchmove.py").read_text()
     assert source.count("save_project(") == 1 and "def switch(" in source[:source.index("save_project(")], "the project's record is written in one place, the switch"
+
+
+# ---------------------------------------------------------------- updating the tool (plan task VS-6.2)
+
+def test_the_page_describes_updating_the_way_the_code_does():
+    from voice_studio.core import update, update_flow
+    text = section(7)
+    for command in update_flow.COMMANDS:
+        if command != "help":
+            assert "python3 -m voice_studio.update %s" % command in text, command
+    source = reg.load_release_source()
+    for claim in ("A release is a git tag", "asks once", "git ls-remote --tags " + source.url, "git clone --depth 1 --branch RELEASE " + source.url, "GIT_TERMINAL_PROMPT=0",
+                  "nothing is saved and nothing is ever checked in the background", "(at most 64)", "no program started for that", "A folder that already exists is never used and never removed",
+                  "**cannot replace the folder it is running from**", "two `mv` commands", "touches no project, recording, round, finished voice or backup", "**No release has been tagged yet**"):
+        assert claim in text, claim
+    assert update.RELEASE_NAME.match("x" * 64) and not update.RELEASE_NAME.match("x" * 65)
+    assert 'GIT_TERMINAL_PROMPT="0"' in (PKG / "core/fetch.py").read_text()
+    assert "Updating the tool (`python3 -m voice_studio.update`)" in section(11) and "checklist section I13" in section(11)
+    five = section(5)
+    assert "python3 -m voice_studio.update" in five and "no automatic update check" in five and "no update check," not in five
+
+
+def test_updating_reaches_the_network_only_through_the_download_module_and_replaces_nothing():
+    import ast
+    for name in ("core/update.py", "core/update_flow.py", "update.py"):
+        imports = " ".join(re.findall(r"^\s*(?:from|import)\s+([A-Za-z_.]+)", (PKG / name).read_text(), flags=re.M))
+        for banned in ("socket", "urllib", "http", "requests", "ssl", "ftplib", "smtplib", "webbrowser", "subprocess", "shutil"):
+            assert not re.search(r"(^| )%s(\.|$| )" % banned, imports), (name, banned)
+    for name in ("core/update.py", "core/update_flow.py"):
+        calls = {node.func.attr for node in ast.walk(ast.parse((PKG / name).read_text())) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)}
+        assert not calls & {"rmtree", "unlink", "removedirs", "rename", "replace", "write_text", "write_bytes", "system", "popen", "run", "Popen"}, (name, calls)
+    library = (PKG / "core/update.py").read_text()
+    assert library.count("networked(") == 2 and library.count("remove_tree(dest, [])") == 1, "two requests (the list and the fetch), and one remover that is only given the folder the fetch made"
+    assert "mv " in (PKG / "core/update_flow.py").read_text() and "os.rename" not in (PKG / "core/update_flow.py").read_text(), "the switch is printed for the person to type, never done"

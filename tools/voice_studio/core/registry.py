@@ -173,6 +173,39 @@ def parse_registry(text: str) -> Registry:
     return Registry(tuple(items))
 
 
+@dataclass(frozen=True)
+class ReleaseSource:
+    """The one address the update command asks about ACK's own releases (plan task VS-6.2, decision P21): a git repository on an allowed host. It downloads no file of the registry."""
+    url: str
+    why_key: str
+
+    @property
+    def host(self) -> str:
+        return urlparse(self.url).hostname or self.url
+
+
+def parse_release_source(text: str) -> ReleaseSource:
+    try:
+        data = json.loads(text)
+        raw = data["releases"]
+        url, why_key = raw["url"], raw["why_key"]
+    except (ValueError, KeyError, TypeError):
+        raise RegistryError("no address for releases")
+    problem = page_problem(url)
+    host = None if problem else urlparse(url).hostname
+    if host not in ALLOWED_HOSTS or not isinstance(why_key, str) or not why_key:          # a problem with the address leaves no host
+        raise RegistryError("the address for releases is not usable: %s" % (problem or "host"))
+    return ReleaseSource(url, why_key)
+
+
+def load_release_source(path: Optional[Path] = None) -> ReleaseSource:
+    path = Path(path) if path else DEFAULT_PATH
+    try:
+        return parse_release_source(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise RegistryError("cannot read %s: %s" % (path.name, exc.strerror or exc))
+
+
 def load_registry(path: Optional[Path] = None) -> Registry:
     path = Path(path) if path else DEFAULT_PATH
     try:

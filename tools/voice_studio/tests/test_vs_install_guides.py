@@ -18,7 +18,7 @@ import pytest
 import test_vs_device_test_doc as device_doc
 import test_vs_text as wording
 from voice_studio.core import diskbudget, envspec, preflight, registry as reg, setupplan as sp, startvoice
-from voice_studio.core import projects_flow as pf, voices_flow as vf, recordings_flow as rf, uninstall_flow as uf, windowcli
+from voice_studio.core import projects_flow as pf, voices_flow as vf, recordings_flow as rf, uninstall_flow as uf, update_flow as upf, windowcli
 from voice_studio.core.setup_flow import parse_options
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -205,13 +205,15 @@ def test_every_voice_studio_command_names_a_real_module_and_options_it_takes(pat
             assert words[0] in pf.OPTIONS, words
         elif module == "voice_studio.uninstall":
             assert words[0] in uf.OPTIONS and set(options) <= set(uf.OPTIONS[words[0]]), words
+        elif module == "voice_studio.update":
+            assert words[0] in upf.OPTIONS and set(options) <= set(upf.OPTIONS[words[0]]), words
         elif module == "voice_studio.voices":
             assert words[0] in vf.OPTIONS and set(options) <= (set(vf.OPTIONS[words[0]]) | {"--project"}), words
             if words[0] == "get":
                 assert startvoice.find_voice(reg.load_registry(), words[1]) == "voice-mike", words
         else:
             pytest.fail("a command for a module this test does not know: " + module)
-    assert {"voice_studio.window", "voice_studio.projects", "voice_studio.voices", "voice_studio.uninstall"} <= seen
+    assert {"voice_studio.window", "voice_studio.projects", "voice_studio.voices", "voice_studio.uninstall", "voice_studio.update"} <= seen
 
 
 @pytest.mark.parametrize("path", GUIDES.values(), ids=GUIDES.keys())
@@ -443,3 +445,12 @@ def test_the_checklist_section_names_both_guides_and_the_commands_the_guides_giv
     assert "irm https://raw.githubusercontent.com/ASPDesignLabs/ACK/main/tools/voice_studio/install.ps1 | iex" in body
     for option in ("ACK_VOICE_CHECK", "ACK_VOICE_DRYRUN", "-Distro", "-Ref", "ACK_VOICE_TAG"):
         assert option in body
+
+
+@pytest.mark.parametrize("path", GUIDES.values(), ids=GUIDES.keys())
+def test_the_guides_say_updating_asks_first_never_touches_the_running_copy_and_is_not_automatic(path):
+    body = " ".join(text_of(path).split())
+    for claim in ("Each says first what it will ask github.com and shows the exact commands, then asks before it contacts anything.", "`get` never touches this copy",
+                  "you type them", "If ACK has not named a release yet, `check` says so.", "no automatic update checks", "when you run the update command in section"):
+        assert claim in body, claim
+    assert "no update checks" not in body

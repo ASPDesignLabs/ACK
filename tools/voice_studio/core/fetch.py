@@ -269,7 +269,7 @@ def run_networked(consent: Optional[ConsentRecord], argv: Sequence[str], item_id
             return CommandResult(subprocess.run(list(argv), cwd=str(cwd) if cwd else None).returncode, "", "")
         except OSError as exc:
             raise FetchError("http", exc.strerror or type(exc).__name__)
-    env = dict(os.environ, LC_ALL="C", LANG="C")
+    env = dict(os.environ, LC_ALL="C", LANG="C", GIT_TERMINAL_PROMPT="0")          # git never stops to ask for a name and password on a terminal this program does not show
     lines = []
     try:
         with subprocess.Popen(list(argv), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, errors="replace",

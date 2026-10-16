@@ -1438,6 +1438,97 @@ section **with only the guide open**, as a person who has nothing else would. Wr
   ```
   → The copy says `0 files copied now` for every file that was already in the project's scratch and copies the rest; then type **`yes`** to `Remove the old place now? It is not used any more. Type yes to delete it.` → `Done. The old place is removed.` The drive's folder `ack-scratch-check` is left (the tool never removes a place you gave it); remove it yourself when you have looked.
 
+## I13. Updating the tool
+
+**New, and not yet run on a real computer.** `update` looks at ACK's releases and fetches one into a **new folder** beside the copy you run (the plan's decisions D11 and P21). A release is a git tag. It is the one command in this list that contacts the internet when you ask it to: it says first what it will ask github.com and shows the exact commands, then asks (a typed yes, or `--yes`), and with nobody to ask it contacts nothing and does nothing. **It never touches the copy it runs from, your projects, your recordings or your backups.** It cannot switch to the new copy for you, because it cannot replace the folder it is running from: it prints the commands, and you type them. **ACK has no named release yet**, so until someone makes a tag on GitHub, `check` says there is nothing to fetch and `get` cannot be tried on the real address (parts C to F say what to do then).
+
+*Built and tried in the build sandbox only, against a git repository made on the same computer with the tags `v1.0` and `v1.1`. Not run on a real computer, never over a real connection and never against github.com.*
+
+**A. Nothing is contacted.** These ask nothing of the internet, so they are safe to run anywhere.
+
+- [ ] Look at the help, then ask for the list and for a release with nobody to ask, and give a name that cannot be a release:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update help
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update check </dev/null
+  echo "exit: $?"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get </dev/null
+  echo "exit: $?"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get "no good" --yes
+  echo "exit: $?"
+  ```
+  → `help` lists `check` and `get` and ends with `Nothing is contacted unless you say yes, nothing is checked in the background, and --yes answers the one question of that run only. No project, recording or backup is touched.` `check` says `ACK Voice Studio: update`, which version and folder this copy is, `It contacts the internet to ask which releases of ACK exist, and to fetch one when you choose.`, `Like any request on the internet it carries this computer's address and the name of the program asking. Nothing you recorded, typed or made is sent, and nothing is saved.`, the exact command it would run, and `There was nobody to ask. To say yes on the command line, add --yes. Nothing was done.` with `exit: 2`. `get` with no name says `Say which release to fetch, for example: …` and `Nothing was done.` (`exit: 2`). The last says `A release name is made of letters, numbers, dots, dashes and underscores only.` and `Nothing was done.` (`exit: 2`). Check the copy was not touched: `git -C ~/ack-tools status --short` prints nothing that you did not change yourself.
+- [ ] Ask for a folder that is not a whole path, and for one that exists already:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get v1.0 --to relative/folder --yes
+  echo "exit: $?"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get v1.0 --to /tmp --yes
+  echo "exit: $?"
+  ```
+  → The first says `Give the whole path after --to, starting with a slash. Nothing was done.` The second says `Something is already at the folder the copy would go to.`, `Nothing was downloaded, and what is there was left as it is.` and `Choose another folder with --to, or remove that one yourself.` Both are `exit: 2`, and `ls /tmp` still shows what it showed.
+
+**B. A computer without git.** The tool needs git to fetch a release, and says so before it asks anything.
+
+- [ ] Hide git for one command by giving it a path with nothing in it:
+  ```bash
+  PATH=/nonexistent PYTHONPATH=~/ack-tools/tools /usr/bin/python3 -m voice_studio.update check --yes
+  echo "exit: $?"
+  ```
+  → `The program that fetches releases, git, is not installed on this computer.`, `Nothing was contacted and nothing was changed.` and `The setup in the installation guide installs it, after asking. Then try again.` With `exit: 2`, and no connection was made (watch the network if you can).
+
+**C. The list, which asks first.** This is the first part that contacts the internet. It sends one request to github.com.
+
+- [ ] Ask for the list and say no, then yes:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update check
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update check
+  ```
+  → Both show the same lines as part A, then `Look for new releases now? Type yes to go on.` Type **`no`** the first time: `Nothing was done.` (`exit: 2`, nothing contacted). Type **`yes`** the second time. With no tag on GitHub it says `ACK has no named releases yet, so there is nothing to fetch.` and ends with `exit: 0`. With tags it says `n releases of ACK are listed:` and a row for each (`v1.1: newer than this copy`, `v1.0: this copy`), whether this copy is at a release (`It is the release v1.0.` or a sentence saying it is not at a named release, so it cannot be compared), and `To fetch one into a new folder beside this copy, run: …`. Write down which it was, how long it took, and whether the sentences about what is sent were clear before you typed anything.
+
+**D. A release, when part C listed one.** If it did not, skip to part G.
+
+- [ ] Make a new empty folder to put the copy in, and ask for a release (the one part C marked newer, or any other if none was):
+  ```bash
+  T=$(mktemp -d)
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get RELEASE --to "$T/new-copy"
+  ls -A "$T"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get RELEASE --to "$T/new-copy"
+  ```
+  → It shows this copy, what is sent, `This downloads the release RELEASE of ACK from github.com into a new folder: …`, the two commands (`First it looks the release up: …` and `Then it fetches it: …`), `This copy, and your projects, recordings and backups, are not touched.`, the room it needs and has (`A copy is usually under 100 MB. 500 MB must be free beside this one, and … is.`), and `Download the release RELEASE now? Type yes to go on.` Type **`no`** the first time: `Nothing was done.` and `ls -A` lists nothing. Type **`yes`** the second time: `Fetched the release …` (with its commit, the folder and the version), `It was checked: it holds the commit the release was listed with, and it is a copy of this tool.`, then `Compared with this copy:` with one row for each area that differs (the lists of programs, what can be downloaded, the words on screen, the recording tool, the tool's own program files, the guides), the names of the files in the first two, and the two commands it prints (`To try it, run: …` and `To use it under the usual name once you are happy with it, run: …`). `exit: 0`. Write down how long the fetch took.
+- [ ] Look at what it made, and at your own copy:
+  ```bash
+  du -sh "$T/new-copy"
+  git -C "$T/new-copy" log -1 --format=%H
+  git -C ~/ack-tools status --short
+  ```
+  → The size is a few tens of megabytes (the sentence said usually under 100 MB: write down the real number). The commit is the one the fetch printed (its first ten letters). Your own copy shows nothing you did not change yourself.
+- [ ] Ask for the same release into the same folder again, and for a name that is not listed:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get RELEASE --to "$T/new-copy" --yes
+  echo "exit: $?"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get v99.99 --to "$T/other" --yes
+  echo "exit: $?"
+  ```
+  → The first says `Something is already at the folder the copy would go to.` and `exit: 2`, and nothing is fetched. The second contacts github.com once (it has to, to know), then says `That is not one of the releases that are listed.`, `Nothing was downloaded.` and `Run the check command to see the names.` with `exit: 1`, and `ls "$T"` shows no `other` folder.
+
+**E. Trying the new copy, without switching.** Optional, and it changes nothing of yours.
+
+- [ ] Run the first of the two commands the fetch printed (the one that starts `PYTHONPATH=`). → The new copy's guided setup starts; its first screen is the same as the one you know. It lists what it would build and asks before it builds anything. Answer **no** (or press Ctrl+C) to every question. Write down whether anything it said about the lists of programs matched the comparison. Your projects and recordings are not touched: `ls ~/ack-voice-studio/projects` shows what it showed.
+
+**F. Stopping in the middle.** Optional, and it needs a connection that is not too fast.
+
+- [ ] Start a fetch with `--yes` and press **Ctrl+C** within a second or two:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get RELEASE --to "$T/stopped" --yes
+  echo "exit: $?"
+  ls -A "$T"
+  ```
+  → `Stopped. A copy that was being fetched was removed again, and this copy was not touched.` with `exit: 1`, and `ls -A` shows no `stopped` folder (if the fetch finished before you pressed Ctrl+C, it shows the whole copy instead, which is also right: the command ended normally). Write down whether a half-made folder was ever left.
+
+**G. Switching, which only you can do.** Real and optional. Read the second command the fetch printed (`mv … && mv …`): it renames your folder `ack-tools` to `ack-tools.old` and the new copy to `ack-tools`. The tool prints it and never runs it.
+
+- [ ] Only if you want the new copy to be the one you use, and only after a backup (`python3 -m voice_studio.backup`, section I9), close every window and terminal that runs the tool, then run that command. Run `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio` and `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.refresh check`. → The tool opens and the check runs; the setup says what it would build and asks first. `ls ~/ack-voice-studio` shows your projects and recordings where they were, and `~/ack-tools.old` still holds the old copy; remove it yourself when you no longer want it. Write down every sentence that left you unsure which folder was which.
+- [ ] When you have looked: `rm -r "$T"` (nothing else in this part was made by it).
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -1521,6 +1612,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I10: how long `check` took, every line that was unclear, what each of parts B to D printed (especially the exit numbers and the files `ls` showed), how long the studio rebuild took and how big the two copies were, whether the line of letters and numbers before and after was the same, whether the old copy was ever unusable, and any sentence that was hard to follow.
 - Section I11: the total part A listed and whether any row surprised you, whether the sums in parts A and E were the same before and after, what parts B and C printed (especially the exit numbers and what `find` and `ls` showed), what part D said, how long the removal and the setup afterwards took, how much room came back, and whether the lines about the menu entry and the tool's own files were clear.
 - Section I12: what parts A to D printed (especially the exit numbers and that the line of letters and numbers was the same three times), how long the move to the real drive took and how big the scratch was, every warning the real drive gave, whether the lines of progress were steady, what the unplugged drive said in both places, and whether the sentences about the old place were clear.
+- Section I13: what parts A and B printed (especially the exit numbers), what part C printed and how long it took (and whether ACK had a tag yet), and if part D was possible: how long the fetch took, how big the new copy was, the rows the comparison printed and whether they matched what you know changed, whether your own copy was untouched, what part F left behind, and for part G which sentence left you unsure which folder was which.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
@@ -1531,7 +1623,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
-- [ ] The pretend homes in sections I10, I11 and I12 are each removed by their own last step (`rm -r "$T"`). The old copy of the programs from section I10 part E is removed by that part, and nothing else in `~/ack-voice-studio/tool` was made by this list except what section I11 part E removed and set up again.
+- [ ] The pretend homes in sections I10, I11 and I12 are each removed by their own last step (`rm -r "$T"`). The folder section I13 fetched a copy into is removed by that section's last step too; a copy you fetched with `--to` anywhere else is yours to remove, and the tool never removes one. The old copy of the programs from section I10 part E is removed by that part, and nothing else in `~/ack-voice-studio/tool` was made by this list except what section I11 part E removed and set up again.
 - [ ] The backups section I9 made are in `~/ack-voice-check-backups` (and `~/ack-voice-studio/backups` if you ever left the folder out). They are real backups, so keep them if you want them; look first with `du -sh ~/ack-voice-check-backups`, and when you are sure: `rm -r ~/ack-voice-check-backups`. The tool never removes a backup itself, and the project's delete question does not touch them.
 - [ ] The small sound files section I8 made are under the project's `listening` folder, a few hundred kilobytes each time (and a large voice copy for each time you kept one in part E). Free up space offers them (section I3); or look with `du -sh ~/ack-voice-studio/projects/voice-check/listening` and remove the folder yourself when you no longer want them.
 - [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.
