@@ -65,12 +65,16 @@ PYTHONPATH=tools python3 -m voice_studio.rounds start --set dataset-1 --project 
 PYTHONPATH=tools python3 -m voice_studio.voicefile make --project anna        # the voice file for ACK from the chosen round, in one new folder (shows the plan, then asks)
 PYTHONPATH=tools python3 -m voice_studio.voicefile listen --project anna      # hear the voice file on this computer before it goes to the phone: three sentences, same engine as the phone (shows the plan, asks, plays, asks whether you heard it)
 PYTHONPATH=tools python3 -m voice_studio.voicefile listen --project anna --round chosen   # the same, straight from a round with no zip file (makes the voice in the new folder first, then asks whether to remove the large copy); with the listening model it also shows what the computer heard
+PYTHONPATH=tools python3 -m voice_studio.backup now --project anna --to ~/anna-backups     # one checked backup file of the recordings, notes and finished voices, in a folder outside the project (shows the plan, then asks; nothing already there is replaced or removed)
+PYTHONPATH=tools python3 -m voice_studio.backup list --project anna --to ~/anna-backups    # the backups there are, and whether the project has changed since the last one; changes nothing
+PYTHONPATH=tools python3 -m voice_studio.backup verify FILE                                # read a backup all the way through and check every file in it; changes nothing
+PYTHONPATH=tools python3 -m voice_studio.backup restore FILE                               # put a backup back: only adds what is missing and never replaces a file (shows the plan, then asks)
 PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window --check             # can the window start here? (needs the system Python: python3-gi, gir1.2-gtk-4.0)
 PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window                     # the window: projects, recordings, rounds, voice file, free up space; every change asks first
 ```
 
 `get` keeps two things apart on purpose: **`--acknowledge`** (or answering `yes` to its first question) says you read where the voice comes from, and **`--yes`** (or its second `yes`) agrees to the download. Neither can stand in for the other.
-Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices), I2 (training rounds), I3 (freeing up space), I4 (the voice file), I5 (the window), I6 (more than one project, and bringing in voice recordings you already have) and I8 (hearing the voice before it goes to the phone) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
+Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices), I2 (training rounds), I3 (freeing up space), I4 (the voice file), I5 (the window), I6 (more than one project, and bringing in voice recordings you already have), I8 (hearing the voice before it goes to the phone) and I9 (backing up a project) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
 
 **For an IT department:** `docs/VOICE_STUDIO_IT_GUIDE.md` says what to allow (hosts, ports, packages, disk), what runs and what listens, how to install offline, and what has and has not been tested.
 

@@ -99,3 +99,20 @@ def test_the_delete_plan_names_each_part_by_its_area(tmp_path):
     plan = profiles.plan_delete(home, project)
     kinds = {p.path.rsplit("/", 1)[1]: p.kind for p in plan.parts}
     assert kinds == {"recordings": "recordings", "rounds": "rounds", "exports": "exports", "listening": "listening", "scratch": "scratch", "project.json": "record", "notes.txt": "other"}
+
+
+def test_the_kind_of_every_area_and_whether_a_backup_holds_it_are_exactly_these():
+    P, R, D, T = Kind.PRECIOUS, Kind.REBUILDABLE, Kind.DISPOSABLE, Kind.TOOL
+    assert {a.id: (a.kind, a.backed_up) for a in areas.PROJECT_AREAS} == {"record": (P, True), "recordings": (P, True), "rounds": (P, True), "exports": (P, True), "listening": (D, False), "scratch": (R, False)}
+    assert {a.id: (a.kind, a.backed_up) for a in areas.HOME_AREAS} == {"projects": (P, True), "backups": (P, False), "tool": (T, False), "state": (P, False)}
+
+
+def test_the_first_name_under_a_folder_is_found_by_whole_names_only():
+    assert areas.first_part("/a/b", "/a/b/c/d") == "c" and areas.first_part("/a/b/", "/a/b/c") == "c"
+    for path in ("/a/bc/d", "/a/b", "/x/y/z", "", "/a"):
+        assert areas.first_part("/a/b", path) == "", path
+
+
+def test_a_name_no_area_claims_belongs_to_none():
+    assert areas.project_area("x") is None and areas.project_area("") is None and areas.home_area("x") is None and areas.project_area("scratch").id == "scratch"
+

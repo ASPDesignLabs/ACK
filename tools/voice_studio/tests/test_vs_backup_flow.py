@@ -545,3 +545,116 @@ def test_a_project_that_changed_since_the_last_backup_gets_a_reminder_with_the_d
 def test_a_project_with_nothing_to_lose_or_a_damaged_record_gets_no_reminder(rig):
     Path(rig.paths.rounds_file).write_text("not json")
     assert bf.nudge_lines(rig.home, ctx_of(rig), CAT) == []
+
+
+# ---------------------------------------------------------------- the edges found by breaking the front on purpose
+
+def test_a_remembered_folder_that_is_not_a_full_path_is_not_used(rig):
+    made = rig.backup(NOW)
+    pb.record_backup(rig.home, made, "voice-check", "relative/folder")
+    code, io = run(rig, "list")
+    assert "There are no backups of Voice check in %s." % rig.home.backups in io.text
+
+
+def test_free_space_is_asked_for_only_where_the_folder_is_a_full_path():
+    system = type("S", (), {"disk_free": lambda self, path: (100, 42)})()
+    assert bf._free_at(system, "relative") is None and bf._free_at(system, "/") == 42
+
+
+def test_a_project_with_nothing_to_lose_gets_no_line_about_its_last_backup():
+    io = Terminal(())
+    bf._say_standing(pb.Standing(pb.CURRENT, "", ""), "Voice check", CAT, io)
+    assert io.lines == []
+
+
+def test_nothing_is_said_to_be_left_out_or_skipped_when_it_is_not(tmp_path):
+    (tmp_path / "clean").mkdir()
+    clean = BackupRig(tmp_path / "clean", rounds=0, junk=False)
+    code, io = run(clean, *now_args(clean, "--yes"))
+    assert code == 0 and "leave these out" not in io.text and "left out because" not in io.text
+
+
+def test_only_ten_of_the_names_left_out_are_shown_and_all_are_counted(tmp_path):
+    many = BackupRig(tmp_path)
+    outside = tmp_path / "outside.bin"
+    outside.write_bytes(b"x")
+    for number in range(1, 13):
+        (many.recordings_root / "incoming" / ("link%d.zip" % number)).symlink_to(outside)
+    code, io = run(many, *now_args(many, "--yes"))
+    assert code == 0 and io.text.count("(not_a_file)") == 10 and io.text.count("12 files were left out because they are not whole, ordinary files.") == 2
+
+
+def test_a_folder_on_another_drive_is_not_told_it_is_on_the_projects_drive(rig, monkeypatch):
+    monkeypatch.setattr(pb, "same_drive", lambda a, b: False)
+    system = WslSystem(rig.studio.python)
+    code, io = run(rig, "now", answers=["no"], system=system)
+    assert "same drive" not in io.text and "Windows side" not in io.text
+
+
+def test_listing_does_not_bring_the_record_of_rounds_up_to_date(rig):
+    plan = rig.world.begin()
+    info = rig.world.job_for(plan, "running")
+    rd.attach_job(rig.paths, plan.number, info.id)
+    rig.world.trainer_makes(2)
+    end_job(info.dir, "finished", ended_at=stamp(26))
+    before = Path(rig.paths.rounds_file).read_bytes()
+    code, io = run(rig, "list", "--to", rig.dest)
+    assert code == 0 and Path(rig.paths.rounds_file).read_bytes() == before and rd.active(rd.load(rig.paths)) is not None
+
+
+def test_verify_shows_ten_problems_at_most(rig, tmp_path):
+    path = forge(tmp_path / "bad.tar", [("odd%d.txt" % n, b"x") for n in range(15)])
+    code, io = run(rig, "verify", path)
+    assert code == 1 and len([line for line in io.lines if line.startswith("  - ")]) == 10
+
+
+def test_a_restore_says_nothing_about_what_there_is_none_of(rig):
+    run(rig, *now_args(rig, "--yes"))
+    path = os.path.join(rig.dest, ARCHIVE)
+    delete_project(rig)
+    code, io = run(rig, "restore", path, answers=["yes"])
+    assert code == 0 and "skip" not in io.text and "differs from the backup" not in io.text and "could not be added" not in io.text and "left as" not in io.text
+    code, io = run(rig, "restore", path)
+    assert code == 0 and "that is missing" not in io.text and "that are missing" not in io.text and "add 0" not in io.text and "differs" not in io.text and "skip 19 files that are already there and the same" in io.text
+
+
+def test_a_restore_lists_at_most_ten_of_the_files_it_leaves(rig):
+    run(rig, *now_args(rig, "--yes"))
+    path = os.path.join(rig.dest, ARCHIVE)
+    for item in pb.collect(rig.paths)[0][:12]:
+        with open(item.source, "ab") as handle:
+            handle.write(b"changed since")
+    code, io = run(rig, "restore", path)
+    rows = [line for line in io.lines if line.startswith("    ") and "/" in line]
+    assert code == 0 and len(rows) == 10 and "leave 12 files exactly as they are" in io.text
+
+
+def test_a_restore_that_cannot_add_more_than_ten_lists_ten_and_fails(rig, monkeypatch):
+    run(rig, *now_args(rig, "--yes"))
+    delete_project(rig)
+    monkeypatch.setattr(pb, "_write_one", lambda tar, member, item: "the disk said no")
+    code, io = run(rig, "restore", os.path.join(rig.dest, ARCHIVE), "--yes")
+    assert code == 1 and len([line for line in io.lines if line.endswith(": the disk said no")]) == 10 and "These could not be added:" in io.text
+
+
+def test_a_file_that_appeared_while_putting_back_is_said_to_be_left_as_it_was(rig, monkeypatch):
+    run(rig, *now_args(rig, "--yes"))
+    (rig.recordings_root / "takes" / TAKE1 / "raw.webm").unlink()
+    real = pb._write_one
+
+    def appears(tar, member, item):
+        if item.name.endswith("raw.webm"):
+            Path(item.dest).write_bytes(b"made meanwhile")
+        return real(tar, member, item)
+    monkeypatch.setattr(pb, "_write_one", appears)
+    code, io = run(rig, "restore", os.path.join(rig.dest, ARCHIVE), "--yes")
+    assert code == 0 and "1 file was left as it was, because it differs from the backup's copy." in io.text
+
+
+def test_a_restore_without_the_room_is_refused_before_it_asks(rig):
+    run(rig, *now_args(rig, "--yes"))
+    delete_project(rig)
+    rig.system.free = (10 ** 12, 1000)
+    code, io = run(rig, "restore", os.path.join(rig.dest, ARCHIVE), answers=["yes"])
+    assert code == 1 and io.prompts == [] and not os.path.exists(rig.paths.root)
+

@@ -236,3 +236,39 @@ def test_the_engine_version_the_page_gives_is_the_one_in_the_lock_and_the_one_th
     lock = (PKG / "data" / "locks" / "studio.lock.txt").read_text(encoding="utf-8")
     phone = (REPO / "app" / "libs" / "README.md").read_text(encoding="utf-8")
     assert "sherpa-onnx==1.13.8" in lock and "sherpa-onnx-core==1.13.8" in lock and "sherpa-onnx-1.13.8.aar" in phone and "sherpa-onnx 1.13.8" in section(7)
+
+
+# ---------------------------------------------------------------- backing up a project (plan task VS-6.1)
+
+def test_the_page_describes_the_backup_the_way_the_code_does():
+    from voice_studio.core import projectbackup as pb
+    text = section(7)
+    home = DataHome("~")
+    assert "python3 -m voice_studio.backup now" in text and "python3 -m voice_studio.backup restore" in text
+    assert home.backups == "~/ack-voice-studio/backups" and "`" + home.backups + "`" in text
+    assert "`state/%s`" % pb.STATE_FILE in text and home.state == "~/ack-voice-studio/state"
+    for claim in ("one plain, uncompressed `.tar` file", "a small `.tar.json` note", "`.partial` name", "**read back in full**", "SHA-256", "**never replaces, prunes or removes a backup**",
+                  "only adds what is missing and never overwrites a file", "refuses while a task of that project is running", "never inside a backup", "has not been backed up yet", "has changed since the last backup"):
+        assert claim in text, claim
+    for left_out in ("working files and training sets", "the test sounds", "older saved points", "the trainer's logs", "earlier backups"):
+        assert left_out in text, left_out
+    assert pb.PARTS == ("record", "recordings", "packages", "rounds", "saved_points", "exports") and pb.MANIFEST == "MANIFEST.json"
+
+
+def test_the_backup_code_uses_no_network_as_the_page_says():
+    names = ("core/projectbackup.py", "core/backup_flow.py", "core/backupnudge.py", "backup.py")
+    for name in names:
+        source = (PKG / name).read_text(encoding="utf-8")
+        imports = " ".join(re.findall(r"^\s*(?:from|import)\s+([A-Za-z_.]+)", source, flags=re.M))
+        for banned in ("socket", "urllib", "http", "requests", "ssl", "ftplib", "smtplib", "webbrowser", "subprocess"):
+            assert not re.search(r"(^| )%s(\.|$| )" % banned, imports), (name, banned)
+    assert "(a test reads the source for it)" in section(7)
+
+
+def test_the_page_says_a_backup_is_personal_data_not_encrypted_and_not_sent_anywhere_and_what_was_not_tested():
+    nine, eleven, twelve = section(9), section(11), section(12)
+    for claim in ("**not encrypted**", "refuses a folder inside a project", "looks synchronised", "never sends a backup anywhere"):
+        assert claim in nine, claim
+    assert "Backing up a project (`python3 -m voice_studio.backup`)" in eleven and "checklist section I9" in eleven and "a folder that a cloud service really synchronises" in eleven
+    assert "so a backup kept there is deleted with it" in twelve and "`--to`" in twelve
+

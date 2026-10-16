@@ -19,6 +19,13 @@ Everything under `tools/voice_studio/` is the tool; `tools/freeform_studio/` is 
 > **Then (third slice, D43, task VS-5.6):** the test clips moved out of scratch into the project's own `listening` folder (grouped by the round or voice file they came from), and Free up space (terminal and
 > window) now offers them and the `--round` voice copies: `rounds free --clips N` / `--copies N` / `--all`. The end-of-run question about the voice copy stays. A listening 30 days old or older gets a notice
 > (in `rounds free`, before `listen`'s plan, and at the top of the window page) and `rounds free --old` takes them all after asking; nothing is ever removed on its own.
+>
+> **Then (Stage 6 begins, 2026-10-16; task VS-6.1, decision P17):** **Backup now is built and tested in the sandbox, never run on a real computer**: `python3 -m voice_studio.backup now | list | verify | restore`,
+> checklist section I9. `core/areas.py` is the first piece of the storage catalogue (VS-6.3): every folder the tool makes is in an area with a kind (precious, rebuildable, disposable, the tool's own) and whether a
+> backup holds it; a test fails when a path the tool names is in no area. `core/projectbackup.py` writes one plain `.tar` of the precious part of one project (never scratch, the test sounds, older saved points or the
+> tool's programs), reads it back in full before it counts, and never replaces or removes an earlier backup; restore only adds what is missing. A one-line reminder is printed by `rounds start` and after
+> `recordings import`. The window can run the command by name (`windowmodel.TOOLS`) but has **no Backup page yet**. Everything about it that was decided without asking is in P17 ("veto any"). **Next in
+> Stage 6:** VS-6.2 Update, VS-6.3 Uninstall and delete (the delete questions should name a backup first, now that one exists), VS-6.4 problem report, VS-6.5 move scratch, VS-6.6 Refresh (needs VS-6.1, now there).
 
 **What the developer wants next (two things; the first is now built, see the update above):**
 

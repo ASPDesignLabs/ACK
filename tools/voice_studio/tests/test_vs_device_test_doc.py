@@ -948,3 +948,171 @@ def test_the_old_listenings_step_quotes_what_the_tool_says_and_the_age_it_uses()
         assert sentence in body, sentence
     for sentence in ("2 earlier listenings are more than 30 days old and should be removed.", "1 earlier listening is more than 30 days old and should be removed."):
         assert says(sentence) and sentence in body, sentence
+
+
+# ---------------------------------------------------------------- section I9: backing up a project
+
+def i9_blocks():
+    """The code blocks of section I9 in order, without the indentation the list gives them."""
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I9."), flags=re.S | re.M)]
+
+
+def test_the_backup_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import backup_flow as bf, rounds_flow as rf
+    found = re.findall(r"python3 -m voice_studio\.(backup|rounds) ([a-z]+)([^\n`;<|&]*)", section("I9."))
+    assert {c for m, c, _ in found if m == "backup"} == {"help", "now", "list", "verify", "restore"} and {c for m, c, _ in found if m == "rounds"} == {"start", "list"}
+    takes_a_value = {"--project", "--to"}
+    seen, positional_wanted = set(), {"now": 0, "list": 0, "verify": 1, "restore": 1, "help": 0, "start": 0}
+    for module, command, rest in found:
+        table = bf.OPTIONS if module == "backup" and command != "help" else rf.OPTIONS
+        if command != "help":
+            assert command in table, (module, command)
+        words, i, positional = shlex.split(rest), 0, []
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert words[i] in table[command], (module, command, words[i])
+                seen.add(words[i])
+                i += 2 if words[i] in takes_a_value else 1
+            else:
+                positional.append(words[i])
+                i += 1
+        assert len(positional) == positional_wanted[command], (module, command, positional)
+        if "--project" in words:
+            assert words[words.index("--project") + 1] == "voice-check"
+    assert seen == {"--project", "--to"}, "the section never answers a question on the line: it is meant to be asked"
+    assert set(bf.COMMANDS) == {"now", "list", "verify", "restore", "help"}
+
+
+def test_every_sentence_the_backup_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I9."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "tar ", "cp ", "rm ", "touch ", "cmp ", "diff ", "printf ", "echo ", "tail ", "T=", "F="))]
+    assert len(quoted) >= 24 and any(cut for _, cut in quoted), (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_pieces_of_sentences_the_backup_section_quotes_are_in_the_tools_words_or_its_code():
+    from voice_studio.core import projectbackup
+    import inspect
+    catalog = " ".join(text_catalog_strings())
+    body = " ".join(section("I9.").split())
+    for piece in ("has not been backed up on this computer yet", "has changed since the last backup", "read it all the way back and check every file before it counts",
+                  "never remove or replace an earlier backup", "Nothing precious in", "The project record and the consent note", "because it is not on this computer"):
+        assert piece in body and piece.replace("make the project voice-check again, ", "") in catalog.replace("{id}", "voice-check") or piece in catalog, piece
+    assert "does not match its checksum" in inspect.getsource(projectbackup.verify) and "does not match its checksum" in body
+
+
+def test_the_places_and_names_the_backup_section_gives_are_the_ones_the_tool_uses():
+    from pathlib import Path as P
+    from freeform_studio import backup as ffbackup
+    from voice_studio.core import ackimport, projectbackup as pb
+    from voice_studio.core.paths import ProjectPaths
+    body = section("I9.")
+    assert "ack-project-backup-voice-check-<date>-<time>.tar" in body and pb.NAME_RE.match("ack-project-backup-voice-check-20261016-013110.tar") and "`.tar.json`" in body
+    assert pb.MANIFEST in body and "`MANIFEST.json`" in body
+    paths = ProjectPaths("/p/voice-check")
+    for name, part in (("project/project.json", "record"), ("rounds/rounds.json", "rounds")):
+        assert "`%s`" % name in body and pb.member_target(paths, name).part == part, name
+    assert "recordings/takes/" in body and pb.member_target(paths, "recordings/takes/t20260930-000001-0001/raw.webm").part == "recordings"
+    assert "exports/" in body and "~/ack-voice-studio/projects/voice-check/recordings/_freeform/en-US/takes" in body
+    assert str(ffbackup.takes_dir(P("recordings"), ackimport.LANGUAGE)) == "recordings/_freeform/en-US/takes"
+    from voice_studio.core.paths import DataHome
+    assert DataHome("~").backups == "~/ack-voice-studio/backups" and "~/ack-voice-studio/backups" in body and "~/ack-voice-check-backups" in body
+    assert "~/ack-voice-check-backups" in section("M.") and "never removes a backup itself" in section("M.")
+
+
+def test_the_backup_section_says_it_removes_nothing_of_yours_and_what_it_leaves_out_and_what_to_send_back():
+    from voice_studio.core import projectbackup as pb
+    body = " ".join(section("I9.").split())
+    assert "**Nothing here removes or changes anything of yours.**" in body and "never replaced or removed by this tool" in body and "only **adds** what is missing and never replaces a file" in body
+    assert "pretend home folder" in body and "Not tried on a real computer" in body
+    for left_out in ("training sets and working files", "the test sounds from section I8", "older saved points", "earlier backups"):
+        assert left_out in body, left_out
+    assert set(pb.LEFT_OUT) >= {"scratch", "listening", "older_saved_points"}
+    assert "Section I9:" in doc_text() or "- Section I9:" in doc_text()
+    names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I8") < names.index("I9") < names.index("J")
+    assert len(i9_blocks()) == 14
+
+
+def test_the_backup_section_runs_as_it_says_against_a_project_with_everything_in_it(tmp_path):
+    import shutil
+    from vs_backup_helpers import BackupRig
+    for tool in ("bash", "tar", "dd", "cmp", "od"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    rig = BackupRig(tmp_path)
+    blocks = i9_blocks()
+    mine = str(TOOLS)
+    python = shlex.quote(sys.executable)
+
+    def adapted(index):
+        text = blocks[index].replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("python3 -m", python + " -m")
+        if index == 3:
+            text = text.replace("--to ~/ack-voice-check-backups\n", "--to ~/ack-voice-check-backups --yes\n")
+        if index == 9:
+            text = text.replace('HOME="$T" ' + python + " -m voice_studio.backup restore \"$F\"", 'HOME="$T" ' + python + " -m voice_studio.backup restore \"$F\" --yes")
+        return text
+
+    script = []
+    for index in (0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
+        script.append('echo "@@ %d"' % index)
+        script.append(adapted(index))
+        script.append('echo "@@ status: $?"')
+        if index == 2:
+            script.append("ls ~/ack-voice-check-backups 2>&1 | head -n 1")
+        if index == 6:
+            script.append(PYBACKUP_LIST.replace("PY", python).replace("TOOLS", shlex.quote(mine)))
+            script.append("rm ~/ack-voice-check-backups/damaged-copy.tar")
+        if index == 9:
+            script.append('echo "@@ T $T"')
+    env = dict(os.environ, HOME=rig.home.home, PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    before = rig.tree()
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=240, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    text, current = {}, ""
+    for chunk in done.stdout.split("@@ ")[1:]:
+        key, _, rest = chunk.partition("\n")
+        if key.split()[0].isdigit():
+            current = key.split()[0]
+            text[current] = rest
+        else:
+            text[current] += key + "\n" + rest                          # the exit status line and anything the section's prose asks to look at after it
+    assert "Commands:" in text["0"] and "There are no backups of Voice check in " in text["0"] and "To make one, run: " in text["0"] and "has not been backed up on this computer yet" in text["0"]
+    assert "A backup of Voice check would be made like this:" in text["2"] and "keep these, one file at a time:" in text["2"] and "leave these out, because they can be made again or are not needed:" in text["2"]
+    assert "The project record and the consent note:" in text["2"] and "No such file or directory" in text["2"] and "status: 2" in text["2"], "nobody to ask, so nothing is written"
+    assert "Reading the backup back and checking every file." in text["3"] and "The backup is made and checked: " in text["3"] and "Every file was read back and matched." in text["3"]
+    assert "This tool never removes a backup." in text["3"]
+    listing = [line for line in text["3"].splitlines() if line.startswith("-rw")]
+    assert len(listing) == 2 and all(line.startswith("-rw-------") for line in listing) and listing[0].endswith(".tar") != listing[1].endswith(".tar")
+    assert sorted(l.split()[-1].rsplit(".", 1)[-1] for l in listing) == ["json", "tar"]
+    names = [line.split()[-1] for line in text["4"].split("status:")[0].splitlines()]
+    assert "project/project.json" in names and any(n.startswith("recordings/takes/") for n in names) and "rounds/rounds.json" in names and any(n.startswith("exports/") for n in names)
+    assert names[-1] == "MANIFEST.json" and not any(w in " ".join(names) for w in ("scratch", "listening", "audio.wav", "token", "datasets"))
+    assert "is whole. Every file in it matched, and nothing is missing or extra." in text["5"] and "Backups of Voice check in " in text["5"] and "Nothing precious in Voice check has changed since the last backup" in text["5"]
+    assert "damaged-copy.tar is not whole:" in text["6"] and "project/project.json" in text["6"] and "does not match its checksum" in text["6"] and "status: 1" in text["6"]
+    assert text["6"].rstrip().splitlines()[-1] == "0", "the copy is not one the list command names"
+    assert "has changed since the last backup" in text["7"]
+    refusal = text["8"]
+    for sentence in ("That folder is inside a project, so deleting the project would delete its backup too.", "Nothing was made.", "Choose a folder outside every project, such as a folder on another drive.",
+                     "The backup folder was not given in full.", "Give the whole path after --to, starting with a slash."):
+        assert sentence in refusal, sentence
+    assert "backups-here" not in refusal.split("Give the whole path")[-1]
+    assert "Nothing needs putting back. Everything in the backup is already in the project." in text["9"]
+    assert "make the project voice-check again, because it is not on this computer" in text["9"] and "Done. " in text["9"] and "Look at the project with: " in text["9"]
+    assert "same project record" in text["10"] and "same takes" in text["10"]
+    assert "leave 1 file exactly as it is, because it differs from the backup's copy. The backup still holds its copy." in text["11"] and "Nothing needs putting back." in text["11"]
+    assert "That folder is on the same drive as the project. It protects against a mistake, not against a drive that fails." in text["12"]
+    pretend = next(line for line in done.stdout.splitlines() if line.startswith("@@ T ")).split(" ", 2)[2]
+    try:
+        assert Path(pretend, "ack-voice-studio", "projects", "voice-check", "project.json").read_bytes().endswith(b" \n")
+    finally:
+        shutil.rmtree(pretend, ignore_errors=True)
+    after = rig.tree()
+    assert {k: v for k, v in after.items() if k != "project.json"} == {k: v for k, v in before.items() if k != "project.json"}, "nothing in the project changed, except the time on its record"
+    assert after["project.json"] == before["project.json"], "the touch changed only the time, never the contents"
+
+
+PYBACKUP_LIST = 'PYTHONPATH=TOOLS PY -m voice_studio.backup list --project voice-check --to ~/ack-voice-check-backups | grep -c damaged'

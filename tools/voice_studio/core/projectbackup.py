@@ -587,9 +587,12 @@ def list_backups(folder: str, project_id: Optional[str] = None) -> List[Dict[str
         if not isinstance(note, dict):
             note = {}
         created = note.get("created") if isinstance(note.get("created"), str) else datetime.strptime(match.group("stamp"), "%Y%m%d-%H%M%S").isoformat(timespec="seconds")
-        found.append({"name": entry, "path": path, "project": match.group("project"), "created": created, "size": os.lstat(path).st_size,
+        found.append({"name": entry, "path": path, "project": match.group("project"), "created": created, "size": os.lstat(path).st_size, "n": int(match.group("n") or 1),
                       "files": note.get("files") if isinstance(note.get("files"), int) else None})
-    return sorted(found, key=lambda b: (str(b["created"]), str(b["name"])), reverse=True)
+    found.sort(key=lambda b: (str(b["created"]), b["n"], str(b["name"])), reverse=True)           # two made in one second: the one numbered later is the newer
+    for item in found:
+        del item["n"]
+    return found
 
 
 # ---------------------------------------------------------------- when each project was last backed up (per computer, never in a backup)

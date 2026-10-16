@@ -1065,6 +1065,128 @@ section **with only the guide open**, as a person who has nothing else would. Wr
 - [ ] Mistakes are refused before anything is written: `--round 0`, `--round x` and `--round 99` each print a plain sentence (`I did not understand …` or `There is no round with that number in this project.`) and make nothing; `--round chosen --folder anything` says `Give --folder or --round, not both.`
 - [ ] Write down: whether you would use this instead of making the voice file first, and whether the copy question was clear.
 
+## I9. Backing up a project
+
+**New, and not yet run on a real computer.** `backup` keeps the part of a project that cannot be made again in one checked file, in a folder you choose, away from the project: the project record and the consent note, the recordings and what was done to them, the packages that came from the phone, the record of training rounds and each round's settings, the saved points that are kept, and the finished voice files. It leaves out what can be made again or is only for listening: training sets and working files, the test sounds from section I8 and the voices made to hear them, older saved points, the trainer's logs, the tool's own programs, the starting voices and earlier backups.
+**Nothing here removes or changes anything of yours.** A backup is always a **new** file in a folder outside every project, it is read all the way back before it counts, and an earlier backup is never replaced or removed by this tool. Putting a backup back only **adds** what is missing and never replaces a file; the step that does it is done in a pretend home folder, so your real project is not touched. The first steps write nothing. It uses the project from section I2 (any project that has a project record will do, and a small one is fine).
+
+*Built and tried in the build sandbox only, with made-up recordings, rounds and saved points and a stand-in for the disk. Not tried on a real computer, on a Windows folder from WSL, or on a folder that a cloud service really syncs.*
+
+**A. Look first. Nothing is written.**
+
+- [ ] Read what it offers, then ask what is backed up so far:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup help
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup list --project voice-check
+  ```
+  → The first prints `Commands:` and one line each for `now`, `list`, `verify` and `restore`. The second says `There are no backups of Voice check in …` and `To make one, run:` with the command, then `has not been backed up on this computer yet` (the project's own name first). Say whether the four lines were clear to you.
+
+**B. The reminder, before a round and after recordings.** The tool reminds you, and nothing more: it never makes a backup by itself and never stops what you were doing.
+
+- [ ] Ask to start a round, and say no. Do this only if section I2 left the project ready to start one; otherwise bring a package in again (section I6) and look at the end of what it prints:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds start --project voice-check
+  ```
+  → Before it asks whether to start, a line says the project `has not been backed up yet.` and `A backup keeps the recordings and notes safe if something goes wrong with this computer.`, and `To make one, run:` with the exact command. Type **`no`**. Write down whether the reminder was easy to notice or got lost among the other lines.
+
+**C. See the plan, and say no.**
+
+- [ ] Ask for a backup into a folder that is not there yet. `~/ack-voice-check-backups` is a folder only this list uses; on WSL a folder on the Windows side outside Documents and OneDrive is better (see part J):
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup now --project voice-check --to ~/ack-voice-check-backups
+  ```
+  → `A backup of Voice check would be made like this:`, then `keep these, one file at a time:` with a line for each part that is there (for example `The project record and the consent note`, with how many files and how big), then `leave these out, because they can be made again or are not needed:` with the training sets, the test sounds and older saved points and their sizes, when there are any, then where it will be written, that it will be `read it all the way back and check every file before it counts`, that it will `never remove or replace an earlier backup`, the room check, and `Make this backup now? Type yes to go on.` Type **`no`**: `Nothing was done.` and `ls ~/ack-voice-check-backups` says there is no such folder. Write down the sizes, the room figures, and whether the left-out list matches what you know is in the project.
+
+**D. Make one.**
+
+- [ ] Run the same command and type **`yes`**:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup now --project voice-check --to ~/ack-voice-check-backups
+  ls -l ~/ack-voice-check-backups
+  ```
+  → A line for each part as it is written, then `Reading the backup back and checking every file.`, then `The backup is made and checked:` with its path, how many files it holds, `Every file was read back and matched.` and its size, `Earlier backups in that folder were not touched. This tool never removes a backup.`, and the two commands to check it again and to put it back. The folder holds one `ack-project-backup-voice-check-<date>-<time>.tar` and a small `.tar.json` note beside it, both readable by you alone. Write down how long it took and the size of the file. A project with many hours of recordings is where the time will show.
+- [ ] Look inside it. It is a plain `tar` file, so it does not need this tool to be opened, and the last thing in it is the list the tool checks it against:
+  ```bash
+  F=$(ls -t ~/ack-voice-check-backups/ack-project-backup-voice-check-*.tar | head -1)
+  tar -tvf "$F" | head -20
+  tar -tf "$F" | tail -n 1
+  ```
+  → The first lists paths such as `project/project.json`, `recordings/takes/…`, `rounds/rounds.json` and `exports/…`; the second prints `MANIFEST.json`. Nothing about scratch, `listening` or older saved points is in it.
+
+**E. Look at it again, and at what the tool knows.**
+
+- [ ] Check it, then list the backups:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup verify "$F"
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup list --project voice-check --to ~/ack-voice-check-backups
+  ```
+  → `is whole. Every file in it matched, and nothing is missing or extra.` Then `Backups of Voice check in …` with one row for the file, and `Nothing precious in Voice check has changed since the last backup, made on …`. Run the part B command again: the reminder is gone.
+
+**F. A backup with one byte changed must not pass.** This changes a **copy**, not the backup itself.
+
+- [ ] Change one byte of a copy and check it:
+  ```bash
+  cp "$F" ~/ack-voice-check-backups/damaged-copy.tar
+  printf 'X' | dd of=~/ack-voice-check-backups/damaged-copy.tar bs=1 seek=600 conv=notrunc 2>/dev/null
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup verify ~/ack-voice-check-backups/damaged-copy.tar
+  ```
+  → `damaged-copy.tar is not whole:` and a line that names `project/project.json` and says it `does not match its checksum`. Exit code 1 (`echo $?`). The copy is not listed by the `list` command (its name is not one the tool gives). Delete the copy: `rm ~/ack-voice-check-backups/damaged-copy.tar`.
+
+**G. It notices that something changed.**
+
+- [ ] Change the time on the project file (its contents stay the same; this is only a way to make the tool see a change), then look:
+  ```bash
+  touch ~/ack-voice-studio/projects/voice-check/project.json
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup list --project voice-check --to ~/ack-voice-check-backups
+  ```
+  → `has changed since the last backup` with the time of the last one and the folder it went to. (Bringing in recordings or finishing a round does the same.) Run the part B command again: the reminder now says the project has changed since the last backup, and when that was. A new backup is a new file; the earlier one is still there.
+
+**H. It refuses clearly.** Neither command writes anything.
+
+- [ ] Try a folder inside the project and a folder given without its full path:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup now --project voice-check --to ~/ack-voice-studio/projects/voice-check/backups-here
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup now --project voice-check --to backups
+  ls ~/ack-voice-studio/projects/voice-check
+  ```
+  → The first: `That folder is inside a project, so deleting the project would delete its backup too.`, `Nothing was made.` and `Choose a folder outside every project, such as a folder on another drive.` The second: `The backup folder was not given in full.` and `Give the whole path after --to, starting with a slash.` The `ls` shows no `backups-here` folder.
+
+**I. Putting it back.** Nothing is replaced. The second command uses a pretend home folder, so it is the whole of a restore on a computer that has never seen this project, without touching yours.
+
+- [ ] Put it back into the project that is there, then into the pretend home, and type **`yes`** to the second:
+  ```bash
+  T=$(mktemp -d)
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup restore "$F"
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.backup restore "$F"
+  ```
+  → The first says `Nothing needs putting back. Everything in the backup is already in the project.` and asks nothing. The second shows `make the project voice-check again, because it is not on this computer` and how many files it would add, asks `Put these back now? Type yes to go on.`, and after `yes` says `Done.` with the count and `Look at the project with:`.
+- [ ] Compare what came back with what you have:
+  ```bash
+  cmp ~/ack-voice-studio/projects/voice-check/project.json "$T/ack-voice-studio/projects/voice-check/project.json" && echo same project record
+  diff <(ls ~/ack-voice-studio/projects/voice-check/recordings/_freeform/en-US/takes) <(ls "$T/ack-voice-studio/projects/voice-check/recordings/_freeform/en-US/takes") && echo same takes
+  ```
+  → `same project record`, and `same takes` (or no output from `ls` on both sides if the project has no recordings). If you have rounds, `rounds list` in the pretend home shows the same rounds: `PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.rounds list --project voice-check`.
+- [ ] Make the restored copy different, then put the backup back again. A file that differs is left exactly as it is:
+  ```bash
+  echo " " >> "$T/ack-voice-studio/projects/voice-check/project.json"
+  PYTHONPATH=~/ack-tools/tools HOME="$T" python3 -m voice_studio.backup restore "$F"
+  tail -c 3 "$T/ack-voice-studio/projects/voice-check/project.json" | od -c | head -2
+  ```
+  → A line saying it would `leave 1 file exactly as it is, because it differs from the backup's copy. The backup still holds its copy.` and `Nothing needs putting back. Everything in the backup is already in the project.` The `od` output still ends in the space you added. When you have looked: `rm -r "$T"`.
+
+**J. Where to keep it.** A backup on the same drive as the project protects against a mistake, not against that drive failing.
+
+- [ ] Ask for a backup without naming a folder, and say no. The folder used last is used (the first time, the tool's own folder, `~/ack-voice-studio/backups`):
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup now --project voice-check
+  ```
+  → `That folder is on the same drive as the project. It protects against a mistake, not against a drive that fails.` Under WSL, when exactly one Windows user is on this computer, the next line is `A folder on the Windows side, outside Documents and OneDrive, also works. For example:` with that user's folder; with two or more it says nothing about it. Write down which you got and whether the example folder is one you would use.
+- [ ] **WSL only.** Ask for a folder inside OneDrive or Documents, and say no:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup now --project voice-check --to /mnt/c/Users/YOU/Documents/ack-check
+  ```
+  → A line beginning `Note:` says the folder may be uploaded to a cloud service, because recordings of a voice are personal data. Nothing is written. Replace `YOU` with your Windows user name.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -1144,6 +1266,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I6: whether every `--kind` brought the right files in, what the tool said when a file could not be read, how long listening took for how many minutes of audio, whether the file chooser was easy to use, and any sentence in the projects steps (especially the two delete questions) that left you unsure what would be removed.
 - Section I7: for each part (A to D), the exact lines the one command printed, where it stopped or asked something this list did not expect, what you typed, how long each step took, and every sentence in a guide that was unclear or a command that did not work as typed. If the one command is not run on a clean Windows or a plain Ubuntu desktop yet, say so.
 - Section I8: part B for each way of playing (heard or not, the exit number, any words it printed, and whether this is WSL or a native desktop), then the seconds `listen` took, which way played, whether the voice was clear, any word said differently on the phone, and whether you want other sentences.
+- Section I9: how long a backup took for how big a project, the file's size, whether the reminder in part B was easy to notice, whether `verify` caught the changed byte, what the second restore in part I said, whether the left-out list in part C matched what you know is in the project, which folder you chose and why, and any sentence that was hard to follow.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
@@ -1154,5 +1277,6 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   where a second try goes when you do not want to reuse the first). These hold only what this list made. The programs the tool built (`~/ack-voice-studio`) are **not** in them and are not touched; they are meant to stay. The packages in your Downloads folder, your phone, ACK and your real recordings are not in them.
   The one place a copy of a package was kept for this list is `~/ack-voice-check/recordings/_freeform/en-US/incoming/`; if you want to keep
   the recordings you imported, copy that folder first.
+- [ ] The backups section I9 made are in `~/ack-voice-check-backups` (and `~/ack-voice-studio/backups` if you ever left the folder out). They are real backups, so keep them if you want them; look first with `du -sh ~/ack-voice-check-backups`, and when you are sure: `rm -r ~/ack-voice-check-backups`. The tool never removes a backup itself, and the project's delete question does not touch them.
 - [ ] The small sound files section I8 made are under the project's `listening` folder, a few hundred kilobytes each time (and a large voice copy for each time you kept one in part E). Free up space offers them (section I3); or look with `du -sh ~/ack-voice-studio/projects/voice-check/listening` and remove the folder yourself when you no longer want them.
 - [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.
