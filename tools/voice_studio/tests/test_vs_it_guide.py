@@ -433,3 +433,19 @@ def test_the_problem_report_reaches_no_network_starts_no_program_and_writes_only
         assert not calls & {"rmtree", "unlink", "removedirs", "rename", "replace", "write_text", "write_bytes", "system", "popen", "run", "Popen", "makedirs", "mkdir"}, (name, calls)
     library = (PKG / "core/reportcmd.py").read_text()
     assert library.count("os.unlink(") == 1 and "makedirs" not in library and "mkdir" not in library and library.count("write_report(") == 1, "one file is written, and only a half-written file of its own is removed"
+
+
+# ---------------------------------------------------------------- the window
+
+def test_the_window_paragraph_names_every_page_the_window_has_in_the_order_of_its_list_and_says_which_can_reach_the_internet():
+    from voice_studio.core import text as catalog_text, windowmodel
+    cat = catalog_text.load_catalog("en")
+    paragraph = " ".join(next(line for line in GUIDE.splitlines() if line.startswith("* **The window (")).split())
+    numbers = {9: "nine", 10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen"}
+    assert "opens one window with %s pages:" % numbers[len(windowmodel.PAGES)] in paragraph
+    places = [paragraph.index(cat.t("window.nav." + page)) for page in windowmodel.PAGES]
+    assert places == sorted(places) and len(set(places)) == len(places), "every page is named once, in the order of the window's list"
+    assert "Updates (a look at which releases exist, and fetching one) and on Check the tool (the buttons that mend or build fresh, which can download again)" in paragraph
+    assert "Hear the voice, Backup and Problem report contact nothing" in paragraph
+    status = " ".join(GUIDE.split("## 1.", 1)[0].split())
+    assert "a window with pages for projects, recordings, training rounds, hearing a voice, the voice file, backup, freeing up space, checking the tool, updates and problem reports" in status

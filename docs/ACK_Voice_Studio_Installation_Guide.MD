@@ -116,7 +116,7 @@ If you press Ctrl+C at any time, it stops cleanly, keeps what was finished, and 
 
 ## 5. Your first hour in the window
 
-The window has pages for Projects, Recordings, Training rounds, Voice file, Free up space and Display. Do these in order.
+The window has pages for Projects, Recordings, Training rounds, Hear the voice, Voice file, Backup, Free up space, Check the tool, Updates, Problem report and Display. The steps below use Projects, Recordings, Training rounds and Voice file, in this order. The other pages are for later: `Backup` copies a project to a safe place, `Check the tool` looks at the programs Voice Studio uses and mends them, `Updates` fetches a newer Voice Studio, and `Problem report` writes down what went wrong so that a helper can read it. Each of them shows what it will do and asks first.
 
 1. **Projects, then `New project…`.** Give the project a name and the hours of recording you expect. Say whose voice it is. Under `Starting voice` you can choose a voice to start from, or `Choose later`. Press the button that makes the project. It shows what it will make and asks first.
 2. **Bring in recordings.** On the Recordings page press `Bring in recordings…`. You choose the kind: an ACK package from the phone (a zip file), a folder of audio files with a text file for each, a folder of audio files with one table, or audio files alone. It shows what it found and asks before it adds anything. It only reads your files; it never changes or removes them.

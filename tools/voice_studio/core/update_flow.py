@@ -58,7 +58,7 @@ def _say_contact(cat: Catalog, io: IO, source: ReleaseSource) -> None:
 
 # ---------------------------------------------------------------- check
 
-def _check(args: Sequence[str], system: System, here: str, version: str, source: ReleaseSource, networked: Callable, cat: Catalog, io: IO) -> int:
+def _check(args: Sequence[str], system: System, here: str, version: str, source: ReleaseSource, networked: Callable, cat: Catalog, io: IO, on_releases: Optional[Callable[[Sequence[str]], None]] = None) -> int:
     try:
         parsed = parse_args(args, flags=YES, values={}, max_words=0)
     except ArgError as error:
@@ -78,6 +78,8 @@ def _check(args: Sequence[str], system: System, here: str, version: str, source:
     except UpdateError as error:
         _say_error(cat, io, error)
         return EXIT_PROBLEM
+    if on_releases is not None:
+        on_releases(tuple(release.name for release in releases))
     if not releases:
         io.say(cat.t("update.releases.none"))
         return EXIT_OK
@@ -202,8 +204,10 @@ def _help(cat: Catalog, io: IO) -> int:
     return EXIT_OK
 
 
-def run_update(argv: Sequence[str], cat: Catalog, io: IO, *, system: System, source: ReleaseSource, networked: Callable, tools_dir: str, version: str) -> int:
-    """`python3 -m voice_studio.update COMMAND ...`. `networked` is the download module's `run_networked`; a test gives its own. Ctrl+C stops cleanly: a folder that was being made is removed again."""
+def run_update(argv: Sequence[str], cat: Catalog, io: IO, *, system: System, source: ReleaseSource, networked: Callable, tools_dir: str, version: str,
+               on_releases: Optional[Callable[[Sequence[str]], None]] = None) -> int:
+    """`python3 -m voice_studio.update COMMAND ...`. `networked` is the download module's `run_networked`; a test gives its own. Ctrl+C stops cleanly: a folder that was being made is removed again.
+    `on_releases` is told the names of the releases (newest first) when `check` has listed them, so the window can offer them; it is the same list the sentences are made from."""
     command = argv[0] if argv else "help"
     rest = list(argv[1:])
     here = code_folder(tools_dir)
@@ -211,7 +215,7 @@ def run_update(argv: Sequence[str], cat: Catalog, io: IO, *, system: System, sou
         if command in ("help", "--help", "-h"):
             return _help(cat, io)
         if command == "check":
-            return _check(rest, system, here, version, source, networked, cat, io)
+            return _check(rest, system, here, version, source, networked, cat, io, on_releases)
         if command == "get":
             return _get(rest, system, here, version, source, networked, cat, io)
         io.say(cat.t("cli.bad_command", command=command[:60]))

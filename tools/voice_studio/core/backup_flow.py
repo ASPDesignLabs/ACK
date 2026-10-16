@@ -39,15 +39,20 @@ def _say_error(error: pb.BackupError, cat: Catalog, io: IO) -> None:
         io.say("    - " + cat.t("backup.verify_problem", problem=line))
 
 
+def remembered_folder(home: DataHome, project_id: str) -> Tuple[str, str]:
+    """(the folder backups go to when none is named, how that was settled: "remembered" for the one used last, or "default" for the tool's own backups folder)."""
+    last = pb.read_state(home).get(project_id, {}).get("folder")
+    if isinstance(last, str) and os.path.isabs(last):
+        return last, "remembered"
+    return home.backups, "default"
+
+
 def _folder_for(parsed, home: DataHome, project_id: str) -> Tuple[Optional[str], str]:
     """(the folder, how it was chosen: "to", "remembered" or "default"), or (None, "bad") for an option that cannot be a folder."""
     wanted = parsed.values.get("to")
     if wanted is not None:
         return os.path.expanduser(wanted), "to"
-    last = pb.read_state(home).get(project_id, {}).get("folder")
-    if isinstance(last, str) and os.path.isabs(last):
-        return last, "remembered"
-    return home.backups, "default"
+    return remembered_folder(home, project_id)
 
 
 def _free_at(system: System, folder: str) -> Optional[int]:
@@ -62,13 +67,21 @@ def _current_record(ctx: Open, now: Optional[datetime], cat: Catalog, io: IO) ->
     return _look(ctx, now, cat, io, write=stale)
 
 
-def _say_standing(standing: pb.Standing, name: str, cat: Catalog, io: IO) -> None:
+def standing_line(standing: pb.Standing, name: str, cat: Catalog) -> Optional[str]:
+    """The sentence for how a project stands (never backed up, changed since, or current), or None for a project with nothing to lose. The window shows the very same sentence."""
     if standing.state == pb.NEVER:
-        io.say(cat.t("backup.standing.never", name=name))
-    elif standing.state == pb.CHANGED:
-        io.say(cat.t("backup.standing.changed", name=name, when=when_text(standing.last), folder=standing.folder))
-    elif standing.last:
-        io.say(cat.t("backup.standing.current", name=name, when=when_text(standing.last)))
+        return cat.t("backup.standing.never", name=name)
+    if standing.state == pb.CHANGED:
+        return cat.t("backup.standing.changed", name=name, when=when_text(standing.last), folder=standing.folder)
+    if standing.last:
+        return cat.t("backup.standing.current", name=name, when=when_text(standing.last))
+    return None
+
+
+def _say_standing(standing: pb.Standing, name: str, cat: Catalog, io: IO) -> None:
+    line = standing_line(standing, name, cat)
+    if line is not None:
+        io.say(line)
 
 
 def nudge_lines(home: DataHome, ctx: Open, cat: Catalog, record: Optional[rd.Record] = None) -> List[str]:

@@ -3,7 +3,7 @@
 A guided, graphical way to record, train and export a custom voice for ACK, on Ubuntu LTS (22.04, 24.04) and on Windows through WSL. One command sets it up
 and opens a native window (GTK 4) that walks a helper and a person through bringing in recordings, training and sending the finished voice to a phone.
 
-**Status.** The window exists (projects, recordings, training rounds, the voice file, freeing up space, display) and every step is also a terminal command. It has been run on one
+**Status.** The window exists (projects, recordings, training rounds, hearing a voice, the voice file, backup, freeing up space, checking the tool, updates, problem reports and display) and every step is also a terminal command. It has been run on one
 computer (Windows with WSL2, Ubuntu 22.04 and 24.04, an RTX 4060). The installation guides are the place to start:
 
 - **Windows, with only PowerShell:** [`docs/ACK_Voice_Studio_Installation_Guide.MD`](../../docs/ACK_Voice_Studio_Installation_Guide.MD). One command (`install.ps1`) sets up WSL and Ubuntu if needed, then does the Ubuntu steps below, then opens the window.
@@ -82,11 +82,11 @@ PYTHONPATH=tools python3 -m voice_studio.update get v1.1                        
 PYTHONPATH=tools python3 -m voice_studio.report show                                         # a problem report for a helper (versions, checks on this computer, the problem you name; names and folders blanked), printed in full; changes nothing
 PYTHONPATH=tools python3 -m voice_studio.report save --to ~/problem-report.txt               # the same, then save exactly that text to that file after a typed yes; never replaces a file, sends nothing
 PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window --check             # can the window start here? (needs the system Python: python3-gi, gir1.2-gtk-4.0)
-PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window                     # the window: projects, recordings, rounds, voice file, free up space; every change asks first
+PYTHONPATH=tools /usr/bin/python3 -m voice_studio.window                     # the window: eleven pages; every change asks first
 ```
 
 `get` keeps two things apart on purpose: **`--acknowledge`** (or answering `yes` to its first question) says you read where the voice comes from, and **`--yes`** (or its second `yes`) agrees to the download. Neither can stand in for the other.
-Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices), I2 (training rounds), I3 (freeing up space), I4 (the voice file), I5 (the window), I6 (more than one project, and bringing in voice recordings you already have), I8 (hearing the voice before it goes to the phone), I9 (backing up a project), I10 (checking the tool and refreshing it), I11 (removing the tool's programs and downloads), I12 (moving a project's scratch), I13 (updating the tool) and I14 (the problem report) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
+Run either command with `help` to see all of it. `docs/VOICE_STUDIO_DEVICE_TEST.md` sections I1 (projects and voices), I2 (training rounds), I3 (freeing up space), I4 (the voice file), I5 (the window), I6 (more than one project, and bringing in voice recordings you already have), I8 (hearing the voice before it goes to the phone), I9 (backing up a project), I10 (checking the tool and refreshing it), I11 (removing the tool's programs and downloads), I12 (moving a project's scratch), I13 (updating the tool), I14 (the problem report) and I15 (the window's pages for hearing, backup, checking, updates and problem reports) walk through them. A round continues from the round you chose, never from the starting voice again by accident, and the commands that only look (`list`, `keep`) change nothing.
 
 **For an IT department:** `docs/VOICE_STUDIO_IT_GUIDE.md` says what to allow (hosts, ports, packages, disk), what runs and what listens, how to install offline, and what has and has not been tested.
 

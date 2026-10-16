@@ -162,6 +162,8 @@ def run(services: wm.Services) -> int:
 
     profile_checks(shell, checks)
     recordings_checks(shell, checks)
+    from . import selftest_tools                        # imported here: it uses this module's helpers
+    selftest_tools.tool_checks(shell, checks)
     look_checks(shell, checks)
     checks["not_busy_at_the_end"] = not shell.busy
     shell.destroy()

@@ -62,7 +62,7 @@ The terminal commands are written as the installation guides write them, with `P
 | 5 | Make a training set | Recordings, `Make a training set…` | |
 | 6 | Get a starting voice | | `voices get` |
 | 7 | Train a round | Training rounds, `Start a round…` | |
-| 8 | Hear it and decide | Training rounds, `Choose this round` or `Go back to round…` | `voicefile listen` to hear it |
+| 8 | Hear it and decide | Hear the voice, `Hear this round…`, then Training rounds, `Choose this round` or `Go back to round…` | `voicefile listen` to hear it |
 | 9 | Make the voice file | Voice file, `Make the voice file…` | |
 | 10 | Put it on the phone | Voice file, `Show the folder` | |
 
@@ -114,6 +114,8 @@ Each round starts from the round you chose last, so the voice improves a little 
 
 After each round, listen. The computer says three sentences in the new voice: *Hello, my name is Anna. I need some help, please. Thank you, that is all.* It also writes down what it heard in each sound, as a hint and never a verdict.
 
+In the window, the Hear the voice page lists the rounds you can hear. Pick one and press `Hear this round…`. It shows what it will do and asks first. In a terminal:
+
 ```bash
 PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile listen --project anna --round 1
 ```
@@ -152,15 +154,17 @@ You do not need any of this on the first day. It is here so that you know it exi
 PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup now --project anna --to ~/anna-backups
 ```
 
+In the window, the Backup page does the same. `Back up now…` shows the folder and what goes in, and asks first. Each backup it lists has `Check it` and `Put it back…`.
+
 **Free up room.** A round leaves large files behind. `Free up space` in the window, or `rounds free`, shows what could go, with sizes, and removes only what you pick. The files that matter are never offered.
 
 **Put a project away, or delete it.** `Put away…` hides a project and removes nothing. `Delete…` removes it for good: it lists what goes, names the backup first, and asks twice. Deleting is also how a person takes their voice back.
 
 **Move the working files to another drive.** If the disk is full, `python3 -m voice_studio.scratch move` copies a project's working files to another place, checks every file, and only then switches. It never touches a recording.
 
-**Update.** `python3 -m voice_studio.update check` asks github.com which releases of ACK Voice Studio exist, after it tells you what it will ask and you say yes. `get` fetches one into a new folder beside the old one. It never replaces the copy you are using, and it never runs by itself.
+**Update.** `python3 -m voice_studio.update check` asks github.com which releases of ACK Voice Studio exist, after it tells you what it will ask and you say yes. `get` fetches one into a new folder beside the old one. It never replaces the copy you are using, and it never runs by itself. In the window, the Updates page has `Look for releases…` and, for the one you pick, `Fetch this release…`.
 
-**Refresh and uninstall.** If something has broken, `python3 -m voice_studio.refresh check` looks and says what; `repair` mends it. `python3 -m voice_studio.uninstall show` lists what an uninstall would remove, and `remove` removes the programs and downloads. Neither touches a project, a recording, a backup or a starting voice.
+**Refresh and uninstall.** If something has broken, `python3 -m voice_studio.refresh check` looks and says what; `repair` mends it. `python3 -m voice_studio.uninstall show` lists what an uninstall would remove, and `remove` removes the programs and downloads. Neither touches a project, a recording, a backup or a starting voice. In the window, the Check the tool page has `Look at everything`, `Mend what is broken…` and `Build a fresh copy…`.
 
 ---
 
@@ -168,7 +172,7 @@ PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.backup now --project anna -
 
 1. **Run the same command again.** It carries on from where it stopped and does not repeat what is done.
 2. **Read the three sentences.** A failure says what happened, whether anything was changed, and what to do next.
-3. **Make a problem report if a helper is going to look.** A command that fails ends with two lines about it. The report is a text file with the versions, the checks on this computer and what went wrong. Your names and folders are blanked, and it holds no recordings, no text you made and no phrases. You see all of it first, and it is saved only where you say.
+3. **Make a problem report if a helper is going to look.** A command that fails ends with two lines about it. The report is a text file with the versions, the checks on this computer and what went wrong. Your names and folders are blanked, and it holds no recordings, no text you made and no phrases. You see all of it first, and it is saved only where you say. In the window, a task that failed offers `Make a problem report…`. The Problem report page has `Show the report`, and `Save the report to a file…` asks for a folder and a name, shows all of it again and asks before it writes.
 
 ```bash
 PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show
@@ -195,6 +199,6 @@ The tool never sends the report. Read it, and give the file to the helper yourse
 
 ## 8. What has been tried
 
-The tool was built and tested on a computer without a screen or a graphics card. What that cannot show was tried by the developer on one computer: Ubuntu 22.04 and 24.04 running inside Windows (WSL2), with an Nvidia RTX 4060. On it the setup, training, stopping and carrying on, the export and the packing of the voice file were run. Three training rounds were run from the terminal. The finished zip file was imported into ACK on a phone, and the window opened and worked. Most of the rest has **not** been run on a real computer yet: the backup, refresh, uninstall, move, update and problem report commands, hearing the voice through a speaker, and the Windows installer. A normal Ubuntu desktop on its own hardware has not been tried either. The file `VOICE_STUDIO_DEVICE_TEST.md` lists every check, and `VOICE_STUDIO_IT_GUIDE.md` says in section 11 what is tested and what is not. If you meet a sentence that is hard to follow, or something that fails, please tell the developer. That is how the tool improves.
+The tool was built and tested on a computer without a screen or a graphics card. What that cannot show was tried by the developer on one computer: Ubuntu 22.04 and 24.04 running inside Windows (WSL2), with an Nvidia RTX 4060. On it the setup, training, stopping and carrying on, the export and the packing of the voice file were run. Three training rounds were run from the terminal. The finished zip file was imported into ACK on a phone, and the window opened and worked. Most of the rest has **not** been run on a real computer yet: the backup, refresh, uninstall, move, update and problem report commands and the window's pages for them, hearing the voice through a speaker, and the Windows installer. A normal Ubuntu desktop on its own hardware has not been tried either. The file `VOICE_STUDIO_DEVICE_TEST.md` lists every check, and `VOICE_STUDIO_IT_GUIDE.md` says in section 11 what is tested and what is not. If you meet a sentence that is hard to follow, or something that fails, please tell the developer. That is how the tool improves.
 
 The older step-by-step guides, `VOICE_TRAINING_GUIDE.md` and `VOICE_DATA_WSL_GUIDE.md`, are still there as the manual route. They do the same work by typing commands one by one.

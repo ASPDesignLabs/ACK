@@ -326,10 +326,16 @@ def test_the_windows_guide_quotes_the_windows_helpers_own_sentences_and_the_ubun
 
 def test_the_pages_and_buttons_of_the_window_are_named_as_the_window_names_them():
     strings = _real_catalog()
-    for page in ("Projects", "Recordings", "Training rounds", "Voice file", "Free up space", "Display"):
-        assert page in strings, page
+    from voice_studio.core import text as catalog_text, windowmodel
+    cat = catalog_text.load_catalog("en")
+    names = [cat.t("window.nav." + page) for page in windowmodel.PAGES]
+    listed = ", ".join(names[:-1]) + " and " + names[-1]
+    assert listed == "Projects, Recordings, Training rounds, Hear the voice, Voice file, Backup, Free up space, Check the tool, Updates, Problem report and Display"
     for guide in GUIDES.values():
-        assert "pages for Projects, Recordings, Training rounds, Voice file, Free up space and Display" in text_of(guide)
+        assert "The window has pages for " + listed + "." in text_of(guide), "the guide lists the pages the window has, in the order of its list"
+        for page, claim in (("Backup", "copies a project to a safe place"), ("Check the tool", "looks at the programs Voice Studio uses and mends them"), ("Updates", "fetches a newer Voice Studio"),
+                            ("Problem report", "writes down what went wrong so that a helper can read it")):
+            assert "`%s` %s" % (page, claim) in text_of(guide), (page, guide.name)
     for button in ("New project…", "Bring in recordings…", "Get the listening model…", "Let the computer listen…", "Make a training set…", "See what a training set would hold",
                    "Start a round…", "Make the voice file…", "Show the folder", "Starting voice", "Choose later"):
         assert button in strings, button

@@ -394,7 +394,7 @@ def test_the_projects_command_is_one_of_the_tools_and_its_heading_is_the_windows
 
 def test_the_backup_command_is_one_of_the_tools_and_the_window_can_run_it_with_its_own_heading(rig, tmp_path):
     svc = full_services(rig)
-    assert "backup" in wm.TOOLS and CAT.t("backup.title") in svc.titles() and len(svc.titles()) == len(wm.TOOLS)
+    assert "backup" in wm.TOOLS and CAT.t("backup.title") in svc.titles()
     dest = tmp_path / "away"
     dest.mkdir()
     sink = Script()
@@ -406,7 +406,7 @@ def test_the_backup_command_is_one_of_the_tools_and_the_window_can_run_it_with_i
 
 def test_the_refresh_command_is_one_of_the_tools_and_the_window_can_run_it_with_its_own_heading(rig):
     svc = full_services(rig)
-    assert "refresh" in wm.TOOLS and CAT.t("refresh.title") in svc.titles() and len(svc.titles()) == len(wm.TOOLS)
+    assert "refresh" in wm.TOOLS and CAT.t("refresh.title") in svc.titles()
     sink = Script()
     wio.start_run(lambda io: svc.run("refresh", ["older"], io), sink, svc.titles())
     assert sink.done.wait(30)

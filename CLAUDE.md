@@ -1752,6 +1752,13 @@ The guided desktop tool for recording, training and exporting a custom voice (`t
 - **Test new code by breaking it.** Copy the repository, change one line at a time (`>=` for `>`, a dropped check, a swapped argument), run the tests, and give every survivor a test, a
   simplification of redundant code, or a written note that it is equivalent. Run the breaks in parallel with a separate `TMPDIR` for each copy, or the runs interfere. This found real
   bugs more than once (a race that could delete a file someone else had just made; a path nested too deep crashing six readers).
+- **A window page is the face of a command, never a second copy of it.** The window (`tools/voice_studio/window/`, GTK 4.6 is the floor) draws; `core/windowmodel.py` decides (the page list `PAGES`, the views,
+  the `(tool, argv)` each button hands to `Services.run`, the report form's rules) and `core/windowio.py` asks the Yes or No question. A page never asks a question the command does not ask and never
+  writes a file or opens a connection itself (`test_vs_window_gtk.py` reads the source). A page that can lead to the internet says so in the checklist: **Updates, and on Check the tool the mend and
+  fresh-copy buttons**, each only after the command says what it will ask for; an earlier line in the checklist wrongly said Updates was the only one (found by reading `refresh_flow.py`). The headless tour
+  (`window/selftest.py`, `selftest_tools.py`, run by `test_vs_window_gtk.py` under GTK 4.14 and, with `ACK_VS_GTK46_RUNNER`, in the Ubuntu 22.04 copy) presses every button. **A tour check inside
+  `if something_exists:` silently never runs** when the copy of the project has no such thing (no tasks, one round): give the page the input instead (the tour builds a `HearView`, patches
+  `job_choices`, calls `folder_chosen`), because the headless file chooser cannot be made to return a folder. Breaking the pages one line at a time found 16 unchecked behaviours in 54 breaks.
 - **The data-sovereignty rules apply here too** (see that section): `docs/DATA_SOVEREIGNTY.md` has the rows for this tool and `test_vs_data_sovereignty_doc.py` fails if a command that can
   reach the network is missing a row. Every source file carries `SPDX-License-Identifier: GPL-3.0-or-later`; `THIRD_PARTY_NOTICES.md` section 7 lists what the tool installs, with how each
   licence was checked (`test_vs_notices.py`).

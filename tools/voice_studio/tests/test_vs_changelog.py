@@ -56,3 +56,13 @@ def test_it_does_not_claim_a_real_run_and_lists_what_is_not_done():
     assert "built and tested in a build sandbox" in body and "nothing here says a step works on a real computer unless that checklist records it" in body
     assert "### Not done yet" in TEXT and "sending recordings over Wi-Fi" in body
     assert "Unreleased" in TEXT.split("\n## ", 1)[1].splitlines()[0] or versions()[0] != (0, 0, 1), "a version with a date is a release that was cut"
+
+
+def test_it_lists_the_window_pages_the_window_has_and_does_not_list_them_as_missing():
+    from voice_studio.core import text as catalog_text, windowmodel
+    cat = catalog_text.load_catalog("en")
+    body = " ".join(TEXT.split())
+    listed = ", ".join(cat.t("window.nav." + p) for p in windowmodel.PAGES[:-1]) + ", and " + cat.t("window.nav." + windowmodel.PAGES[-1])
+    assert "The window has eleven pages: " + listed.replace(", and ", " and ") in body and len(windowmodel.PAGES) == 11
+    assert "Updates and the mend and fresh-copy buttons of Check the tool can lead to the internet" in body
+    assert "The window's pages for backup" not in body and "A window page for getting a starting voice" in body

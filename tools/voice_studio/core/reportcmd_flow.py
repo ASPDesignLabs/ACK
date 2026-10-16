@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timezone
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 from . import jobs, preflight, report as rp, reportcmd as rc
 from .cliargs import ArgError, parse_args
@@ -72,7 +72,7 @@ def _print(report: rp.Report, cat: Catalog, io: IO) -> None:
     io.say(cat.t("reportcmd.rule.end"))
 
 
-def _show(args: Sequence[str], home: DataHome, system: System, cat: Catalog, io: IO, now: datetime) -> int:
+def _show(args: Sequence[str], home: DataHome, system: System, cat: Catalog, io: IO, now: datetime, on_report: Optional[Callable[[str], None]] = None) -> int:
     try:
         parsed = parse_args(args, flags=SHOW_FLAGS, values=SHOW_VALUES, max_words=0)
     except ArgError as error:
@@ -83,13 +83,15 @@ def _show(args: Sequence[str], home: DataHome, system: System, cat: Catalog, io:
     except ReportError as error:
         _say_error(cat, io, error)
         return EXIT_NOTHING_DONE
+    if on_report is not None:
+        on_report(report.text)
     _print(report, cat, io)
     io.say(cat.t("reportcmd.show.kept_nothing"))
     io.say(cat.t("reportcmd.show.how", command=rc.REPORT_COMMAND + " save --to ~/problem-report.txt"))
     return EXIT_OK
 
 
-def _save(args: Sequence[str], home: DataHome, system: System, cat: Catalog, io: IO, now: datetime) -> int:
+def _save(args: Sequence[str], home: DataHome, system: System, cat: Catalog, io: IO, now: datetime, on_report: Optional[Callable[[str], None]] = None) -> int:
     try:
         parsed = parse_args(args, flags=SAVE_FLAGS, values=SAVE_VALUES, max_words=0)
     except ArgError as error:
@@ -104,6 +106,8 @@ def _save(args: Sequence[str], home: DataHome, system: System, cat: Catalog, io:
     except ReportError as error:
         _say_error(cat, io, error)
         return EXIT_NOTHING_DONE
+    if on_report is not None:
+        on_report(report.text)
     _print(report, cat, io)
     reason = rc.sync_reason(place)
     if reason:
@@ -133,8 +137,9 @@ def _help(cat: Catalog, io: IO) -> int:
     return EXIT_OK
 
 
-def run_report(argv: Sequence[str], home: DataHome, cat: Catalog, io: IO, *, system: System, now: Optional[datetime] = None) -> int:
-    """`python3 -m voice_studio.report COMMAND ...`. `now` is for a test; the real one is the clock."""
+def run_report(argv: Sequence[str], home: DataHome, cat: Catalog, io: IO, *, system: System, now: Optional[datetime] = None, on_report: Optional[Callable[[str], None]] = None) -> int:
+    """`python3 -m voice_studio.report COMMAND ...`. `now` is for a test; the real one is the clock. `on_report` is given the text of the report when it has been built (the very text
+    that is printed and, for `save`, written), so the window can show it on its page."""
     command = argv[0] if argv else "help"
     rest = list(argv[1:])
     when = now or datetime.now(timezone.utc)
@@ -142,9 +147,9 @@ def run_report(argv: Sequence[str], home: DataHome, cat: Catalog, io: IO, *, sys
         if command in ("help", "--help", "-h"):
             return _help(cat, io)
         if command == "show":
-            return _show(rest, home, system, cat, io, when)
+            return _show(rest, home, system, cat, io, when, on_report)
         if command == "save":
-            return _save(rest, home, system, cat, io, when)
+            return _save(rest, home, system, cat, io, when, on_report)
         io.say(cat.t("cli.bad_command", command=command[:60]))
         return EXIT_NOTHING_DONE
     except KeyboardInterrupt:

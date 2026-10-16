@@ -720,7 +720,9 @@ def test_the_new_section_comes_after_the_window_and_before_the_manual_steps_and_
     assert "**You always say which kind it is**" in body and "the tool never guesses" in body
     assert "A folder you choose is **only read**" in body and "Nothing here uses the internet." in body
     assert "`--yes` on the line answers the first question only; the second is always asked" in body
-    assert "Six** pages on the left: Projects, Recordings, Training rounds, Voice file, Free up space and Display" in body
+    from voice_studio.core import text as catalog_text, windowmodel
+    titles = [catalog_text.load_catalog("en").t("window.nav." + name) for name in windowmodel.PAGES]
+    assert "Eleven** pages on the left: %s and %s" % (", ".join(titles[:-1]), titles[-1]) in body and len(titles) == 11
     assert "none chosen for you" in body and "a folder is never taken for a package" in body
 
 
@@ -1473,6 +1475,45 @@ def test_the_parts_of_the_update_section_that_contact_nothing_run_as_they_say(tm
     assert "Give the whole path after --to, starting with a slash. Nothing was done." in a2 and "Something is already at the folder the copy would go to." in a2 and a2.count("exit: 2") == 2
     assert "The program that fetches releases, git, is not installed on this computer." in b and "exit: 2" in b
     assert not (home / "ack-voice-studio").exists(), "the real home was not touched"
+
+
+# ---------------------------------------------------------------- section I15: the window's pages for hearing, backup, checking, updates and problem reports
+
+NEW_PAGE_LABELS = ("window.hear.hear_voice", "window.hear.hear_round", "window.hear.show_folder", "window.backup.now", "window.backup.choose_folder", "window.backup.usual_folder", "window.backup.check",
+                   "window.backup.put_back", "window.backup.check_other", "window.backup.put_back_other", "window.backup.show_folder", "window.refresh.check", "window.refresh.check_quick",
+                   "window.refresh.repair", "window.refresh.rebuild", "window.refresh.older_list", "window.refresh.older_remove", "window.update.look", "window.update.get", "window.report.show",
+                   "window.report.save", "window.report.copy", "window.report.choose_folder", "window.report.save_go", "window.result.report_button")
+
+
+def test_every_sentence_the_window_pages_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I15."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "PATH=", "~/", "ls ", "cat ", "du ", "git ", "mv ", "rm ", "cd ", "echo ", "T=", "[", "(cd"))]
+    assert len(quoted) >= 40, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_window_pages_section_names_every_button_the_five_pages_have_by_the_words_on_it():
+    from voice_studio.core import text as catalog_text
+    cat = catalog_text.load_catalog("en")
+    body = " ".join(section("I15.").split())
+    for key in NEW_PAGE_LABELS:
+        label = cat.t(key)
+        assert "`%s`" % label in body, "the section does not name the button: " + label
+
+
+def test_the_window_pages_section_says_what_it_did_not_cover_and_what_the_pages_never_do():
+    from voice_studio.core import windowmodel
+    body = " ".join(section("I15.").split())
+    for claim in ("**New, and not yet run on a real computer.**", "Nothing on these pages starts by itself, nothing reads again on a timer", "the pages that can lead to the internet are Updates and, on Check the tool, the buttons that mend or build fresh (they can download again)",
+                  "under GTK 4.14 and under the exact stack of the floor (Ubuntu 22.04: Python 3.10, python3-gi 3.42, GTK 4.6.9)", "Updates was given a stand-in for the network, so nothing was contacted",
+                  "Not run on WSLg or a native desktop, with a mouse, over a real connection, through a speaker, or with a screen reader", "**what the shown problem report held that you did not expect**"):
+        assert claim in doc_text() or claim in body, claim
+    assert [name for name in windowmodel.PAGES if name in ("hear", "backup", "refresh", "update", "report")] == ["hear", "backup", "refresh", "update", "report"]
+    names = re.findall(r"^## (I15|I14|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I14") < names.index("I15") < names.index("J")
+    assert "- Section I15:" in doc_text() and "section I15 made for a backup and a report" in section("M.")
 
 
 # ---------------------------------------------------------------- section I14: the problem report

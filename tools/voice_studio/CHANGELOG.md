@@ -33,6 +33,11 @@ listed, section by section, in `docs/VOICE_STUDIO_DEVICE_TEST.md`; nothing here 
   you use. It says first what it will ask, asks before it contacts anything, never changes the running copy, and prints the commands for switching so you can type them.
 - **Problem report.** `python3 -m voice_studio.report` builds a report a helper can read, with names and folders blanked and no recordings or phrases in it. It shows all of it
   first and saves it only where you say. A command that fails after it began ends with two lines pointing at it.
+- **The window's pages for the tools.** The window has eleven pages: Projects, Recordings, Training rounds, Hear the voice, Voice file, Backup, Free up space, Check the tool, Updates,
+  Problem report and Display. Hear the voice, Backup, Check the tool, Updates and Problem report are the window's face for the commands of the same names: a button hands the command to
+  the same flow, which shows what it will do and asks with Yes and No buttons (No is where the keyboard starts). Where a command needs a folder or a name, the window asks in a small form
+  and shows every problem in it before it runs anything. Updates and the mend and fresh-copy buttons of Check the tool can lead to the internet, and only after the command says what it
+  will ask for and you say yes; nothing on these pages runs by itself or on a timer. A task that fails offers a way to the Problem report page.
 - **Guides.** A beginner guide (`docs/VOICE_STUDIO_GUIDE.md`), a page for the helper (`docs/VOICE_STUDIO_HELPER_HANDOUT.md`), two installation guides, an IT guide, a device
   checklist and a data-sovereignty page, each held to the code by tests.
 
@@ -42,5 +47,5 @@ listed, section by section, in `docs/VOICE_STUDIO_DEVICE_TEST.md`; nothing here 
 - **Nothing is deleted unless you ask.** Every command that changes or removes something shows what it will do first and asks; with nobody to ask it does nothing.
 
 ### Not done yet
-- The window's pages for backup, refresh, update, the problem report and listening; sending recordings over Wi-Fi; the recording paths for helpers; a real run on native Ubuntu,
+- A window page for getting a starting voice (it is still a typed command); sending recordings over Wi-Fi; the recording paths for helpers; a real run on native Ubuntu,
   with a screen reader, on a real GPU, through a real speaker and over a real connection (all of these are rows in the device checklist).
