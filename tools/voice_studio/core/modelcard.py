@@ -130,9 +130,9 @@ def _whose(inp: CardInput, cat: Catalog) -> list:
     if inp.whose_voice != pj.SOMEONE_ELSE:
         return [cat.t("modelcard.whose.own"), cat.t("modelcard.whose.unchecked")]
     lines = [cat.t("modelcard.whose.else")]
-    if not inp.note_complete:
+    if not inp.note_complete or not inp.how_given:                  # a note whose way is not one of the fixed ones is not summarised, whatever else is filled in
         lines.append(cat.t("modelcard.whose.note_incomplete"))
-    elif inp.how_given:
+    else:
         lines.append(cat.t("modelcard.whose.note", how=cat.t("project.how_given." + inp.how_given)))
     lines.append(cat.t("modelcard.whose.unchecked"))
     return lines

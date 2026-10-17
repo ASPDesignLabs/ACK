@@ -8,7 +8,7 @@ from dataclasses import replace
 
 import pytest
 
-from vs_startvoice_helpers import LESSAC_PAGE, NOW, implies_permission, leaked_keys, make_project, make_registry
+from vs_startvoice_helpers import LESSAC_PAGE, NOW, implies_permission, leaked_keys, make_project, make_registry, make_voice
 from voice_studio.core import modelcard as mc, project as pj, rounds as rd, startvoice, text
 from voice_studio.core.project import Acknowledgment, Consent
 from voice_studio.core.text import size_text
@@ -125,6 +125,34 @@ def test_a_starting_voice_that_is_not_a_plain_word_is_not_copied_into_the_card(v
     assert "does not say which starting voice" in body
 
 
+def test_a_revision_is_kept_whole_up_to_sixty_four_characters_and_cut_after():
+    for length, kept in ((63, 63), (64, 64), (65, 64)):
+        revision = "r" * length
+        body = card_text(the_project=make_project(acknowledgments=(Acknowledgment("voice-mike", "2026-10-09T08:00:00Z", revision),)))
+        assert "for revision %s." % ("r" * kept) in body and "for revision %s." % ("r" * (kept + 1)) not in body
+
+
+def test_a_page_the_registry_does_not_have_is_not_printed_as_none():
+    registry = make_registry(mike=None)
+    item = make_voice("voice-mike", b"voice" * 20, pages=(("lessac", LESSAC_PAGE),))
+    body = card_text(registry=type(registry)(registry.items + (item,)))
+    assert "Page to read: " + LESSAC_PAGE in body and "None" not in body and body.count("Page to read:") == 1
+
+
+def test_a_voice_with_no_known_host_does_not_get_a_host_line():
+    registry = make_registry(mike=None)
+    item = make_voice("voice-mike", b"voice" * 20, url=None)
+    body = card_text(registry=type(registry)(registry.items + (item,)))
+    assert "the place that file comes from" not in body and "None" not in body and "trained further from the starting voice Mike" in body
+
+
+def test_a_complete_note_with_no_known_way_is_called_incomplete_never_left_out():
+    inp = replace(build(the_project=else_project()), how_given="", note_complete=True)
+    lines = mc.build_card(inp, CAT).text.splitlines()
+    assert "  The consent note in the project is not complete." in lines and not any("records how the agreement" in l for l in lines)
+    assert leaked_keys("\n".join(lines)) == []
+
+
 def test_the_training_line_counts_the_rounds_behind_the_chosen_one_and_the_minutes():
     rec = record(finished(1, 0, "voice-mike", 30), finished(2, 1, "", 45), finished(3, 2, "", 20), finished(4, 2, "", 99), current=3)
     assert "  Taken from round 3. The rounds behind it number 3, about 95 minutes of training in all." in card_text(rec=rec, number=3).splitlines()
@@ -235,12 +263,29 @@ def test_the_same_input_gives_the_same_bytes():
     assert mc.build_card(build(), CAT).to_bytes().endswith(b"\n") and not mc.build_card(build(), CAT).to_bytes().endswith(b"\n\n")
 
 
-def test_a_very_long_line_is_cut():
-    long_page = "https://example.org/" + "a" * 900
+def registry_with_lessac_page(address):
     registry = make_registry()
-    items = tuple(replace(i, pages=tuple(sorted((name, long_page if name == "lessac" else address) for name, address in i.pages))) for i in registry.items)
-    body = card_text(registry=type(registry)(items))
-    assert max(len(l) for l in body.splitlines()) == mc.MAX_LINE and "Page to read: https://example.org/aaa" in body
+    return type(registry)(tuple(replace(i, pages=tuple(sorted((name, address if name == "lessac" else other) for name, other in i.pages))) for i in registry.items))
+
+
+def test_a_line_is_cut_at_exactly_four_hundred_characters_and_not_before():
+    prefix = "    Page to read: "                               # four spaces of indent, then the words
+    for extra, kept in ((0, True), (1, False), (-1, True)):
+        address = "h" * (400 - len(prefix) + extra)
+        body = card_text(registry=registry_with_lessac_page(address))
+        line = next(l for l in body.splitlines() if l.startswith(prefix + "hhh"))
+        assert len(line) == min(400, len(prefix) + len(address)) and (line.endswith(address) is kept)
+    assert mc.MAX_LINE == 400
+
+
+def test_the_cards_name_is_the_one_the_documents_name():
+    assert mc.CARD_NAME == "MODEL_CARD.txt"
+
+
+def test_the_card_opens_with_its_title_and_the_two_sentences_that_say_what_it_is_and_what_it_rests_on():
+    lines = card_text().splitlines()
+    assert lines[:5] == ["Voice file card", "", "This card describes one voice file made with ACK Voice Studio. It says where the voice comes from and how it was made.",
+                         "It is written from what the project recorded. Nothing here has been checked against anything else.", ""]
 
 
 @pytest.mark.parametrize("stamp, shown", [("2026-10-11T13:05:09Z", "2026-10-11 13:05 UTC"), ("2026-10-11T13:05:09", "2026-10-11T13:05:09"), ("x" * 50, "x" * 30),
@@ -280,6 +325,19 @@ def test_a_link_where_the_card_goes_counts_as_a_file_that_is_there(tmp_path):
     with pytest.raises(FileExistsError):
         mc.write_card(str(tmp_path), mc.build_card(build(), CAT))
     assert target.read_text() == "keep"
+
+
+def test_while_it_is_being_written_the_card_is_a_hidden_temporary_file_and_never_a_half_card(tmp_path, monkeypatch):
+    seen = []
+    real = os.fsync
+
+    def look(fd):
+        seen.append(sorted(os.listdir(tmp_path)))
+        real(fd)
+
+    monkeypatch.setattr(os, "fsync", look)
+    mc.write_card(str(tmp_path), mc.build_card(build(), CAT))
+    assert len(seen) == 1 and len(seen[0]) == 1 and seen[0][0].startswith(".card-") and seen[0][0].endswith(".tmp") and mc.CARD_NAME not in seen[0]
 
 
 def test_a_write_that_fails_part_way_leaves_no_card_and_no_temporary_file(tmp_path, monkeypatch):
