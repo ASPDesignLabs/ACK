@@ -49,15 +49,17 @@ class SendSystem(RealSystem):
 class Serve:
     """A stand-in listener: records what it was given, says what a real one says, and returns the result a test chooses."""
 
-    def __init__(self, result=None, events=(), raises=None, port=None):
+    def __init__(self, result=None, events=(), raises=None, port=None, drop_folder=False):
         self.result = result or ls.SendResult(ls.DELIVERED, 123, 1, 0, 0)
-        self.events, self.raises, self.port = list(events), raises, port
+        self.events, self.raises, self.port, self.drop_folder = list(events), raises, port, drop_folder
         self.calls = []
 
     def __call__(self, path, name, address, port, certificate, key, token, *, on_event, should_stop, **kw):
         files_then = {"certificate": os.path.isfile(certificate), "key": os.path.isfile(key), "mode": oct(os.stat(key).st_mode & 0o777), "dir": os.path.dirname(certificate)}
         self.calls.append(dict(path=path, name=name, address=address, port=port, certificate=certificate, key=key, token=token, stop=should_stop, kw=kw, files=files_then))
         on_event("listening", port=self.port or port)
+        if self.drop_folder:                                    # something else removed the work folder while it was listening
+            shutil.rmtree(files_then["dir"])
         for kind, facts in self.events:
             on_event(kind, **facts)
         if self.raises:
@@ -72,7 +74,8 @@ class Rig(ListenRig):
 
     def send(self, *argv, answers=(), interactive=True, serve=None, now=NOW, ansi=False, system=None):
         io = Terminal(answers, interactive)
-        io.ansi = ansi
+        if ansi is not None:                                    # None: a terminal that does not say whether it can show colour at all
+            io.ansi = ansi
         serve = serve if serve is not None else Serve()
         code = vff.run_voicefile(["send"] + list(argv), self.home, None, CAT, io, training=self.training_env, now=now, system=system or self.send_system, serve=serve)
         assert leaked_keys(io.text + "\n".join(io.prompts)) == [], "a catalog key was printed instead of words"
@@ -134,9 +137,16 @@ def test_a_voice_file_the_phone_would_refuse_is_never_offered(tmp_path):
 
 
 def test_an_unknown_option_and_an_extra_word_are_told_and_nothing_is_done(rig):
-    for argv in (("--nope",), ("extra",), ("--address",), ("--port", "1", "--port", "2")):
+    rig.authority()                                             # so that nothing else would stop a send that was understood
+    for argv in (("--nope", "--yes"), ("extra", "--yes"), ("--address",), ("--port", "1", "--port", "2")):
         code, io, serve = rig.send(*argv)
-        assert code == 2 and serve.calls == [], argv
+        assert code == 2 and serve.calls == [] and not said(io, say("voicefile.send.title")) and not said(io, say("voicefile.send.plan_head")), argv
+
+
+def test_a_project_that_does_not_exist_is_told_and_nothing_is_done(rig):
+    rig.authority()
+    code, io, serve = rig.send("--project", "nobody-by-that-name", "--yes")
+    assert code == 2 and serve.calls == [] and not said(io, say("voicefile.send.plan_head")) and io.lines[1:], "a reason is given"
 
 
 @pytest.mark.parametrize("port", ["0", "1023", "65536", "-1", "abc", "", "80", "8443.5", "８４４３", "1e4", " 8443"])
@@ -376,7 +386,7 @@ def test_a_refusal_from_the_listener_is_told_in_three_parts_and_the_work_folder_
 def test_ctrl_c_stops_it_cleanly_and_removes_the_certificate_made_for_the_send(rig):
     rig.authority()
     code, io, serve = rig.send("--yes", serve=Serve(raises=KeyboardInterrupt()))
-    assert code == 1 and said(io, say("voicefile.send.stopped", minutes=10, count=0)) and rig.workdirs() == []
+    assert code == 1 and said(io, say("voicefile.send.stopped")) and rig.workdirs() == []
 
 
 def test_the_real_listener_refuses_an_address_this_computer_does_not_have_and_the_flow_says_so(rig):
@@ -402,6 +412,47 @@ def test_a_certificate_for_the_address_is_really_made_by_the_authority_before_th
 
 
 # ---------------------------------------------------------------- the command's help and wiring
+
+def test_a_computer_without_openssl_that_has_the_certificate_files_is_told_in_three_parts_and_nothing_is_started(rig):
+    rig.authority()
+
+    class NoOpenssl(SendSystem):
+        def which(self, name):
+            return None if name == "openssl" else super().which(name)
+    code, io, serve = rig.send("--yes", system=NoOpenssl())
+    assert code == 1 and serve.calls == [] and said(io, say("phonecert.error.no_openssl.what")) and said(io, say("phonecert.error.no_openssl.next"))
+
+
+def test_a_work_folder_that_cannot_be_made_is_told_in_three_parts_and_nothing_is_started(rig, monkeypatch):
+    rig.authority()
+
+    def refuse(home):
+        raise pc.PhoneCertError("folder")
+    monkeypatch.setattr(pc, "new_workdir", refuse)
+    code, io, serve = rig.send("--yes")
+    assert code == 1 and serve.calls == [] and said(io, say("phonecert.error.folder.what")) and rig.workdirs() == []
+
+
+def test_a_work_folder_that_is_already_gone_at_the_end_is_no_trouble(rig):
+    rig.authority()
+    code, io, serve = rig.send("--yes", serve=Serve(drop_folder=True))
+    assert code == 0 and said(io, say("voicefile.send.done_next")) and rig.workdirs() == []
+
+
+def test_a_terminal_that_does_not_say_whether_it_can_show_colour_gets_the_address_and_no_code(rig):
+    rig.authority()
+    code, io, serve = rig.send("--yes", ansi=None)
+    assert code == 0 and said(io, say("voicefile.send.waiting")) and not any(line.startswith("\x1b[") for line in io.lines)
+
+
+def test_the_code_is_drawn_with_two_light_squares_around_it(rig):
+    from voice_studio.core import qrcode
+    rig.authority()
+    code, io, serve = rig.send("--yes", ansi=True)
+    url = "https://192.168.1.23:8443/%s/%s.zip" % (serve.calls[0]["token"], VOICE)
+    drawn = [line for line in io.lines if line.startswith("\x1b[30;47m")]
+    assert drawn == qrcode.lines(qrcode.encode(url), 2, color=True)
+
 
 def test_the_help_lists_send_and_the_options_the_checklist_may_name():
     io = Terminal()

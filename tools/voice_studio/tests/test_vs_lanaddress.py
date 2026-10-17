@@ -16,6 +16,7 @@ class IpSystem(FakeSystem):
     def __init__(self, output=None, result=None, has_ip=True, **kw):
         super().__init__(**kw)
         self.output, self.result, self.has_ip = output, result, has_ip
+        self.timeouts = []
 
     def which(self, name):
         return ("/usr/sbin/ip" if self.has_ip else None) if name == "ip" else super().which(name)
@@ -23,6 +24,7 @@ class IpSystem(FakeSystem):
     def run(self, argv, timeout=15.0, cwd=None, env=None):
         if argv[0].endswith("/ip"):
             self.ran.append(tuple(argv))
+            self.timeouts.append(timeout)
             return self.result if self.result is not None or self.output is None else CommandResult(0, self.output)
         return super().run(argv, timeout, cwd, env)
 
@@ -38,7 +40,7 @@ def test_a_desktop_with_a_wifi_card_a_container_network_and_a_virtual_machine_ne
 def test_the_question_asked_is_a_local_one_for_global_addresses_only():
     system = IpSystem(DESKTOP)
     la.candidates(system)
-    assert system.ran == [("/usr/sbin/ip", "-4", "-o", "addr", "show", "scope", "global")]
+    assert system.ran == [("/usr/sbin/ip", "-4", "-o", "addr", "show", "scope", "global")] and system.timeouts == [10]
 
 
 def test_two_real_cards_give_two_addresses_in_the_order_listed():
@@ -71,6 +73,12 @@ def test_the_same_address_on_two_lines_is_listed_once_and_a_card_alias_is_cut_of
                                   "2: eth0    inet 192.168.1.256/24 scope global eth0\\ x", "x2: eth0    inet 192.168.1.5/24 scope global eth0\\ x"])
 def test_a_line_that_is_not_an_address_line_is_ignored(line):
     assert got(line + "\n") == ()
+
+
+def test_a_line_that_is_not_an_address_line_does_not_stop_the_ones_after_it():
+    out = "garbage\n2: eth0    inet6 fe80::1/64 scope link\n3: eth1    inet 192.168.1.5/24 scope global eth1\\ x\n"
+    assert got(out) == (la.Candidate("eth1", "192.168.1.5"),)
+    assert got("2: docker0    inet 192.168.9.1/24 scope global docker0\\ x\n3: eth1    inet 192.168.1.5/24 scope global eth1\\ x\n") == (la.Candidate("eth1", "192.168.1.5"),), "a skipped card does not end the list"
 
 
 def test_without_ip_or_when_it_fails_there_are_no_addresses_and_no_crash():

@@ -380,3 +380,156 @@ def test_every_error_code_the_module_can_raise_is_listed():
     raised = {n.args[0].value for n in ast.walk(tree) if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "SendError" and n.args and isinstance(n.args[0], ast.Constant)}
     assert raised <= set(ls.ERROR_CODES)
     assert {"not_private", "bad_port", "bad_name", "no_file", "bad_certificate", "cannot_listen"} <= raised
+
+
+# ---------------------------------------------------------------- boundaries and small behaviours found by breaking the code one line at a time
+
+def raw(authority, server, pieces, pause=0.3):
+    """A secure connection that sends each piece with a pause, and returns what came back (b"" when the listener dropped it)."""
+    with socket.create_connection(("127.0.0.1", server.port), timeout=5) as plain:
+        with trusting(authority).wrap_socket(plain, server_hostname="127.0.0.1") as tls:
+            for piece in pieces:
+                tls.sendall(piece)
+                time.sleep(pause)
+            try:
+                return tls.recv(4096)
+            except (OSError, ssl.SSLError):
+                return b""
+
+
+def request_of(server, header_bytes):
+    """A valid request for the right address whose head, before its closing blank line, is exactly `header_bytes` long."""
+    first = b"GET " + right(server).encode() + b" HTTP/1.1\r\n"
+    filler = b"X: " + b"a" * (header_bytes - len(first) - len(b"X: ") - 2) + b"\r\n"
+    head = first + filler
+    assert len(head) == header_bytes
+    return head
+
+
+def test_the_limit_on_the_size_of_a_request_is_exactly_8192_bytes_before_the_blank_line(authority, serve):
+    assert ls.MAX_REQUEST_BYTES == 8192
+    server = serve()
+    assert raw(authority, server, [request_of(server, 8193), b"\r\n"]).startswith(b"HTTP/1.1 404"), "one byte over the limit is a stranger, even for the right address"
+    assert raw(authority, server, [request_of(server, 8192), b"\r\n"]).startswith(b"HTTP/1.1 200"), "exactly the limit is still read"
+
+
+@pytest.mark.parametrize("line", ["GARBAGE", "GET", "GET /x", "GET {path}", "GET {path} HTTP/1.1 extra", "GET {path} HTTP/2.0", "GET {path} FTP/1.1", "GET  {path} HTTP/1.1", ""])
+def test_a_request_line_that_is_not_method_path_and_http_one_is_a_stranger_even_with_the_right_path(authority, serve, line):
+    server = serve()
+    got = raw(authority, server, [line.format(path=right(server)).encode() + b"\r\n\r\n"], pause=0.1)
+    assert got.startswith(b"HTTP/1.1 404") and server.kinds() == ["listening", "stranger"], line
+    status, _, body = get(authority, server, right(server))
+    assert status == 200, "the listener is still there for the real request"
+
+
+def test_a_phone_that_arrives_after_the_listener_has_waited_a_while_is_still_served(authority, serve, blob):
+    server = serve()
+    time.sleep(ls.LISTEN_POLL_SECONDS * 3)
+    status, _, body = get(authority, server, right(server))
+    assert status == 200 and body == blob.read_bytes()
+
+
+def test_without_a_stop_function_it_waits_until_the_time_is_up(authority, blob):
+    result = ls.serve_once(str(blob), NAME, "127.0.0.1", 0, authority["certificate"], authority["key"], ls.new_token(), minutes=0.01, ranges=LOOPBACK)
+    assert result.outcome == ls.TIMED_OUT
+
+
+def test_the_time_limit_is_the_minutes_given_times_sixty_seconds_and_is_met_at_exactly_that_moment(authority, blob):
+    seen = []
+    readings = iter([100.0, 219.0, 220.0])
+
+    def clock():
+        value = next(readings)
+        seen.append(value)
+        return value
+    result = ls.serve_once(str(blob), NAME, "127.0.0.1", 0, authority["certificate"], authority["key"], ls.new_token(), minutes=2, clock=clock, ranges=LOOPBACK)
+    assert result.outcome == ls.TIMED_OUT and seen == [100.0, 219.0, 220.0], "119 seconds in is not the end of two minutes; exactly 120 is"
+
+
+def free_port():
+    probe = socket.socket()
+    probe.bind(("127.0.0.1", 0))
+    port = probe.getsockname()[1]
+    probe.close()
+    return port
+
+
+def test_the_same_port_can_be_used_again_straight_after_a_send(authority, serve):
+    port = free_port()
+    first = serve(port=port)
+    assert get(authority, first, right(first))[0] == 200
+    assert first.finish().outcome == ls.DELIVERED
+    second = serve(port=port)
+    assert second.error is None and second.port == port, "a connection that is still winding down must not keep the port from the next try"
+
+
+def test_a_port_in_use_and_an_address_this_computer_does_not_have_are_told_apart(authority, serve, blob):
+    first = serve()
+    busy = serve(port=first.port)
+    assert busy.error is not None and busy.error.code == "in_use"
+    with pytest.raises(ls.SendError) as caught:
+        ls.serve_once(str(blob), NAME, "192.168.213.77", 0, authority["certificate"], authority["key"], ls.new_token())
+    assert caught.value.code == "cannot_listen" and caught.value.detail, "the system's own words are kept"
+
+
+@pytest.mark.parametrize("port", [1024, 65535, 0])
+def test_the_ports_at_the_edges_of_the_range_are_accepted(port):
+    ls._check("192.168.1.5", port, NAME, pc.PRIVATE_RANGES)
+
+
+def test_a_file_of_one_byte_can_be_offered_and_an_empty_one_cannot(tmp_path):
+    one = tmp_path / "one.zip"
+    one.write_bytes(b"x")
+    fd, size = ls._open_file(str(one))
+    os.close(fd)
+    assert size == 1
+    empty = tmp_path / "empty.zip"
+    empty.write_bytes(b"")
+    with pytest.raises(ls.SendError) as caught:
+        ls._open_file(str(empty))
+    assert caught.value.code == "no_file"
+
+
+class Sink:
+    def __init__(self, fail_on=None):
+        self.got, self.calls, self.fail_on = b"", 0, fail_on
+
+    def sendall(self, data):
+        self.calls += 1
+        if self.calls == self.fail_on:
+            raise OSError("the phone went away")
+        self.got += data
+
+
+def file_of(tmp_path, size):
+    path = tmp_path / "f.bin"
+    path.write_bytes(bytes(i % 251 for i in range(size)))
+    return os.open(str(path), os.O_RDONLY), path.read_bytes()
+
+
+def test_the_stream_sends_exactly_the_size_it_was_told_even_when_the_file_is_longer_now(tmp_path):
+    fd, data = file_of(tmp_path, 3 * ls.CHUNK)
+    try:
+        sink = Sink()
+        assert ls._stream(sink, fd, ls.CHUNK + 100) == ls.CHUNK + 100 and sink.got == data[:ls.CHUNK + 100]
+    finally:
+        os.close(fd)
+
+
+def test_the_stream_says_how_far_it_got_when_the_phone_goes_away(tmp_path):
+    fd, data = file_of(tmp_path, 3 * ls.CHUNK)
+    try:
+        assert ls._stream(Sink(fail_on=1), fd, 3 * ls.CHUNK) == 0
+        sink = Sink(fail_on=2)
+        assert ls._stream(sink, fd, 3 * ls.CHUNK) == ls.CHUNK and sink.got == data[:ls.CHUNK]
+    finally:
+        os.close(fd)
+
+
+def test_the_stream_stops_when_the_file_turns_out_to_be_shorter_than_it_was_told(tmp_path):
+    fd, data = file_of(tmp_path, 10)
+    try:
+        sink = Sink()
+        assert ls._stream(sink, fd, 1000) == 10 and sink.got == data
+    finally:
+        os.close(fd)

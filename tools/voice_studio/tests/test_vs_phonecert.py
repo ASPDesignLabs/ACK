@@ -51,14 +51,14 @@ def mode(path):
 
 @pytest.mark.parametrize("address", ["10.0.0.1", "10.255.255.254", "172.16.0.1", "172.31.255.254", "192.168.0.1", "192.168.255.254", "192.168.1.23"])
 def test_home_network_addresses_are_accepted(address):
-    assert pc.is_private_address(address)
+    assert pc.is_private_address(address) is True
 
 
 @pytest.mark.parametrize("address", ["8.8.8.8", "11.0.0.1", "9.255.255.255", "172.15.255.255", "172.32.0.1", "192.167.255.255", "192.169.0.1", "127.0.0.1", "0.0.0.0", "169.254.1.1", "100.64.0.1",
                                      "::1", "fd00::1", "fe80::1", "", " 192.168.1.1", "192.168.1.1 ", "192.168.1.1\n", "192.168.1", "192.168.1.1.1", "192.168.001.001", "192.168.1.256",
                                      "192.168.1.1/24", "example.com", "localhost", "192.168.1.1:8443", "０.0.0.0", "+192.168.1.1", None, 3232235777])
 def test_everything_else_is_refused(address):
-    assert not pc.is_private_address(address)
+    assert pc.is_private_address(address) is False
 
 
 def test_the_ranges_can_be_widened_only_by_being_asked_to():

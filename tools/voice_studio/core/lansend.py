@@ -84,7 +84,7 @@ def _check(address: str, port: int, name: str, ranges: Sequence[Tuple[str, str]]
 def _open_file(path: str) -> Tuple[int, int]:
     """(file descriptor, size) of a plain file, opened without following a link."""
     try:
-        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
     except OSError:
         raise SendError("no_file")
     try:
@@ -108,7 +108,7 @@ def _read_request(connection: ssl.SSLSocket) -> Optional[Tuple[str, str]]:
         if not piece:
             return None
         data += piece
-    first = data.split(b"\r\n", 1)[0].decode("latin-1")
+    first = data.partition(b"\r\n")[0].decode("latin-1")
     parts = first.split(" ")
     if len(parts) != 3 or not parts[2].startswith("HTTP/1."):
         return None
@@ -137,14 +137,14 @@ def serve_once(path: str, name: str, address: str, port: int, certificate: str, 
             raise SendError("bad_certificate")
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
             try:
                 listener.bind((address, port))
             except OSError as error:
-                if error.errno in (errno.EADDRINUSE, 48, 10048):          # 48 and 10048: the same refusal on other systems
+                if error.errno == errno.EADDRINUSE:
                     raise SendError("in_use")
-                raise SendError("cannot_listen", (error.strerror or "")[:100])
-            listener.listen(4)
+                raise SendError("cannot_listen", error.strerror or "")
+            listener.listen()
             listener.settimeout(LISTEN_POLL_SECONDS)
             on_event("listening", port=listener.getsockname()[1])
             return _loop(listener, context, fd, size, name, token, minutes, on_event, should_stop, clock)
@@ -167,9 +167,7 @@ def _loop(listener: socket.socket, context: ssl.SSLContext, fd: int, size: int, 
             return SendResult(TIMED_OUT, sent, attempts, untrusted, strangers)
         try:
             raw, _peer = listener.accept()
-        except socket.timeout:
-            continue
-        except OSError:
+        except OSError:                                         # nothing yet (the poll ran out), or a connection that went away before it was taken
             continue
         raw.settimeout(REQUEST_SECONDS)
         try:
@@ -190,7 +188,6 @@ def _loop(listener: socket.socket, context: ssl.SSLContext, fd: int, size: int, 
                     _reply(connection, "200 OK", headers)
                     continue
                 attempts += 1
-                sent = 0
                 on_event("sending", size=size)
                 connection.settimeout(SEND_SECONDS)
                 _reply(connection, "200 OK", headers)

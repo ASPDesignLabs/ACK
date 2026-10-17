@@ -39,7 +39,7 @@ def candidates(system: System) -> Tuple[Candidate, ...]:
         match = LINE.match(line.strip())
         if not match:
             continue
-        card, address = match.group(1).split("@", 1)[0], match.group(2)
+        card, address = match.group(1).partition("@")[0], match.group(2)
         if card.startswith(VIRTUAL_PREFIXES) or address in seen or not phonecert.is_private_address(address):
             continue
         seen.add(address)

@@ -72,13 +72,8 @@ def _make_certificate(parsed, home: DataHome, system: System, now: Optional[date
     return EXIT_OK
 
 
-def _certificate_ok(home: DataHome, system: System, now: Optional[datetime], cat: Catalog, io: IO) -> Optional[int]:
+def _certificate_ok(authority: phonecert.Authority, home: DataHome, cat: Catalog, io: IO) -> Optional[int]:
     """None when the certificate file can be used; otherwise the exit code, with the reason said."""
-    try:
-        authority = phonecert.status(home, system, now)
-    except phonecert.PhoneCertError as error:
-        _say_parts(cat, io, "phonecert", error.code, error.detail)
-        return EXIT_PROBLEM
     if authority.state in (phonecert.DAMAGED, phonecert.EXPIRED):
         _say_parts(cat, io, "phonecert", authority.state)
         io.say("  " + cat.t("voicefile.send.cert_where", folder=phonecert.folder(home)))
@@ -190,13 +185,13 @@ def run_send(args: Sequence[str], home: DataHome, cat: Catalog, io: IO, *, syste
             io.say("    - " + cat.t("voicezip.problem." + problem))
         return EXIT_PROBLEM
     try:
-        state = phonecert.status(home, system, now).state
+        authority = phonecert.status(home, system, now)
     except phonecert.PhoneCertError as error:
         _say_parts(cat, io, "phonecert", error.code, error.detail)
         return EXIT_PROBLEM
-    if state == phonecert.ABSENT:
+    if authority.state == phonecert.ABSENT:
         return _make_certificate(parsed, home, system, now, cat, io)
-    refused = _certificate_ok(home, system, now, cat, io)
+    refused = _certificate_ok(authority, home, cat, io)
     if refused is not None:
         return refused
     address = _choose_address(parsed, system, cat, io)
@@ -233,7 +228,7 @@ def _send(home: DataHome, system: System, zip_path: str, name: str, size: int, a
         _say_parts(cat, io, "lansend", error.code, error.detail)
         return EXIT_PROBLEM
     except KeyboardInterrupt:
-        io.say(cat.t("voicefile.send.stopped", minutes=lansend.MINUTES, count=0))
+        io.say(cat.t("voicefile.send.stopped"))
         return EXIT_PROBLEM
     finally:
         if work:

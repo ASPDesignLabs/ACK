@@ -255,6 +255,59 @@ def test_random_text_of_random_length_reads_back_in_every_version():
     assert seen == set(range(1, 11)) or len(seen) >= 8
 
 
+CENTRES = {1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34], 7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46], 10: [6, 28, 50]}      # table E.1
+
+
+def mask_of(matrix):
+    return next(k for k in range(8) if expected_format(k) == read_format(matrix))
+
+
+@pytest.mark.parametrize("version", range(1, 11))
+def test_every_fixed_square_has_the_value_the_standard_gives_in_every_mask(version):
+    size = 17 + 4 * version
+    fixed = function_map(size, version)
+    for mask in range(8):
+        m = qr._Grid(version).masked(mask)
+        assert len(m) == size and read_format(m) == expected_format(mask)
+        for ox, oy in ((0, 0), (size - 7, 0), (0, size - 7)):
+            for y in range(7):
+                for x in range(7):
+                    assert m[oy + y][ox + x] == (max(abs(x - 3), abs(y - 3)) != 2), ("finder", ox, oy, x, y)
+        for i in range(8):
+            for x, y in ((7, i), (i, 7), (size - 8, i), (size - 8 + i, 7), (7, size - 8 + i), (i, size - 8)):
+                assert not m[y][x], ("separator", x, y)
+        assert [m[6][i] for i in range(8, size - 8)] == [i % 2 == 0 for i in range(8, size - 8)] and [m[i][6] for i in range(8, size - 8)] == [i % 2 == 0 for i in range(8, size - 8)]
+        assert m[size - 8][8] is True
+        for cy in CENTRES[version]:
+            for cx in CENTRES[version]:
+                if (cx, cy) not in ((6, 6), (6, CENTRES[version][-1]), (CENTRES[version][-1], 6)):
+                    assert [[m[cy + dy][cx + dx] for dx in range(-2, 3)] for dy in range(-2, 3)] == [[max(abs(dx), abs(dy)) != 1 for dx in range(-2, 3)] for dy in range(-2, 3)], ("alignment", cx, cy)
+        if version >= 7:
+            word = (version << 12) | bch_remainder(version, 0x1F25, 12)
+            for i in range(18):
+                assert m[i // 3][size - 11 + i % 3] is bool(word >> i & 1) and m[size - 11 + i % 3][i // 3] is bool(word >> i & 1), ("version", i)
+        for r in range(size):
+            for c in range(size):
+                if not fixed[r][c]:
+                    assert m[r][c] == MASK_RULES[mask](r, c), ("data square before data", r, c)
+
+
+def test_the_eight_mask_rules_are_the_standards():
+    for mask in range(8):
+        assert all(qr._MASKS[mask](i, j) == MASK_RULES[mask](i, j) for i in range(70) for j in range(70)), mask
+
+
+def test_the_mask_with_the_lowest_penalty_wins_and_the_first_of_equals(monkeypatch):
+    monkeypatch.setattr(qr, "penalty", lambda m: 100 - mask_of(m))
+    assert mask_of(qr.encode("any text")) == 7, "all eight masks are tried, and the lowest penalty is the highest mask here"
+    monkeypatch.setattr(qr, "penalty", lambda m: mask_of(m))
+    assert mask_of(qr.encode("any text")) == 0
+    monkeypatch.setattr(qr, "penalty", lambda m: 5)
+    assert mask_of(qr.encode("any text")) == 0, "a tie goes to the first mask"
+    monkeypatch.setattr(qr, "penalty", lambda m: 100 - (3 if mask_of(m) == 4 else mask_of(m) % 3))
+    assert mask_of(qr.encode("any text")) == 4
+
+
 def test_the_fixed_squares_are_where_the_standard_puts_them():
     m = qr.encode("fixed squares")
     size = len(m)
@@ -316,6 +369,17 @@ def test_rule_one_costs_three_for_a_run_of_five_and_one_more_for_each_square_bey
     assert qr.penalty_runs(grid(["00000"] * 5)) == 5 * 3 + 5 * 3, "five rows and five columns, each one run of five"
 
 
+def test_rule_one_counts_a_run_of_four_at_either_end_of_a_line_as_nothing_and_a_run_of_five_as_three():
+    for row in ("11110", "01111", "0111100", "1111010"):
+        m = checker(len(row))
+        m[0] = [c == "1" for c in row]
+        assert qr.penalty_runs(m) == 0, row
+    five_at_the_start, five_at_the_end = checker(7), checker(7)
+    five_at_the_start[0] = [True] * 5 + [False, True]
+    five_at_the_end[0] = [True, False] + [True] * 5
+    assert qr.penalty_runs(five_at_the_start) == 3 and qr.penalty_runs(five_at_the_end) == 3
+
+
 def test_rule_one_counts_a_run_that_ends_at_the_edge_and_a_run_in_the_middle():
     middle = grid(["0111110", "1010101", "0101010", "1010101", "0101010", "1010101", "0101010"])
     assert qr.penalty_runs(middle) == 3
@@ -331,7 +395,9 @@ def test_rule_two_costs_three_for_every_two_by_two_block_of_one_colour_overlaps_
     assert qr.penalty_blocks(grid(["111", "111", "111"])) == 4 * 3
     assert qr.penalty_blocks(grid(["000", "000", "000"])) == 4 * 3
     assert qr.penalty_blocks(grid(["110", "110", "001"])) == 3
-    assert qr.penalty_blocks(grid(["10", "11"])) == 0
+    for one_odd_square_out in (["10", "11"], ["01", "11"], ["11", "01"], ["11", "10"]):
+        assert qr.penalty_blocks(grid(one_odd_square_out)) == 0, one_odd_square_out
+    assert qr.penalty_blocks(grid(["00", "00"])) == 3
 
 
 def test_rule_three_costs_forty_for_the_finder_like_pattern_with_four_light_squares_on_either_side():

@@ -271,13 +271,12 @@ def penalty_runs(matrix: Matrix) -> int:
     score = 0
     for line in _lines(matrix):
         run = 1
-        for i in range(1, len(line)):
-            if line[i] == line[i - 1]:
+        for i in range(1, len(line) + 1):                       # one step past the end closes the last run
+            if i < len(line) and line[i] == line[i - 1]:
                 run += 1
             else:
                 score += 3 + run - 5 if run >= 5 else 0
                 run = 1
-        score += 3 + run - 5 if run >= 5 else 0
     return score
 
 
@@ -296,7 +295,7 @@ def penalty_finder_like(matrix: Matrix) -> int:
             start = text.find(pattern)
             while start != -1:
                 score += 40
-                start = text.find(pattern, start + 1)
+                start = text.find(pattern, start + len(pattern))             # neither pattern can overlap itself, so the next one starts after this one
     return score
 
 
