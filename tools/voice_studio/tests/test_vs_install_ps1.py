@@ -582,7 +582,7 @@ def test_an_ubuntu_part_that_could_not_be_started_is_a_failure(tmp_path):
 def test_windows_that_is_too_old_stops_before_wsl_is_even_looked_at(tmp_path):
     got = run_install(tmp_path, facts=dict(FACTS_OK, Build=19043))
     assert got["code"] == 1 and lives(got) == [] and not any(c.startswith("capture") for c in got["calls"])
-    assert any("too old to show Linux windows" in line for line in got["said"])
+    assert any("needs Windows 11" in line and "Nothing was changed" in line for line in got["said"])
 
 
 @needs_pwsh
