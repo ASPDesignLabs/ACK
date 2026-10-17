@@ -8,14 +8,16 @@ from voice_studio.core.system import CommandResult, RealSystem
 VER_11 = "\r\nMicrosoft Windows [Version 10.0.22631.4460]\r\n"
 VER_10 = "\r\nMicrosoft Windows [Version 10.0.19045.5011]\r\n"
 SAME = object()
+PATH_CMD = "/mnt/c/Windows/system32/cmd.exe"          # where WSL puts it on the search path
+KNOWN_CMD = "/mnt/c/Windows/System32/cmd.exe"         # where Windows keeps it
 
 
 class WslSystem(RealSystem):
     """The real files (the Windows drive is a folder made by the test), a made-up kernel, environment and programs."""
 
-    def __init__(self, tmp_path, *, kernel=PROC_WSL2, cmd=SAME, wslinfo=None, users=("Anna",), automount="mnt", wsl_conf=SAME, distro="Ubuntu-24.04", profile=SAME):
+    def __init__(self, tmp_path, *, kernel=PROC_WSL2, cmd=SAME, wslinfo=None, users=("Anna",), automount="mnt", wsl_conf=SAME, distro="Ubuntu-24.04", profile=SAME, cmd_on_path=True):
         self.root = str(tmp_path / automount)
-        self.kernel, self.distro = kernel, distro
+        self.kernel, self.distro, self.cmd_on_path = kernel, distro, cmd_on_path
         self.cmd = CommandResult(0, VER_11) if cmd is SAME else cmd
         self.wslinfo = wslinfo
         self.profile = SAME if profile is SAME else profile
@@ -49,17 +51,17 @@ class WslSystem(RealSystem):
         return super().read_text(path)
 
     def environ(self):
-        return {"WSL_DISTRO_NAME": self.distro} if self.kernel != PROC_NATIVE else {}
+        return {"WSL_DISTRO_NAME": self.distro} if self.distro and self.kernel != PROC_NATIVE else {}
 
     def which(self, name):
         if name == "cmd.exe":
-            return "/mnt/c/Windows/System32/cmd.exe" if self.cmd is not None else None
+            return PATH_CMD if self.cmd is not None and self.cmd_on_path else None
         if name == "wslinfo":
             return "/usr/bin/wslinfo" if self.wslinfo is not None else None
         return super().which(name)
 
     def exists(self, path):
-        if path == "/mnt/c/Windows/System32/cmd.exe":
+        if path == KNOWN_CMD:
             return self.cmd is not None
         return super().exists(path)
 

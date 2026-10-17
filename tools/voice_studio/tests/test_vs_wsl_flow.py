@@ -9,7 +9,7 @@ import pytest
 
 from vs_fakes import PROC_NATIVE
 from vs_startvoice_helpers import Terminal, implies_permission, leaked_keys
-from vs_wsl_helpers import VER_10, WslSystem
+from vs_wsl_helpers import PATH_CMD, VER_10, WslSystem
 from voice_studio.core import jobs, text, wsl, wsl_flow as wf
 from voice_studio.core.paths import DataHome
 from voice_studio.core.system import CommandResult
@@ -91,7 +91,7 @@ def test_a_plain_wsl_with_no_file_says_what_it_means_for_a_phone_and_for_a_long_
         "  " + say("wsl.check.home", path=home), "  " + say("wsl.check.file_none", name=".wslconfig"),
         "  " + say("wsl.check.mode_unset"), "  " + say("wsl.check.phone_no", command=CHECK + " phone"),
         "  " + say("wsl.check.idle_default", command=CHECK + " idle")]
-    assert programs(system) == [("/mnt/c/Windows/System32/cmd.exe", "/c", "ver"), ("/mnt/c/Windows/System32/cmd.exe", "/c", "echo %USERPROFILE%")], "only the two Windows questions, nothing else"
+    assert programs(system) == [(PATH_CMD, "/c", "ver"), (PATH_CMD, "/c", "echo %USERPROFILE%")], "only the two Windows questions, nothing else"
     assert not os.path.exists(system.config_path()), "looking changes nothing"
 
 
@@ -337,7 +337,7 @@ def test_no_command_is_run_but_the_two_windows_questions_and_wslinfo(tmp_path):
     system = WslSystem(tmp_path, wslinfo=CommandResult(0, "nat\n"))
     code, io, _ = run(tmp_path, "phone", "--yes", system=system)
     assert code == 0
-    assert set(programs(system)) == {("/mnt/c/Windows/System32/cmd.exe", "/c", "ver"), ("/mnt/c/Windows/System32/cmd.exe", "/c", "echo %USERPROFILE%"), ("/usr/bin/wslinfo", "--networking-mode")}
+    assert set(programs(system)) == {(PATH_CMD, "/c", "ver"), (PATH_CMD, "/c", "echo %USERPROFILE%"), ("/usr/bin/wslinfo", "--networking-mode")}
 
 
 # ---------------------------------------------------------------- idle
@@ -394,3 +394,53 @@ def test_idle_write_failure_and_ctrl_c(tmp_path, monkeypatch):
     assert code == 1 and io.lines[-4:] == parts("not_written", "x")
     code, io, _ = run(tmp_path, "idle", answers=[KeyboardInterrupt()], system=system)
     assert code == 1 and io.lines[-1] == say("wsl.interrupted")
+
+
+# ---------------------------------------------------------------- found by breaking the code one line at a time
+
+def test_a_windows_that_answers_without_saying_its_build_gets_no_build_line(tmp_path):
+    system = WslSystem(tmp_path, cmd=CommandResult(0, "something else\r\n"))
+    code, io, _ = run(tmp_path, "check", system=system)
+    assert "  " + say("wsl.check.windows_works") in io.lines and not any("The Windows build is" in line for line in io.lines)
+    assert "  " + say("wsl.check.phone_old", need=22621) not in io.lines, "an unknown build is not called too old"
+
+
+def test_a_long_value_in_the_file_is_cut_short_when_it_is_shown(tmp_path):
+    system = WslSystem(tmp_path)
+    system.write_config("[wsl2]\nnetworkingMode=%s\n[general]\ninstanceIdleTimeout=%s\n" % ("m" * 60, "9" * 60))
+    code, io, _ = run(tmp_path, "check", system=system)
+    assert "  " + say("wsl.check.mode_file", mode="m" * 40) in io.lines and "  " + say("wsl.check.idle_other", value="9" * 40, command=CHECK + " idle") in io.lines
+
+
+def test_the_networking_mode_is_not_called_unset_for_a_file_that_cannot_be_read_or_a_home_that_is_not_known(tmp_path):
+    bad = WslSystem(tmp_path)
+    bad.write_config("", binary=b"\xff\xfe\x00")
+    code, io, _ = run(tmp_path, "check", system=bad)
+    assert "  " + say("wsl.check.mode_unset") not in io.lines and "  " + say("wsl.check.file_bad", path=bad.config_path()) in io.lines
+    lost = WslSystem(tmp_path / "lost", cmd=None, users=("Anna", "Ben"))
+    code, io, _ = run(tmp_path, "check", system=lost)
+    assert "  " + say("wsl.check.mode_unset") not in io.lines
+    there = WslSystem(tmp_path / "there")
+    there.write_config("[wsl2]\nmemory=1GB\n")
+    assert "  " + say("wsl.check.mode_unset") in run(tmp_path, "check", system=there)[1].lines, "a file with no mode in it is unset"
+    assert "  " + say("wsl.check.mode_unset") in run(tmp_path, "check", system=WslSystem(tmp_path / "nofile"))[1].lines, "so is no file"
+
+
+def test_a_command_that_is_not_known_is_named_in_at_most_sixty_characters(tmp_path):
+    code, io, _ = run(tmp_path, "z" * 100)
+    assert io.lines == [say("cli.bad_command", command="z" * 60)]
+
+
+def test_the_time_given_names_the_copy_of_a_second_change_and_without_a_time_the_clock_is_used(tmp_path):
+    system = WslSystem(tmp_path)
+    system.write_config("[wsl2]\nmemory=1GB\n")
+    assert run(tmp_path, "phone", "--yes", system=system)[0] == 0
+    assert run(tmp_path, "idle", "--yes", system=system)[0] == 0
+    assert sorted(os.listdir(os.path.dirname(system.config_path()))) == [".wslconfig", ".wslconfig.bak", ".wslconfig.bak-20261017-093015"]
+    other = WslSystem(tmp_path / "clock")
+    other.write_config("[wsl2]\nmemory=1GB\n")
+    io = Terminal([], True)
+    assert wf.run_wsl(["phone", "--yes"], DataHome(str(tmp_path / "home")), CAT, io, system=other) == 0 and other.read_config().endswith("networkingMode=mirrored\n")
+    io = Terminal([], True)
+    assert wf.run_wsl(["idle", "--yes"], DataHome(str(tmp_path / "home")), CAT, io, system=other) == 0, "a copy already exists, so the real time names the next one"
+    assert len(os.listdir(os.path.dirname(other.config_path()))) == 3

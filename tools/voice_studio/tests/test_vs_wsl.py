@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from vs_fakes import PROC_NATIVE, PROC_WSL1, PROC_WSL2
-from vs_wsl_helpers import VER_10, VER_11, WslSystem
+from vs_wsl_helpers import KNOWN_CMD, PATH_CMD, VER_10, VER_11, WslSystem
 from voice_studio.core import preflight, wsl
 from voice_studio.core.system import CommandResult
 
@@ -59,6 +59,12 @@ def test_a_key_is_added_to_a_section_that_is_there_after_its_last_setting_and_be
     assert wsl.with_setting(text, "wsl2", "networkingMode", "mirrored") == "[wsl2]\nmemory=8GB\nnetworkingMode=mirrored\n# about the next\n\n[general]\nx=1\n"
     assert wsl.with_setting("[wsl2]\n", "wsl2", "networkingMode", "mirrored") == "[wsl2]\nnetworkingMode=mirrored\n"
     assert wsl.with_setting("[wsl2]", "wsl2", "networkingMode", "mirrored") == "[wsl2]\nnetworkingMode=mirrored", "a file with no final line end keeps having none"
+
+
+def test_a_comment_of_either_kind_after_the_last_setting_stays_after_the_new_one():
+    for mark in ("#", ";"):
+        text = "[wsl2]\nmemory=8GB\n%s about the next\n\n[general]\nx=1\n" % mark
+        assert wsl.with_setting(text, "wsl2", "networkingMode", "mirrored") == "[wsl2]\nmemory=8GB\nnetworkingMode=mirrored\n%s about the next\n\n[general]\nx=1\n" % mark
 
 
 def test_a_section_is_added_at_the_end_when_the_file_has_none_and_a_blank_line_keeps_it_apart():
@@ -138,6 +144,8 @@ def test_windows_drives_are_under_mnt_unless_the_system_says_otherwise(tmp_path)
     assert wsl.automount_root(WslSystem(tmp_path, wsl_conf="[boot]\nsystemd=true\n")) == "/mnt"
     assert wsl.automount_root(WslSystem(tmp_path, wsl_conf="[automount]\nroot = /windir/\n")) == "/windir"
     assert wsl.automount_root(WslSystem(tmp_path, wsl_conf='# note\n[Automount]\nRoot="/w"\n')) == "/w"
+    assert wsl.automount_root(WslSystem(tmp_path, wsl_conf="[automount]\nroot = /windirx/\n")) == "/windirx" and wsl.automount_root(WslSystem(tmp_path, wsl_conf='[automount]\nroot="/drivex"\n')) == "/drivex"
+    assert wsl.automount_root(WslSystem(tmp_path, wsl_conf="[automount]\n# root = /commented\n; root = /also\n")) == "/mnt"
     assert wsl.automount_root(WslSystem(tmp_path, wsl_conf="[boot]\nroot=/elsewhere\n")) == "/mnt", "only the automount section counts"
     for odd in ("relative", "/", "/a/../b", ""):
         assert wsl.automount_root(WslSystem(tmp_path, wsl_conf="[automount]\nroot=%s\n" % odd)) == "/mnt", odd
@@ -155,7 +163,7 @@ def test_windows_is_asked_for_the_profile_folder_first_and_its_answer_is_turned_
     system = WslSystem(tmp_path, users=("Anna", "Ben"))
     got = wsl.windows_home(system, asked=True)
     assert got == wsl.WindowsHome(system.c_users + "/Anna", wsl.HOW_ASKED)
-    assert system.ran == [(("/mnt/c/Windows/System32/cmd.exe", "/c", "echo %USERPROFILE%"), wsl.INTEROP_TIMEOUT_S)]
+    assert system.ran == [((PATH_CMD, "/c", "echo %USERPROFILE%"), wsl.INTEROP_TIMEOUT_S)]
 
 
 def test_an_answer_that_does_not_lead_to_a_folder_is_not_trusted_and_the_user_folders_are_looked_at_instead(tmp_path):
@@ -163,6 +171,32 @@ def test_an_answer_that_does_not_lead_to_a_folder_is_not_trusted_and_the_user_fo
         system = WslSystem(tmp_path, users=("Anna",), profile=CommandResult(0, answer))
         got = wsl.windows_home(system, asked=True)
         assert got == wsl.WindowsHome(system.c_users + "/Anna", wsl.HOW_ONLY), answer
+
+
+def test_the_name_in_a_refusal_is_cut_short_and_so_is_a_long_list_of_users(tmp_path):
+    system = WslSystem(tmp_path, cmd=None, users=("user-%02d" % n for n in range(30)))
+    with pytest.raises(wsl.WslError) as caught:
+        wsl.windows_home(system, asked=False)
+    assert caught.value.code == "several_users" and len(caught.value.detail) == 200 and caught.value.detail.startswith("user-00, user-01")
+    with pytest.raises(wsl.WslError) as caught:
+        wsl.windows_home(system, asked=False, named="n" * 64)
+    assert caught.value.code == "no_such_user" and caught.value.detail == "n" * 60
+
+
+def test_what_windows_says_is_not_trusted_when_the_program_failed_or_could_not_run(tmp_path):
+    for profile in (CommandResult(1, "C:\\Users\\Ben\r\n"), None):
+        system = WslSystem(tmp_path, users=("Anna", "Ben"), profile=profile)
+        with pytest.raises(wsl.WslError) as caught:
+            wsl.windows_home(system, asked=True)
+        assert caught.value.code == "several_users", profile
+        tmp_path = tmp_path / "again"
+
+
+def test_a_windows_program_that_is_not_on_the_search_path_is_found_where_windows_keeps_it(tmp_path):
+    system = WslSystem(tmp_path, cmd_on_path=False)
+    assert wsl.interop(system) == (wsl.INTEROP_WORKS, 22631) and system.ran == [((KNOWN_CMD, "/c", "ver"), wsl.INTEROP_TIMEOUT_S)]
+    assert wsl.windows_home(system, asked=True).how == wsl.HOW_ASKED and system.ran[-1][0] == (KNOWN_CMD, "/c", "echo %USERPROFILE%")
+    assert wsl.interop(WslSystem(tmp_path / "none", cmd=None, cmd_on_path=False)) == (wsl.INTEROP_MISSING, None)
 
 
 def test_without_a_windows_program_the_only_user_folder_is_used(tmp_path):
@@ -203,7 +237,7 @@ def test_a_drive_other_than_c_is_followed_when_windows_says_the_profile_is_there
 def test_a_windows_program_that_answers_gives_the_build_number_it_asked_for_with_a_time_limit(tmp_path):
     system = WslSystem(tmp_path)
     assert wsl.interop(system) == (wsl.INTEROP_WORKS, 22631)
-    assert system.ran == [(("/mnt/c/Windows/System32/cmd.exe", "/c", "ver"), wsl.INTEROP_TIMEOUT_S)] and wsl.INTEROP_TIMEOUT_S == 10.0
+    assert system.ran == [((PATH_CMD, "/c", "ver"), wsl.INTEROP_TIMEOUT_S)] and wsl.INTEROP_TIMEOUT_S == 10.0
     assert wsl.interop(WslSystem(tmp_path, cmd=CommandResult(0, VER_10))) == (wsl.INTEROP_WORKS, 19045)
     assert wsl.interop(WslSystem(tmp_path, cmd=CommandResult(0, "something else\r\n"))) == (wsl.INTEROP_WORKS, None)
 
@@ -236,14 +270,14 @@ def test_without_wslinfo_or_when_it_fails_the_running_mode_is_not_known(tmp_path
 def test_a_computer_that_is_not_ubuntu_in_windows_is_told_so_before_anything_is_asked(tmp_path):
     system = WslSystem(tmp_path, kernel=PROC_NATIVE)
     facts = wsl.look(system)
-    assert facts.platform is preflight.Platform.NATIVE and facts.home is None and facts.config_text is None and system.ran == []
+    assert facts.platform is preflight.Platform.NATIVE and facts.home is None and facts.config_text is None and system.ran == [] and facts.config_bad is False and facts.home_error is None
 
 
 def test_the_facts_come_from_the_file_the_running_ubuntu_and_the_programs_that_answer(tmp_path):
     system = WslSystem(tmp_path, wslinfo=CommandResult(0, "nat\n"))
     system.write_config("[wsl2]\nnetworkingMode=Mirrored\n\n[general]\ninstanceIdleTimeout=-1\n")
     facts = wsl.look(system)
-    assert (facts.platform, facts.distro, facts.interop, facts.build) == (preflight.Platform.WSL2, "Ubuntu-24.04", wsl.INTEROP_WORKS, 22631)
+    assert (facts.platform, facts.interop, facts.build) == (preflight.Platform.WSL2, wsl.INTEROP_WORKS, 22631)
     assert facts.runtime_mode == "nat" and facts.file_mode == "mirrored" and facts.file_idle == "-1" and not facts.config_bad
     assert facts.home == wsl.WindowsHome(system.c_users + "/Anna", wsl.HOW_ASKED) and facts.config_path == system.config_path() and facts.config_text.startswith("[wsl2]")
 
@@ -254,6 +288,19 @@ def test_the_last_value_in_the_file_is_the_one_that_counts_and_a_file_that_is_no
     assert facts.config_text is None and facts.file_mode is None and facts.file_idle is None and facts.config_path == system.config_path() and not facts.config_bad
     system.write_config("[wsl2]\nnetworkingMode=nat\nnetworkingMode=mirrored\n")
     assert wsl.look(system).file_mode == "mirrored"
+
+
+def test_the_last_idle_value_in_the_file_is_the_one_that_counts(tmp_path):
+    system = WslSystem(tmp_path)
+    system.write_config("[general]\ninstanceIdleTimeout=0\ninstanceIdleTimeout=-1\n")
+    assert wsl.look(system).file_idle == "-1"
+
+
+def test_ubuntu_in_windows_is_recognised_by_its_kernel_even_when_the_environment_says_nothing(tmp_path):
+    system = WslSystem(tmp_path, distro=None)
+    assert system.environ() == {} and wsl.look(system).platform is preflight.Platform.WSL2
+    system.write_config("[general]\ninstanceIdleTimeout=-1\n")
+    assert wsl.idle_state(system) == wsl.IDLE_NEVER
 
 
 def test_a_file_that_is_not_plain_utf8_text_is_marked_and_never_read_as_text(tmp_path):
@@ -332,7 +379,7 @@ def test_a_plan_is_refused_when_the_home_is_not_known_or_the_file_cannot_be_edit
     assert code_of(wsl.plan_edit, facts_for(system), "wsl2", "k", "v") == "bad_text"
     system.write_config("[wsl2]\nk=1\nk=2\n")
     assert code_of(wsl.plan_edit, facts_for(system), "wsl2", "k", "v") == "duplicate"
-    facts = wsl.Facts(preflight.Platform.WSL2, "", wsl.INTEROP_MISSING, None, None, None, None, None, None, None, None)
+    facts = wsl.Facts(preflight.Platform.WSL2, wsl.INTEROP_MISSING, None, None, None, None, None, None, None, None, False)
     assert code_of(wsl.plan_edit, facts, "wsl2", "k", "v") == "no_windows_home", "no reason given is still a reason"
 
 
@@ -397,6 +444,72 @@ def test_a_write_that_cannot_happen_says_so_with_the_systems_words_and_leaves_th
     assert system.read_config() == "[wsl2]\nmemory=1GB\n"
 
 
+def test_what_the_write_tells_about_a_failure_is_the_systems_own_words_cut_short(tmp_path, monkeypatch):
+    system = WslSystem(tmp_path)
+    system.write_config("[wsl2]\nmemory=1GB\n")
+    plan = wsl.plan_edit(facts_for(system), wsl.SECTION_IDLE, wsl.KEY_IDLE, wsl.NEVER)
+
+    def refuse(source, target):
+        raise OSError("x" * 300)
+    monkeypatch.setattr(wsl.os, "replace", refuse)
+    with pytest.raises(wsl.WslError) as caught:
+        wsl.apply_edit(plan, NOW)
+    assert caught.value.code == "not_written" and caught.value.detail == "x" * 100
+    assert system.read_config() == "[wsl2]\nmemory=1GB\n" and sorted(os.listdir(os.path.dirname(plan.path))) == [".wslconfig", ".wslconfig.bak"], "no temporary file is left, and the copy stays"
+
+
+def test_a_file_that_appears_while_waiting_is_named_in_the_failure(tmp_path):
+    system = WslSystem(tmp_path)
+    plan = wsl.plan_edit(facts_for(system), wsl.SECTION_IDLE, wsl.KEY_IDLE, wsl.NEVER)
+    system.write_config("x")
+    with pytest.raises(wsl.WslError) as caught:
+        wsl.apply_edit(plan, NOW)
+    assert caught.value.detail == "the file appeared while this was waiting"
+
+
+def test_a_copy_that_does_not_match_stops_the_write_before_the_file_is_touched(tmp_path, monkeypatch):
+    system = WslSystem(tmp_path)
+    system.write_config("[wsl2]\nmemory=1GB\n")
+    plan = wsl.plan_edit(facts_for(system), wsl.SECTION_IDLE, wsl.KEY_IDLE, wsl.NEVER)
+    real_open = open
+
+    class Liar:
+        def __init__(self, handle):
+            self.handle = handle
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self.handle.close()
+
+        def read(self):
+            return self.handle.read() + b"!"
+
+    def lying_open(path, mode="r", *a, **kw):
+        handle = real_open(path, mode, *a, **kw)
+        return Liar(handle) if str(path).endswith(".bak") and mode == "rb" else handle
+    monkeypatch.setattr(wsl, "open", lying_open, raising=False)
+    with pytest.raises(wsl.WslError) as caught:
+        wsl.apply_edit(plan, NOW)
+    assert caught.value.detail == "the copy differs" and system.read_config() == "[wsl2]\nmemory=1GB\n"
+
+
+def test_a_file_that_does_not_read_back_as_written_is_reported(tmp_path, monkeypatch):
+    system = WslSystem(tmp_path)
+    plan = wsl.plan_edit(facts_for(system), wsl.SECTION_IDLE, wsl.KEY_IDLE, wsl.NEVER)
+    real_replace = os.replace
+
+    def corrupting(source, target):
+        real_replace(source, target)
+        with open(target, "wb") as damaged:
+            damaged.write(b"damaged")
+    monkeypatch.setattr(wsl.os, "replace", corrupting)
+    with pytest.raises(wsl.WslError) as caught:
+        wsl.apply_edit(plan, NOW)
+    assert caught.value.detail == "the file read back differs"
+
+
 def test_the_kinds_of_error_this_module_raises_are_the_ones_it_lists():
     assert wsl.ERROR_CODES == ("no_windows_home", "several_users", "no_such_user", "bad_text", "duplicate", "not_written")
 
@@ -414,8 +527,9 @@ def fake_windows(config=None, *, users=("Anna",), kernel=PROC_WSL2, extra_dirs=(
     if config is not None:
         files["%s/Anna/.wslconfig" % root] = config
         present.add("%s/Anna/.wslconfig" % root)
+    from vs_fakes import ALL_TOOLS
     return FakeSystem(proc_version=kernel, environ={"WSL_DISTRO_NAME": "Ubuntu-24.04"} if kernel != PROC_NATIVE else {}, present=present, dirs=["%s/%s" % (root, u) for u in users] + list(extra_dirs),
-                      listings={root: list(users)}), files
+                      listings={root: list(users)}, tools=dict(ALL_TOOLS, **{"cmd.exe": PATH_CMD})), files
 
 
 def idle(config=None, **kw):
@@ -449,4 +563,5 @@ def test_a_home_that_cannot_be_told_or_a_file_that_cannot_be_read_is_unknown():
 def test_it_starts_no_program_to_find_out():
     system, files = fake_windows("[general]\ninstanceIdleTimeout=-1\n")
     system.files.update(files)
-    assert wsl.idle_state(system) == wsl.IDLE_NEVER and system.ran == []
+    assert system.which("cmd.exe") == PATH_CMD
+    assert wsl.idle_state(system) == wsl.IDLE_NEVER and system.ran == [], "a Windows program is there to be asked, and is not"

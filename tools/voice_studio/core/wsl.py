@@ -37,7 +37,7 @@ FIREWALL_RULE = "ACK-Voice-Studio-send"
 MIRRORED_MIN_BUILD = 22621                                              # Windows 11 version 22H2, the first that has mirrored networking
 INTEROP_TIMEOUT_S = 10.0
 KNOWN_CMD = "/mnt/c/Windows/System32/cmd.exe"                           # where Windows keeps it, for a computer whose WSL does not add Windows programs to the search path
-SYSTEM_FOLDERS = frozenset({"public", "default", "default user", "all users", "desktop.ini", "defaultuser0", "wsiaccount"})
+SYSTEM_FOLDERS = frozenset({"public", "default", "default user", "all users", "defaultuser0", "wsiaccount"})        # a loose file such as desktop.ini is left out because only folders are looked at
 ERROR_CODES = ("no_windows_home", "several_users", "no_such_user", "bad_text", "duplicate", "not_written")
 
 IDLE_NEVER, IDLE_STOPS, IDLE_UNKNOWN = "never", "stops", "unknown"
@@ -53,12 +53,16 @@ _BUILD = re.compile(r"\[Version (\d+)\.(\d+)\.(\d+)")
 
 class WslError(Exception):
     def __init__(self, code: str, detail: str = ""):
-        super().__init__(code + (": " + detail if detail else ""))
+        super().__init__(code)
         self.code = code
         self.detail = detail
 
 
 # ---------------------------------------------------------------- reading and changing the text of .wslconfig
+
+def _without_mark(text: str) -> str:
+    return text[1:] if text.startswith("\ufeff") else text
+
 
 def _split(text: str) -> Tuple[List[str], str, bool]:
     """(lines without their line ends, the line end the file uses, whether it ends with one)."""
@@ -66,7 +70,7 @@ def _split(text: str) -> Tuple[List[str], str, bool]:
         raise WslError("bad_text")
     eol = "\r\n" if "\r\n" in text else "\n"
     lines = text.replace("\r\n", "\n").split("\n") if text else []
-    final = len(lines) > 1 and lines[-1] == ""
+    final = bool(lines) and lines[-1] == ""
     if final:
         lines.pop()
     return lines, eol, final
@@ -76,9 +80,7 @@ def find(text: str, section: str, key: str) -> List[str]:
     """Every value the file gives `key` inside `[section]` (names compare without regard to case), in file order. A comment line, which begins with # or ;, gives nothing."""
     values: List[str] = []
     current = ""
-    for line in text.lstrip("\ufeff").replace("\r\n", "\n").split("\n"):
-        if line.lstrip().startswith(("#", ";")):
-            continue
+    for line in _without_mark(text).split("\n"):                 # a comment line, which begins with # or ;, matches neither pattern, and the patterns take a trailing CR in their stride
         header = _SECTION.match(line)
         if header:
             current = header.group(1).strip().lower()
@@ -92,11 +94,11 @@ def find(text: str, section: str, key: str) -> List[str]:
 def with_setting(text: str, section: str, key: str, value: str) -> str:
     """`text` with `key` in `[section]` set to `value`: the value changed where the file already has the key, the key added to the section where the file has only the section, and the section
     added at the end where it has neither. The same text comes back when the value is already right. A file that sets the key twice is refused."""
-    bom = "\ufeff" if text.startswith("\ufeff") else ""
-    lines, eol, final = _split(text[len(bom):])
+    bom = text[:len(text) - len(_without_mark(text))]
+    lines, eol, final = _split(_without_mark(text))
     if len(find(text, section, key)) > 1:
         raise WslError("duplicate", key)
-    current, section_at, key_at, last_at = "", -1, -1, -1
+    current, section_at, key_at, last_at = "", None, None, None
     for i, line in enumerate(lines):
         if line.lstrip().startswith(("#", ";")):
             continue
@@ -104,7 +106,7 @@ def with_setting(text: str, section: str, key: str, value: str) -> str:
         if header:
             current = header.group(1).strip().lower()
             if current == section.lower():
-                if section_at >= 0:
+                if section_at is not None:
                     raise WslError("duplicate", section)
                 section_at = last_at = i
             continue
@@ -114,12 +116,12 @@ def with_setting(text: str, section: str, key: str, value: str) -> str:
             assign = _ASSIGN.match(line)
             if assign and assign.group(2).lower() == key.lower():
                 key_at = i
-    if key_at >= 0:
+    if key_at is not None:
         assign = _ASSIGN.match(lines[key_at])
         if assign.group(4).strip().lower() == value.lower():
             return text
         lines[key_at] = assign.group(1) + assign.group(2) + assign.group(3) + value
-    elif section_at >= 0:
+    elif section_at is not None:
         lines.insert(last_at + 1, "%s=%s" % (key, value))
     else:
         if lines and lines[-1].strip():
@@ -150,9 +152,7 @@ def automount_root(system: System) -> str:
     """Where WSL puts the Windows drives: /mnt unless /etc/wsl.conf says otherwise."""
     text = system.read_text("/etc/wsl.conf") or ""
     section = ""
-    for line in text.replace("\r\n", "\n").split("\n"):
-        if line.lstrip().startswith(("#", ";")):
-            continue
+    for line in text.split("\n"):
         header = _SECTION.match(line)
         if header:
             section = header.group(1).strip().lower()
@@ -160,7 +160,7 @@ def automount_root(system: System) -> str:
         assign = _ASSIGN.match(line)
         if assign and section == "automount" and assign.group(2).lower() == "root":
             root = assign.group(4).strip().strip('"').rstrip("/")
-            if root.startswith("/") and len(root) > 1 and ".." not in root.split("/"):
+            if root.startswith("/") and ".." not in root.split("/"):
                 return root
     return "/mnt"
 
@@ -217,7 +217,6 @@ def windows_home(system: System, *, asked: bool, named: Optional[str] = None) ->
 @dataclass(frozen=True)
 class Facts:
     platform: preflight.Platform
-    distro: str
     interop: str                                    # INTEROP_WORKS, INTEROP_FAILED or INTEROP_MISSING
     build: Optional[int]                            # the Windows build number, when Windows told us
     runtime_mode: Optional[str]                     # how this running Ubuntu is networked ("nat", "mirrored"...) when `wslinfo` says
@@ -227,7 +226,7 @@ class Facts:
     config_text: Optional[str]                      # None: there is no file (or no home)
     file_mode: Optional[str]                        # what the file says for networkingMode
     file_idle: Optional[str]                        # what the file says for instanceIdleTimeout
-    config_bad: bool = False                        # the file is there but is not plain UTF-8 text
+    config_bad: bool                                # the file is there but is not plain UTF-8 text
 
 
 def runtime_networking_mode(system: System) -> Optional[str]:
@@ -254,9 +253,8 @@ def read_exact(path: str) -> Optional[str]:
 def look(system: System, *, named: Optional[str] = None) -> Facts:
     """Read the facts. Starts one short Windows program to ask what works, and changes nothing."""
     platform = preflight.detect_platform(system.read_text("/proc/version"), system.environ())
-    distro = system.environ().get("WSL_DISTRO_NAME", "")
     if platform is preflight.Platform.NATIVE:
-        return Facts(platform, distro, INTEROP_MISSING, None, None, None, None, None, None, None, None, False)
+        return Facts(platform, INTEROP_MISSING, None, None, None, None, None, None, None, None, False)
     state, build = interop(system)
     home: Optional[WindowsHome] = None
     error: Optional[WslError] = None
@@ -277,7 +275,7 @@ def look(system: System, *, named: Optional[str] = None) -> Facts:
         modes, idles = find(text, SECTION_NETWORK, KEY_NETWORK), find(text, SECTION_IDLE, KEY_IDLE)
         mode = modes[-1].lower() if modes else None
         idle = idles[-1] if idles else None
-    return Facts(platform, distro, state, build, runtime_networking_mode(system), home, error, path, text, mode, idle, bad)
+    return Facts(platform, state, build, runtime_networking_mode(system), home, error, path, text, mode, idle, bad)
 
 
 def idle_state(system: System) -> Optional[str]:
@@ -303,7 +301,7 @@ def idle_state(system: System) -> Optional[str]:
 def firewall_commands(port: int) -> Tuple[str, str]:
     """(the PowerShell command that lets a phone reach `port` on Ubuntu, and the one that takes the rule away again). For the person to run themselves in a PowerShell opened as administrator."""
     if not isinstance(port, int) or isinstance(port, bool) or not 1024 <= port <= 65535:
-        raise ValueError("port")
+        raise ValueError
     add = ("New-NetFirewallHyperVRule -Name '%s' -DisplayName 'ACK Voice Studio: send the voice file' -Direction Inbound -VMCreatorId '%s' -Protocol TCP -LocalPorts %d"
            % (FIREWALL_RULE, HYPERV_VM_CREATOR, port))
     return add, "Remove-NetFirewallHyperVRule -Name '%s'" % FIREWALL_RULE

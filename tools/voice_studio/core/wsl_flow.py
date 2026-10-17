@@ -29,7 +29,6 @@ PORT = {"--port": "port"}
 COMMANDS = ("check", "phone", "idle", "help")
 OPTIONS = {"check": frozenset(USER), "phone": frozenset(YES) | frozenset(USER) | frozenset(PORT), "idle": frozenset(YES) | frozenset(USER)}          # the checklist is held to these
 USAGE = ("wsl.usage.check", "wsl.usage.phone", "wsl.usage.idle", "wsl.usage.options")
-DEFAULT_PORT = 8443
 
 
 def _task_running(home: DataHome) -> bool:
@@ -64,8 +63,7 @@ def _say_windows(facts: wsl.Facts, cat: Catalog, io: IO) -> None:
 
 def _say_file(facts: wsl.Facts, cat: Catalog, io: IO) -> None:
     if facts.home is None:
-        if facts.home_error is not None:
-            _say_error(facts.home_error, cat, io)
+        _say_error(facts.home_error, cat, io)                  # a home is missing only for a reason
         return
     io.say("  " + cat.t("wsl.check.home", path=facts.home.path))
     if facts.config_bad:
@@ -86,7 +84,7 @@ def _mirrored_now(facts: wsl.Facts) -> bool:
 def _say_network(facts: wsl.Facts, cat: Catalog, io: IO) -> None:
     if facts.file_mode is not None:
         io.say("  " + cat.t("wsl.check.mode_file", mode=facts.file_mode[:40]))
-    elif facts.config_text is not None or facts.home is not None:
+    elif facts.home is not None and not facts.config_bad:
         io.say("  " + cat.t("wsl.check.mode_unset"))
     if facts.runtime_mode is not None:
         io.say("  " + cat.t("wsl.check.mode_running", mode=facts.runtime_mode))
