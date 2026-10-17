@@ -132,7 +132,7 @@ def test_the_one_web_address_it_names_is_the_one_install_ps1_fetches_from():
 
 def test_it_says_before_it_goes_on_where_everything_comes_from_and_that_nothing_is_signed_yet():
     sources = NSI_TEXT.split("Function SourcesCreate")[1].split("FunctionEnd")[0]
-    for need in ("holds no copy of ACK", "GPL, version 3 or later", "from Microsoft", "Ubuntu's archives", "asks before it downloads", "stay on this computer", "sends nothing about you", "is legal advice"):
+    for need in ("holds no copy of ACK", "GPL, version 3 or later", "Ubuntu 24.04 and WSL: from Microsoft", "Ubuntu's archives", "asks before it downloads", "stay on this computer", "sends nothing about you", "is legal advice"):
         assert need in sources, need
     assert "not signed yet" in NSI_TEXT
     order = [m.group(0) for m in re.finditer(r"^(?:!insertmacro MUI_PAGE_\w+|Page custom \w+)", NSI_TEXT, re.M)]
