@@ -215,16 +215,15 @@ def _loop(listener: socket.socket, context: ssl.SSLContext, fd: int, size: int, 
 
 
 def _stream(connection: ssl.SSLSocket, fd: int, size: int) -> int:
-    """Write the whole file to the connection; returns how many bytes went (less than `size` when the phone went away)."""
-    sent, at = 0, 0
+    """Write the whole file to the connection; returns how many bytes went (less than `size` when the phone went away or the file turns out to be shorter)."""
+    sent = 0
     try:
-        while at < size:
-            block = os.pread(fd, min(CHUNK, size - at), at)
+        while True:
+            block = os.pread(fd, min(CHUNK, size - sent), sent)          # asks for nothing once `size` bytes have gone, so the loop ends on an empty read
             if not block:
                 break
             connection.sendall(block)
-            at += len(block)
-            sent = at
+            sent += len(block)
     except (ssl.SSLError, OSError):
-        return sent
+        pass
     return sent

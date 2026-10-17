@@ -13,6 +13,7 @@ Nothing here touches the disk, the network or the screen: it turns text into a g
 """
 from __future__ import annotations
 
+import itertools
 from typing import List, Sequence, Tuple
 
 Matrix = List[List[bool]]                           # True is a dark square; matrix[row][column]
@@ -270,13 +271,10 @@ def penalty_runs(matrix: Matrix) -> int:
     """Rule 1: every run of five or more squares alike in a row or a column costs 3, and 1 more for each square beyond five."""
     score = 0
     for line in _lines(matrix):
-        run = 1
-        for i in range(1, len(line) + 1):                       # one step past the end closes the last run
-            if i < len(line) and line[i] == line[i - 1]:
-                run += 1
-            else:
-                score += 3 + run - 5 if run >= 5 else 0
-                run = 1
+        for _, same in itertools.groupby(line):
+            run = len(list(same))
+            if run >= 5:
+                score += run - 2                                # 3 for the run, and 1 for each square beyond five
     return score
 
 
