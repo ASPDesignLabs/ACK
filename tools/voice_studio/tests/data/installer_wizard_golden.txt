@@ -1,0 +1,332 @@
+### .onInit
+IfSilent 0 interactive
+MessageBox MB_OK|MB_ICONSTOP "<text>"
+Abort
+interactive:
+SetRegView 64
+ReadRegStr $0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" "CurrentBuildNumber"
+${If} $0 == ""
+StrCpy $0 0
+${EndIf}
+${If} $0 < ${MIN_BUILD}
+MessageBox MB_OK|MB_ICONSTOP "<text>"
+Abort
+${EndIf}
+StrCpy $Distro ""
+StrCpy $UserName ""
+StrCpy $Password ""
+StrCpy $NeedsPlatform 1
+StrCpy $NeedsDistro 1
+StrCpy $NeedsAccount 1
+StrCpy $Stopped 0
+StrCpy $SudoIsOn 0
+StrCpy $PowerShell "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
+IfFileExists "$PowerShell" ps_ok 0
+StrCpy $PowerShell "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
+ps_ok:
+### RunEngineLogged
+DetailPrint "<text>"
+nsExec::ExecToLog '"$PowerShell" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$Engine" -Step $StepName $StepExtra'
+Pop $StepCode
+### RunEngineQuiet
+nsExec::ExecToStack '"$PowerShell" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$Engine" -Step $StepName $StepExtra'
+Pop $StepCode
+Pop $StepText
+### PasswordIn
+StrCpy $1 $Password
+System::Call 'kernel32::SetEnvironmentVariable(t "ACK_VS_PASSWORD", t r1)i'
+### PasswordOut
+System::Call 'kernel32::SetEnvironmentVariable(t "ACK_VS_PASSWORD", i 0)i'
+StrCpy $1 ""
+### AddLine
+SendMessage $Edit ${EM_SETSEL} -1 -1
+SendMessage $Edit ${EM_REPLACESEL} 0 "STR:$R0$\r$\n"
+### StripLevel
+StrCpy $R5 0
+strip_loop:
+StrCpy $R6 $0 1 $R5
+StrCmp $R6 "" strip_done
+StrCmp $R6 "|" strip_found
+IntOp $R5 $R5 + 1
+Goto strip_loop
+strip_found:
+IntOp $R5 $R5 + 1
+StrCpy $0 $0 "" $R5
+strip_done:
+### SourcesCreate
+!insertmacro MUI_HEADER_TEXT "<text>"
+nsDialogs::Create 1018
+Pop $Dialog
+${If} $Dialog == error
+Abort
+${EndIf}
+${NSD_CreateMLText} <box> ""
+Pop $Edit
+SendMessage $Edit ${EM_SETREADONLY} 1 0
+StrCpy $R0 "<text>"
+Call AddLine
+StrCpy $R0 ""
+Call AddLine
+StrCpy $R0 "<text>"
+Call AddLine
+StrCpy $R0 "<text>"
+Call AddLine
+StrCpy $R0 "<text>"
+Call AddLine
+StrCpy $R0 "<text>"
+Call AddLine
+StrCpy $R0 ""
+Call AddLine
+StrCpy $R0 "<text>"
+Call AddLine
+StrCpy $R0 ""
+Call AddLine
+StrCpy $R0 "<text>"
+Call AddLine
+nsDialogs::Show
+### LookCreate
+!insertmacro MUI_HEADER_TEXT "<text>"
+nsDialogs::Create 1018
+Pop $Dialog
+${If} $Dialog == error
+Abort
+${EndIf}
+${NSD_CreateMLText} <box> ""
+Pop $Edit
+SendMessage $Edit ${EM_SETREADONLY} 1 0
+GetDlgItem $NextButton $HWNDPARENT 1
+EnableWindow $NextButton 0
+StrCpy $R0 "<text>"
+Call AddLine
+${NSD_CreateTimer} LookNow 100
+nsDialogs::Show
+### LookNow
+${NSD_KillTimer} LookNow
+InitPluginsDir
+File "/oname=$PLUGINSDIR\engine.ps1" "${STAGE}\engine.ps1"
+File "/oname=$PLUGINSDIR\install.ps1" "${STAGE}\install.ps1"
+StrCpy $Engine "$PLUGINSDIR\engine.ps1"
+StrCpy $CheckFile "$PLUGINSDIR\check.ini"
+StrCpy $StepName "check"
+StrCpy $StepExtra '-ResultFile "$CheckFile"'
+Call RunEngineQuiet
+ReadINIStr $0 "$CheckFile" "result" "stop"
+${If} $StepCode == "error"
+${OrIf} $0 == ""
+StrCpy $Stopped 1
+SendMessage $Edit ${EM_SETSEL} 0 -1
+StrCpy $R0 "<text>"
+SendMessage $Edit ${EM_REPLACESEL} 0 "STR:$R0$\r$\n"
+Return
+${EndIf}
+SendMessage $Edit ${EM_SETSEL} 0 -1
+SendMessage $Edit ${EM_REPLACESEL} 0 "STR:"
+ReadINIStr $1 "$CheckFile" "lines" "count"
+${If} $1 == ""
+StrCpy $1 0
+${EndIf}
+StrCpy $2 1
+${While} $2 <= $1
+ReadINIStr $0 "$CheckFile" "lines" "$2"
+Call StripLevel
+StrCpy $R0 $0
+Call AddLine
+IntOp $2 $2 + 1
+${EndWhile}
+ReadINIStr $Stopped "$CheckFile" "result" "stop"
+ReadINIStr $NeedsPlatform "$CheckFile" "result" "needs_platform"
+ReadINIStr $NeedsDistro "$CheckFile" "result" "needs_distro"
+ReadINIStr $NeedsAccount "$CheckFile" "result" "needs_account"
+ReadINIStr $0 "$CheckFile" "result" "distro"
+${If} $0 != ""
+StrCpy $Distro $0
+${Else}
+StrCpy $Distro "Ubuntu-24.04"
+${EndIf}
+ReadINIStr $0 "$CheckFile" "result" "user"
+${If} $0 != ""
+StrCpy $UserName $0
+${EndIf}
+${If} $Stopped == 1
+StrCpy $R0 ""
+Call AddLine
+StrCpy $R0 "<text>"
+Call AddLine
+${Else}
+EnableWindow $NextButton 1
+${EndIf}
+### LookLeave
+${If} $Stopped != 0
+Abort
+${EndIf}
+### AccountCreate
+${If} $NeedsAccount == 0
+Abort
+${EndIf}
+!insertmacro MUI_HEADER_TEXT "<text>"
+nsDialogs::Create 1018
+Pop $Dialog
+${If} $Dialog == error
+Abort
+${EndIf}
+${NSD_CreateLabel} <box> "<text>"
+Pop $0
+${NSD_CreateLabel} <box> "<text>"
+Pop $0
+${NSD_CreateText} <box> "$UserName"
+Pop $NameBox
+${NSD_CreateLabel} <box> "<text>"
+Pop $0
+${NSD_CreatePassword} <box> ""
+Pop $PassBox
+${NSD_CreateLabel} <box> "<text>"
+Pop $0
+${NSD_CreatePassword} <box> ""
+Pop $AgainBox
+${NSD_CreateLabel} <box> "<text>"
+Pop $0
+nsDialogs::Show
+### AccountLeave
+${NSD_GetText} $NameBox $UserName
+${NSD_GetText} $PassBox $Password
+${NSD_GetText} $AgainBox $R9
+${If} $UserName == ""
+MessageBox MB_OK|MB_ICONEXCLAMATION "<text>"
+Goto refuse
+${EndIf}
+${If} $Password == ""
+MessageBox MB_OK|MB_ICONEXCLAMATION "<text>"
+Goto refuse
+${EndIf}
+${If} $Password != $R9
+MessageBox MB_OK|MB_ICONEXCLAMATION "<text>"
+Goto refuse
+${EndIf}
+StrCpy $R9 ""
+StrCpy $StepName "validate"
+StrCpy $StepExtra '-User "$UserName"'
+Call PasswordIn
+Call RunEngineQuiet
+Call PasswordOut
+${If} $StepCode != 0
+${If} $StepText == ""
+StrCpy $StepText "<text>"
+${EndIf}
+MessageBox MB_OK|MB_ICONEXCLAMATION "<text>"
+Goto refuse
+${EndIf}
+Return
+refuse:
+StrCpy $R9 ""
+Abort
+### Fail
+${If} $SudoIsOn == 1
+StrCpy $StepName "sudo-off"
+StrCpy $StepExtra '-Distro "$Distro" -User "$UserName"'
+Call RunEngineLogged
+StrCpy $SudoIsOn 0
+${EndIf}
+StrCpy $Password ""
+DetailPrint "$R0"
+MessageBox MB_OK|MB_ICONEXCLAMATION "<text>"
+Abort
+### MustRun
+Call RunEngineLogged
+${If} $StepCode == 0
+Return
+${EndIf}
+${If} $StepCode == 3
+StrCpy $R0 "<text>"
+DetailPrint "$R0"
+MessageBox MB_OK|MB_ICONINFORMATION "<text>"
+StrCpy $Password ""
+Abort
+${EndIf}
+${If} $StepCode == 2
+StrCpy $R0 "<text>"
+${Else}
+StrCpy $R0 "<text>"
+${EndIf}
+Call Fail
+### "Install"
+SetOutPath "$INSTDIR"
+File "${STAGE}\engine.ps1"
+File "${STAGE}\install.ps1"
+File "${STAGE}\LICENSE"
+File "${STAGE}\NOTICE"
+File "${STAGE}\ack.ico"
+WriteUninstaller "$INSTDIR\Uninstall.exe"
+StrCpy $Engine "$INSTDIR\engine.ps1"
+WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${NAME}"
+WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${VERSION}"
+WriteRegStr HKCU "${UNINSTALL_KEY}" "Publisher" "${PUBLISHER}"
+WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
+WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\ack.ico"
+WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoModify" 1
+WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoRepair" 1
+${If} $NeedsPlatform == 1
+StrCpy $StepName "platform"
+StrCpy $StepExtra ""
+Call MustRun
+${EndIf}
+${If} $NeedsDistro == 1
+StrCpy $StepName "distro"
+StrCpy $StepExtra '-Distro "$Distro" -User "$UserName"'
+Call MustRun
+${EndIf}
+${If} $NeedsAccount == 1
+StrCpy $StepName "user"
+StrCpy $StepExtra '-Distro "$Distro" -User "$UserName"'
+Call PasswordIn
+Call RunEngineLogged
+Call PasswordOut
+StrCpy $Password ""
+${If} $StepCode != 0
+StrCpy $R0 "<text>"
+Call Fail
+${EndIf}
+${EndIf}
+StrCpy $StepName "sudo-on"
+StrCpy $StepExtra '-Distro "$Distro" -User "$UserName"'
+StrCpy $SudoIsOn 1
+Call MustRun
+StrCpy $StepName "setup"
+StrCpy $StepExtra '-Distro "$Distro" -User "$UserName"'
+Call MustRun
+StrCpy $StepName "sudo-off"
+StrCpy $StepExtra '-Distro "$Distro" -User "$UserName"'
+Call RunEngineLogged
+StrCpy $SudoIsOn 0
+${If} $StepCode != 0
+StrCpy $R0 "<text>"
+DetailPrint "$R0"
+MessageBox MB_OK|MB_ICONEXCLAMATION "<text>"
+${EndIf}
+StrCpy $StepName "launcher"
+StrCpy $StepExtra '-Distro "$Distro" -User "$UserName"'
+Call RunEngineLogged
+${If} $StepCode != 0
+DetailPrint "<text>"
+${EndIf}
+### OpenStudio
+StrCpy $StepName "open"
+StrCpy $StepExtra '-Distro "$Distro" -User "$UserName"'
+Call RunEngineQuiet
+### "Uninstall"
+IfFileExists "$INSTDIR\engine.ps1" 0 files
+StrCpy $PowerShell "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
+IfFileExists "$PowerShell" ps_found 0
+StrCpy $PowerShell "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
+ps_found:
+nsExec::ExecToLog '"$PowerShell" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\engine.ps1" -Step unlauncher'
+Pop $0
+files:
+Delete "$INSTDIR\engine.ps1"
+Delete "$INSTDIR\install.ps1"
+Delete "$INSTDIR\LICENSE"
+Delete "$INSTDIR\NOTICE"
+Delete "$INSTDIR\ack.ico"
+Delete "$INSTDIR\Uninstall.exe"
+RMDir "$INSTDIR"
+DeleteRegKey HKCU "${UNINSTALL_KEY}"

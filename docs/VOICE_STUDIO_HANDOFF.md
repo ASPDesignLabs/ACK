@@ -86,12 +86,14 @@ The developer is autistic, uses the tools they are building every day, and build
 - Native Ubuntu 22.04 and 24.04 desktops, Orca, and any screen reader under WSLg. (I7 section C; plan VS-0.1.)
 - The no-`sudo` Windows Start-menu shortcut (F27) and whether it behaves like the install flow when closed.
 - Timings of every step. Whether closing PowerShell also closes the window on a clean Windows.
+- **The Windows setup program** (`tools/voice_studio/installer/`, plan VS-7.4, D44, P28, checklist I18; added 2026-10-17): the wizard has never been shown on a screen, and neither it nor the engine has run on a real Windows. The engine's PowerShell was run here against stand-ins for `wsl.exe` (177 tests), and the wizard compiles with `makensis` into a 32-bit program that asks for no administrator rights (33 tests). **The least certain step is Ubuntu registering without its first-run question** (cloud-init with `--no-launch`, the fallback `ubuntu2404.exe install --root`); write down exactly what happens. It is unsigned (D44), Windows 11 only, and it asks for and sees the Ubuntu password, unlike `install.ps1`.
 
 **The pieces, in the order a person meets them:**
 
 | Piece | File | What it does |
 |---|---|---|
 | Windows helper | `tools/voice_studio/install.ps1` | Looks (Windows build, Nvidia driver, free room), finds or offers Ubuntu, hands over, opens the window. Exit codes 0 done, 1 could not, 2 nothing done, 3 "a step is left for you, then run the same command again". |
+| Windows setup program | `tools/voice_studio/installer/` (`ack-voice-studio.nsi`, `engine.ps1`, `build.sh`, its `README.md`) and `.github/workflows/voice-studio-installer.yml` | A wizard (NSIS) for **Windows 11 only** that runs the PowerShell engine one hidden step at a time and asks for an Ubuntu account name and password; fetches the program from its source while it runs; unsigned; no silent mode. The engine stands on `install.ps1`'s functions. `tests/test_vs_installer.py` and `tests/test_vs_installer_engine.py` hold it; the engine tests need PowerShell (`ACK_VS_PWSH` or `pwsh` on the path), the build tests need `makensis`; both skip without. |
 | Ubuntu entry | `tools/voice_studio/get.sh` | Fetches ACK with `git clone --depth 1 --branch <release>` into `~/ack-tools` (asks before installing `git`), offers an update to an existing copy, hands over to `setup.sh`. |
 | Guided setup | `core/guided_flow.py`, `core/setup_flow.py`, `core/buildenv_flow.py` | `python3 -m voice_studio`: Ubuntu packages, then the studio programs, then the training programs, then the window. Each is asked first, skippable, and safe to repeat. `--no-window` is what `install.ps1` passes. |
 | The window | `window/` (GTK edge), `core/windowmodel.py`, `core/windowio.py` (plain Python) | Pages today: Projects, Recordings, Rounds, Voice file, Free up space, Display. It runs the same flows as the terminal through `windowio.ChannelIO` and `Services.run`. |

@@ -249,10 +249,12 @@ def findings(tmp_path, **changes):
 
 
 @needs_pwsh
-def test_windows_before_the_first_one_that_shows_linux_windows_is_a_stop_and_the_first_one_that_does_is_not(tmp_path):
-    assert findings(tmp_path, Build=19043)["windows_old"]["Level"] == "stop"
-    got = findings(tmp_path, Build=19044)
-    assert "windows_old" not in got and got["windows_ok"]["Level"] == "ok" and "build 19044" in got["windows_ok"]["Text"]
+def test_any_windows_before_windows_11_is_a_stop_and_the_first_windows_11_is_not(tmp_path):
+    assert findings(tmp_path, Build=19045)["windows_old"]["Level"] == "stop"            # the last Windows 10
+    assert findings(tmp_path, Build=21999)["windows_old"]["Level"] == "stop"
+    got = findings(tmp_path, Build=22000)
+    assert "windows_old" not in got and got["windows_ok"]["Level"] == "ok" and "build 22000" in got["windows_ok"]["Text"]
+    assert "Windows 11" in findings(tmp_path, Build=19045)["windows_old"]["Text"] and "Nothing was changed" in findings(tmp_path, Build=19045)["windows_old"]["Text"]
 
 
 @needs_pwsh

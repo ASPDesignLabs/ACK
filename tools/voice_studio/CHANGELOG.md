@@ -12,6 +12,12 @@ listed, section by section, in `docs/VOICE_STUDIO_DEVICE_TEST.md`; nothing here 
 ## [0.0.1] - Unreleased
 
 ### Added
+- **A setup program for Windows 11, so no terminal is needed to start.** `installer/` holds a wizard (`ACK-Voice-Studio-Setup-<version>.exe`, built with NSIS by `installer/build.sh`) that looks at the computer,
+  sets up WSL and Ubuntu 24.04 if they are not there, asks for an Ubuntu account name and password, fetches ACK Voice Studio from its source while it runs, sets up its programs and puts it in the
+  Start menu. **It is not signed yet, it works only on Windows 11 (build 22000 or newer), it has no silent mode, and it has not been run on a real Windows computer.** It sees the Ubuntu password you
+  type (the command-line installer never does); the password is sent once to Ubuntu and kept in no file, log or message, and is set only on an account that has none. A temporary permission it needs for the
+  install is taken away again whatever happens. Uninstalling removes only its own files and Start menu entry, never Ubuntu, the tool or any recording or voice.
+- **Windows 10 is no longer supported.** `install.ps1` stops on a Windows build older than 22000 and says Windows 11 is needed.
 - **Set-up in one command.** The guided setup (`python3 -m voice_studio`) checks the computer, asks before it installs anything, builds two sets of programs beside each other
   (`python3 -m voice_studio.buildenv`) and ends at the window. Windows has its own one-line installer that sets up Ubuntu under WSL first.
 - **Projects and recordings.** `python3 -m voice_studio.projects` makes, shows, changes and puts away a project, with its consent note, and deletes one only after two questions;

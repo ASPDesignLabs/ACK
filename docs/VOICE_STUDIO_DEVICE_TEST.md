@@ -54,6 +54,7 @@ The folders and names used below (change them if yours differ):
 | I15 | The window's pages for hearing, backup, checking, updates and problem reports | Press every button on the five pages that came after the first six, and answer what they ask. |
 | I16 | Giving the voice file to the phone over Wi-Fi | Put a certificate on the phone once, then send the voice file over the home network. |
 | I17 | Ubuntu under Windows: the phone and the idle stop | Keep Ubuntu running when the last window closes, and let a phone reach it. |
+| I18 | The Windows setup program | Start from one file you double-click: no terminal; an Ubuntu account and password asked in a window. |
 | J | Making the voice file | The same as I4, done by hand. |
 | K | On the phone | Put the voice on the phone and hear it in ACK. |
 | L | What to send back | What to write down and send back. |
@@ -1924,6 +1925,57 @@ Use the project from section I2 (`voice-check`, with at least two finished round
   → `.wslconfig`, and one `.wslconfig.bak` for the first change (a later one gets `.wslconfig.bak-` and the time). No file with `.new-` in its name. The tool never replaces or removes a copy.
 - [ ] To go back to what you had, close every Ubuntu window, copy the old file over the new one yourself (`cp` the `.bak` to `.wslconfig`), remove the firewall rule (part D) and restart WSL. The tool does not do this for you.
 
+## I18. The Windows setup program
+
+**New, and not yet run on a real Windows computer.** `ACK-Voice-Studio-Setup-<version>.exe` (the plan's task VS-7.4, decision D44, choices P28) is a wizard for **Windows 11 only** that does what the two installation guides do, with no terminal: it looks at the computer, sets up WSL and Ubuntu 24.04 if they are not there, asks you for an **Ubuntu account name and password**, fetches ACK Voice Studio from its source (GitHub) and sets up its programs inside Ubuntu, and puts it in the Start menu. It is **not signed yet**, so Windows will warn you. It has no silent mode.
+
+*Built and tried in the build sandbox only: the wizard compiles, and the PowerShell it runs was run for real against stand-ins for `wsl.exe`. **Nothing was run on a real Windows computer: not the wizard's pages, not `wsl --install`, not Ubuntu registering by itself, not the unsigned warning.** The least certain step is Ubuntu registering without asking its own first-run question; write down exactly what you see there.*
+
+Get the file one of two ways: the unsigned file the workflow `voice-studio-installer` keeps for 30 days (the Actions page of the repository, under the run's artifacts), or build it yourself with `tools/voice_studio/installer/build.sh` on Ubuntu (it needs `makensis`). Either way a `.sha256` file sits beside it.
+
+**A. Before you run it.**
+
+- [ ] In PowerShell, compare the file with its checksum: `Get-FileHash .\ACK-Voice-Studio-Setup-*.exe -Algorithm SHA256` and the `.sha256` file's first word. → The two are the same. Write down whether they were.
+- [ ] Double-click the file. → Windows warns about an unknown publisher (**SmartScreen**: "Windows protected your PC", then More info, then Run anyway). Write down the exact words and whether Run anyway was easy to find. **If your computer's rules block unsigned programs, write down what it said; do not change the rules for this test.**
+- [ ] If you have a Windows 10 computer, run it there. → A message says it works only on Windows 11 for now, names the build it found, and says nothing was changed. Nothing else opens. (Skip this step without one, and say so.)
+
+**B. The pages.** Go slowly; write down anything cut off, anything you could not read, and anything you did not understand.
+
+- [ ] The welcome page, then the licence page. → The licence is the GPL text and Next goes on (there is nothing to tick).
+- [ ] **Where everything comes from.** → It says the setup program holds no copy of ACK and names the five places (ACK on GitHub, Ubuntu and WSL from Microsoft, Ubuntu's own programs, the training programs and the starting voice, and that your recordings stay on this computer). Write down whether you could follow it.
+- [ ] **Looking at this computer.** → It lists what it found (Windows build, disk room, graphics card, WSL, Ubuntu) and changes nothing. Next is switched off until the look is done, and stays off if the computer cannot be used. Write down how long it took and what it listed.
+- [ ] **An account for Ubuntu** (it is skipped when Ubuntu already has an account). → Name, password, password again. Try each of these and write down what each said: nothing typed; two passwords that differ; the name `root`; a password of five characters; a password with an accent in it. **Every one is refused with a message and nothing is changed.**
+- [ ] Look at the words on that page about the password. → It says the setup program sees the password, sends it once to Ubuntu and does not save it. Write down whether you were comfortable with that and whether the page made it clear that the command-line installer works differently.
+
+**C. A computer that has never had WSL.**
+
+- [ ] Choose a name and a password and go on. → The details list shows each step in turn: `platform`, `distro`, `user`, `sudo-on`, `setup`, `sudo-off`, `launcher`. **Windows asks once for permission to set up WSL**; choose Yes.
+- [ ] If it says the computer must restart, restart it and run the setup program again. → It looks again, finds WSL, and carries on from there without asking for the account twice. Write down what it showed the second time.
+- [ ] Wait for the long step (it downloads several gigabytes). → It ends with the Finish page. Write down how long each step took and whether the window looked frozen at any time.
+- [ ] Press the checkbox to open ACK Voice Studio and Finish. → The window opens. Write down whether the Start menu now has `ACK Voice Studio (Ubuntu-24.04)`.
+
+**D. What it left behind.** Open Ubuntu from the Start menu.
+
+- [ ] Run `id` and `sudo -v`. → You are the account you named, and `sudo -v` asks for **your password** and accepts it (so the password was set).
+- [ ] Run `ls /etc/sudoers.d/`. → `ack-voice-studio-install` is **not** there: the temporary permission was taken away.
+- [ ] In PowerShell run `type $env:LOCALAPPDATA\ack-voice-studio\installer.log`. → A line for each step. **The password is not in it** (search the file for it). Write down anything you did not expect.
+
+**E. While it runs.**
+
+- [ ] Open Task Manager, the Details tab, and add the Command line column while the `user` step runs. → No password in any command line.
+
+**F. A failure, then a second try.**
+
+- [ ] On a computer that has gone through C, remove the network cable or turn off Wi-Fi during the long step, wait for it to fail, then reconnect. → A message says which step stopped, that nothing you made is lost, and that you can run it again. Check that `/etc/sudoers.d/ack-voice-studio-install` is **gone** after the failure. Run the setup program again. → It skips what is done and carries on.
+
+**G. A computer that already has Ubuntu and an account.**
+
+- [ ] Run the setup program there. → The account page is **not shown**, the account's password is not asked for or changed (check that your old password still works), and the set-up goes straight to fetching ACK.
+
+**H. Taking it away.**
+
+- [ ] Settings, Apps, Installed apps, ACK Voice Studio, Uninstall. → The page says it leaves Ubuntu, the programs inside it and your recordings and voices alone. Afterwards the Start menu entry is gone and `%LOCALAPPDATA%\ACK Voice Studio` is gone (or holds nothing of the setup program's), and **Ubuntu still starts and the tool is still in it**. Write down anything it left or removed that it should not have.
+
 ## J. Making the voice file
 
 - [ ] Export, then give it its settings file with the exact name, then prepare it for the phone:
@@ -2012,6 +2064,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I15: for each of the five pages, whether you found it without help and whether the buttons did what their words said; **what the shown problem report held that you did not expect** (the most important line of this section); how long the look for releases took; whether the sounds played through the window in Hear the voice; and anything the keyboard or a screen reader could not reach.
 - Section I16: whether the four steps for putting the file on the phone matched what your phone showed (make, model, Android version, the words of the menus, and the warning it gave); whether the code scanned at the first try; the address it chose and whether the phone could open it; how long the download took for how many megabytes; whether a device without the certificate got a warning and no file; what each part of D printed (especially the exit numbers); on WSL, the address, the networking mode and what you changed to make it work; and what was left in the certificate folder.
 - Section I17: the report `check` printed against what Windows said (build, networking mode, WSL version), whether the two `ls` lines were the same, whether Notepad showed the changed file normally, whether the idle setting kept the job alive for five minutes (and your WSL version), whether the firewall command was accepted as printed (the whole message if not), what `wslinfo` and `ip` printed after the restart, whether the phone could open the address, and what else you had to change.
+- Section I18: the exact words Windows used to warn about the unsigned file and whether Run anyway was easy to find; what each page looked like (anything cut off at your text size); how long the look, the WSL step, Ubuntu and the long step took; **whether Ubuntu registered without asking its own question**, and the exact words if it did ask; whether Windows asked for permission once and what it said; whether a restart was needed and whether the second run carried on; the contents of `installer.log`; whether the password appeared anywhere; whether the temporary permission file was gone after a success and after a failure; whether an existing account was left alone; and what the uninstaller left behind.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 

@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Builds the ACK Voice Studio Windows setup program and checks the PowerShell it runs. Nothing here signs anything (plan decision D44) and nothing is published: the built
+# .exe is an artifact of the run, kept 30 days. The Windows job runs only the steps that change nothing on the machine.
+name: voice-studio-installer
+
+on:
+  push:
+    paths:
+      - 'tools/voice_studio/installer/**'
+      - 'tools/voice_studio/install.ps1'
+      - 'tools/voice_studio/__init__.py'
+      - '.github/workflows/voice-studio-installer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install NSIS
+        run: sudo apt-get update && sudo apt-get install -y nsis
+      - name: Build the setup program (unsigned)
+        run: tools/voice_studio/installer/build.sh "$RUNNER_TEMP/dist"
+      - name: Keep it
+        uses: actions/upload-artifact@v4
+        with:
+          name: ACK-Voice-Studio-Setup-unsigned
+          path: |
+            ${{ runner.temp }}/dist/*.exe
+            ${{ runner.temp }}/dist/*.sha256
+          retention-days: 30
+
+  powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Both files parse in Windows PowerShell 5.1 and in PowerShell 7
+        shell: powershell
+        run: |
+          foreach ($f in 'tools/voice_studio/install.ps1', 'tools/voice_studio/installer/engine.ps1') {
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f), [ref]$null, [ref]$errors)
+            if ($errors) { $errors | ForEach-Object { Write-Host $_.Message }; exit 1 }
+            Write-Host "$f parses in $($PSVersionTable.PSVersion)"
+          }
+      - name: Same in PowerShell 7
+        shell: pwsh
+        run: |
+          foreach ($f in 'tools/voice_studio/install.ps1', 'tools/voice_studio/installer/engine.ps1') {
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f), [ref]$null, [ref]$errors)
+            if ($errors) { $errors | ForEach-Object { Write-Host $_.Message }; exit 1 }
+            Write-Host "$f parses in $($PSVersionTable.PSVersion)"
+          }
+      - name: The engine's questions that change nothing (Windows PowerShell 5.1)
+        shell: powershell
+        env:
+          ACK_VS_PASSWORD: 'a-fine-password-1'
+          ACK_VS_ENGINE_LOG: ${{ runner.temp }}\engine.log
+        run: |
+          $engine = 'tools/voice_studio/installer/engine.ps1'
+          & powershell -NoProfile -File $engine -Step help; if ($LASTEXITCODE -ne 0) { exit 1 }
+          & powershell -NoProfile -File $engine -Step validate -User anna; if ($LASTEXITCODE -ne 0) { exit 1 }
+          & powershell -NoProfile -File $engine -Step validate -User root; if ($LASTEXITCODE -ne 2) { exit 1 }
+          & powershell -NoProfile -File $engine -Step distro -Distro Ubuntu-24.04 -User anna -DryRun; if ($LASTEXITCODE -ne 0) { exit 1 }
+          if (Select-String -Path $env:ACK_VS_ENGINE_LOG -SimpleMatch 'a-fine-password-1' -Quiet) { Write-Host 'the password is in the log'; exit 1 }

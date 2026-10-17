@@ -394,9 +394,10 @@ def test_the_download_total_is_the_sum_of_the_documented_downloads():
         assert "about 5 GB in all" in text_of(guide)
 
 
-def test_the_windows_build_floor_in_the_guide_is_the_first_windows_that_shows_linux_windows():
-    assert int(re.search(r"MinBuild\s*=\s*(\d+)", SCRIPT_PS1).group(1)) == 19044
-    assert "Windows 10 version 21H2 or newer" in text_of(WIN) and "21H2 or newer" in helper_texts()["windows_old"]
+def test_the_windows_build_floor_in_the_guide_is_windows_11_and_windows_10_is_said_to_be_unsupported():
+    assert int(re.search(r"MinBuild\s*=\s*(\d+)", SCRIPT_PS1).group(1)) == 22000
+    assert "Windows 11 (any version). Windows 10 is not supported." in text_of(WIN) and "needs Windows 11" in helper_texts()["windows_old"]
+    assert "Windows 10" not in helper_texts()["windows_old"] and "should work" not in text_of(WIN)
 
 
 # ================================================================ honesty

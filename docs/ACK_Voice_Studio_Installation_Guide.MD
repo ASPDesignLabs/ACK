@@ -8,13 +8,15 @@ It stands on its own: you do not need any other file to follow it. If you use Ub
 
 **How it runs on Windows.** The tool is a Linux program. Windows can run Linux inside itself with a feature called WSL. The command below sets up WSL and Ubuntu if you do not have them, then installs and opens Voice Studio inside Ubuntu. The window appears on your Windows desktop like any other window.
 
+**If you would rather not open PowerShell.** There is also a setup program, `ACK-Voice-Studio-Setup-<version>.exe`, that asks the same questions in windows and asks you to choose an Ubuntu name and password. It is new, it is **not signed yet** (so Windows will warn you about an unknown publisher), it works only on Windows 11, and it has not been run on a real Windows computer yet. It is described in `tools/voice_studio/installer/README.md`. Unlike the command below, **the setup program sees the Ubuntu password you type**, sends it once to Ubuntu and keeps it nowhere. This guide is about the command.
+
 ---
 
 ## 1. Before you start
 
 | You need | Details |
 |---|---|
-| Windows | Windows 11. Windows 10 version 21H2 or newer (the last Windows 10 is 22H2) should work too, but it has not been tried here and Windows 10 is past its standard support. It must be the 64-bit kind. |
+| Windows | Windows 11 (any version). Windows 10 is not supported. It must be the 64-bit kind. |
 | PowerShell | The one that comes with Windows is fine. To open it: press the Start button, type `PowerShell`, press Enter. |
 | Free room | At least 25 GB free on the drive Windows is installed on. About 63 GB is comfortable for two people's projects and both starting voices. |
 | Memory | About 8 GB of memory (RAM) or more. |
@@ -187,7 +189,7 @@ Run the same command again first: it carries on from where it stopped and does n
 
 | Message or problem | What to do |
 |---|---|
-| `This version of Windows is too old to show Linux windows. It needs Windows 10 version 21H2 or newer, or Windows 11. Update Windows, then run this again.` | Update Windows, then run the command again. |
+| `ACK Voice Studio needs Windows 11, and this computer has an older Windows. Nothing was changed. Update to Windows 11 if this computer can, then run this again.` | Update to Windows 11, then run the command again. Windows 10 is not supported. |
 | `Virtualization looks switched off.` | Switch it on in the computer's startup settings (the firmware). Where that is differs from one computer to the next: search for your computer maker's name and `enable virtualization`. |
 | `Installing WSL needs PowerShell opened as administrator.` | See section 3, step 1. |
 | `WSL is installed but needs the computer to restart first.` | Restart, then run the command again. |
@@ -200,7 +202,7 @@ Run the same command again first: it carries on from where it stopped and does n
 | `There is no desktop to show a window on.` | Windows needs a version with graphical Linux programs. Updating WSL is Microsoft's usual advice, though it has not been tried here on a computer that showed this message: in PowerShell run `wsl --update`, then `wsl --shutdown`, then the one command again. |
 | `Everything above was set up, but the window cannot open here. The reason is above.` | Everything is installed. Fix what the lines above say, then run the one command again to open the window. |
 | PowerShell says running scripts is disabled | The one-line command is not a script file, so it is not stopped by that. If you saved the file, run it with `powershell -ExecutionPolicy Bypass -File` as in section 2. That affects only that one run. |
-| PowerShell cannot connect to the web address | Check the internet connection. On an older Windows 10, running `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12` first is the usual fix. On a work computer, a proxy may be in the way: ask whoever looks after it. |
+| PowerShell cannot connect to the web address | Check the internet connection. On a work computer, a proxy may be in the way: ask whoever looks after it. |
 | No supported graphics card was found | Training is switched off. Everything else works. Install the Nvidia driver in **Windows** (not inside Ubuntu), restart, and run the command again. |
 
 **If you want a helper to look.** A command that fails after it began ends with two lines about a problem report. A problem report is a plain text file: the versions, the checks on this computer, the problem and how a task ended, with your names and folders blanked and no recordings, no text you made and no phrases. You see all of it first, and it is saved only where you say:

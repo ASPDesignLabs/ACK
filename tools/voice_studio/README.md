@@ -14,7 +14,7 @@ Picking the work up: [`docs/VOICE_STUDIO_HANDOFF.md`](../../docs/VOICE_STUDIO_HA
 
 ## Getting started (Ubuntu 22.04 or 24.04, native or under WSL)
 
-On Windows, `install.ps1` does the Windows part and then runs the Ubuntu command below inside Ubuntu (see the Windows guide). On Ubuntu, one command does everything and ends at the window:
+On Windows 11, `install.ps1` does the Windows part and then runs the Ubuntu command below inside Ubuntu (see the Windows guide). **A setup program for Windows 11 that needs no terminal** (`installer/`, `ACK-Voice-Studio-Setup-<version>.exe`) asks for an Ubuntu account name and password in a window and does the same; it is unsigned, has no silent mode, and has not been run on a real Windows (`installer/README.md`, checklist section I18). On Ubuntu, one command does everything and ends at the window:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ASPDesignLabs/ACK/main/tools/voice_studio/get.sh | bash
