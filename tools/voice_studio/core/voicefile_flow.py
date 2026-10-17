@@ -12,7 +12,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional, Sequence
 
-from . import commands, envfind, jobs, listen_flow, rounds as rd, voicefile as vf, voicesend_flow, voicezip
+from . import commands, envbuild, envfind, jobs, listen_flow, modelcard, rounds as rd, voicefile as vf, voicesend_flow, voicezip
+from .. import __version__
 from .cliargs import ArgError, parse_args
 from .diskbudget import Level
 from .paths import DataHome
@@ -26,7 +27,7 @@ from .text import Catalog, size_text
 VOICEFILE_COMMAND = "python3 -m voice_studio.voicefile"
 OPTIONS = {"make": frozenset(YES) | frozenset(PROJECT), "list": frozenset(PROJECT), "listen": listen_flow.OPTIONS, "send": voicesend_flow.OPTIONS}                 # the checklist is held to these
 STAGE_TEXT = {"export": "voicefile.make.stage_export", "settings": "voicefile.make.stage_settings", "patch": "voicefile.make.stage_patch", "zip": "voicefile.make.stage_zip",
-              "check": "voicefile.make.stage_check"}
+              "check": "voicefile.make.stage_check", "card": "voicefile.make.stage_card"}
 
 
 def _help(cat: Catalog, io: IO) -> int:
@@ -61,7 +62,7 @@ def _list(args: Sequence[str], home: DataHome, cat: Catalog, io: IO) -> int:
 def _say_plan(plan: vf.VoicePlan, cat: Catalog, io: IO) -> None:
     io.say(cat.t("voicefile.make.plan_head"))
     for line in (cat.t("voicefile.make.plan_round", round=plan.round, size=size_text(plan.checkpoint_bytes), minutes=plan.trained_minutes),
-                 cat.t("voicefile.make.plan_settings"), cat.t("voicefile.make.plan_steps"), cat.t("voicefile.make.plan_zip"), cat.t("voicefile.make.plan_folder", folder=plan.folder),
+                 cat.t("voicefile.make.plan_settings"), cat.t("voicefile.make.plan_steps"), cat.t("voicefile.make.plan_zip"), cat.t("voicefile.make.plan_card"), cat.t("voicefile.make.plan_folder", folder=plan.folder),
                  cat.t("voicefile.make.plan_time")):
         io.say("  " + line)
     io.say(cat.t("voicefile.make.checks_head"))
@@ -77,7 +78,7 @@ def _where_it_stands(folder: str, cat: Catalog, io: IO) -> None:
     io.say("  " + cat.t("voicefile.make.left_where", folder=folder))
 
 
-def _make(args: Sequence[str], home: DataHome, now: Optional[datetime], training: TrainingEnv, system: System, tools_dir: str, cat: Catalog, io: IO) -> int:
+def _make(args: Sequence[str], home: DataHome, now: Optional[datetime], training: TrainingEnv, system: System, tools_dir: str, registry: Optional[Registry], cat: Catalog, io: IO) -> int:
     try:
         parsed = parse_args(args, flags=YES, values=PROJECT, max_words=0)
     except ArgError as error:
@@ -105,8 +106,15 @@ def _make(args: Sequence[str], home: DataHome, now: Optional[datetime], training
     def stage(name: str) -> None:
         io.say(cat.t(STAGE_TEXT[name]))
 
+    def card(made: vf.Made) -> modelcard.Card:
+        """The card is read from what the project stored, at the moment the voice file is finished."""
+        programs, _why = envbuild.read_record(environment.env_dir)
+        inp = modelcard.gather(record, plan.round, ctx.project, registry, zip_bytes=made.zip_bytes, model_sha256=made.model_sha256,
+                               config_sha256=made.config_sha256, made_at=jobs.utc_stamp(now), tool_version=__version__, programs=programs)
+        return modelcard.build_card(inp, cat)
+
     try:
-        made = vf.make_voice(plan, environment, tools_dir, system, stage)
+        made = vf.make_voice(plan, environment, tools_dir, system, stage, card)
     except vf.VoiceFileError as error:
         _say_parts(cat, io, "voicefile", error.code, error.detail)
         if error.folder:
@@ -128,6 +136,7 @@ def _make(args: Sequence[str], home: DataHome, now: Optional[datetime], training
     io.say(cat.t("voicefile.make.done", zip=made.zip_path))
     io.say(cat.t("voicefile.make.done_size", size=size_text(made.zip_bytes)))
     io.say(cat.t("voicefile.make.done_folder", folder=made.folder))
+    io.say(cat.t("voicefile.make.done_card", card=made.card_path))
     io.say(cat.t("voicefile.make.done_next"))
     return EXIT_OK
 
@@ -151,7 +160,7 @@ def run_voicefile(argv: Sequence[str], home: DataHome, registry: Registry, cat: 
         if command == "list":
             return _list(rest, home, cat, io)
         if command == "make":
-            return _make(rest, home, now, training, system, tools, cat, io)
+            return _make(rest, home, now, training, system, tools, registry, cat, io)
         if command == "listen":
             return listen_flow.run_listen(rest, home, now, training, studio or _no_studio, system, tools, cat, io,
                                             speech=speech or (lambda: envfind.speech_model(home, registry)))

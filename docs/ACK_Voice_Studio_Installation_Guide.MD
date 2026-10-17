@@ -132,7 +132,7 @@ The window has pages for Projects, Recordings, Training rounds, Hear the voice, 
 
    The first line lists your projects so you can copy the project's name exactly.
 7. **Training rounds, then `Start a round…`.** This needs the training programs (section 2, step 4) and a graphics card. It shows the plan and asks first. You can stop a round and start another from the one you choose.
-8. **Voice file, then `Make the voice file…`.** This makes the zip file ACK takes, from the round you chose, in a new folder. Press `Show the folder` to open it in Windows File Explorer. Copy the zip file to your phone. In ACK, open AUDIO ARCHITECT, find CUSTOM VOICE and press IMPORT, then pick the zip file.
+8. **Voice file, then `Make the voice file…`.** This makes the zip file ACK takes, from the round you chose, in a new folder, with a card beside it (`MODEL_CARD.txt`) that says where the voice comes from. Press `Show the folder` to open it in Windows File Explorer. Copy the zip file to your phone. In ACK, open AUDIO ARCHITECT, find CUSTOM VOICE and press IMPORT, then pick the zip file.
 
 Every button that changes something shows you what it will do and asks first. Anything that deletes shows what goes. Deleting a whole project asks twice.
 

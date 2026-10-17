@@ -22,6 +22,11 @@ listed, section by section, in `docs/VOICE_STUDIO_DEVICE_TEST.md`; nothing here 
 - **Training rounds.** `python3 -m voice_studio.rounds` starts a round, shows how it is going, stops it, chooses the round to use, goes back to an earlier one, keeps a note, and
   frees the space a round used. Nothing is removed without a question that shows what goes.
 - **The voice file.** `python3 -m voice_studio.voicefile` makes the zip ACK takes from the chosen round, lists the ones made, and plays a finished voice on the computer.
+- **A card beside the voice file.** `voicefile make` (and the window's Voice file page) now ends by writing `MODEL_CARD.txt` in the same new folder, as its own file that is not inside the zip and
+  is never sent to the phone. It says where the voice comes from (the starting voice the training record names, the chain behind it and the pages that state its terms, with the date and revision
+  you acknowledged), how many rounds and minutes of training are behind it, whether the project was set up as your own voice or someone else's (for someone else's, only how the agreement was
+  given, never a name or a word of the note), the tool's version and the training programs' build, and the check codes of the two files in the zip. It does not name the project, and it
+  never says or suggests that use of a voice is allowed. If the card cannot be written, the finished zip is left as it is and the command says so.
 - **Sending the voice file over Wi-Fi.** `python3 -m voice_studio.voicefile send` gives the finished zip to a phone on the same home network, once, so that no cable is needed. The first
   time it makes a small certificate file (limited to home-network addresses, kept in the tool's `state` folder, with its secret part readable only by you) and stops, because you put that
   file on the phone once. After that it shows the plan, asks, and listens for up to ten minutes on one home-network address, over a secure connection, for one file, at an address that holds

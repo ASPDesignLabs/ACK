@@ -140,7 +140,7 @@ Nothing is deleted when you choose or go back. There is no fixed number of round
 PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile make --project anna
 ```
 
-This makes one zip file, from the round you chose, in a new folder. Press `Show the folder` to open it. Copy the zip file to the phone. In ACK open AUDIO ARCHITECT, find CUSTOM VOICE, press IMPORT, and pick the file. ACK restarts by itself, and then you can choose MY VOICE as the voice profile.
+This makes one zip file, from the round you chose, in a new folder. Beside it, it writes a short card, `MODEL_CARD.txt`, that says where the voice comes from. The card is not part of the zip and does not go to the phone; read it before you give the folder to anyone. Press `Show the folder` to open it. Copy the zip file to the phone. In ACK open AUDIO ARCHITECT, find CUSTOM VOICE, press IMPORT, and pick the file. ACK restarts by itself, and then you can choose MY VOICE as the voice profile.
 
 **Or send it over Wi-Fi, with no cable.** This works when the computer and the phone are on the same home Wi-Fi.
 

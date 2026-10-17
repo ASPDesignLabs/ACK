@@ -722,7 +722,7 @@ and what was removed cannot be brought back, so **if you want every round kept a
 ## I4. Making the voice file with one command
 
 **New, and not yet run on a real computer.** This does what section J does by hand, from the round you chose, in one command: it makes the voice from that round's saved file, gives it that round's own settings file, prepares it for the phone, makes the zip
-file ACK takes, and reads the zip back as the phone would. It writes only into **one new folder** under the project's `exports` and never changes, replaces or removes anything that was there. It needs the project from section I2 with at least one finished
+file ACK takes, and reads the zip back as the phone would. Last, it writes a **card** (`MODEL_CARD.txt`) beside the zip that says where the voice comes from and how it was made (part of the plan's decisions D21 and D27; the card is not inside the zip). It writes only into **one new folder** under the project's `exports` and never changes, replaces or removes anything that was there. It needs the project from section I2 with at least one finished
 round that is chosen (`rounds list` says which), and it does not run while a round is training. About 1 GB of free space is needed at most (the tool says how much it checked). Run one command at a time.
 
 - [ ] Look. This changes nothing:
@@ -741,7 +741,7 @@ round that is chosen (`rounds list` says which), and it does not run while a rou
   ```bash
   time PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile make --project voice-check
   ```
-  → `Step 1 of 5: making the voice from the saved point.`, then steps 2 to 5, then `Done. The file to give to ACK is: …` with the path of the zip file, and the folder it is all in. If a step stops, it says which, what was left (`What was made so far is in …`) and that nothing was deleted;
+  → `Step 1 of 5: making the voice from the saved point.`, then steps 2 to 5, then `Last: writing the card that says where the voice comes from, beside the zip file.`, then `Done. The file to give to ACK is: …` with the path of the zip file, the folder it is all in, and where the card is. If a step stops, it says which, what was left (`What was made so far is in …`) and that nothing was deleted;
   **copy the whole output**, and the `ls -l` of that folder. If the export stops with `GuardOnDataDependentSymNode` or asks for `onnxscript`, that decides whether the lock needs another package, as in section J.
 - [ ] Look at what it made, and compare the settings file with the round's own:
   ```bash
@@ -749,8 +749,22 @@ round that is chosen (`rounds list` says which), and it does not run while a rou
   python3 -m zipfile -l ~/ack-voice-studio/projects/voice-check/exports/*/*.zip
   ls ~/ack-voice-studio/projects/voice-check/rounds/config
   ```
-  → The folder holds `my_voice.onnx`, `my_voice.onnx.json`, `my_voice.onnx.before-patch` and the zip file. `python3 -m zipfile -l` lists exactly `model.onnx` and `model.onnx.json`. The settings file is a copy of the chosen round's file in `rounds/config`: `cmp` that file with `my_voice.onnx.json`
+  → The folder holds `my_voice.onnx`, `my_voice.onnx.json`, `my_voice.onnx.before-patch`, the zip file and `MODEL_CARD.txt`. `python3 -m zipfile -l` lists exactly `model.onnx` and `model.onnx.json` (the card is not in the zip). The settings file is a copy of the chosen round's file in `rounds/config`: `cmp` that file with `my_voice.onnx.json`
   (give `cmp` both paths); it prints nothing when they are the same.
+- [ ] **Read the card.** New, and not yet run on a real computer. `MODEL_CARD.txt` is a plain text file that says where the voice comes from, written from what your project recorded and nothing else. Read it here, or press `Show the folder` on the window's Voice file page and double-click it in Windows:
+  ```bash
+  cat ~/ack-voice-studio/projects/voice-check/exports/*/MODEL_CARD.txt
+  ls -l ~/ack-voice-studio/projects/voice-check/exports/*/MODEL_CARD.txt
+  ```
+  → It starts `Voice file card` and has six headings in this order: `The voice file`, `Where it comes from`, `How it was trained`, `Whose voice it is`, `Made with` and `What this card holds`. The `ls` shows `-rw-------` (only you can read it). Check each part:
+  `The voice file` gives `Zip file for ACK:` with the zip's size, `Made on:` with the time in UTC, and two check codes. `Where it comes from` names the starting voice your project began from (Mike or Amy), says what the voice's own pages say about its recordings and about Lessac, gives a `Page to read:` address for each, and ends with the date of the read, that nothing is hosted here and `no legal advice`. It also shows either `acknowledged in this project on` a date `for revision` a number, or `This project has no acknowledgment recorded for that voice.`; a project made before acknowledgments were kept should say the second, and that is the right answer, not a fault. `How it was trained` gives the round and how many rounds and minutes are behind it: compare with `rounds list`. `Whose voice it is` matches how you set the project up; for someone else's voice it names only *how* the agreement was given (for example `They said so`), never a name, a date or a word of the note. `Made with` gives the tool's version and the training programs' build.
+  **Read every sentence for anything that sounds like permission to use the voice, and write down any you find: there should be none.** The card must not say that use is allowed, only that the question is yours and is separate.
+- [ ] Check the card against the files, and search it for names. The first command takes the two files out of the zip into a new folder in `/tmp` and prints their check codes; they must be the two codes in the card. The second prints nothing if neither the project's folder name nor your own name is in the card (change `yourname` first):
+  ```bash
+  mkdir /tmp/ack-card-check && python3 -m zipfile -e ~/ack-voice-studio/projects/voice-check/exports/*/*.zip /tmp/ack-card-check && sha256sum /tmp/ack-card-check/model.onnx /tmp/ack-card-check/model.onnx.json
+  grep -i -e voice-check -e yourname ~/ack-voice-studio/projects/voice-check/exports/*/MODEL_CARD.txt
+  ```
+  → The two codes match. The `grep` prints nothing. The new folder in `/tmp` can be deleted when you are done; nothing else uses it.
 - [ ] Look again, and make a second one a minute later. The first must not change:
   ```bash
   PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile list --project voice-check
@@ -766,7 +780,7 @@ round that is chosen (`rounds list` says which), and it does not run while a rou
   → `The chosen round has no settings file.` and under it `Nothing was made.` and what to do next. The `ls` shows only the folders from before. **Put the file back (the third command) even if something looks wrong.**
 - [ ] Take the zip file to the phone and import it, as in section K. Write down whether ACK took it the first time, and whether it speaks in the voice.
   *Confirmed on the developer's computer and phone (2026-10-11): `make` ran the real export, patcher and zip in 10.7 seconds and produced a 64 MB zip that read back clean; the folder held exactly the four files, the zip held exactly `model.onnx` and `model.onnx.json`, the settings file was identical to round 3's own; the phone took the zip the first time and MY VOICE spoke, better than the earlier runs. The refusal step (moving the settings file aside) was not run.*
-- [ ] Write down: how long it took, whether any wording confused you (the plan, the five steps, the `Done.` lines), whether you wanted the file somewhere else than the project's `exports` folder, and whether you wanted a name of your own for it.
+- [ ] Write down: how long it took, whether any wording confused you (the plan, the five steps, the `Done.` lines, the card), whether you wanted the file somewhere else than the project's `exports` folder, whether you wanted a name of your own for it, and whether you would hand the card to someone who is given the voice.
 
 ## I5. The window (WSL only for now)
 

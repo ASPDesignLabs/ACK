@@ -12,9 +12,9 @@ import pytest
 
 from vs_fakes import FakeSystem
 from vs_rounds_helpers import NOW, World, end_job, make_world, slurp, stamp
-from vs_startvoice_helpers import Terminal, implies_permission, leaked_keys
+from vs_startvoice_helpers import Terminal, implies_permission, leaked_keys, make_registry
 from vs_voicefile_helpers import MakerSystem, ProjectRig, TOOLS, finished_rounds, tree_of, write_settings
-from voice_studio.core import jobs, rounds as rd, text, voicefile as vf, voicefile_flow as vff
+from voice_studio.core import jobs, modelcard, project as pj, rounds as rd, text, voicefile as vf, voicefile_flow as vff, voicezip
 from voice_studio.core.diskbudget import DEFAULT_TABLE, floors_for
 from voice_studio.core.envbuild import EnvPaths
 from voice_studio.core.paths import DataHome, ProjectPaths, ScratchPaths
@@ -28,9 +28,15 @@ FOLDER = "voice-check-round-%03d-20261011-120000"        # NOW is 2026-10-11 12:
 class Rig(ProjectRig):
     """The shared project with a way to run the voice file command on a made-up terminal."""
 
+    registry = make_registry()
+
+    def acknowledge(self, voice="voice-mike", revision="0123abcd"):
+        """The project records that the person was shown where the starting voice comes from (core/startvoice.py::acknowledge)."""
+        pj.save_project(self.paths, pj.with_acknowledgment(pj.load_project(self.paths), voice, revision, NOW))
+
     def run(self, *argv, answers=(), interactive=True):
         io = Terminal(answers, interactive)
-        code = vff.run_voicefile(list(argv), self.home, None, CAT, io, training=self.training_env, now=NOW, system=self.system, tools_dir=str(TOOLS))
+        code = vff.run_voicefile(list(argv), self.home, self.registry, CAT, io, training=self.training_env, now=NOW, system=self.system, tools_dir=str(TOOLS))
         assert leaked_keys(io.text + "\n".join(io.prompts)) == [], "a catalog key was printed instead of words"
         assert implies_permission(io.text) == [], "something printed says or implies that use is permitted"
         return code, io
@@ -281,3 +287,106 @@ def test_the_front_runs_help_and_list_and_makes_nothing_when_the_training_progra
     refused = run("make", "--project", "voice-check", "--yes")
     assert refused.returncode == 1 and "Traceback" not in refused.stderr and "Nothing was made." in refused.stdout
     assert sorted(os.listdir(tmp_path / "ack-voice-studio" / "projects" / "voice-check" / "exports")) == []
+
+
+# ---------------------------------------------------------------- the card beside the zip
+
+def made_with_card(rig, *extra):
+    rig.finish(2)
+    code, io = rig.run("make", "--yes", "--project", "voice-check", *extra)
+    folder = "%s/%s" % (rig.paths.exports, FOLDER % 2)
+    return code, io, folder, folder + "/" + modelcard.CARD_NAME
+
+
+def test_make_writes_the_card_beside_the_zip_and_says_where_it_is_and_that_it_stays_out_of_the_zip(rig):
+    rig.acknowledge()
+    code, io, folder, card = made_with_card(rig)
+    assert code == 0 and os.path.isfile(card) and sorted(os.listdir(folder)) == sorted(["my_voice.onnx", "my_voice.onnx.json", "my_voice.onnx.before-patch", FOLDER % 2 + ".zip", modelcard.CARD_NAME])
+    assert "The card that says where the voice comes from is %s. It is not inside the zip file, so it does not go to the phone." % card in io.lines
+    assert io.lines.index("Last: writing the card that says where the voice comes from, beside the zip file.") > io.lines.index("Step 5 of 5: reading the zip file back as the phone would.")
+    assert io.lines.index("Done. The file to give to ACK is: %s/%s.zip" % (folder, FOLDER % 2)) > io.lines.index("Last: writing the card that says where the voice comes from, beside the zip file.")
+    assert io.lines.index("The card that says where the voice comes from is %s. It is not inside the zip file, so it does not go to the phone." % card) > io.lines.index("Everything is in %s: the voice, its settings file, the original, and the zip file." % folder)
+
+
+def test_the_plan_names_the_card_before_anything_is_asked(rig):
+    rig.finish(2)
+    code, io = rig.run("make", "--project", "voice-check", answers=["no"])
+    asked = next(i for i, e in enumerate(io.events) if e[0] == "ask")
+    assert "  write a card, beside the zip file, that says where the voice comes from. It is not inside the zip file" in [e[1] for e in io.events[:asked] if e[0] == "say"]
+    assert code == 2 and not os.path.exists(rig.paths.exports) or rig.exports() == []
+
+
+def test_the_card_is_read_from_this_projects_record_the_chosen_round_the_acknowledgment_and_the_files_that_were_made(rig):
+    rig.acknowledge()
+    code, io, folder, card = made_with_card(rig)
+    body = slurp(card).decode("utf-8")
+    zip_path = "%s/%s.zip" % (folder, FOLDER % 2)
+    assert "  Zip file for ACK: %s" % size_text(os.stat(zip_path).st_size) in body.splitlines()
+    assert "  Made on: 2026-10-11 12:00 UTC" in body.splitlines() and "  It was trained further from the starting voice Mike." in body.splitlines()
+    assert "  Shown where it comes from, and acknowledged in this project on 2026-10-11, for revision 0123abcd." in body.splitlines()
+    assert "Taken from round 2. The rounds behind it number 2, about %d minutes of training in all." % rd.trained_minutes(rd.load(rig.paths), 2) in body
+    report = voicezip.verify_voice_zip(__import__("pathlib").Path(zip_path))
+    assert report == ()
+    import hashlib
+    with __import__("zipfile").ZipFile(zip_path) as archive:
+        assert "  Check code of the voice (SHA-256): " + hashlib.sha256(archive.read("model.onnx")).hexdigest() in body.splitlines()
+        assert "  Check code of its settings file (SHA-256): " + hashlib.sha256(archive.read("model.onnx.json")).hexdigest() in body.splitlines()
+
+
+def test_a_project_that_never_acknowledged_the_voice_gets_a_card_that_says_so(rig):
+    code, io, folder, card = made_with_card(rig)
+    body = slurp(card).decode("utf-8")
+    assert code == 0 and "  This project has no acknowledgment recorded for that voice." in body.splitlines()
+
+
+def test_the_card_is_owner_only_and_holds_nothing_of_the_project_but_what_it_says_it_holds(rig):
+    code, io, folder, card = made_with_card(rig)
+    body = slurp(card).decode("utf-8")
+    assert code == 0 and (os.stat(card).st_mode & 0o777) == 0o600
+    assert "voice-check" not in body and "Voice check" not in body and str(rig.home.root if hasattr(rig.home, "root") else "/tmp") not in body
+    assert implies_permission(body) == [] and leaked_keys(body) == []
+
+
+def test_the_training_programs_and_tool_version_come_from_their_own_records(rig):
+    from voice_studio import __version__
+    from voice_studio.core import envbuild
+    os.makedirs(rig.training.env_dir)
+    envbuild.write_json(rig.training.env_dir + "/" + envbuild.RECORD_NAME, {"schema": envbuild.SCHEMA, "id": "training-abc", "fingerprint": "f" * 64, "steps": {}, "patches": {}})
+    code, io, folder, card = made_with_card(rig)
+    lines = slurp(card).decode("utf-8").splitlines()
+    assert "  ACK Voice Studio, version " + __version__ in lines and "  Training programs: training-abc, build ffffffffff" in lines
+
+
+def test_without_a_readable_record_of_the_programs_the_card_says_so(rig):
+    code, io, folder, card = made_with_card(rig)
+    assert "  Training programs: their record could not be read." in slurp(card).decode("utf-8").splitlines()
+
+
+def test_a_card_that_cannot_be_written_says_the_voice_file_is_ready_where_the_folder_is_and_that_nothing_was_deleted(rig, monkeypatch):
+    rig.finish(2)
+
+    def no_room(_folder, _card):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(modelcard, "write_card", no_room)
+    code, io = rig.run("make", "--yes", "--project", "voice-check")
+    folder = "%s/%s" % (rig.paths.exports, FOLDER % 2)
+    assert code == 1 and "The voice file is ready, but its card could not be written." in io.text
+    assert "The zip file was made and read back without problems, and nothing was deleted." in io.text and "The zip file is finished, so copy it to the phone as it is. To get a card too, make the voice file again." in io.text
+    assert "  What was made so far is in %s. Nothing was deleted." % folder in io.lines
+    assert not any(l.startswith("Done.") for l in io.lines) and voicezip.verify_voice_zip(__import__("pathlib").Path("%s/%s.zip" % (folder, FOLDER % 2))) == ()
+
+
+def test_the_front_without_a_registry_still_writes_a_card_that_does_not_guess_the_voice(tmp_path):
+    rig = Rig(tmp_path)
+    rig.finish(2)
+    io = Terminal([], True)
+    code = vff.run_voicefile(["make", "--yes", "--project", "voice-check"], rig.home, None, CAT, io, training=rig.training_env, now=NOW, system=rig.system, tools_dir=str(TOOLS))
+    body = slurp("%s/%s/%s" % (rig.paths.exports, FOLDER % 2, modelcard.CARD_NAME)).decode("utf-8")
+    assert code == 0 and "does not know that voice" in body and "Page to read" not in body
+
+
+def test_list_still_shows_one_row_for_a_folder_that_holds_a_card_and_a_zip(rig):
+    made_with_card(rig)
+    code, io = rig.run("list", "--project", "voice-check")
+    assert code == 0 and [l for l in io.lines if l.startswith("  " + FOLDER % 2)] == ["  %s: %s" % (FOLDER % 2, size_text(os.stat("%s/%s/%s.zip" % (rig.paths.exports, FOLDER % 2, FOLDER % 2)).st_size))]
