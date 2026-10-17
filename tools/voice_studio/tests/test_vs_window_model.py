@@ -272,6 +272,16 @@ def test_making_the_voice_file_asks_with_the_plan_in_view_and_a_no_makes_nothing
     assert wm.voicefiles_view(rig.home, "voice-check", CAT).items[0].name == rig.exports()[0]
 
 
+def test_making_the_voice_file_from_the_window_also_writes_the_card_beside_the_zip(rig):
+    rig.finish(2)
+    code, lines = press(rig, wm.make_args("voice-check"), Script(True))
+    folder = "%s/%s" % (rig.paths.exports, rig.exports()[0])
+    card = folder + "/MODEL_CARD.txt"
+    assert code == 0 and os.path.isfile(card) and slurp(card).decode("utf-8").startswith("Voice file card\n")
+    assert "The card that says where the voice comes from is %s. It is not inside the zip file, so it does not go to the phone." % card in lines
+    assert sorted(os.listdir(folder)) == sorted(["my_voice.onnx", "my_voice.onnx.json", "my_voice.onnx.before-patch", rig.exports()[0] + ".zip", "MODEL_CARD.txt"])
+
+
 def test_a_refusal_comes_back_as_words_and_asks_nothing(rig):
     sink = Script()
     code, lines = press(rig, wm.make_args("voice-check"), sink)
