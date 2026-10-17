@@ -150,6 +150,12 @@ PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.voicefile send --project an
 
 The first time, the tool explains and asks, and then makes one small certificate file. It stops there, because you put that file on the phone once, as a trusted certificate; it prints the steps. The file can vouch only for addresses inside a home network, never for a web site. Run the same command again to send. It shows what it will do and asks. After you say yes, it waits for up to ten minutes and shows an address, and on a terminal that can draw it, a square code the phone can scan. Open the address on the phone. The file can be taken once, and only by the exact address shown. The tool stops by itself as soon as the whole file has been sent. While it waits, the computer accepts connections from the home network, and that is the only time the tool does.
 
+**On Windows, with Ubuntu inside it,** a phone usually cannot reach Ubuntu. This command says what is wrong and what to change; it changes nothing until you say yes.
+
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl check
+```
+
 ---
 
 ## 5. Looking after your work
@@ -207,6 +213,6 @@ The tool never sends the report. Read it, and give the file to the helper yourse
 
 ## 8. What has been tried
 
-The tool was built and tested on a computer without a screen or a graphics card. What that cannot show was tried by the developer on one computer: Ubuntu 22.04 and 24.04 running inside Windows (WSL2), with an Nvidia RTX 4060. On it the setup, training, stopping and carrying on, the export and the packing of the voice file were run. Three training rounds were run from the terminal. The finished zip file was imported into ACK on a phone, and the window opened and worked. Most of the rest has **not** been run on a real computer yet: the backup, refresh, uninstall, move, update and problem report commands and the window's pages for them, hearing the voice through a speaker, and the Windows installer. Sending the voice file over Wi-Fi has not been tried on a phone either, including whether the phone accepts the certificate file. A normal Ubuntu desktop on its own hardware has not been tried either. The file `VOICE_STUDIO_DEVICE_TEST.md` lists every check, and `VOICE_STUDIO_IT_GUIDE.md` says in section 11 what is tested and what is not. If you meet a sentence that is hard to follow, or something that fails, please tell the developer. That is how the tool improves.
+The tool was built and tested on a computer without a screen or a graphics card. What that cannot show was tried by the developer on one computer: Ubuntu 22.04 and 24.04 running inside Windows (WSL2), with an Nvidia RTX 4060. On it the setup, training, stopping and carrying on, the export and the packing of the voice file were run. Three training rounds were run from the terminal. The finished zip file was imported into ACK on a phone, and the window opened and worked. Most of the rest has **not** been run on a real computer yet: the backup, refresh, uninstall, move, update and problem report commands and the window's pages for them, hearing the voice through a speaker, and the Windows installer. Sending the voice file over Wi-Fi has not been tried on a phone either, including whether the phone accepts the certificate file. The same goes for the command that helps Ubuntu inside Windows reach a phone. A normal Ubuntu desktop on its own hardware has not been tried either. The file `VOICE_STUDIO_DEVICE_TEST.md` lists every check, and `VOICE_STUDIO_IT_GUIDE.md` says in section 11 what is tested and what is not. If you meet a sentence that is hard to follow, or something that fails, please tell the developer. That is how the tool improves.
 
 The older step-by-step guides, `VOICE_TRAINING_GUIDE.md` and `VOICE_DATA_WSL_GUIDE.md`, are still there as the manual route. They do the same work by typing commands one by one.

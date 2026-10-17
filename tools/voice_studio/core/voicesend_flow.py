@@ -111,7 +111,7 @@ def _say_plan(name: str, size: int, address: str, port: int, wsl: bool, cat: Cat
                  cat.t("voicefile.send.plan_once"), cat.t("voicefile.send.plan_stop"), cat.t("voicefile.send.plan_only")):
         io.say("  " + line)
     if wsl:
-        io.say(cat.t("voicefile.send.wsl_note"))
+        io.say(cat.t("voicefile.send.wsl_note", command="python3 -m voice_studio.wsl check"))
 
 
 def _show_address(url: str, cat: Catalog, io: IO) -> None:

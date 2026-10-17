@@ -53,6 +53,7 @@ The folders and names used below (change them if yours differ):
 | I14 | The problem report | Make a report a helper can read. |
 | I15 | The window's pages for hearing, backup, checking, updates and problem reports | Press every button on the five pages that came after the first six, and answer what they ask. |
 | I16 | Giving the voice file to the phone over Wi-Fi | Put a certificate on the phone once, then send the voice file over the home network. |
+| I17 | Ubuntu under Windows: the phone and the idle stop | Keep Ubuntu running when the last window closes, and let a phone reach it. |
 | J | Making the voice file | The same as I4, done by hand. |
 | K | On the phone | Put the voice on the phone and hear it in ACK. |
 | L | What to send back | What to write down and send back. |
@@ -1792,8 +1793,8 @@ Use the project from section I2 (`voice-check`, with at least two finished round
 
 **E. Ubuntu under Windows (WSL).** The part most likely not to work, and the reason the plan has a later task (VS-3.6) for it. Nothing here changes a Windows setting.
 
-- [ ] Run part C's first step on WSL. → After the plan it adds `This is Ubuntu under Windows. A phone usually cannot reach the address that Ubuntu sees. If the phone cannot open the address, the checklist for this command says what to try.` Then send anyway. Write down the address Ubuntu chose (WSL's usual default network gives an address like `172.x.x.x` that only Windows can reach), and whether the phone could open it.
-- [ ] If it could not: in Windows, run `wsl --status` and write down the networking mode it prints (or look in `%UserProfile%\.wslconfig`). The tool does not change this, and does not open a Windows firewall port; those are the next task. If you know how, try "mirrored" networking and the Windows Defender Firewall rule for TCP port 8443 for private networks **yourself**, and write down exactly what you changed and what worked, so that the next task can explain it.
+- [ ] Run part C's first step on WSL. → After the plan it adds `This is Ubuntu under Windows. A phone usually cannot reach the address that Ubuntu sees. To see what is needed, run: python3 -m voice_studio.wsl check` (section I17 is that command). Then send anyway. Write down the address Ubuntu chose (WSL's usual default network gives an address like `172.x.x.x` that only Windows can reach), and whether the phone could open it.
+- [ ] If it could not: section I17 is the command that explains what to change, changes the one Windows file after you say yes, and prints the firewall command and the restart. Do it there, then come back and repeat part C.
 
 **F. What it left behind.**
 
@@ -1808,6 +1809,106 @@ Use the project from section I2 (`voice-check`, with at least two finished round
   ```
   → `0`: the certificate and its secret part are not in a backup.
 - [ ] To make a new certificate file (it ends after two years, and the tool says so thirty days before): move the folder aside, **never delete it**: `mv ~/ack-voice-studio/state/phone-certificate ~/ack-voice-studio/state/phone-certificate-old`, run the send command, and put the new file on the phone. The old one on the phone can then be removed in the phone's settings.
+
+## I17. Ubuntu under Windows: the phone and the idle stop
+
+**New, and not yet run on a real Windows computer.** `python3 -m voice_studio.wsl check | phone | idle` (the plan's task VS-3.6, decision D17, choices P26) helps with the two things about Ubuntu inside Windows that get in the way of this tool, both settings in one Windows file, `.wslconfig`, in your Windows home folder: a phone cannot reach Ubuntu in WSL's usual network (`networkingMode=mirrored` in `[wsl2]` shares the Windows network), and Ubuntu stops about a minute after its last window or terminal closes, taking a running round with it (`instanceIdleTimeout=-1` in `[general]`, finding F3). `check` only looks. `phone` and `idle` each show the one change they want to make, ask first, and copy the file as it was before they change it. **They never restart WSL, never run the firewall command (they print it), and change nothing on Windows but that one file.**
+
+*Built and tried in the build sandbox only, against a pretend Windows drive: reading and changing the file without disturbing a line of it (Windows line ends, a byte order mark and comments are kept), finding the home folder with and without a Windows program to ask, the copies, and every refusal. **Not run on a real Windows computer**: not the real `wslinfo`, not the Windows programs it starts, not the firewall command (it is Microsoft's own, copied from their page on WSL networking, and was not tried), not whether `instanceIdleTimeout` does anything on your version of WSL, and not whether a phone can reach Ubuntu afterwards. That is what this section is for.* Use a Windows computer with Ubuntu under WSL 2. Section D's job-survival checks are the ones part C leans on.
+
+**A. Look first.** Nothing is changed.
+
+- [ ] In PowerShell, write down what Windows says: `wsl --version`, `wsl --status` and `type $env:USERPROFILE\.wslconfig` (the last may say the file is not there). Then in Ubuntu:
+  ```bash
+  ls -l --time=ctime /mnt/c/Users/*/.wslconfig 2>/dev/null
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl check
+  ls -l --time=ctime /mnt/c/Users/*/.wslconfig 2>/dev/null
+  ```
+  → `ACK Voice Studio: Ubuntu inside Windows (WSL)`, `What this computer reports:` and then, each indented, whether Windows programs can be started from Ubuntu, the Windows build, your Windows home folder, whether the settings file is there, the networking mode the file asks for (and the one Ubuntu is running with, if `wslinfo` is there), what that means for a phone, and what it means for a long round. The two `ls` lines are the same: looking changed nothing. Write down every line, and whether each is true (the build against `ver`, the mode against `wsl --status`).
+- [ ] If your computer has more than one user folder under `C:\Users`, the command says `There is more than one user folder on the C drive, so I cannot tell which one is yours.` unless Windows could be asked; name yours with `--windows-user`:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl check --windows-user YOURNAME
+  ```
+  → The same report, for that folder. (Skip this step if the first report already found your home.)
+
+**B. What it must refuse.** None of these should show a Python error.
+
+- [ ] Ask for things it must refuse:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl phone --port 80
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl check --windows-user nobody-by-that-name
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl restart
+  ```
+  → `The port must be a whole number from 1024 to 65535. Nothing was done.`, then `There is no user folder with that name on the C drive.` with two more sentences, then `I do not know the command restart. Nothing was done. Run it with help to see the commands.`
+
+**C. Keep Ubuntu running when the last window closes.** This is the part the developer already did by hand once (finding F3); here the tool does it.
+
+- [ ] See the notice a round start gives while the setting is missing. Use the project from section I2 and answer **no**:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.rounds start --set dataset-1 --project voice-check
+  ```
+  → Among the lines before the question: `This is Ubuntu under Windows. If you close the last Ubuntu window while the round runs, Ubuntu can stop and take the round with it. To prevent that, run: python3 -m voice_studio.wsl idle`
+- [ ] Ask for the change, and say **no**:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl idle
+  ```
+  → `Keeping Ubuntu running when the last window closes takes two steps.`, the lines that differ (a `+instanceIdleTimeout=-1` line, under `[general]`), and `Change the file now? Type yes to change it.` Type **`no`**: `Nothing was done.` The file is exactly as it was.
+- [ ] Run it again and type **`yes`**:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl idle
+  ls -la /mnt/c/Users/*/.wslconfig*
+  ```
+  → `Changed. The file as it was is kept as …` and `.wslconfig.bak` is there next to `.wslconfig` (if the file did not exist before, `Made the file …` and no copy). Open `.wslconfig` in Notepad: your own lines are unchanged and in the same order, with the new line added. Write down whether Notepad still shows the file normally (line ends, accents in comments).
+- [ ] Restart WSL **when no round is running** (the tool says so; it never does this): close every Ubuntu window and in PowerShell run `wsl.exe --shutdown`. Open Ubuntu again and run `python3 -m voice_studio.wsl check`. → `Ubuntu is kept running after the last window closes.` The round start from the first step now prints no such notice.
+- [ ] The real test, from section D: start the short job, close every Ubuntu window and wait five minutes. → The job is still going when you open Ubuntu again (the setting worked on your version of WSL). If it was killed, run `wsl.exe --update` in PowerShell, restart WSL and try once more. Write down your WSL version.
+
+**D. Let a phone reach Ubuntu.** Needs Windows 11 version 22H2 or newer.
+
+- [ ] Ask for the change, and say **no**:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl phone
+  ```
+  → `Letting a phone reach Ubuntu takes three steps.`, the change to `.wslconfig` (a `+networkingMode=mirrored` line under `[wsl2]`), the question, and after your **no**: `Nothing was done.` and none of the commands. (On Windows 10, or Windows 11 older than 22H2, it says `This Windows is older than the version that has mirrored networking (build 22621). Copy the voice file to the phone by hand instead.` and stops: write down your build.)
+- [ ] Run it again and type **`yes`**:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl phone
+  ```
+  → The file is changed and its old copy kept, then step 2 gives one PowerShell command and one to take the rule away again, `This tool never runs it for you.`, and step 3 gives `wsl.exe --shutdown`. If a round is running, `A task is running now. Do not restart WSL until it has finished, because a restart stops it.` is among them.
+- [ ] Run the step 2 command yourself, in PowerShell opened as administrator. → Write down whether Windows accepted it as printed. If it refused, write down the whole message and what you changed to make it work. **This command is Microsoft's, copied from their page, and nobody has tried it.**
+- [ ] Restart WSL as step 3 says, open Ubuntu, and look:
+  ```bash
+  wslinfo --networking-mode
+  ip -4 -o addr show scope global
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl check
+  ```
+  → `mirrored`; an address that begins like your Wi-Fi address (not `172.x.x.x`); and a report with `A phone on the same Wi-Fi can reach this Ubuntu once the Windows firewall lets the port through.` Write down what `wslinfo` printed (or that it is not there).
+- [ ] Send the voice file as in section I16 part C. → `voicefile send` still adds its note about Ubuntu under Windows, then offers an address that begins like your Wi-Fi address, and the phone opens it. Write down whether it did, and what else you had to change.
+- [ ] Take the firewall rule away when you are done, with the second command step 2 gave, in an administrator PowerShell. → Write down whether it was accepted.
+
+**E. A file the tool must not touch.** Use a folder that is not your own, so that your real file is never at risk.
+
+- [ ] Make a pretend Windows user folder and a file the tool cannot edit safely:
+  ```bash
+  mkdir /mnt/c/Users/ack-voice-check-user
+  printf '[wsl2]\nnetworkingMode=nat\nnetworkingMode=none\n' > /mnt/c/Users/ack-voice-check-user/.wslconfig
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl phone --windows-user ack-voice-check-user --yes
+  cat /mnt/c/Users/ack-voice-check-user/.wslconfig
+  ```
+  → `The settings file gives the same setting twice, so I cannot tell which one counts.` with two more sentences, `Technical detail: networkingMode`, exit 2, and the file exactly as you made it.
+- [ ] A file saved by Notepad as UTF-16 (open the pretend file in Notepad, choose Save As and the encoding `UTF-16 LE`), then:
+  ```bash
+  PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.wsl phone --windows-user ack-voice-check-user --yes
+  ```
+  → `The settings file is not plain text that this tool can edit safely.` with two more sentences, and the file is as Notepad saved it.
+
+**F. What it left behind.**
+
+- [ ] Look at what is there:
+  ```bash
+  ls -la /mnt/c/Users/*/.wslconfig*
+  ```
+  → `.wslconfig`, and one `.wslconfig.bak` for the first change (a later one gets `.wslconfig.bak-` and the time). No file with `.new-` in its name. The tool never replaces or removes a copy.
+- [ ] To go back to what you had, close every Ubuntu window, copy the old file over the new one yourself (`cp` the `.bak` to `.wslconfig`), remove the firewall rule (part D) and restart WSL. The tool does not do this for you.
 
 ## J. Making the voice file
 
@@ -1896,6 +1997,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
 - Section I14: whether the two lines at the end of the failed command in part B were easy to find and follow, what parts A, C and D printed (especially the exit numbers), every name, folder or address of yours that was still readable in a report (parts A, B, E and F) and which kind it was, whether the report was something you would be willing to give a helper, and any sentence that was hard to follow.
 - Section I15: for each of the five pages, whether you found it without help and whether the buttons did what their words said; **what the shown problem report held that you did not expect** (the most important line of this section); how long the look for releases took; whether the sounds played through the window in Hear the voice; and anything the keyboard or a screen reader could not reach.
 - Section I16: whether the four steps for putting the file on the phone matched what your phone showed (make, model, Android version, the words of the menus, and the warning it gave); whether the code scanned at the first try; the address it chose and whether the phone could open it; how long the download took for how many megabytes; whether a device without the certificate got a warning and no file; what each part of D printed (especially the exit numbers); on WSL, the address, the networking mode and what you changed to make it work; and what was left in the certificate folder.
+- Section I17: the report `check` printed against what Windows said (build, networking mode, WSL version), whether the two `ls` lines were the same, whether Notepad showed the changed file normally, whether the idle setting kept the job alive for five minutes (and your WSL version), whether the firewall command was accepted as printed (the whole message if not), what `wslinfo` and `ip` printed after the restart, whether the phone could open the address, and what else you had to change.
 - Anything that printed a Python error, with its last five lines. Nothing in these steps should show one: a person should always get a sentence.
 - Anything you would have wanted the screen to say differently. These sentences are the ones a helper will read.
 
@@ -1908,6 +2010,7 @@ For each section: **done**, **done with a difference** (say what) or **stopped h
   the recordings you imported, copy that folder first.
 - [ ] The pretend homes in sections I10, I11 and I12 are each removed by their own last step (`rm -r "$T"`). The folder section I14 saved a report in is removed by its part D. The folder section I15 made for a backup and a report is removed by that section's part F. The backups section I15 made in the tool's own backups folder stay (the tool never removes a backup; remove them yourself if you want them gone). The folder section I13 fetched a copy into is removed by that section's last step too; a copy you fetched with `--to` anywhere else is yours to remove, and the tool never removes one. The old copy of the programs from section I10 part E is removed by that part, and nothing else in `~/ack-voice-studio/tool` was made by this list except what section I11 part E removed and set up again.
 - [ ] The certificate file section I16 made is the folder `~/ack-voice-studio/state/phone-certificate` (the certificate and its secret part, nothing else). Keep it if you will send to the phone again. The tool never removes it. When you are sure: `rm -r ~/ack-voice-studio/state/phone-certificate`, and remove the certificate from the phone in the phone's settings. If you moved it aside in part F, the same goes for `phone-certificate-old`.
+- [ ] The pretend Windows user folder section I17 made is `C:\Users\ack-voice-check-user` (one file in it). Remove it yourself: `rm -r /mnt/c/Users/ack-voice-check-user`. The `.wslconfig.bak` copies next to your real `.wslconfig` are real backups: keep them, or remove them yourself when you are sure. The tool never removes one. The firewall rule, if you made it, is taken away with the command part D gave.
 - [ ] The backups section I9 made are in `~/ack-voice-check-backups` (and `~/ack-voice-studio/backups` if you ever left the folder out). They are real backups, so keep them if you want them; look first with `du -sh ~/ack-voice-check-backups`, and when you are sure: `rm -r ~/ack-voice-check-backups`. The tool never removes a backup itself, and the project's delete question does not touch them.
 - [ ] The small sound files section I8 made are under the project's `listening` folder, a few hundred kilobytes each time (and a large voice copy for each time you kept one in part E). Free up space offers them (section I3); or look with `du -sh ~/ack-voice-studio/projects/voice-check/listening` and remove the folder yourself when you no longer want them.
 - [ ] The check project from section I1 is the folder `~/ack-voice-studio/projects/voice-check` (a project file and empty folders, and after section I2 a copy of the training set and every round's saved files, about 4.8 GB a round: look with `du -sh` first; nothing of value if you used it only for this list). To remove just that: `rm -r ~/ack-voice-studio/projects/voice-check`. **Keep the voices in `~/ack-voice-studio/tool/downloads/voices/`**: they are checked copies that cannot be fetched again if their host removes them, and every later project uses them.

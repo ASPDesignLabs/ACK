@@ -1771,3 +1771,12 @@ The guided desktop tool for recording, training and exporting a custom voice (`t
   `core/qrcode.py` is a pure-Python encoder (tested against the standard's worked values and an independent decoder written from the specification); the QR is drawn only when the terminal can show black on white
   (`io.ansi`), and the address is always printed. **Not confirmed on a phone: that Android enforces the name constraints, that the QR scans, and the network under WSL (VS-3.6 is not built).** When a statement elsewhere says the tool
   "opens no listening port", it means outside this one command; keep the IT guide, `docs/DATA_SOVEREIGNTY.md` and the checklist in step with `core/lansend.py` (their tests read the code).
+- **`wsl` is the one command that writes a Windows file, and it writes exactly one** (plan VS-3.6, choices P26; the checklist is section I17). `python3 -m voice_studio.wsl check | phone | idle`
+  (`core/wsl.py`, `core/wsl_flow.py`) helps with two settings in `.wslconfig` in the person's Windows home folder: `networkingMode=mirrored` under `[wsl2]` (a phone can reach Ubuntu) and
+  `instanceIdleTimeout=-1` under `[general]` (Ubuntu is not stopped about a minute after its last window closes, finding F3). The rules: the file is **reached as a file** through the Windows drive
+  (`/mnt/c/Users/<name>`, or where `/etc/wsl.conf` puts it), never through a Windows program, because those do not always work (F4); the two Windows questions (`cmd.exe /c ver`, `cmd.exe /c echo
+  %USERPROFILE%`) have a ten-second limit and nothing depends on them; an edit is **one setting, shown as the lines that differ, asked once (`--yes` answers it), the old file copied first to a name
+  that does not exist (`.bak`, then with the time), the new text written to a temporary file and moved into place, then read back**, and every other line, comment, line end and byte order mark is kept
+  (read and written as bytes: a text-mode read turns CRLF into LF); a file that is not UTF-8 text or repeats the key or the section is refused. **It never restarts WSL and never runs the firewall
+  command: it prints them.** `rounds start` reads the file (no Windows program) and says, before it asks, that closing the last window can stop the round; it never refuses for it. **Unverified:** the firewall
+  command and where Microsoft keeps each key were taken from a search summary of Microsoft's page, `wslinfo --networking-mode` was not seen, and nothing has run on a real Windows.

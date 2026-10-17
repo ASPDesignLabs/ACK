@@ -16,7 +16,7 @@ def section(number):
     return re.search(r"^## %s\..*?(?=^## |\Z)" % number, DOC, flags=re.S | re.M).group(0)
 
 
-MARKERS = ("ACK Voice Studio", "listening model", "newer release of the tool", "`refresh repair`", "`voicefile send`")
+MARKERS = ("ACK Voice Studio", "listening model", "newer release of the tool", "`refresh repair`", "`voicefile send`", "`python3 -m voice_studio.wsl`")
 
 
 def rows(number):
@@ -70,6 +70,17 @@ def test_the_row_for_giving_the_voice_file_to_the_phone_says_what_the_listener_d
     assert {a.id: a.backed_up for a in areas.HOME_AREAS}["state"] is False, "the certificate's secret part lives under state, which no backup holds"
     everything_else = next(r for r in rows(2) if "Everything else in ACK Voice Studio" in r)
     assert "the voice file" not in everything_else.replace("making the voice file", ""), "giving it to a phone is not 'nobody'"
+
+
+def test_the_row_for_the_wsl_command_says_what_it_reads_changes_and_never_does():
+    from voice_studio.core import wsl
+    row = next(r for r in rows(2) if "`python3 -m voice_studio.wsl`" in r).replace("**", "")
+    for claim in ("nobody.", "one file on this same computer", "`.wslconfig` in your Windows home folder", "at most two short Windows programs", "nothing leaves the computer", "Shows the change first, asks, and keeps a copy of the old file",
+                  "It never restarts WSL and never runs the firewall command; it only prints it", "make the same change by hand"):
+        assert claim in row, claim
+    assert wsl.CONFIG_NAME == ".wslconfig"
+    everything_else = next(r for r in rows(2) if "Everything else in ACK Voice Studio" in r)
+    assert "wsl" not in everything_else.lower().replace("windows", ""), "the Windows file is not 'nothing'"
 
 
 def test_what_the_page_says_every_download_does_first_is_what_the_tool_does():

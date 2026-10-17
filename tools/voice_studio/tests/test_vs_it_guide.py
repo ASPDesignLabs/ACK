@@ -466,3 +466,15 @@ def test_the_window_paragraph_names_every_page_the_window_has_in_the_order_of_it
     assert "Hear the voice, Backup and Problem report contact nothing" in paragraph
     status = " ".join(GUIDE.split("## 1.", 1)[0].split())
     assert "a window with pages for projects, recordings, training rounds, hearing a voice, the voice file, backup, freeing up space, checking the tool, updates and problem reports" in status
+
+
+def test_what_the_guide_says_about_the_windows_file_is_what_the_code_does():
+    from voice_studio.core import wsl, wsl_flow
+    text, top = section(7), section(2)
+    assert "**The tool never restarts WSL and never runs a firewall command.**" in text and "One file on the Windows side, only on a typed yes" in top
+    assert "`networkingMode=mirrored` under `[wsl2]`" in text and (wsl.KEY_NETWORK, wsl.MIRRORED, wsl.SECTION_NETWORK) == ("networkingMode", "mirrored", "wsl2")
+    assert "`instanceIdleTimeout=-1` under `[general]`" in text and (wsl.KEY_IDLE, wsl.NEVER, wsl.SECTION_IDLE) == ("instanceIdleTimeout", "-1", "general")
+    assert "ten-second limit" in text and wsl.INTEROP_TIMEOUT_S == 10.0 and "`cmd.exe /c ver`" in text and "`cmd.exe /c echo %USERPROFILE%`" in text
+    assert "`.wslconfig.bak`" in text and wsl.CONFIG_NAME == ".wslconfig" and "`wslinfo --networking-mode`" in text and "`--windows-user`" in text
+    assert "`New-NetFirewallHyperVRule`" in text and wsl.firewall_commands(8443)[0].startswith("New-NetFirewallHyperVRule ") and "8443 unless told otherwise" in text and wsl_flow.DEFAULT_PORT == 8443
+    assert "the command was not tried by the tool's author" in text and "section I17" in text

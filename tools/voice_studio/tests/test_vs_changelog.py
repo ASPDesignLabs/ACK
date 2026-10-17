@@ -72,3 +72,10 @@ def test_it_says_the_send_command_is_the_one_place_the_tool_listens_and_which_mo
     body = " ".join(TEXT.split())
     assert "`python3 -m voice_studio.voicefile send`" in body and "`core/lansend.py`" in body and (PKG / "core" / "lansend.py").exists()
     assert "the first and only place the tool listens" in body and "up to ten minutes" in body and "twelve requests" in body
+
+
+def test_it_says_what_the_wsl_command_changes_and_what_it_never_does():
+    from voice_studio.core import wsl
+    body = " ".join(TEXT.split())
+    assert "`python3 -m voice_studio.wsl`" in body and "`.wslconfig`" in body and "`%s=%s`" % (wsl.KEY_IDLE, wsl.NEVER) in body
+    assert "never restarts WSL and never runs the firewall command (it prints it)" in body and "A round started under WSL without that setting now says so before it asks." in body

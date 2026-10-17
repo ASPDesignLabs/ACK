@@ -298,9 +298,9 @@ def test_ubuntu_under_windows_gets_one_extra_note_before_the_question_and_native
     rig = Rig(tmp_path, system=SendSystem(wsl=True))
     rig.authority()
     code, io, serve = rig.send("--yes")
-    assert said(io, say("voicefile.send.wsl_note")) and code == 0
+    assert said(io, say("voicefile.send.wsl_note", command="python3 -m voice_studio.wsl check")) and code == 0
     code, io, serve = rig.send("--yes", system=SendSystem(wsl=False))
-    assert not said(io, say("voicefile.send.wsl_note"))
+    assert not said(io, say("voicefile.send.wsl_note", command="python3 -m voice_studio.wsl check"))
 
 
 # ---------------------------------------------------------------- listening

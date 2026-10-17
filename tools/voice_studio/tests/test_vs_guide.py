@@ -12,7 +12,7 @@ import test_vs_device_test_doc as device_doc
 from test_vs_text import JARGON
 from vs_startvoice_helpers import implies_permission
 from voice_studio.core import (backup_flow, commands, preflight, projects_flow, recordings_flow, refresh_flow, registry as reg, reportcmd_flow, rounds_flow, scratchmove_flow, startvoice,
-                               text as vtext, uninstall_flow, update_flow, voicefile_flow, voices_flow)
+                               text as vtext, uninstall_flow, update_flow, voicefile_flow, voices_flow, wsl_flow)
 from voice_studio.core.text import size_text
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -20,9 +20,9 @@ DOCS = ROOT / "docs"
 GUIDE, HANDOUT = DOCS / "VOICE_STUDIO_GUIDE.md", DOCS / "VOICE_STUDIO_HELPER_HANDOUT.md"
 PAGES = {"guide": GUIDE, "handout": HANDOUT}
 FLOWS = {"projects": projects_flow, "recordings": recordings_flow, "voices": voices_flow, "rounds": rounds_flow, "voicefile": voicefile_flow, "backup": backup_flow, "refresh": refresh_flow,
-         "uninstall": uninstall_flow, "scratch": scratchmove_flow, "update": update_flow, "report": reportcmd_flow}
+         "uninstall": uninstall_flow, "scratch": scratchmove_flow, "update": update_flow, "report": reportcmd_flow, "wsl": wsl_flow}
 TAKES_A_VALUE = {"--project", "--name", "--kind", "--table", "--set", "--minutes", "--to", "--round", "--folder", "--text", "--step", "--problem", "--detail", "--job", "--hours", "--programs",
-                 "--saved", "--working", "--copies", "--clips", "--max-gain-db", "--address", "--port"}
+                 "--saved", "--working", "--copies", "--clips", "--max-gain-db", "--address", "--port", "--windows-user"}
 
 
 def text_of(path):

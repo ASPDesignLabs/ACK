@@ -16,7 +16,7 @@ from freeform_studio import files_import
 from vs_fakes import (DEBIAN_12, MEM_4G, PROC_WSL1, SMI_6G, SMI_DRIVER_DOWN, UBUNTU_2004, FakeSystem, wsl2)
 from voice_studio.core import describe as ds
 from voice_studio.core import ackimport, commands, copyin, diskbudget, envbuild, envspec, fetch, freeup, joblines, launcher, listen, jobs, newproject, phonemes, preflight, profiles, progress, project, projectbackup, recordings, refresh, report, rounds, scratch, setupplan, setuprun, startvoice, text, trainguard, voicefile, voicezip, winshortcut
-from voice_studio.core import guided_flow, lansend, phonecert, refresh_flow, reportcmd, reportcmd_flow, scratchmove, scratchmove_flow, uninstall, uninstall_flow, update, update_flow
+from voice_studio.core import guided_flow, lansend, phonecert, refresh_flow, reportcmd, reportcmd_flow, scratchmove, scratchmove_flow, uninstall, uninstall_flow, update, update_flow, wsl
 from voice_studio.core.registry import load_registry
 from voice_studio.core.system import CommandResult
 from voice_studio.core.text import Catalog, TextError
@@ -24,7 +24,7 @@ from voice_studio.core.text import Catalog, TextError
 PKG = Path(__file__).resolve().parents[1]
 CAT = text.load_catalog("en")
 SHIPPED_PY = sorted([p for p in (PKG / "core").glob("*.py") if p.name not in {"text.py", "describe.py"}] + list((PKG / "window").glob("*.py")))
-NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup", "env", "newproject", "ackimport", "voicezip", "dataset", "commands", "progress", "copyin", "buildenv", "connection", "startvoice", "phonemes", "listen", "cli", "projects", "profiles", "recordings", "voices", "rounds", "freeup", "voicefile", "window", "guided", "backup", "refresh", "uninstall", "scratchmove", "update", "reportcmd", "phonecert", "lansend")
+NAMESPACES = ("ui", "preflight", "apt", "fetch", "job", "project", "scratch", "budget", "report", "setup", "env", "newproject", "ackimport", "voicezip", "dataset", "commands", "progress", "copyin", "buildenv", "connection", "startvoice", "phonemes", "listen", "cli", "projects", "profiles", "recordings", "voices", "rounds", "freeup", "voicefile", "window", "guided", "backup", "refresh", "uninstall", "scratchmove", "update", "reportcmd", "phonecert", "lansend", "wsl")
 KEY = re.compile(r"^(%s)\.[a-z0-9_]+(\.[a-z0-9_]+)*$" % "|".join(NAMESPACES))
 
 
@@ -191,7 +191,7 @@ def test_the_wording_rules_can_actually_fail():          # mutation guards: each
 
 def test_the_three_parts_of_a_failure_are_not_the_same_sentence_and_the_middle_one_says_what_happened_to_the_files():
     says_something_about_change = ("nothing", "kept", "deleted", "left", "no project", "not opened", "not changed", "not saved")
-    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("profiles", profiles.ERROR_CODES), ("recordings", recordings.ERROR_CODES), ("env", envbuild.ERROR_CODES), ("newproject", newproject.ERROR_CODES), ("ackimport", ackimport.ERROR_CODES), ("copyin", copyin.ERROR_CODES), ("voicezip", voicezip.ERROR_CODES), ("commands", commands.ERROR_CODES), ("reportcmd", reportcmd.ERROR_CODES), ("startvoice", startvoice.ERROR_CODES), ("rounds", rounds.ERROR_CODES), ("freeup", freeup.ERROR_CODES), ("voicefile", voicefile.ERROR_CODES), ("listen", listen.ERROR_CODES), ("phonemes", phonemes.ERROR_CODES), ("backup", projectbackup.ERROR_CODES), ("refresh", refresh.ERROR_CODES), ("uninstall", uninstall.ERROR_CODES), ("scratchmove", scratchmove.ERROR_CODES), ("update", update.ERROR_CODES), ("phonecert", phonecert.ERROR_CODES), ("lansend", lansend.ERROR_CODES), ("window", launcher.ERROR_CODES + winshortcut.ERROR_CODES)):
+    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("profiles", profiles.ERROR_CODES), ("recordings", recordings.ERROR_CODES), ("env", envbuild.ERROR_CODES), ("newproject", newproject.ERROR_CODES), ("ackimport", ackimport.ERROR_CODES), ("copyin", copyin.ERROR_CODES), ("voicezip", voicezip.ERROR_CODES), ("commands", commands.ERROR_CODES), ("reportcmd", reportcmd.ERROR_CODES), ("startvoice", startvoice.ERROR_CODES), ("rounds", rounds.ERROR_CODES), ("freeup", freeup.ERROR_CODES), ("voicefile", voicefile.ERROR_CODES), ("listen", listen.ERROR_CODES), ("phonemes", phonemes.ERROR_CODES), ("backup", projectbackup.ERROR_CODES), ("refresh", refresh.ERROR_CODES), ("uninstall", uninstall.ERROR_CODES), ("scratchmove", scratchmove.ERROR_CODES), ("update", update.ERROR_CODES), ("phonecert", phonecert.ERROR_CODES), ("lansend", lansend.ERROR_CODES), ("wsl", wsl.ERROR_CODES), ("window", launcher.ERROR_CODES + winshortcut.ERROR_CODES)):
         for code in codes:
             parts = ds.error_text(CAT, ns, code)
             assert len({parts.what, parts.changed, parts.next}) == 3 and all(p and "." in p for p in (parts.what, parts.changed, parts.next)), (ns, code)
@@ -215,7 +215,7 @@ def code_keys():
 
 def derived_keys():
     keys = set()
-    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("profiles", profiles.ERROR_CODES), ("recordings", recordings.ERROR_CODES), ("env", envbuild.ERROR_CODES), ("newproject", newproject.ERROR_CODES), ("ackimport", ackimport.ERROR_CODES), ("copyin", copyin.ERROR_CODES), ("voicezip", voicezip.ERROR_CODES), ("commands", commands.ERROR_CODES), ("reportcmd", reportcmd.ERROR_CODES), ("startvoice", startvoice.ERROR_CODES), ("rounds", rounds.ERROR_CODES), ("freeup", freeup.ERROR_CODES), ("voicefile", voicefile.ERROR_CODES), ("listen", listen.ERROR_CODES), ("phonemes", phonemes.ERROR_CODES), ("backup", projectbackup.ERROR_CODES), ("refresh", refresh.ERROR_CODES), ("uninstall", uninstall.ERROR_CODES), ("scratchmove", scratchmove.ERROR_CODES), ("update", update.ERROR_CODES), ("phonecert", phonecert.ERROR_CODES), ("lansend", lansend.ERROR_CODES), ("window", launcher.ERROR_CODES + winshortcut.ERROR_CODES)):
+    for ns, codes in (("fetch", fetch.ERROR_CODES), ("job", jobs.ERROR_CODES), ("project", project.ERROR_CODES), ("profiles", profiles.ERROR_CODES), ("recordings", recordings.ERROR_CODES), ("env", envbuild.ERROR_CODES), ("newproject", newproject.ERROR_CODES), ("ackimport", ackimport.ERROR_CODES), ("copyin", copyin.ERROR_CODES), ("voicezip", voicezip.ERROR_CODES), ("commands", commands.ERROR_CODES), ("reportcmd", reportcmd.ERROR_CODES), ("startvoice", startvoice.ERROR_CODES), ("rounds", rounds.ERROR_CODES), ("freeup", freeup.ERROR_CODES), ("voicefile", voicefile.ERROR_CODES), ("listen", listen.ERROR_CODES), ("phonemes", phonemes.ERROR_CODES), ("backup", projectbackup.ERROR_CODES), ("refresh", refresh.ERROR_CODES), ("uninstall", uninstall.ERROR_CODES), ("scratchmove", scratchmove.ERROR_CODES), ("update", update.ERROR_CODES), ("phonecert", phonecert.ERROR_CODES), ("lansend", lansend.ERROR_CODES), ("wsl", wsl.ERROR_CODES), ("window", launcher.ERROR_CODES + winshortcut.ERROR_CODES)):
         keys |= {"%s.error.%s.%s" % (ns, code, part) for code in codes for part in ("what", "changed", "next")}
     keys |= {"scratch.refuse." + c for c in scratch.REFUSAL_CODES} | {"scratch.warn." + c for c in scratch.WARNING_CODES}
     keys |= {"scratch.speed." + c for c in scratch.SPEED_CODES} | {"job.status." + s.value for s in jobs.JobStatus}
@@ -311,6 +311,7 @@ def test_every_error_the_modules_raise_is_in_its_list_and_every_listed_one_is_ra
                                  (PKG / "core/reportcmd_flow.py", "ReportError", ("needs_problem", "needs_job", "no_place")),
                                  (PKG / "core/phonecert.py", "PhoneCertError", phonecert.ERROR_CODES),
                                  (PKG / "core/lansend.py", "SendError", lansend.ERROR_CODES),
+                                 (PKG / "core/wsl.py", "WslError", wsl.ERROR_CODES),
                                  (PKG / "core/launcher.py", "LauncherError", launcher.ERROR_CODES),
                                  (PKG / "core/winshortcut.py", "LauncherError", winshortcut.ERROR_CODES + ("odd_path", "foreign_file"))):
         raised = codes_in_calls(path, callee) - {"consent_problems"}

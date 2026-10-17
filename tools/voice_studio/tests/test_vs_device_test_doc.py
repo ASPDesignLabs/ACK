@@ -1651,7 +1651,7 @@ def test_the_send_section_names_the_things_the_listener_really_does_and_says_wha
     from voice_studio.core import lansend, phonecert
     body = " ".join(section("I16.").split())
     assert "**New, and not yet run on a real computer or a real phone.**" in body and "It is the one place the tool **listens** for a connection" in body
-    assert "for up to ten minutes" in body and lansend.MINUTES == 10 and "port 8443" in body and lansend.DEFAULT_PORT == 8443 and "TCP port 8443" in body
+    assert "for up to ten minutes" in body and lansend.MINUTES == 10 and "port 8443" in body and lansend.DEFAULT_PORT == 8443
     assert "**Not run on a real network, on WSL's network, through a real phone's browser, or with a phone camera**" in body
     assert "`authority.key` (permissions `-rw-------`)" in body and phonecert.KEY_FILE == "authority.key" and "`%s`" % phonecert.CERT_FILE in body and "`drwx------`" in body
     for pair in phonecert.PRIVATE_RANGES:
@@ -1661,3 +1661,56 @@ def test_the_send_section_names_the_things_the_listener_really_does_and_says_wha
     assert "Section I16:" in doc_text() and "certificate file section I16 made" in section("M.")
     names = re.findall(r"^## (I16|I15|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
     assert names.index("I15") < names.index("I16") < names.index("J") and len(i16_blocks()) == 9
+
+
+# ---------------------------------------------------------------- section I17: Ubuntu under Windows, the phone and the idle stop
+
+def i17_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I17."), flags=re.S | re.M)]
+
+
+def test_the_wsl_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import wsl_flow
+    found = re.findall(r"python3 -m voice_studio\.wsl ([a-z]+)([^\n`;<|&]*)", section("I17."))
+    assert found and {c for c, _ in found} == {"check", "phone", "idle", "restart"}
+    seen = set()
+    for command, rest in found:
+        if command == "restart":
+            assert command not in wsl_flow.COMMANDS
+            continue
+        assert command in wsl_flow.COMMANDS
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert words[i] in wsl_flow.OPTIONS[command], (command, words[i])
+                seen.add(words[i])
+                i += 2 if words[i] in ("--windows-user", "--port") else 1
+            else:
+                i += 1
+    assert seen >= {"--windows-user", "--port", "--yes"}
+
+
+def test_every_sentence_the_wsl_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I17."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "wc ", "cat ", "T=", "echo ", "rm ", "mv ", "[", "<", "openssl ", "tar ", "ss ", "wsl ", "wsl.exe", "explorer.exe", "ACK ", "%",
+                                                                              "type ", "ip ", "wslinfo", "mkdir ", "printf ", "cp ", "python3 -m", "C:\\", "Windows ", "networkingMode", "instanceIdleTimeout"))]
+    assert len(quoted) >= 18, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_wsl_section_names_what_the_commands_really_write_and_say_and_what_was_not_run():
+    from voice_studio.core import wsl
+    body = " ".join(section("I17.").split())
+    assert "**New, and not yet run on a real Windows computer.**" in body and "**Not run on a real Windows computer**" in body
+    assert "`networkingMode=mirrored` in `[wsl2]`" in body and (wsl.KEY_NETWORK, wsl.MIRRORED, wsl.SECTION_NETWORK) == ("networkingMode", "mirrored", "wsl2")
+    assert "`instanceIdleTimeout=-1` in `[general]`" in body and (wsl.KEY_IDLE, wsl.NEVER, wsl.SECTION_IDLE) == ("instanceIdleTimeout", "-1", "general")
+    assert "build 22621" in body and wsl.MIRRORED_MIN_BUILD == 22621 and "Windows 11 version 22H2" in body
+    assert "They never restart WSL, never run the firewall command (they print it), and change nothing on Windows but that one file." in body
+    assert "Microsoft's own, copied from their page on WSL networking, and was not tried" in body
+    assert ".wslconfig.bak" in body and "`.wslconfig.bak-` and the time" in body and "`wsl.exe --shutdown`" in body
+    assert "Section I17:" in doc_text() and "pretend Windows user folder section I17 made" in section("M.")
+    names = re.findall(r"^## (I17|I16|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I16") < names.index("I17") < names.index("J") and len(i17_blocks()) == 12

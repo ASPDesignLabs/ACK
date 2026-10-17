@@ -1111,3 +1111,54 @@ def test_a_reminder_writes_nothing(rig):
     rig.world.dataset()
     rig.run(*start_args(), answers=["no"])
     assert not os.path.exists(rig.home.state + "/backups.json") and not os.path.exists(rig.home.backups)
+
+
+# ---------------------------------------------------------------- Ubuntu in Windows stops with its last window (finding F3)
+
+def _under_windows(rig, config):
+    from vs_fakes import PROC_WSL2
+    system = FakeSystem(proc_version=PROC_WSL2, environ={"WSL_DISTRO_NAME": "Ubuntu-24.04"}, present={"/mnt/c", "/mnt/c/Users/Anna/.wslconfig"}, dirs=["/mnt/c/Users/Anna"],
+                        listings={"/mnt/c/Users": ["Anna"]}, disks=rig.system.disks)
+    if config is not None:
+        system.files["/mnt/c/Users/Anna/.wslconfig"] = config
+    rig.system = system
+    return system
+
+
+WSL_IDLE_NOTICE = "This is Ubuntu under Windows. If you close the last Ubuntu window while the round runs, Ubuntu can stop and take the round with it. To prevent that, run: python3 -m voice_studio.wsl idle"
+
+
+def test_a_round_started_in_ubuntu_under_windows_without_the_setting_says_how_to_keep_ubuntu_running_before_it_asks(rig):
+    rig.world.dataset()
+    system = _under_windows(rig, "[wsl2]\nmemory=8GB\n")
+    code, io = rig.run(*start_args(), answers=["yes"])
+    assert code == 0 and len(rig.started) == 1 and WSL_IDLE_NOTICE in io.lines
+    assert io.events.index(("say", WSL_IDLE_NOTICE)) < next(i for i, e in enumerate(io.events) if e[0] == "ask")
+    assert system.ran and all(os.path.basename(a[0]) != "cmd.exe" for a in system.ran), "no Windows program was started to find out"
+
+
+def test_the_notice_is_also_said_when_the_settings_file_cannot_be_found_and_is_never_a_reason_to_stop(rig):
+    rig.world.dataset()
+    system = _under_windows(rig, None)
+    system.listings["/mnt/c/Users"] = ["Anna", "Ben"]
+    system.dirs.add("/mnt/c/Users/Ben")
+    code, io = rig.run(*start_args(), answers=["yes"])
+    assert code == 0 and len(rig.started) == 1 and WSL_IDLE_NOTICE in io.lines
+
+
+def test_with_the_setting_in_place_or_not_under_windows_the_notice_is_not_said(rig):
+    rig.world.dataset()
+    _under_windows(rig, "[general]\ninstanceIdleTimeout=-1\n")
+    code, io = rig.run(*start_args(), answers=["no"])
+    assert WSL_IDLE_NOTICE not in io.lines
+    rig.system = FakeSystem(disks=rig.system.disks)
+    code, io = rig.run(*start_args(), answers=["no"])
+    assert WSL_IDLE_NOTICE not in io.lines and "wsl" not in io.text.lower()
+
+
+def test_the_notice_is_not_said_when_the_round_cannot_start_anyway(rig):
+    rig.world.dataset()
+    _under_windows(rig, None)
+    rig.set_free(1)
+    _code, io = rig.run(*start_args(), answers=["yes"])
+    assert WSL_IDLE_NOTICE not in io.lines and rig.started == []

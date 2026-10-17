@@ -15,7 +15,7 @@ import os
 from datetime import datetime
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import commands, freeup, jobs, rounds as rd, startvoice as sv, trainguard as tg
+from . import commands, freeup, jobs, rounds as rd, startvoice as sv, trainguard as tg, wsl
 from .backupnudge import nudge_lines as backup_nudge
 from .buildenv_flow import duration_text
 from .diskbudget import DEFAULT_TABLE, MIB, DriveMap, Level, Role, Watch, floors_for, watch as disk_watch
@@ -504,6 +504,8 @@ def _start(args: Sequence[str], home: DataHome, registry: Registry, training: Tr
         return EXIT_NOTHING_DONE                                          # said above, in words, with nothing started; --yes does not get past this
     for line in backup_nudge(home, ctx.project, ctx.paths, cat, record):      # a reminder before training, never a stop (plan D7)
         io.say(line)
+    if wsl.idle_state(system) in (wsl.IDLE_STOPS, wsl.IDLE_UNKNOWN):          # Ubuntu in Windows stops about a minute after its last window closes (finding F3)
+        io.say(cat.t("rounds.start.wsl_idle", command="python3 -m voice_studio.wsl idle"))
     declined = _confirmed(parsed, cat.t("rounds.start.question", number=plan.number), cat, io)
     if declined is not None:
         return declined
