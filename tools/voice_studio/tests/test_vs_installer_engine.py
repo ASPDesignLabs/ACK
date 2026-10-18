@@ -477,6 +477,8 @@ def test_setting_up_wsl_asks_windows_once_for_exactly_the_platform_and_no_distri
     result = engine(tmp_path, "platform", replies=no_wsl())
     assert result["elevated"][0]["ArgumentLine"] == "--install --no-distribution" and len(result["elevated"]) == 1
     assert result["code"] == 3 and any("must restart" in s for s in result["said"])
+    assert "Setting up WSL. Windows may ask you to allow this. It can take a few minutes." in result["said"]
+    assert "platform wsl.exe --install --no-distribution -> ran=True code=0 declined=False" in (tmp_path / "engine.log").read_text()
 
 
 @needs_pwsh
@@ -490,6 +492,7 @@ $code = @(Invoke-AckVsEngine -Step 'platform' -Say $say -Wsl $wsl -Elevate $elev
 ConvertTo-Json -InputObject @{ code = $code; said = @($said); elevated = @($elevated).Count } -Compress
 """, tmp_path)
     assert result["code"] == 0 and result["elevated"] == 1
+    assert state_of(tmp_path)["platform"] == "done" and "platform_boot" not in state_of(tmp_path)
 
 
 @needs_pwsh
@@ -1082,7 +1085,7 @@ def test_run_again_after_the_restart_with_wsl_still_silent_says_why_and_does_not
     assert result["code"] == 1 and result["elevated"] == []
     message = " ".join(result["said"])
     assert "restarted since, but WSL still does not answer" in message and "must restart" not in message and "virtualization" in message and "installer.log" in message
-    assert state_of(tmp_path)["platform"] == "failed"
+    assert state_of(tmp_path)["platform"] == "failed" and "platform_boot" not in state_of(tmp_path)
 
 
 @needs_pwsh
@@ -1236,3 +1239,35 @@ def test_the_state_file_takes_a_key_of_32_letters_and_a_value_of_200_characters_
     run_ps("Update-AckVsEngState -Values @{ %s = 'one'; %s = 'two' }\n'null' | ConvertTo-Json -Compress" % ("d" * 32, "e" * 33), tmp_path)
     keys = set(state_of(tmp_path))
     assert "d" * 32 in keys and "e" * 33 not in keys
+
+
+@needs_pwsh
+def test_the_state_folder_is_made_when_it_is_not_there_and_a_plain_file_name_is_written_where_the_program_stands(tmp_path):
+    run_ps("$env:ACK_VS_ENGINE_STATE = %s\nUpdate-AckVsEngState -Values @{ a = '1' }\n'null' | ConvertTo-Json -Compress" % lit(str(tmp_path / "deep" / "er" / "state.ini")), tmp_path)
+    assert (tmp_path / "deep" / "er" / "state.ini").read_bytes().startswith(b"a=1\r\n")
+    run_ps("Set-Location %s\n[Environment]::CurrentDirectory = %s\n$env:ACK_VS_ENGINE_STATE = 'plain.ini'\nUpdate-AckVsEngState -Values @{ b = '2' }\n'null' | ConvertTo-Json -Compress" % (lit(str(tmp_path)), lit(str(tmp_path))), tmp_path)
+    assert (tmp_path / "plain.ini").read_bytes().startswith(b"b=2\r\n")
+
+
+@needs_pwsh
+@pytest.mark.parametrize("scenario", ["no_wsl", "wsl_no_ubuntu", "ubuntu_with_account", "restart_waiting", "earlier_run"])
+def test_the_check_says_aloud_exactly_what_it_writes_in_the_result_file(tmp_path, scenario):
+    """What the wizard shows is the result file; what the details list shows is what is said. They must be the same sentences in the same order."""
+    options, replies = "", {}
+    if scenario == "no_wsl":
+        replies = no_wsl()
+    elif scenario == "wsl_no_ubuntu":
+        replies = {"-l -v": reply([], code=1), "--status": reply(["Default Version: 2"])}
+    elif scenario == "ubuntu_with_account":
+        replies = {"-l -v": reply(LISTING), "getent passwd": reply(PASSWD_ANNA)}
+    elif scenario == "restart_waiting":
+        replies = no_wsl()
+        (tmp_path / "state.ini").write_text("platform=restart\r\nplatform_boot=%s\r\n" % T1, encoding="ascii")
+        options = "-BootStamp { return %s }" % lit(T1)
+    else:
+        replies = {"-l -v": reply(LISTING), "getent passwd": reply(PASSWD_ROOT_ONLY)}
+        (tmp_path / "state.ini").write_text("stage=distro\r\naccount=anna\r\n", encoding="ascii")
+    result, (_values, lines) = check(tmp_path, replies=replies, options=options)
+    written = [lines[str(i)].split("|", 1)[1] for i in range(1, len(lines))]
+    assert result["said"][0] == "Looking at this computer. Nothing is changed at this step."
+    assert result["said"][1:] == written and len(written) >= 2

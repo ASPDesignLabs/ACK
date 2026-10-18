@@ -231,6 +231,7 @@ function Update-AckVsEngState {
     param([hashtable]$Values, [string]$Path = (Get-AckVsEngStatePath))
     if (-not $Path) { return }
     try {
+        $Path = [System.IO.Path]::GetFullPath($Path)                 # one place for every call below: .NET and PowerShell would otherwise read a relative name from different folders
         $state = Read-AckVsEngState -Path $Path
         foreach ($key in @($Values.Keys)) {
             if ($key -notmatch '^[a-z_]{1,32}\z' -or $key -match 'pass|secret') { continue }
