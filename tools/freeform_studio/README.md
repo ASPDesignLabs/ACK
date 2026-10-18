@@ -229,7 +229,7 @@ What happens:
   for you: a flagged piece waits for you.
 
 **Finishing recordings without the server.** The server decodes, listens to and cuts a recording as soon as it arrives. If you would rather not start it
-(a program such as ACK Voice Studio does this), `python -m freeform_studio.process --output <recordings folder>` does the same work for every recording
+(a program such as ACK Voice Studio, which lives in its own repository, `ASPDesignLabs/ACK-Voice-Studio`, does this), `python -m freeform_studio.process --output <recordings folder>` does the same work for every recording
 that is waiting, then stops. It needs the speech model to be on this computer already (it never downloads one), it can be stopped and run again, and it
 changes nothing but the recordings that were waiting. `--json` prints one JSON object per line instead of sentences.
 

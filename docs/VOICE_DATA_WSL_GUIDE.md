@@ -4,7 +4,7 @@ A copy-paste guide for inspecting, checking, splitting, and backing up the recor
 Piper voice, all from a WSL terminal. Companion to [VOICE_TRAINING_GUIDE.md](VOICE_TRAINING_GUIDE.md), which
 covers the pipeline itself (setup, training, export, importing into ACK).
 
-> **This is the manual route.** These commands inspect, check and back up the data of a hand-made setup. ACK Voice Studio keeps recordings in a project of its own and does these checks for you (how much has been recorded, what to do next, a checked backup). Start with [VOICE_STUDIO_GUIDE.md](VOICE_STUDIO_GUIDE.md). The commands here still work on the folders this guide names, and they leave the `~/ack-voice-studio` folder alone unless you point them at it.
+> **This is the manual route.** These commands inspect, check and back up the data of a hand-made setup. ACK Voice Studio keeps recordings in a project of its own and does these checks for you (how much has been recorded, what to do next, a checked backup). Start with [VOICE_STUDIO_GUIDE.md](https://github.com/ASPDesignLabs/ACK-Voice-Studio/blob/main/docs/VOICE_STUDIO_GUIDE.md) (in the ACK Voice Studio repository, which was split out of this one). The commands here still work on the folders this guide names, and they leave the `~/ack-voice-studio` folder alone unless you point them at it.
 
 
 **About the "Example output" blocks.** Every command below was actually executed, on Ubuntu with ffmpeg 6.1,
