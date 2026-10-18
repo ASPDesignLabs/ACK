@@ -29,8 +29,15 @@ def scale() -> float:
 
 
 def _apply(widget: Gtk.Widget, values: Dict[str, int]) -> None:
-    for name, value in values.items():
-        widget.set_property(name.replace("_", "-"), px(value))
+    """Set each property at the current scale. A scrolled window refuses a minimum height above the maximum it still holds (GTK prints a critical warning and keeps the old minimum), and a
+    jump of the scale can put the new minimum above the old maximum; so when both are given the minimum is cleared first, the maximum is set, and the minimum is set last."""
+    names = list(values)
+    if "min_content_height" in values and "max_content_height" in values:
+        widget.set_property("min-content-height", -1)
+        names.remove("min_content_height")
+        names.append("min_content_height")
+    for name in names:
+        widget.set_property(name.replace("_", "-"), px(values[name]))
 
 
 def track(widget: Gtk.Widget, **values: int) -> Gtk.Widget:

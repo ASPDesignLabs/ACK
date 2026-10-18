@@ -10,6 +10,9 @@ Environment this was built against: Windows 11, WSL2 (Ubuntu), an RTX
 (the current maintained Piper fork), on-device engine
 [`sherpa-onnx`](https://github.com/k2-fsa/sherpa-onnx) inside ACK.
 
+> **This is the manual route.** ACK Voice Studio does the work of this guide with a window and a few terminal commands, pins every version, and asks before each step. Start with [VOICE_STUDIO_GUIDE.md](VOICE_STUDIO_GUIDE.md). Keep this guide for when you want to see what happens underneath, or when Voice Studio cannot run on your computer. The two can differ in small ways: the tool builds its own pinned copy of the trainer under `~/ack-voice-studio/tool` and does not use a `~/piper1-gpl` clone.
+
+
 ---
 
 ## 0. The pipeline, end to end

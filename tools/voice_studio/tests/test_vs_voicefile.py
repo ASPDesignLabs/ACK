@@ -10,7 +10,7 @@ import pytest
 from vs_rounds_helpers import NOW, make_world, slurp, stamp
 from vs_voicefile_helpers import MakerSystem, TOOLS, finished_rounds, tree_of, write_settings
 from vs_voice_helpers import PATCHED, onnx_bytes, piper_config
-from voice_studio.core import commands, rounds as rd, voicefile as vf, voicezip
+from voice_studio.core import commands, modelcard, rounds as rd, voicefile as vf, voicezip
 from voice_studio.core.diskbudget import DEFAULT_TABLE, Level, floors_for
 
 STAMP = "2026-10-11T13:00:00Z"
@@ -31,10 +31,10 @@ def code_of(fn, *a, **kw):
     return caught.value.code
 
 
-def make(world, plan=None, system=None, stages=None):
+def make(world, plan=None, system=None, stages=None, card=None):
     plan = plan or plan_for(world)
     system = system or MakerSystem()
-    return vf.make_voice(plan, world.training, str(TOOLS), system, stages.append if stages is not None else None), system
+    return vf.make_voice(plan, world.training, str(TOOLS), system, stages.append if stages is not None else None, card), system
 
 
 # ---------------------------------------------------------------- the plan
@@ -280,3 +280,97 @@ def test_the_voice_files_made_before_are_the_zips_that_sit_in_a_folder_of_the_sa
     os.makedirs(world.paths.exports + "/real")
     os.symlink(str(elsewhere / "linked.zip"), world.paths.exports + "/real/real.zip")           # a real folder whose zip is a link
     assert vf.existing_voice_files(world.paths) == ((os.path.basename(made.folder), made.zip_path, made.zip_bytes),)
+
+
+# ---------------------------------------------------------------- the card beside the zip
+
+def a_card(made):
+    return modelcard.Card("a card for %s\n" % os.path.basename(made.zip_path))
+
+
+def test_with_no_card_asked_for_none_is_written_and_the_five_steps_are_the_only_ones_told(world):
+    finished_rounds(world, 2)
+    stages = []
+    made, _ = make(world, stages=stages)
+    assert made.card_path == "" and stages == list(vf.STAGES) and not os.path.exists(made.folder + "/" + modelcard.CARD_NAME)
+
+
+def test_a_card_is_written_last_beside_the_zip_after_the_zip_was_read_back(world):
+    finished_rounds(world, 2)
+    stages, handed = [], []
+
+    def card(made):
+        handed.append((made, os.path.isfile(made.zip_path), stages[:]))
+        return a_card(made)
+
+    made, _ = make(world, stages=stages, card=card)
+    assert stages == list(vf.STAGES) + [vf.CARD_STAGE] and vf.CARD_STAGE == "card"
+    assert made.card_path == made.folder + "/" + modelcard.CARD_NAME and slurp(made.card_path) == ("a card for %s\n" % os.path.basename(made.zip_path)).encode()
+    seen, zip_there, told = handed[0]
+    assert len(handed) == 1 and zip_there and told == list(vf.STAGES) + [vf.CARD_STAGE] and seen.zip_bytes == os.stat(made.zip_path).st_size and seen.card_path == ""
+
+
+def test_the_card_is_not_inside_the_zip_and_the_zip_still_has_exactly_the_two_files_the_phone_takes(world):
+    finished_rounds(world, 2)
+    made, _ = make(world, card=a_card)
+    with zipfile.ZipFile(made.zip_path) as archive:
+        assert sorted(archive.namelist()) == ["model.onnx", "model.onnx.json"]
+    assert voicezip.verify_voice_zip(__import__("pathlib").Path(made.zip_path)) == ()
+
+
+def test_the_cards_folder_gains_only_the_card_and_everything_else_is_as_before(world):
+    finished_rounds(world, 2)
+    plan = plan_for(world)
+    before = {p: slurp(p) for p in tree_of(world.paths.root)}
+    make(world, plan, card=a_card)
+    new = [p for p in tree_of(world.paths.root) if p not in before]
+    assert sorted(os.path.basename(p) for p in new) == sorted(["my_voice.onnx", "my_voice.onnx.json", "my_voice.onnx.before-patch", os.path.basename(plan.zip_path), modelcard.CARD_NAME])
+    assert all(os.path.exists(p) and slurp(p) == data for p, data in before.items())
+
+
+@pytest.mark.parametrize("failure", [OSError(28, "No space left on device"), RuntimeError("boom"), ValueError("odd")])
+def test_a_card_that_cannot_be_made_leaves_the_good_voice_file_and_says_card_failed_with_the_folder(world, failure):
+    finished_rounds(world, 2)
+    plan = plan_for(world)
+
+    def broken(_made):
+        raise failure
+
+    with pytest.raises(vf.VoiceFileError) as caught:
+        make(world, plan, card=broken)
+    error = caught.value
+    assert error.code == "card_failed" and error.folder == plan.folder and error.stage == "card"
+    assert error.detail == (failure.strerror if isinstance(failure, OSError) else type(failure).__name__)
+    assert voicezip.verify_voice_zip(__import__("pathlib").Path(plan.zip_path)) == () and not os.path.exists(plan.folder + "/" + modelcard.CARD_NAME)
+
+
+def test_a_card_that_cannot_be_written_is_card_failed_too_and_the_folder_holds_only_the_voice_file(world, monkeypatch):
+    finished_rounds(world, 2)
+    plan = plan_for(world)
+
+    def no_room(_folder, _card):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(modelcard, "write_card", no_room)
+    with pytest.raises(vf.VoiceFileError) as caught:
+        make(world, plan, card=a_card)
+    assert caught.value.code == "card_failed" and caught.value.detail == "No space left on device"
+    assert sorted(os.listdir(plan.folder)) == sorted(["my_voice.onnx", "my_voice.onnx.json", "my_voice.onnx.before-patch", os.path.basename(plan.zip_path)])
+
+
+def test_a_stop_while_the_card_is_made_is_not_swallowed_as_a_card_failure(world):
+    finished_rounds(world, 2)
+
+    def stop(_made):
+        raise KeyboardInterrupt()
+
+    with pytest.raises(KeyboardInterrupt):
+        make(world, card=stop)
+
+
+def test_no_card_is_asked_for_when_a_step_before_it_fails(world):
+    finished_rounds(world, 2)
+    asked = []
+    with pytest.raises(vf.VoiceFileError) as caught:
+        make(world, system=MakerSystem(patch="fail"), card=lambda made: asked.append(made) or a_card(made))
+    assert caught.value.code == "patch_failed" and asked == []

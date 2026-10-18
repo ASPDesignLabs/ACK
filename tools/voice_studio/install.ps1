@@ -32,7 +32,7 @@ function Get-AckVsSettings {
         DefaultRef     = 'main'              # what is fetched when nothing is chosen; get.sh holds the same word. A release name replaces it when one is cut.
         InstallDistro  = 'Ubuntu-24.04'
         Accepted       = @('Ubuntu-24.04', 'Ubuntu-22.04', 'Ubuntu')
-        MinBuild       = 19044               # Windows 10 version 21H2: the first Windows 10 that shows Linux windows (WSLg). Windows 11 is higher.
+        MinBuild       = 22000               # Windows 11 (version 21H2), the first Windows 11. Windows 10 is not supported: virtualization and WSL cannot be counted on there.
         MinFreeGiB     = 25                  # the tool's own bare minimum (docs/VOICE_STUDIO_IT_GUIDE.md section 3)
         GetScript      = 'tools/voice_studio/get.sh'
         RawHost        = 'https://raw.githubusercontent.com'
@@ -45,7 +45,7 @@ function Get-AckVsText {
         title          = 'ACK Voice Studio: setting up on Windows'
         intro          = 'This sets up ACK Voice Studio inside Ubuntu on this computer and then opens it. It asks before it changes anything. It never asks for your Windows password and never changes PowerShell''s script rules.'
         looking        = 'Looking at this computer. Nothing is changed at this step.'
-        windows_old    = 'This version of Windows is too old to show Linux windows. It needs Windows 10 version 21H2 or newer, or Windows 11. Update Windows, then run this again.'
+        windows_old    = 'ACK Voice Studio needs Windows 11, and this computer has an older Windows. Nothing was changed. Update to Windows 11 if this computer can, then run this again.'
         windows_ok     = 'Windows: ok (build {build}).'
         not_64         = 'This is not a 64-bit Windows, so Ubuntu cannot be set up here.'
         virt_off       = 'Virtualization looks switched off. Linux in Windows needs it. It is a setting in the computer''s startup settings (the firmware), and where it is differs from one computer to the next.'
@@ -95,12 +95,12 @@ function Format-AckVsText {
 
 function Test-AckVsRefName {
     param([string]$Name)
-    ($Name -match '^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$') -and ($Name -notmatch '\.\.') -and ($Name -notmatch '//') -and ($Name -notmatch '/$')
+    ($Name -match '^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}\z') -and ($Name -notmatch '\.\.') -and ($Name -notmatch '//') -and ($Name -notmatch '/$')
 }
 
 function Test-AckVsDistroName {
     param([string]$Name)
-    $Name -match '^Ubuntu[A-Za-z0-9._-]{0,57}$'
+    $Name -match '^Ubuntu[A-Za-z0-9._-]{0,57}\z'
 }
 
 function Read-AckVsArguments {

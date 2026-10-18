@@ -106,7 +106,7 @@ If you press Ctrl+C at any time, it stops cleanly, keeps what was finished, and 
 
 ## 4. Your first hour in the window
 
-The window has pages for Projects, Recordings, Training rounds, Voice file, Free up space and Display. Do these in order.
+The window has pages for Projects, Recordings, Training rounds, Hear the voice, Voice file, Backup, Free up space, Check the tool, Updates, Problem report and Display. The steps below use Projects, Recordings, Training rounds and Voice file, in this order. The other pages are for later: `Backup` copies a project to a safe place, `Check the tool` looks at the programs Voice Studio uses and mends them, `Updates` fetches a newer Voice Studio, and `Problem report` writes down what went wrong so that a helper can read it. Each of them shows what it will do and asks first.
 
 1. **Projects, then `New project…`.** Give the project a name and the hours of recording you expect. Say whose voice it is. Under `Starting voice` you can choose a voice to start from, or `Choose later`. It shows what it will make and asks first.
 2. **Bring in recordings.** On the Recordings page press `Bring in recordings…`. You choose the kind: an ACK package from the phone (a zip file), a folder of audio files with a text file for each, a folder of audio files with one table, or audio files alone. It shows what it found and asks before it adds anything. It only reads your files; it never changes or removes them.
@@ -121,7 +121,7 @@ The window has pages for Projects, Recordings, Training rounds, Voice file, Free
    ```
 
 7. **Training rounds, then `Start a round…`.** This needs the training programs (section 2, step 4) and a graphics card. It shows the plan and asks first. You can stop a round and start another from the one you choose.
-8. **Voice file, then `Make the voice file…`.** This makes the zip file ACK takes, from the round you chose, in a new folder. Press `Show the folder` to open it. Copy the zip file to your phone. In ACK, open AUDIO ARCHITECT, find CUSTOM VOICE and press IMPORT, then pick the zip file.
+8. **Voice file, then `Make the voice file…`.** This makes the zip file ACK takes, from the round you chose, in a new folder, with a card beside it (`MODEL_CARD.txt`) that says where the voice comes from. Press `Show the folder` to open it. Copy the zip file to your phone. In ACK, open AUDIO ARCHITECT, find CUSTOM VOICE and press IMPORT, then pick the zip file.
 
 Every button that changes something shows you what it will do and asks first. Anything that deletes shows what goes. Deleting a whole project asks twice.
 
@@ -179,6 +179,15 @@ Run the same command again first: it carries on from where it stopped and does n
 | `No supported graphics card was found, so training is switched off.` | Everything else works. For an Nvidia card, install its driver (section 1), restart, and run the command again. |
 | A web address cannot be reached | Check the internet connection. On a work network, a proxy may be in the way: ask whoever looks after it. |
 
+**If you want a helper to look.** A command that fails after it began ends with two lines about a problem report. A problem report is a plain text file: the versions, the checks on this computer, the problem and how a task ended, with your names and folders blanked and no recordings, no text you made and no phrases. You see all of it first, and it is saved only where you say:
+
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report save --to ~/problem-report.txt
+```
+
+`show` prints the report and changes nothing. `save` prints it again, asks once, and writes exactly that text to the file you name. It never replaces a file unless you add `--replace`, and the tool never sends it anywhere: read it, then give the file to the helper yourself.
+
 ---
 
 ## 8. Updating, and removing
@@ -190,23 +199,43 @@ cd ~/ack-tools && git pull
 PYTHONPATH=~/ack-tools/tools python3 -m voice_studio
 ```
 
-The second line checks everything and asks before it rebuilds anything that changed. Nothing updates by itself. If `git pull` says you are not on a branch, you installed a fixed release: to use a newer one, run the one command with `ACK_VOICE_TAG` set to the new release name and `ACK_VOICE_DIR` set to a new folder, and your old folder stays as it was.
+The second line checks everything and asks before it rebuilds anything that changed. Nothing updates by itself.
 
-**Removing.** There is no uninstall button yet. Everything below is permanent, so make a copy of your projects first: copy the folder `ack-voice-studio` from your home folder to a USB drive or an external disk that you control. Do not copy it into Dropbox, OneDrive or a similar synced folder.
+If `git pull` says you are not on a branch, you installed a fixed release: to use a newer one, run the one command with `ACK_VOICE_TAG` set to the new release name and `ACK_VOICE_DIR` set to a new folder, and your old folder stays as it was.
 
-- To take the applications-list entry away, run the `--remove-launcher` line from section 5.
-- To remove the tool and its programs, delete the folders `ack-tools` and `ack-voice-studio` in your home folder. **This deletes your projects and recordings.**
+**Looking at the releases.** To see whether ACK Voice Studio has a named release and fetch one into a new folder beside this one, without changing this one:
+
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update check
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get RELEASE
+```
+
+Each says first what it will ask github.com and shows the exact commands, then asks before it contacts anything. `get` never touches this copy: it prints two commands, one for trying the new copy and one for using it under the usual name, and you type them. Your projects and recordings stay in `ack-voice-studio` whichever copy you use. If ACK Voice Studio has not named a release yet, `check` says so. The phone app's own version names are not releases of this tool and are not listed.
+
+**Removing.** One command takes the programs the tool built and the files it downloaded off the disk. It does not touch your projects, your recordings, your backups or the starting voices you chose. Look first, then remove:
+
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall show
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall remove
+```
+
+`show` only looks. `remove` shows the same list, asks once, and removes only what it showed. It cannot remove the tool's own files or the entry in the applications list, so it prints the command for each and you run them:
+
+- To take the applications-list entry away, run the `--remove-launcher` line from section 5 (`show` prints it too).
+- To remove the tool's own files, delete the folder `ack-tools` in your home folder: `rm -r ~/ack-tools`. Do this last, because the commands above need it.
+- Your projects and recordings stay in `ack-voice-studio` in your home folder. To delete one project, use `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects delete`: it asks twice and names a backup first.
+- To delete everything, make a copy of your projects first: copy the folder `ack-voice-studio` from your home folder to a USB drive or an external disk that you control. Do not copy it into Dropbox, OneDrive or a similar synced folder. Then delete the folder `ack-voice-studio`. **This deletes your projects and recordings.** The backups the tool made are inside that folder too, in `backups`, so copy those out as well.
 - The Ubuntu programs it installed stay (they are ordinary Ubuntu programs and can be removed with `apt`).
 
 ---
 
 ## 9. What it contacts, and what stays on your computer
 
-Nothing you record leaves your computer. There are no accounts, no usage reports and no update checks. Each place below is contacted only for the reason given.
+Nothing you record leaves your computer. There are no accounts, no usage reports and no automatic update checks. Each place below is contacted only for the reason given.
 
 | Place | Why | When |
 |---|---|---|
-| `raw.githubusercontent.com` and `github.com` | To fetch the setup script and ACK's files. | The first run. |
+| `raw.githubusercontent.com` and `github.com` | To fetch the setup script and ACK's files. | The first run, and when you run the update command in section 8 and say yes. |
 | Ubuntu's package servers | The few Ubuntu programs in section 2. | Once, with your yes. |
 | The Python package site (`pypi.org` and `files.pythonhosted.org`) | The programs the tool runs on. | When you say yes to each set. |
 | `huggingface.co` | The listening model and a starting voice. | Only when you press the button or run the command, after you agree. |

@@ -18,7 +18,7 @@ import pytest
 import test_vs_device_test_doc as device_doc
 import test_vs_text as wording
 from voice_studio.core import diskbudget, envspec, preflight, registry as reg, setupplan as sp, startvoice
-from voice_studio.core import projects_flow as pf, voices_flow as vf, recordings_flow as rf, windowcli
+from voice_studio.core import projects_flow as pf, voices_flow as vf, recordings_flow as rf, uninstall_flow as uf, update_flow as upf, reportcmd_flow as rcf, windowcli
 from voice_studio.core.setup_flow import parse_options
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -203,13 +203,19 @@ def test_every_voice_studio_command_names_a_real_module_and_options_it_takes(pat
             assert set(options) <= window_options, options
         elif module == "voice_studio.projects":
             assert words[0] in pf.OPTIONS, words
+        elif module == "voice_studio.uninstall":
+            assert words[0] in uf.OPTIONS and set(options) <= set(uf.OPTIONS[words[0]]), words
+        elif module == "voice_studio.report":
+            assert words[0] in rcf.OPTIONS and set(options) <= set(rcf.OPTIONS[words[0]]), words
+        elif module == "voice_studio.update":
+            assert words[0] in upf.OPTIONS and set(options) <= set(upf.OPTIONS[words[0]]), words
         elif module == "voice_studio.voices":
             assert words[0] in vf.OPTIONS and set(options) <= (set(vf.OPTIONS[words[0]]) | {"--project"}), words
             if words[0] == "get":
                 assert startvoice.find_voice(reg.load_registry(), words[1]) == "voice-mike", words
         else:
             pytest.fail("a command for a module this test does not know: " + module)
-    assert {"voice_studio.window", "voice_studio.projects", "voice_studio.voices"} <= seen
+    assert {"voice_studio.window", "voice_studio.projects", "voice_studio.voices", "voice_studio.uninstall", "voice_studio.update", "voice_studio.report"} <= seen
 
 
 @pytest.mark.parametrize("path", GUIDES.values(), ids=GUIDES.keys())
@@ -320,10 +326,16 @@ def test_the_windows_guide_quotes_the_windows_helpers_own_sentences_and_the_ubun
 
 def test_the_pages_and_buttons_of_the_window_are_named_as_the_window_names_them():
     strings = _real_catalog()
-    for page in ("Projects", "Recordings", "Training rounds", "Voice file", "Free up space", "Display"):
-        assert page in strings, page
+    from voice_studio.core import text as catalog_text, windowmodel
+    cat = catalog_text.load_catalog("en")
+    names = [cat.t("window.nav." + page) for page in windowmodel.PAGES]
+    listed = ", ".join(names[:-1]) + " and " + names[-1]
+    assert listed == "Projects, Recordings, Training rounds, Hear the voice, Voice file, Backup, Free up space, Check the tool, Updates, Problem report and Display"
     for guide in GUIDES.values():
-        assert "pages for Projects, Recordings, Training rounds, Voice file, Free up space and Display" in text_of(guide)
+        assert "The window has pages for " + listed + "." in text_of(guide), "the guide lists the pages the window has, in the order of its list"
+        for page, claim in (("Backup", "copies a project to a safe place"), ("Check the tool", "looks at the programs Voice Studio uses and mends them"), ("Updates", "fetches a newer Voice Studio"),
+                            ("Problem report", "writes down what went wrong so that a helper can read it")):
+            assert "`%s` %s" % (page, claim) in text_of(guide), (page, guide.name)
     for button in ("New project…", "Bring in recordings…", "Get the listening model…", "Let the computer listen…", "Make a training set…", "See what a training set would hold",
                    "Start a round…", "Make the voice file…", "Show the folder", "Starting voice", "Choose later"):
         assert button in strings, button
@@ -382,9 +394,10 @@ def test_the_download_total_is_the_sum_of_the_documented_downloads():
         assert "about 5 GB in all" in text_of(guide)
 
 
-def test_the_windows_build_floor_in_the_guide_is_the_first_windows_that_shows_linux_windows():
-    assert int(re.search(r"MinBuild\s*=\s*(\d+)", SCRIPT_PS1).group(1)) == 19044
-    assert "Windows 10 version 21H2 or newer" in text_of(WIN) and "21H2 or newer" in helper_texts()["windows_old"]
+def test_the_windows_build_floor_in_the_guide_is_windows_11_and_windows_10_is_said_to_be_unsupported():
+    assert int(re.search(r"MinBuild\s*=\s*(\d+)", SCRIPT_PS1).group(1)) == 22000
+    assert "Windows 11 (any version). Windows 10 is not supported." in text_of(WIN) and "needs Windows 11" in helper_texts()["windows_old"]
+    assert "Windows 10" not in helper_texts()["windows_old"] and "should work" not in text_of(WIN)
 
 
 # ================================================================ honesty
@@ -425,7 +438,7 @@ def test_neither_guide_tells_the_reader_to_turn_off_a_security_feature_or_to_use
 
 def checklist_section():
     body = (ROOT / "docs" / "VOICE_STUDIO_DEVICE_TEST.md").read_text(encoding="utf-8")
-    return body.split("## I7. Installing from scratch", 1)[1].split("## J. Making the voice file", 1)[0]
+    return body.split("## I7. Installing from scratch", 1)[1].split("## I8. Hearing the voice", 1)[0]          # section I7 only: the sections after it quote their own tools (and openssl) and have their own tests
 
 
 def test_the_checklist_section_for_the_installation_quotes_only_what_the_tool_says():
@@ -441,3 +454,21 @@ def test_the_checklist_section_names_both_guides_and_the_commands_the_guides_giv
     assert "irm https://raw.githubusercontent.com/ASPDesignLabs/ACK/main/tools/voice_studio/install.ps1 | iex" in body
     for option in ("ACK_VOICE_CHECK", "ACK_VOICE_DRYRUN", "-Distro", "-Ref", "ACK_VOICE_TAG"):
         assert option in body
+
+
+@pytest.mark.parametrize("path", GUIDES.values(), ids=GUIDES.keys())
+def test_the_guides_say_updating_asks_first_never_touches_the_running_copy_and_is_not_automatic(path):
+    body = " ".join(text_of(path).split())
+    for claim in ("Each says first what it will ask github.com and shows the exact commands, then asks before it contacts anything.", "`get` never touches this copy",
+                  "you type them", "If ACK Voice Studio has not named a release yet, `check` says so.", "The phone app's own version names are not releases of this tool and are not listed.", "no automatic update checks", "when you run the update command in section"):
+        assert claim in body, claim
+    assert "no update checks" not in body
+
+
+@pytest.mark.parametrize("path", GUIDES.values(), ids=GUIDES.keys())
+def test_the_guides_say_the_problem_report_is_shown_first_saved_where_you_say_and_never_sent(path):
+    body = " ".join(text_of(path).split())
+    for claim in ("A command that fails after it began ends with two lines about a problem report.", "with your names and folders blanked and no recordings, no text you made and no phrases",
+                  "You see all of it first, and it is saved only where you say", "`show` prints the report and changes nothing.", "never replaces a file unless you add `--replace`",
+                  "the tool never sends it anywhere", "give the file to the helper yourself"):
+        assert claim in body, claim

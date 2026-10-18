@@ -18,7 +18,7 @@ from .core.registry import Registry, load_registry
 from .core.rounds_flow import run_rounds
 from .core.system import RealSystem
 from .core.text import load_catalog
-from .__main__ import TerminalIO
+from .__main__ import TerminalIO, reports_failures
 
 
 def training_environment(home: DataHome, registry: Registry) -> Callable[[], Tuple[Optional[EnvPaths], str]]:
@@ -26,6 +26,7 @@ def training_environment(home: DataHome, registry: Registry) -> Callable[[], Tup
     return envfind.resolver("training", home, registry, RealSystem())
 
 
+@reports_failures("rounds")
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     home, registry = DataHome(os.path.expanduser("~")), load_registry()

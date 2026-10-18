@@ -6,7 +6,7 @@ A failed step is told in three parts (plan decision D22): what happened, whether
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from .diskbudget import Level, Watch
 from .jobs import JobStatus
@@ -32,8 +32,23 @@ def check_text(cat: Catalog, check: Check) -> str:
     return cat.t(check.key, **args)
 
 
+_SHOWN: List[Tuple[str, str]] = []
+
+
+def errors_shown() -> Tuple[Tuple[str, str], ...]:
+    """The problems this program has told the person about so far, each once, in the order they were told (plan task VS-6.4: a failed command points at a problem report that
+    names the one it showed). One process is one command, so this is that command's list."""
+    return tuple(_SHOWN)
+
+
+def forget_errors_shown() -> None:
+    del _SHOWN[:]
+
+
 def error_text(cat: Catalog, namespace: str, code: str, **args: object) -> ErrorText:
     """`namespace` is "fetch", "job" or "project"; `code` is the error's `.code`."""
+    if (namespace, code) not in _SHOWN:
+        _SHOWN.append((namespace, code))
     base = "%s.error.%s." % (namespace, code)
     return ErrorText(cat.t(base + "what", **args), cat.t(base + "changed", **args), cat.t(base + "next", **args))
 

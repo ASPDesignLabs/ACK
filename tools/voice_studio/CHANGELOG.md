@@ -1,0 +1,70 @@
+# ACK Voice Studio: changelog
+
+This is the changelog of ACK Voice Studio only (`tools/voice_studio/`). The Android app's changes are in `CHANGELOG.md` at the top of the repository, and nothing here changes
+that file or the notes the app shows with `/info`.
+
+The version is `__version__` in `tools/voice_studio/__init__.py`. A release of this tool is a git tag named `voice-studio-v` plus that version, for example `voice-studio-v0.1.0`
+(`docs/VOICE_STUDIO_RELEASE_RUNBOOK.md`). The repository's other tags (`v1.0-beta.1` and the rest) belong to the phone app and are not releases of this tool.
+
+Everything below was built and tested in a build sandbox without a graphical screen, a speaker, a microphone, a GPU or a phone. What was and was not run on a real computer is
+listed, section by section, in `docs/VOICE_STUDIO_DEVICE_TEST.md`; nothing here says a step works on a real computer unless that checklist records it.
+
+## [0.0.1] - Unreleased
+
+### Added
+- **A setup program for Windows 11, so no terminal is needed to start.** `installer/` holds a wizard (`ACK-Voice-Studio-Setup-<version>.exe`, built with NSIS by `installer/build.sh`) that looks at the computer,
+  sets up WSL and Ubuntu 24.04 if they are not there, asks for an Ubuntu account name and password, fetches ACK Voice Studio from its source while it runs, sets up its programs and puts it in the
+  Start menu. **It is not signed yet, it works only on Windows 11 (build 22000 or newer), it has no silent mode, and it has not been run on a real Windows computer.** It sees the Ubuntu password you
+  type (the command-line installer never does); the password is sent once to Ubuntu and kept in no file, log or message, and is set only on an account that has none. A temporary permission it needs for the
+  install is taken away again whatever happens. Uninstalling removes only its own files and Start menu entry, never Ubuntu, the tool or any recording or voice.
+- **Windows 10 is no longer supported.** `install.ps1` stops on a Windows build older than 22000 and says Windows 11 is needed.
+- **Set-up in one command.** The guided setup (`python3 -m voice_studio`) checks the computer, asks before it installs anything, builds two sets of programs beside each other
+  (`python3 -m voice_studio.buildenv`) and ends at the window. Windows has its own one-line installer that sets up Ubuntu under WSL first.
+- **Projects and recordings.** `python3 -m voice_studio.projects` makes, shows, changes and puts away a project, with its consent note, and deletes one only after two questions;
+  `python3 -m voice_studio.recordings` brings in a package ACK saved on the phone (or a folder of audio files), lets the computer listen to what is waiting once the listening model
+  has been fetched, and makes the training set.
+- **Starting voices.** `python3 -m voice_studio.voices` lists the starting voices, shows where each one comes from before anything is downloaded, and fetches one only after you say you
+  read that and agree to the download.
+- **Training rounds.** `python3 -m voice_studio.rounds` starts a round, shows how it is going, stops it, chooses the round to use, goes back to an earlier one, keeps a note, and
+  frees the space a round used. Nothing is removed without a question that shows what goes.
+- **The voice file.** `python3 -m voice_studio.voicefile` makes the zip ACK takes from the chosen round, lists the ones made, and plays a finished voice on the computer.
+- **A card beside the voice file.** `voicefile make` (and the window's Voice file page) now ends by writing `MODEL_CARD.txt` in the same new folder, as its own file that is not inside the zip and
+  is never sent to the phone. It says where the voice comes from (the starting voice the training record names, the chain behind it and the pages that state its terms, with the date and revision
+  you acknowledged), how many rounds and minutes of training are behind it, whether the project was set up as your own voice or someone else's (for someone else's, only how the agreement was
+  given, never a name or a word of the note), the tool's version and the training programs' build, and the check codes of the two files in the zip. It does not name the project, and it
+  never says or suggests that use of a voice is allowed. If the card cannot be written, the finished zip is left as it is and the command says so.
+- **Sending the voice file over Wi-Fi.** `python3 -m voice_studio.voicefile send` gives the finished zip to a phone on the same home network, once, so that no cable is needed. The first
+  time it makes a small certificate file (limited to home-network addresses, kept in the tool's `state` folder, with its secret part readable only by you) and stops, because you put that
+  file on the phone once. After that it shows the plan, asks, and listens for up to ten minutes on one home-network address, over a secure connection, for one file, at an address that holds
+  a random secret; it stops by itself when the file has been sent, when the time is up, or after twelve requests for anything else. It prints the address and, on a terminal that can draw it,
+  a QR code. This is the first and only place the tool listens for a connection (`core/lansend.py`); it never contacts anything.
+- **Ubuntu under Windows.** `python3 -m voice_studio.wsl` (`check`, `phone` and `idle`) looks at the Windows side of Ubuntu in WSL and, after a typed yes, changes the one Windows file `.wslconfig`: mirrored
+  networking so that a phone can reach Ubuntu, and `instanceIdleTimeout=-1` so that Ubuntu is not stopped about a minute after its last window closes (and a round with it). It keeps a copy of
+  the old file, never restarts WSL and never runs the firewall command (it prints it). A round started under WSL without that setting now says so before it asks.
+- **Backup.** `python3 -m voice_studio.backup` copies a project's recordings, notes and finished voices to a folder (the one used last, or the tool's own backups folder, unless you
+  name another), reads the copy back before it counts, and restores from it by adding what is missing. It never replaces or removes an earlier backup.
+- **Refresh.** `python3 -m voice_studio.refresh` looks at the tool's own programs, downloads and notes, mends what is broken, builds a fresh copy beside the old one, and lists the
+  older copies.
+- **Move scratch.** `python3 -m voice_studio.scratch` says where a project's working files are and moves them to another place.
+- **Uninstall.** `python3 -m voice_studio.uninstall` shows what it would take off the disk and what it keeps (projects, recordings, backups and the starting voices you chose), then
+  removes only that.
+- **Update.** `python3 -m voice_studio.update` asks github.com which releases of the tool exist (tags that begin with `voice-studio-`) and fetches one into a new folder beside the copy
+  you use. It says first what it will ask, asks before it contacts anything, never changes the running copy, and prints the commands for switching so you can type them.
+- **Problem report.** `python3 -m voice_studio.report` builds a report a helper can read, with names and folders blanked and no recordings or phrases in it. It shows all of it
+  first and saves it only where you say. A command that fails after it began ends with two lines pointing at it.
+- **The window's pages for the tools.** The window has eleven pages: Projects, Recordings, Training rounds, Hear the voice, Voice file, Backup, Free up space, Check the tool, Updates,
+  Problem report and Display. Hear the voice, Backup, Check the tool, Updates and Problem report are the window's face for the commands of the same names: a button hands the command to
+  the same flow, which shows what it will do and asks with Yes and No buttons (No is where the keyboard starts). Where a command needs a folder or a name, the window asks in a small form
+  and shows every problem in it before it runs anything. Updates and the mend and fresh-copy buttons of Check the tool can lead to the internet, and only after the command says what it
+  will ask for and you say yes; nothing on these pages runs by itself or on a timer. A task that fails offers a way to the Problem report page.
+- **Guides.** A beginner guide (`docs/VOICE_STUDIO_GUIDE.md`), a page for the helper (`docs/VOICE_STUDIO_HELPER_HANDOUT.md`), two installation guides, an IT guide, a device
+  checklist and a data-sovereignty page, each held to the code by tests.
+
+### Kept the same on purpose
+- **Nothing is sent anywhere.** The tool reaches the internet only through one download module, only when you say yes to a question that names what will be asked, and never for
+  your recordings, text or voices. Nothing checks for updates by itself.
+- **Nothing is deleted unless you ask.** Every command that changes or removes something shows what it will do first and asks; with nobody to ask it does nothing.
+
+### Not done yet
+- A window page for getting a starting voice (it is still a typed command); a window page for sending the voice file over Wi-Fi (it is a typed command; the code is never drawn in the window); a window page for the WSL help; sending recordings from the phone to the computer over Wi-Fi; the recording paths for helpers; a real run on native Ubuntu,
+  with a screen reader, on a real GPU, through a real speaker and over a real connection (all of these are rows in the device checklist).

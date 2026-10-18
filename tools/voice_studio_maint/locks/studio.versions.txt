@@ -1,8 +1,10 @@
 # The exact versions of the studio environment (Freeform Studio's recorder, review and dataset programs), as input for tools/voice_studio_maint/make_lock.py.
 # Origin: the developer's own computer (Ubuntu 22.04 on WSL2, Python 3.10.12), the environment tools/freeform_studio/install.sh made, `pip freeze`, 2026-10-11.
+# Added 2026-10-15: sherpa-onnx and sherpa-onnx-core 1.13.8, the same version ACK's phone app runs (app/libs/README.md), so a finished voice can be heard on this computer with the
+# engine and settings the phone uses before it is sent (plan task VS-5.4). Nothing else changed.
 # Taken out: the three nvidia-* libraries (cuBLAS, cuDNN, NVRTC for CUDA 12) that `install.sh --gpu` adds for speech recognition on the graphics card. The guided setup
 # recognises speech on the processor, which needs none of them and keeps this environment free of proprietary libraries and about 1.6 GB smaller. Nothing else is
-# taken out, and nothing is added: pip's own metadata for these versions says every package here is needed on Python 3.10 (on 3.11 and later exceptiongroup and tomli are not).
+# taken out, and nothing else is added: pip's own metadata for these versions says every package here is needed on Python 3.10 (on 3.11 and later exceptiongroup and tomli are not).
 aiofiles==25.1.0
 anyio==4.15.1
 av==17.1.0
@@ -39,6 +41,8 @@ priority==2.0.0
 protobuf==7.36.2
 PyYAML==6.0.3
 Quart==0.20.0
+sherpa-onnx==1.13.8
+sherpa-onnx-core==1.13.8
 sympy==1.14.0
 tokenizers==0.23.2
 toml==0.10.2

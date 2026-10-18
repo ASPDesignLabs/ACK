@@ -2,6 +2,7 @@
 """The terminal front for managing profiles: edit, archive, unarchive, delete. Held to: nothing changes without a yes, what would change is shown before the question, a delete asks twice and
 the second question is never skipped by --yes, a delete names what goes and what to copy first, a task that is running stops it before any question, a profile that is put away is not used
 by any command that changes things, and a window's Yes and No buttons answer the very same questions."""
+from pathlib import Path
 import json
 import os
 
@@ -91,28 +92,28 @@ def test_help_names_the_new_commands_and_their_options(home):
 
 def test_edit_with_nothing_to_change_says_so_and_does_nothing(home):
     create_project(home.projects, "Anna", "own")
-    before = open(paths_of(home, "anna").project_json, "rb").read()
+    before = Path(paths_of(home, "anna").project_json).read_bytes()
     code, io = go(home, "edit", "anna")
     assert code == 2 and "Nothing was given to change" in io.text and io.prompts == []
-    assert open(paths_of(home, "anna").project_json, "rb").read() == before
+    assert Path(paths_of(home, "anna").project_json).read_bytes() == before
 
 
 def test_edit_shows_what_changes_before_it_asks_and_a_no_changes_nothing(home):
     create_project(home.projects, "Anna", "own", planned_hours=1)
-    before = open(paths_of(home, "anna").project_json, "rb").read()
+    before = Path(paths_of(home, "anna").project_json).read_bytes()
     code, io = go(home, "edit", "anna", "--name", "Anna B", "--hours", "2,5", answers=["no"])
     assert code == 2 and io.prompts == ["Save these changes? Type yes to save them. "]
     assert "These details of anna would change:" in io.text and "  Name: from Anna to Anna B" in io.lines and "  Planned hours: from 1 to 2.5" in io.lines
     assert io.events.index(("say", "  Name: from Anna to Anna B")) < io.events.index(("ask", io.prompts[0])) and "Nothing was changed." in io.text
-    assert open(paths_of(home, "anna").project_json, "rb").read() == before
+    assert Path(paths_of(home, "anna").project_json).read_bytes() == before
 
 
 def test_edit_with_a_yes_saves_and_keeps_the_version_from_before(home):
     create_project(home.projects, "Anna", "own")
-    before = open(paths_of(home, "anna").project_json, "rb").read()
+    before = Path(paths_of(home, "anna").project_json).read_bytes()
     code, io = go(home, "edit", "anna", "--name=Anna B", answers=["yes"])
     assert code == 0 and "Saved. The details of anna are changed." in io.text
-    assert load(home, "anna").name == "Anna B" and open(paths_of(home, "anna").previous_json, "rb").read() == before
+    assert load(home, "anna").name == "Anna B" and Path(paths_of(home, "anna").previous_json).read_bytes() == before
     assert "The version from before is kept as " + paths_of(home, "anna").previous_json in io.text
 
 
@@ -277,6 +278,64 @@ def test_delete_shows_exactly_what_goes_and_what_to_copy_first_before_it_asks(ho
     assert "Nothing was removed." in io.text and exists(home, "anna") and os.path.isfile(paths_of(home, "anna").rounds + "/rounds.json")
 
 
+def backed_up(home, project_id, destination):
+    from voice_studio.core import projectbackup as pb
+    paths = paths_of(home, project_id)
+    made = pb.create(pb.plan_backup(paths, home, project_id, destination, 10 ** 12), paths, NOW)
+    pb.record_backup(home, made, project_id, destination)
+    return made
+
+
+def test_delete_says_the_project_has_never_been_backed_up_and_how_to_make_one_before_it_asks(home):
+    create_project(home.projects, "Anna", "own")
+    code, io = go(home, "delete", "anna", answers=["no"])
+    line = "Anna has not been backed up on this computer. To make a backup first, run: python3 -m voice_studio.backup now --project anna"
+    assert line in io.lines and io.events.index(("say", line)) < io.events.index(("ask", io.prompts[0]))
+    assert io.lines.index("Before you go on, copy anything you may want later. Nothing here can be brought back.") < io.lines.index(line)
+    assert exists(home, "anna")
+
+
+def test_delete_says_where_the_last_backup_is_and_that_deleting_the_project_leaves_it(home, tmp_path):
+    create_project(home.projects, "Anna", "own")
+    folder = str(tmp_path / "away")
+    when = backed_up(home, "anna", folder).created.replace("T", " ").replace("+00:00", " UTC")
+    code, io = go(home, "delete", "anna", answers=["no"])
+    assert ("Anna was last backed up on %s in %s, and nothing precious has changed since. "
+            "That backup is outside the project, so deleting the project does not remove it." % (when, folder)) in io.lines and "has not been backed up" not in io.text
+
+
+def test_delete_says_when_the_project_changed_after_its_last_backup_and_how_to_back_up_again(home, tmp_path):
+    create_project(home.projects, "Anna", "own")
+    folder = str(tmp_path / "away")
+    when = backed_up(home, "anna", folder).created.replace("T", " ").replace("+00:00", " UTC")
+    later = os.stat(paths_of(home, "anna").project_json).st_mtime + 5
+    os.utime(paths_of(home, "anna").project_json, (later, later))
+    code, io = go(home, "delete", "anna", answers=["no"])
+    assert ("Anna has changed since the last backup, made on %s in %s. To back up again first, run: python3 -m voice_studio.backup now --project anna" % (when, folder)) in io.lines
+
+
+def test_delete_says_nothing_about_a_backup_when_the_record_of_rounds_cannot_be_read_and_still_asks_twice(home):
+    create_project(home.projects, "Anna", "own")
+    fill(paths_of(home, "anna"))                       # a record of rounds that is not one
+    code, io = go(home, "delete", "anna", answers=["yes", "no"])
+    assert code == 2 and "backed up" not in io.text and "changed since the last backup" not in io.text and len(io.prompts) == 2 and "" not in io.lines, "no empty line stands in for the missing sentence"
+
+
+def test_delete_with_yes_on_the_line_still_shows_the_backup_sentence_and_the_second_question(home):
+    create_project(home.projects, "Anna", "own")
+    code, io = go(home, "delete", "anna", "--yes", answers=["no"])
+    assert "Anna has not been backed up on this computer." in io.text and len(io.prompts) == 1 and io.prompts[0].startswith("Last question.")
+
+
+def test_a_project_with_nothing_to_hold_gets_no_sentence_about_backups(home, monkeypatch):
+    from voice_studio.core import backupnudge, projectbackup as pb
+    create_project(home.projects, "Anna", "own")
+    monkeypatch.setattr(pb, "standing", lambda *a, **k: pb.Standing(pb.CURRENT, "", ""))
+    assert backupnudge.delete_line(home, load(home, "anna"), paths_of(home, "anna"), CAT) is None
+    code, io = go(home, "delete", "anna", answers=["no"])
+    assert "backed up" not in io.text and "changed since the last backup" not in io.text and "" not in io.lines
+
+
 def test_delete_with_no_finished_voice_file_says_so(home):
     create_project(home.projects, "Anna", "own")
     code, io = go(home, "delete", "anna", answers=["no"])
@@ -414,7 +473,7 @@ def test_delete_names_a_scratch_folder_it_will_not_remove(home, tmp_path):
     place.mkdir()
     folder = str(place / "ack-voice-scratch" / "anna")
     put(folder + "/x", 3)
-    open(folder + "/.ack-voice-scratch", "w").write(json.dumps({"schema": 1, "project": "someone-else"}) + "\n")
+    Path(folder + "/.ack-voice-scratch").write_text(json.dumps({"schema": 1, "project": "someone-else"}) + "\n")
     from voice_studio.core.project import with_scratch_place
     save_project(paths_of(home, "anna"), with_scratch_place(project, str(place)))
     code, io = go(home, "delete", "anna", answers=["yes", "yes"])

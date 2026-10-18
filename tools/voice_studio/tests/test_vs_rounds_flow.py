@@ -115,7 +115,7 @@ def test_the_options_each_command_publishes_are_the_options_it_accepts():
     assert set(rf.OPTIONS) == {"list", "start", "stop", "choose", "back", "note", "keep", "free"}
     long = {c: {o for o in options if o.startswith("--")} for c, options in rf.OPTIONS.items()}
     assert long["list"] == {"--project"} and long["keep"] == {"--project"} and {"--set", "--minutes", "--yes", "--project"} == long["start"]
-    assert {"--all", "--saved", "--working", "--yes", "--project"} == long["free"]
+    assert {"--all", "--old", "--saved", "--working", "--clips", "--copies", "--yes", "--project"} == long["free"]
     assert {"--text", "--yes", "--project"} == long["note"] and {"--yes", "--project"} == long["stop"] == long["choose"] == long["back"]
 
 
@@ -1071,3 +1071,94 @@ def test_free_in_a_damaged_record_changes_nothing(rig):
         code, io = rig.run(*argv, "--project", "anna")
         assert code == 1 and "damaged" in io.text
     assert Path(rig.paths.rounds_file).read_text() == "{broken"
+
+
+# ---------------------------------------------------------------- the reminder to back up before training (plan D7)
+
+def _back_up(rig, tmp_path):
+    from voice_studio.core import projectbackup as pb
+    plan = pb.plan_backup(rig.paths, rig.home, "anna", str(tmp_path / "bk"), None)
+    made = pb.create(plan, rig.paths, NOW)
+    pb.record_backup(rig.home, made, "anna", plan.destination)
+
+
+def test_starting_a_round_reminds_the_person_to_back_up_before_it_asks_and_does_not_stop_it(rig):
+    rig.world.dataset()
+    code, io = rig.run(*start_args(), answers=["yes"])
+    reminder = "Anna has not been backed up yet. A backup keeps the recordings and notes safe if something goes wrong with this computer. To make one, run: python3 -m voice_studio.backup now --project anna"
+    assert code == 0 and len(rig.started) == 1
+    assert reminder in io.lines and io.events.index(("say", reminder)) < next(i for i, e in enumerate(io.events) if e[0] == "ask")
+
+
+def test_after_a_backup_the_reminder_is_gone_until_something_precious_changes(rig, tmp_path):
+    rig.world.dataset()
+    _back_up(rig, tmp_path)
+    _code, io = rig.run(*start_args(), answers=["no"])
+    assert "backed up" not in io.text and "last backup" not in io.text
+    rig.world.run_round(version=0)
+    _code, io = rig.run(*start_args(), answers=["no"])
+    assert "Anna has changed since the last backup, made on 2026-10-11 12:00:00 UTC." in io.text
+
+
+def test_the_reminder_is_not_printed_when_the_round_cannot_start_anyway(rig):
+    rig.world.dataset()
+    rig.set_free(1)
+    _code, io = rig.run(*start_args(), answers=["yes"])
+    assert "backed up" not in io.text and rig.started == []
+
+
+def test_a_reminder_writes_nothing(rig):
+    rig.world.dataset()
+    rig.run(*start_args(), answers=["no"])
+    assert not os.path.exists(rig.home.state + "/backups.json") and not os.path.exists(rig.home.backups)
+
+
+# ---------------------------------------------------------------- Ubuntu in Windows stops with its last window (finding F3)
+
+def _under_windows(rig, config):
+    from vs_fakes import PROC_WSL2
+    system = FakeSystem(proc_version=PROC_WSL2, environ={"WSL_DISTRO_NAME": "Ubuntu-24.04"}, present={"/mnt/c", "/mnt/c/Users/Anna/.wslconfig"}, dirs=["/mnt/c/Users/Anna"],
+                        listings={"/mnt/c/Users": ["Anna"]}, disks=rig.system.disks)
+    if config is not None:
+        system.files["/mnt/c/Users/Anna/.wslconfig"] = config
+    rig.system = system
+    return system
+
+
+WSL_IDLE_NOTICE = "This is Ubuntu under Windows. If you close the last Ubuntu window while the round runs, Ubuntu can stop and take the round with it. To prevent that, run: python3 -m voice_studio.wsl idle"
+
+
+def test_a_round_started_in_ubuntu_under_windows_without_the_setting_says_how_to_keep_ubuntu_running_before_it_asks(rig):
+    rig.world.dataset()
+    system = _under_windows(rig, "[wsl2]\nmemory=8GB\n")
+    code, io = rig.run(*start_args(), answers=["yes"])
+    assert code == 0 and len(rig.started) == 1 and WSL_IDLE_NOTICE in io.lines
+    assert io.events.index(("say", WSL_IDLE_NOTICE)) < next(i for i, e in enumerate(io.events) if e[0] == "ask")
+    assert system.ran and all(os.path.basename(a[0]) != "cmd.exe" for a in system.ran), "no Windows program was started to find out"
+
+
+def test_the_notice_is_also_said_when_the_settings_file_cannot_be_found_and_is_never_a_reason_to_stop(rig):
+    rig.world.dataset()
+    system = _under_windows(rig, None)
+    system.listings["/mnt/c/Users"] = ["Anna", "Ben"]
+    system.dirs.add("/mnt/c/Users/Ben")
+    code, io = rig.run(*start_args(), answers=["yes"])
+    assert code == 0 and len(rig.started) == 1 and WSL_IDLE_NOTICE in io.lines
+
+
+def test_with_the_setting_in_place_or_not_under_windows_the_notice_is_not_said(rig):
+    rig.world.dataset()
+    _under_windows(rig, "[general]\ninstanceIdleTimeout=-1\n")
+    code, io = rig.run(*start_args(), answers=["no"])
+    assert WSL_IDLE_NOTICE not in io.lines
+    rig.system = FakeSystem(disks=rig.system.disks)
+    code, io = rig.run(*start_args(), answers=["no"])
+    assert WSL_IDLE_NOTICE not in io.lines and "wsl" not in io.text.lower()
+
+
+def test_the_notice_is_not_said_when_the_round_cannot_start_anyway(rig):
+    rig.world.dataset()
+    _under_windows(rig, None)
+    rig.set_free(1)
+    _code, io = rig.run(*start_args(), answers=["yes"])
+    assert WSL_IDLE_NOTICE not in io.lines and rig.started == []

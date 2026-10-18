@@ -14,9 +14,10 @@ from .core.projects_flow import run_projects
 from .core.registry import load_registry
 from .core.system import RealSystem
 from .core.text import load_catalog
-from .__main__ import TerminalIO
+from .__main__ import TerminalIO, reports_failures
 
 
+@reports_failures("projects")
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     return run_projects(args, RealSystem(), DataHome(os.path.expanduser("~")), load_registry(), load_catalog("en"), TerminalIO())

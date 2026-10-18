@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Keeping your voice data on your own computer
 
-This is for anyone using Freeform Studio and the training steps to make a voice for their own AAC, and for speech-language
-pathologists (SLPs) helping someone else do it. It says where the data is, when anything touches the internet, how to check
+This is for anyone using Freeform Studio, the training steps and ACK Voice Studio (the desktop tool that guides them) to make a voice for
+their own AAC, and for speech-language pathologists (SLPs) helping someone else do it. It says where the data is, when anything touches the internet, how to check
 that yourself, and what to think about when the voice isn't yours.
 
 **The rule this project follows:** recordings, what the PC heard, your edits, exports, backups, the training data and the
@@ -20,6 +20,12 @@ This is not legal advice. It records what the software does, how that was checke
 | Training dataset | `~/piper/freeform-dataset-<date>/` |
 | Training cache, checkpoints, logs | `~/piper/my-training/`, `~/piper/checkpoints/`, `~/piper1-gpl/lightning_logs/` |
 | The trained voice | the `.onnx` and `.onnx.json` files you exported, then inside the ACK app's private storage |
+| **ACK Voice Studio:** a person's project (the recordings brought in, the text written from them, training sets, training rounds and their saved points, finished voice files, and the note about who agreed) | `~/ack-voice-studio/projects/<name>/`, in the Linux home folder (under WSL, inside the Linux disk image, not in a OneDrive or other synchronised Windows folder). The training sets and each round's working files are in its `scratch` folder, which can be moved to another drive you choose |
+| ACK Voice Studio: the test sounds made by hearing a voice on the computer | the project's `listening` folder, grouped by the round or voice file they came from. Small. Offered for removal after 30 days; never removed on their own |
+| ACK Voice Studio: a backup of one project (`python3 -m voice_studio.backup`) | the folder you name, never inside a project. One plain `.tar` of the recordings, the notes and the finished voices. **Not encrypted.** The tool checks it by reading it back, never replaces or removes an earlier one, and warns when the folder looks synchronised |
+| ACK Voice Studio: its programs, downloads and the starting voices | `~/ack-voice-studio/tool/`. The programs and downloads are made again by set-up; the starting voices are kept, because they may not be downloadable again. None of it holds your recordings |
+| ACK Voice Studio: its small records | `~/ack-voice-studio/state/`: what you agreed to download, the window's colour and size choices (written only after you say yes), the record of tasks that are running or ran, and, only if you send the voice file to a phone over Wi-Fi, the small certificate file for the phone and its secret part (`state/phone-certificate/`, readable only by you, never in a backup) |
+| A problem report you save from ACK Voice Studio (`python3 -m voice_studio.report save`) | the one file you name, as plain text, readable by you only. Your names and folders are blanked, and it has no recordings, no text you made and no phrases. It is about your computer, though, and **not encrypted**; the tool never sends it |
 | On your phone, while recording in the browser | the browser keeps each audio part until the PC confirms it, then deletes it; unsent edits are kept as a draft |
 | On your phone, while recording with the ACK app | inside ACK's own private storage, until you save a package; ACK has no network permission and its cloud backup is switched off |
 | Packages saved by the ACK app | wherever you put the `.zip` file, then `~/piper-recording-studio/output/_freeform/<code>/incoming/` once you add it in Freeform Studio. Copies of what is on your phone; **not** included in backups; never deleted by the program |
@@ -38,6 +44,14 @@ This is not legal advice. It records what the software does, how that was checke
 |---|---|---|---|
 | Installing (`install.sh`, `pip`) | PyPI | package names, your address | install once, then work offline |
 | `python -m freeform_studio.models fetch` | huggingface.co | the model name, your address, library versions. **Asks first. No audio, no text.** | skip it by copying a model folder and using `--asr-model /path` |
+| Setting up ACK Voice Studio (`install.ps1` or `get.sh`, then `python3 -m voice_studio`) | github.com and raw.githubusercontent.com (the tool itself); the Ubuntu package servers (a few programs); PyPI (`pypi.org`, `files.pythonhosted.org`: the programs it runs on); on a Windows without WSL, Microsoft's servers | package and file names, your address. **Each download is listed with its size and asked about first; the person's yes is kept in `state/consent.json`** | set it up once, then work offline; or hand over the files yourself (the IT guide, section 6) |
+| The Windows setup program for ACK Voice Studio (`ACK-Voice-Studio-Setup-<version>.exe`, which runs `installer/engine.ps1` hidden) | It makes **no connection itself**: it starts PowerShell and `wsl.exe`, and the set-up step runs the very command `install.ps1` uses, so the hosts are those of the row above (github.com and raw.githubusercontent.com; the Ubuntu package servers; PyPI; Microsoft's servers for WSL and Ubuntu) | the same as set-up. **It asks for an Ubuntu account name and a password and sees the password** (it is sent once to Ubuntu on standard input and kept in no file, log, message or command line), which the command-line installer never does. A log of the steps, with no password, is kept at `%LOCALAPPDATA%\ack-voice-studio\installer.log` | run `install.ps1` or `get.sh` by hand instead; nothing in the program needs the internet except the same downloads |
+| Getting the listening model (`recordings model`) and a starting voice (`voices get`) | huggingface.co, and the download hosts it redirects to (`*.hf.co`) | the file names, your address. **Asks first; a starting voice asks twice and shows its licence.** No audio, no text | skip it by putting the files in place yourself |
+| Looking for a newer release of the tool, and fetching one (`python3 -m voice_studio.update`) | github.com | the request itself: your address and the name of the program asking. **Says first what it will ask and shows the commands; nothing is checked in the background.** Nothing of yours | don't run it |
+| Mending a damaged download or building the programs again (`refresh repair`, `refresh rebuild`) | the same hosts as set-up | the same as set-up, under the same agreement | `refresh check` only looks, and reaches no network |
+| Giving the finished voice file to your phone over the home network (`voicefile send`) | **no host on the internet.** For a few minutes this computer waits for one device on your own home network to ask for the one file, at an address that holds a secret token, over a secure connection, and stops after the first complete download | the finished voice file, to whichever device opens that exact address first. **Asks first; shows the address; ends by itself in 10 minutes; nothing else on the computer can be fetched.** The first time it makes a small certificate file you put on the phone; its secret part stays on this computer and is not in a backup | don't run it, and copy the zip file by cable or USB drive instead |
+| Helping Ubuntu under Windows reach a phone and stay running (`python3 -m voice_studio.wsl`) | **nobody.** It reads, and after a typed yes changes, one file on this same computer: `.wslconfig` in your Windows home folder. It starts at most two short Windows programs on this computer to ask what Windows is called and what version it is | nothing leaves the computer. **Shows the change first, asks, and keeps a copy of the old file. It never restarts WSL and never runs the firewall command; it only prints it.** Opening the firewall for a phone is your decision | don't run it, or make the same change by hand |
+| **Everything else in ACK Voice Studio:** projects, bringing recordings in, letting the computer listen, training sets, training rounds, making the voice file, hearing the voice, backup, moving scratch, uninstall, Free up space, the problem report and the window | **nobody** | nothing | (nothing to avoid). Not measured with the network cut off for a whole training round; by design it needs none |
 | The server, review pages, export, backup, dataset building, `doctor` | **nobody** | nothing | (nothing to avoid) |
 | Bringing a package from the ACK app into Freeform Studio (`ack_import` or the Review page's *Add recordings from ACK*) | **nobody** | nothing | (nothing to avoid). The package moves by cable or USB drive; ACK has no way to send it anywhere |
 | Using the ACK Wear watch app | Google, through Google Play services (not through ACK), **only when Bluetooth between the phone and the watch is unavailable** | deck and Target Computer names, settings, and, if the watch audio relay is on, the speech audio. Google says it is end-to-end encrypted while it travels. **Not yet tested on a real phone and watch** | don't use the watch app. See section 8 |
@@ -56,6 +70,8 @@ You don't have to take any of this on trust.
 **The simplest test (no tools needed).** Disconnect your router from the internet (unplug its internet cable), keep Wi-Fi on so
 your phone can still reach the PC, and record, review, edit, export and back up a take. Everything should work. If something
 doesn't, tell the project: that means something needed the internet.
+
+**ACK Voice Studio.** After set-up, the same test works for it: everything except fetching the listening model or a starting voice, looking for a newer release, and mending a download works with the internet cable unplugged. The IT guide (`VOICE_STUDIO_IT_GUIDE.md`, section 5) lists every host it can reach and why, and the tool shows each download with its address and size and asks before it starts. A whole training round with the network cut off has not been measured; by design it needs none.
 
 **Watch every connection a program makes** (Linux or WSL):
 
@@ -159,8 +175,8 @@ apply. Ask your organization's privacy officer. Some things to settle with the p
 * The phone's own operating system and apps.
 * **ACK's own storage is not encrypted and ACK has no app lock.** The phone's lock screen is the only barrier: anyone who can unlock the
   phone, or read its storage with the right tool, can read what ACK holds.
-* An **EXPORT .JSON** file, a **safety copy**, a voice or GIF `.zip`, or a **training package** can be read by anyone who gets the file.
-  None of them has a password.
+* An **EXPORT .JSON** file, a **safety copy**, a voice or GIF `.zip`, a **training package**, an ACK Voice Studio **backup** or a saved
+  **problem report** can be read by anyone who gets the file. None of them has a password.
 * Anything you **copy** out of ACK sits in plain text on the phone's clipboard, where a keyboard's clipboard history or an app allowed to
   read the clipboard may keep it.
 * The watch link: see section 8.
@@ -171,7 +187,7 @@ apply. Ask your organization's privacy officer. Some things to settle with the p
 They are checked by tests, so a change that breaks one fails before it ships: `test_no_network.py` (no connections, no web
 addresses in shipped files), `test_privacy.py` (offline model loading, owner-only files, browser caching, the clean link, synced
 folders), `test_sovereignty_policy.py` (the Android app: no network permission, no cloud backup, no network code) and
-`test_license_headers.py` (licensing). Inside the Android app's own tests, two guards keep the warnings honest: every field of
+`test_license_headers.py` (licensing). ACK Voice Studio has its own: `test_vs_network_rules.py` (only the download module may import anything that can reach the network or start a program, no web address is written anywhere but the list of downloads and the bootstrap script, and `System.run` refuses network programs), `test_vs_it_guide.py` (the hosts in the IT guide are the hosts the code knows, and the update and report commands reach no network), `test_vs_areas.py` (every folder the tool makes is in an area that says whether a backup holds it and whether it can be deleted), `test_vs_report.py` and `test_vs_reportcmd_flow.py` (a problem report is checked with planted names and cannot hold a recording or a phrase) and `test_vs_data_sovereignty_doc.py` (this page's rows about it are the code's). Inside the Android app's own tests, two guards keep the warnings honest: every field of
 EXPORT .JSON must be described by the warning that says what the file contains (`ExportContentsTest`), and every preference file
 or folder the app writes must be covered by DELETE DATA (`StorageCatalogueTest`), so a new place that stores data cannot be added
 without deciding how it is described and deleted. The Android app's cloud backup is off for everything it stores; to keep a copy,

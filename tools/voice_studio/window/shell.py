@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Callable, List, Optional, Sequence, Tuple
 
+from ..core import describe
 from ..core import windowio as wio
 from ..core import windowmodel as wm
 from ..core import windowprefs as wp
@@ -12,6 +13,7 @@ from . import a11y, dialogs, sizing
 from .gtkload import GLib, Gtk
 from .pages import DisplayPage, FreePage, Page, ProjectsPage, RecordingsPage, RoundsPage, VoiceFilePage
 from .theme import Appearance
+from .toolpages import BackupPage, HearPage, RefreshPage, ReportPage, UpdatePage
 
 PULSE_MS = 150
 
@@ -45,6 +47,9 @@ class Shell(Gtk.ApplicationWindow):
         self.run_handle: Optional[wio.Run] = None
         self.dialog: Optional[Gtk.Dialog] = None            # the question on the screen, kept so a test can answer it
         self.form = None                                    # the form on the screen (window/forms.py), kept so a test can fill it
+        self.chooser = None                                 # the system's file chooser on the screen (window/toolforms.py), kept so a test can close it
+        self.last_failure: Optional[wm.Failure] = None      # the last task that failed after it began (not a report): what the Problem report page offers to be about
+        self._current: Tuple[str, Sequence[str]] = ("", ())
         self._then: Optional[Callable[[int], None]] = None  # told the exit code when the task that is running ends
         self.last_result: Tuple[int, Tuple[str, ...]] = (0, ())
         self._pulse_id = 0
@@ -63,9 +68,11 @@ class Shell(Gtk.ApplicationWindow):
         middle = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, vexpand=True)
         sizing.track(middle, spacing=12)
         self.stack = Gtk.Stack(hexpand=True, vexpand=True, transition_type=Gtk.StackTransitionType.NONE)
-        self.pages: List[Page] = [ProjectsPage(self), RecordingsPage(self), RoundsPage(self), VoiceFilePage(self), FreePage(self), DisplayPage(self)]
-        self.page_names = ("projects", "recordings", "rounds", "voicefile", "free", "display")
-        titles = (cat.t("window.nav.projects"), cat.t("window.nav.recordings"), cat.t("window.nav.rounds"), cat.t("window.nav.voicefile"), cat.t("window.nav.free"), cat.t("window.nav.display"))
+        self.pages: List[Page] = [ProjectsPage(self), RecordingsPage(self), RoundsPage(self), HearPage(self), VoiceFilePage(self), BackupPage(self), FreePage(self), RefreshPage(self),
+                                  UpdatePage(self), ReportPage(self), DisplayPage(self)]
+        self.page_names = wm.PAGES
+        titles = (cat.t("window.nav.projects"), cat.t("window.nav.recordings"), cat.t("window.nav.rounds"), cat.t("window.nav.hear"), cat.t("window.nav.voicefile"), cat.t("window.nav.backup"),
+                  cat.t("window.nav.free"), cat.t("window.nav.refresh"), cat.t("window.nav.update"), cat.t("window.nav.report"), cat.t("window.nav.display"))
         for page, key, title in zip(self.pages, self.page_names, titles):
             self.stack.add_titled(page.widget, key, title)
         self.sidebar = Gtk.StackSidebar(stack=self.stack, css_classes=["ack-nav"])
@@ -131,6 +138,11 @@ class Shell(Gtk.ApplicationWindow):
         sizing.track(scroll, min_content_height=70, max_content_height=170)
         scroll.set_child(self.result_label)
         box.append(scroll)
+        self.report_button = Gtk.Button(label=cat.t("window.result.report_button"), css_classes=["ack-button"], halign=Gtk.Align.START, visible=False)
+        self.report_button.connect("clicked", lambda _b: self.stack.set_visible_child_name("report"))
+        a11y.name(self.report_button, cat.t("window.result.report_button"))
+        self.stack.connect("notify::visible-child", lambda _s, _p: self._show_report_button())
+        box.append(self.report_button)
         return box
 
     # ---------------------------------------------------------------- the display
@@ -226,6 +238,8 @@ class Shell(Gtk.ApplicationWindow):
         if self.busy:
             return
         tool, argv = button
+        self._current = (tool, argv)
+        describe.forget_errors_shown()                     # the problems this task tells the person about are the ones a report may name
         self._then = then
         self._run_lines = []
         self._set_busy(True)
@@ -255,10 +269,20 @@ class Shell(Gtk.ApplicationWindow):
     def on_finished(self, code: int, lines: Sequence[str]) -> None:
         self._set_busy(False)
         self.set_result(code, tuple(lines))
+        tool, argv = self._current
+        if tool != "report":                                # a report is about the task before it, so making one does not forget which that was
+            self.last_failure = wm.failure_about(tool, argv, describe.errors_shown()) if code == 1 else None
+            if code == 1:
+                self.add_to_result(self.cat.t("window.result.report_hint", page=self.cat.t("window.nav.report")))
+            self._show_report_button()
         then, self._then = self._then, None
         self.refresh()
         if then is not None:
             then(code)
+
+    def _show_report_button(self) -> None:
+        """The way to the Problem report page is offered under a failed task, so it is found without looking through the list of pages. It goes away on that page and after a task that did not fail."""
+        self.report_button.set_visible(self.last_failure is not None and self.stack.get_visible_child_name() != "report")
 
     def add_to_result(self, line: str) -> None:
         """One more line under what the last task said (the task's own words stay)."""

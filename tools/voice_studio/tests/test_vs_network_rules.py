@@ -20,7 +20,9 @@ PY = [p for p in SHIPPED if p.suffix == ".py"]
 
 DOWNLOAD_MODULE = "core/fetch.py"
 MAY_START_PROGRAMS = {"core/system.py", "core/fetch.py", "core/jobs.py", "core/jobrunner.py"}     # the job supervisor and its runner
-WEB_ADDRESS_ALLOWED = {"data/sources.json", "get.sh"}                # get.sh: the one address the person is shown before the first fetch of ACK itself
+LISTENER_MODULE = "core/lansend.py"                                  # the one place that listens for a connection (plan VS-5.1, choices P25); it may import these two and nothing else that is network
+LISTENER_MAY_IMPORT = {"socket", "ssl"}
+WEB_ADDRESS_ALLOWED = {"data/sources.json", "get.sh", LISTENER_MODULE}   # get.sh: the one address the person is shown before the first fetch of ACK itself; the listener builds the address of this computer
 NETWORK_ROOTS = {"socket", "ssl", "http", "ftplib", "smtplib", "telnetlib", "xmlrpc", "poplib", "imaplib", "nntplib", "socketserver",
                  "requests", "httpx", "aiohttp", "websockets", "paramiko", "urllib3", "huggingface_hub", "asyncio"}
 
@@ -67,14 +69,48 @@ def test_the_package_has_files_to_check():
     assert any(rel(p) == DOWNLOAD_MODULE for p in PY) and len(PY) >= 6
 
 
-def test_only_the_download_module_imports_anything_that_can_reach_the_network():
-    offenders = {rel(p): sorted(network_imports(ast.parse(p.read_text()))) for p in PY if rel(p) != DOWNLOAD_MODULE}
-    offenders = {k: v for k, v in offenders.items() if v}
-    assert not offenders, "the network may be used only in %s:\n%s" % (DOWNLOAD_MODULE, offenders)
+def test_only_the_download_module_imports_anything_that_can_reach_the_network_and_the_listener_only_the_two_it_needs():
+    offenders = {}
+    for p in PY:
+        if rel(p) == DOWNLOAD_MODULE:
+            continue
+        found = network_imports(ast.parse(p.read_text()))
+        if rel(p) == LISTENER_MODULE:
+            found -= LISTENER_MAY_IMPORT
+        if found:
+            offenders[rel(p)] = sorted(found)
+    assert not offenders, "the network may be used only in %s (and listened on only in %s):\n%s" % (DOWNLOAD_MODULE, LISTENER_MODULE, offenders)
 
 
 def test_the_download_module_really_is_the_one_that_uses_it():
     assert network_imports(ast.parse((PKG / DOWNLOAD_MODULE).read_text())) >= {"urllib.request"}
+
+
+DIALING = {"connect", "connect_ex", "create_connection", "getaddrinfo", "gethostbyname", "gethostbyname_ex", "gethostbyaddr", "getfqdn", "getnameinfo", "urlopen", "sendto", "sendmsg",
+           "create_default_context", "socketpair", "fromfd", "create_server"}
+
+
+def dialing_calls(tree):
+    return {n.func.attr for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr in DIALING} | \
+           {n.func.id for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in DIALING}
+
+
+def test_the_listener_listens_and_dials_nothing():
+    """It may bind one address and accept connections; it may not open a connection, look a name up or send to an address of its own choosing (plan VS-5.1)."""
+    source = (PKG / LISTENER_MODULE).read_text()
+    tree = ast.parse(source)
+    assert network_imports(tree) == LISTENER_MAY_IMPORT
+    assert dialing_calls(tree) == set()
+    binds = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr == "bind"]
+    assert len(binds) == 1, "exactly one place binds an address, and it binds the one it was given"
+    for never in ("0.0.0.0", "INADDR_ANY", "AF_INET6", "AF_UNIX", "SO_BROADCAST", "SO_REUSEPORT", "setdefaulttimeout", 'bind(("",', "bind(('',"):
+        assert never not in source, never
+    assert "AF_INET" in source
+
+
+def test_the_listener_names_no_host_and_builds_the_one_address_from_the_one_it_is_given():
+    lines = [l for l in (PKG / LISTENER_MODULE).read_text().splitlines() if "://" in l]
+    assert [l.strip() for l in lines if not l.strip().startswith(("#", '"""'))] == ['return "https://%s:%d/%s/%s" % (address, port, token, name)']
 
 
 def test_only_two_modules_may_start_a_program_and_neither_may_use_a_shell():
@@ -106,6 +142,10 @@ def test_the_source_checks_can_actually_fail():          # mutation guards: each
     assert network_imports(ast.parse("from urllib import parse\nimport urllib.parse\n")) == set()
     assert process_starts(ast.parse("import subprocess\nimport os\nos.system('x')\nos.execv('a', [])\n")) == {"subprocess", "os.system", "os.execv"}
     assert process_starts(ast.parse("import os\nos.path.join('a')\n")) == set()
+    assert dialing_calls(ast.parse("import socket\nsocket.create_connection(('a', 1))\n")) == {"create_connection"}
+    assert dialing_calls(ast.parse("s.connect(('a', 1))\ns.sendto(b'x', ('a', 1))\nsocket.getaddrinfo('a', 1)\n")) == {"connect", "sendto", "getaddrinfo"}
+    assert dialing_calls(ast.parse("from socket import create_connection\ncreate_connection(('a', 1))\n")) == {"create_connection"}
+    assert dialing_calls(ast.parse("s.bind(('a', 1))\ns.listen(1)\ns.accept()\ns.sendall(b'x')\n")) == set()
 
 
 # ---------------------------------------------------------------- the run-time gate

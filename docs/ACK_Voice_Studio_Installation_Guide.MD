@@ -8,13 +8,15 @@ It stands on its own: you do not need any other file to follow it. If you use Ub
 
 **How it runs on Windows.** The tool is a Linux program. Windows can run Linux inside itself with a feature called WSL. The command below sets up WSL and Ubuntu if you do not have them, then installs and opens Voice Studio inside Ubuntu. The window appears on your Windows desktop like any other window.
 
+**If you would rather not open PowerShell.** There is also a setup program, `ACK-Voice-Studio-Setup-<version>.exe`, that asks the same questions in windows and asks you to choose an Ubuntu name and password. It is new, it is **not signed yet** (so Windows will warn you about an unknown publisher), it works only on Windows 11, and it has not been run on a real Windows computer yet. It is described in `tools/voice_studio/installer/README.md`. Unlike the command below, **the setup program sees the Ubuntu password you type**, sends it once to Ubuntu and keeps it nowhere. This guide is about the command.
+
 ---
 
 ## 1. Before you start
 
 | You need | Details |
 |---|---|
-| Windows | Windows 11. Windows 10 version 21H2 or newer (the last Windows 10 is 22H2) should work too, but it has not been tried here and Windows 10 is past its standard support. It must be the 64-bit kind. |
+| Windows | Windows 11 (any version). Windows 10 is not supported. It must be the 64-bit kind. |
 | PowerShell | The one that comes with Windows is fine. To open it: press the Start button, type `PowerShell`, press Enter. |
 | Free room | At least 25 GB free on the drive Windows is installed on. About 63 GB is comfortable for two people's projects and both starting voices. |
 | Memory | About 8 GB of memory (RAM) or more. |
@@ -116,7 +118,7 @@ If you press Ctrl+C at any time, it stops cleanly, keeps what was finished, and 
 
 ## 5. Your first hour in the window
 
-The window has pages for Projects, Recordings, Training rounds, Voice file, Free up space and Display. Do these in order.
+The window has pages for Projects, Recordings, Training rounds, Hear the voice, Voice file, Backup, Free up space, Check the tool, Updates, Problem report and Display. The steps below use Projects, Recordings, Training rounds and Voice file, in this order. The other pages are for later: `Backup` copies a project to a safe place, `Check the tool` looks at the programs Voice Studio uses and mends them, `Updates` fetches a newer Voice Studio, and `Problem report` writes down what went wrong so that a helper can read it. Each of them shows what it will do and asks first.
 
 1. **Projects, then `New project…`.** Give the project a name and the hours of recording you expect. Say whose voice it is. Under `Starting voice` you can choose a voice to start from, or `Choose later`. Press the button that makes the project. It shows what it will make and asks first.
 2. **Bring in recordings.** On the Recordings page press `Bring in recordings…`. You choose the kind: an ACK package from the phone (a zip file), a folder of audio files with a text file for each, a folder of audio files with one table, or audio files alone. It shows what it found and asks before it adds anything. It only reads your files; it never changes or removes them.
@@ -132,7 +134,7 @@ The window has pages for Projects, Recordings, Training rounds, Voice file, Free
 
    The first line lists your projects so you can copy the project's name exactly.
 7. **Training rounds, then `Start a round…`.** This needs the training programs (section 2, step 4) and a graphics card. It shows the plan and asks first. You can stop a round and start another from the one you choose.
-8. **Voice file, then `Make the voice file…`.** This makes the zip file ACK takes, from the round you chose, in a new folder. Press `Show the folder` to open it in Windows File Explorer. Copy the zip file to your phone. In ACK, open AUDIO ARCHITECT, find CUSTOM VOICE and press IMPORT, then pick the zip file.
+8. **Voice file, then `Make the voice file…`.** This makes the zip file ACK takes, from the round you chose, in a new folder, with a card beside it (`MODEL_CARD.txt`) that says where the voice comes from. Press `Show the folder` to open it in Windows File Explorer. Copy the zip file to your phone. In ACK, open AUDIO ARCHITECT, find CUSTOM VOICE and press IMPORT, then pick the zip file.
 
 Every button that changes something shows you what it will do and asks first. Anything that deletes shows what goes. Deleting a whole project asks twice.
 
@@ -187,7 +189,7 @@ Run the same command again first: it carries on from where it stopped and does n
 
 | Message or problem | What to do |
 |---|---|
-| `This version of Windows is too old to show Linux windows. It needs Windows 10 version 21H2 or newer, or Windows 11. Update Windows, then run this again.` | Update Windows, then run the command again. |
+| `ACK Voice Studio needs Windows 11, and this computer has an older Windows. Nothing was changed. Update to Windows 11 if this computer can, then run this again.` | Update to Windows 11, then run the command again. Windows 10 is not supported. |
 | `Virtualization looks switched off.` | Switch it on in the computer's startup settings (the firmware). Where that is differs from one computer to the next: search for your computer maker's name and `enable virtualization`. |
 | `Installing WSL needs PowerShell opened as administrator.` | See section 3, step 1. |
 | `WSL is installed but needs the computer to restart first.` | Restart, then run the command again. |
@@ -200,8 +202,17 @@ Run the same command again first: it carries on from where it stopped and does n
 | `There is no desktop to show a window on.` | Windows needs a version with graphical Linux programs. Updating WSL is Microsoft's usual advice, though it has not been tried here on a computer that showed this message: in PowerShell run `wsl --update`, then `wsl --shutdown`, then the one command again. |
 | `Everything above was set up, but the window cannot open here. The reason is above.` | Everything is installed. Fix what the lines above say, then run the one command again to open the window. |
 | PowerShell says running scripts is disabled | The one-line command is not a script file, so it is not stopped by that. If you saved the file, run it with `powershell -ExecutionPolicy Bypass -File` as in section 2. That affects only that one run. |
-| PowerShell cannot connect to the web address | Check the internet connection. On an older Windows 10, running `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12` first is the usual fix. On a work computer, a proxy may be in the way: ask whoever looks after it. |
+| PowerShell cannot connect to the web address | Check the internet connection. On a work computer, a proxy may be in the way: ask whoever looks after it. |
 | No supported graphics card was found | Training is switched off. Everything else works. Install the Nvidia driver in **Windows** (not inside Ubuntu), restart, and run the command again. |
+
+**If you want a helper to look.** A command that fails after it began ends with two lines about a problem report. A problem report is a plain text file: the versions, the checks on this computer, the problem and how a task ended, with your names and folders blanked and no recordings, no text you made and no phrases. You see all of it first, and it is saved only where you say:
+
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report show
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.report save --to ~/problem-report.txt
+```
+
+`show` prints the report and changes nothing. `save` prints it again, asks once, and writes exactly that text to the file you name. It never replaces a file unless you add `--replace`, and the tool never sends it anywhere: read it, then give the file to the helper yourself.
 
 If Ubuntu already works and only the PowerShell part gives you trouble, you do not need it: open Ubuntu from the Start menu and follow the separate Ubuntu guide from its one command.
 
@@ -218,10 +229,28 @@ PYTHONPATH=~/ack-tools/tools python3 -m voice_studio
 
 The second line checks everything and asks before it rebuilds anything that changed. Nothing updates by itself.
 
-**Removing.** There is no uninstall button yet. Everything below is permanent, so make a copy of your projects first: copy `ack-voice-studio` from your Ubuntu home folder to a USB drive or an external disk that you control. In Ubuntu, a Windows drive appears under `/mnt`, for example `/mnt/d`. Do not copy it into OneDrive, Dropbox or Documents, which may be synced.
+**Looking at the releases.** To see whether ACK Voice Studio has a named release and fetch one into a new folder beside this one, without changing this one:
 
-- To take the Start menu shortcut away, run the `--remove-launcher` line from section 6.
-- To remove the tool and its programs, delete the folders `ack-tools` and `ack-voice-studio` in your Ubuntu home folder. **This deletes your projects and recordings.**
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update check
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.update get RELEASE
+```
+
+Each says first what it will ask github.com and shows the exact commands, then asks before it contacts anything. `get` never touches this copy: it prints two commands, one for trying the new copy and one for using it under the usual name, and you type them. Your projects and recordings stay in `ack-voice-studio` whichever copy you use. If ACK Voice Studio has not named a release yet, `check` says so. The phone app's own version names are not releases of this tool and are not listed.
+
+**Removing.** In Ubuntu, one command takes the programs the tool built and the files it downloaded off the disk. It does not touch your projects, your recordings, your backups or the starting voices you chose. Look first, then remove:
+
+```bash
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall show
+PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.uninstall remove
+```
+
+`show` only looks. `remove` shows the same list, asks once, and removes only what it showed. It cannot remove the tool's own files or the Start menu shortcut, so it prints the command for each and you run them:
+
+- To take the Start menu shortcut away, run the `--remove-launcher` line from section 6 (`show` prints it too).
+- To remove the tool's own files, delete the folder `ack-tools` in your Ubuntu home folder: `rm -r ~/ack-tools`. Do this last, because the commands above need it.
+- Your projects and recordings stay in `ack-voice-studio` in your Ubuntu home folder. To delete one project, use `PYTHONPATH=~/ack-tools/tools python3 -m voice_studio.projects delete`: it asks twice and names a backup first.
+- To delete everything, make a copy of your projects first: copy `ack-voice-studio` from your Ubuntu home folder to a USB drive or an external disk that you control. In Ubuntu, a Windows drive appears under `/mnt`, for example `/mnt/d`. Do not copy it into OneDrive, Dropbox or Documents, which may be synced. Then delete the folder `ack-voice-studio`. **This deletes your projects and recordings.** The backups the tool made are inside that folder too, in `backups`, so copy those out as well.
 - The Ubuntu programs it installed stay (they are ordinary Ubuntu programs and can be removed with `apt`).
 - To remove Ubuntu from Windows completely, run `wsl --unregister Ubuntu-24.04` in PowerShell. **This deletes everything inside that Ubuntu, with no way back.**
 
@@ -229,11 +258,11 @@ The second line checks everything and asks before it rebuilds anything that chan
 
 ## 10. What it contacts, and what stays on your computer
 
-Nothing you record leaves your computer. There are no accounts, no usage reports and no update checks. Each place below is contacted only for the reason given.
+Nothing you record leaves your computer. There are no accounts, no usage reports and no automatic update checks. Each place below is contacted only for the reason given.
 
 | Place | Why | When |
 |---|---|---|
-| `raw.githubusercontent.com` and `github.com` | To fetch this script and ACK's files. | The first run. |
+| `raw.githubusercontent.com` and `github.com` | To fetch this script and ACK's files. | The first run, and when you run the update command in section 9 and say yes. |
 | Microsoft | To install WSL and Ubuntu. | Only if they are not installed yet. |
 | Ubuntu's package servers | The few Ubuntu programs in section 2. | Once, with your yes. |
 | The Python package site (`pypi.org` and `files.pythonhosted.org`) | The programs the tool runs on. | When you say yes to each set. |

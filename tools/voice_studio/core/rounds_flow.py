@@ -10,11 +10,13 @@ Every sentence comes from the text catalog. Exit codes: 0 done, 1 something fail
 """
 from __future__ import annotations
 
+import dataclasses
 import os
 from datetime import datetime
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import commands, freeup, jobs, rounds as rd, startvoice as sv, trainguard as tg
+from . import commands, freeup, jobs, rounds as rd, startvoice as sv, trainguard as tg, wsl
+from .backupnudge import nudge_lines as backup_nudge
 from .buildenv_flow import duration_text
 from .diskbudget import DEFAULT_TABLE, MIB, DriveMap, Level, Role, Watch, floors_for, watch as disk_watch
 from .cliargs import ArgError, Parsed, parse_args
@@ -35,8 +37,9 @@ YES = {"--yes": "yes", "-y": "yes"}
 PROJECT = {"--project": "project"}
 START_VALUES = {**PROJECT, "--set": "dataset", "--minutes": "minutes"}
 NOTE_VALUES = {**PROJECT, "--text": "text"}
-FREE_FLAGS = {**YES, "--all": "all"}
-FREE_VALUES = {**PROJECT, "--saved": "saved", "--working": "working"}
+FREE_FLAGS = {**YES, "--all": "all", "--old": "old"}
+FREE_VALUES = {**PROJECT, "--saved": "saved", "--working": "working", "--copies": "copies", "--clips": "clips"}
+FREE_OPTION = {"files": "saved", "folder": "working", "copy": "copies", "clips": "clips"}         # the option of the free command that names each kind of offer, by round number
 MAX_FAILURES_SHOWN = 10
 FILES_ROW = {"chosen": "rounds.free.files_chosen", "before": "rounds.free.files_before", "other": "rounds.free.files_other", "point": "rounds.free.files_other_point"}
 OPTIONS = {"list": frozenset(PROJECT), "start": frozenset(YES) | frozenset(START_VALUES), "stop": frozenset(YES) | frozenset(PROJECT),
@@ -256,18 +259,34 @@ def _keep(args: Sequence[str], home: DataHome, now: Optional[datetime], cat: Cat
 
 # ---------------------------------------------------------------- free up space
 
-def _round_numbers(word: str) -> Optional[List[int]]:
-    """'1,3' -> [1, 3]; anything that is not whole round numbers separated by commas -> None."""
+def _round_numbers(word: str, minimum: int = 1) -> Optional[List[int]]:
+    """'1,3' -> [1, 3]; anything that is not whole round numbers separated by commas -> None. Test clips and voice copies may be of round 0: a voice file whose round cannot be told."""
     found = [_number(part) for part in word.split(",")]
-    if any(n is None or n < 1 for n in found):
+    if any(n is None or n < minimum for n in found):
         return None
     return [n for n in found if n is not None]
 
 
+def old_notice_lines(count: int, project_id: str, cat: Catalog) -> List[str]:
+    """The notice that earlier listenings are old and should be removed, and how: said by `free`, at the end of `listen`, and by the window. Nothing is removed because of it."""
+    if count < 1:
+        return []
+    return [cat.count("rounds.free.old_notice", count, days=freeup.OLD_AFTER_DAYS),
+            cat.t("rounds.free.old_how", command="%s free --old --project %s" % (ROUNDS_COMMAND, project_id))]
+
+
 def free_row_text(offer: freeup.Offer, cat: Catalog) -> str:
     """What is said about one thing that could be freed. The terminal prints it and the window draws it."""
+    if offer.kind in ("copy", "clips") and offer.old:
+        return free_row_text(dataclasses.replace(offer, old=False), cat) + " " + cat.t("rounds.free.old_note", days=freeup.OLD_AFTER_DAYS)
     if offer.kind == "folder":
         return cat.t("rounds.free.working", round=offer.round, size=size_text(offer.bytes))
+    if offer.kind == "copy":
+        return cat.t("rounds.free.copy", round=offer.round, when=offer.when, size=size_text(offer.bytes))
+    if offer.kind == "clips":
+        if offer.source.startswith("round-"):
+            return cat.t("rounds.free.clips_round", round=offer.round, when=offer.when, size=size_text(offer.bytes))
+        return cat.t("rounds.free.clips_voice", name=offer.source, when=offer.when, size=size_text(offer.bytes))
     key = FILES_ROW["point" if offer.includes_saved_point else offer.relation]
     return cat.count(key, len(offer.paths), round=offer.round, size=size_text(offer.bytes))
 
@@ -285,6 +304,8 @@ def _free_list(shown: freeup.Plan, ctx: Open, cat: Catalog, io: IO) -> None:
         _free_row(offer, cat, io)
     if shown.offers:
         io.say(cat.t("rounds.free.total", size=size_text(sum(o.bytes for o in shown.offers))))
+    for line in old_notice_lines(shown.old_listenings, ctx.project.id, cat):
+        io.say(line)
     if shown.kept:
         io.say(cat.count("rounds.free.kept", len(shown.kept), size=size_text(sum(f.size for _n, f in shown.kept))))
     if shown.busy:
@@ -294,6 +315,9 @@ def _free_list(shown: freeup.Plan, ctx: Open, cat: Catalog, io: IO) -> None:
     io.say(cat.t("rounds.free.never"))
     if shown.offers:
         io.say(cat.t("rounds.free.how", command="%s free --saved 1 --project %s" % (ROUNDS_COMMAND, ctx.project.id)))
+        heard = next((o for o in shown.offers if o.kind in ("copy", "clips")), None)
+        if heard is not None:
+            io.say(cat.t("rounds.free.how_heard", command="%s free --%s %d --project %s" % (ROUNDS_COMMAND, FREE_OPTION[heard.kind], heard.round, ctx.project.id)))
         io.say(cat.t("rounds.free.how_all"))
 
 
@@ -303,41 +327,53 @@ def _free_up(args: Sequence[str], home: DataHome, now: Optional[datetime], syste
     except ArgError as error:
         return say_bad_arg(error, cat, io)
     io.say(cat.t("rounds.title"))
-    named = {kind: parsed.values[kind] for kind in ("saved", "working") if kind in parsed.values}
+    named = {kind: parsed.values[kind] for kind in FREE_OPTION.values() if kind in parsed.values}
     if "all" in parsed.flags and named:
         io.say(cat.t("rounds.free.both"))
         return EXIT_NOTHING_DONE
     numbers: Dict[str, List[int]] = {}
     for kind, word in named.items():
-        found = _round_numbers(word)
+        found = _round_numbers(word, 0 if kind in ("clips", "copies") else 1)
         if found is None:
             io.say(cat.t("rounds.free.bad_numbers", text=word[:40]))
             return EXIT_NOTHING_DONE
         numbers[kind] = found
-    selecting = "all" in parsed.flags or bool(named)
+    if "old" in parsed.flags and ("all" in parsed.flags or named):
+        io.say(cat.t("rounds.free.old_alone"))
+        return EXIT_NOTHING_DONE
+    selecting = "all" in parsed.flags or "old" in parsed.flags or bool(named)
     ctx, code = _open(parsed, home, cat, io)
     if ctx is None:
         return code
     record = _look(ctx, now, cat, io, write=selecting)
-    shown = freeup.plan(ctx.paths, ctx.scratch, record)
+    shown = freeup.plan(ctx.paths, ctx.scratch, record, now)
     if not selecting:
         _free_list(shown, ctx, cat, io)
         return EXIT_OK
     if not shown.offers:
         io.say(cat.t("rounds.free.nothing"))
         return EXIT_NOTHING_DONE
-    if "all" in parsed.flags:
+    if "old" in parsed.flags:
+        picked = [o for o in shown.offers if o.old]
+        if not picked:
+            io.say(cat.t("rounds.free.nothing_old", days=freeup.OLD_AFTER_DAYS))
+            return EXIT_NOTHING_DONE
+    elif "all" in parsed.flags:
         picked = list(shown.offers)
     else:
         picked = []
         for kind, wanted in numbers.items():
-            offer_kind = "files" if kind == "saved" else "folder"
-            by_round = {o.round: o for o in shown.offers if o.kind == offer_kind}
+            offer_kind = next(k for k, option in FREE_OPTION.items() if option == kind)
+            by_round: Dict[int, List[freeup.Offer]] = {}
+            for o in shown.offers:
+                if o.kind == offer_kind:
+                    by_round.setdefault(o.round, []).append(o)
             missing = [n for n in wanted if n not in by_round]
             if missing:
                 io.say(cat.t("rounds.free.unknown", option="--" + kind, numbers=",".join(str(n) for n in missing), command="%s free --project %s" % (ROUNDS_COMMAND, ctx.project.id)))
                 return EXIT_NOTHING_DONE
-            picked += [by_round[n] for n in sorted(set(wanted))]
+            for n in sorted(set(wanted)):
+                picked += by_round[n]                                  # every listening of that round, for the two kinds a round can have several of
     io.say(cat.t("rounds.free.will_remove"))
     for offer in picked:
         _free_row(offer, cat, io)
@@ -350,6 +386,8 @@ def _free_up(args: Sequence[str], home: DataHome, now: Optional[datetime], syste
         _say_parts(cat, io, "freeup", error.code, error.detail)
         return EXIT_PROBLEM
     io.say(cat.t("rounds.free.done", files=result.removed_files, folders=result.removed_folders, size=size_text(result.removed_bytes)))
+    if result.removed_heard:
+        io.say(cat.t("rounds.free.done_heard", files=result.removed_heard))
     free = _free(system, ctx)
     if free["project"] is not None:
         io.say(cat.t("rounds.free.free_now", free=size_text(free["project"])))
@@ -464,6 +502,10 @@ def _start(args: Sequence[str], home: DataHome, registry: Registry, training: Tr
             io.say("  " + cat.t("rounds.start.disk_ok", free=size_text(drive.free), need=size_text(drive.need)))
     if Level.NOT_ENOUGH in (room.level, disk.level):
         return EXIT_NOTHING_DONE                                          # said above, in words, with nothing started; --yes does not get past this
+    for line in backup_nudge(home, ctx.project, ctx.paths, cat, record):      # a reminder before training, never a stop (plan D7)
+        io.say(line)
+    if wsl.idle_state(system) in (wsl.IDLE_STOPS, wsl.IDLE_UNKNOWN):          # Ubuntu in Windows stops about a minute after its last window closes (finding F3)
+        io.say(cat.t("rounds.start.wsl_idle", command="python3 -m voice_studio.wsl idle"))
     declined = _confirmed(parsed, cat.t("rounds.start.question", number=plan.number), cat, io)
     if declined is not None:
         return declined

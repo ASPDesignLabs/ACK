@@ -22,7 +22,7 @@ import sys
 from dataclasses import dataclass, replace
 from typing import Iterable, List, Optional, Sequence, Tuple
 
-from . import jobs, voicefile
+from . import areas, jobs, voicefile
 from .paths import DataHome, ProjectPaths
 from .newproject import CONSENT_TEXT_FIELDS, MAX_TYPED, Problem, parse_hours
 from .project import Consent, MAX_NAME, MAX_NOTE, Project, SCRATCH_CUSTOM, clean_text, consent_problems, validate
@@ -123,7 +123,7 @@ def split(projects: Iterable[Project]) -> Tuple[Tuple[Project, ...], Tuple[Proje
 
 @dataclass(frozen=True)
 class Part:
-    kind: str                       # recordings, rounds, exports, scratch, record, other
+    kind: str                       # recordings, rounds, exports, listening, scratch, record, other
     path: str
     bytes: int
     files: int
@@ -146,7 +146,7 @@ class DeletePlan:
     @property
     def by_kind(self) -> Tuple[Tuple[str, int, int], ...]:
         """(kind, bytes, files) with the parts of one kind added together, in the order the screens show them."""
-        order = ("recordings", "rounds", "exports", "scratch", "record", "other")
+        order = ("recordings", "rounds", "exports", "listening", "scratch", "record", "other")
         return tuple((kind, sum(p.bytes for p in self.parts if p.kind == kind), sum(p.files for p in self.parts if p.kind == kind)) for kind in order if any(p.kind == kind for p in self.parts))
 
 
@@ -174,7 +174,9 @@ def measure(path: str) -> Tuple[int, int]:
 
 
 def _kind(paths: ProjectPaths, entry: str) -> str:
-    return {paths.recordings: "recordings", paths.rounds: "rounds", paths.exports: "exports", paths.default_scratch: "scratch"}.get(entry, "record" if os.path.basename(entry) in KEPT_LAST else "other")
+    """The area (core/areas.py) of something directly under the project's folder, or "other" when none claims it."""
+    area = areas.project_area(os.path.basename(entry))
+    return area.id if area is not None else "other"
 
 
 def _custom_scratch(project: Project) -> Tuple[str, str]:
@@ -252,6 +254,9 @@ def _remove_tree(path: str, failed: List[Tuple[str, str]]) -> None:
         shutil.rmtree(path, onexc=note)
     else:
         shutil.rmtree(path, onerror=note)
+
+
+remove_tree = _remove_tree        # the same remover for the other deletes (core/uninstall.py): a link is unlinked, never followed
 
 
 def delete_project(home: DataHome, project: Project, shown: DeletePlan) -> DeleteResult:

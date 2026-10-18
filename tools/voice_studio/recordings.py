@@ -19,9 +19,10 @@ from .core.recordings_flow import run_recordings
 from .core.registry import load_registry
 from .core.system import RealSystem
 from .core.text import load_catalog
-from .__main__ import TerminalIO
+from .__main__ import TerminalIO, reports_failures
 
 
+@reports_failures("recordings")
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     home, registry = DataHome(os.path.expanduser("~")), load_registry()

@@ -526,5 +526,7 @@ def test_get_reads_answers_from_the_terminal_not_from_its_own_input():
 
 def test_get_names_what_it_fetches_in_one_place_and_a_chosen_name_replaces_it():
     code = GET.read_text()
-    assert code.count('DEFAULT_TAG="main"') == 1 and 'TAG="${ACK_VOICE_TAG:-$DEFAULT_TAG}"' in code and '--branch "$TAG"' in code
+    defaults = re.findall(r'^DEFAULT_TAG="([^"]*)"', code, flags=re.M)
+    assert len(defaults) == 1 and re.fullmatch(r"main|voice-studio-v\d+\.\d+\.\d+", defaults[0]), "the default is the branch main or the whole tag of a release (the runbook moves it)"
+    assert 'TAG="${ACK_VOICE_TAG:-$DEFAULT_TAG}"' in code and '--branch "$TAG"' in code
     assert "master" not in code and [l for l in code.splitlines() if re.search(r"\bmain\b", l)] == [l for l in code.splitlines() if l.startswith('DEFAULT_TAG="main"')], "the default name is written in one place"

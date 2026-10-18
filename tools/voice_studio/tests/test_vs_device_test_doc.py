@@ -171,12 +171,14 @@ def test_the_build_command_the_checklist_gives_takes_the_options_it_gives_and_ch
     for given in commands_given:
         parsed, unknown = parse_build_options(shlex.split(given))
         assert parsed is not None, given
-        assert parsed.env_id == "training"
+        assert parsed.env_id in ("training", "studio")
+    assert {shlex.split(c)[0] for c in commands_given} == {"training", "studio"}
     assert any("--check" in c for c in commands_given) and any("--check" not in c for c in commands_given)
     env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(TOOLS))
-    done = subprocess.run([sys.executable, "-m", "voice_studio.buildenv", "training", "--check"], cwd=str(home), env=env, text=True, capture_output=True, timeout=120)
-    assert done.returncode == 1 and done.stdout.startswith("ACK Voice Studio: setting up one set of programs"), done.stdout + done.stderr
-    assert not (Path(home) / "ack-voice-studio").exists() and sorted(p.name for p in Path(home).iterdir()) == []
+    for which in ("training", "studio"):
+        done = subprocess.run([sys.executable, "-m", "voice_studio.buildenv", which, "--check"], cwd=str(home), env=env, text=True, capture_output=True, timeout=120)
+        assert done.returncode == 1 and done.stdout.startswith("ACK Voice Studio: setting up one set of programs"), done.stdout + done.stderr
+        assert not (Path(home) / "ack-voice-studio").exists() and sorted(p.name for p in Path(home).iterdir()) == []
 
 
 def test_the_folders_the_checklist_names_for_the_tool_built_programs_are_where_the_tool_puts_them():
@@ -532,7 +534,7 @@ def test_the_free_commands_it_gives_exist_and_take_the_options_it_gives():
     from voice_studio.core import rounds_flow as rf
     found = re.findall(r"python3 -m voice_studio\.rounds (free)([^\n`;<]*)", section("I3."))
     assert len(found) >= 6
-    takes_a_value = {"--project", "--saved", "--working"}
+    takes_a_value = {"--project", "--saved", "--working", "--clips", "--copies"}
     seen = set()
     for command, rest in found:
         words, i = shlex.split(rest), 0
@@ -541,7 +543,7 @@ def test_the_free_commands_it_gives_exist_and_take_the_options_it_gives():
             seen.add(words[i])
             i += 2 if words[i] in takes_a_value else 1
         assert words[words.index("--project") + 1] == "voice-check"
-    assert seen >= {"--saved", "--working", "--all", "--project"}
+    assert seen >= {"--saved", "--working", "--all", "--project", "--clips", "--copies"}
 
 
 def test_every_sentence_the_free_section_quotes_as_the_tools_output_is_one_the_tool_says():
@@ -718,7 +720,9 @@ def test_the_new_section_comes_after_the_window_and_before_the_manual_steps_and_
     assert "**You always say which kind it is**" in body and "the tool never guesses" in body
     assert "A folder you choose is **only read**" in body and "Nothing here uses the internet." in body
     assert "`--yes` on the line answers the first question only; the second is always asked" in body
-    assert "Six** pages on the left: Projects, Recordings, Training rounds, Voice file, Free up space and Display" in body
+    from voice_studio.core import text as catalog_text, windowmodel
+    titles = [catalog_text.load_catalog("en").t("window.nav." + name) for name in windowmodel.PAGES]
+    assert "Eleven** pages on the left: %s and %s" % (", ".join(titles[:-1]), titles[-1]) in body and len(titles) == 11
     assert "none chosen for you" in body and "a folder is never taken for a package" in body
 
 
@@ -841,3 +845,872 @@ def test_the_project_steps_run_as_the_section_says_and_the_second_question_of_a_
     code, io = projects("delete", "second-check", answers=["yes", "yes"])
     assert code == 0 and any(line.startswith("Done. The project second-check is deleted. About ") for line in io.lines)
     assert sorted(os.listdir(home.projects)) == ["voice-check"]
+
+
+# ---------------------------------------------------------------- section I8: hearing the voice before it goes to the phone
+
+def test_the_listen_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import voicefile_flow as vff
+    found = re.findall(r"python3 -m voice_studio\.voicefile ([a-z]+)([^\n`;<]*)", section("I8."))
+    assert {c for c, _ in found} == {"listen", "list"}
+    seen = set()
+    for command, rest in found:
+        assert command in vff.OPTIONS, command
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            assert words[i].startswith("-") and words[i] in vff.OPTIONS[command], (command, words[i])
+            seen.add(words[i])
+            i += 2 if words[i] in ("--project", "--folder", "--round") else 1
+    assert seen >= {"--project", "--folder", "--yes", "--round"} and any(c == "listen" for c, _ in found)
+
+
+def test_every_sentence_the_listening_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I8."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "ls ", "head ", "du ", "time ", "~/", "python3 "))]
+    assert len(quoted) >= 8 and any(cut for _, cut in quoted), quoted
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_parts_for_hearing_what_was_heard_and_for_a_round_name_the_real_options_texts_and_room():
+    from voice_studio.core import listen, listen_flow
+    from voice_studio.core.text import size_text
+    body = section("I8.")
+    assert "**D. Writing down what the computer hears.**" in body and "**E. Listening straight to a round, with no zip file.**" in body
+    assert size_text(listen.ROUND_NEED_BYTES) in body and listen_flow.MODEL_COMMAND in body
+    for option in ("--round chosen", "--round 1", "--round 0", "--round x", "--round 99", "--round chosen --folder"):
+        assert option in body, option
+    for name in listen.VOICE_COPY_NAMES:
+        assert "`%s`" % name in body, name
+    assert "tools/freeform" not in body
+
+
+def test_the_three_sentences_the_section_names_are_the_ones_the_tool_says():
+    from voice_studio.core import listen_flow
+    body = " ".join(section("I8.").split())
+    sentences = listen_flow.sentences(__import__("voice_studio.core.text", fromlist=["x"]).load_catalog("en"))
+    assert len(sentences) == 3 and " ".join(sentences) in body.replace("(", "").replace(")", "")
+
+
+def test_the_player_the_section_tries_first_is_the_command_the_tool_runs():
+    from voice_studio.core import playback
+    body = section("I8.")
+    line = next(l.strip() for l in body.splitlines() if l.strip().startswith("ffplay "))
+    tool = playback.Playback(type("S", (), {"which": staticmethod(lambda n: n), "read_text": staticmethod(lambda p: "")})()).argv("ffplay", '"$T/tone.wav"')
+    assert line.split(";")[0] == " ".join(tool), (line, tool)
+
+
+def test_the_section_asks_for_a_probe_of_each_way_and_names_every_way_the_tool_may_use():
+    from voice_studio.core import playback
+    body = section("I8.")
+    for name in set(playback.NATIVE_ORDER) | set(playback.WSL_ORDER):
+        assert (name if name != "windows" else "powershell.exe") in body, name
+    assert "mktemp -d" in body and 'rm -r "$T"' in body, "the probe cleans up after itself"
+
+
+def test_the_places_the_listening_section_names_are_where_the_tool_puts_things():
+    from voice_studio.core.paths import DataHome, ProjectPaths
+    body = section("I8.")
+    paths = ProjectPaths(DataHome("~").projects + "/voice-check")
+    listening = paths.listening.replace(DataHome("~").projects, "~/ack-voice-studio/projects")
+    assert listening in body and paths.exports.replace(DataHome("~").projects, "~/ack-voice-studio/projects") in body
+    assert "scratch/listening" not in body and "scratch/listening" not in section("M."), "the sound files are kept with the project, not in scratch (decision D43)"
+
+
+def test_the_listening_section_says_it_changes_nothing_and_what_to_send_back():
+    body = " ".join(section("I8.").split())
+    assert "changes nothing that was there" in body and "uses no network after the engine is installed" in body and "Nothing about sound from this tool has been seen on a real computer yet" in body
+    assert "Section I8:" in doc_text() and "voice-check/listening" in section("M.") and "Free up space offers them" in section("M.")
+
+
+def test_the_listening_section_follows_the_install_section_and_comes_before_the_manual_one():
+    names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I7") < names.index("I8") < names.index("J")
+
+
+def test_the_free_up_space_section_names_the_new_options_and_the_texts_the_tool_says_for_listenings():
+    from voice_studio.core import rounds_flow as rf
+    body = section("I3.")
+    for option in ("--clips", "--copies"):
+        assert option in rf.FREE_VALUES and option in body, option
+    assert "--old" in rf.FREE_FLAGS and "free --old" in body and "30 days" in body
+    for sentence in ("The test clips stay.", "Test clips and voices made for hearing, removed:", "chosen by round too, with --clips and --copies."):
+        assert says(sentence), sentence
+        assert sentence in body, sentence
+    assert "section I8 part E" in body and "listening` folder" in body
+
+
+def test_the_old_listenings_step_quotes_what_the_tool_says_and_the_age_it_uses():
+    from voice_studio.core import freeup
+    body = section("I3.")
+    assert freeup.OLD_AFTER_DAYS == 30
+    for sentence in ("This is more than 30 days old and should be removed.", "To remove them, run:", "Nothing is more than 30 days old. Nothing was removed.",
+                     "Give --old on its own, without --all or a list of rounds."):
+        assert says(sentence), sentence
+        assert sentence in body, sentence
+    for sentence in ("2 earlier listenings are more than 30 days old and should be removed.", "1 earlier listening is more than 30 days old and should be removed."):
+        assert says(sentence) and sentence in body, sentence
+
+
+# ---------------------------------------------------------------- section I9: backing up a project
+
+def i9_blocks():
+    """The code blocks of section I9 in order, without the indentation the list gives them."""
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I9."), flags=re.S | re.M)]
+
+
+def test_the_backup_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import backup_flow as bf, rounds_flow as rf
+    found = re.findall(r"python3 -m voice_studio\.(backup|rounds) ([a-z]+)([^\n`;<|&]*)", section("I9."))
+    assert {c for m, c, _ in found if m == "backup"} == {"help", "now", "list", "verify", "restore"} and {c for m, c, _ in found if m == "rounds"} == {"start", "list"}
+    takes_a_value = {"--project", "--to"}
+    seen, positional_wanted = set(), {"now": 0, "list": 0, "verify": 1, "restore": 1, "help": 0, "start": 0}
+    for module, command, rest in found:
+        table = bf.OPTIONS if module == "backup" and command != "help" else rf.OPTIONS
+        if command != "help":
+            assert command in table, (module, command)
+        words, i, positional = shlex.split(rest), 0, []
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert words[i] in table[command], (module, command, words[i])
+                seen.add(words[i])
+                i += 2 if words[i] in takes_a_value else 1
+            else:
+                positional.append(words[i])
+                i += 1
+        assert len(positional) == positional_wanted[command], (module, command, positional)
+        if "--project" in words:
+            assert words[words.index("--project") + 1] == "voice-check"
+    assert seen == {"--project", "--to"}, "the section never answers a question on the line: it is meant to be asked"
+    assert set(bf.COMMANDS) == {"now", "list", "verify", "restore", "help"}
+
+
+def test_every_sentence_the_backup_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I9."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "tar ", "cp ", "rm ", "touch ", "cmp ", "diff ", "printf ", "echo ", "tail ", "T=", "F="))]
+    assert len(quoted) >= 24 and any(cut for _, cut in quoted), (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_pieces_of_sentences_the_backup_section_quotes_are_in_the_tools_words_or_its_code():
+    from voice_studio.core import projectbackup
+    import inspect
+    catalog = " ".join(text_catalog_strings())
+    body = " ".join(section("I9.").split())
+    for piece in ("has not been backed up on this computer yet", "has changed since the last backup", "read it all the way back and check every file before it counts",
+                  "never remove or replace an earlier backup", "Nothing precious in", "The project record and the consent note", "because it is not on this computer"):
+        assert piece in body and piece.replace("make the project voice-check again, ", "") in catalog.replace("{id}", "voice-check") or piece in catalog, piece
+    assert "does not match its checksum" in inspect.getsource(projectbackup.verify) and "does not match its checksum" in body
+
+
+def test_the_places_and_names_the_backup_section_gives_are_the_ones_the_tool_uses():
+    from pathlib import Path as P
+    from freeform_studio import backup as ffbackup
+    from voice_studio.core import ackimport, projectbackup as pb
+    from voice_studio.core.paths import ProjectPaths
+    body = section("I9.")
+    assert "ack-project-backup-voice-check-<date>-<time>.tar" in body and pb.NAME_RE.match("ack-project-backup-voice-check-20261016-013110.tar") and "`.tar.json`" in body
+    assert pb.MANIFEST in body and "`MANIFEST.json`" in body
+    paths = ProjectPaths("/p/voice-check")
+    for name, part in (("project/project.json", "record"), ("rounds/rounds.json", "rounds")):
+        assert "`%s`" % name in body and pb.member_target(paths, name).part == part, name
+    assert "recordings/takes/" in body and pb.member_target(paths, "recordings/takes/t20260930-000001-0001/raw.webm").part == "recordings"
+    assert "exports/" in body and "~/ack-voice-studio/projects/voice-check/recordings/_freeform/en-US/takes" in body
+    assert str(ffbackup.takes_dir(P("recordings"), ackimport.LANGUAGE)) == "recordings/_freeform/en-US/takes"
+    from voice_studio.core.paths import DataHome
+    assert DataHome("~").backups == "~/ack-voice-studio/backups" and "~/ack-voice-studio/backups" in body and "~/ack-voice-check-backups" in body
+    assert "~/ack-voice-check-backups" in section("M.") and "never removes a backup itself" in section("M.")
+
+
+def test_the_backup_section_says_it_removes_nothing_of_yours_and_what_it_leaves_out_and_what_to_send_back():
+    from voice_studio.core import projectbackup as pb
+    body = " ".join(section("I9.").split())
+    assert "**Nothing here removes or changes anything of yours.**" in body and "never replaced or removed by this tool" in body and "only **adds** what is missing and never replaces a file" in body
+    assert "pretend home folder" in body and "Not tried on a real computer" in body
+    for left_out in ("training sets and working files", "the test sounds from section I8", "older saved points", "earlier backups"):
+        assert left_out in body, left_out
+    assert set(pb.LEFT_OUT) >= {"scratch", "listening", "older_saved_points"}
+    assert "Section I9:" in doc_text() or "- Section I9:" in doc_text()
+    names = re.findall(r"^## ([A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I8") < names.index("I9") < names.index("J")
+    assert len(i9_blocks()) == 14
+
+
+def test_the_backup_section_runs_as_it_says_against_a_project_with_everything_in_it(tmp_path):
+    import shutil
+    from vs_backup_helpers import BackupRig
+    for tool in ("bash", "tar", "dd", "cmp", "od"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    rig = BackupRig(tmp_path)
+    blocks = i9_blocks()
+    mine = str(TOOLS)
+    python = shlex.quote(sys.executable)
+
+    def adapted(index):
+        text = blocks[index].replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("python3 -m", python + " -m")
+        if index == 3:
+            text = text.replace("--to ~/ack-voice-check-backups\n", "--to ~/ack-voice-check-backups --yes\n")
+        if index == 9:
+            text = text.replace('HOME="$T" ' + python + " -m voice_studio.backup restore \"$F\"", 'HOME="$T" ' + python + " -m voice_studio.backup restore \"$F\" --yes")
+        return text
+
+    script = []
+    for index in (0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
+        script.append('echo "@@ %d"' % index)
+        script.append(adapted(index))
+        script.append('echo "@@ status: $?"')
+        if index == 2:
+            script.append("ls ~/ack-voice-check-backups 2>&1 | head -n 1")
+        if index == 6:
+            script.append(PYBACKUP_LIST.replace("PY", python).replace("TOOLS", shlex.quote(mine)))
+            script.append("rm ~/ack-voice-check-backups/damaged-copy.tar")
+        if index == 9:
+            script.append('echo "@@ T $T"')
+    env = dict(os.environ, HOME=rig.home.home, PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    before = rig.tree()
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=240, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    text, current = {}, ""
+    for chunk in done.stdout.split("@@ ")[1:]:
+        key, _, rest = chunk.partition("\n")
+        if key.split()[0].isdigit():
+            current = key.split()[0]
+            text[current] = rest
+        else:
+            text[current] += key + "\n" + rest                          # the exit status line and anything the section's prose asks to look at after it
+    assert "Commands:" in text["0"] and "There are no backups of Voice check in " in text["0"] and "To make one, run: " in text["0"] and "has not been backed up on this computer yet" in text["0"]
+    assert "A backup of Voice check would be made like this:" in text["2"] and "keep these, one file at a time:" in text["2"] and "leave these out, because they can be made again or are not needed:" in text["2"]
+    assert "The project record and the consent note:" in text["2"] and "No such file or directory" in text["2"] and "status: 2" in text["2"], "nobody to ask, so nothing is written"
+    assert "Reading the backup back and checking every file." in text["3"] and "The backup is made and checked: " in text["3"] and "Every file was read back and matched." in text["3"]
+    assert "This tool never removes a backup." in text["3"]
+    listing = [line for line in text["3"].splitlines() if line.startswith("-rw")]
+    assert len(listing) == 2 and all(line.startswith("-rw-------") for line in listing) and listing[0].endswith(".tar") != listing[1].endswith(".tar")
+    assert sorted(l.split()[-1].rsplit(".", 1)[-1] for l in listing) == ["json", "tar"]
+    names = [line.split()[-1] for line in text["4"].split("status:")[0].splitlines()]
+    assert "project/project.json" in names and any(n.startswith("recordings/takes/") for n in names) and "rounds/rounds.json" in names and any(n.startswith("exports/") for n in names)
+    assert names[-1] == "MANIFEST.json" and not any(w in " ".join(names) for w in ("scratch", "listening", "audio.wav", "token", "datasets"))
+    assert "is whole. Every file in it matched, and nothing is missing or extra." in text["5"] and "Backups of Voice check in " in text["5"] and "Nothing precious in Voice check has changed since the last backup" in text["5"]
+    assert "damaged-copy.tar is not whole:" in text["6"] and "project/project.json" in text["6"] and "does not match its checksum" in text["6"] and "status: 1" in text["6"]
+    assert text["6"].rstrip().splitlines()[-1] == "0", "the copy is not one the list command names"
+    assert "has changed since the last backup" in text["7"]
+    refusal = text["8"]
+    for sentence in ("That folder is inside a project, so deleting the project would delete its backup too.", "Nothing was made.", "Choose a folder outside every project, such as a folder on another drive.",
+                     "The backup folder was not given in full.", "Give the whole path after --to, starting with a slash."):
+        assert sentence in refusal, sentence
+    assert "backups-here" not in refusal.split("Give the whole path")[-1]
+    assert "Nothing needs putting back. Everything in the backup is already in the project." in text["9"]
+    assert "make the project voice-check again, because it is not on this computer" in text["9"] and "Done. " in text["9"] and "Look at the project with: " in text["9"]
+    assert "same project record" in text["10"] and "same takes" in text["10"]
+    assert "leave 1 file exactly as it is, because it differs from the backup's copy. The backup still holds its copy." in text["11"] and "Nothing needs putting back." in text["11"]
+    assert "That folder is on the same drive as the project. It protects against a mistake, not against a drive that fails." in text["12"]
+    pretend = next(line for line in done.stdout.splitlines() if line.startswith("@@ T ")).split(" ", 2)[2]
+    try:
+        assert Path(pretend, "ack-voice-studio", "projects", "voice-check", "project.json").read_bytes().endswith(b" \n")
+    finally:
+        shutil.rmtree(pretend, ignore_errors=True)
+    after = rig.tree()
+    assert {k: v for k, v in after.items() if k != "project.json"} == {k: v for k, v in before.items() if k != "project.json"}, "nothing in the project changed, except the time on its record"
+    assert after["project.json"] == before["project.json"], "the touch changed only the time, never the contents"
+
+
+PYBACKUP_LIST = 'PYTHONPATH=TOOLS PY -m voice_studio.backup list --project voice-check --to ~/ack-voice-check-backups | grep -c damaged'
+
+
+# ---------------------------------------------------------------- section I10: checking the tool, and refreshing it
+
+def i10_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I10."), flags=re.S | re.M)]
+
+
+def test_the_refresh_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import refresh_flow as rff
+    found = re.findall(r"python3 -m voice_studio\.(refresh|buildenv) ([a-z]+)([^\n`;<|&]*)", section("I10."))
+    assert {c for m, c, _ in found if m == "refresh"} == {"check", "repair", "rebuild", "older"} and {c for m, c, _ in found if m == "buildenv"} == {"studio"}
+    seen = set()
+    for module, command, rest in found:
+        if module == "buildenv":
+            assert shlex.split(rest) == ["--check"]
+            continue
+        assert command in rff.OPTIONS, command
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            assert words[i].startswith("-") and words[i] in rff.OPTIONS[command], (command, words[i])
+            seen.add(words[i])
+            i += 2 if words[i] == "--programs" else 1
+        if "--programs" in words:
+            assert words[words.index("--programs") + 1] in ("studio", "training")
+    assert seen >= {"--quick", "--yes", "--programs", "--remove"} and set(rff.COMMANDS) == {"check", "repair", "rebuild", "older", "help"}
+
+
+def test_every_sentence_the_refresh_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I10."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "cat ", "du ", "time ", "T=", "find ", "mkdir ", "head ", "echo ", "rm ", "["))]
+    assert len(quoted) >= 25 and any(cut for _, cut in quoted), (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_places_the_refresh_section_names_are_where_the_tool_keeps_things():
+    from voice_studio.core import envgen, startvoice
+    from voice_studio.core.paths import DataHome
+    from voice_studio.core.registry import load_registry
+    body = section("I10.")
+    item = next(i for i in load_registry().items if i.id == "voice-mike")
+    assert str(startvoice.voice_folder(DataHome("$T"), item) / item.filename).replace("$T/", '$T/') in body.replace('"', "")
+    assert envgen.path_of(DataHome("$T")).replace("$T", "$T") in body.replace('"', "") and envgen.FILE == "environments.json"
+    assert DataHome("~").projects in body and "~/ack-voice-studio/tool/environments/*" in body and ".damaged-" in body
+
+
+def test_the_refresh_section_says_what_it_never_touches_and_which_parts_use_a_pretend_home_and_what_was_not_run():
+    body = " ".join(section("I10.").split())
+    assert "It never touches a project, a recording, a round, a finished voice file or a backup." in body and "The first three parts below use a pretend home folder" in body
+    assert "Not run on a real computer." in body and "--programs studio" in body and "--programs training" in body
+    assert "Section I10:" in doc_text() and "rm -r \"$T\"" in section("M.")
+    names = re.findall(r"^## (I10|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I9") < names.index("I10") < names.index("J") and len(i10_blocks()) == 8
+
+
+def test_the_refresh_section_runs_as_it_says_in_a_pretend_home(tmp_path):
+    import shutil
+    for tool in ("bash", "head", "ls", "cat"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    blocks = i10_blocks()
+    mine, python = str(TOOLS), shlex.quote(sys.executable)
+
+    def adapted(index):
+        text = blocks[index].replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("python3 -m", python + " -m")
+        if index == 2:                       # a pipe cannot answer: the first repair is left unanswered (it says so), the second is told yes
+            first, second = text.split("cat ", 1)[0], "cat " + text.split("cat ", 1)[1]
+            text = first + "echo ---\n" + second.replace("refresh repair\n", "refresh repair --yes\n")
+        return text
+
+    home = tmp_path / "home"
+    home.mkdir()
+    script = []
+    for index in (1, 2, 3):
+        script.append('echo "@@ %d"' % index)
+        script.append(adapted(index))
+        if index == 1:
+            script.append('echo "@@ T $T"')
+    env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=240, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    parts = {chunk.split("\n", 1)[0].strip(): chunk.split("\n", 1)[1] for chunk in done.stdout.split("@@ ")[1:]}
+    pretend = Path(next(k for k in parts if k.startswith("T "))[2:])
+    assert "  [problem] The note of which copy of the programs is in use: It cannot be read." in parts["1"] and "exit: 1" in parts["1"]
+    assert "To mend what can be mended, run: python3 -m voice_studio.refresh repair" in parts["1"]
+    assert "A repair would do this:" in parts["2"] and "  Set the note of which copy of the programs is in use aside under another name, beside itself. It is not deleted." in parts["2"]
+    assert "There was nobody to ask. To say yes on the command line, add --yes. Nothing was done." in parts["2"].split("---")[0]
+    after = parts["2"].split("---")[1]
+    assert after.strip().splitlines()[0] == "{" and "was set aside as " in after and "environments.json.damaged-" in after and "Looking again." in after
+    state = pretend / "ack-voice-studio" / "state"
+    assert sorted(p.name for p in state.iterdir() if p.name.startswith("environments.json")) == [next(p.name for p in state.iterdir() if ".damaged-" in p.name)] and (state / next(p.name for p in state.iterdir() if ".damaged-" in p.name)).read_text().strip() == "{"
+    d = parts["3"]
+    assert "[problem] The starting voice Mike: The file is not what was agreed." in d and "  Fetch the starting voice Mike again. The file in the way is replaced only after the new one has been checked." in d
+    assert "The download was not started because it has not been agreed to yet." in d and "  The starting voice Mike could not be fetched again. The file that was there is as it was." in d
+    voice = pretend / "ack-voice-studio" / "tool" / "downloads" / "voices" / "voice-mike" / "epoch=5460-val_mos=4.2686.ckpt"
+    try:
+        assert voice.stat().st_size == 1000 and voice.read_bytes() == b"\0" * 1000 and " 1000 " in d
+        assert not (home / "ack-voice-studio").exists(), "the real home was not touched"
+    finally:
+        shutil.rmtree(pretend, ignore_errors=True)
+
+
+
+# ---------------------------------------------------------------- section I11: removing the tool's programs and downloads
+
+def i11_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I11."), flags=re.S | re.M)]
+
+
+def test_the_uninstall_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import uninstall_flow as uf
+    found = re.findall(r"python3 -m voice_studio\.(uninstall|refresh|projects|voices|window) ([a-z-]+)([^\n`;<|&]*)", section("I11."))
+    assert {c for m, c, _ in found if m == "uninstall"} == {"show", "remove"} and set(uf.COMMANDS) == {"show", "remove", "help"}
+    assert {(m, c) for m, c, _ in found if m != "uninstall"} == {("refresh", "check"), ("projects", "list")}
+    for module, command, rest in found:
+        if module == "uninstall":
+            assert command in uf.OPTIONS and all(w in uf.OPTIONS[command] for w in shlex.split(rest) if w.startswith("-")), (command, rest)
+
+
+def test_every_sentence_the_uninstall_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I11."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "cat ", "du ", "df ", "time ", "T=", "H=", "find ", "mkdir ", "head ", "echo ", "rm ", "["))]
+    assert len(quoted) >= 14, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_uninstall_section_says_what_it_never_touches_and_which_parts_are_pretend_and_what_was_not_run():
+    body = " ".join(section("I11.").split())
+    assert "It never touches a project, a recording, a round, a finished voice file, a backup, the starting voices you chose or the tool's small notes." in body
+    assert "The first three parts below use a pretend home folder" in body and "Not run on a real computer." in body and "Real, slow and optional." in body
+    assert "Section I11:" in doc_text() and "pretend homes in sections I10, I11 and I12" in section("M.")
+    names = re.findall(r"^## (I11|I10|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I10") < names.index("I11") < names.index("J") and len(i11_blocks()) == 6
+
+
+def test_the_uninstall_section_runs_as_it_says_in_a_pretend_home(tmp_path):
+    import shutil
+    for tool in ("bash", "head", "find", "sort"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    blocks = i11_blocks()
+    mine, python = str(TOOLS), shlex.quote(sys.executable)
+
+    def adapted(text):
+        return text.replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("python3 -m", python + " -m")
+
+    lines, seen = blocks[2].splitlines(), 0
+    for i, line in enumerate(lines):                       # a pipe cannot answer: the first remove is left unanswered (it says so), the second is told --yes
+        if "uninstall remove" in line:
+            seen += 1
+            lines[i] = line + (" --yes" if seen == 2 else "") + '; echo "exit: $?"'
+    assert seen == 2
+    home = tmp_path / "home"
+    home.mkdir()
+    script = [adapted(blocks[1]), 'echo "@@ 1"', 'echo "@@ T $T"', "echo @@ 2", adapted("\n".join(lines))]
+    env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=120, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    out = done.stdout
+    pretend = Path(next(line for line in out.splitlines() if line.startswith("@@ T ")).split(" ", 2)[2])
+    try:
+        looked = out.split("@@ 1")[0]
+        removing = out.split("@@ 2")[1]
+        assert "  Downloaded file: " in looked and "archive.tar.gz" in looked and "voice-mike" not in looked.split("These are kept:")[0] and "take.wav" not in looked
+        assert "These are kept:" in looked and "1 other item in the tool's folders was left alone, because this tool did not make it or is still building it." in looked and "exit: 0" in looked
+        assert "There was nobody to ask. To say yes on the command line, add --yes. Nothing was done." in removing and "exit: 2" in removing and "exit: 0" in removing
+        assert "Done. The programs and downloaded files were removed. About 5.7 KB is free again. Nothing of yours was touched." in removing
+        found = removing.splitlines()
+        assert found.count("projects/anna/recordings/take.wav") == 2 and found.count("tool/downloads/archive.tar.gz") == 1 and found.count("tool/downloads/models/speech-small-en/a.bin") == 1, "all six files after the no, four after the yes"
+        kept = sorted(str(p.relative_to(pretend / "ack-voice-studio")) for p in (pretend / "ack-voice-studio").rglob("*") if p.is_file())
+        assert kept == ["backups/anna.tar", "projects/anna/recordings/take.wav", "state/consent.json", "tool/downloads/voices/voice-mike/mike.ckpt"]
+        assert (pretend / "ack-voice-studio/tool/environments/somebody-elses").is_dir() and not (home / "ack-voice-studio").exists(), "the real home was not touched"
+    finally:
+        shutil.rmtree(pretend, ignore_errors=True)
+
+
+# ---------------------------------------------------------------- section I12: moving a project's scratch
+
+def i12_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I12."), flags=re.S | re.M)]
+
+
+def test_the_scratch_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import projects_flow as pf, rounds_flow as rf, scratchmove_flow as smf
+    found = re.findall(r"python3 -m voice_studio\.(scratch|projects|rounds) ([a-z]+)([^\n`;<|&]*)", section("I12."))
+    assert {c for m, c, _ in found if m == "scratch"} == {"show", "move"} and set(smf.COMMANDS) == {"show", "move", "help"}
+    assert {(m, c) for m, c, _ in found if m != "scratch"} == {("projects", "new"), ("rounds", "start")}
+    seen = set()
+    for module, command, rest in found:
+        table = {"scratch": smf.OPTIONS, "projects": pf.OPTIONS, "rounds": rf.OPTIONS}[module]
+        assert command in table, (module, command)
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert words[i] in table[command], (module, command, words[i])
+                seen.add(words[i])
+                i += 2 if words[i] in ("--to", "--name") else 1
+            else:
+                i += 1
+    assert seen >= {"--to", "--default", "--yes", "--own", "--name"}
+
+
+def test_every_sentence_the_scratch_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I12."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "cat ", "du ", "df ", "time ", "T=", "H=", "P=", "find ", "mkdir ", "head ", "echo ", "rm ", "[", "(cd"))]
+    assert len(quoted) >= 25, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_scratch_section_says_what_it_never_touches_which_parts_are_pretend_and_what_was_not_run():
+    body = " ".join(section("I12.").split())
+    assert "It never touches a recording, a round or a finished voice file." in body and "The first three parts below use a pretend home folder" in body
+    assert "Not run on a real computer, and never on a second drive." in body and "Real and slow;" in body
+    assert "Section I12:" in doc_text() and "I10, I11 and I12" in section("M.")
+    names = re.findall(r"^## (I12|I11|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I11") < names.index("I12") < names.index("J") and len(i12_blocks()) == 8
+
+
+def test_the_scratch_section_runs_as_it_says_in_a_pretend_home(tmp_path):
+    import shutil
+    for tool in ("bash", "head", "find", "sort", "sha256sum"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    blocks = i12_blocks()
+    mine, python = str(TOOLS), shlex.quote(sys.executable)
+
+    def adapted(text):
+        return text.replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("python3 -m", python + " -m")
+
+    def answered(text, yes_from):
+        """A pipe cannot answer: the first `move` is left unanswered (it says so) and every one after it is told --yes."""
+        lines, seen = text.splitlines(), 0
+        for i, line in enumerate(lines):
+            if "scratch move" in line:
+                seen += 1
+                lines[i] = line + (" --yes" if seen >= yes_from else "") + '; echo "exit: $?"'
+        return "\n".join(lines)
+    home = tmp_path / "home"
+    home.mkdir()
+    script = [adapted(blocks[0]), 'echo "@@ T $T"', "echo @@ B", adapted(blocks[1]), "echo @@ C", adapted(answered(blocks[2], 2)), "echo @@ D", adapted(answered(blocks[3], 1))]
+    env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=180, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    out = done.stdout
+    pretend = Path(next(line for line in out.splitlines() if line.startswith("@@ T ")).split(" ", 2)[2])
+    try:
+        a, rest = out.split("@@ B")
+        b, rest = rest.split("@@ C")
+        c, d = rest.split("@@ D")
+        assert "Made the project scratch-check." in a and "  4 files, 16 KB." in a and "exit: 0" in a and "To move it, run: " in a
+        sums = [line for line in a.splitlines() if re.fullmatch(r"[0-9a-f]{64}  -", line)]
+        assert len(sums) == 1
+        assert b.count("That place cannot be used:") == 2 and b.count("exit: 2") == 2 and b.count("Nothing was done.") == 2
+        assert "  That folder is inside this project's own folders. Choose somewhere else." in b and "  Please choose a folder from the list rather than typing a short name." in b
+        assert "ack-voice-scratch" not in b.split("exit: 2")[-1], "the refusals made nothing in the drive folder"
+        assert "There was nobody to ask. To say yes on the command line, add --yes. Nothing was done." in c and "exit: 2" in c
+        assert "The copy is made and checked: 4 files copied now, 0 already there." in c and "  Copied 4 of 4 files." in c
+        assert "The scratch of Scratch check is in the place you chose: " in c and "The old place was kept." in c
+        csums = [line for line in c.splitlines() if re.fullmatch(r"[0-9a-f]{64}  -", line)]
+        assert csums == sums
+        assert "The copy is made and checked: 0 files copied now, 4 already there." in d
+        dsums = [line for line in d.splitlines() if re.fullmatch(r"[0-9a-f]{64}  -", line)]
+        assert dsums == sums
+        assert (pretend / "ack-voice-studio/projects/scratch-check/scratch/datasets/d1/metadata.csv").read_text() == "a.wav|hello\n"
+        assert not (home / "ack-voice-studio").exists(), "the real home was not touched"
+    finally:
+        shutil.rmtree(pretend, ignore_errors=True)
+
+
+# ---------------------------------------------------------------- section I13: updating the tool
+
+def i13_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I13."), flags=re.S | re.M)]
+
+
+def test_the_update_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import update_flow as uf
+    found = re.findall(r"python3 -m voice_studio\.(update|refresh|backup) ([a-z]+)([^\n`;<|&]*)", section("I13."))
+    assert {c for m, c, _ in found if m == "update"} == {"check", "get", "help"} == set(uf.COMMANDS)
+    assert {(m, c) for m, c, _ in found if m != "update"} == {("refresh", "check")}
+    seen = set()
+    for module, command, rest in found:
+        if module != "update":
+            continue
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert command in uf.OPTIONS and words[i] in uf.OPTIONS[command], (command, words[i])
+                seen.add(words[i])
+                i += 2 if words[i] == "--to" else 1
+            else:
+                i += 1
+    assert seen >= {"--to", "--yes"}
+
+
+def test_every_sentence_the_update_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I13."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "PATH=", "~/", "ls ", "cat ", "du ", "git ", "mv ", "rm ", "cd ", "echo ", "T=", "[", "(cd"))]
+    assert len(quoted) >= 30, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_update_section_says_what_it_never_touches_that_no_release_exists_and_what_was_not_run():
+    from voice_studio.core import registry as reg, update as up
+    from voice_studio.core.text import size_text
+    body = " ".join(section("I13.").split())
+    assert "It never touches the copy it runs from, your projects, your recordings or your backups." in body and "**ACK Voice Studio has no named release yet**" in body
+    prefix = reg.load_release_source().tag_prefix
+    assert prefix == "voice-studio-" and body.count("`%s`" % prefix) >= 2, "the section names the prefix the registry really uses"
+    assert "the phone app's tags" in body and "`v1.0-beta.1`" in body and "ACK has no named release" not in body.replace("ACK Voice Studio has no named release", ""), "it must not say the repository has no tags at all"
+    assert "Not run on a real computer, never over a real connection and never against github.com." in body
+    assert "%s must be free beside this one" % size_text(up.ROOM_BYTES) in body and "usually under 100 MB" in body
+    assert "it prints the commands, and you type them" in body and "The tool prints it and never runs it." in body
+    assert "Section I13:" in doc_text() and "section I13 fetched a copy into" in section("M.") and "pretend homes in sections I10, I11 and I12" in section("M.")
+    names = re.findall(r"^## (I13|I12|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I12") < names.index("I13") < names.index("J") and len(i13_blocks()) == 8
+
+
+def test_the_parts_of_the_update_section_that_contact_nothing_run_as_they_say(tmp_path):
+    import shutil
+    for tool in ("bash", "git"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    blocks = i13_blocks()
+    mine, python = str(TOOLS), shlex.quote(sys.executable)
+
+    def adapted(text):
+        return text.replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("/usr/bin/python3 -m", python + " -m").replace("python3 -m", python + " -m")
+    home = tmp_path / "home"
+    home.mkdir()
+    script = [adapted(blocks[0]), "echo @@ A2", adapted(blocks[1]), "echo @@ B", adapted(blocks[2])]
+    env = dict(os.environ, HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=120, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    a, rest = done.stdout.split("@@ A2")
+    a2, b = rest.split("@@ B")
+    assert "Commands:" in a and "Nothing is contacted unless you say yes, nothing is checked in the background" in a and a.count("exit: 2") == 3
+    assert "There was nobody to ask. To say yes on the command line, add --yes. Nothing was done." in a and "A release name is made of letters, numbers, dots, dashes and underscores only." in a
+    assert "Give the whole path after --to, starting with a slash. Nothing was done." in a2 and "Something is already at the folder the copy would go to." in a2 and a2.count("exit: 2") == 2
+    assert "The program that fetches releases, git, is not installed on this computer." in b and "exit: 2" in b
+    assert not (home / "ack-voice-studio").exists(), "the real home was not touched"
+
+
+# ---------------------------------------------------------------- section I15: the window's pages for hearing, backup, checking, updates and problem reports
+
+NEW_PAGE_LABELS = ("window.hear.hear_voice", "window.hear.hear_round", "window.hear.show_folder", "window.backup.now", "window.backup.choose_folder", "window.backup.usual_folder", "window.backup.check",
+                   "window.backup.put_back", "window.backup.check_other", "window.backup.put_back_other", "window.backup.show_folder", "window.refresh.check", "window.refresh.check_quick",
+                   "window.refresh.repair", "window.refresh.rebuild", "window.refresh.older_list", "window.refresh.older_remove", "window.update.look", "window.update.get", "window.report.show",
+                   "window.report.save", "window.report.copy", "window.report.choose_folder", "window.report.save_go", "window.result.report_button")
+
+
+def test_every_sentence_the_window_pages_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I15."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "PATH=", "~/", "ls ", "cat ", "du ", "git ", "mv ", "rm ", "cd ", "echo ", "T=", "[", "(cd"))]
+    assert len(quoted) >= 40, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_window_pages_section_names_every_button_the_five_pages_have_by_the_words_on_it():
+    from voice_studio.core import text as catalog_text
+    cat = catalog_text.load_catalog("en")
+    body = " ".join(section("I15.").split())
+    for key in NEW_PAGE_LABELS:
+        label = cat.t(key)
+        assert "`%s`" % label in body, "the section does not name the button: " + label
+
+
+def test_the_window_pages_section_says_what_it_did_not_cover_and_what_the_pages_never_do():
+    from voice_studio.core import windowmodel
+    body = " ".join(section("I15.").split())
+    for claim in ("**New, and not yet run on a real computer.**", "Nothing on these pages starts by itself, nothing reads again on a timer", "the pages that can lead to the internet are Updates and, on Check the tool, the buttons that mend or build fresh (they can download again)",
+                  "under GTK 4.14 and under the exact stack of the floor (Ubuntu 22.04: Python 3.10, python3-gi 3.42, GTK 4.6.9)", "Updates was given a stand-in for the network, so nothing was contacted",
+                  "Not run on WSLg or a native desktop, with a mouse, over a real connection, through a speaker, or with a screen reader", "**what the shown problem report held that you did not expect**"):
+        assert claim in doc_text() or claim in body, claim
+    assert [name for name in windowmodel.PAGES if name in ("hear", "backup", "refresh", "update", "report")] == ["hear", "backup", "refresh", "update", "report"]
+    names = re.findall(r"^## (I15|I14|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I14") < names.index("I15") < names.index("J")
+    assert "- Section I15:" in doc_text() and "section I15 made for a backup and a report" in section("M.")
+
+
+# ---------------------------------------------------------------- section I14: the problem report
+
+def i14_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I14."), flags=re.S | re.M)]
+
+
+def test_the_report_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import reportcmd_flow as rf, update_flow as uf
+    found = re.findall(r"python3 -m voice_studio\.(report|update) ([a-z]+)([^\n`;<|&]*)", section("I14."))
+    assert {c for m, c, _ in found if m == "report"} == {"help", "show", "save"} == set(rf.COMMANDS) and {c for m, c, _ in found if m == "update"} == {"check"}
+    seen = set()
+    for module, command, rest in found:
+        table = (rf if module == "report" else uf).OPTIONS
+        words, i = shlex.split(rest.replace('"paste the Technical detail line here"', "x")), 0
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert command in table and words[i] in table[command], (module, command, words[i])
+                seen.add(words[i])
+                i += 2 if words[i] in ("--to", "--step", "--problem", "--detail", "--job") else 1
+            else:
+                i += 1
+    assert seen >= {"--to", "--yes", "--replace", "--step", "--problem", "--detail", "--job", "--include-log"}
+
+
+def test_every_sentence_the_report_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I14."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "HTTPS_PROXY", "~/", "ls ", "wc ", "cat ", "T=", "echo ", "rm ", "[", "----", "<"))]
+    assert len(quoted) >= 18, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_report_section_says_what_it_shows_what_it_never_does_and_what_was_not_run():
+    body = " ".join(section("I14.").split())
+    assert "It prints **all** of it and changes nothing." in body and "never replaces a file unless you add `--replace`, makes no folder, and sends nothing anywhere" in body
+    assert "no recordings, no text you made and no phrases" in body and "A command that was declined, or could not be asked, gets no such lines." in body
+    assert "Not run on a real computer, and no helper has read one yet." in body and "Known limits: a name of one letter is not hidden" in body
+    assert "---- the report starts on the next line ----" in body and "---- the report ends on the line before this one ----" in body
+    assert "Section I14:" in doc_text() and "section I14 saved a report in" in section("M.")
+    names = re.findall(r"^## (I14|I13|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I13") < names.index("I14") < names.index("J") and len(i14_blocks()) == 9
+
+
+def test_the_parts_of_the_report_section_that_contact_nothing_run_as_they_say(tmp_path):
+    import shutil
+    for tool in ("bash", "git"):
+        if not shutil.which(tool):
+            pytest.skip(tool + " is not installed here")
+    blocks = i14_blocks()
+    mine, python = str(TOOLS), shlex.quote(sys.executable)
+
+    def adapted(text):
+        return text.replace("PYTHONPATH=~/ack-tools/tools", "PYTHONPATH=" + shlex.quote(mine)).replace("python3 -m", python + " -m")
+
+    def answered(text):
+        """A pipe cannot answer: the first save is left unanswered (it says so) and the second is told --yes."""
+        seen, lines = 0, text.splitlines()
+        for i, line in enumerate(lines):
+            if "report save" in line:
+                seen += 1
+                lines[i] = line + (" --yes" if seen >= 2 else "")
+        return "\n".join(lines)
+    home = tmp_path / "home"
+    home.mkdir()
+    script = [adapted(blocks[0]), "echo @@ B1", adapted(blocks[1]), "echo @@ B2", adapted(blocks[2]), "echo @@ B3", adapted(blocks[3]), "echo @@ C",
+              adapted(answered(blocks[4])).replace('wc -c "$T/problem.txt"', 'wc -c < "$T/problem.txt"'), "echo @@ DA", adapted(blocks[5]), "echo @@ DB",
+              adapted(blocks[6].replace("--replace", "--replace --yes")), "echo @@ F", adapted(blocks[8])]
+    env = dict(os.environ, HOME=str(home), USER="pretendlogin", PYTHONDONTWRITEBYTECODE="1")
+    env.pop("PYTHONPATH", None)
+    done = subprocess.run(["bash", "-c", "\n".join(script)], env=env, cwd=str(tmp_path), text=True, capture_output=True, timeout=180, stdin=subprocess.DEVNULL)
+    assert "Traceback" not in done.stdout + done.stderr, done.stderr[-1500:]
+    out = done.stdout
+    a, rest = out.split("@@ B1")
+    b1, rest = rest.split("@@ B2")
+    b2, rest = rest.split("@@ B3")
+    b3, rest = rest.split("@@ C")
+    c, rest = rest.split("@@ DA")
+    d, rest = rest.split("@@ DB")
+    d2, f = rest.split("@@ F")
+    assert "Commands:" in a and "---- the report starts on the next line ----" in a and "---- the report ends on the line before this one ----" in a and "exit: 0" in a
+    assert "Nothing was saved and nothing was sent." in a and "pretendlogin" not in a
+    assert "The place the releases are kept could not be asked, or it did not give the release." in b1 and b1.count("exit: 1") == 1 and b1.count("exit: 2") == 1
+    assert b1.count("A problem report can be made for a helper") == 1 and "show --step 'update check' --problem update/unreachable" in b1
+    assert "  Step: update check" in b2 and "  Problem: update / unreachable" in b2 and "  More detail: paste the Technical detail line here" in b2
+    assert "That is not a problem name the tool knows." in b3 and "--detail goes with --problem." in b3 and b3.count("Nothing was built or saved.") == 2
+    assert "There was nobody to ask. To say yes on the command line, add --yes. Nothing was done." in c and "Saved " in c and "-rw-------" in c
+    sizes = re.findall(r"^Saved (\d+) bytes to ", c, re.M)
+    assert len(sizes) == 1 and re.search(r"^%s$" % sizes[0], c, re.M)
+    for sentence in ("There is already a file at that place.", "The folder for that file does not exist.", "Give the whole path of the file, starting with a slash or with ~.", "Say where to save the report."):
+        assert sentence in d, sentence
+    assert d.count("exit: 2") == 4 and "---- the report starts" not in d and re.search(r"^problem\.txt$", d, re.M)
+    assert "is there already and will be replaced." in d2 and "Saved " in d2
+    assert "Step: <user> on" in f and "folder <voice-studio>, address <address>, mail <email>" in f and "pretendlogin" not in f
+
+
+# ---------------------------------------------------------------- section I16: giving the voice file to the phone over Wi-Fi
+
+def i16_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I16."), flags=re.S | re.M)]
+
+
+def test_the_send_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import voicefile_flow as vff
+    found = re.findall(r"python3 -m voice_studio\.voicefile ([a-z]+)([^\n`;<|&]*)", section("I16."))
+    assert found and {c for c, _ in found} == {"send"}
+    table = vff.OPTIONS["send"]
+    seen = set()
+    for command, rest in found:
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert words[i] in table, words[i]
+                seen.add(words[i])
+                i += 2 if words[i] in ("--project", "--folder", "--address", "--port") else 1
+            else:
+                i += 1
+    assert seen >= {"--project", "--address", "--port", "--folder"}
+
+
+def test_every_sentence_the_send_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I16."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "wc ", "cat ", "T=", "echo ", "rm ", "mv ", "[", "<", "openssl ", "tar ", "ss ", "wsl ", "explorer.exe", "ACK ", "%"))]
+    assert len(quoted) >= 25, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_send_section_names_the_things_the_listener_really_does_and_says_what_was_not_run():
+    from voice_studio.core import lansend, phonecert
+    body = " ".join(section("I16.").split())
+    assert "**New, and not yet run on a real computer or a real phone.**" in body and "It is the one place the tool **listens** for a connection" in body
+    assert "for up to ten minutes" in body and lansend.MINUTES == 10 and "port 8443" in body and lansend.DEFAULT_PORT == 8443
+    assert "**Not run on a real network, on WSL's network, through a real phone's browser, or with a phone camera**" in body
+    assert "`authority.key` (permissions `-rw-------`)" in body and phonecert.KEY_FILE == "authority.key" and "`%s`" % phonecert.CERT_FILE in body and "`drwx------`" in body
+    for pair in phonecert.PRIVATE_RANGES:
+        assert "`IP:%s/%s`" % pair in body, pair
+    assert "`DNS:%s`" % phonecert.NO_SUCH_NAME in body and "ss -ltn | grep 8443" in body
+    assert "move the folder aside, **never delete it**" in body and "no folder beginning `send-`" in body
+    assert "Section I16:" in doc_text() and "certificate file section I16 made" in section("M.")
+    names = re.findall(r"^## (I16|I15|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I15") < names.index("I16") < names.index("J") and len(i16_blocks()) == 9
+
+
+# ---------------------------------------------------------------- section I17: Ubuntu under Windows, the phone and the idle stop
+
+def i17_blocks():
+    import textwrap
+    return [textwrap.dedent(b) for b in re.findall(r"^[ ]*```bash\n(.*?)^[ ]*```", section("I17."), flags=re.S | re.M)]
+
+
+def test_the_wsl_commands_it_gives_exist_and_take_the_options_it_gives():
+    from voice_studio.core import wsl_flow
+    found = re.findall(r"python3 -m voice_studio\.wsl ([a-z]+)([^\n`;<|&]*)", section("I17."))
+    assert found and {c for c, _ in found} == {"check", "phone", "idle", "restart"}
+    seen = set()
+    for command, rest in found:
+        if command == "restart":
+            assert command not in wsl_flow.COMMANDS
+            continue
+        assert command in wsl_flow.COMMANDS
+        words, i = shlex.split(rest), 0
+        while i < len(words):
+            if words[i].startswith("-"):
+                assert words[i] in wsl_flow.OPTIONS[command], (command, words[i])
+                seen.add(words[i])
+                i += 2 if words[i] in ("--windows-user", "--port") else 1
+            else:
+                i += 1
+    assert seen >= {"--windows-user", "--port", "--yes"}
+
+
+def test_every_sentence_the_wsl_section_quotes_as_the_tools_output_is_one_the_tool_says():
+    spans = re.findall(r"`([^`\n]+)`", section("I17."))
+    quoted = [(s.rstrip(" …").rstrip(), s.endswith("…")) for s in spans
+              if " " in s and s.rstrip()[-1] in ".?…:" and not s.startswith(("PYTHONPATH", "~/", "ls ", "wc ", "cat ", "T=", "echo ", "rm ", "mv ", "[", "<", "openssl ", "tar ", "ss ", "wsl ", "wsl.exe", "explorer.exe", "ACK ", "%",
+                                                                              "type ", "ip ", "wslinfo", "mkdir ", "printf ", "cp ", "python3 -m", "C:\\", "Windows ", "networkingMode", "instanceIdleTimeout"))]
+    assert len(quoted) >= 18, (len(quoted), quoted)
+    for sentence, cut in quoted:
+        assert says(sentence, cut), "the section quotes a sentence the tool does not say: " + sentence
+
+
+def test_the_wsl_section_names_what_the_commands_really_write_and_say_and_what_was_not_run():
+    from voice_studio.core import wsl
+    body = " ".join(section("I17.").split())
+    assert "**New, and not yet run on a real Windows computer.**" in body and "**Not run on a real Windows computer**" in body
+    assert "`networkingMode=mirrored` in `[wsl2]`" in body and (wsl.KEY_NETWORK, wsl.MIRRORED, wsl.SECTION_NETWORK) == ("networkingMode", "mirrored", "wsl2")
+    assert "`instanceIdleTimeout=-1` in `[general]`" in body and (wsl.KEY_IDLE, wsl.NEVER, wsl.SECTION_IDLE) == ("instanceIdleTimeout", "-1", "general")
+    assert "build 22621" in body and wsl.MIRRORED_MIN_BUILD == 22621 and "Windows 11 version 22H2" in body
+    assert "They never restart WSL, never run the firewall command (they print it), and change nothing on Windows but that one file." in body
+    assert "Microsoft's own, copied from their page on WSL networking, and was not tried" in body
+    assert ".wslconfig.bak" in body and "`.wslconfig.bak-` and the time" in body and "`wsl.exe --shutdown`" in body
+    assert "Section I17:" in doc_text() and "pretend Windows user folder section I17 made" in section("M.")
+    names = re.findall(r"^## (I17|I16|[A-Z][0-9]?)\. ", doc_text(), flags=re.M)
+    assert names.index("I16") < names.index("I17") < names.index("J") and len(i17_blocks()) == 12

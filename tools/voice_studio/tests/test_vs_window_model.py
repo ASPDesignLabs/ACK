@@ -272,6 +272,16 @@ def test_making_the_voice_file_asks_with_the_plan_in_view_and_a_no_makes_nothing
     assert wm.voicefiles_view(rig.home, "voice-check", CAT).items[0].name == rig.exports()[0]
 
 
+def test_making_the_voice_file_from_the_window_also_writes_the_card_beside_the_zip(rig):
+    rig.finish(2)
+    code, lines = press(rig, wm.make_args("voice-check"), Script(True))
+    folder = "%s/%s" % (rig.paths.exports, rig.exports()[0])
+    card = folder + "/MODEL_CARD.txt"
+    assert code == 0 and os.path.isfile(card) and slurp(card).decode("utf-8").startswith("Voice file card\n")
+    assert "The card that says where the voice comes from is %s. It is not inside the zip file, so it does not go to the phone." % card in lines
+    assert sorted(os.listdir(folder)) == sorted(["my_voice.onnx", "my_voice.onnx.json", "my_voice.onnx.before-patch", rig.exports()[0] + ".zip", "MODEL_CARD.txt"])
+
+
 def test_a_refusal_comes_back_as_words_and_asks_nothing(rig):
     sink = Script()
     code, lines = press(rig, wm.make_args("voice-check"), sink)
@@ -390,6 +400,28 @@ def test_deleting_a_project_asks_twice_with_the_list_in_the_first_question_and_a
 
 def test_the_projects_command_is_one_of_the_tools_and_its_heading_is_the_windows_own(rig):
     assert "projects" in wm.TOOLS and CAT.t("projects.title") in full_services(rig).titles()
+
+
+def test_the_backup_command_is_one_of_the_tools_and_the_window_can_run_it_with_its_own_heading(rig, tmp_path):
+    svc = full_services(rig)
+    assert "backup" in wm.TOOLS and CAT.t("backup.title") in svc.titles()
+    dest = tmp_path / "away"
+    dest.mkdir()
+    sink = Script()
+    wio.start_run(lambda io: svc.run("backup", ["now", "--to", str(dest), "--yes"], io), sink, svc.titles())
+    assert sink.done.wait(30)
+    code, lines = sink.result
+    assert code == 0 and sink.questions == [] and [n for n in os.listdir(dest) if n.endswith(".tar")] != []
+
+
+def test_the_refresh_command_is_one_of_the_tools_and_the_window_can_run_it_with_its_own_heading(rig):
+    svc = full_services(rig)
+    assert "refresh" in wm.TOOLS and CAT.t("refresh.title") in svc.titles()
+    sink = Script()
+    wio.start_run(lambda io: svc.run("refresh", ["older"], io), sink, svc.titles())
+    assert sink.done.wait(30)
+    code, lines = sink.result
+    assert code == 0 and sink.questions == [] and "No old copies of the programs are on the disk." in lines
 
 
 # ---------------------------------------------------------------- recordings from the window

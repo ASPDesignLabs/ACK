@@ -17,6 +17,7 @@ from dataclasses import astuple, replace
 from datetime import datetime
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from .backupnudge import delete_line as backup_line
 from .cliargs import ArgError, Parsed, parse_args
 from .describe import error_text
 from .newproject import FormInput, FormState, Problem, create, evaluate
@@ -49,7 +50,7 @@ MAX_FAILED_SHOWN = 5
 FIELD_WORDS = {"name": "projects.field.name", "hours": "projects.field.hours", "consent.given_by": "projects.field.consent.given_by", "consent.what_to": "projects.field.consent.what_to",
                "consent.when": "projects.field.consent.when", "consent.withdraw": "projects.field.consent.withdraw", "consent.how_given": "projects.field.consent.how_given",
                "consent.how_given_other": "projects.field.consent.how_given_other"}
-PART_WORDS = {"recordings": "projects.delete.what.recordings", "rounds": "projects.delete.what.rounds", "exports": "projects.delete.what.exports", "scratch": "projects.delete.what.scratch",
+PART_WORDS = {"recordings": "projects.delete.what.recordings", "rounds": "projects.delete.what.rounds", "exports": "projects.delete.what.exports", "listening": "projects.delete.what.listening", "scratch": "projects.delete.what.scratch",
               "record": "projects.delete.what.record", "other": "projects.delete.what.other"}
 ARG_ERRORS = {"unknown": "cli.bad_option", "missing_value": "cli.missing_value", "repeated": "cli.repeated", "extra_word": "cli.extra_word"}
 
@@ -516,6 +517,9 @@ def _delete(args: Sequence[str], system: System, home: DataHome, registry: Regis
     if plan.left_scratch:
         io.say(cat.t("projects.delete.left", folder=plan.left_scratch))
     io.say(cat.t("projects.delete.backup"))
+    about_backup = backup_line(home, project, ProjectPaths(plan.root), cat)
+    if about_backup:
+        io.say(about_backup)
     if plan.blocked:
         _say_profile_error(ProfileError("job_running"), cat, io)
         return EXIT_NOTHING_DONE

@@ -85,7 +85,7 @@ def test_the_window_files_hold_no_colour_of_their_own_every_colour_comes_from_th
 
 
 def test_every_pixel_size_set_from_python_goes_through_the_scale():
-    for name in ("pages.py", "shell.py", "dialogs.py", "forms.py"):
+    for name in ("pages.py", "shell.py", "dialogs.py", "forms.py", "toolpages.py", "toolforms.py"):
         code = code_only(PKG / "window" / name)
         loose = re.findall(r"Gtk\.\w+\([^()]*\b(?:spacing|column_spacing|row_spacing|margin_\w+|width_request|height_request|min_content_height|max_content_height)=\d+", code)
         assert loose == [], (name, loose)
@@ -172,6 +172,69 @@ def test_bringing_recordings_in_goes_only_through_the_terminals_command_after_a_
     assert "forms.open_import" not in selftest and "wm.import_args" not in selftest
 
 
+def _calls_outside_lambdas(function: ast.AST):
+    """Every call in a function, leaving out the bodies of lambdas (the handlers a button is given, which run only when it is pressed)."""
+    stack = list(ast.iter_child_nodes(function))
+    while stack:
+        node = stack.pop()
+        if isinstance(node, ast.Lambda):
+            continue
+        if isinstance(node, ast.Call):
+            yield node
+        stack.extend(ast.iter_child_nodes(node))
+
+
+def test_no_tool_page_starts_a_task_or_contacts_anything_when_it_is_built_or_looked_at():
+    tree = ast.parse(source(PKG / "window" / "toolpages.py"))
+    looked = [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name in ("build", "refresh", "_update_rounds", "_row")]
+    assert len(looked) >= 12
+    for function in looked:
+        for call in _calls_outside_lambdas(function):
+            name = ast.unparse(call.func)
+            assert not name.endswith(".run") and "networked" not in name and "start_run" not in name, (function.name, name)
+
+
+def test_each_tool_button_is_the_words_of_one_terminal_command_run_as_the_one_task():
+    tree = ast.parse(source(PKG / "window" / "toolpages.py"))
+    runs = [ast.unparse(node.args[0]) for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "run"
+            and ast.unparse(node.func.value) in ("shell", "self.shell")]
+    allowed = {"wm.backup_now_args(pid, self.folder, not self.leave_out)", "wm.backup_verify_args(p)", "wm.backup_restore_args(p)", "command(path)", "wm.listen_voice_args(pid, n)",
+               "wm.listen_round_args(self.shell.project_id, self.round_numbers[index])", "wm.refresh_check_args()", "wm.refresh_check_args(quick=True)", "wm.refresh_repair_args()",
+               "wm.refresh_rebuild_args(self.choices[index].id)", "wm.refresh_older_args()", "wm.refresh_older_args(remove=True)", "wm.update_check_args()", "wm.update_get_args(self.releases[index])",
+               "wm.report_args(self.fields())"}
+    assert len(runs) == len(allowed) and set(runs) == allowed, (sorted(set(runs) ^ allowed), len(runs))          # each button is one command; the one for another file reaches `backup_verify_args` through `command(path)`
+    pages = code_only(PKG / "window" / "toolpages.py")
+    assert pages.count("wm.backup_restore_args") >= 2 and pages.count("wm.backup_verify_args") >= 2
+    # no replace option is ever offered, for a backup put back or a report saved
+    assert "--replace" not in pages and "replace" not in code_only(PKG / "window" / "toolforms.py")
+
+
+def test_the_report_form_closes_only_when_whole_and_then_hands_over_the_words_of_the_command():
+    forms = code_only(PKG / "window" / "toolforms.py")
+    answer = forms.split("def _on_response(")[1].split("\n    def ")[0]
+    assert answer.index("self._problems()") < answer.index("if problems:") < answer.index("self._close(dialog)") < answer.index("self.shell.run(command")
+    problems = forms.split("def _problems(")[1].split("\n    def ")[0]
+    assert "wm.check_report_save(" in problems and "wm.report_args(self.fields, save_to=path)" in problems
+    assert forms.count("self.shell.run(") == 1 and forms.count("Gtk.FileChooserDialog(") == 1
+    assert "SELECT_FOLDER" in forms and "Gtk.FileChooserAction.OPEN" in forms and "FileChooserAction.SAVE" not in forms and "CREATE_FOLDER" not in forms
+    assert "Gtk.FileDialog" not in forms and "Gtk.FileChooserNative" not in forms
+    close = forms.split("def _close(")[1].split("\n    def ")[0]
+    assert "self.shell.chooser.destroy()" in close and close.index("self.shell.chooser.destroy()") < close.index("dialog.destroy()")
+
+
+def test_a_failed_task_keeps_the_report_it_is_about_and_the_report_is_never_sent_or_written_by_the_window():
+    shell = code_only(PKG / "window" / "shell.py")
+    finished = shell.split("def on_finished(")[1].split("\n    def ")[0]
+    assert "if tool != 'report':" in finished and "wm.failure_about(tool, argv, describe.errors_shown())" in finished
+    run = shell.split("def run(")[1].split("\n    def ")[0]
+    assert run.index("self.busy") < run.index("describe.forget_errors_shown()") < run.index("wio.start_run(")
+    for path in WINDOW:
+        code = code_only(path)
+        assert "learned.report" not in code or path.name in ("toolpages.py", "selftest_tools.py"), path.name
+    pages = code_only(PKG / "window" / "toolpages.py")
+    assert "get_clipboard().set(self.shell.services.learned.report)" in pages
+
+
 def test_the_recordings_page_reads_again_by_itself_only_while_the_computer_is_listening():
     pages = code_only(PKG / "window" / "pages.py")
     recordings = pages.split("class RecordingsPage")[1].split("\nclass ")[0]
@@ -198,6 +261,31 @@ def test_no_control_is_icon_only_and_there_is_no_sound_call():
 
 
 # ---------------------------------------------------------------- the real window, driven
+
+# what the tour of the five tool pages (window/selftest_tools.py) must report as true; the update page's longer path needs `git` on the computer the tour runs on
+TOUR_TOOL_KEYS = ("hear_page_controls_are_named", "hear_page_offers_the_rounds_the_model_lists", "hear_page_has_a_round_to_hear", "the_chosen_round_is_the_one_preselected", "no_voice_file_is_said_so",
+                  "hearing_a_round_finishes", "hearing_without_the_programs_says_so_and_starts_nothing", "a_look_keeps_the_round_that_was_picked", "the_failure_names_only_what_that_task_told", "a_failed_task_offers_the_way_to_the_report_page",
+                  "the_way_to_the_report_page_goes_there_and_goes_away", "a_failed_task_points_at_the_problem_report", "the_report_takes_the_focus_so_it_is_in_view",
+                  "report_page_controls_are_named", "the_page_offers_the_failure_just_shown", "nothing_is_shown_before_a_report_is_built", "the_log_choice_waits_for_a_task",
+                  "a_report_is_built_without_a_question", "the_report_is_shown_on_its_page", "the_report_names_the_step_that_failed", "the_report_holds_no_folder_of_this_computer",
+                  "making_a_report_keeps_the_failure_it_is_about", "copy_says_it_copied_the_report", "an_unticked_failure_adds_nothing_and_the_persons_words_stay",
+                  "a_ticked_failure_fills_in_the_step_and_the_one_problem", "typed_words_win_for_the_step_but_the_problem_stays",
+                  "choosing_a_task_lets_the_log_be_asked_for_and_the_fields_name_both", "choosing_no_task_clears_the_log_choice", "save_form_opens_as_the_question_on_the_screen", "save_form_controls_are_named",
+                  "save_form_says_no_folder_was_chosen_and_stays_open", "the_chooser_picks_a_folder_and_closes_choosing_nothing", "a_file_name_with_a_slash_is_refused_in_the_form",
+                  "saving_shows_the_whole_report_before_it_asks", "a_no_saves_nothing", "a_yes_saves_exactly_the_report_that_was_shown", "a_file_that_is_there_is_never_replaced_the_form_says_so",
+                  "cancelling_the_form_does_nothing",
+                  "backup_page_controls_are_named", "backup_page_says_how_the_project_stands", "backup_page_says_where_the_next_one_goes", "no_backup_is_listed_before_one_is_made",
+                  "backing_up_shows_what_it_holds_before_it_asks", "a_no_makes_no_backup", "a_declined_task_is_not_a_failure", "leaving_out_the_saved_points_is_kept_across_a_look", "leaving_out_the_saved_points_is_said_in_the_plan", "a_click_on_the_words_ticks_the_box",
+                  "a_second_click_on_the_words_unticks_it", "a_yes_makes_a_backup_and_the_page_lists_it",
+                  "the_page_now_says_nothing_has_changed_since", "each_backup_has_check_and_put_back_buttons", "check_it_reads_the_backup_back",
+                  "putting_back_what_is_all_there_adds_nothing_and_asks_nothing", "choosing_a_folder_opens_the_chooser_and_cancel_changes_nothing", "a_chosen_folder_is_said_and_can_be_put_down",
+                  "the_usual_folder_comes_back", "a_chosen_folder_is_the_one_the_plan_names", "a_chosen_folder_is_used_once_and_then_remembered_by_the_command", "backup_page_controls_are_named_after",
+                  "refresh_page_controls_are_named", "the_programs_choice_offers_every_set_and_all", "a_quick_look_finishes_and_says_something", "a_look_changes_nothing",
+                  "a_fresh_copy_with_nothing_set_up_says_so_and_starts_nothing", "older_copies_are_listed_without_a_question", "removing_older_copies_with_none_there_asks_nothing",
+                  "update_page_controls_are_named", "update_page_says_which_copy_this_is", "nothing_is_looked_for_until_asked")
+TOUR_UPDATE_KEYS = ("a_look_keeps_the_release_that_was_picked", "looking_says_what_it_will_ask_before_it_asks", "a_no_contacts_nothing", "a_yes_asks_once_and_only_for_the_list", "the_releases_found_are_offered_newest_first",
+                    "fetching_says_the_exact_commands_before_it_asks", "a_no_to_fetching_contacts_nothing_more", "a_look_that_finds_no_release_says_so_and_offers_none", "update_page_controls_are_named_after")
+
 
 def _system_python():
     found = sorted(str(p) for p in Path("/usr/bin").glob("python3*") if re.fullmatch(r"python3(\.\d+)?", p.name))      # the Python that Ubuntu's python3-gi belongs to is not always `python3`
@@ -239,7 +327,8 @@ def test_the_real_window_passes_its_own_tour_on_a_virtual_display(tmp_path):
     assert done.returncode == 0, done.stdout[-1500:] + done.stderr[-1500:]
     report = json.loads(done.stdout.strip().splitlines()[-1])
     assert report["failed"] == [] and report["unnamed_controls"] == {} and report["smallest_text_pt"] >= 12.0 and report["animations_off"] is True
-    assert report["pages"] == ["Projects", "Recordings", "Training rounds", "Voice file", "Free up space", "Display"] and report["project_opened"] == "voice-check"
+    assert report["pages"] == ["Projects", "Recordings", "Training rounds", "Hear the voice", "Voice file", "Backup", "Free up space", "Check the tool", "Updates", "Problem report", "Display"]
+    assert report["project_opened"] == "voice-check"
     for key in ("the_chosen_round_has_no_choose_button", "no_is_the_default_widget", "pages_locked_while_a_question_waits", "a_second_task_is_refused_while_busy", "pages_unlocked_after",
                 "result_head_for_nothing", "result_head_for_done", "remove_button_off_when_nothing_is_ticked", "free_question_names_only_the_ticked", "result_head_for_a_problem",
                 "no_is_where_the_focus_starts", "yes_is_not_the_default", "question_has_no_typed_instruction", "choose_question_shown", "no_answered", "no_changed_nothing", "yes_answered", "yes_chose_it", "free_question_shown", "free_no_answered", "make_finished", "make_said_why",
@@ -253,6 +342,11 @@ def test_the_real_window_passes_its_own_tour_on_a_virtual_display(tmp_path):
                 "import_form_controls_are_named", "no_kind_is_chosen_for_the_person", "import_form_says_what_is_missing_and_stays_open", "a_package_is_picked_as_one_zip_file",
                 "files_are_picked_as_a_folder_or_a_zip", "the_table_name_shows_only_for_a_table", "changing_the_kind_forgets_the_place_chosen", "the_file_chooser_opens",
                 "the_file_chooser_closes_and_chooses_nothing", "files_are_picked_by_choosing_a_folder", "a_package_is_picked_by_choosing_a_file", "a_zip_of_files_is_picked_by_choosing_a_file", "cancel_closes_the_form_and_does_nothing", "import_shows_what_it_found_before_it_asks", "a_no_adds_nothing"):
+        assert report[key] is True, key
+    for key in TOUR_TOOL_KEYS:
+        assert report[key] is True, key
+    assert report["update_yes_check"] in ("ran", "skipped: no git on this computer")
+    for key in (TOUR_UPDATE_KEYS if report["update_yes_check"] == "ran" else ("without_git_the_look_says_so_and_contacts_nothing",)):
         assert report[key] is True, key
     assert report["import_yes_check"] in ("ran", "skipped: no ffmpeg on this computer")
     if report["import_yes_check"] == "ran":

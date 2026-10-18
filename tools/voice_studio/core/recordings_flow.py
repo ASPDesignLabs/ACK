@@ -32,6 +32,7 @@ from .envbuild import EnvPaths
 from .paths import DataHome, ProjectPaths
 from .projects_flow import EXIT_NOTHING_DONE, EXIT_OK, EXIT_PROBLEM, resolve_project, say_bad_arg
 from .registry import Registry
+from .backupnudge import nudge_lines as backup_nudge
 from .rounds_flow import Open, _confirmed, _say_parts, scratch_ready, scratch_root
 from .setup_flow import IO
 from .voices_flow import Download
@@ -231,9 +232,9 @@ def _import(args: Sequence[str], home: DataHome, plan_files: Callable[..., files
         return code
     source = parsed.words[0]
     if kind == "package":
-        return _import_package(parsed, source, ctx, cat, io)
+        return _import_package(parsed, source, ctx, home, cat, io)
     plan = plan_files(Path(source), kind, Path(ctx.paths.recordings), table=parsed.values.get("table", ""))
-    return _import_files(parsed, plan, ctx, cat, io)
+    return _import_files(parsed, plan, ctx, home, cat, io)
 
 
 def _note_sync(recordings: str, cat: Catalog, io: IO) -> None:
@@ -242,7 +243,7 @@ def _note_sync(recordings: str, cat: Catalog, io: IO) -> None:
         io.say(cat.t("recordings.note_line", text=warning))
 
 
-def _import_files(parsed, plan: files_import.Plan, ctx: Open, cat: Catalog, io: IO) -> int:
+def _import_files(parsed, plan: files_import.Plan, ctx: Open, home: DataHome, cat: Catalog, io: IO) -> int:
     for line in plan_lines(plan, cat):
         io.say(line)
     if not plan.to_import:
@@ -276,11 +277,13 @@ def _import_files(parsed, plan: files_import.Plan, ctx: Open, cat: Catalog, io: 
     if not result.clips:
         io.say(cat.t("recordings.import.none_added"))
         return EXIT_PROBLEM
+    for line in backup_nudge(home, ctx.project, ctx.paths, cat):         # new recordings are the one thing that cannot be made again: say so while it is fresh
+        io.say(line)
     io.say(cat.t("recordings.import.next", command=_command("finish", ctx.project.id)))
     return EXIT_OK
 
 
-def _import_package(parsed, source: str, ctx: Open, cat: Catalog, io: IO) -> int:
+def _import_package(parsed, source: str, ctx: Open, home: DataHome, cat: Catalog, io: IO) -> int:
     try:
         prepared = ackimport.prepare(source, Path(ctx.paths.recordings))
     except ackimport.AckImportError as error:
@@ -311,6 +314,8 @@ def _import_package(parsed, source: str, ctx: Open, cat: Catalog, io: IO) -> int
         _say_parts(cat, io, "ackimport", error.code, error.detail)
         return EXIT_PROBLEM
     io.say(cat.count("recordings.import.made", len(created)))
+    for line in backup_nudge(home, ctx.project, ctx.paths, cat):
+        io.say(line)
     io.say(cat.t("recordings.import.next", command=_command("finish", ctx.project.id)))
     return EXIT_OK
 
