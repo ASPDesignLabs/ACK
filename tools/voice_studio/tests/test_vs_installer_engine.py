@@ -1250,7 +1250,7 @@ def test_the_state_folder_is_made_when_it_is_not_there_and_a_plain_file_name_is_
 
 
 @needs_pwsh
-@pytest.mark.parametrize("scenario", ["no_wsl", "wsl_no_ubuntu", "ubuntu_with_account", "restart_waiting", "earlier_run"])
+@pytest.mark.parametrize("scenario", ["no_wsl", "wsl_no_ubuntu", "ubuntu_with_account", "restart_waiting", "earlier_run", "wsl_version_one"])
 def test_the_check_says_aloud_exactly_what_it_writes_in_the_result_file(tmp_path, scenario):
     """What the wizard shows is the result file; what the details list shows is what is said. They must be the same sentences in the same order."""
     options, replies = "", {}
@@ -1264,6 +1264,8 @@ def test_the_check_says_aloud_exactly_what_it_writes_in_the_result_file(tmp_path
         replies = no_wsl()
         (tmp_path / "state.ini").write_text("platform=restart\r\nplatform_boot=%s\r\n" % T1, encoding="ascii")
         options = "-BootStamp { return %s }" % lit(T1)
+    elif scenario == "wsl_version_one":
+        replies = {"-l -v": reply(["  NAME            STATE           VERSION", "* Ubuntu-24.04    Running         1"])}
     else:
         replies = {"-l -v": reply(LISTING), "getent passwd": reply(PASSWD_ROOT_ONLY)}
         (tmp_path / "state.ini").write_text("stage=distro\r\naccount=anna\r\n", encoding="ascii")
