@@ -31,8 +31,8 @@ PASSWD_ANNA = PASSWD_ROOT_ONLY + ["anna:x:1000:1000:Anna,,,:/home/anna:/bin/bash
 
 def run_ps(body, tmp_path, env=None):
     driver = tmp_path / "driver.ps1"
-    driver.write_text("$ErrorActionPreference = 'Stop'\n$env:ACK_VOICE_NO_AUTORUN = '1'\n$env:ACK_VS_ENGINE_LOG = %s\n. %s\n%s\n" % (lit(str(tmp_path / "engine.log")), lit(str(ENGINE)), body),
-                      encoding="utf-8")
+    driver.write_text("$ErrorActionPreference = 'Stop'\n$env:ACK_VOICE_NO_AUTORUN = '1'\n$env:ACK_VS_ENGINE_LOG = %s\n$env:ACK_VS_ENGINE_STATE = %s\n. %s\n%s\n"
+                      % (lit(str(tmp_path / "engine.log")), lit(str(tmp_path / "state.ini")), lit(str(ENGINE)), body), encoding="utf-8")
     done = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", str(driver)], capture_output=True, text=True, timeout=180, env=dict(os.environ, **(env or {})))
     assert done.returncode == 0, done.stdout[-1500:] + done.stderr[-1500:]
     return json.loads(done.stdout.strip().splitlines()[-1])
@@ -84,8 +84,11 @@ def table(mapping):
     return "@{" + "; ".join("%s = %s" % (lit(str(k)), lit(v)) for k, v in mapping.items()) + "}"
 
 
-def engine(tmp_path, step, *, replies=None, elevate=None, facts=None, found="''", program=None, files=None, extra="", options="", password=None, env=None):
-    """Run Invoke-AckVsEngine for one step with the stand-ins above; returns the code, what it said, every wsl request, and the other events."""
+def engine(tmp_path, step, *, replies=None, elevate=None, facts=None, found="''", program=None, files=None, extra="", options="", password=None, env=None, boot=None, state=None):
+    """Run Invoke-AckVsEngine for one step with the stand-ins above; returns the code, what it said, every wsl request, and the other events. `boot` is when Windows "started" (the stand-in
+    for the boot stamp); `state` is what an earlier run left (written to the state file first)."""
+    if state is not None:
+        (tmp_path / "state.ini").write_text("".join("%s=%s\r\n" % kv for kv in state.items()), encoding="ascii")
     elevate = elevate or {"Ran": True, "Code": 0, "Declined": False}
     program = program or {"Ran": True, "Code": 0, "Lines": []}
     body = PRELUDE % {"replies": table(replies or {}), "elevate": lit(elevate), "facts": lit(facts or FACTS_OK), "found": found, "program": lit(program)}
@@ -94,14 +97,26 @@ def engine(tmp_path, step, *, replies=None, elevate=None, facts=None, found="''"
     body += extra
     pw = "-Password %s" % lit(password) if password is not None else ""
     body += """
-$code = @(Invoke-AckVsEngine -Step %(step)s %(options)s %(pw)s -Say $say -Wsl $wsl -Elevate $elevate -Start $start -GetFacts $getFacts -FileExists $fileExists -WriteFile $writeFile -RemoveFile $removeFile -FindProgram $findProgram -RunProgram $runProgram -ProfileFolder %(profile)s)[-1]
+$code = @(Invoke-AckVsEngine -Step %(step)s %(options)s %(pw)s -Say $say -Wsl $wsl -Elevate $elevate -Start $start -GetFacts $getFacts -FileExists $fileExists -WriteFile $writeFile -RemoveFile $removeFile -FindProgram $findProgram -RunProgram $runProgram -ProfileFolder %(profile)s %(boot)s)[-1]
 ConvertTo-Json -InputObject @{ code = $code; said = @($said); calls = @($calls); elevated = @($elevated); events = @($events); files = @($files.Keys); started = @($started) } -Depth 8 -Compress
-""" % {"step": lit(step), "options": options, "pw": pw, "profile": lit(profile_of(tmp_path))}
+""" % {"step": lit(step), "options": options, "pw": pw, "profile": lit(profile_of(tmp_path)), "boot": ("-BootStamp { return %s }" % lit(boot)) if boot is not None else ""}
     return run_ps(body, tmp_path, env)
 
 
 def reply(lines=(), code=0, ran=True):
     return {"Ran": ran, "Code": code, "Lines": list(lines)}
+
+
+def no_wsl(first="Windows Subsystem for Linux is not installed."):
+    """WSL answers none of the three questions the engine asks (`wsl -l -v`, `wsl --status`, `wsl --version`)."""
+    return {"-l -v": reply([first], code=1), "--status": reply([], code=1), "--version": reply([], code=1)}
+
+
+def state_of(tmp_path):
+    path = tmp_path / "state.ini"
+    if not path.exists():
+        return {}
+    return dict(line.split("=", 1) for line in path.read_text(encoding="ascii").splitlines() if "=" in line)
 
 
 def args_of(result):
@@ -381,7 +396,7 @@ def test_windows_10_stops_the_check_before_wsl_is_touched(tmp_path):
 
 @needs_pwsh
 def test_the_first_windows_11_passes_the_check(tmp_path):
-    result, (values, lines) = check(tmp_path, facts=dict(FACTS_OK, Build=22000), replies={"-l -v": reply([], code=1)})
+    result, (values, lines) = check(tmp_path, facts=dict(FACTS_OK, Build=22000), replies=no_wsl())
     assert result["code"] == 0 and values["stop"] == "0" and values["windows_build"] == "22000"
 
 
@@ -393,9 +408,9 @@ def test_a_computer_that_is_not_64_bit_stops_the_check(tmp_path):
 
 @needs_pwsh
 def test_with_no_wsl_the_check_says_all_three_things_are_needed_and_changes_nothing(tmp_path):
-    result, (values, lines) = check(tmp_path, replies={"-l -v": reply(["Windows Subsystem for Linux is not installed."], code=1)})
+    result, (values, lines) = check(tmp_path, replies=no_wsl())
     assert result["code"] == 0 and (values["wsl"], values["needs_platform"], values["needs_distro"], values["needs_account"], values["distro"], values["user"]) == ("none", "1", "1", "1", "", "")
-    assert args_of(result) == ["-l -v", "-l -q"] or args_of(result) == ["-l -v"]
+    assert args_of(result) == ["-l -v", "--status", "--version"]                  # the three questions, and nothing that changes anything
 
 
 @needs_pwsh
@@ -459,9 +474,7 @@ def test_when_wsl_already_works_nothing_is_set_up_and_no_permission_is_asked(tmp
 
 @needs_pwsh
 def test_setting_up_wsl_asks_windows_once_for_exactly_the_platform_and_no_distribution(tmp_path):
-    state = "$n = 0\n"
-    replies = {"-l -v": reply([], code=1)}
-    result = engine(tmp_path, "platform", replies=replies)
+    result = engine(tmp_path, "platform", replies=no_wsl())
     assert result["elevated"][0]["ArgumentLine"] == "--install --no-distribution" and len(result["elevated"]) == 1
     assert result["code"] == 3 and any("must restart" in s for s in result["said"])
 
@@ -481,14 +494,14 @@ ConvertTo-Json -InputObject @{ code = $code; said = @($said); elevated = @($elev
 
 @needs_pwsh
 def test_a_no_from_windows_is_a_no_and_nothing_else_is_tried(tmp_path):
-    result = engine(tmp_path, "platform", replies={"-l -v": reply([], code=1)}, elevate={"Ran": False, "Code": 1, "Declined": True})
+    result = engine(tmp_path, "platform", replies=no_wsl(), elevate={"Ran": False, "Code": 1, "Declined": True})
     assert result["code"] == 2 and any("Windows was not allowed to set up WSL, so nothing was changed" in s for s in result["said"]) and len(result["elevated"]) == 1
 
 
 @needs_pwsh
 @pytest.mark.parametrize("code, expected", [(0, 3), (3010, 3), (1, 1), (-1, 1), (5, 1)])
 def test_the_exit_code_of_the_wsl_install_decides_between_a_restart_and_a_failure(tmp_path, code, expected):
-    result = engine(tmp_path, "platform", replies={"-l -v": reply([], code=1)}, elevate={"Ran": True, "Code": code, "Declined": False})
+    result = engine(tmp_path, "platform", replies=no_wsl(), elevate={"Ran": True, "Code": code, "Declined": False})
     assert result["code"] == expected
     if expected == 1:
         assert any("Windows could not set up WSL (code %d)" % code in s for s in result["said"])
@@ -496,7 +509,7 @@ def test_the_exit_code_of_the_wsl_install_decides_between_a_restart_and_a_failur
 
 @needs_pwsh
 def test_the_dry_run_of_the_wsl_step_shows_the_command_and_asks_for_nothing(tmp_path):
-    result = engine(tmp_path, "platform", replies={"-l -v": reply([], code=1)}, options="-DryRun")
+    result = engine(tmp_path, "platform", replies=no_wsl(), options="-DryRun")
     assert result["code"] == 0 and result["elevated"] == [] and any("wsl.exe --install --no-distribution" in s for s in result["said"])
 
 
@@ -1008,3 +1021,218 @@ def test_the_marker_and_the_name_pattern_are_the_ones_the_tool_itself_puts_on_it
     body = ENGINE.read_text(encoding="ascii")
     assert "ShortcutMarker  = '%s'" % winshortcut.MARKER in body
     assert "ShortcutPattern = 'ACK Voice Studio (*).lnk'" in body and winshortcut.shortcut_name("ACK Voice Studio", "Ubuntu-24.04") == "ACK Voice Studio (Ubuntu-24.04)"
+
+
+# ================================================================ a restart, and carrying on after it (found on the first real run: the wizard asked for a restart and, run again, started over)
+
+T1, T2 = "2026-10-18T08:00:00Z", "2026-10-18T09:30:00Z"
+
+
+@needs_pwsh
+@pytest.mark.parametrize("answers", [{"-l -v": 1, "--status": 0, "--version": 1}, {"-l -v": 1, "--status": 1, "--version": 0}, {"-l -v": 0, "--status": 1, "--version": 1}])
+def test_wsl_that_answers_any_one_of_its_three_questions_is_set_up_even_with_no_ubuntu_installed(tmp_path, answers):
+    """`wsl -l -v` fails when WSL is fine and no Ubuntu is there yet; taking that for "no WSL" is what asked for a restart again and again."""
+    replies = {k: reply(["x"] if c == 0 else [], code=c) for k, c in answers.items()}
+    result = engine(tmp_path, "platform", replies=replies)
+    assert result["code"] == 0 and result["elevated"] == [] and "WSL is already set up." in result["said"]
+    assert state_of(tmp_path)["platform"] == "done"
+
+
+@needs_pwsh
+def test_the_questions_are_asked_in_order_and_stop_at_the_first_answer(tmp_path):
+    result = engine(tmp_path, "platform", replies={"-l -v": reply([], code=1), "--status": reply(["Default Version: 2"])})
+    assert args_of(result) == ["-l -v", "--status"]
+
+
+@needs_pwsh
+def test_what_each_question_got_is_kept_in_the_log_for_reading_a_stop_afterwards(tmp_path):
+    engine(tmp_path, "platform", replies=no_wsl("Windows Subsystem for Linux is not installed."), elevate={"Ran": True, "Code": 3010, "Declined": False}, boot=T1)
+    log = (tmp_path / "engine.log").read_text()
+    assert "wsl wsl.exe -l -v -> ran=True code=1 first=Windows Subsystem for Linux is not installed." in log
+    assert "wsl wsl.exe --status -> ran=True code=1" in log and "wsl wsl.exe --version -> ran=True code=1" in log
+    assert re.search(r"platform restart asked for \(install code 3010, Windows started %s\)" % T1, log)
+
+
+@needs_pwsh
+@pytest.mark.parametrize("code", [0, 3010])
+def test_a_restart_that_is_asked_for_is_remembered_with_the_time_windows_started(tmp_path, code):
+    result = engine(tmp_path, "platform", replies=no_wsl(), elevate={"Ran": True, "Code": code, "Declined": False}, boot=T1)
+    assert result["code"] == 3
+    assert state_of(tmp_path)["platform"] == "restart" and state_of(tmp_path)["platform_boot"] == T1
+
+
+@needs_pwsh
+def test_run_again_before_the_restart_waits_and_does_not_set_up_wsl_again(tmp_path):
+    result = engine(tmp_path, "platform", replies=no_wsl(), state={"platform": "restart", "platform_boot": T1}, boot=T1)
+    assert result["code"] == 3 and result["elevated"] == []
+    assert any("has not restarted since" in s and "choose Restart, not Shut down" in s for s in result["said"])
+    assert state_of(tmp_path)["platform"] == "restart"                       # still waiting, nothing forgotten
+
+
+@needs_pwsh
+def test_run_again_after_the_restart_carries_on_when_wsl_answers(tmp_path):
+    result = engine(tmp_path, "platform", replies={"-l -v": reply([], code=1), "--status": reply(["Default Version: 2"])}, state={"platform": "restart", "platform_boot": T1}, boot=T2)
+    assert result["code"] == 0 and result["elevated"] == []
+    assert state_of(tmp_path)["platform"] == "done" and "platform_boot" not in state_of(tmp_path)
+
+
+@needs_pwsh
+def test_run_again_after_the_restart_with_wsl_still_silent_says_why_and_does_not_ask_for_another_restart(tmp_path):
+    result = engine(tmp_path, "platform", replies=no_wsl(), state={"platform": "restart", "platform_boot": T1}, boot=T2)
+    assert result["code"] == 1 and result["elevated"] == []
+    message = " ".join(result["said"])
+    assert "restarted since, but WSL still does not answer" in message and "must restart" not in message and "virtualization" in message and "installer.log" in message
+    assert state_of(tmp_path)["platform"] == "failed"
+
+
+@needs_pwsh
+def test_after_that_stop_the_next_run_tries_the_set_up_once_more(tmp_path):
+    result = engine(tmp_path, "platform", replies=no_wsl(), state={"platform": "failed"}, boot=T2, elevate={"Ran": True, "Code": 3010, "Declined": False})
+    assert result["code"] == 3 and len(result["elevated"]) == 1
+    assert state_of(tmp_path)["platform"] == "restart" and state_of(tmp_path)["platform_boot"] == T2
+
+
+@needs_pwsh
+@pytest.mark.parametrize("before, now, restarted", [(T1, T1, False), (T1, T2, True), ("", T2, True), (T1, "", True), ("", "", True)])
+def test_a_restart_is_told_by_the_time_windows_started_and_an_unknown_time_never_waits_for_ever(tmp_path, before, now, restarted):
+    assert call("Test-AckVsEngRestarted -Before %s -Now %s" % (lit(before), lit(now)), tmp_path) is restarted
+
+
+@needs_pwsh
+def test_the_boot_stamp_is_utc_text_or_nothing(tmp_path):
+    stamp = call("Get-AckVsEngBootStamp", tmp_path)
+    assert stamp == "" or re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", stamp)
+
+
+@needs_pwsh
+def test_a_dry_run_of_the_wsl_step_remembers_nothing(tmp_path):
+    engine(tmp_path, "platform", replies=no_wsl(), options="-DryRun", boot=T1)
+    engine(tmp_path, "platform", replies={"-l -v": reply(["x"])}, options="-DryRun", boot=T1)
+    assert state_of(tmp_path) == {}
+
+
+@needs_pwsh
+def test_a_declined_permission_and_a_failed_install_leave_no_restart_waiting(tmp_path):
+    engine(tmp_path, "platform", replies=no_wsl(), elevate={"Ran": False, "Code": 1, "Declined": True}, boot=T1)
+    engine(tmp_path, "platform", replies=no_wsl(), elevate={"Ran": True, "Code": 5, "Declined": False}, boot=T1)
+    assert "platform" not in state_of(tmp_path)
+
+
+# ---------------------------------------------------------------- the check reads it
+
+@needs_pwsh
+def test_the_check_after_an_unfinished_restart_says_so_before_an_account_and_a_password_are_asked_for(tmp_path):
+    result, (values, lines) = check(tmp_path, replies=no_wsl(), options="-BootStamp { return %s }" % lit(T1))
+    # (no state yet: an ordinary computer without WSL)
+    assert values["restart_needed"] == "0" and values["needs_platform"] == "1"
+    (tmp_path / "state.ini").write_text("platform=restart\r\nplatform_boot=%s\r\n" % T1, encoding="ascii")
+    result, (values, lines) = check(tmp_path, replies=no_wsl(), options="-BootStamp { return %s }" % lit(T1))
+    assert result["code"] == 0 and values["restart_needed"] == "1" and values["stop"] == "0"
+    assert any(line.startswith("warn|") and "has not restarted since" in line for line in lines.values())
+    assert args_of(result) == ["-l -v", "--status", "--version"]               # it does not go on to look for Ubuntu or an account
+
+
+@needs_pwsh
+def test_the_check_after_the_restart_goes_on_and_needs_no_restart(tmp_path):
+    (tmp_path / "state.ini").write_text("platform=restart\r\nplatform_boot=%s\r\n" % T1, encoding="ascii")
+    result, (values, lines) = check(tmp_path, replies={"-l -v": reply([], code=1), "--status": reply(["Default Version: 2"])}, options="-BootStamp { return %s }" % lit(T2))
+    assert (values["restart_needed"], values["needs_platform"], values["wsl"], values["needs_distro"], values["needs_account"]) == ("0", "0", "ready", "1", "1")
+
+
+@needs_pwsh
+def test_the_check_after_the_restart_with_wsl_silent_does_not_wait_again_and_leaves_the_stop_to_the_step(tmp_path):
+    (tmp_path / "state.ini").write_text("platform=restart\r\nplatform_boot=%s\r\n" % T1, encoding="ascii")
+    result, (values, _lines) = check(tmp_path, replies=no_wsl(), options="-BootStamp { return %s }" % lit(T2))
+    assert (values["restart_needed"], values["needs_platform"]) == ("0", "1")
+
+
+@needs_pwsh
+def test_the_check_names_the_step_the_last_run_got_to_and_the_account_and_ubuntu_it_used(tmp_path):
+    (tmp_path / "state.ini").write_text("stage=distro\r\naccount=anna\r\ndistro=Ubuntu-24.04\r\n", encoding="ascii")
+    result, (values, lines) = check(tmp_path, replies={"-l -v": reply(["x"], code=1), "--status": reply(["Default Version: 2"])})
+    assert (values["state_stage"], values["state_account"], values["state_distro"]) == ("distro", "anna", "Ubuntu-24.04")
+    assert any("An earlier run of this setup got as far as the step distro. This run carries on from there." in line for line in lines.values())
+
+
+@needs_pwsh
+def test_with_nothing_left_by_an_earlier_run_the_check_says_nothing_about_one(tmp_path):
+    result, (values, lines) = check(tmp_path, replies={"-l -v": reply([])})
+    assert (values["state_stage"], values["state_account"], values["state_distro"]) == ("", "", "")
+    assert not any("earlier run" in line for line in lines.values())
+
+
+# ---------------------------------------------------------------- what is written down
+
+@needs_pwsh
+def test_a_step_that_succeeds_writes_down_how_far_it_got_and_what_it_was_given(tmp_path):
+    engine(tmp_path, "user", replies={"id -u anna": reply(["1000"]), "passwd -S": reply(["P"])}, options="-Distro Ubuntu-24.04 -User anna", password=PASSWORD)
+    state = state_of(tmp_path)
+    assert (state["stage"], state["account"]) == ("user", "anna") and re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d", state["updated"])
+    engine(tmp_path, "distro", replies={"-l -v": reply(LISTING)}, options="-Distro Ubuntu-24.04")
+    assert (state_of(tmp_path)["stage"], state_of(tmp_path)["distro"]) == ("distro", "Ubuntu-24.04")
+    engine(tmp_path, "setup", options="-Distro Ubuntu-24.04 -User anna")
+    assert state_of(tmp_path)["stage"] == "setup" and state_of(tmp_path)["account"] == "anna"
+
+
+@needs_pwsh
+@pytest.mark.parametrize("step, options, program_replies", [("user", "-Distro Ubuntu-24.04 -User anna", {"useradd": reply([], code=9), "id -u anna": reply([], code=1)}),
+                                                            ("setup", "-Distro Ubuntu-24.04 -User anna", {"bash -c": reply([], code=1)})])
+def test_a_step_that_fails_changes_nothing_in_what_was_written_down(tmp_path, step, options, program_replies):
+    engine(tmp_path, step, replies=program_replies, options=options, password=PASSWORD, state={"stage": "platform"})
+    assert state_of(tmp_path).get("stage") == "platform" and "account" not in state_of(tmp_path)
+
+
+@needs_pwsh
+def test_the_password_is_never_in_what_was_written_down_whatever_the_key_is_called(tmp_path):
+    engine(tmp_path, "user", replies={"id -u anna": reply(["1000"]), "passwd -S": reply(["P"])}, options="-Distro Ubuntu-24.04 -User anna", password=PASSWORD)
+    run_ps("Update-AckVsEngState -Values @{ password = %s; ack_secret = %s; account_pass = %s; stage = 'x' }\n'null' | ConvertTo-Json -Compress" % (lit(PASSWORD), lit(PASSWORD), lit(PASSWORD)), tmp_path)
+    text = (tmp_path / "state.ini").read_text(encoding="ascii")
+    assert PASSWORD not in text and "password" not in text and "secret" not in text and "pass" not in text.replace("passwd", "")
+    assert state_of(tmp_path)["stage"] == "x"
+
+
+@needs_pwsh
+def test_the_state_file_is_ascii_sorted_with_windows_line_ends_and_leaves_no_scratch_file(tmp_path):
+    run_ps("Update-AckVsEngState -Values @{ b = 'two'; a = 'one' }\nUpdate-AckVsEngState -Values @{ c = 'three' }\n'null' | ConvertTo-Json -Compress", tmp_path)
+    raw = (tmp_path / "state.ini").read_bytes()
+    assert raw.isascii() and raw.endswith(b"\r\n") and b"\n" not in raw.replace(b"\r\n", b"")
+    keys = [line.split("=")[0] for line in raw.decode().splitlines()]
+    assert keys == sorted(keys) and set(keys) == {"a", "b", "c", "updated"}
+    assert not (tmp_path / "state.ini.tmp").exists()
+
+
+@needs_pwsh
+def test_an_empty_value_takes_a_key_away_and_a_bad_key_is_ignored(tmp_path):
+    run_ps("Update-AckVsEngState -Values @{ a = 'one'; platform_boot = 'x' }\nUpdate-AckVsEngState -Values @{ platform_boot = ''; 'Bad Key' = 'no'; 'x=y' = 'no' }\n'null' | ConvertTo-Json -Compress", tmp_path)
+    assert set(state_of(tmp_path)) == {"a", "updated"}
+
+
+@needs_pwsh
+def test_a_damaged_state_file_reads_as_what_is_good_in_it_and_is_mended_by_the_next_write(tmp_path):
+    (tmp_path / "state.ini").write_bytes(b"stage=distro\r\n\xff\xfe junk\r\nBAD KEY=1\r\naccount=" + b"a" * 300 + b"\r\nplatform=restart\r\n")
+    state = call("Read-AckVsEngState", tmp_path)
+    assert state == {"stage": "distro", "platform": "restart"}                 # the long value and the junk lines are not taken
+    run_ps("Update-AckVsEngState -Values @{ stage = 'user' }\n'null' | ConvertTo-Json -Compress", tmp_path)
+    assert state_of(tmp_path)["stage"] == "user" and state_of(tmp_path)["platform"] == "restart" and "account" not in state_of(tmp_path)
+
+
+@needs_pwsh
+def test_with_no_place_to_keep_it_nothing_is_written_and_nothing_fails(tmp_path):
+    body = "$env:ACK_VS_ENGINE_STATE = ''\n$env:LOCALAPPDATA = ''\nUpdate-AckVsEngState -Values @{ a = '1' }\n$s = Read-AckVsEngState\nConvertTo-Json -InputObject @{ count = $s.Count; path = (Get-AckVsEngStatePath) } -Compress"
+    assert run_ps(body, tmp_path) == {"count": 0, "path": ""}
+
+
+@needs_pwsh
+def test_the_state_lives_beside_the_log_in_the_users_local_folder(tmp_path):
+    body = "$env:ACK_VS_ENGINE_STATE = ''\n$env:ACK_VS_ENGINE_LOG = ''\n$env:LOCALAPPDATA = %s\nConvertTo-Json -InputObject @{ state = (Get-AckVsEngStatePath); log = (Get-AckVsEngLogPath) } -Compress" % lit(str(tmp_path / "Local"))
+    got = run_ps(body, tmp_path)
+    assert got["state"].replace("\\", "/").endswith("Local/ack-voice-studio/installer-state.ini") and os.path.dirname(got["state"]) == os.path.dirname(got["log"])
+
+
+@needs_pwsh
+def test_the_state_file_takes_a_key_of_32_letters_and_a_value_of_200_characters_and_nothing_longer(tmp_path):
+    (tmp_path / "state.ini").write_bytes(("a" * 32 + "=" + "v" * 200 + "\r\n" + "b" * 33 + "=x\r\n" + "c=" + "v" * 201 + "\r\n").encode("ascii"))
+    assert call("Read-AckVsEngState", tmp_path) == {"a" * 32: "v" * 200}
+    run_ps("Update-AckVsEngState -Values @{ %s = 'one'; %s = 'two' }\n'null' | ConvertTo-Json -Compress" % ("d" * 32, "e" * 33), tmp_path)
+    keys = set(state_of(tmp_path))
+    assert "d" * 32 in keys and "e" * 33 not in keys

@@ -52,8 +52,8 @@ NSI_CODE = code_lines(NSI)
 NSI_TEXT = "\n".join(NSI_CODE)
 GOLDEN = Path(__file__).resolve().parent / "data" / "installer_wizard_golden.txt"
 LOGIC_BLOCKS = [("Function", ".onInit"), ("Function", "RunEngineLogged"), ("Function", "RunEngineQuiet"), ("Function", "PasswordIn"), ("Function", "PasswordOut"), ("Function", "AddLine"),
-                ("Function", "StripLevel"), ("Function", "SourcesCreate"), ("Function", "LookCreate"), ("Function", "LookNow"), ("Function", "LookLeave"), ("Function", "AccountCreate"),
-                ("Function", "AccountLeave"), ("Function", "Fail"), ("Function", "MustRun"), ("Section", '"Install"'), ("Function", "OpenStudio"), ("Section", '"Uninstall"')]
+                ("Function", "StripLevel"), ("Function", "SkipWhenResumed"), ("Function", "SourcesCreate"), ("Function", "LookCreate"), ("Function", "LookNow"), ("Function", "LookLeave"), ("Function", "AccountCreate"),
+                ("Function", "AccountLeave"), ("Function", "AskRestart"), ("Function", "Fail"), ("Function", "MustRun"), ("Section", '"Install"'), ("Function", "OpenStudio"), ("Section", '"Uninstall"')]
 
 
 def normal(line):
@@ -181,8 +181,8 @@ def test_the_password_variable_is_emptied_after_the_account_is_made_and_on_every
     user_step = install.split('StrCpy $StepName "user"')[1].split("${EndIf}")[0]
     assert user_step.index("Call PasswordOut") < user_step.index('StrCpy $Password ""')
     assert 'StrCpy $Password ""' in NSI_TEXT.split("Function Fail")[1].split("FunctionEnd")[0]
-    must = NSI_TEXT.split("Function MustRun")[1].split("FunctionEnd")[0]
-    assert 'StrCpy $Password ""' in must.split("${If} $StepCode == 3")[1].split("${EndIf}")[0]               # the restart way out
+    restart = NSI_TEXT.split("Function AskRestart")[1].split("FunctionEnd")[0]
+    assert restart.index('StrCpy $Password ""') < restart.index("MessageBox")                              # the restart way out: gone before the question is even shown
     leave = NSI_TEXT.split("Function AccountLeave")[1].split("FunctionEnd")[0]
     assert leave.count('StrCpy $R9 ""') == 2
 
@@ -237,7 +237,7 @@ def test_the_temporary_permission_is_taken_away_again_whatever_happens_to_the_se
 
 def test_a_restart_a_refusal_and_a_failure_are_each_told_apart_and_stop_the_install_with_a_way_back():
     must = NSI_TEXT.split("Function MustRun")[1].split("FunctionEnd")[0]
-    assert "${If} $StepCode == 3" in must and "must restart" in must and "run this setup program again" in must
+    assert re.search(r"\$\{If\} \$StepCode == 3\n\s*DetailPrint \"[^\"]*must restart[^\"]*\"\n\s*Call AskRestart\n\s*\$\{EndIf\}", must)
     assert "${If} $StepCode == 2" in must and "was not allowed" in must
     fail = NSI_TEXT.split("Function Fail")[1].split("FunctionEnd")[0]
     assert "Nothing you made is lost" in fail and "carry on" in fail and "installer.log" in fail
@@ -252,7 +252,7 @@ def test_a_missing_start_menu_entry_does_not_fail_the_install_but_a_failed_set_u
 
 
 def test_every_powershell_it_starts_is_hidden_non_interactive_and_runs_only_the_engine_file():
-    runs = [l.strip() for l in NSI_CODE if "nsExec::" in l]
+    runs = [l.strip() for l in NSI_CODE if "nsExec::" in l and "shutdown.exe" not in l]
     assert len(runs) == 3
     for line in runs:
         assert '"$PowerShell" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' in line, line
@@ -286,7 +286,7 @@ def test_the_files_the_wizard_installs_are_the_files_the_build_stages_and_the_en
 def test_the_uninstaller_removes_only_what_the_installer_wrote_and_never_a_whole_folder_tree():
     removal = NSI_TEXT.split('Section "Uninstall"')[1]
     deletes = re.findall(r'^\s*Delete "([^"]+)"$', removal, re.M)
-    assert sorted(deletes) == sorted(["$INSTDIR\\engine.ps1", "$INSTDIR\\install.ps1", "$INSTDIR\\LICENSE", "$INSTDIR\\NOTICE", "$INSTDIR\\ack.ico", "$INSTDIR\\Uninstall.exe"])
+    assert sorted(deletes) == sorted(["$INSTDIR\\engine.ps1", "$INSTDIR\\install.ps1", "$INSTDIR\\LICENSE", "$INSTDIR\\NOTICE", "$INSTDIR\\ack.ico", "$INSTDIR\\Resume.exe", "$INSTDIR\\Uninstall.exe"])
     assert [x.split(";")[0].strip() for x in re.findall(r"RMDir\s+(.*)", removal)] == ['"$INSTDIR"']                 # without /r: only if nothing else is in it
     assert "RMDir /r" not in NSI_TEXT and "/REBOOTOK" not in NSI_TEXT
     assert "DeleteRegKey HKCU" in removal and "DeleteRegKey HKLM" not in NSI_TEXT
@@ -508,6 +508,77 @@ def test_the_start_of_the_file_sets_what_the_build_and_the_program_depend_on():
 def test_the_licence_page_shows_the_licence_and_the_pages_use_the_programs_own_icon():
     assert '!insertmacro MUI_PAGE_LICENSE "${STAGE}\\LICENSE"' in NSI_TEXT
     assert '!define MUI_ICON "${STAGE}\\ack.ico"' in NSI_TEXT and '!define MUI_UNICON "${STAGE}\\ack.ico"' in NSI_TEXT
+
+
+# ================================================================ a restart, and carrying on after it
+
+def restart_block():
+    return NSI_TEXT.split("Function AskRestart")[1].split("FunctionEnd")[0]
+
+
+def test_a_restart_is_asked_about_and_never_done_without_a_yes():
+    block = restart_block()
+    question = block.index("MessageBox MB_YESNO")
+    assert re.search(r'MessageBox MB_YESNO\|MB_ICONQUESTION ".*Restart now\?" IDNO restart_later', block)
+    assert question < block.index("shutdown.exe") < block.index("restart_later:") < block.index("Quit")
+    assert NSI_TEXT.count("shutdown.exe") == 1 and "shutdown.exe /r /t 20 " in block                    # a restart (not a shut down), with 20 seconds to change one's mind
+    assert "/s " not in block and "/p " not in block and "/f" not in block                                 # never a shut down, never forced
+
+
+def test_the_restart_question_says_restart_not_shut_down_and_that_the_setup_comes_back_and_the_password_is_asked_again():
+    text = re.search(r'MessageBox MB_YESNO\|MB_ICONQUESTION "(.*)" IDNO', restart_block()).group(1)
+    for need in ("choose Restart, not Shut down", "start again by itself the next time you sign in", "carry on from here", "password is not kept", "asked for it again", "Restart now?"):
+        assert need in text, need
+
+
+def test_a_restart_is_asked_for_in_exactly_two_places_the_step_that_needs_one_and_the_check_that_finds_one_is_waiting():
+    assert NSI_TEXT.count("Call AskRestart") == 2
+    must = NSI_TEXT.split("Function MustRun")[1].split("FunctionEnd")[0]
+    assert "${If} $StepCode == 3" in must and "Call AskRestart" in must
+    leave = NSI_TEXT.split("Function LookLeave")[1].split("FunctionEnd")[0]
+    assert re.search(r"\$\{If\} \$RestartNeeded == 1\n\s*Call AskRestart\n\s*\$\{EndIf\}", leave)
+    look = NSI_TEXT.split("Function LookNow")[1].split("FunctionEnd")[0]
+    assert 'ReadINIStr $RestartNeeded "$CheckFile" "result" "restart_needed"' in look and "restart this computer now" in look
+
+
+def test_the_setup_comes_back_by_a_run_once_entry_for_this_user_only_that_windows_removes_after_running_it():
+    assert '!define RUNONCE_KEY "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce"' in NSI_TEXT
+    writes = [l.strip() for l in NSI_CODE if "RUNONCE_KEY" in l and l.strip().startswith("WriteReg")]
+    assert writes == ['WriteRegStr HKCU "${RUNONCE_KEY}" "${RUNONCE_NAME}" \'"$INSTDIR\\Resume.exe"\'']
+    assert "HKLM" not in "\n".join(l for l in NSI_CODE if "RUNONCE" in l)
+    assert NSI_TEXT.count("${RUNONCE_KEY}") == 3                                                          # the one write and the two deletions below
+    on_init = NSI_TEXT.split("Function .onInit")[1].split("FunctionEnd")[0]
+    removal = NSI_TEXT.split('Section "Uninstall"')[1]
+    assert 'DeleteRegValue HKCU "${RUNONCE_KEY}" "${RUNONCE_NAME}"' in on_init and 'DeleteRegValue HKCU "${RUNONCE_KEY}" "${RUNONCE_NAME}"' in removal
+    assert restart_block().index("WriteRegStr") < restart_block().index("MessageBox")                      # written before the question, so a restart by hand after a No still resumes
+
+
+def test_the_copy_that_windows_starts_is_the_setup_program_itself_kept_in_its_own_folder_and_is_not_copied_over_itself():
+    block = restart_block()
+    assert re.search(r'StrCmp \$EXEPATH "\$INSTDIR\\Resume.exe" resume_copied\n\s*CopyFiles /SILENT "\$EXEPATH" "\$INSTDIR\\Resume.exe"\n\s*resume_copied:', block)
+    assert block.index("CreateDirectory") < block.index("CopyFiles")
+    on_init = NSI_TEXT.split("Function .onInit")[1].split("FunctionEnd")[0]
+    assert re.search(r'StrCmp \$EXEPATH "\$INSTDIR\\Resume.exe" 0 not_resumed\n\s*StrCpy \$Resumed 1\n\s*not_resumed:', on_init)
+
+
+def test_after_a_restart_the_pages_already_read_are_not_shown_again_but_the_look_and_the_account_are():
+    assert NSI_TEXT.count("!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipWhenResumed") == 2
+    skip = NSI_TEXT.split("Function SkipWhenResumed")[1].split("FunctionEnd")[0]
+    assert re.search(r"\$\{If\} \$Resumed == 1\n\s*Abort", skip)
+    sources = NSI_TEXT.split("Function SourcesCreate")[1].split("FunctionEnd")[0]
+    assert re.search(r"^\s*\$\{If\} \$Resumed == 1\n\s*Abort", sources.lstrip("\n"))
+    for page in ("LookCreate", "AccountCreate"):
+        assert "$Resumed" not in NSI_TEXT.split("Function %s" % page)[1].split("FunctionEnd")[0]
+
+
+def test_the_account_name_an_earlier_run_was_given_is_offered_again_and_the_password_never_is():
+    look = NSI_TEXT.split("Function LookNow")[1].split("FunctionEnd")[0]
+    assert re.search(r'ReadINIStr \$0 "\$CheckFile" "result" "state_account"\n\s*\$\{If\} \$0 != ""\n\s*StrCpy \$UserName \$0', look)
+    assert look.index('"state_account"') < look.index('"result" "user"')                                   # an account that is really there wins over a remembered name
+    assert not re.search(r"pass", look, re.I)
+    page = NSI_TEXT.split("Function AccountCreate")[1].split("FunctionEnd")[0]
+    assert 'NSD_CreateText} 0 50u 60% 12u "$UserName"' in page and "type the password again: it is never kept" in page
+    assert re.findall(r"\$Password", "\n".join(l for l in NSI_CODE if "RunOnce" in l or "RUNONCE" in l)) == []
 
 
 if __name__ == "__main__":

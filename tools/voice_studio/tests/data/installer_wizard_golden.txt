@@ -19,7 +19,13 @@ StrCpy $NeedsPlatform 1
 StrCpy $NeedsDistro 1
 StrCpy $NeedsAccount 1
 StrCpy $Stopped 0
+StrCpy $RestartNeeded 0
+StrCpy $Resumed 0
+StrCmp $EXEPATH "$INSTDIR\Resume.exe" 0 not_resumed
+StrCpy $Resumed 1
+not_resumed:
 StrCpy $SudoIsOn 0
+DeleteRegValue HKCU "${RUNONCE_KEY}" "${RUNONCE_NAME}"
 StrCpy $PowerShell "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
 IfFileExists "$PowerShell" ps_ok 0
 StrCpy $PowerShell "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
@@ -53,7 +59,14 @@ strip_found:
 IntOp $R5 $R5 + 1
 StrCpy $0 $0 "" $R5
 strip_done:
+### SkipWhenResumed
+${If} $Resumed == 1
+Abort
+${EndIf}
 ### SourcesCreate
+${If} $Resumed == 1
+Abort
+${EndIf}
 !insertmacro MUI_HEADER_TEXT "<text>"
 nsDialogs::Create 1018
 Pop $Dialog
@@ -137,6 +150,11 @@ ReadINIStr $Stopped "$CheckFile" "result" "stop"
 ReadINIStr $NeedsPlatform "$CheckFile" "result" "needs_platform"
 ReadINIStr $NeedsDistro "$CheckFile" "result" "needs_distro"
 ReadINIStr $NeedsAccount "$CheckFile" "result" "needs_account"
+ReadINIStr $RestartNeeded "$CheckFile" "result" "restart_needed"
+ReadINIStr $0 "$CheckFile" "result" "state_account"
+${If} $0 != ""
+StrCpy $UserName $0
+${EndIf}
 ReadINIStr $0 "$CheckFile" "result" "distro"
 ${If} $0 != ""
 StrCpy $Distro $0
@@ -154,10 +172,19 @@ StrCpy $R0 "<text>"
 Call AddLine
 ${Else}
 EnableWindow $NextButton 1
+${If} $RestartNeeded == 1
+StrCpy $R0 ""
+Call AddLine
+StrCpy $R0 "<text>"
+Call AddLine
+${EndIf}
 ${EndIf}
 ### LookLeave
 ${If} $Stopped != 0
 Abort
+${EndIf}
+${If} $RestartNeeded == 1
+Call AskRestart
 ${EndIf}
 ### AccountCreate
 ${If} $NeedsAccount == 0
@@ -219,6 +246,18 @@ Return
 refuse:
 StrCpy $R9 ""
 Abort
+### AskRestart
+CreateDirectory "$INSTDIR"
+StrCmp $EXEPATH "$INSTDIR\Resume.exe" resume_copied
+CopyFiles /SILENT "$EXEPATH" "$INSTDIR\Resume.exe"
+resume_copied:
+WriteRegStr HKCU "${RUNONCE_KEY}" "${RUNONCE_NAME}" '"$INSTDIR\Resume.exe"'
+StrCpy $Password ""
+MessageBox MB_YESNO|MB_ICONQUESTION "This computer must restart before ACK Voice Studio can go on (choose Restart, not Shut down).$\r$\n$\r$\nSetup will start again by itself the next time you sign in, and carry on from here. Your Ubuntu password is not kept, so you will be asked for it again.$\r$\n$\r$\nRestart now?" IDNO restart_later
+nsExec::Exec 'shutdown.exe /r /t 20 /c "ACK Voice Studio setup: restarting. Setup starts again when you sign in."'
+Pop $0
+restart_later:
+Quit
 ### Fail
 ${If} $SudoIsOn == 1
 StrCpy $StepName "sudo-off"
@@ -236,11 +275,8 @@ ${If} $StepCode == 0
 Return
 ${EndIf}
 ${If} $StepCode == 3
-StrCpy $R0 "<text>"
-DetailPrint "$R0"
-MessageBox MB_OK|MB_ICONINFORMATION "<text>"
-StrCpy $Password ""
-Abort
+DetailPrint "<text>"
+Call AskRestart
 ${EndIf}
 ${If} $StepCode == 2
 StrCpy $R0 "<text>"
@@ -327,6 +363,8 @@ Delete "$INSTDIR\install.ps1"
 Delete "$INSTDIR\LICENSE"
 Delete "$INSTDIR\NOTICE"
 Delete "$INSTDIR\ack.ico"
+Delete "$INSTDIR\Resume.exe"
 Delete "$INSTDIR\Uninstall.exe"
 RMDir "$INSTDIR"
 DeleteRegKey HKCU "${UNINSTALL_KEY}"
+DeleteRegValue HKCU "${RUNONCE_KEY}" "${RUNONCE_NAME}"

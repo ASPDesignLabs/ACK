@@ -31,6 +31,8 @@ CRCCheck on
 !define NAME "ACK Voice Studio"
 !define PUBLISHER "ASP Design Labs"
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\ACKVoiceStudio"
+!define RUNONCE_KEY "Software\Microsoft\Windows\CurrentVersion\RunOnce"
+!define RUNONCE_NAME "ACKVoiceStudioSetup"
 !define MIN_BUILD 22000                                                 ; the first Windows 11 build; install.ps1's MinBuild is the same number
 
 Name "${NAME}"
@@ -64,6 +66,8 @@ Var NeedsPlatform
 Var NeedsDistro
 Var NeedsAccount
 Var Stopped                 ; 1 when the check says this computer cannot be used
+Var Resumed                 ; 1 when this is the copy of the setup program that Windows started after a restart: the pages already read are not shown again
+Var RestartNeeded           ; 1 when an earlier run set WSL up and the restart it asked for has not happened
 Var SudoIsOn                ; 1 while the temporary permission for the install is in place, so a failure can take it away
 Var PowerShell
 Var Engine
@@ -88,7 +92,9 @@ Var StepText
 !define MUI_FINISHPAGE_RUN_FUNCTION OpenStudio
 !define MUI_UNCONFIRMPAGE_TEXT_TOP "This takes away the setup program's own files and the Start menu entry made for ${NAME}. It does not take away Ubuntu, the programs inside it, or your recordings, transcripts and voices: those are yours and stay where they are. The guide says how to remove them yourself."
 
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipWhenResumed
 !insertmacro MUI_PAGE_WELCOME
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipWhenResumed
 !insertmacro MUI_PAGE_LICENSE "${STAGE}\LICENSE"
 Page custom SourcesCreate "" ""
 Page custom LookCreate LookLeave ""
@@ -124,7 +130,13 @@ Function .onInit
   StrCpy $NeedsDistro 1
   StrCpy $NeedsAccount 1
   StrCpy $Stopped 0
+  StrCpy $RestartNeeded 0
+  StrCpy $Resumed 0
+  StrCmp $EXEPATH "$INSTDIR\Resume.exe" 0 not_resumed
+  StrCpy $Resumed 1
+  not_resumed:
   StrCpy $SudoIsOn 0
+  DeleteRegValue HKCU "${RUNONCE_KEY}" "${RUNONCE_NAME}"          ; a resume entry from an earlier run is not needed now that the setup is running; it is written again if a restart is asked for
   ; a 32-bit program on 64-bit Windows would reach the 32-bit PowerShell and a System32 without wsl.exe; Sysnative is the way to the real one
   StrCpy $PowerShell "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
   IfFileExists "$PowerShell" ps_ok 0
@@ -182,7 +194,17 @@ FunctionEnd
 
 ; ------------------------------------------------------------------------------------------------ page: where everything comes from
 
+; After a restart the setup carries on from where it stopped: the welcome, the licence and where everything comes from were read already.
+Function SkipWhenResumed
+  ${If} $Resumed == 1
+    Abort
+  ${EndIf}
+FunctionEnd
+
 Function SourcesCreate
+  ${If} $Resumed == 1
+    Abort
+  ${EndIf}
   !insertmacro MUI_HEADER_TEXT "Where everything comes from" "Read this before you go on."
   nsDialogs::Create 1018
   Pop $Dialog
@@ -273,6 +295,11 @@ Function LookNow
   ReadINIStr $NeedsPlatform "$CheckFile" "result" "needs_platform"
   ReadINIStr $NeedsDistro "$CheckFile" "result" "needs_distro"
   ReadINIStr $NeedsAccount "$CheckFile" "result" "needs_account"
+  ReadINIStr $RestartNeeded "$CheckFile" "result" "restart_needed"
+  ReadINIStr $0 "$CheckFile" "result" "state_account"
+  ${If} $0 != ""
+    StrCpy $UserName $0                                   ; the account name an earlier run was given is offered again; the password never is
+  ${EndIf}
   ReadINIStr $0 "$CheckFile" "result" "distro"
   ${If} $0 != ""
     StrCpy $Distro $0
@@ -290,12 +317,21 @@ Function LookNow
     Call AddLine
   ${Else}
     EnableWindow $NextButton 1
+    ${If} $RestartNeeded == 1
+      StrCpy $R0 ""
+      Call AddLine
+      StrCpy $R0 "Press Next to restart this computer now. Setup starts again by itself when you sign in, and carries on from here."
+      Call AddLine
+    ${EndIf}
   ${EndIf}
 FunctionEnd
 
 Function LookLeave
   ${If} $Stopped != 0
     Abort
+  ${EndIf}
+  ${If} $RestartNeeded == 1
+    Call AskRestart
   ${EndIf}
 FunctionEnd
 
@@ -311,7 +347,7 @@ Function AccountCreate
   ${If} $Dialog == error
     Abort
   ${EndIf}
-  ${NSD_CreateLabel} 0 0 100% 36u "Ubuntu runs inside Windows and needs an account of its own. Choose a name (lower-case letters, numbers, - and _, starting with a letter) and a password (8 to 128 letters, numbers and ordinary symbols). Ubuntu asks for the password only when something needs administrator rights."
+  ${NSD_CreateLabel} 0 0 100% 36u "Ubuntu runs inside Windows and needs an account of its own. Choose a name (lower-case letters, numbers, - and _, starting with a letter) and a password (8 to 128 letters, numbers and ordinary symbols). Ubuntu asks for the password only when something needs administrator rights. If this setup was stopped before, for example by a restart, type the password again: it is never kept."
   Pop $0
   ${NSD_CreateLabel} 0 40u 100% 10u "Account name:"
   Pop $0
@@ -368,6 +404,22 @@ FunctionEnd
 
 ; ------------------------------------------------------------------------------------------------ the install
 
+; A restart is needed (WSL was just set up, or an earlier run set it up and the restart has not happened). Nothing is restarted without a question. Either answer leaves the setup to start again by
+; itself when the person next signs in (a RunOnce entry for this user, which Windows removes after it has run it), carrying on from where it stopped; the password is not kept, so it is asked again.
+Function AskRestart
+  CreateDirectory "$INSTDIR"
+  StrCmp $EXEPATH "$INSTDIR\Resume.exe" resume_copied
+  CopyFiles /SILENT "$EXEPATH" "$INSTDIR\Resume.exe"
+  resume_copied:
+  WriteRegStr HKCU "${RUNONCE_KEY}" "${RUNONCE_NAME}" '"$INSTDIR\Resume.exe"'
+  StrCpy $Password ""
+  MessageBox MB_YESNO|MB_ICONQUESTION "This computer must restart before ACK Voice Studio can go on (choose Restart, not Shut down).$\r$\n$\r$\nSetup will start again by itself the next time you sign in, and carry on from here. Your Ubuntu password is not kept, so you will be asked for it again.$\r$\n$\r$\nRestart now?" IDNO restart_later
+  nsExec::Exec 'shutdown.exe /r /t 20 /c "ACK Voice Studio setup: restarting. Setup starts again when you sign in."'
+  Pop $0
+  restart_later:
+  Quit
+FunctionEnd
+
 ; Stops the install: takes the temporary permission away if it is in place, says so, and aborts. $R0 = the sentence to show.
 Function Fail
   ${If} $SudoIsOn == 1
@@ -389,11 +441,8 @@ Function MustRun
     Return
   ${EndIf}
   ${If} $StepCode == 3
-    StrCpy $R0 "This computer must restart before it can go on."
-    DetailPrint "$R0"
-    MessageBox MB_OK|MB_ICONINFORMATION "$R0$\r$\n$\r$\nRestart it now, then run this setup program again. It carries on from here."
-    StrCpy $Password ""
-    Abort
+    DetailPrint "This computer must restart before it can go on."
+    Call AskRestart
   ${EndIf}
   ${If} $StepCode == 2
     StrCpy $R0 "The step $StepName was not allowed, so it was not done."
@@ -490,7 +539,9 @@ Section "Uninstall"
   Delete "$INSTDIR\LICENSE"
   Delete "$INSTDIR\NOTICE"
   Delete "$INSTDIR\ack.ico"
+  Delete "$INSTDIR\Resume.exe"
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"                                         ; only if it is empty
   DeleteRegKey HKCU "${UNINSTALL_KEY}"
+  DeleteRegValue HKCU "${RUNONCE_KEY}" "${RUNONCE_NAME}"
 SectionEnd

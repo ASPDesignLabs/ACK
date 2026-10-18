@@ -72,6 +72,9 @@ function Get-AckVsEngText {
         platform_no     = 'Windows was not allowed to set up WSL, so nothing was changed. Run the installer again and choose Yes when Windows asks.'
         platform_failed = 'Windows could not set up WSL (code {code}). Nothing else was changed. Install the latest Windows 11 updates, then run the installer again.'
         platform_restart = 'WSL is set up, but this computer must restart before it can be used. Restart it, then run the installer again. It carries on from here.'
+        platform_restart_wait = 'WSL was set up, but this computer has not restarted since. Restart it (choose Restart, not Shut down), then run the installer again. It carries on from here.'
+        platform_after_restart = 'WSL was set up and this computer has restarted since, but WSL still does not answer. If you chose Shut down earlier and not Restart, choose Restart once. Otherwise check that virtualization is on in the computer firmware and that Windows Update has finished, then run the installer again. What was tried is in installer.log.'
+        resume          = 'An earlier run of this setup got as far as the step {stage}. This run carries on from there.'
         distro_have     = 'Ubuntu is already installed: {name}.'
         distro_run      = 'Installing Ubuntu from Microsoft. This can take several minutes.'
         distro_start    = 'Starting Ubuntu for the first time.'
@@ -197,6 +200,83 @@ function Write-AckVsEngResult {
     }
     [void]$out.Append(('count={0}' -f $count) + "`r`n")
     [System.IO.File]::WriteAllText($Path, $out.ToString(), [System.Text.Encoding]::ASCII)
+}
+
+# ---------------------------------------------------------------- what an earlier run left
+
+function Get-AckVsEngStatePath {
+    if ($env:ACK_VS_ENGINE_STATE) { return $env:ACK_VS_ENGINE_STATE }
+    $base = $env:LOCALAPPDATA
+    if (-not $base) { return '' }
+    Join-Path (Join-Path $base 'ack-voice-studio') 'installer-state.ini'
+}
+
+function Read-AckVsEngState {
+    <# What earlier runs left, so that a run after a restart (or after a stop) carries on instead of starting again: a few key=value lines (the last step that was done, the Ubuntu name, the
+       account name, whether a restart is waited for and when Windows last started). Never a password. A file that is missing or damaged reads as nothing. #>
+    param([string]$Path = (Get-AckVsEngStatePath))
+    $state = @{}
+    try {
+        if ($Path -and (Test-Path -LiteralPath $Path)) {
+            foreach ($raw in [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::ASCII)) {
+                if ($raw -match '^([a-z_]{1,32})=([\x20-\x7e]{0,200})\z') { $state[$Matches[1]] = $Matches[2].Trim() }
+            }
+        }
+    } catch { }
+    $state
+}
+
+function Update-AckVsEngState {
+    <# Adds or changes keys (an empty value takes the key away). A key that could hold a secret is never written. Best effort: a state that cannot be saved must not stop an install. #>
+    param([hashtable]$Values, [string]$Path = (Get-AckVsEngStatePath))
+    if (-not $Path) { return }
+    try {
+        $state = Read-AckVsEngState -Path $Path
+        foreach ($key in @($Values.Keys)) {
+            if ($key -notmatch '^[a-z_]{1,32}\z' -or $key -match 'pass|secret') { continue }
+            $value = ConvertTo-AckVsEngLine -Raw ([string]$Values[$key])
+            if ([string]::IsNullOrEmpty($value)) { [void]$state.Remove($key) } else { $state[$key] = $value }
+        }
+        $state['updated'] = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+        $out = New-Object System.Text.StringBuilder
+        foreach ($key in @($state.Keys | Sort-Object)) { [void]$out.Append(('{0}={1}' -f $key, $state[$key]) + "`r`n") }
+        $folder = Split-Path -Parent $Path
+        if ($folder -and -not (Test-Path -LiteralPath $folder)) { New-Item -ItemType Directory -Path $folder -Force | Out-Null }
+        $temp = $Path + '.tmp'
+        [System.IO.File]::WriteAllText($temp, $out.ToString(), [System.Text.Encoding]::ASCII)
+        Move-Item -LiteralPath $temp -Destination $Path -Force
+    } catch { }
+}
+
+function Get-AckVsEngBootStamp {
+    <# When Windows last started, as UTC text, or nothing when that cannot be read. A restart changes it; Shut down with Fast startup does not, which is why the words say Restart. #>
+    try {
+        $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop
+        return $os.LastBootUpTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    } catch { return '' }
+}
+
+function Test-AckVsEngRestarted {
+    <# Has this computer restarted since the stamp was written? When either stamp is unknown it says yes: waiting for a restart nobody can see would stop a person forever. #>
+    param([string]$Before, [string]$Now)
+    if ($Before -eq '' -or $Now -eq '') { return $true }
+    $Before -ne $Now
+}
+
+function Test-AckVsEngWslReady {
+    <# Does WSL answer? Three questions; one answer is enough. `wsl -l -v` is not enough alone: it fails when WSL is set up and no Ubuntu is installed yet, and taking that for "WSL is not
+       there" asked for a restart again and again. What each question got is kept in the log, so that a stop can be read afterwards. #>
+    param([scriptblock]$Wsl)
+    $listed = $null
+    foreach ($probe in @(@('-l', '-v'), @('--status'), @('--version'))) {
+        $answer = & $Wsl @{ Arguments = $probe; TimeoutSec = 60 }
+        if ($null -eq $listed) { $listed = $answer }                      # the first answer is the listing of Ubuntus, which the check reads next
+        $first = ''
+        foreach ($raw in @($answer.Lines)) { $clean = ConvertTo-AckVsEngLine -Raw ([string]$raw); if ($clean -ne '') { $first = $clean; break } }
+        Write-AckVsEngLog -Step 'wsl' -Message ('wsl.exe ' + ($probe -join ' ') + ' -> ran=' + $answer.Ran + ' code=' + $answer.Code + ' first=' + $first)
+        if ($answer.Ran -and $answer.Code -eq 0) { return @{ Ready = $true; Listed = $listed } }
+    }
+    @{ Ready = $false; Listed = $listed }
 }
 
 # ---------------------------------------------------------------- running programs
@@ -383,9 +463,10 @@ function Get-AckVsEngDefaultWsl {
 }
 
 function Step-AckVsEngCheck {
-    param([string]$Distro, [string]$ResultFile, [scriptblock]$Say, [scriptblock]$Wsl, [scriptblock]$GetFacts)
+    param([string]$Distro, [string]$ResultFile, [scriptblock]$Say, [scriptblock]$Wsl, [scriptblock]$GetFacts, [scriptblock]$BootStamp, [string]$StatePath)
     $text = Get-AckVsEngText
     & $Say $text.looking
+    $state = Read-AckVsEngState -Path $StatePath
     $lines = @()
     $stop = $false
     $facts = & $GetFacts
@@ -394,12 +475,26 @@ function Step-AckVsEngCheck {
         $lines += ($finding.Level + '|' + $finding.Text)
         if ($finding.Level -eq 'stop') { $stop = $true }
     }
-    $values = @{ stop = $(if ($stop) { 1 } else { 0 }); wsl = 'none'; distro = ''; user = ''; needs_account = 1; needs_platform = 1; needs_distro = 1; windows_build = $facts.Build; free_gib = $facts.FreeGiB; gpu = $(if ($facts.GpuName) { 1 } else { 0 }) }
+    $values = @{ stop = $(if ($stop) { 1 } else { 0 }); wsl = 'none'; distro = ''; user = ''; needs_account = 1; needs_platform = 1; needs_distro = 1; restart_needed = 0; state_stage = [string]$state['stage']; state_account = [string]$state['account']; state_distro = [string]$state['distro']; windows_build = $facts.Build; free_gib = $facts.FreeGiB; gpu = $(if ($facts.GpuName) { 1 } else { 0 }) }
+    if (-not $stop -and $state['stage']) {
+        $message = Format-AckVsText $text.resume @{ stage = [string]$state['stage'] }
+        & $Say $message
+        $lines += ('info|' + $message)
+    }
     if (-not $stop) {
-        $listed = & $Wsl @{ Arguments = @('-l', '-v'); TimeoutSec = 60 }
-        $ready = ($listed.Ran -and $listed.Code -eq 0)
+        $readiness = Test-AckVsEngWslReady -Wsl $Wsl
+        $ready = $readiness.Ready
+        $listed = $readiness.Listed
         if ($ready) { $values.wsl = 'ready'; $values.needs_platform = 0; $lines += ('ok|' + $text.wsl_ready) } else { $lines += ('info|' + $text.wsl_none) }
         & $Say $(if ($ready) { $text.wsl_ready } else { $text.wsl_none })
+        if (-not $ready -and $state['platform'] -eq 'restart' -and -not (Test-AckVsEngRestarted -Before ([string]$state['platform_boot']) -Now ([string](& $BootStamp)))) {
+            # WSL was set up by an earlier run, which asked for a restart that has not happened: say so now, before an account and a password are asked for
+            $values.restart_needed = 1
+            & $Say $text.platform_restart_wait
+            $lines += ('warn|' + $text.platform_restart_wait)
+            Write-AckVsEngResult -Path $ResultFile -Values $values -Lines $lines
+            return 0
+        }
         $distros = @(Read-AckVsDistros -Listed $listed -WslCapture { param($a) & $Wsl @{ Arguments = @($a); TimeoutSec = 60 } })
         $pick = Select-AckVsDistro -Distros $distros -Wanted $Distro
         if ($pick.Name -ne '' -and $pick.Why -eq 'old_version') {
@@ -438,10 +533,22 @@ function Step-AckVsEngCheck {
 }
 
 function Step-AckVsEngPlatform {
-    param([bool]$DryRun, [scriptblock]$Say, [scriptblock]$Wsl, [scriptblock]$Elevate)
+    param([bool]$DryRun, [scriptblock]$Say, [scriptblock]$Wsl, [scriptblock]$Elevate, [scriptblock]$BootStamp, [string]$StatePath)
     $text = Get-AckVsEngText
-    $listed = & $Wsl @{ Arguments = @('-l', '-v'); TimeoutSec = 60 }
-    if ($listed.Ran -and $listed.Code -eq 0) { & $Say $text.platform_have; return 0 }
+    if ((Test-AckVsEngWslReady -Wsl $Wsl).Ready) {
+        if (-not $DryRun) { Update-AckVsEngState -Path $StatePath -Values @{ platform = 'done'; platform_boot = '' } }
+        & $Say $text.platform_have
+        return 0
+    }
+    $state = Read-AckVsEngState -Path $StatePath
+    $boot = [string](& $BootStamp)
+    if ($state['platform'] -eq 'restart') {
+        # An earlier run set WSL up and asked for a restart. Do not set it up (and ask for a restart) again and again: wait for the restart, and if WSL still does not answer after it, say so.
+        if (-not (Test-AckVsEngRestarted -Before ([string]$state['platform_boot']) -Now $boot)) { & $Say $text.platform_restart_wait; return 3 }
+        if (-not $DryRun) { Update-AckVsEngState -Path $StatePath -Values @{ platform = 'failed'; platform_boot = '' } }
+        & $Say $text.platform_after_restart
+        return 1
+    }
     $arguments = @('--install', '--no-distribution')
     if ($DryRun) { & $Say $text.dry_header; & $Say ('  (with permission) wsl.exe ' + (Format-AckVsCommandLine $arguments)); return 0 }
     & $Say $text.platform_run
@@ -449,8 +556,13 @@ function Step-AckVsEngPlatform {
     Write-AckVsEngLog -Step 'platform' -Message ('wsl.exe ' + (Format-AckVsCommandLine $arguments) + ' -> ran=' + $done.Ran + ' code=' + $done.Code + ' declined=' + $done.Declined)
     if ($done.Declined) { & $Say $text.platform_no; return 2 }
     if (-not $done.Ran -or ($done.Code -ne 0 -and $done.Code -ne 3010)) { & $Say (Format-AckVsText $text.platform_failed @{ code = $done.Code }); return 1 }
-    $listed = & $Wsl @{ Arguments = @('-l', '-v'); TimeoutSec = 60 }
-    if ($listed.Ran -and $listed.Code -eq 0) { return 0 }
+    if ((Test-AckVsEngWslReady -Wsl $Wsl).Ready) {
+        Update-AckVsEngState -Path $StatePath -Values @{ platform = 'done'; platform_boot = '' }
+        return 0
+    }
+    # Set up, but not answering yet: it needs a restart. That is remembered with the time Windows started, so that the next run can tell whether the restart has happened.
+    Update-AckVsEngState -Path $StatePath -Values @{ platform = 'restart'; platform_boot = $boot }
+    Write-AckVsEngLog -Step 'platform' -Message ('restart asked for (install code ' + $done.Code + ', Windows started ' + $boot + ')')
     & $Say $text.platform_restart
     3
 }
@@ -662,6 +774,24 @@ function Start-AckVsEngDetached {
     } catch { return @{ Ran = $false; Code = 1 } }
 }
 
+# ---------------------------------------------------------------- remembering how far it got
+
+function Save-AckVsEngProgress {
+    <# After a step that succeeded: write down that it did, so that a run after a stop or a restart can say where the last one got to and the wizard can offer the account name again. The password is
+       not here and never is. #>
+    param([string]$Step, [string]$Distro, [string]$User, [string]$StatePath)
+    $values = @{}
+    switch ($Step) {
+        'platform' { $values.stage = 'platform' }
+        'distro'   { $values.stage = 'distro'; if ($Distro) { $values.distro = $Distro } }
+        'user'     { $values.stage = 'user'; if ($User) { $values.account = $User } }
+        'sudo-on'  { $values.stage = 'sudo-on' }
+        'setup'    { $values.stage = 'setup' }
+        'launcher' { $values.stage = 'launcher' }
+    }
+    if ($values.Count -gt 0) { Update-AckVsEngState -Path $StatePath -Values $values }
+}
+
 # ---------------------------------------------------------------- the whole thing
 
 function Invoke-AckVsEngine {
@@ -681,7 +811,9 @@ function Invoke-AckVsEngine {
         [string]$ProgramsFolder = [Environment]::GetFolderPath('Programs'),
         [scriptblock]$Describe = { param($p) try { (New-Object -ComObject WScript.Shell).CreateShortcut($p).Description } catch { '' } },
         [scriptblock]$Remove = { param($p) Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue },
-        [string]$Password = $null
+        [string]$Password = $null,
+        [scriptblock]$BootStamp = { Get-AckVsEngBootStamp },
+        [string]$StatePath = (Get-AckVsEngStatePath)
     )
     $text = Get-AckVsEngText
     $settings = Get-AckVsSettings
@@ -697,8 +829,8 @@ function Invoke-AckVsEngine {
     Write-AckVsEngLog -Step $Step -Message ('start distro=' + $Distro + ' ref=' + $Ref + ' user=' + $User + ' dry=' + $dry)
     $code = 1
     switch ($Step) {
-        'check'     { $code = Step-AckVsEngCheck -Distro $Distro -ResultFile $ResultFile -Say $Say -Wsl $Wsl -GetFacts $GetFacts }
-        'platform'  { $code = Step-AckVsEngPlatform -DryRun $dry -Say $Say -Wsl $Wsl -Elevate $Elevate }
+        'check'     { $code = Step-AckVsEngCheck -Distro $Distro -ResultFile $ResultFile -Say $Say -Wsl $Wsl -GetFacts $GetFacts -BootStamp $BootStamp -StatePath $StatePath }
+        'platform'  { $code = Step-AckVsEngPlatform -DryRun $dry -Say $Say -Wsl $Wsl -Elevate $Elevate -BootStamp $BootStamp -StatePath $StatePath }
         'distro'    { $code = Step-AckVsEngDistro -Distro $Distro -User $User -DryRun $dry -Say $Say -Wsl $Wsl -FileExists $FileExists -WriteFile $WriteFile -RemoveFile $RemoveFile -ProfileFolder $ProfileFolder -FindProgram $FindProgram -RunProgram $RunProgram }
         'validate'  { $code = Step-AckVsEngValidate -User $User -Password $Password -Say $Say }
         'user'      { $code = Step-AckVsEngUser -Distro $Distro -User $User -Password $Password -DryRun $dry -Say $Say -Wsl $Wsl }
@@ -710,6 +842,7 @@ function Invoke-AckVsEngine {
         'unlauncher' { $code = Step-AckVsEngUnlauncher -ProgramsFolder $ProgramsFolder -DryRun $dry -Say $Say -Describe $Describe -Remove $Remove }
     }
     Write-AckVsEngLog -Step $Step -Message ('end code=' + $code)
+    if ($code -eq 0 -and -not $dry) { Save-AckVsEngProgress -Step $Step -Distro $Distro -User $User -StatePath $StatePath }
     [int]$code
 }
 

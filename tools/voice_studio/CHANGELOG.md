@@ -17,6 +17,10 @@ listed, section by section, in `docs/VOICE_STUDIO_DEVICE_TEST.md`; nothing here 
   Start menu. **It is not signed yet, it works only on Windows 11 (build 22000 or newer), it has no silent mode, and it has not been run on a real Windows computer.** It sees the Ubuntu password you
   type (the command-line installer never does); the password is sent once to Ubuntu and kept in no file, log or message, and is set only on an account that has none. A temporary permission it needs for the
   install is taken away again whatever happens. Uninstalling removes only its own files and Start menu entry, never Ubuntu, the tool or any recording or voice.
+- **The Windows setup program now remembers where it got to and carries on after a restart.** Found on its first real run: it asked for a restart and, run again, began again. It now treats WSL as
+  set up when any of `wsl -l -v`, `wsl --status` and `wsl --version` answers (the first alone fails when no Ubuntu is installed yet, which could ask for a restart again and again), writes down in
+  `%LOCALAPPDATA%\ack-voice-studio\installer-state.ini` the step it reached, the Ubuntu and account names and when Windows last started (never the password), asks `Restart now?` instead of just
+  stopping, and starts itself again at the next sign-in with one `RunOnce` value. If WSL still does not answer after a restart it says so once and does not ask for another. Not yet seen on a real Windows.
 - **Windows 10 is no longer supported.** `install.ps1` stops on a Windows build older than 22000 and says Windows 11 is needed.
 - **Set-up in one command.** The guided setup (`python3 -m voice_studio`) checks the computer, asks before it installs anything, builds two sets of programs beside each other
   (`python3 -m voice_studio.buildenv`) and ends at the window. Windows has its own one-line installer that sets up Ubuntu under WSL first.

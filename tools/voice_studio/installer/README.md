@@ -41,6 +41,13 @@ A test (`tests/test_vs_installer.py`) fails when the wizard names a place `insta
 The build does not sign. When there is a solution, signing is one more step after `build.sh` (for example `osslsigncode` on Linux, or `signtool` on Windows) on the `.exe`; the `.sha256`
 file then has to be made again. Until then Windows shows its warning for an unknown publisher, and the checklist asks the person running it to write down exactly what it said.
 
+## A restart, and carrying on
+
+WSL itself sometimes needs a restart. The wizard then asks `Restart now?` (a Restart, 20 seconds to cancel, only after Yes) and, either way, leaves one `RunOnce` value for this user that starts a copy of itself
+(`Resume.exe`) at the next sign-in. The engine writes down in `%LOCALAPPDATA%\ack-voice-studio\installer-state.ini` that a restart is waited for and when Windows last started, so a run before the restart says
+so and a run after it carries on from there without asking for a second restart; every step that succeeds is written down too, and the account name (never the password) is offered again. WSL counts as set
+up when any one of `wsl -l -v`, `wsl --status` and `wsl --version` succeeds. If something stops, `installer.log` and `installer-state.ini` in the same folder are what to send.
+
 ## The password
 
 The wizard sees the Ubuntu password the person types (the command-line installer never does). It puts it in the environment of the one engine step that needs it, the engine sends it to Ubuntu
